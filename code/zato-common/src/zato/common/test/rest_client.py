@@ -93,11 +93,12 @@ class _RESTClient:
         self.payload_only_messages = payload_only_messages
 
         self._api_invoke_username = 'pubapi'
-        self._api_invoke_password = 'wILNUjacJjIyYBx6G9zCVHmfu87DRF7f'
+        self._api_invoke_password = 'CUmurNhD3MyDuSKvKl-5I5z3Hr9G03RY'
 
 # ################################################################################################################################
 
     def init(self) -> 'None':
+
         return
 
         # Local aliases

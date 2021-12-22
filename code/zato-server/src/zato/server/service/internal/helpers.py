@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 from io import StringIO
 from logging import DEBUG
+from simplejson import loads
 
 # Zato
 from zato.common.pubsub import PUBSUB
@@ -24,7 +25,7 @@ from zato.server.service.internal.service import Invoke
 
 if 0:
     from zato.common.pubsub import PubSubMessage
-    from zato.common.typing_ import any_, anytuple
+    from zato.common.typing_ import any_, anydict, anytuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -446,24 +447,27 @@ class HelperPubSubTarget(Service):
         self.logger.info('I was invoked with %r', msg.to_dict())
 
         # .. load the inner dict ..
-        data = msg.data # type: bytes
+        data = msg.data # type: anydict
 
         # .. confirm what it was ..
         self.logger.info('Data is %r', data)
 
-        # .. this is where we will save our input data ..
-        file_name = data['file_name']
+        # .. optionally, save our input data for the external caller to check it ..
+        if data['target_needs_file']:
 
-        # .. we will save the message as a JSON one ..
-        json_msg = msg.to_json(needs_utf8_decode=True)
+            # .. this is where we will save our input data ..
+            file_name = data['file_name']
 
-        # .. confirm what we will be saving and where ..
-        self.logger.info('Saving data to file `%s` -> `%s`', file_name, json_msg)
+            # .. we will save the message as a JSON one ..
+            json_msg = msg.to_json(needs_utf8_decode=True)
 
-        # .. and actually save it now.
-        f = open_rw(file_name)
-        f.write(json_msg)
-        f.close()
+            # .. confirm what we will be saving and where ..
+            self.logger.info('Saving data to file `%s` -> `%s`', file_name, json_msg)
+
+            # .. and actually save it now.
+            f = open_rw(file_name)
+            f.write(json_msg)
+            f.close()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -474,12 +478,34 @@ class HelperPubSubHook(PubSubHook):
     name = 'helpers.pubsub.hook'
 
     class SimpleIO:
+        input_required  = AsIs('ctx')
         output_required = 'hook_action'
 
     def before_publish(self):
-        self.logger.info('Helpers before_publish; pub_msg_id:`%s`, data:`%s`',
-            self.request.input.ctx.msg.pub_msg_id, self.request.input.ctx.msg.data)
-        self.response.hook_action = PUBSUB.HOOK_ACTION.DELIVER
+
+        # Local aliases
+        data       = self.request.input.ctx.msg.data
+        pub_msg_id = self.request.input.ctx.msg.pub_msg_id
+
+        # Log what we have received ..
+        self.logger.info('Helpers before_publish; pub_msg_id:`%s`, data:`%s`', pub_msg_id, data)
+
+        # .. load data from JSON ..
+        dict_data = loads(data)
+
+        # .. find information where we should save our input to ..
+        file_name = dict_data['file_name']
+
+        # .. add a suffix so as not to clash with the main recipient of the message ..
+        file_name = file_name + '.hook-before-publish.json'
+
+        # .. store our input in a file for the external caller to check it ..
+        f = open_rw(file_name)
+        f.write(data)
+        f.close()
+
+        # .. and proceed with the publication
+        self.response.payload.hook_action = PUBSUB.HOOK_ACTION.DELIVER
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -494,15 +520,53 @@ class HelperPubSubSource(Service):
 
     def handle(self):
 
+        # Local aliases
+        data = self.request.raw_request # type: dict
+        topic_name = '/zato/s/to/helpers_pubsub_target'
+
+        # The first time around, we need a file from the target service ..
+        data['target_needs_file'] = True
+
         # Publish the message ..
-        self.pubsub.publish(HelperPubSubTarget, data=self.request.raw_request)
+        self.pubsub.publish(HelperPubSubTarget, data=data)
+
+        # .. the topic for that service has to be potentially created so we wait here until it appears ..
+        self.pubsub.wait_for_topic(topic_name)
 
         # .. now, once the message has been published, we know that the topic
         # .. for the receiving service exists, so we can assign a hook service to it ..
-        ...
+        response = self.invoke('zato.pubsub.topic.get', {'cluster_id': self.server.cluster_id, 'name': topic_name})
+        response = response['response']
+
+        # Request to edit the topic with
+        request = {}
+
+        # These can be taken from the previous response as-is
+        keys = ('has_gd', 'id' ,'is_active', 'is_internal', 'max_depth_gd', 'max_depth_non_gd', 'name', 'on_no_subs_pub')
+
+        # .. add the default keys ..
+        for key in keys:
+            request[key] = response[key]
+
+        # .. set the helper hook service and other metadata..
+        request['hook_service_name']  = HelperPubSubHook.get_name()
+        request['cluster_id']         = self.server.cluster_id
+        request['depth_check_freq']   = 500
+        request['is_api_sub_allowed'] = True
+        request['pub_buffer_size_gd'] = 500
+        request['task_sync_interval'] = 500
+        request['task_delivery_interval'] = 500
+
+        # .. now, we can edit the topic to set its hooks service
+        response = self.invoke('zato.pubsub.topic.edit', request)
+        response
+
+        # The second time around, the target service should not create a file
+        data['target_needs_file'] = False
 
         # .. and now, we can publish the message once more, this time around expecting
-        # .. that the hook service will be invoked.
+        # .. that the hook service will be invoked ..
+        self.pubsub.publish(HelperPubSubTarget, data=data)
 
 # ################################################################################################################################
 # ################################################################################################################################
