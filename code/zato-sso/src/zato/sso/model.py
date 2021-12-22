@@ -18,7 +18,7 @@ from zato.common.typing_ import strnone
 
 if 0:
     from zato.common import SMTPMessage
-    from zato.common.odb.model import SSOUser
+    from zato.common.typing_ import anydict
     from zato.sso.common import BaseRequestCtx
 
 # ################################################################################################################################
@@ -46,7 +46,7 @@ class RequestCtx(Model):
 
 @dataclass(init=False)
 class PasswordResetNotifCtx(Model):
-    user: 'SSOUser'
+    user: 'anydict'
     token: 'str'
     smtp_message: 'SMTPMessage'
 
