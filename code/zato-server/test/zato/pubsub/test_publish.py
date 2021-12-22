@@ -8,13 +8,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from datetime import datetime
+from datetime import datetime, time, timezone
 from json import loads
 from tempfile import gettempdir
 from unittest import main
 
-# dateutil
-from dateutil.parser import parse as dt_parse
+# ciso8601
+from ciso8601 import parse_datetime
 
 # Zato
 from zato.common.pubsub import PUBSUB
@@ -22,6 +22,7 @@ from zato.common.util.api import new_cid
 from zato.common.util.file_system import wait_for_file
 from zato.common.util.open_ import open_r
 from zato.common.test.rest_client import RESTClientTestCase
+from zato.common.util.time_ import local_tz
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,13 +104,16 @@ class PubSubTestCase(RESTClientTestCase):
         expiration_time     = data['expiration_time']
         expiration_time_iso = data['expiration_time_iso']
 
-        expiration_time = datetime.fromtimestamp(expiration_time)
-        expiration_time = expiration_time
+        expiration_time     = datetime.fromtimestamp(expiration_time, tz=timezone.utc)
+        expiration_time_iso = parse_datetime(expiration_time_iso).astimezone(tz=timezone.utc)
 
-        expiration_time_iso = dt_parse(expiration_time_iso)
+        expiration_time = str(expiration_time)
+        expiration_time_iso = str(expiration_time_iso)
 
         print(111, expiration_time)
         print(222, expiration_time_iso)
+
+        self.assertEqual(expiration_time, expiration_time_iso)
 
 
         # "expiration_time": 3787633752.932831,
