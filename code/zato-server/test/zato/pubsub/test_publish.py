@@ -69,6 +69,42 @@ class PubSubTestCase(RESTClientTestCase):
 
         # .. and run all the tests now ..
 
+        # ##
+
+        now = datetime.now(tz=timezone.utc).isoformat()
+
+        # ##
+
+        expiration_time = data['expiration_time']
+        expiration_time = datetime.fromtimestamp(expiration_time, tz=timezone.utc)
+        expiration_time = str(expiration_time)
+
+        expiration_time_iso = data['expiration_time_iso']
+        expiration_time_iso = parse_datetime(expiration_time_iso).astimezone(tz=timezone.utc)
+        expiration_time_iso = str(expiration_time_iso)
+
+        # ##
+
+        pub_time = data['pub_time']
+        pub_time = datetime.fromtimestamp(pub_time, tz=timezone.utc)
+        pub_time = str(pub_time)
+
+        pub_time_iso = data['pub_time_iso']
+        pub_time_iso = parse_datetime(pub_time_iso).astimezone(tz=timezone.utc)
+        pub_time_iso = str(pub_time_iso)
+
+        # ##
+
+        recv_time = data['recv_time']
+        recv_time = datetime.fromtimestamp(recv_time, tz=timezone.utc)
+        recv_time = str(recv_time)
+
+        recv_time_iso = data['recv_time_iso']
+        recv_time_iso = parse_datetime(recv_time_iso).astimezone(tz=timezone.utc)
+        recv_time_iso = str(recv_time_iso)
+
+        # ##
+
         self.assertEqual(data['data_prefix'], '')
         self.assertEqual(data['data_prefix_short'], '')
         self.assertEqual(data['delivery_count'], 0)
@@ -91,7 +127,7 @@ class PubSubTestCase(RESTClientTestCase):
         self.assertDictEqual(data['data'], request)
         self.assertDictEqual(data['pub_pattern_matched'], {})
 
-        self.assertTrue(data['size'] >= 112)
+        self.assertTrue(data['size'] >= 100)
         self.assertTrue(data['has_gd'])
         self.assertTrue(data['pub_msg_id'].startswith('zpsm'))
         self.assertTrue(data['sub_key'].startswith('zpsk.srv'))
@@ -101,64 +137,13 @@ class PubSubTestCase(RESTClientTestCase):
         self.assertListEqual(data['deliver_to_sk'], [])
         self.assertListEqual(data['reply_to_sk'], [])
 
-        expiration_time     = data['expiration_time']
-        expiration_time_iso = data['expiration_time_iso']
-
-        expiration_time     = datetime.fromtimestamp(expiration_time, tz=timezone.utc)
-        expiration_time_iso = parse_datetime(expiration_time_iso).astimezone(tz=timezone.utc)
-
-        expiration_time = str(expiration_time)
-        expiration_time_iso = str(expiration_time_iso)
-
-        print(111, expiration_time)
-        print(222, expiration_time_iso)
-
         self.assertEqual(expiration_time, expiration_time_iso)
+        self.assertEqual(pub_time, pub_time_iso)
+        self.assertEqual(recv_time, recv_time_iso)
 
-
-        # "expiration_time": 3787633752.932831,
-        # "expiration_time_iso": "2090-01-09T08:29:12.932831",
-
-        '''
-        {
-            x "cluster_id": 0,
-            x "data": {
-                "file_name": "/tmp/zato-unittest-pubsub-2d21d577d32af62c6ae54285.json",
-                "random_data": "2d21d577d32af62c6ae54285"
-            },
-            x "data_prefix": "",
-            x "data_prefix_short": "",
-            x "deliver_to_sk": [],
-            x "delivery_count": 0,
-            x "delivery_status": "",
-            x "expiration": 2147483647000,
-            "expiration_time": 3787633752.932831,
-            "expiration_time_iso": "2090-01-09T08:29:12.932831",
-            x "ext_pub_time_iso": "",
-            x "has_gd": true,
-            x "is_in_sub_queue": false,
-            x "mime_type": "text/plain",
-            x "priority": 5,
-            x "pub_msg_id": "zpsm80eafdf4a10a76a8a4a3080f",
-            x "pub_pattern_matched": {},
-            "pub_time": 1640150105.932831,
-            "pub_time_iso": "2021-12-22T05:15:05.932831",
-            x "published_by_id": 1,
-            "recv_time": 1640150106.1367662,
-            x "reply_to_sk": [],
-            x "server_name": "",
-            x "server_pid": 0,
-            x "size": 114,
-            x "sub_key": "zpsk.srv.ccd1ea",
-            x "sub_pattern_matched": "sub=/zato/s/to/*",
-            x "topic_id": 0,
-            x "topic_name": "/zato/s/to/helpers_pubsub_target",
-            x "zato_ctx": {
-            x    "target_service_name": "helpers.pubsub.target",
-            x    "zato_mime_type": "application/vnd.zato.ps.msg"
-            }
-        }
-        '''
+        self.assertLess(now, expiration_time_iso)
+        self.assertGreater(now, pub_time_iso)
+        self.assertGreater(now, recv_time_iso)
 
 # ################################################################################################################################
 # ################################################################################################################################
