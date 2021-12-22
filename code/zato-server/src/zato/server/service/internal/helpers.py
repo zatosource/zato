@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass
 from io import StringIO
-from json import loads
 from logging import DEBUG
 
 # Zato
