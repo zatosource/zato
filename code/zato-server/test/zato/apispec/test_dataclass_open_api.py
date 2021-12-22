@@ -29,8 +29,7 @@ from zato.server.apispec.spec.openapi import OpenAPIGenerator
 
 if 0:
     from bunch import Bunch
-
-    Bunch = Bunch
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 
@@ -60,8 +59,8 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
 
         generator = Generator(service_store_services, sio_config, include, exclude, query, tags, needs_sio_desc=False)
 
-        info_dict = generator.get_info()
-        info = bunchify(info_dict)
+        info_dict  = generator.get_info()
+        info_bunch = bunchify(info_dict) # type: any_
 
         channel_data = [{
             'service_name': service_name,
@@ -74,9 +73,14 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         needs_rest_channels = True
         api_invoke_path = APISPEC.GENERIC_INVOKE_PATH
 
-        open_api_generator = OpenAPIGenerator(info, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
+        open_api_generator = OpenAPIGenerator(info_bunch, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
 
         result = open_api_generator.generate()
+
+        f = open('/tmp/zzz.yaml', 'w')
+        f.write(result)
+        f.close()
+
         result = yaml_load(result, FullLoader)
         result = bunchify(result)
 
@@ -176,17 +180,18 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         self.assertListEqual(account.required, ['account_no', 'account_segment', 'account_type'])
         self.assertDictEqual(account.properties, {
             'account_no': {
-                'description': '',
+                'description': 'This description is above the field',
                 'subtype':     'int32',
                 'type':        'integer',
             },
             'account_segment': {
-                'description': '',
+                'description': """This is a multiline description,
+it has two lines.""",
                 'subtype':     'string',
                 'type':        'string',
             },
             'account_type': {
-                'description': '',
+                'description': 'This is an inline description',
                 'subtype':     'string',
                 'type':        'string',
             },

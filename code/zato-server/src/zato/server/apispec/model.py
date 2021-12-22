@@ -14,6 +14,9 @@ from operator import attrgetter
 # Bunch
 from bunch import Bunch
 
+# SimpleParsing
+from simple_parsing.docstring import get_attribute_docstring
+
 # Zato
 from zato.common.typing_ import extract_from_union, is_union
 from zato.common.marshal_.api import extract_model_class, is_list, Model
@@ -22,6 +25,7 @@ from zato.common.marshal_.api import extract_model_class, is_list, Model
 # ################################################################################################################################
 
 if 0:
+    from simple_parsing.docstring import AttributeDocString
     from zato.common.typing_ import any_, anydict, anylist
     from zato.server.service import Service
     Service = Service
@@ -86,7 +90,7 @@ class FieldInfo:
 # ################################################################################################################################
 
     @staticmethod
-    def from_python_field(field:'Field', api_spec_info:'Bunch') -> 'FieldInfo':
+    def from_python_field(model:'Model', field:'Field', api_spec_info:'Bunch') -> 'FieldInfo':
 
         if not field.type:
             raise ValueError('Value missing -> field.type ({})'.format(field))
@@ -95,6 +99,12 @@ class FieldInfo:
         info.name = field.name or '<field-no-name>'
         info.is_required = field.default is MISSING
         info.description = field.__doc__ or ''
+
+        # Extract the Python field's docstring, regardless of its location in relation to the field ..
+        docstring = get_attribute_docstring(model, info.name) # type: AttributeDocString
+
+        # .. and assign it to the information object, in this priority.
+        info.description = (docstring.comment_above or docstring.comment_inline or docstring.docstring_below or '').strip()
 
         field_type_info = FieldInfo.get_field_type_info(field)
         field_type = field_type_info.field_type
