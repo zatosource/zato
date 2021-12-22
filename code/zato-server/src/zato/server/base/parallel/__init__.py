@@ -1069,7 +1069,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def encrypt(self, data, prefix=SECRETS.PREFIX):
+    def encrypt(self, data:'any_', prefix:'str'=SECRETS.PREFIX) -> 'str':
         """ Returns data encrypted using server's CryptoManager.
         """
         if data:
