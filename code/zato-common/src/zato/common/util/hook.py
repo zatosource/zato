@@ -12,7 +12,7 @@ from zato.common.util.api import is_func_overridden
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import callable_
+    from zato.common.typing_ import any_, callable_
 
 # ################################################################################################################################
 
@@ -42,11 +42,14 @@ class HookTool:
         if not self.is_hook_overridden(service_name, hook_type):
             return
 
-        def _invoke_hook_service(*args, **kwargs):
+        def _invoke_hook_service(*args:'any_', **kwargs:'any_') -> 'any_':
             """ A function to invoke hook services.
             """
             ctx = self.hook_ctx_class(hook_type, *args, **kwargs)
-            return self.invoke_func(service_name, {'ctx':ctx}, serialize=False).getvalue(serialize=False)['response']
+            response = self.invoke_func(service_name, {'ctx':ctx}, serialize=False)
+            response = response.getvalue(serialize=False)
+            response = response['response']
+            return response
 
         return _invoke_hook_service
 

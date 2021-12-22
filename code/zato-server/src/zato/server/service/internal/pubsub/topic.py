@@ -197,19 +197,24 @@ class Get(AdminService):
     """ Returns a pub/sub topic by its ID.
     """
     class SimpleIO:
-        input_required = ('cluster_id', AsIs('id'))
-        output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd',
-            'current_depth_gd')
-        output_optional = ('last_pub_time', 'on_no_subs_pub')
+        input_required = 'cluster_id'
+        input_optional = AsIs('id'), 'name'
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd', \
+            'current_depth_gd'
+        output_optional = 'last_pub_time', 'on_no_subs_pub'
 
     def handle(self):
 
         # Local aliases
-        topic_id = self.request.input.id
+        topic_id   = self.request.input.id
+        topic_name = self.request.input.name
 
-        with closing(self.odb.session()) as session:
-            topic = pubsub_topic(session, self.request.input.cluster_id, topic_id)
+        with closing(self.odb.session()) as session: # type: ignore
+            topic = pubsub_topic(session, self.request.input.cluster_id, topic_id, topic_name)
             topic['current_depth_gd'] = get_gd_depth_topic(session, self.request.input.cluster_id, topic_id)
+
+        # Now, we know that we have this object so we can just make use of its ID
+        topic_id = topic.id
 
         last_data = get_last_pub_metadata(self.server, [topic_id])
         if last_data:
