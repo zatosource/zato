@@ -25,6 +25,7 @@ from zato.common.json_internal import json_dumps
 from zato.common.odb.model import SSOPasswordReset as FlowPRTModel
 from zato.sso import const, Default, status_code, ValidationError
 from zato.sso.common import SSOCtx
+from zato.sso.model import PasswordResetNotifCtx
 from zato.sso.odb.query import get_user_by_email, get_user_by_name, get_user_by_name_or_email, get_user_by_prt, \
      get_user_by_prt_and_reset_key
 from zato.sso.util import new_prt, new_prt_reset_key, UserChecker
@@ -34,6 +35,7 @@ from zato.sso.util import new_prt, new_prt_reset_key, UserChecker
 if 0:
     from typing import Callable
     from zato.common.odb.model import SSOUser
+    from zato.common.typing_ import anydict, anylist, callable_
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.email import SMTPConnection
 
@@ -57,16 +59,10 @@ FlowPRTModelUpdate = FlowPRTModelTable.update
 # ################################################################################################################################
 # ################################################################################################################################
 
-_unrecognised_locale = object()
-
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 @dataclass
 class AccessTokenCtx:
-    user: dict
-    reset_key: str
+    user:      'anydict'
+    reset_key: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,8 +80,15 @@ user_search_by_map = {
 class PasswordResetAPI:
     """ Message flow around password-reset tokens (PRT).
     """
-    def __init__(self, server, sso_conf, odb_session_func, decrypt_func, verify_hash_func):
-        # type: (ParallelServer, dict, Callable, Callable, Callable) -> None
+    def __init__(
+        self,
+        server,           # type: ParallelServer
+        sso_conf,         # type: Bunch
+        odb_session_func, # type: callable_
+        decrypt_func,     # type: callable_
+        verify_hash_func  # type: callable_
+        ) -> 'None':
+
         self.server = server
         self.sso_conf = sso_conf
         self.odb_session_func = odb_session_func
@@ -123,20 +126,29 @@ class PasswordResetAPI:
         # Name of an outgoing SMTP connections to send notifications through
         self.smtp_conn_name = sso_conf.main.smtp_conn # type: str
 
+        # Name of a service to send out emails through
+        self.email_service = sso_conf.main.get('email_service', '') # type: str
+
         # From who the SMTP messages will be sent
         self.email_from = sso_conf.password_reset.email_from
 
 # ################################################################################################################################
 
-    def post_configure(self, func, is_sqlite):
-        # type: (Callable, bool) -> None
+    def post_configure(self, func:'callable_', is_sqlite:'bool') -> 'None':
         self.odb_session_func = func
         self.is_sqlite = is_sqlite
 
 # ################################################################################################################################
 
-    def create_token(self, cid, credential, current_app, remote_addr, user_agent, _utcnow=datetime.utcnow, _timedelta=timedelta):
-        # type: (str, object, object) -> None
+    def create_token(
+        self,
+        cid,         # type: str
+        credential,  # type: str
+        current_app, # type: str
+        remote_addr, # type: anylist
+        user_agent,  # type: str
+        _utcnow=datetime.utcnow, # type: callable_
+        ) -> 'None':
 
         # Validate input
         if not credential:
@@ -196,8 +208,15 @@ class PasswordResetAPI:
 
 # ################################################################################################################################
 
-    def access_token(self, cid, token, current_app, remote_addr, user_agent, _utcnow=datetime.utcnow, _timedelta=timedelta):
-        # type: (str, str, str, str, str, object, object) -> AccessTokenCtx
+    def access_token(
+        self,
+        cid,         # type: str
+        token,       # type: str
+        current_app, # type: str
+        remote_addr, # type: anylist
+        user_agent,  # type: str
+        _utcnow=datetime.utcnow, # type: callable_
+        ) -> 'AccessTokenCtx':
 
         # For later use
         now = _utcnow()
@@ -253,9 +272,17 @@ class PasswordResetAPI:
 
 # ################################################################################################################################
 
-    def change_password(self, cid, new_password, token, reset_key, current_app, remote_addr, user_agent,
-        _utcnow=datetime.utcnow, _timedelta=timedelta):
-        # type: (str, str, str, str, str, str, object, object) -> str
+    def change_password(
+        self,
+        cid,          # type: str
+        new_password, # type: str
+        token,        # type: str
+        reset_key,    # type: str
+        current_app,  # type: str
+        remote_addr,  # type: anylist
+        user_agent,   # type: str
+        _utcnow=datetime.utcnow, # type: callable_
+        ) -> 'None':
 
         # For later use
         now = _utcnow()
@@ -324,13 +351,45 @@ class PasswordResetAPI:
 
 # ################################################################################################################################
 
-    def send_notification(self, user, token, _template_name=CommonSSO.EmailTemplate.PasswordResetLink):
-        # type: (SSOUser, str)
+    def _send_notification(
+        self,
+        user,        # type: SSOUser
+        token,       # type: str
+        smtp_message # type: SMTPMessage
+        ) -> 'None':
 
-        if not self.smtp_conn_name:
-            msg = 'Could not notify user `%s`, SSO SMTP connection not configured in sso.conf (main.smtp_conn)'
-            logger.warning(msg, user.user_id)
-            return
+        # If there is a user-defined service to send out emails, make use of it here
+        # and do not proceed further on our end ..
+        if self.email_service:
+
+            # .. prepare all the details for the custom service ..
+            ctx = PasswordResetNotifCtx()
+            ctx.user = user._asdict()
+            ctx.token = token
+            ctx.smtp_message = smtp_message
+
+            # .. and invoke it.
+            self.server.invoke(self.email_service, ctx)
+
+        # .. otherwise, we send the notification ourselves ..
+        else:
+
+            # .. make sure there is an SMTP connection to send an email through ..
+            if not self.smtp_conn_name:
+                msg = 'Could not notify user `%s`, SSO SMTP connection not configured in sso.conf (main.smtp_conn)'
+                logger.warning(msg, user.user_id)
+                return
+
+            # .. get a handle to an SMTP connection ..
+            smtp_conn = self.server.worker_store.email_smtp_api.get(self.smtp_conn_name).conn # type: SMTPConnection
+
+            # .. and send it to the user.
+            smtp_conn.send(smtp_message)
+
+# ################################################################################################################################
+
+    def send_notification(self, user, token, _template_name=CommonSSO.EmailTemplate.PasswordResetLink):
+        # type: (SSOUser, str, str) -> None
 
         # Decrypt email for later user
         user_email = self.decrypt_func(user.email)
@@ -373,29 +432,31 @@ class PasswordResetAPI:
         # .. fill it in ..
         msg_body = template.format(**template_params)
 
-        # .. get a handle to an SMTP connection ..
-        smtp_conn = self.server.worker_store.email_smtp_api.get(self.smtp_conn_name).conn # type: SMTPConnection
-
         # .. create a new message ..
-        msg = SMTPMessage()
-        msg.is_html = True
+        smtp_message = SMTPMessage()
+        smtp_message.is_html = True
 
         # .. provide metadata ..
-        msg.subject = self.sso_conf.password_reset.get('email_title_' + pref_lang) or 'Password reset'
-        msg.to = user_email
-        msg.from_ = self.email_from
+        smtp_message.subject = self.sso_conf.password_reset.get('email_title_' + pref_lang) or 'Password reset'
+        smtp_message.to = user_email
+        smtp_message.from_ = self.email_from
 
         # .. attach payload ..
-        msg.body = msg_body
+        smtp_message.body = msg_body
 
-        # .. and send it to the user.
-        smtp_conn.send(msg)
+        # .. and send the message to the user.
+        self._send_notification(user, token, smtp_message)
 
 # ################################################################################################################################
 
-    def _build_sso_ctx(self, cid, remote_addr, user_agent, current_app):
-        # type: (str, str, str, str) -> None
-        return SSOCtx(
+    def _build_sso_ctx(
+        self,
+        cid,         # type: str
+        remote_addr, # type: anylist
+        user_agent,  # type: str
+        current_app  # type: str
+        ) -> 'SSOCtx':
+        ctx = SSOCtx(
             cid=cid,
             remote_addr=remote_addr,
             user_agent=user_agent,
@@ -403,7 +464,8 @@ class PasswordResetAPI:
                 'current_app': current_app,
             }),
             sso_conf=self.sso_conf,
-        )
+        ) # type: ignore
+        return ctx
 
 # ################################################################################################################################
 # ################################################################################################################################
