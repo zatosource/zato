@@ -45,7 +45,7 @@ def build_field_list(model:'Model', api_spec_info:'any_') -> 'anylist':
     for _, field in sorted(python_field_list.items()): # type: (str, Field)
 
         # Parameter details object
-        info = FieldInfo.from_python_field(field, api_spec_info)
+        info = FieldInfo.from_python_field(model, field, api_spec_info)
         out.append(info)
 
     return out

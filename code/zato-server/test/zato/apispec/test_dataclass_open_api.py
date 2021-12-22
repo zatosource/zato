@@ -76,6 +76,11 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         open_api_generator = OpenAPIGenerator(info_bunch, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
 
         result = open_api_generator.generate()
+
+        f = open('/tmp/zzz.yaml', 'w')
+        f.write(result)
+        f.close()
+
         result = yaml_load(result, FullLoader)
         result = bunchify(result)
 
@@ -175,17 +180,18 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         self.assertListEqual(account.required, ['account_no', 'account_segment', 'account_type'])
         self.assertDictEqual(account.properties, {
             'account_no': {
-                'description': '',
+                'description': 'This description is above the field',
                 'subtype':     'int32',
                 'type':        'integer',
             },
             'account_segment': {
-                'description': '',
+                'description': """This is a multiline description,
+it has two lines.""",
                 'subtype':     'string',
                 'type':        'string',
             },
             'account_type': {
-                'description': '',
+                'description': 'This is an inline description',
                 'subtype':     'string',
                 'type':        'string',
             },
