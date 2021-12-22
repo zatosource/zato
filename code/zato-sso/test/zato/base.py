@@ -24,6 +24,7 @@ from zato.common.util.api import get_odb_session_from_server_dir
 from zato.common.crypto.totp_ import TOTPManager
 from zato.common.test.config import TestConfig
 from zato.common.test.rest_client import RESTClientTestCase
+from zato.common.test import rand_string
 from zato.sso import const, status_code
 from zato.sso.odb.query import get_user_by_name
 
@@ -103,7 +104,7 @@ class BaseTest(RESTClientTestCase):
 # ################################################################################################################################
 
     def _get_random(self, prefix, _utcnow=datetime.utcnow):
-        return prefix.format(_utcnow().isoformat(), next(self.rand_counter))
+        return prefix.format(_utcnow().isoformat(), next(self.rand_counter)) + '.' + rand_string()[:10]
 
 # ################################################################################################################################
 
