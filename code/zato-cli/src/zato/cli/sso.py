@@ -98,7 +98,17 @@ class SSOCommand(ZatoCommand):
         def _hash_secret(_secret):
             return crypto_manager.hash_secret(_secret, 'sso.super-user')
 
-        user_api = UserAPI(None, sso_conf, None, crypto_manager.encrypt, crypto_manager.decrypt, _hash_secret, None, new_user_id)
+        user_api = UserAPI(
+            server=None,
+            sso_conf=sso_conf,
+            totp=None,
+            odb_session_func=None,
+            encrypt_func=crypto_manager.encrypt,
+            decrypt_func=crypto_manager.decrypt,
+            hash_func=_hash_secret,
+            verify_hash_func=None,
+            new_user_id_func=new_user_id
+            )
         user_api.post_configure(_get_session, True, False)
 
         return user_api

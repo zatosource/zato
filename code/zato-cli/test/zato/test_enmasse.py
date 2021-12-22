@@ -68,7 +68,7 @@ channel_plain_http:
     url_path: /test/enmasse2/{test_suffix}
 
 zato_generic_connection:
-    - address2: ws://localhost:12345
+    - address: ws://localhost:12345
       cache_expiry: 0
       has_auto_reconnect: true
       is_active: true
