@@ -14,13 +14,15 @@ from logging import DEBUG
 # Zato
 from zato.common.exception import Forbidden
 from zato.common.typing_ import intnone, list_, optional
-from zato.server.service import AsIs, Model, Service
+from zato.common.util.open_ import open_rw
+from zato.server.service import AsIs, Model, PubSubHook, Service
 from zato.server.service.internal.service import Invoke
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.pubsub import PubSubMessage
     from zato.common.typing_ import any_, anytuple
 
 # ################################################################################################################################
@@ -425,6 +427,68 @@ class APISpecHelperAccountList(Service):
 
         out.user_account_list = [account2, account1]
         self.response.payload = out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HelperPubSubTarget(Service):
+    """ Test support services - PubSubTarget.
+    """
+    name = 'helpers.pubsub.target'
+
+    def handle(self):
+
+        # Our request
+        msg = self.request.raw_request # type: PubSubMessage
+
+        # Whatever happens next, log what we received
+        self.logger.info('I was invoked with %r', msg.to_dict())
+
+        # .. load the inner dict ..
+        data = msg.data # type: bytes
+
+        # .. confirm what it was ..
+        self.logger.info('Data is %r', data)
+
+        # .. this is where we will save our input data ..
+        file_name = data['file_name']
+
+        # .. we will save the message as a JSON one ..
+        json_msg = msg.to_json(needs_utf8_decode=True)
+
+        # .. confirm what we will be saving and where ..
+        self.logger.info('Saving data to file `%s` -> `%s`', file_name, json_msg)
+
+        # .. and actually save it now.
+        f = open_rw(file_name)
+        f.write(json_msg)
+        f.close()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HelperPubSubHook(PubSubHook):
+    """ Test support services - PubSubHook.
+    """
+    name = 'helpers.pubsub.hook'
+
+    def before_publish(self):
+        self.logger.info('Helpers before_publish; pub_msg_id:`%s`, data:`%s`',
+            self.request.input.ctx.msg.pub_msg_id, self.request.input.ctx.msg.data)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HelperPubSubSource(Service):
+    """ Test support services - PubSubSource.
+    """
+    name = 'helpers.pubsub.source'
+
+    class SimpleIO:
+        input_required = 'random_data', 'file_name'
+
+    def handle(self):
+        self.pubsub.publish(HelperPubSubTarget, data=self.request.raw_request)
 
 # ################################################################################################################################
 # ################################################################################################################################

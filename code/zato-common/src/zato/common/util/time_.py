@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from time import time
 import logging
 
@@ -49,7 +49,7 @@ def utcnow_as_ms(_time=time):
 def datetime_from_ms(ms:'float', isoformat:'bool'=True) -> 'str | datetime':
     """ Converts a number of milliseconds since UNIX epoch to a datetime object.
     """
-    value = _epoch + timedelta(milliseconds=ms)
+    value = datetime.fromtimestamp(ms, tz=timezone.utc)
     if isoformat:
         return value.isoformat()
     else:
