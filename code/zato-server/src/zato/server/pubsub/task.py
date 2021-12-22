@@ -695,13 +695,13 @@ class Message(PubSubMessage):
     def add_iso_times(self) -> 'None':
         """ Sets additional attributes for datetime in ISO-8601.
         """
-        self.pub_time_iso = cast_('str', datetime_from_ms(self.pub_time))
+        self.pub_time_iso = cast_('str', datetime_from_ms(self.pub_time * 1000))
 
         if self.ext_pub_time:
-            self.ext_pub_time_iso = cast_('str', datetime_from_ms(self.ext_pub_time))
+            self.ext_pub_time_iso = cast_('str', datetime_from_ms(self.ext_pub_time * 1000))
 
         if self.expiration_time:
-            self.expiration_time_iso = cast_('str', datetime_from_ms(self.expiration_time))
+            self.expiration_time_iso = cast_('str', datetime_from_ms(self.expiration_time * 1000))
 
         if self.recv_time:
             self.recv_time_iso = cast_('str', datetime_from_ms(self.recv_time))
