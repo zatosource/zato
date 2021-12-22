@@ -9,6 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 
+# ujson
+from ujson import dumps
+
 # Zato
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.util.api import new_cid
@@ -68,7 +71,7 @@ msg_pub_attrs = (
     'position_in_group', 'pub_time', 'ext_pub_time', 'data', 'data_prefix', 'data_prefix_short', 'mime_type', 'priority',
     'expiration', 'expiration_time', 'has_gd', 'delivery_status', 'size', 'published_by_id', 'topic_id',
     'is_in_sub_queue', 'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso',
-    'recv_time', 'data_prefix_short', 'server_name', 'server_pid', 'pub_pattern_matched', 'sub_pattern_matched',
+    'recv_time', 'recv_time_iso', 'data_prefix_short', 'server_name', 'server_pid', 'pub_pattern_matched', 'sub_pattern_matched',
     'delivery_count', 'user_ctx', 'zato_ctx'
 )
 
@@ -80,6 +83,7 @@ msg_pub_ignore = (
     'deliver_to_sk',
     'delivery_status',
     'recv_time',
+    'recv_time_iso',
     'reply_to_sk',
     'expiration_time_iso',
     'ext_pub_time_iso',
@@ -121,6 +125,7 @@ class PubSubMessage:
     pub_attrs = msg_pub_attrs + sk_lists
 
     recv_time:     'float'
+    recv_time_iso: 'str'
     server_name:   'str'
     server_pid:    'int'
     topic:         'optional[Topic]'
@@ -167,6 +172,7 @@ class PubSubMessage:
 
     def __init__(self) -> 'None':
         self.recv_time = utcnow_as_ms()
+        self.recv_time_iso = ''
         self.server_name = ''
         self.server_pid = 0
         self.topic = None
@@ -213,6 +219,7 @@ class PubSubMessage:
         self,
         skip=None,               # type: strtuple
         needs_utf8_encode=False, # type: bool
+        needs_utf8_decode=False, # type: bool
         add_id_attrs=False,      # type: bool
         _data_keys=_data_keys    # type: strtuple
         ) -> 'commondict':
@@ -226,9 +233,15 @@ class PubSubMessage:
             if key != 'topic' and key not in skip:
                 value = getattr(self, key)
                 if value is not None:
+
                     if needs_utf8_encode:
                         if key in _data_keys:
                             value = value.encode('utf8') if isinstance(value, str) else value
+
+                    if needs_utf8_decode:
+                        if key in _data_keys:
+                            value = value.decode('utf8') if isinstance(value, bytes) else value
+
                     out[key] = value
 
         if add_id_attrs:
@@ -258,12 +271,24 @@ class PubSubMessage:
         """ Returns a dict representation of self ready to be delivered to external systems,
         i.e. without internal attributes on output.
         """
-        out = self.to_dict(skip, needs_utf8_encode, True)
+        out = self.to_dict(skip, needs_utf8_encode=needs_utf8_encode, add_id_attrs=True)
         if self.reply_to_sk:
             out['ctx'] = {
                 'reply_to_sk': self.reply_to_sk
             }
         return out
+
+# ################################################################################################################################
+
+    def to_json(self, *args:'any_', **kwargs:'any_') -> 'str':
+        data = self.to_dict(*args, **kwargs)
+        return dumps(data)
+
+# ################################################################################################################################
+
+    def to_external_json(self, *args:'any_', **kwargs:'any_') -> 'str':
+        data = self.to_external_dict(*args, **kwargs)
+        return dumps(data)
 
 # ################################################################################################################################
 # ################################################################################################################################

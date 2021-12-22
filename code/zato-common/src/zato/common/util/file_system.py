@@ -7,9 +7,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 import re
 import string
-from datetime import datetime
+from datetime import datetime, timedelta
+from time import sleep
 
 # ################################################################################################################################
 
@@ -33,3 +35,17 @@ def fs_safe_now(_utcnow:'callable_'=datetime.utcnow) -> 'str':
     return fs_safe_name(_utcnow().isoformat())
 
 # ################################################################################################################################
+
+def wait_for_file(path:'str', max_wait:'int'=5) -> 'None':
+
+    found = False
+    now   = datetime.utcnow()
+    until = now + timedelta(seconds=max_wait)
+
+    while now < until:
+        found = os.path.exists(path)
+        if found:
+            break
+        else:
+            sleep(0.05)
+            now = datetime.utcnow()

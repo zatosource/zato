@@ -213,7 +213,8 @@ class Publish(AdminService):
             ps_msg.sub_pattern_matched[sub.sub_key] = sub.sub_pattern_matched
 
         if ps_msg.data:
-            ps_msg.size = len(ps_msg.data.encode('utf8')) # We need to store the size in bytes rather than Unicode codepoints
+            # We need to store the size in bytes rather than Unicode codepoints
+            ps_msg.size = len(ps_msg.data if isinstance(ps_msg.data, bytes) else ps_msg.data.encode('utf8'))
         else:
             ps_msg.size = 0
 
@@ -572,14 +573,14 @@ class Publish(AdminService):
         try:
 
             # For later use
-            dt_now = datetime_from_ms(ctx.now * 1000)
+            dt_now = datetime_from_ms(ctx.now)
 
             # This is optional
             ext_pub_time = ctx.last_msg.get('ext_pub_time')
             if ext_pub_time:
                 if isinstance(ext_pub_time, str):
                     ext_pub_time = float(ext_pub_time)
-                ext_pub_time = datetime_from_ms(ext_pub_time * 1000)
+                ext_pub_time = datetime_from_ms(ext_pub_time)
 
             # Prepare a document to update the topic's metadata with
             if has_topic:
