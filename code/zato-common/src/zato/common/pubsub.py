@@ -71,7 +71,7 @@ msg_pub_attrs = (
     'position_in_group', 'pub_time', 'ext_pub_time', 'data', 'data_prefix', 'data_prefix_short', 'mime_type', 'priority',
     'expiration', 'expiration_time', 'has_gd', 'delivery_status', 'size', 'published_by_id', 'topic_id',
     'is_in_sub_queue', 'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso',
-    'recv_time', 'data_prefix_short', 'server_name', 'server_pid', 'pub_pattern_matched', 'sub_pattern_matched',
+    'recv_time', 'recv_time_iso', 'data_prefix_short', 'server_name', 'server_pid', 'pub_pattern_matched', 'sub_pattern_matched',
     'delivery_count', 'user_ctx', 'zato_ctx'
 )
 
@@ -83,6 +83,7 @@ msg_pub_ignore = (
     'deliver_to_sk',
     'delivery_status',
     'recv_time',
+    'recv_time_iso',
     'reply_to_sk',
     'expiration_time_iso',
     'ext_pub_time_iso',
@@ -124,6 +125,7 @@ class PubSubMessage:
     pub_attrs = msg_pub_attrs + sk_lists
 
     recv_time:     'float'
+    recv_time_iso: 'str'
     server_name:   'str'
     server_pid:    'int'
     topic:         'optional[Topic]'
@@ -170,6 +172,7 @@ class PubSubMessage:
 
     def __init__(self) -> 'None':
         self.recv_time = utcnow_as_ms()
+        self.recv_time_iso = ''
         self.server_name = ''
         self.server_pid = 0
         self.topic = None
