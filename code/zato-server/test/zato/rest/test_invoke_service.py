@@ -16,15 +16,13 @@ from zato.common.test.rest_client import RESTClientTestCase
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InvocationTestCase(RESTClientTestCase):
+class PingTestCase(RESTClientTestCase):
 
-    needs_bunch = False
-    needs_current_app = False
+    needs_bunch           = False
+    needs_current_app     = False
     payload_only_messages = False
 
-# ################################################################################################################################
-
-    def test_invoke_ping(self) -> 'None':
+    def xtest_invoke_ping(self) -> 'None':
 
         # Invoke the default ping service ..
         response = self.get('/zato/ping')
@@ -36,6 +34,23 @@ class InvocationTestCase(RESTClientTestCase):
 
         len_cid = len(response['zato_env']['cid'])
         self.assertTrue(len_cid >= 23) # We cannot be certain but it should be at least 23 characters of random data
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class APIInvokeTestCase(RESTClientTestCase):
+
+    needs_bunch           = False
+    needs_current_app     = False
+    payload_only_messages = False
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.rest_client.init()
+
+    def test_api_invoke(self):
+        response = self.rest_client.api_invoke('pub.zato.ping')
+        self.assertDictEqual({'pong':'zato'}, response)
 
 # ################################################################################################################################
 # ################################################################################################################################
