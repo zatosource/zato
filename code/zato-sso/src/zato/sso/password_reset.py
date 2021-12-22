@@ -25,6 +25,7 @@ from zato.common.json_internal import json_dumps
 from zato.common.odb.model import SSOPasswordReset as FlowPRTModel
 from zato.sso import const, Default, status_code, ValidationError
 from zato.sso.common import SSOCtx
+from zato.sso.model import PasswordResetNotifCtx
 from zato.sso.odb.query import get_user_by_email, get_user_by_name, get_user_by_name_or_email, get_user_by_prt, \
      get_user_by_prt_and_reset_key
 from zato.sso.util import new_prt, new_prt_reset_key, UserChecker
@@ -85,7 +86,7 @@ class PasswordResetAPI:
     """ Message flow around password-reset tokens (PRT).
     """
     def __init__(self, server, sso_conf, odb_session_func, decrypt_func, verify_hash_func):
-        # type: (ParallelServer, dict, Callable, Callable, Callable) -> None
+        # type: (ParallelServer, Bunch, Callable, Callable, Callable) -> None
         self.server = server
         self.sso_conf = sso_conf
         self.odb_session_func = odb_session_func
@@ -122,6 +123,9 @@ class PasswordResetAPI:
 
         # Name of an outgoing SMTP connections to send notifications through
         self.smtp_conn_name = sso_conf.main.smtp_conn # type: str
+
+        # Name of a service to send out emails through
+        self.email_service = sso_conf.main.get('email_service', '') # type: str
 
         # From who the SMTP messages will be sent
         self.email_from = sso_conf.password_reset.email_from
@@ -324,13 +328,45 @@ class PasswordResetAPI:
 
 # ################################################################################################################################
 
-    def send_notification(self, user, token, _template_name=CommonSSO.EmailTemplate.PasswordResetLink):
-        # type: (SSOUser, str)
+    def _send_notification(
+        self,
+        user,        # type: SSOUser
+        token,       # type: str
+        smtp_message # type: SMTPMessage
+        ) -> 'None':
 
-        if not self.smtp_conn_name:
-            msg = 'Could not notify user `%s`, SSO SMTP connection not configured in sso.conf (main.smtp_conn)'
-            logger.warning(msg, user.user_id)
-            return
+        # If there is a user-defined service to send out emails, make use of it here
+        # and do not proceed further on our end ..
+        if self.email_service:
+
+            # .. prepare all the details for the custom service ..
+            ctx = PasswordResetNotifCtx()
+            ctx.user = user
+            ctx.token = token
+            ctx.smtp_message = smtp_message
+
+            # .. and invoke it.
+            self.server.invoke(self.email_service, ctx)
+
+        # .. otherwise, we send the notification ourselves ..
+        else:
+
+            # .. make sure there is an SMTP connection to send an email through ..
+            if not self.smtp_conn_name:
+                msg = 'Could not notify user `%s`, SSO SMTP connection not configured in sso.conf (main.smtp_conn)'
+                logger.warning(msg, user.user_id)
+                return
+
+            # .. get a handle to an SMTP connection ..
+            smtp_conn = self.server.worker_store.email_smtp_api.get(self.smtp_conn_name).conn # type: SMTPConnection
+
+            # .. and send it to the user.
+            smtp_conn.send(smtp_message)
+
+# ################################################################################################################################
+
+    def send_notification(self, user, token, _template_name=CommonSSO.EmailTemplate.PasswordResetLink):
+        # type: (SSOUser, str, str) -> None
 
         # Decrypt email for later user
         user_email = self.decrypt_func(user.email)
@@ -373,23 +409,20 @@ class PasswordResetAPI:
         # .. fill it in ..
         msg_body = template.format(**template_params)
 
-        # .. get a handle to an SMTP connection ..
-        smtp_conn = self.server.worker_store.email_smtp_api.get(self.smtp_conn_name).conn # type: SMTPConnection
-
         # .. create a new message ..
-        msg = SMTPMessage()
-        msg.is_html = True
+        smtp_message = SMTPMessage()
+        smtp_message.is_html = True
 
         # .. provide metadata ..
-        msg.subject = self.sso_conf.password_reset.get('email_title_' + pref_lang) or 'Password reset'
-        msg.to = user_email
-        msg.from_ = self.email_from
+        smtp_message.subject = self.sso_conf.password_reset.get('email_title_' + pref_lang) or 'Password reset'
+        smtp_message.to = user_email
+        smtp_message.from_ = self.email_from
 
         # .. attach payload ..
-        msg.body = msg_body
+        smtp_message.body = msg_body
 
-        # .. and send it to the user.
-        smtp_conn.send(msg)
+        # .. and send the message to the user.
+        self._send_notification(user, token, smtp_message)
 
 # ################################################################################################################################
 
