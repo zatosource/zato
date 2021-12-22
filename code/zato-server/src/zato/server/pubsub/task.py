@@ -659,6 +659,7 @@ class Message(PubSubMessage):
         self.pub_time_iso = ''
         self.ext_pub_time_iso = ''
         self.expiration_time_iso = ''
+        self.recv_time_iso = ''
 
 # ################################################################################################################################
 
@@ -701,6 +702,9 @@ class Message(PubSubMessage):
 
         if self.expiration_time:
             self.expiration_time_iso = cast_('str', datetime_from_ms(self.expiration_time))
+
+        if self.recv_time:
+            self.recv_time_iso = cast_('str', datetime_from_ms(self.recv_time))
 
 # ################################################################################################################################
 
