@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from io import StringIO
 from logging import DEBUG
 from simplejson import loads
+from time import sleep
 
 # Zato
 from zato.common.pubsub import PUBSUB
@@ -534,6 +535,7 @@ class HelperPubSubSource(Service):
 
         # .. the topic for that service has to be potentially created so we wait here until it appears ..
         self.pubsub.wait_for_topic(topic_name)
+        sleep(0.1)
 
         # .. now, once the message has been published, we know that the topic
         # .. for the receiving service exists, so we can assign a hook service to it ..
@@ -544,7 +546,7 @@ class HelperPubSubSource(Service):
         request = {}
 
         # These can be taken from the previous response as-is
-        keys = ('has_gd', 'id' ,'is_active', 'is_internal', 'max_depth_gd', 'max_depth_non_gd', 'name', 'on_no_subs_pub')
+        keys = ('has_gd', 'id','is_active', 'is_internal', 'max_depth_gd', 'max_depth_non_gd', 'name', 'on_no_subs_pub')
 
         # .. add the default keys ..
         for key in keys:
@@ -559,28 +561,19 @@ class HelperPubSubSource(Service):
         request['task_sync_interval'] = 500
         request['task_delivery_interval'] = 500
 
-        self.logger.info('QQQ-1')
-
         # .. now, we can edit the topic to set its hooks service
         response = self.invoke('zato.pubsub.topic.edit', request)
 
-        self.logger.info('QQQ-2')
-
         # .. once again, wait until the topic has been recreated ..
         self.pubsub.wait_for_topic(topic_name)
-
-        self.logger.info('QQQ-3')
+        sleep(0.1)
 
         # The second time around, the target service should not create a file
         data['target_needs_file'] = False
 
-        self.logger.info('QQQ-4')
-
         # .. and now, we can publish the message once more, this time around expecting
         # .. that the hook service will be invoked ..
         self.pubsub.publish(HelperPubSubTarget, data=data)
-
-        self.logger.info('QQQ-5')
 
 # ################################################################################################################################
 # ################################################################################################################################
