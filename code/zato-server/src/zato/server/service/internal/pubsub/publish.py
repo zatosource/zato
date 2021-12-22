@@ -573,14 +573,14 @@ class Publish(AdminService):
         try:
 
             # For later use
-            dt_now = datetime_from_ms(ctx.now * 1000)
+            dt_now = datetime_from_ms(ctx.now)
 
             # This is optional
             ext_pub_time = ctx.last_msg.get('ext_pub_time')
             if ext_pub_time:
                 if isinstance(ext_pub_time, str):
                     ext_pub_time = float(ext_pub_time)
-                ext_pub_time = datetime_from_ms(ext_pub_time * 1000)
+                ext_pub_time = datetime_from_ms(ext_pub_time)
 
             # Prepare a document to update the topic's metadata with
             if has_topic:
