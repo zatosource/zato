@@ -161,7 +161,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.deployment_key = ''
         self.has_gevent = None # type: bool
         self.delivery_store = None
-        self.static_config = None
+        self.static_config = None # type: Bunch()
         self.component_enabled = Bunch()
         self.client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
         self.broker_client = None # type: BrokerClient
@@ -1069,7 +1069,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def encrypt(self, data, prefix=SECRETS.PREFIX):
+    def encrypt(self, data:'any_', prefix:'str'=SECRETS.PREFIX) -> 'str':
         """ Returns data encrypted using server's CryptoManager.
         """
         if data:
