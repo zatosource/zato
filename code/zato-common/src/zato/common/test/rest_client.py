@@ -19,7 +19,8 @@ from bunch import Bunch, bunchify
 import requests
 
 # Zato
-from zato.common.test.config import TestConfig as Config
+from zato.common.crypto.api import CryptoManager
+from zato.common.test.config import TestConfig
 from zato.sso import status_code
 
 # ################################################################################################################################
@@ -85,6 +86,22 @@ class _RESTClient:
 
 # ################################################################################################################################
 
+    def init(self) -> 'None':
+
+        # Local aliases
+        sec_name = 'pubapi'
+
+        # A shortcut
+        command = sh.zato # type: ignore
+
+        # Generate a new password ..
+
+        # Invoke enmasse ..
+        out = command('service', 'invoke', TestConfig.server_location,
+            '--payload', '--input', config_path, '--replace-odb-objects', '--verbose')
+
+# ################################################################################################################################
+
     def _invoke(
         self,
         func,      # type: callable_
@@ -96,9 +113,9 @@ class _RESTClient:
         _unexpected=object() # type: any_
         ) -> 'Bunch':
 
-        address = Config.server_address.format(url_path)
+        address = TestConfig.server_address.format(url_path)
         if self.needs_current_app:
-            request['current_app'] = Config.current_app
+            request['current_app'] = TestConfig.current_app
         data = dumps(request)
 
         logger.info('Invoking %s %s with %s', func_name, address, data)
