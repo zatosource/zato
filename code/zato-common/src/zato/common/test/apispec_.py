@@ -47,9 +47,16 @@ class User(Model):
 
 @dataclass
 class Account(Model):
+
+    # This description is above the field
     account_no:      int
-    account_type:    str
+
+    account_type:    str # This is an inline description
+
     account_segment: str
+    """ This is a multiline description,
+    it has two lines.
+    """
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,9 +91,6 @@ class CyMyService(Service):
 
     It has a docstring.
     """
-
-    invokes = ['abc.def', 'qwe.rty']
-
     class SimpleIO:
         """
         * input_req_user_id - This is the first line.
@@ -118,9 +122,6 @@ class DataclassMyService(Service):
 
     It has a docstring.
     """
-
-    invokes = ['abc.def', 'qwe.rty']
-
     class SimpleIO:
         input  = MyRequest
         output = MyResponse
