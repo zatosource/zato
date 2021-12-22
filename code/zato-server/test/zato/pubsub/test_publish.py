@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from datetime import datetime, time, timezone
+from datetime import datetime, timezone
 from json import loads
 from tempfile import gettempdir
 from unittest import main
@@ -22,7 +22,6 @@ from zato.common.util.api import new_cid
 from zato.common.util.file_system import wait_for_file
 from zato.common.util.open_ import open_r
 from zato.common.test.rest_client import RESTClientTestCase
-from zato.common.util.time_ import local_tz
 
 # ################################################################################################################################
 # ################################################################################################################################
