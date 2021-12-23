@@ -11,12 +11,13 @@ from copy import deepcopy
 from unittest import main
 
 # Zato
-from zato.common.test.apispec_ import DataclassMyService, run_common_apispec_assertions, service_name, sio_config
+from zato.common.test.apispec_ import run_common_apispec_assertions, service_name, sio_config
 from zato.common.api import APISPEC, URL_TYPE
 from zato.common.marshal_.simpleio import DataClassSimpleIO
 from zato.common.test import BaseSIOTestCase
 from zato.server.apispec.spec.core import Generator
 from zato.server.apispec.spec.openapi import OpenAPIGenerator
+from zato.server.service.internal.helpers import MyDataclassService
 
 # ################################################################################################################################
 
@@ -35,7 +36,7 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
 
     def test_dataclass_generate_open_api(self):
 
-        MyClass = deepcopy(DataclassMyService)
+        MyClass = deepcopy(MyDataclassService)
         DataClassSimpleIO.attach_sio(None, self.get_server_config(), MyClass)
 
         service_store_services = {
