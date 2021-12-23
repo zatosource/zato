@@ -116,6 +116,7 @@ class CommandStore:
              hl7_                as hl7_mod,                 \
              ide                 as ide_mod,                 \
              info                as info_mod,                \
+             openapi_            as openapi_mod,             \
              quickstart          as quickstart_mod,          \
              service             as service_mod,             \
              sso                 as sso_mod,                 \
@@ -348,6 +349,17 @@ class CommandStore:
         info.add_argument('path', help='Path to a Zato component')
         info.set_defaults(command='info')
         self.add_opts(info, info_mod.Info.opts)
+
+        #
+        # openapi
+        #
+        openapi = subs.add_parser(
+            'openapi',
+            description='OpenAPI specification generator',
+            parents=[base_parser])
+        openapi.set_defaults(command='openapi')
+        openapi.add_argument('path', help='Path to a Zato server')
+        self.add_opts(openapi, openapi_mod.OpenAPI.opts)
 
         #
         # reset-totp-key
