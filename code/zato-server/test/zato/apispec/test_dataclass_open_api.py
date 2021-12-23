@@ -43,7 +43,6 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         MyClass = deepcopy(DataclassMyService)
         DataClassSimpleIO.attach_sio(None, self.get_server_config(), MyClass)
 
-
         service_store_services = {
             'my.impl.name': {
                 'name': service_name,
