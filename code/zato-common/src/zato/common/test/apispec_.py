@@ -6,9 +6,6 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from typing import List as list_
-
 # Bunch
 from bunch import Bunch
 
@@ -16,16 +13,15 @@ from bunch import Bunch
 from yaml import FullLoader, load as yaml_load
 
 # Zato
-from zato.common.ext.dataclasses import dataclass
-from zato.common.typing_ import optional
 from zato.common.util.file_system import fs_safe_name
-from zato.server.service import Model, Service
+from zato.server.service import Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.test import BaseSIOTestCase
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,61 +42,6 @@ sio_config.bool.exact = set()
 sio_config.bool.suffix = set()
 
 service_name = 'my.service'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass
-class User(Model):
-
-    user_name:    str # This is a string
-
-    address_data: dict            # This is a dict
-    prefs_dict:   optional[dict]  # This is an optional dict
-
-    phone_list:   list            # This is a list
-    email_list:   optional[list]  # This is an optional list
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass
-class Account(Model):
-
-    # This description is above the field
-    account_no:      int
-
-    account_type:    str # This is an inline description
-
-    account_segment: str
-    """ This is a multiline description,
-    it has two lines.
-    """
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass
-class AccountList(Model):
-    account_list: list_[Account]
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass
-class MyRequest(Model):
-    request_id: int
-    user: User
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False)
-class MyResponse(Model):
-    current_balance: int
-    last_account_no: int = 567
-    pref_account: Account
-    account_list: AccountList
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -136,18 +77,6 @@ class CyMyService(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class DataclassMyService(Service):
-    """ This is my service.
-
-    It has a docstring.
-    """
-    class SimpleIO:
-        input  = MyRequest
-        output = MyResponse
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def run_common_apispec_assertions(self:'BaseSIOTestCase', data:'str') -> 'None':
 
     result = yaml_load(data, FullLoader)
@@ -176,9 +105,9 @@ def run_common_apispec_assertions(self:'BaseSIOTestCase', data:'str') -> 'None':
     #
     schemas = components['schemas']
 
-    user_class         = 'zato.common.test.apispec_.User'
-    account_class      = 'zato.common.test.apispec_.Account'
-    account_list_class = 'zato.common.test.apispec_.AccountList'
+    user_class         = 'zato.server.service.internal.helpers.MyUser'
+    account_class      = 'zato.server.service.internal.helpers.MyAccount'
+    account_list_class = 'zato.server.service.internal.helpers.MyAccountList'
 
     self.assertListEqual(sorted(schemas), [
         'request_my_service',
