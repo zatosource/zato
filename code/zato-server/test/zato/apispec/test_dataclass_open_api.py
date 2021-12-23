@@ -10,8 +10,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from copy import deepcopy
 from unittest import main
 
-# Bunch
-from bunch import bunchify
 
 # PyYAML
 from yaml import FullLoader, load as yaml_load
@@ -28,8 +26,7 @@ from zato.server.apispec.spec.openapi import OpenAPIGenerator
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 
@@ -59,8 +56,7 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
 
         generator = Generator(service_store_services, sio_config, include, exclude, query, tags, needs_sio_desc=False)
 
-        info_dict  = generator.get_info()
-        info_bunch = bunchify(info_dict) # type: any_
+        initial_info = generator.get_info() # type: any_
 
         channel_data = [{
             'service_name': service_name,
@@ -73,40 +69,39 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         needs_rest_channels = True
         api_invoke_path = APISPEC.GENERIC_INVOKE_PATH
 
-        open_api_generator = OpenAPIGenerator(info_bunch, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
+        open_api_generator = OpenAPIGenerator(initial_info, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
 
         result = open_api_generator.generate()
 
-        f = open('/tmp/zzz.yaml', 'w')
+        f = open('/home/dsuch/tmp/zzz.yaml', 'w')
         f.write(result)
         f.close()
 
         result = yaml_load(result, FullLoader)
-        result = bunchify(result)
 
-        components = result.components # type: Bunch
-        info       = result.info       # type: Bunch
-        openapi    = result.openapi    # type: Bunch
-        paths      = result.paths      # type: Bunch
-        servers    = result.servers    # type: Bunch
+        components = result['components'] # type: anydict
+        info       = result['info']       # type: anydict
+        openapi    = result['openapi']    # type: anydict
+        paths      = result['paths']      # type: anydict
+        servers    = result['servers']    # type: anydict
 
         #
         # Servers
         #
-        localhost = servers[0]
-        self.assertEqual(localhost.url, 'http://127.0.0.1:17010')
+        localhost = servers[0] # type: anydict
+        self.assertEqual(localhost['url'], 'http://127.0.0.1:17010')
 
         #
         # Info
         #
-        self.assertEqual(info.title, 'API spec')
-        self.assertEqual(info.version, '1.0')
-        self.assertEqual(openapi, '3.0.2')
+        self.assertEqual(info['title'], 'API spec')
+        self.assertEqual(info['version'], '1.0')
+        self.assertEqual(openapi, '3.0.3')
 
         #
         # Schemas
         #
-        schemas = components.schemas
+        schemas = components['schemas']
 
         user_class         = 'zato.common.test.apispec_.User'
         account_class      = 'zato.common.test.apispec_.Account'
@@ -120,24 +115,23 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
             f'{user_class}',
         ])
 
-        user         = schemas[f'{user_class}']        # type: Bunch
-        account      = schemas[f'{account_class}']     # type: Bunch
-        account_list = schemas[f'{account_list_class}'] # type: Bunch
+        user         = schemas[f'{user_class}']        # type: anydict
+        account      = schemas[f'{account_class}']     # type: anydict
+        account_list = schemas[f'{account_list_class}'] # type: anydict
 
-        request_my_service  = schemas['request_my_service']  # type: Bunch
-        response_my_service = schemas['response_my_service'] # type: Bunch
+        request_my_service  = schemas['request_my_service']  # type: anydict
+        response_my_service = schemas['response_my_service'] # type: anydict
 
         #
         # Request my.service
         #
-        self.assertEqual(request_my_service.title, 'Request object for my.service')
-        self.assertEqual(request_my_service.type,  'object')
+        self.assertEqual(request_my_service['title'], 'Request object for my.service')
+        self.assertEqual(request_my_service['type'],  'object')
 
-        self.assertListEqual(request_my_service.required, ['request_id', 'user'])
-        self.assertDictEqual(request_my_service.properties, {
+        self.assertListEqual(request_my_service['required'], ['request_id', 'user'])
+        self.assertDictEqual(request_my_service['properties'], {
             'request_id': {
                 'description': '',
-                'subtype':     'int32',
                 'type':        'integer',
             },
             'user': {
@@ -149,23 +143,21 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         #
         # Response my.service
         #
-        self.assertEqual(response_my_service.title, 'Response object for my.service')
-        self.assertEqual(response_my_service.type,  'object')
+        self.assertEqual(response_my_service['title'], 'Response object for my.service')
+        self.assertEqual(response_my_service['type'],  'object')
 
-        self.assertListEqual(response_my_service.required, ['account_list', 'current_balance', 'pref_account'])
-        self.assertDictEqual(response_my_service.properties, {
+        self.assertListEqual(response_my_service['required'], ['account_list', 'current_balance', 'pref_account'])
+        self.assertDictEqual(response_my_service['properties'], {
             'account_list': {
                 '$ref':        f'#/components/schemas/{account_list_class}',
                 'description': '',
             },
             'current_balance': {
                 'description': '',
-                'subtype':     'int32',
                 'type':        'integer',
             },
             'last_account_no': {
                 'description': '',
-                'subtype':     'int32',
                 'type':        'integer',
             },
             'pref_account': {
@@ -177,22 +169,19 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         #
         # Account schema
         #
-        self.assertListEqual(account.required, ['account_no', 'account_segment', 'account_type'])
-        self.assertDictEqual(account.properties, {
+        self.assertListEqual(account['required'], ['account_no', 'account_segment', 'account_type'])
+        self.assertDictEqual(account['properties'], {
             'account_no': {
                 'description': 'This description is above the field',
-                'subtype':     'int32',
                 'type':        'integer',
             },
             'account_segment': {
                 'description': """This is a multiline description,
 it has two lines.""",
-                'subtype':     'string',
                 'type':        'string',
             },
             'account_type': {
                 'description': 'This is an inline description',
-                'subtype':     'string',
                 'type':        'string',
             },
         })
@@ -200,8 +189,8 @@ it has two lines.""",
         #
         # AccountList schema
         #
-        self.assertListEqual(account_list.required, ['account_list'])
-        self.assertDictEqual(account_list.properties, {
+        self.assertListEqual(account_list['required'], ['account_list'])
+        self.assertDictEqual(account_list['properties'], {
             'account_list': {
                 'description': '',
                 'type':        'array',
@@ -214,32 +203,76 @@ it has two lines.""",
         #
         # User schema
         #
-        self.assertListEqual(user.required, ['user_name'])
-        self.assertDictEqual(user.properties, {
+        self.assertListEqual(user['required'], ['address_data', 'phone_list', 'user_name'])
+        self.assertDictEqual(user['properties'], {
+            'address_data': {
+                'description': 'This is a dict',
+                'type': 'object',
+                'additionalProperties': {},
+            },
+            'email_list': {
+                'description': 'This is an optional list',
+                'type': 'array',
+                'items': {}
+            },
+            'prefs_dict': {
+                'description': 'This is an optional dict',
+                'type': 'object',
+                'additionalProperties': {},
+            },
+            'phone_list': {
+                'description': 'This is a list',
+                'type': 'array',
+                'items': {}
+            },
             'user_name': {
-                'description': '',
-                'subtype':     'string',
-                'type':        'string',
-            }
+                'description': 'This is a string',
+                'type': 'string',
+            },
         })
 
         localhost = servers[0]
-        self.assertEqual(localhost.url, 'http://127.0.0.1:17010')
+        self.assertEqual(localhost['url'], 'http://127.0.0.1:17010')
 
         self.assertEqual(len(paths), 2)
 
+        #
+        # Information generic to all channels
+        #
         for url_path in ['/test/{phone_number}', '/zato/api/invoke/my.service']:
 
-            my_service_path = paths[url_path] # type: Bunch
-            post = my_service_path.post
+            my_service_path = paths[url_path] # type: anydict
+            post = my_service_path['post']    # type: anydict
 
-            self.assertListEqual(post.consumes, ['application/json'])
-            self.assertEqual(post.operationId, 'post_{}'.format(fs_safe_name(url_path)))
-            self.assertTrue(post.requestBody.required)
+            self.assertEqual(post['operationId'], 'post_{}'.format(fs_safe_name(url_path)))
+            self.assertTrue(post['requestBody']['required'])
             self.assertEqual(
-                post.requestBody.content['application/json'].schema['$ref'], '#/components/schemas/request_my_service')
+                post['requestBody']['content']['application/json']['schema']['$ref'],
+                '#/components/schemas/request_my_service')
             self.assertEqual(
-                post.responses['200'].content['application/json'].schema['$ref'], '#/components/schemas/response_my_service')
+                post['responses']['200']['content']['application/json']['schema']['$ref'],
+                '#/components/schemas/response_my_service')
+
+        #
+        # Only the dedicated channel gets path parameters ..
+        #
+        path   = paths['/test/{phone_number}']
+        params = path['post']['parameters']
+
+        self.assertListEqual(params, [{
+            'description': '',
+            'in': 'path',
+            'name': 'phone_number',
+            'required': True,
+            'schema': {
+                'format': 'string',
+                'type': 'string'
+            }
+        }])
+
+        # .. whereas the generic API invoker has no path parameters.
+        path   = paths['/zato/api/invoke/my.service']
+        self.assertNotIn('parameters', path['post'])
 
 # ################################################################################################################################
 # ################################################################################################################################

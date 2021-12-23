@@ -14,6 +14,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common.ext.dataclasses import dataclass
+from zato.common.typing_ import optional
 from zato.server.service import Model, Service
 
 # ################################################################################################################################
@@ -40,7 +41,14 @@ service_name = 'my.service'
 
 @dataclass
 class User(Model):
-    user_name: str
+
+    user_name:    str # This is a string
+
+    address_data: dict            # This is a dict
+    prefs_dict:   optional[dict]  # This is an optional dict
+
+    phone_list:   list            # This is a list
+    email_list:   optional[list]  # This is an optional list
 
 # ################################################################################################################################
 # ################################################################################################################################
