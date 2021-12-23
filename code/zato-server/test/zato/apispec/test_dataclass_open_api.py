@@ -133,7 +133,6 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         self.assertDictEqual(request_my_service['properties'], {
             'request_id': {
                 'description': '',
-                'subtype':     'int32',
                 'type':        'integer',
             },
             'user': {
@@ -156,12 +155,10 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
             },
             'current_balance': {
                 'description': '',
-                'subtype':     'int32',
                 'type':        'integer',
             },
             'last_account_no': {
                 'description': '',
-                'subtype':     'int32',
                 'type':        'integer',
             },
             'pref_account': {
@@ -177,18 +174,15 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         self.assertDictEqual(account['properties'], {
             'account_no': {
                 'description': 'This description is above the field',
-                'subtype':     'int32',
                 'type':        'integer',
             },
             'account_segment': {
                 'description': """This is a multiline description,
 it has two lines.""",
-                'subtype':     'string',
                 'type':        'string',
             },
             'account_type': {
                 'description': 'This is an inline description',
-                'subtype':     'string',
                 'type':        'string',
             },
         })
@@ -219,22 +213,18 @@ it has two lines.""",
             },
             'phone_list': {
                 'description': '',
-                'subtype':     'array',
                 'type':        'array',
             },
             'address_data': {
                 'description': '',
-                'subtype':     'object',
                 'type':        'object',
             },
             'email_list': {
                 'description': '',
-                'subtype':     'array',
                 'type':        'array',
             },
             'prefs_dict': {
                 'description': '',
-                'subtype':     'object',
                 'type':        'object',
             },
         })
