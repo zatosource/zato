@@ -19,8 +19,10 @@ import sh
 from sh import ErrorReturnCode
 
 # Zato
+from zato.common.test.apispec_ import run_common_apispec_assertions
 from zato.common.test.config import TestConfig
 from zato.common.test import rand_string, rand_unicode
+from zato.common.util.open_ import open_r
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,56 +36,6 @@ logger = getLogger(__name__)
 if 0:
     from sh import RunningCommand
     from zato.common.typing_ import any_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-template = """
-
-channel_plain_http:
-
-  - connection: channel
-    is_active: true
-    is_internal: false
-    merge_url_params_req: true
-    name: /test/enmasse1/{test_suffix}
-    params_pri: channel-params-over-msg
-    sec_def: zato-no-security
-    service: pub.zato.ping
-    service_name: pub.zato.ping
-    transport: plain_http
-    url_path: /test/enmasse1/{test_suffix}
-
-  - connection: channel
-    is_active: true
-    is_internal: false
-    merge_url_params_req: true
-    name: /test/enmasse2/{test_suffix}
-    params_pri: channel-params-over-msg
-    sec_def: zato-no-security
-    service: pub.zato.ping
-    service_name: pub.zato.ping
-    transport: plain_http
-    url_path: /test/enmasse2/{test_suffix}
-
-zato_generic_connection:
-    - address: ws://localhost:12345
-      cache_expiry: 0
-      has_auto_reconnect: true
-      is_active: true
-      is_channel: true
-      is_internal: false
-      is_outconn: false
-      is_zato: true
-      name: test.enmasse.{test_suffix}
-      on_connect_service_name: pub.zato.ping
-      on_message_service_name: pub.zato.ping
-      pool_size: 1
-      sec_use_rbac: false
-      security_def: ZATO_NONE
-      subscription_list:
-      type_: outconn-wsx
-"""
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -151,6 +103,13 @@ class APISpecTestCase(TestCase):
         try:
             # Invoke openapi to create a definition ..
             self._invoke_command(file_path)
+
+            # .. read it back ..
+            f = open_r(file_path)
+            data = f.read()
+            f.close()
+
+            run_common_apispec_assertions(self, data, with_all_paths=False)
 
         except ErrorReturnCode as e:
 
