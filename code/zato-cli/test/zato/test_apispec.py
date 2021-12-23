@@ -117,7 +117,7 @@ class CommandLineTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def _invoke_enmasse(self, config_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
+    def _invoke_apispec(self, config_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
 
         # A shortcut
         command = sh.zato # type: ignore
