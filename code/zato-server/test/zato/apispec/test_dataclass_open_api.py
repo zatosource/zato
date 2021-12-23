@@ -74,7 +74,7 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
 
         result = open_api_generator.generate()
 
-        f = open('/tmp/zzz.yaml', 'w')
+        f = open('/home/dsuch/tmp/zzz.yaml', 'w')
         f.write(result)
         f.close()
 

@@ -41,11 +41,14 @@ service_name = 'my.service'
 
 @dataclass
 class User(Model):
-    user_name:    str
-    phone_list:   list
-    address_data: dict
-    email_list:   optional[list]
-    prefs_dict:   optional[dict]
+
+    user_name:    str # This is a string
+
+    address_data: dict            # This is a dict
+    prefs_dict:   optional[dict]  # This is an optional dict
+
+    phone_list:   list            # This is a list
+    email_list:   optional[list]  # This is an optional list
 
 # ################################################################################################################################
 # ################################################################################################################################
