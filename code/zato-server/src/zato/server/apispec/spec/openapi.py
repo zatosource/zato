@@ -12,6 +12,9 @@ from logging import getLogger
 # Bunch
 from bunch import Bunch, bunchify
 
+# Parse
+from parse import parse
+
 # PyYAML
 from yaml import dump as yaml_dump, Dumper as YAMLDumper
 
@@ -331,7 +334,29 @@ class OpenAPIGenerator:
                 post['responses']   = responses
 
                 if channel_params:
-                    post['parameters'] = channel_params
+
+                    # Whether this "url_path" should receive the channel parameters
+                    should_attach = True
+
+                    # The channel parameters dictionary needs to be ignored
+                    # if the channel is actually an API invoker, i.e. these parameters
+                    # should only be used with channels that are dedicated to a service
+                    # because this is where they were extracted from.
+
+                    # Iterate over all the API invokers ..
+                    for path_pattern in self.api_invoke_path:
+
+                        # .. if we have a match, it means that "url_path" is actually
+                        # .. a path pointing to an API invoker, in which case we ignore it,
+                        # .. meaning that we will not attach channel parameters to it.
+                        if parse(path_pattern, url_path):
+                            should_attach = False
+                            break
+
+                    # If we are here, it means that "url_path" is a standalone REST channel,
+                    # which means that it will get its path parameters.
+                    if should_attach:
+                        post['parameters'] = channel_params
 
         return yaml_dump(out.toDict(), Dumper=YAMLDumper, default_flow_style=False)
 
