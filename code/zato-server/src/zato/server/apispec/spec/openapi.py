@@ -141,7 +141,12 @@ class OpenAPIGenerator:
             # .. while for simple types, these two will exist ..
             else:
                 property_map['type'] = info.type
-                property_map['subtype'] = info.subtype
+
+                if info.type == 'array':
+                    property_map['items'] = {}
+
+                elif info.type == 'object':
+                    property_map['additionalProperties'] = {}
 
             # .. now, we can assign the property to its container.
             properties[info.name] = property_map
@@ -298,10 +303,12 @@ class OpenAPIGenerator:
                 post = out_path.setdefault('post', Bunch()) # type: Bunch
 
                 operation_id = 'post_{}'.format(fs_safe_name(url_path))
-                consumes = ['application/json']
 
-                request_ref  = '#/components/schemas/{}'.format(self._get_request_name(service_name_fs))
-                response_ref = '#/components/schemas/{}'.format(self._get_response_name(service_name_fs))
+                request_name  = self._get_request_name(service_name_fs)
+                response_name = self._get_response_name(service_name_fs)
+
+                request_ref  = '#/components/schemas/{}'.format(request_name)
+                response_ref = '#/components/schemas/{}'.format(response_name)
 
                 request_body = Bunch()
                 request_body.required = True
@@ -313,13 +320,13 @@ class OpenAPIGenerator:
 
                 responses = Bunch()
                 responses['200'] = Bunch()
+                responses['200'].description = ''
                 responses['200'].content = Bunch()
                 responses['200'].content['application/json'] = Bunch()
                 responses['200'].content['application/json'].schema = Bunch()
                 responses['200'].content['application/json'].schema['$ref'] = response_ref
 
                 post['operationId'] = operation_id
-                post['consumes']    = consumes
                 post['requestBody'] = request_body
                 post['responses']   = responses
 
