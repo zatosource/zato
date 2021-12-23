@@ -12,6 +12,9 @@ from logging import getLogger
 # Bunch
 from bunch import Bunch, bunchify
 
+# Parse
+from parse import parse
+
 # PyYAML
 from yaml import dump as yaml_dump, Dumper as YAMLDumper
 
@@ -141,7 +144,12 @@ class OpenAPIGenerator:
             # .. while for simple types, these two will exist ..
             else:
                 property_map['type'] = info.type
-                property_map['subtype'] = info.subtype
+
+                if info.type == 'array':
+                    property_map['items'] = {}
+
+                elif info.type == 'object':
+                    property_map['additionalProperties'] = {}
 
             # .. now, we can assign the property to its container.
             properties[info.name] = property_map
@@ -220,9 +228,13 @@ class OpenAPIGenerator:
 # ################################################################################################################################
 
     def generate(self) -> 'str':
+
+        # Local aliases
+        sec_name = 'BasicAuth'
+
         # Basic information, always available
         out = Bunch()
-        out.openapi = '3.0.2'
+        out.openapi = '3.0.3'
         out.info = {
             'title': 'API spec',
             'version': '1.0',
@@ -232,6 +244,16 @@ class OpenAPIGenerator:
         # Responses to refer to in paths
         out.components = Bunch()
         out.components.schemas = Bunch()
+
+        # Security definition ..
+        out.components['securitySchemes'] = {}
+        out.components['securitySchemes'][sec_name] = {}
+        out.components['securitySchemes'][sec_name]['type']   = 'http'
+        out.components['securitySchemes'][sec_name]['scheme'] = 'basic'
+
+        # .. apply the definition globally.
+        out['security'] = []
+        out['security'].append({sec_name:[]})
 
         # REST paths
         out.paths = Bunch()
@@ -298,10 +320,12 @@ class OpenAPIGenerator:
                 post = out_path.setdefault('post', Bunch()) # type: Bunch
 
                 operation_id = 'post_{}'.format(fs_safe_name(url_path))
-                consumes = ['application/json']
 
-                request_ref  = '#/components/schemas/{}'.format(self._get_request_name(service_name_fs))
-                response_ref = '#/components/schemas/{}'.format(self._get_response_name(service_name_fs))
+                request_name  = self._get_request_name(service_name_fs)
+                response_name = self._get_response_name(service_name_fs)
+
+                request_ref  = '#/components/schemas/{}'.format(request_name)
+                response_ref = '#/components/schemas/{}'.format(response_name)
 
                 request_body = Bunch()
                 request_body.required = True
@@ -313,18 +337,40 @@ class OpenAPIGenerator:
 
                 responses = Bunch()
                 responses['200'] = Bunch()
+                responses['200'].description = ''
                 responses['200'].content = Bunch()
                 responses['200'].content['application/json'] = Bunch()
                 responses['200'].content['application/json'].schema = Bunch()
                 responses['200'].content['application/json'].schema['$ref'] = response_ref
 
                 post['operationId'] = operation_id
-                post['consumes']    = consumes
                 post['requestBody'] = request_body
                 post['responses']   = responses
 
                 if channel_params:
-                    post['parameters'] = channel_params
+
+                    # Whether this "url_path" should receive the channel parameters
+                    should_attach = True
+
+                    # The channel parameters dictionary needs to be ignored
+                    # if the channel is actually an API invoker, i.e. these parameters
+                    # should only be used with channels that are dedicated to a service
+                    # because this is where they were extracted from.
+
+                    # Iterate over all the API invokers ..
+                    for path_pattern in self.api_invoke_path:
+
+                        # .. if we have a match, it means that "url_path" is actually
+                        # .. a path pointing to an API invoker, in which case we ignore it,
+                        # .. meaning that we will not attach channel parameters to it.
+                        if parse(path_pattern, url_path):
+                            should_attach = False
+                            break
+
+                    # If we are here, it means that "url_path" is a standalone REST channel,
+                    # which means that it will get its path parameters.
+                    if should_attach:
+                        post['parameters'] = channel_params
 
         return yaml_dump(out.toDict(), Dumper=YAMLDumper, default_flow_style=False)
 
