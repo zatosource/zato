@@ -94,6 +94,7 @@ class _RESTClient:
 
         self._api_invoke_username = 'pubapi'
         self._api_invoke_password = ''
+        self._auth = None
 
 # ################################################################################################################################
 
