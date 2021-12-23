@@ -11,12 +11,18 @@ import os
 from logging import basicConfig, getLogger, WARN
 from tempfile import gettempdir
 from traceback import format_exc
-
 from unittest import main, TestCase
+
+# openapi-spec-validator
+from openapi_spec_validator import validate_spec
+from openapi_spec_validator.readers import read_from_filename
 
 # sh
 import sh
 from sh import ErrorReturnCode
+
+# PyYAML
+from yaml import safe_load
 
 # Zato
 from zato.common.test.apispec_ import run_common_apispec_assertions
@@ -109,7 +115,12 @@ class APISpecTestCase(TestCase):
             data = f.read()
             f.close()
 
+            # .. run our assertions ..
             run_common_apispec_assertions(self, data, with_all_paths=False)
+
+            # .. and validate it once more using an external library ..
+            spec_dict, _ = read_from_filename(file_path)
+            validate_spec(spec_dict)
 
         except ErrorReturnCode as e:
 
