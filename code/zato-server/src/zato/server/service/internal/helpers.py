@@ -638,9 +638,14 @@ class MyDataclassService(Service):
 
     It has a docstring.
     """
+    name = 'helpers.dataclass-service'
+
     class SimpleIO:
         input  = MyRequest
         output = MyResponse
+
+    def handle(self):
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
