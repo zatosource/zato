@@ -228,6 +228,10 @@ class OpenAPIGenerator:
 # ################################################################################################################################
 
     def generate(self) -> 'str':
+
+        # Local aliases
+        sec_name = 'BasicAuth'
+
         # Basic information, always available
         out = Bunch()
         out.openapi = '3.0.2'
@@ -240,6 +244,16 @@ class OpenAPIGenerator:
         # Responses to refer to in paths
         out.components = Bunch()
         out.components.schemas = Bunch()
+
+        # Security definition ..
+        out.components['securitySchemes'] = {}
+        out.components['securitySchemes'][sec_name] = {}
+        out.components['securitySchemes'][sec_name]['type']   = 'http'
+        out.components['securitySchemes'][sec_name]['scheme'] = 'basic'
+
+        # .. apply the definition globally.
+        out['security'] = []
+        out['security'].append({sec_name:[]})
 
         # REST paths
         out.paths = Bunch()
