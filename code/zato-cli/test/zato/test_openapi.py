@@ -21,9 +21,6 @@ from openapi_spec_validator.readers import read_from_filename
 import sh
 from sh import ErrorReturnCode
 
-# PyYAML
-from yaml import safe_load
-
 # Zato
 from zato.common.test.apispec_ import run_common_apispec_assertions
 from zato.common.test.config import TestConfig
