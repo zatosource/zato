@@ -43,6 +43,8 @@ class PubSubTestCase(RESTClientTestCase):
     needs_current_app     = False
     payload_only_messages = False
 
+# ################################################################################################################################
+
     def setUp(self) -> None:
         super().setUp()
         self.rest_client.init()

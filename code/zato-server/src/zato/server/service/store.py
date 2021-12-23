@@ -1137,7 +1137,8 @@ class ServiceStore:
         # type: (str, bool) -> list
 
         try:
-            return self.import_services_from_module_object(import_module(mod_name), is_internal)
+            module_object = import_module(mod_name)
+            return self.import_services_from_module_object(module_object, is_internal)
         except Exception as e:
             logger.warning('Could not import module `%s` (internal:%d) -> `%s`', mod_name, is_internal, e.args)
             return []
