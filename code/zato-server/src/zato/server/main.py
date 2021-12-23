@@ -376,7 +376,7 @@ if __name__ == '__main__':
         server_base_dir = env_server_base_dir
         cmd_line_options = {
             'fg':True,
-            'sync_internal':False,
+            'sync_internal':True,
             'secret_key':'',
             'stderr_path':None,
         }
