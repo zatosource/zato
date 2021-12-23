@@ -1,4 +1,5 @@
 mypy
+openapi3
 pylint
 selenium
 selenium-wire
