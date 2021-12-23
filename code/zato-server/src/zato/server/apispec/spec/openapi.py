@@ -234,7 +234,7 @@ class OpenAPIGenerator:
 
         # Basic information, always available
         out = Bunch()
-        out.openapi = '3.0.2'
+        out.openapi = '3.0.3'
         out.info = {
             'title': 'API spec',
             'version': '1.0',
