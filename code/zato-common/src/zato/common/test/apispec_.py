@@ -20,7 +20,7 @@ from zato.server.service import Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.test import BaseSIOTestCase
+    from unittest import TestCase
     from zato.common.typing_ import anydict
 
 # ################################################################################################################################
@@ -41,7 +41,7 @@ sio_config.bool.prefix = set()
 sio_config.bool.exact = set()
 sio_config.bool.suffix = set()
 
-service_name = 'my.service'
+service_name = 'helpers.dataclass-service'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,7 +77,7 @@ class CyMyService(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def run_common_apispec_assertions(self:'BaseSIOTestCase', data:'str') -> 'None':
+def run_common_apispec_assertions(self:'TestCase', data:'str', with_all_paths:'bool'=True) -> 'None':
 
     result = yaml_load(data, FullLoader)
 
@@ -110,8 +110,8 @@ def run_common_apispec_assertions(self:'BaseSIOTestCase', data:'str') -> 'None':
     account_list_class = 'zato.server.service.internal.helpers.MyAccountList'
 
     self.assertListEqual(sorted(schemas), [
-        'request_my_service',
-        'response_my_service',
+        'request_helpers_dataclass_service',
+        'response_helpers_dataclass_service',
         f'{account_class}',
         f'{account_list_class}',
         f'{user_class}',
@@ -121,17 +121,17 @@ def run_common_apispec_assertions(self:'BaseSIOTestCase', data:'str') -> 'None':
     account      = schemas[f'{account_class}']     # type: anydict
     account_list = schemas[f'{account_list_class}'] # type: anydict
 
-    request_my_service  = schemas['request_my_service']  # type: anydict
-    response_my_service = schemas['response_my_service'] # type: anydict
+    request  = schemas['request_helpers_dataclass_service']  # type: anydict
+    response = schemas['response_helpers_dataclass_service'] # type: anydict
 
     #
     # Request my.service
     #
-    self.assertEqual(request_my_service['title'], 'Request object for my.service')
-    self.assertEqual(request_my_service['type'],  'object')
+    self.assertEqual(request['title'], 'Request object for helpers.dataclass-service')
+    self.assertEqual(request['type'],  'object')
 
-    self.assertListEqual(request_my_service['required'], ['request_id', 'user'])
-    self.assertDictEqual(request_my_service['properties'], {
+    self.assertListEqual(request['required'], ['request_id', 'user'])
+    self.assertDictEqual(request['properties'], {
         'request_id': {
             'description': '',
             'type':        'integer',
@@ -145,11 +145,11 @@ def run_common_apispec_assertions(self:'BaseSIOTestCase', data:'str') -> 'None':
     #
     # Response my.service
     #
-    self.assertEqual(response_my_service['title'], 'Response object for my.service')
-    self.assertEqual(response_my_service['type'],  'object')
+    self.assertEqual(response['title'], 'Response object for helpers.dataclass-service')
+    self.assertEqual(response['type'],  'object')
 
-    self.assertListEqual(response_my_service['required'], ['account_list', 'current_balance', 'pref_account'])
-    self.assertDictEqual(response_my_service['properties'], {
+    self.assertListEqual(response['required'], ['account_list', 'current_balance', 'pref_account'])
+    self.assertDictEqual(response['properties'], {
         'account_list': {
             '$ref':        f'#/components/schemas/{account_list_class}',
             'description': '',
@@ -236,44 +236,56 @@ it has two lines.""",
     localhost = servers[0]
     self.assertEqual(localhost['url'], 'http://127.0.0.1:17010')
 
-    self.assertEqual(len(paths), 2)
+    if with_all_paths:
+
+        # Both /test/{phone_number} and /zato/api/invoke/helpers.dataclass-service
+        expected_len_paths = 2
+        url_paths = ['/test/{phone_number}', '/zato/api/invoke/helpers.dataclass-service']
+    else:
+
+        # Only /zato/api/invoke/helpers.dataclass-service
+        expected_len_paths = 1
+        url_paths = ['/zato/api/invoke/helpers.dataclass-service']
+
+    self.assertEqual(len(paths), expected_len_paths)
 
     #
     # Information generic to all channels
     #
-    for url_path in ['/test/{phone_number}', '/zato/api/invoke/my.service']:
+    for url_path in url_paths:
 
-        my_service_path = paths[url_path] # type: anydict
-        post = my_service_path['post']    # type: anydict
+        service_path = paths[url_path] # type: anydict
+        post = service_path['post']    # type: anydict
 
         self.assertEqual(post['operationId'], 'post_{}'.format(fs_safe_name(url_path)))
         self.assertTrue(post['requestBody']['required'])
         self.assertEqual(
             post['requestBody']['content']['application/json']['schema']['$ref'],
-            '#/components/schemas/request_my_service')
+            '#/components/schemas/request_helpers_dataclass_service')
         self.assertEqual(
             post['responses']['200']['content']['application/json']['schema']['$ref'],
-            '#/components/schemas/response_my_service')
+            '#/components/schemas/response_helpers_dataclass_service')
 
     #
     # Only the dedicated channel gets path parameters ..
     #
-    path   = paths['/test/{phone_number}']
-    params = path['post']['parameters']
+    if with_all_paths:
+        path   = paths['/test/{phone_number}']
+        params = path['post']['parameters']
 
-    self.assertListEqual(params, [{
-        'description': '',
-        'in': 'path',
-        'name': 'phone_number',
-        'required': True,
-        'schema': {
-            'format': 'string',
-            'type': 'string'
-        }
-    }])
+        self.assertListEqual(params, [{
+            'description': '',
+            'in': 'path',
+            'name': 'phone_number',
+            'required': True,
+            'schema': {
+                'format': 'string',
+                'type': 'string'
+            }
+        }])
 
     # .. whereas the generic API invoker has no path parameters.
-    path   = paths['/zato/api/invoke/my.service']
+    path   = paths['/zato/api/invoke/helpers.dataclass-service']
     self.assertNotIn('parameters', path['post'])
 
 # ################################################################################################################################
