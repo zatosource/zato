@@ -93,13 +93,11 @@ class _RESTClient:
         self.payload_only_messages = payload_only_messages
 
         self._api_invoke_username = 'pubapi'
-        self._api_invoke_password = 'CUmurNhD3MyDuSKvKl-5I5z3Hr9G03RY'
+        self._api_invoke_password = ''
 
 # ################################################################################################################################
 
     def init(self) -> 'None':
-
-        return
 
         # Local aliases
         sec_name = 'pubapi'
@@ -123,9 +121,12 @@ class _RESTClient:
         # .. log what we are about to do ..
         logger.info('Changing password for HTTP Basic Auth `%s`', sec_name)
 
-        # .. and reset the password now.
+        # .. reset the password now ..
         command('service', 'invoke', TestConfig.server_location,
             'zato.security.basic-auth.change-password', '--payload', payload)
+
+        # .. and store the credentials for later use.
+        self._auth = (self._api_invoke_username, self._api_invoke_password)
 
 # ################################################################################################################################
 
@@ -145,7 +146,9 @@ class _RESTClient:
             request['current_app'] = TestConfig.current_app
         data = dumps(request)
 
-        logger.info('Invoking %s %s with %s', func_name, address, data)
+        auth = auth or self._auth
+
+        logger.info('Invoking %s %s with %s (%s)', func_name, address, data, auth)
         response = func(address, data=data, auth=auth) # type: Response
 
         logger.info('Response received %s %s', response.status_code, response.text)
