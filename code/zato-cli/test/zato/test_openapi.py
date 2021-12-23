@@ -21,7 +21,6 @@ from sh import ErrorReturnCode
 # Zato
 from zato.common.test.config import TestConfig
 from zato.common.test import rand_string, rand_unicode
-from zato.common.util.open_ import open_w
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,108 +88,78 @@ zato_generic_connection:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CommandLineTestCase(TestCase):
+class APISpecTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def _warn_on_error(self, stdout:'any_', stderr:'any_') -> 'None':
-        logger.warning(format_exc())
-        logger.warning('stdout -> %s', stdout)
-        logger.warning('stderr -> %s', stderr)
+    def _warn_on_error(self, stdout:'any_', stderr:'any_', has_exception:'bool'=True) -> 'None':
+
+        if has_exception:
+            logger.warning(format_exc())
+
+        logger.warning('stdout -> %r', stdout)
+        logger.warning('stderr -> %r', stderr)
 
 # ################################################################################################################################
 
-    def _assert_command_line_result(self, out:'RunningCommand') -> 'None':
+    def _assert_command_line_result(self, out:'RunningCommand', file_path:'str') -> 'None':
 
         self.assertEqual(out.exit_code, 0)
 
+        # This is the information returned to user
+        expected = 'Output saved to '+ file_path + '\n'
+
+        # This is stdout that the command returned
         stdout = out.stdout.decode('utf8')
-        stderr = out.stdout.decode('utf8')
+        stderr = out.stderr.decode('utf8')
 
-        if 'error' in stdout:
-            self._warn_on_error(stdout, stderr)
-            self.fail('Found an error in stdout while invoking enmasse')
-
-        if 'error' in stderr:
-            self._warn_on_error(stdout, stderr)
-            self.fail('Found an error in stderr while invoking enmasse')
+        # Make sure the expected information is in stdout
+        if expected not in stdout:
+            self._warn_on_error(stdout, stderr, has_exception=False)
+            msg = 'Could not find {!r} in {!r}'
+            self.fail(msg.format(expected, stdout))
 
 # ################################################################################################################################
 
-    def _invoke_apispec(self, config_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
+    def _invoke_command(self, file_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
 
         # A shortcut
         command = sh.zato # type: ignore
 
         # Invoke enmasse ..
-        out = command('enmasse', TestConfig.server_location,
-            '--import', '--input', config_path, '--replace-odb-objects', '--verbose')
+        out = command('openapi', TestConfig.server_location,
+            '--exclude', '""', '--include', 'helpers.dataclass-service',
+            '--file', file_path,
+            '--verbose')
 
         # .. if told to, make sure there was no error in stdout/stderr ..
         if require_ok:
-            self._assert_command_line_result(out)
+            self._assert_command_line_result(out, file_path)
 
         return out
 
 # ################################################################################################################################
 
-    def test_enmasse_ok(self) -> 'None':
+    def test_apispec(self) -> 'None':
 
         tmp_dir = gettempdir()
         test_suffix = rand_unicode() + '.' + rand_string()
 
-        file_name = 'zato-enmasse-' + test_suffix + '.yaml'
-        config_path = os.path.join(tmp_dir, file_name)
-
-        data = template.format(test_suffix=test_suffix)
-
-        f = open_w(config_path)
-        f.write(data)
-        f.close()
+        file_name = 'zato-test-' + test_suffix + '.yaml'
+        file_path = os.path.join(tmp_dir, file_name)
 
         try:
-            # Invoke enmasse to create objects ..
-            self._invoke_enmasse(config_path)
-
-            # .. now invoke it again to edit them in place.
-            self._invoke_enmasse(config_path)
+            # Invoke openapi to create a definition ..
+            self._invoke_command(file_path)
 
         except ErrorReturnCode as e:
+
             stdout = e.stdout # type: bytes
             stdout = stdout.decode('utf8') # type: ignore
             stderr = e.stderr
 
             self._warn_on_error(stdout, stderr)
-            self.fail('Caught an exception while invoking enmasse')
-
-# ################################################################################################################################
-
-    def test_enmasse_service_does_not_exit(self) -> 'None':
-
-        tmp_dir = gettempdir()
-        test_suffix = rand_unicode() + '.' + rand_string()
-
-        file_name = 'zato-enmasse-' + test_suffix + '.yaml'
-        config_path = os.path.join(tmp_dir, file_name)
-
-        # Note that we replace pub.zato.ping with a service that certainly does not exist
-        data = template.replace('pub.zato.ping', 'zato-enmasse-service-does-not-exit')
-        data = data.format(test_suffix=test_suffix)
-
-        f = open_w(config_path)
-        f.write(data)
-        f.close()
-
-        # Invoke enmasse to create objects (which will fail because the service used above does not exist)
-        out = self._invoke_enmasse(config_path, require_ok=False)
-
-        stdout = out.stdout # type: any_
-        stdout = stdout.decode('utf8')
-        stderr = out.stderr
-
-        if not '3 errors found' in stdout:
-            self._warn_on_error(stdout, stderr)
-            self.fail('Expected for enmasse to return errors')
+            self.fail('Caught an exception while invoking openapi')
 
 # ################################################################################################################################
 # ################################################################################################################################
