@@ -206,26 +206,29 @@ it has two lines.""",
         #
         self.assertListEqual(user['required'], ['address_data', 'phone_list', 'user_name'])
         self.assertDictEqual(user['properties'], {
-            'user_name': {
-                'description': '',
-                'subtype':     'string',
-                'type':        'string',
-            },
-            'phone_list': {
-                'description': '',
-                'type':        'array',
-            },
             'address_data': {
-                'description': '',
-                'type':        'object',
+                'description': 'This is a dict',
+                'type': 'object',
+                'additionalProperties': {},
             },
             'email_list': {
-                'description': '',
-                'type':        'array',
+                'description': 'This is an optional list',
+                'type': 'array',
+                'items': {}
             },
             'prefs_dict': {
-                'description': '',
-                'type':        'object',
+                'description': 'This is an optional dict',
+                'type': 'object',
+                'additionalProperties': {},
+            },
+            'phone_list': {
+                'description': 'This is a list',
+                'type': 'array',
+                'items': {}
+            },
+            'user_name': {
+                'description': 'This is a string',
+                'type': 'string',
             },
         })
 
@@ -234,12 +237,14 @@ it has two lines.""",
 
         self.assertEqual(len(paths), 2)
 
+        #
+        # Information generic to all channels
+        #
         for url_path in ['/test/{phone_number}', '/zato/api/invoke/my.service']:
 
             my_service_path = paths[url_path] # type: anydict
             post = my_service_path['post']    # type: anydict
 
-            self.assertListEqual(post['consumes'], ['application/json'])
             self.assertEqual(post['operationId'], 'post_{}'.format(fs_safe_name(url_path)))
             self.assertTrue(post['requestBody']['required'])
             self.assertEqual(
@@ -248,6 +253,27 @@ it has two lines.""",
             self.assertEqual(
                 post['responses']['200']['content']['application/json']['schema']['$ref'],
                 '#/components/schemas/response_my_service')
+
+        #
+        # Only the dedicated channel gets path parameters ..
+        #
+        path   = paths['/test/{phone_number}']
+        params = path['post']['parameters']
+
+        self.assertListEqual(params, [{
+            'description': '',
+            'in': 'path',
+            'name': 'phone_number',
+            'required': True,
+            'schema': {
+                'format': 'string',
+                'type': 'string'
+            }
+        }])
+
+        # .. whereas the generic API invoker has no path parameters.
+        path   = paths['/zato/api/invoke/my.service']
+        self.assertNotIn('parameters', path['post'])
 
 # ################################################################################################################################
 # ################################################################################################################################
