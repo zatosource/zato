@@ -89,7 +89,7 @@ zato_generic_connection:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CommandLineTestCase(TestCase):
+class EnmasseTestCase(TestCase):
 
 # ################################################################################################################################
 
@@ -105,7 +105,7 @@ class CommandLineTestCase(TestCase):
         self.assertEqual(out.exit_code, 0)
 
         stdout = out.stdout.decode('utf8')
-        stderr = out.stdout.decode('utf8')
+        stderr = out.stderr.decode('utf8')
 
         if 'error' in stdout:
             self._warn_on_error(stdout, stderr)
@@ -117,7 +117,7 @@ class CommandLineTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def _invoke_enmasse(self, config_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
+    def _invoke_command(self, config_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
 
         # A shortcut
         command = sh.zato # type: ignore
@@ -150,10 +150,10 @@ class CommandLineTestCase(TestCase):
 
         try:
             # Invoke enmasse to create objects ..
-            self._invoke_enmasse(config_path)
+            self._invoke_command(config_path)
 
             # .. now invoke it again to edit them in place.
-            self._invoke_enmasse(config_path)
+            self._invoke_command(config_path)
 
         except ErrorReturnCode as e:
             stdout = e.stdout # type: bytes
@@ -182,7 +182,7 @@ class CommandLineTestCase(TestCase):
         f.close()
 
         # Invoke enmasse to create objects (which will fail because the service used above does not exist)
-        out = self._invoke_enmasse(config_path, require_ok=False)
+        out = self._invoke_command(config_path, require_ok=False)
 
         stdout = out.stdout # type: any_
         stdout = stdout.decode('utf8')
