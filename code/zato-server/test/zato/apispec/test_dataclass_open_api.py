@@ -96,7 +96,7 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         #
         self.assertEqual(info['title'], 'API spec')
         self.assertEqual(info['version'], '1.0')
-        self.assertEqual(openapi, '3.0.2')
+        self.assertEqual(openapi, '3.0.3')
 
         #
         # Schemas
