@@ -72,11 +72,6 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         open_api_generator = OpenAPIGenerator(initial_info, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
 
         result = open_api_generator.generate()
-
-        f = open('/home/dsuch/tmp/zzz.yaml', 'w')
-        f.write(result)
-        f.close()
-
         result = yaml_load(result, FullLoader)
 
         components = result['components'] # type: anydict
