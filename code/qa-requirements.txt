@@ -1,6 +1,7 @@
 mypy
-openapi3
+openapi-spec-validator
 pylint
+requests-openapi
 selenium
 selenium-wire
 types-markdown
