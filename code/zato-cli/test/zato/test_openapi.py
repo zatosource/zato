@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from http.client import BAD_REQUEST
 from logging import basicConfig, getLogger, WARN
 from tempfile import gettempdir
 from traceback import format_exc
@@ -16,6 +17,9 @@ from unittest import main, TestCase
 # openapi-spec-validator
 from openapi_spec_validator import validate_spec
 from openapi_spec_validator.readers import read_from_filename
+
+# requests-openapi
+import requests_openapi
 
 # sh
 import sh
@@ -37,8 +41,9 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 if 0:
+    from requests import Response
     from sh import RunningCommand
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,7 +100,7 @@ class APISpecTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_apispec(self) -> 'None':
+    def test_openapi(self) -> 'None':
 
         tmp_dir = gettempdir()
         test_suffix = rand_unicode() + '.' + rand_string()
@@ -115,9 +120,29 @@ class APISpecTestCase(TestCase):
             # .. run our assertions ..
             run_common_apispec_assertions(self, data, with_all_paths=False)
 
-            # .. and validate it once more using an external library ..
+            # .. validate it once more using an external library ..
             spec_dict, _ = read_from_filename(file_path)
             validate_spec(spec_dict)
+
+            # .. and triple-check now by invoking the endpoint based on the spec generated ..
+
+            client = requests_openapi.Client()
+            client.load_spec_from_file(file_path)
+
+            # Note that we provide no request here
+            response = client.post__zato_api_invoke_helpers_dataclass_service()# type: Response
+            json_result = response.json() # type: anydict
+
+            # The response and JSON result will point to a 400 error because
+            # the underlying client that we use does not accept JSON request messages.
+            # Yet, it still a useful test because we know that the operation did exist
+            # and the server did correctly reject a call without a correct input.
+            self.assertEqual(response.status_code, BAD_REQUEST)
+
+            self.assertEqual(json_result['result'],  'Error')
+            self.assertEqual(json_result['details'], 'Invalid input')
+            self.assertIsInstance(json_result['cid'], str)
+            self.assertGreaterEqual(len(json_result['cid']), 24)
 
         except ErrorReturnCode as e:
 
