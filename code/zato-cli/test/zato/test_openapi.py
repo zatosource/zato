@@ -100,7 +100,7 @@ class APISpecTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_apispec(self) -> 'None':
+    def test_openapi(self) -> 'None':
 
         tmp_dir = gettempdir()
         test_suffix = rand_unicode() + '.' + rand_string()
