@@ -188,9 +188,16 @@ class SchedulerServer:
     def __call__(self, env, start_response):
         try:
             request = env['wsgi.input'].read()
-            self.handle_api_request(request)
+
+            if request:
+                return_data = b'{}\n'
+                self.handle_api_request(request)
+            else:
+                return_data = b''
+
             start_response(ok, headers)
-            return [b'{}\n']
+            return return_data
+
         except Exception:
             logger.warning(format_exc())
 
