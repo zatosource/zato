@@ -171,10 +171,10 @@ class SchedulerServer:
         data = loads(data)
 
         # .. callback functions expect Bunch instances on input ..
-        data = Bunch(data)
+        data = Bunch(data) # type: ignore
 
         # .. look up the action we need to invoke ..
-        action_name = code_to_name[data['action']]
+        action_name = code_to_name[data['action']] # type: ignore
 
         # .. convert it to an actual method to invoke ..
         func_name = 'on_broker_msg_{}'.format(action_name)
