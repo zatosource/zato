@@ -193,7 +193,7 @@ class Create(ZatoCommand):
             secret_key = secret_key.decode('utf8')
 
         # We will use TLS only if we were given crypto material on input
-        use_tls = False
+        use_tls = is_arg_given(args, 'priv_key_path')
 
         config = {
             'odb_db_name': args.odb_db_name or args.sqlite_path,
