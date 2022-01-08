@@ -190,10 +190,10 @@ class SchedulerServer:
             request = env['wsgi.input'].read()
 
             if request:
-                return_data = b'{}\n'
+                return_data = '{}\n'
                 self.handle_api_request(request)
             else:
-                return_data = b''
+                return_data = ''
 
             start_response(ok, headers)
             return return_data
