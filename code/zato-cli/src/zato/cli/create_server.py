@@ -799,7 +799,7 @@ class Create(ZatoCommand):
                 odb_engine = 'postgresql+pg8000'
 
             # This can be overridden through an environment variable
-            scheduler_use_tls = os.environ.get('ZATO_SERVER_SCHEDULER_USE_TLS', True)
+            scheduler_use_tls = os.environ.get('ZATO_SERVER_SCHEDULER_USE_TLS', False)
             scheduler_use_tls = as_bool(scheduler_use_tls)
 
             server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
