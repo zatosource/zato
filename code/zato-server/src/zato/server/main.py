@@ -167,11 +167,8 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     pickup_config = get_config(repo_location, 'pickup.conf')
 
     if server_config.main.get('debugger_enabled'):
-        debugger_host = server_config.main.debugger_host
-        debugger_port = server_config.main.debugger_port
-        logger.info('Debugger waiting for connections on %s:%s', debugger_host, debugger_port)
         import debugpy
-        debugpy.listen((debugger_host, debugger_port))
+        debugpy.listen((server_config.main.debugger_host, server_config.main.debugger_port))
         debugpy.wait_for_client()
 
     sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
