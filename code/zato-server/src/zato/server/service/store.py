@@ -676,15 +676,17 @@ class ServiceStore:
                     'deployment_info': '<todo>'
                 })
 
-            # All set, write out the cache file, assuming that we can do it (on Windows, we cannot)
+            # All set, write out the cache file, assuming that we can do it.
+            # We cannot on Windows or under a debugger (as indicated by the environment variable).
             if self.has_internal_cache:
 
-                f = open(cache_file_path, 'wb')
-                f.write(dill_dumps(internal_cache))
-                f.close()
+                if not os.environ.get('ZATO_SERVER_BASE_DIR'):
+                    f = open(cache_file_path, 'wb')
+                    f.write(dill_dumps(internal_cache))
+                    f.close()
 
-            logger.info('{} %d internal services (%s) (%s)'.format(self.action_internal_done),
-                len(info.to_process), info.total_size_human, self.server.name)
+                logger.info('{} %d internal services (%s) (%s)'.format(self.action_internal_done),
+                    len(info.to_process), info.total_size_human, self.server.name)
 
             return info.to_process
 
