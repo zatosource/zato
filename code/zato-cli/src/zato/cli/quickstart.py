@@ -29,7 +29,7 @@ vscode_launch_json = """
             "name": "Remote Zato Main",
             "type": "python",
             "request": "launch",
-            "program": "/opt/zato/3.2.0/code/zato-server/src/zato/server/main.py",
+            "program": "/opt/zato/current/zato-server/src/zato/server/main.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "env": {
@@ -44,7 +44,7 @@ vscode_launch_json = """
 
 vscode_settings_json = """
 {
-    "python.pythonPath": "/opt/zato/3.2.0/code/bin/python"
+    "python.pythonPath": "/opt/zato/current/bin/python"
 }
 """
 
