@@ -202,7 +202,8 @@ class SubscribeService(_PubSubService):
             })['response']
         except PubSubSubscriptionExists:
             self.logger.warning(format_exc())
-            raise BadRequest(self.cid, 'Subscription to topic `{}` already exists'.format(self.request.input.topic_name))
+            msg = 'Subscription to topic `{}` already exists'.format(self.request.input.topic_name)
+            raise BadRequest(self.cid, msg, needs_msg=True)
         else:
             self.response.payload.sub_key = response['sub_key']
             self.response.payload.queue_depth = response['queue_depth']
@@ -246,11 +247,18 @@ class SubscribeService(_PubSubService):
                     raise Forbidden(self.cid)
 
             # We have all permissions checked now and can proceed to the actual calls
-            self.response.payload = self.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
+            response = self.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
                 'cluster_id': self.server.cluster_id,
                 'sub_key': sub_key
             })
 
+            # Make sure that we always return JSON payload
+            response = response or {}
+
+            # Assign the response ..
+            self.response.payload = response
+
+            # .. and clean up WSX state if the caller was a WebSocket.
             if sub.is_wsx:
                 self.invoke('zato.channel.web-socket.client.unregister-ws-sub-key', {
                     'sub_key_list': [sub_key],
