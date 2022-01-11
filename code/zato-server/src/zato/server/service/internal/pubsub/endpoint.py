@@ -729,6 +729,9 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
             }, pid=sk_server.server_pid)
 
             if response:
+                response = response.data
+                response = response[sk_server.server_pid]
+                response = response.pid_data
                 response = response['msg_list']
                 response = reversed(response)
 
