@@ -130,6 +130,8 @@ def publish(req, cluster_id, topic_id):
     initial_hook_service_name = None
     select_changer_data = {}
 
+    initial_publisher_id = None
+
     topic_list_response = req.zato.client.invoke('zato.pubsub.topic.get-list', {
         'cluster_id': cluster_id,
         'needs_details': False,
@@ -152,14 +154,21 @@ def publish(req, cluster_id, topic_id):
         for line in (item.topic_patterns or '').splitlines():
             if line.startswith('sub='):
                 publisher_list.append({'id':item.id, 'name':item.name})
+                if item.name == PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME:
+                    initial_publisher_id = item.id
                 break
 
     return_data = {
         'cluster_id': cluster_id,
         'action': 'publish',
-        'form': MsgPublishForm(req, dumps(select_changer_data), initial_topic_name, topic_list,
-            initial_hook_service_name, publisher_list)
-    }
+        'form': MsgPublishForm(
+            req,
+            dumps(select_changer_data),
+            initial_topic_name, topic_list,
+            initial_hook_service_name,
+            publisher_list,
+            initial={'publisher_id': initial_publisher_id}
+        )}
 
     return TemplateResponse(req, 'zato/pubsub/message-publish.html', return_data)
 
