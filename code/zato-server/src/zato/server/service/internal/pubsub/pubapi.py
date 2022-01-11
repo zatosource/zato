@@ -23,6 +23,13 @@ from zato.server.service import AsIs, Int, Service
 from zato.server.service.internal.pubsub.subscription import CreateWSXSubscription
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class BaseSIO:
     input_required = ('topic_name',)
@@ -41,7 +48,8 @@ class TopicSIO(BaseSIO):
 # ################################################################################################################################
 
 class SubSIO(BaseSIO):
-    input_optional  = 'delivery_method'
+    input_optional  = 'sub_key', 'delivery_method'
+    output_optional = 'sub_key', Int('queue_depth')
 
 # ################################################################################################################################
 
@@ -127,10 +135,19 @@ class TopicService(_PubSubService):
 
 # ################################################################################################################################
 
-    def _get_messages(self, ctx):
+    def _get_messages(self, endpoint_id:'int') -> 'anylist':
         """ POST /zato/pubsub/topic/{topic_name}
         """
-        sub_key = self.request.input.sub_key
+
+        # Not every channel may present a sub_key on input
+        if self.chan.type in (CHANNEL.WEB_SOCKET, CHANNEL.SERVICE): # type: ignore
+            sub_key = self.request.input.get('sub_key')
+        else:
+            sub = self.pubsub.get_subscription_by_endpoint_id(endpoint_id)
+            sub_key = sub.sub_key # type: ignore
+
+        #if not sub_key:
+        #    sub = self.pubsub
 
         try:
             self.pubsub.get_subscription_by_sub_key(sub_key)
@@ -147,12 +164,21 @@ class TopicService(_PubSubService):
         # Checks credentials and returns endpoint_id if valid
         endpoint_id = self._pubsub_check_credentials()
 
-        # Both publish and get_messages are using POST but sub_key is absent in the latter.
-        if self.request.input.sub_key:
-            response = dumps(self._get_messages(endpoint_id))
-            self.response.payload = response
-        else:
-            self.response.payload.msg_id = self._publish(endpoint_id)
+        # Extracts payload and publishes the message
+        self.response.payload.msg_id = self._publish(endpoint_id)
+
+# ################################################################################################################################
+
+    def handle_PATCH(self):
+
+        # Checks credentials and returns endpoint_id if valid
+        endpoint_id = self._pubsub_check_credentials()
+
+        # Find our messages ..
+        messages = self._get_messages(endpoint_id)
+
+        # .. and return them to the caller.
+        self.response.payload = dumps(messages)
 
 # ################################################################################################################################
 
@@ -163,7 +189,7 @@ class SubscribeService(_PubSubService):
 
 # ################################################################################################################################
 
-    def _check_sub_access(self, endpoint_id):
+    def _check_sub_access(self, endpoint_id:'int') -> 'None':
 
         # At this point we know that the credentials are valid and in principle, there is such an endpoint,
         # but we still don't know if it has permissions to subscribe to this topic and we don't want to reveal
@@ -192,7 +218,7 @@ class SubscribeService(_PubSubService):
         self._check_sub_access(endpoint_id)
 
         try:
-            self.invoke('zato.pubsub.subscription.subscribe-rest', {
+            response = self.invoke('zato.pubsub.subscription.subscribe-rest', {
                 'topic_name': self.request.input.topic_name,
                 'endpoint_id': endpoint_id,
                 'delivery_batch_size': PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE,
@@ -202,14 +228,23 @@ class SubscribeService(_PubSubService):
         except PubSubSubscriptionExists:
             msg = 'Subscription for topic `%s` already exists for endpoint_id `%s`'
             self.logger.info(msg, self.request.input.topic_name, endpoint_id)
-        finally:
-            self.response.payload = {}
+        else:
+            self.response.payload.sub_key     = response['sub_key']
+            self.response.payload.queue_depth = response['queue_depth']
 
 # ################################################################################################################################
 
     def _handle_DELETE(self):
         """ Low-level implementation of DELETE /zato/pubsub/subscribe/topic/{topic_name}
         """
+        # This may be provided by WebSockets
+        sub_key = self.request.input.get('sub_key')
+
+        # Not every channel may present a sub_key on input
+        if sub_key and self.chan.type not in (CHANNEL.WEB_SOCKET, CHANNEL.SERVICE): # type: ignore
+            self.logger.warn('Channel type `%s` may not use sub_key on input (%s)', self.chan.type, sub_key)
+            raise Forbidden(self.cid)
+
         # Checks credentials and returns endpoint_id if valid
         endpoint_id = self._pubsub_check_credentials()
 
@@ -222,15 +257,18 @@ class SubscribeService(_PubSubService):
 
         # .. also check that sub_key exists and that we are not using another endpoint's sub_key.
         try:
-            sub = self.pubsub.get_subscription_by_endpoint_id(endpoint_id, needs_error=False)
+            if sub_key:
+                sub = self.pubsub.get_subscription_by_sub_key(sub_key)
+            else:
+                sub = self.pubsub.get_subscription_by_endpoint_id(endpoint_id, needs_error=False)
         except KeyError:
             self.logger.warning('Could not find subscription by endpoint_id:`%s`, endpoint:`%s`',
                 endpoint_id, self.pubsub.get_endpoint_by_id(endpoint_id).name)
             raise Forbidden(self.cid)
         else:
             if not sub:
-                self.logger.info('No subscription for endpoint_id: `%s` (%s) (delete)',
-                    endpoint_id, self.request.input.topic_name)
+                self.logger.info('No subscription for sub_key: `%s` and endpoint_id: `%s` (%s) (delete)',
+                    sub_key, endpoint_id, self.request.input.topic_name)
                 return
 
             # Raise an exception if current endpoint is not the one that created the subscription originally,
@@ -296,7 +334,7 @@ class GetMessages(Service):
 
     def handle(self):
         self.response.payload = self.invoke(
-            TopicService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'POST'})
+            TopicService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'PATCH'})
 
 # ################################################################################################################################
 
