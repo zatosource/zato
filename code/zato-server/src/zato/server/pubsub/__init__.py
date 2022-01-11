@@ -683,8 +683,15 @@ class PubSub:
         the method with an invalid sub_key. Must be invoked with self.lock held.
         """
         sub = self.subscriptions_by_sub_key.pop(sub_key, _invalid) # type: Subscription
-        if sub is _invalid and (not ignore_missing):
-            raise KeyError('No such sub_key `%s`', sub_key)
+        if sub is _invalid:
+
+            # If this is on, we only log information about the event ..
+            if ignore_missing:
+                logger.info('Could not find sub_key %s', sub_key)
+
+            # .. otherwise, we raise an entire exception.
+            else:
+                raise KeyError('No such sub_key `%s`', sub_key)
         else:
             logger.info('Deleted subscription object `%s` (%s)', sub.sub_key, sub.topic_name)
             return sub # Either valid or invalid but ignore_missing is True
