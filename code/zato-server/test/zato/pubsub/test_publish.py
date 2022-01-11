@@ -47,7 +47,7 @@ class PubSubTestCase(RESTClientTestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.rest_client.init()
+        self.rest_client.init(sec_name='pubapi')
 
 # ################################################################################################################################
 

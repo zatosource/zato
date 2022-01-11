@@ -98,10 +98,7 @@ class _RESTClient:
 
 # ################################################################################################################################
 
-    def init(self) -> 'None':
-
-        # Local aliases
-        sec_name = 'pubapi'
+    def init(self, /, sec_name:'str'='pubapi') -> 'None':
 
         # A shortcut
         command = sh.zato # type: ignore
