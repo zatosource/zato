@@ -110,6 +110,7 @@ class ModelValidationError(Exception):
         self.elem_path   = elem_path
         self.reason = self.msg = self.get_reason()
         self.status = BAD_REQUEST
+        self.needs_msg = False # Added for compatibility with BadRequest as used in channel.py:dispathc
 
 # ################################################################################################################################
 
