@@ -31,7 +31,7 @@ from zato.sso import status_code
 
 if 0:
     from requests import Response
-    from zato.common.typing_ import any_, anytuple, callable_, optional
+    from zato.common.typing_ import any_, anydictnone, anytuple, callable_, optional
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -139,6 +139,7 @@ class _RESTClient:
         request,   # type: any_
         expect_ok, # type: bool
         auth=None, # type: optional[anytuple]
+        qs=None,    # type: anydictnone
         _unexpected=object() # type: any_
         ) -> 'Bunch':
 
@@ -149,8 +150,8 @@ class _RESTClient:
 
         auth = auth or self._auth
 
-        logger.info('Invoking %s %s with %s (%s)', func_name, address, data, auth)
-        response = func(address, data=data, auth=auth) # type: Response
+        logger.info('Invoking %s %s with %s (%s) (%s)', func_name, address, data, auth, qs)
+        response = func(address, data=data, auth=auth, params=qs) # type: Response
 
         logger.info('Response received %s %s', response.status_code, response.text)
 
@@ -205,8 +206,9 @@ class _RESTClient:
 
 # ################################################################################################################################
 
-    def delete(self, url_path:'str', request:'str'='', expect_ok:'bool'=True, auth:'any_'=None) -> 'Bunch':
-        return self._invoke(requests.delete, 'DELETE', url_path, request, expect_ok, auth)
+    def delete(self, url_path:'str', request:'str'='', expect_ok:'bool'=True, auth:'any_'=None, qs:'anydictnone'=None) -> 'Bunch':
+        qs = qs or {}
+        return self._invoke(requests.delete, 'DELETE', url_path, request, expect_ok, auth, qs)
 
 # ################################################################################################################################
 # ################################################################################################################################

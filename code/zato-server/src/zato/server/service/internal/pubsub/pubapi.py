@@ -41,8 +41,8 @@ class TopicSIO(BaseSIO):
 # ################################################################################################################################
 
 class SubSIO(BaseSIO):
-    input_optional = ('sub_key', 'delivery_method')
-    output_optional = ('sub_key', 'queue_depth')
+    input_optional  = 'sub_key', 'delivery_method'
+    output_optional = 'sub_key', Int('queue_depth')
 
 # ################################################################################################################################
 
