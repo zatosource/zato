@@ -41,8 +41,7 @@ class TopicSIO(BaseSIO):
 # ################################################################################################################################
 
 class SubSIO(BaseSIO):
-    input_optional  = 'sub_key', 'delivery_method'
-    output_optional = 'sub_key', Int('queue_depth')
+    input_optional  = 'delivery_method'
 
 # ################################################################################################################################
 
@@ -193,7 +192,7 @@ class SubscribeService(_PubSubService):
         self._check_sub_access(endpoint_id)
 
         try:
-            response = self.invoke('zato.pubsub.subscription.subscribe-rest', {
+            self.invoke('zato.pubsub.subscription.subscribe-rest', {
                 'topic_name': self.request.input.topic_name,
                 'endpoint_id': endpoint_id,
                 'delivery_batch_size': PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE,
@@ -201,17 +200,15 @@ class SubscribeService(_PubSubService):
                 'server_id': self.server.id,
             })['response']
         except PubSubSubscriptionExists:
-            self.logger.warning(format_exc())
-            msg = 'Subscription to topic `{}` already exists'.format(self.request.input.topic_name)
-            raise BadRequest(self.cid, msg, needs_msg=True)
-        else:
-            self.response.payload.sub_key = response['sub_key']
-            self.response.payload.queue_depth = response['queue_depth']
+            msg = 'Subscription for topic `%s` already exists for endpoint_id `%s`'
+            self.logger.info(msg, self.request.input.topic_name, endpoint_id)
+        finally:
+            self.response.payload = {}
 
 # ################################################################################################################################
 
-    def handle_DELETE(self):
-        """ DELETE /zato/pubsub/subscribe/topic/{topic_name}
+    def _handle_DELETE(self):
+        """ Low-level implementation of DELETE /zato/pubsub/subscribe/topic/{topic_name}
         """
         # Checks credentials and returns endpoint_id if valid
         endpoint_id = self._pubsub_check_credentials()
@@ -267,6 +264,17 @@ class SubscribeService(_PubSubService):
                 self.invoke('zato.channel.web-socket.client.unregister-ws-sub-key', {
                     'sub_key_list': [sub.sub_key],
                 })
+
+# ################################################################################################################################
+
+    def handle_DELETE(self):
+        """ DELETE /zato/pubsub/subscribe/topic/{topic_name}
+        """
+        # Call our implementation ..
+        self._handle_DELETE()
+
+        # .. and always return an empty response.
+        self.response.payload = {}
 
 # ################################################################################################################################
 
