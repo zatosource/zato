@@ -10,7 +10,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 from traceback import format_exc
 
+# orjson
+from orjson import loads
+
 # Zato
+from zato.common import DATA_FORMAT
 from zato.common.marshal_.api import Model
 
 # ################################################################################################################################
@@ -30,6 +34,11 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger('zato')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_dict_like = {DATA_FORMAT.DICT, DATA_FORMAT.JSON}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -80,7 +89,7 @@ class DataClassSimpleIO:
 
 # ################################################################################################################################
 
-    def parse_input(self, data, _ignored_data_format, service, extra):
+    def parse_input(self, data, data_format, service, extra):
         # type: (dict, object, Service, object)
 
         # If we have a SimpleIO input declared ..
@@ -91,6 +100,8 @@ class DataClassSimpleIO:
                 return data
 
             # .. otherwise, it must be a dict and we extract its contents.
+            if data_format in _dict_like and (not isinstance(data, dict)):
+                data = loads(data)
             return self.server.marshal_api.from_dict(service, data, self.user_declaration.input, extra)
 
 # ################################################################################################################################
