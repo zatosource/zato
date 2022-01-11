@@ -97,7 +97,8 @@ class ServerRPC:
             server = self._get_invoker_by_server_name(server_name)
             self._invokers[server_name] = server
 
-        return self._invokers[server_name]
+        invoker = self._invokers[server_name]
+        return invoker
 
 # ################################################################################################################################
 
