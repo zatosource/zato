@@ -21,6 +21,33 @@ from zato.common.util.open_ import open_w
 
 DEFAULT_NO_SERVERS=1
 
+vscode_launch_json = """
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Remote Zato Main",
+            "type": "python",
+            "request": "launch",
+            "program": "/opt/zato/current/zato-server/src/zato/server/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "GEVENT_SUPPORT":"true",
+                "ZATO_SERVER_BASE_DIR": "/opt/zato/env/qs-1/server1",
+                "ZATO_SCHEDULER_BASE_DIR": "/opt/zato/env/qs-1/scheduler"
+            }
+        }
+    ]
+}
+"""
+
+vscode_settings_json = """
+{
+    "python.pythonPath": "/opt/zato/current/bin/python"
+}
+"""
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -545,6 +572,15 @@ class Create(ZatoCommand):
         # 8) Scripts
         #
         zato_bin = 'zato'
+
+        # Visual Studio integration
+        vscode_dir = os.path.join(args.path, '.vscode')
+        vscode_launch_json_path = os.path.join(vscode_dir, 'launch.json')
+        vscode_settings_json_path = os.path.join(vscode_dir, 'settings.json')
+
+        os.mkdir(vscode_dir)
+        open_w(vscode_launch_json_path).write(vscode_launch_json)
+        open_w(vscode_settings_json_path).write(vscode_settings_json)
 
         # This will exist for Windows and other systems
         zato_qs_start_path = 'zato-qs-start.bat' if is_windows else 'zato-qs-start.sh'

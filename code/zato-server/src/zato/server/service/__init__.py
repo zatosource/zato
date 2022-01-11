@@ -66,7 +66,7 @@ from zato.cy.reqresp.response import Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.common.ext.dataclasses import dataclass
-from zato.common.marshal_.api import Model
+from zato.common.marshal_.api import Model, ModelCtx
 from zato.simpleio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as SIOElem, Float, Int, List, \
      Opaque, Text, UTC, UUID
 
@@ -85,6 +85,7 @@ Float = Float
 Int = Int
 List = List
 Model = Model
+ModelCtx = ModelCtx
 Opaque = Opaque
 Text = Text
 UTC = UTC
