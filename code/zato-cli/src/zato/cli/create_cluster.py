@@ -695,10 +695,11 @@ class Create(ZatoCommand):
         from zato.common.util.time_ import utcnow_as_ms
 
         sec_demo = HTTPBasicAuth(
-            None, 'zato.pubsub.demo.secdef', True, 'zato.pubsub.demo', 'Zato pub/sub demo', self.generate_password(), cluster)
+            None, PUBSUB.DEFAULT.DEMO_SECDEF_NAME, True, PUBSUB.DEFAULT.DEMO_USERNAME,
+            'Zato pub/sub demo', self.generate_password(), cluster)
         session.add(sec_demo)
 
-        sec_default_internal = HTTPBasicAuth(None, PUBSUB.DEFAULT.INTERNAL_SECDEF_NAME, True, 'zato.pubsub.internal',
+        sec_default_internal = HTTPBasicAuth(None, PUBSUB.DEFAULT.INTERNAL_SECDEF_NAME, True, PUBSUB.DEFAULT.INTERNAL_USERNAME,
             'Zato pub/sub internal', self.generate_password(), cluster)
         session.add(sec_default_internal)
 

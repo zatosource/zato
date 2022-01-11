@@ -808,11 +808,16 @@ class PUBSUB:
         TASK_DELIVERY_INTERVAL = 2000
         WAIT_TIME_SOCKET_ERROR = 10
         WAIT_TIME_NON_SOCKET_ERROR = 3
-        INTERNAL_SECDEF_NAME = 'zato.pubsub.internal.secdef'
-        INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
         ON_NO_SUBS_PUB = 'accept'
         SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
         UnsubOnWSXClose = True
+
+        DEMO_SECDEF_NAME = 'zato.pubsub.demo.secdef'
+        DEMO_USERNAME = 'zato.pubsub.demo'
+
+        INTERNAL_USERNAME = 'zato.pubsub.internal'
+        INTERNAL_SECDEF_NAME = 'zato.pubsub.internal.secdef'
+        INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
 
     class SERVICE_SUBSCRIBER:
         NAME = 'zato.pubsub.service.endpoint'

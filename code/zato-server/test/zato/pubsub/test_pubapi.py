@@ -7,10 +7,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from unittest import main
+from time import sleep
 
 # Zato
 from zato.common import PUBSUB
+from zato.common.pubsub import prefix_sk
 from zato.common.test.rest_client import RESTClientTestCase
 
 # ################################################################################################################################
@@ -22,8 +23,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-sec_name   = PUBSUB.DEFAULT.INTERNAL_SECDEF_NAME
-username   = 'pubsub'
+_default = PUBSUB.DEFAULT
+
+sec_name   = _default.DEMO_SECDEF_NAME
+username   = _default.DEMO_USERNAME
 topic_name = '/zato/demo/sample'
 
 class config:
@@ -48,8 +51,11 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def _unsubscribe(self) -> 'anydict':
-        response = self.rest_client.delete(config.path_unsubscribe) # type: anydict
+    def _unsubscribe(self, sub_key:'str'='') -> 'anydict':
+        response = self.rest_client.delete(
+            config.path_unsubscribe,
+            qs={'sub_key': sub_key}
+        ) # type: anydict
 
         # We always expect an empty dict on reply from unsubscribe
         self.assertDictEqual(response, {})
@@ -64,9 +70,38 @@ class PubAPITestCase(RESTClientTestCase):
         # Before subscribing, make sure we are not currently subscribed
         self._unsubscribe()
 
+        response = self.rest_client.post(config.path_subscribe)
+
+        # Wait a moment to make sure the subscription data is created
+        sleep(0.1)
+
+        sub_key       = response['sub_key']
+        queue_depth = response['queue_depth']
+
+        #
+        # Validate sub_key
+        #
+
+        self.assertIsInstance(sub_key, str)
+        self.assertTrue(sub_key.startswith(prefix_sk))
+
+        len_sub_key = len(sub_key)
+        len_prefix  = len(prefix_sk)
+
+        self.assertTrue(len_sub_key >= len_prefix + 5) # We expect at least a few random characters here
+
+        #
+        # Validate queue_depth
+        #
+
+        self.assertIsInstance(queue_depth, int)
+
+        # Clean up after the test
+        self._unsubscribe(sub_key)
+
 # ################################################################################################################################
 
-    def test_self_unsubscribe(self):
+    def xtest_self_unsubscribe(self):
 
         # Unsubscribe once ..
         response = self._unsubscribe()
@@ -82,8 +117,8 @@ class PubAPITestCase(RESTClientTestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-
 if __name__ == '__main__':
+    from unittest import main
     main()
 
 # ################################################################################################################################
