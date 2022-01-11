@@ -18,7 +18,7 @@ from unittest import main
 from ciso8601 import parse_datetime
 
 # Zato
-from zato.common.pubsub import PUBSUB
+from zato.common.pubsub import MSG_PREFIX, PUBSUB
 from zato.common.util.api import new_cid
 from zato.common.util.file_system import wait_for_file
 from zato.common.util.open_ import open_r
@@ -151,7 +151,7 @@ class PubSubTestCase(RESTClientTestCase):
 
         self.assertTrue(pub_sub_data['size'] >= 100)
         self.assertTrue(pub_sub_data['has_gd'])
-        self.assertTrue(pub_sub_data['pub_msg_id'].startswith('zpsm'))
+        self.assertTrue(pub_sub_data['pub_msg_id'].startswith(MSG_PREFIX.MSG_ID))
         self.assertTrue(pub_sub_data['sub_key'].startswith('zpsk.srv'))
 
         self.assertFalse(pub_sub_data['is_in_sub_queue'])
