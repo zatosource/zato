@@ -136,7 +136,7 @@ class Publish(AdminService):
         # .. otherwise, use input GD value or the default per topic.
         else:
             has_gd = input.get('has_gd', _zato_none)
-            if has_gd != _zato_none:
+            if has_gd not in (None, _zato_none):
                 if not isinstance(has_gd, bool):
                     raise ValueError('Input has_gd is not a bool (found:`{}`)'.format(repr(has_gd)))
             else:
