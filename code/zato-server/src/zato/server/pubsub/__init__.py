@@ -202,6 +202,9 @@ class PubSub:
         # Sec def ID -> Endpoint ID
         self.sec_id_to_endpoint_id = {} # type: intdict
 
+        # Sec def ID -> Sub key (for single-sub key REST clients)
+        self.sec_id_to_single_sub_key = {} # type: intdict
+
         # WS chan def ID -> Endpoint ID
         self.ws_channel_id_to_endpoint_id = {} # type: intdict
 
@@ -312,6 +315,17 @@ class PubSub:
                 return self._get_subscription_by_sub_key(sub_key)
             except KeyError:
                 return None
+
+# ################################################################################################################################
+
+    def get_subscription_by_endpoint_id(self, endpoint_id:'int', needs_error:'bool'=True) -> 'subnone':
+        with self.lock:
+            for sub in self.get_all_subscriptions().values():
+                if sub.endpoint_id == endpoint_id:
+                    return sub
+            else:
+                if needs_error:
+                    raise KeyError(f'No sub for endpoint_id `{endpoint_id}`')
 
 # ################################################################################################################################
 
