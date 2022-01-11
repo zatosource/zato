@@ -129,7 +129,7 @@ class TopicService(_PubSubService):
 # ################################################################################################################################
 
     def _get_messages(self, ctx):
-        """ POST /zato/pubsub/topic/{topic_name}?sub_key=...
+        """ POST /zato/pubsub/topic/{topic_name}
         """
         sub_key = self.request.input.sub_key
 
@@ -211,28 +211,29 @@ class SubscribeService(_PubSubService):
 # ################################################################################################################################
 
     def handle_DELETE(self):
-        """ DELETE /zato/pubsub/subscribe/topic/{topic_name}?sub_key=..
+        """ DELETE /zato/pubsub/subscribe/topic/{topic_name}
         """
-        # Local aliases
-        sub_key = self.request.input.sub_key
-
         # Checks credentials and returns endpoint_id if valid
         endpoint_id = self._pubsub_check_credentials()
+
+        if not endpoint_id:
+            self.logger.warn('Could not find endpoint_for input credentials')
+            return
 
         # To unsubscribe, we also need to have the right subscription permissions first (patterns) ..
         self._check_sub_access(endpoint_id)
 
         # .. also check that sub_key exists and that we are not using another endpoint's sub_key.
         try:
-            sub = self.pubsub.get_subscription_by_sub_key(sub_key)
+            sub = self.pubsub.get_subscription_by_endpoint_id(endpoint_id, needs_error=False)
         except KeyError:
-            self.logger.warning('Could not find subscription by sub_key:`%s`, endpoint:`%s`',
-                sub_key, self.pubsub.get_endpoint_by_id(endpoint_id).name)
+            self.logger.warning('Could not find subscription by endpoint_id:`%s`, endpoint:`%s`',
+                endpoint_id, self.pubsub.get_endpoint_by_id(endpoint_id).name)
             raise Forbidden(self.cid)
         else:
-
             if not sub:
-                self.logger.info('No such sub_key: `%s`', sub_key)
+                self.logger.info('No subscription for endpoint_id: `%s` (%s) (delete)',
+                    endpoint_id, self.request.input.topic_name)
                 return
 
             # Raise an exception if current endpoint is not the one that created the subscription originally,
@@ -243,13 +244,16 @@ class SubscribeService(_PubSubService):
                     sub_endpoint = self.pubsub.get_endpoint_by_id(sub.endpoint_id)
                     self_endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
                     self.logger.warning('Endpoint `%s` cannot unsubscribe sk:`%s` (%s) created by `%s`',
-                        self_endpoint.name, sub_key, self.pubsub.get_topic_by_sub_key(sub_key).name, sub_endpoint.name)
+                        self_endpoint.name,
+                        sub.sub_key,
+                        self.pubsub.get_topic_by_sub_key(sub.sub_key).name,
+                        sub_endpoint.name)
                     raise Forbidden(self.cid)
 
             # We have all permissions checked now and can proceed to the actual calls
             response = self.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
                 'cluster_id': self.server.cluster_id,
-                'sub_key': sub_key
+                'sub_key': sub.sub_key
             })
 
             # Make sure that we always return JSON payload
@@ -261,7 +265,7 @@ class SubscribeService(_PubSubService):
             # .. and clean up WSX state if the caller was a WebSocket.
             if sub.is_wsx:
                 self.invoke('zato.channel.web-socket.client.unregister-ws-sub-key', {
-                    'sub_key_list': [sub_key],
+                    'sub_key_list': [sub.sub_key],
                 })
 
 # ################################################################################################################################
