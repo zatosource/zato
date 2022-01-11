@@ -137,6 +137,9 @@ class RemoteServerInvoker(ServerInvoker):
     def _invoke(self, invoke_func, service, request=None, *args, **kwargs):
         # type: (Callable, str, object) -> ServerInvocationResult
 
+        # Local aliases
+        kwargs_pid = kwargs.get('pid')
+
         if not self.invocation_ctx.address:
             logger.info('RPC address not found for %s:%s -> `%r` (%s)',
                 self.invocation_ctx.cluster_name,
@@ -164,17 +167,40 @@ class RemoteServerInvoker(ServerInvoker):
             if response.has_data:
                 for pid, pid_data in response.data.items():
 
-                    per_pid_data = pid_data['pid_data']
+                    # We may potentially receive it if all_pids is not used
+                    if pid == 'response':
+                        pid = kwargs_pid
 
+                    # This will not exist if we were invoking a specific PID
+                    per_pid_data = pid_data.get('pid_data', '')
+
+                    # We go here if there is no response for a PID ..
                     if per_pid_data == '':
-                        pid_data['pid_data'] = None
 
-                    if per_pid_data and isinstance(per_pid_data, str) and per_pid_data[0] == '{':
-                        pid_data['pid_data'] = loads(per_pid_data)
+                        # .. however, if we did invoke another PID then we need to extract
+                        # .. the response ourselves because it will not be in a top-level per-PID dict ..
+                        if kwargs_pid:
 
-                    per_pid_response = from_dict(PerPIDResponse, pid_data) # type: PerPIDResponse
-                    per_pid_response.pid = pid
-                    out.data[pid] = per_pid_response
+                            per_pid_response = PerPIDResponse()
+                            per_pid_response.is_ok = True
+                            per_pid_response.pid = kwargs_pid
+                            per_pid_response.pid_data = pid_data
+                            per_pid_response.error_info = ''
+
+                            out.data[pid] = per_pid_response
+
+                        # .. otherwise, there really was not response for that PID.
+                        else:
+                            pid_data['pid_data'] = None
+
+                    else:
+                        if per_pid_data:
+                            if isinstance(per_pid_data, str) and per_pid_data[0] == '{':
+                                pid_data['pid_data'] = loads(per_pid_data)
+
+                        per_pid_response = from_dict(PerPIDResponse, pid_data) # type: PerPIDResponse
+                        per_pid_response.pid = pid
+                        out.data[pid] = per_pid_response
 
         # .. and return the result to our caller.
         return out
