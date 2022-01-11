@@ -490,11 +490,12 @@ class DeleteEndpointQueue(AdminService):
 # ################################################################################################################################
 
 class _GetMessagesBase:
-    def _get_sub_by_sub_input(self):
-        if self.request.input.get('sub_id'):
-            return self.pubsub.get_subscription_by_id(self.request.input.sub_id)
-        elif self.request.input.get('sub_key'):
-            return self.pubsub.get_subscription_by_sub_key(self.request.input.sub_key)
+    def _get_sub_by_sub_input(self, input):
+
+        if input.get('sub_id'):
+            return self.pubsub.get_subscription_by_id(input.sub_id)
+        elif input.get('sub_key'):
+            return self.pubsub.get_subscription_by_sub_key(input.sub_key)
         else:
             raise Exception('Either sub_id or sub_key must be given on input')
 
@@ -508,7 +509,13 @@ class GetEndpointQueueMessagesGD(AdminService, _GetMessagesBase):
     SimpleIO = _GetEndpointQueueMessagesSIO
 
     def get_data(self, session):
-        sub = self._get_sub_by_sub_input()
+
+        input = self.request.input
+        sub = self._get_sub_by_sub_input(input)
+
+        if not sub:
+            self.logger.info('Could not find subscription by input `%s` (#1)', input)
+            return
 
         return self._search(
             pubsub_messages_for_queue, session, self.request.input.cluster_id, sub.sub_key, True, False)
@@ -553,7 +560,14 @@ class GetEndpointQueueMessagesNonGD(NonGDSearchService, _GetMessagesBase):
     SimpleIO = _GetEndpointQueueMessagesSIO
 
     def handle(self):
-        sub = self._get_sub_by_sub_input()
+
+        input = self.request.input
+        sub = self._get_sub_by_sub_input(input)
+
+        if not sub:
+            self.logger.info('Could not find subscription by input `%s` (#2)', input)
+            return
+
         sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
 
         if sk_server:
@@ -699,7 +713,14 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
         default_value = None
 
     def handle(self):
-        sub = self._get_sub_by_sub_input()
+
+        input = self.request.input
+        sub = self._get_sub_by_sub_input(input)
+
+        if not sub:
+            self.logger.info('Could not find subscription by input `%s` (#3)', input)
+            return
+
         sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
 
         if sk_server:
