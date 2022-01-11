@@ -202,7 +202,8 @@ class SubscribeService(_PubSubService):
             })['response']
         except PubSubSubscriptionExists:
             self.logger.warning(format_exc())
-            raise BadRequest(self.cid, 'Subscription to topic `{}` already exists'.format(self.request.input.topic_name))
+            msg = 'Subscription to topic `{}` already exists'.format(self.request.input.topic_name)
+            raise BadRequest(self.cid, msg, needs_msg=True)
         else:
             self.response.payload.sub_key = response['sub_key']
             self.response.payload.queue_depth = response['queue_depth']
