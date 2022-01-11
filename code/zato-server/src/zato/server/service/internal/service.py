@@ -438,7 +438,7 @@ class Invoke(AdminService):
 
         else:
 
-            # This branch the same as above in is_async branch, except in is_async there was no all_pids
+            # This branch is the same as above in is_async branch, except in is_async there was no all_pids
 
             # It is possible that we were given the all_pids flag on input but we know
             # ourselves that there is only one process, the current one, so we can just
@@ -475,9 +475,6 @@ class Invoke(AdminService):
                 else:
 
                     func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
-
-                    if 'palo-alto' in name:
-                        payload = loads(payload)
 
                     response = func(
                         id_,
