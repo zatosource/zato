@@ -52,10 +52,7 @@ class PubAPITestCase(RESTClientTestCase):
 # ################################################################################################################################
 
     def _unsubscribe(self, sub_key:'str'='') -> 'anydict':
-        response = self.rest_client.delete(
-            config.path_unsubscribe,
-            qs={'sub_key': sub_key}
-        ) # type: anydict
+        response = self.rest_client.delete(config.path_unsubscribe) # type: anydict
 
         # We always expect an empty dict on reply from unsubscribe
         self.assertDictEqual(response, {})
@@ -70,13 +67,13 @@ class PubAPITestCase(RESTClientTestCase):
         # Before subscribing, make sure we are not currently subscribed
         self._unsubscribe()
 
-        response = self.rest_client.post(config.path_subscribe)
+        response_initial = self.rest_client.post(config.path_subscribe)
 
         # Wait a moment to make sure the subscription data is created
         sleep(0.1)
 
-        sub_key       = response['sub_key']
-        queue_depth = response['queue_depth']
+        sub_key = response_initial['sub_key']
+        queue_depth = response_initial['queue_depth']
 
         #
         # Validate sub_key
@@ -96,12 +93,14 @@ class PubAPITestCase(RESTClientTestCase):
 
         self.assertIsInstance(queue_depth, int)
 
-        # Clean up after the test
-        self._unsubscribe(sub_key)
+        # Subscribe once more - this should be allowed although we expect an empty response now
+        response_already_subscribed = self.rest_client.post(config.path_subscribe)
+
+        self.assertDictEqual(response_already_subscribed, {})
 
 # ################################################################################################################################
 
-    def xtest_self_unsubscribe(self):
+    def test_self_unsubscribe(self):
 
         # Unsubscribe once ..
         response = self._unsubscribe()
