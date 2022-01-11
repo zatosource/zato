@@ -698,7 +698,7 @@ class Create(ZatoCommand):
             None, 'zato.pubsub.demo.secdef', True, 'zato.pubsub.demo', 'Zato pub/sub demo', self.generate_password(), cluster)
         session.add(sec_demo)
 
-        sec_default_internal = HTTPBasicAuth(None, 'zato.pubsub.internal.secdef', True, 'zato.pubsub.internal',
+        sec_default_internal = HTTPBasicAuth(None, PUBSUB.DEFAULT.INTERNAL_SECDEF_NAME, True, 'zato.pubsub.internal',
             'Zato pub/sub internal', self.generate_password(), cluster)
         session.add(sec_default_internal)
 

@@ -98,7 +98,10 @@ class _RESTClient:
 
 # ################################################################################################################################
 
-    def init(self, /, sec_name:'str'='pubapi') -> 'None':
+    def init(self, /, username:'str', sec_name:'str') -> 'None':
+
+        # Assign for later use
+        self._api_invoke_username = username
 
         # A shortcut
         command = sh.zato # type: ignore
