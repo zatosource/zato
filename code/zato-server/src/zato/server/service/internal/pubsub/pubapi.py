@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from traceback import format_exc
@@ -18,7 +16,7 @@ from rapidjson import dumps
 from future.utils import itervalues
 
 # Zato
-from zato.common.api import CHANNEL, CONTENT_TYPE, PUBSUB
+from zato.common.api import CHANNEL, CONTENT_TYPE, PUBSUB, ZATO_NONE
 from zato.common.exception import BadRequest, Forbidden, PubSubSubscriptionExists
 from zato.common.util.auth import parse_basic_auth
 from zato.server.service import AsIs, Int, Service
@@ -122,7 +120,7 @@ class TopicService(_PubSubService):
             'correl_id': input.correl_id,
             'in_reply_to': input.in_reply_to,
             'ext_client_id': input.ext_client_id,
-            'has_gd': input.has_gd or False,
+            'has_gd': input.has_gd or ZATO_NONE,
             'endpoint_id': endpoint_id,
         }
 
