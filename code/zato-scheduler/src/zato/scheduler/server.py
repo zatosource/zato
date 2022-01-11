@@ -171,10 +171,10 @@ class SchedulerServer:
         data = loads(data)
 
         # .. callback functions expect Bunch instances on input ..
-        data = Bunch(data)
+        data = Bunch(data) # type: ignore
 
         # .. look up the action we need to invoke ..
-        action_name = code_to_name[data['action']]
+        action_name = code_to_name[data['action']] # type: ignore
 
         # .. convert it to an actual method to invoke ..
         func_name = 'on_broker_msg_{}'.format(action_name)
@@ -188,9 +188,16 @@ class SchedulerServer:
     def __call__(self, env, start_response):
         try:
             request = env['wsgi.input'].read()
-            self.handle_api_request(request)
+
+            if request:
+                return_data = '{}\n'
+                self.handle_api_request(request)
+            else:
+                return_data = ''
+
             start_response(ok, headers)
-            return [b'{}\n']
+            return return_data
+
         except Exception:
             logger.warning(format_exc())
 
