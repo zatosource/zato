@@ -68,12 +68,12 @@ install-qa-reqs:
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 
 run-tests:
-	#$(MAKE) install-qa-reqs
-	#$(MAKE) static-check
-	#$(MAKE) type-check
-	#$(MAKE) common-tests
+	$(MAKE) install-qa-reqs
+	$(MAKE) static-check
+	$(MAKE) type-check
+	$(MAKE) common-tests
 	$(MAKE) server-tests
-	#$(MAKE) cli-tests
-	#$(MAKE) sso-tests
-	#$(MAKE) web-admin-tests
-	#$(MAKE) cy-tests
+	$(MAKE) cli-tests
+	$(MAKE) sso-tests
+	$(MAKE) web-admin-tests
+	$(MAKE) cy-tests

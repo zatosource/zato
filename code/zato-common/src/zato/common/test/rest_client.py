@@ -98,7 +98,10 @@ class _RESTClient:
 
 # ################################################################################################################################
 
-    def init(self, /, username:'str', sec_name:'str') -> 'None':
+    def init(self, /, username:'str'='', sec_name:'str'='') -> 'None':
+
+        username = username or 'pubapi'
+        sec_name = sec_name or 'pubapi'
 
         # Assign for later use
         self._api_invoke_username = username
@@ -196,7 +199,7 @@ class _RESTClient:
 
 # ################################################################################################################################
 
-    def post(self, url_path:'str', request:'str'='', expect_ok:'bool'=True, auth:'any_'=None) -> 'Bunch':
+    def post(self, url_path:'str', request:'any_'='', expect_ok:'bool'=True, auth:'any_'=None) -> 'Bunch':
         return self._invoke(requests.post, 'POST', url_path, request, expect_ok, auth)
 
 # ################################################################################################################################
