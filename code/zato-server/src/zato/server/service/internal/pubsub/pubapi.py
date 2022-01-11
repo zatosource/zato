@@ -146,9 +146,6 @@ class TopicService(_PubSubService):
             sub = self.pubsub.get_subscription_by_endpoint_id(endpoint_id)
             sub_key = sub.sub_key # type: ignore
 
-        #if not sub_key:
-        #    sub = self.pubsub
-
         try:
             self.pubsub.get_subscription_by_sub_key(sub_key)
         except KeyError:

@@ -115,6 +115,7 @@ _does_not_exist = object()
 
 _default_expiration = PUBSUB.DEFAULT.EXPIRATION
 default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
+default_sub_pattern_matched = '(No sub pattern)'
 
 # ################################################################################################################################
 
@@ -696,18 +697,36 @@ class PubSub:
         """ Deletes a subscription from the list of subscription. By default, it is not an error to call
         the method with an invalid sub_key. Must be invoked with self.lock held.
         """
-        sub = self.subscriptions_by_sub_key.pop(sub_key, _invalid) # type: Subscription
+        sub = self.subscriptions_by_sub_key.get(sub_key, _invalid) # type: Subscription
+
+        #
+        # There is no such subscription and we may either log it or raise an exception ..
+        #
         if sub is _invalid:
 
             # If this is on, we only log information about the event ..
             if ignore_missing:
-                logger.info('Could not find sub_key %s', sub_key)
+                logger.info('Could not find sub_key to delete `%s`', sub_key)
 
             # .. otherwise, we raise an entire exception.
             else:
                 raise KeyError('No such sub_key `%s`', sub_key)
+
+        #
+        # If we are here, it means that the subscription is valid
+        #
         else:
+
+            # Now, delete the subscription
+            self.subscriptions_by_sub_key.pop(sub_key, _invalid)
+
+            # Delete the subscription's sk_server first because it depends on the subscription
+            # for sk_server table formatting.
+            self.delete_sub_key_server(sub_key, sub_pattern_matched=sub.sub_pattern_matched)
+
+            # Log what we have done ..
             logger.info('Deleted subscription object `%s` (%s)', sub.sub_key, sub.topic_name)
+
             return sub # Either valid or invalid but ignore_missing is True
 
 # ################################################################################################################################
@@ -1058,7 +1077,7 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def format_sk_servers(self, default:'str'='---') -> 'str':
+    def format_sk_servers(self, default:'str'='---', sub_pattern_matched:'str'=default_sub_pattern_matched) -> 'str':
 
         # Prepare the table
         len_columns = len(self.sk_server_table_columns)
@@ -1077,7 +1096,15 @@ class PubSub:
 
         for idx, item in enumerate(servers, 1):
 
-            sub_key_info = [item.sub_key]
+            # Let the basic information contain both the sub_key and the pattern matched during subscription.
+            sub = self.get_subscription_by_sub_key(item.sub_key)
+            if sub:
+                sub_pattern_matched = sub.sub_pattern_matched
+            else:
+                sub_pattern_matched = sub_pattern_matched or default_sub_pattern_matched
+            basic_info = f'{item.sub_key} -> {sub_pattern_matched}'
+
+            sub_key_info = [basic_info]
 
             if item.wsx_info:
                 for name in ('swc', 'name', 'pub_client_id', 'peer_fqdn', 'forwarded_for_fqdn'):
@@ -1163,16 +1190,23 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def delete_sub_key_server(self, sub_key:'str') -> 'None':
+    def delete_sub_key_server(self, sub_key:'str', sub_pattern_matched:'str'='') -> 'None':
         with self.lock:
             sub_key_server = self.sub_key_servers.get(sub_key)
             if sub_key_server:
-                msg = 'Deleting info about delivery server for sub_key `%s`, was `%s:%s`'
+                msg = 'Deleting sk_server for sub_key `%s`, was `%s:%s`'
 
                 logger.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
                 logger_zato.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
 
-                del self.sub_key_servers[sub_key]
+                self.sub_key_servers.pop(sub_key, None)
+
+                sks_table = self.format_sk_servers(sub_pattern_matched=sub_pattern_matched)
+                msg_sks = 'Current sk_servers after deletion of `%s`:\n%s'
+
+                logger.info(msg_sks, sub_key, sks_table)
+                logger_zato.info(msg_sks, sub_key, sks_table)
+
             else:
                 logger.info('Could not find sub_key `%s` while deleting sub_key server, current `%s` `%s`',
                     sub_key, self.server.name, self.server.pid)
@@ -1186,6 +1220,8 @@ class PubSub:
         with self.lock:
             for sub_key in config['sub_key_list']:
                 _ = self.sub_key_servers.pop(sub_key, None)
+
+                # ->> Compare this loop with the .pop call above
                 for server_info in self.sub_key_servers.values():
                     if server_info.sub_key == sub_key:
                         del self.sub_key_servers[sub_key]

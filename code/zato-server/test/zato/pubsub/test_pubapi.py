@@ -11,14 +11,15 @@ from time import sleep
 
 # Zato
 from zato.common import PUBSUB
-from zato.common.pubsub import prefix_sk
+from zato.common.pubsub import MSG_PREFIX, prefix_sk
+from zato.common.test import rand_string
 from zato.common.test.rest_client import RESTClientTestCase
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import anydict, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,7 +52,12 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def _unsubscribe(self, sub_key:'str'='') -> 'anydict':
+    def _subscribe(self) -> 'anydict':
+        return self.rest_client.post(config.path_subscribe)
+
+# ################################################################################################################################
+
+    def _unsubscribe(self) -> 'anydict':
         response = self.rest_client.delete(config.path_unsubscribe) # type: anydict
 
         # We always expect an empty dict on reply from unsubscribe
@@ -62,7 +68,7 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def test_self_subscribe(self):
+    def xtest_self_subscribe(self):
 
         # Before subscribing, make sure we are not currently subscribed
         self._unsubscribe()
@@ -100,7 +106,7 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def test_self_unsubscribe(self):
+    def xtest_self_unsubscribe(self):
 
         # Unsubscribe once ..
         response = self._unsubscribe()
@@ -112,6 +118,60 @@ class PubAPITestCase(RESTClientTestCase):
         # .. even if we are already unsubscribed.
         response = self._unsubscribe()
         self.assertDictEqual(response, {})
+
+# ################################################################################################################################
+
+    def test_full_path_with_prior_subscription(self):
+
+        # First, make sure that we are not subscribed so that we can receive a sub_key in the next step
+        self._unsubscribe()
+
+        # Wait a moment to make sure the subscription is deleted
+        sleep(0.1)
+
+        # Note that in this test we are subscribing upfront
+        sub_response = self._subscribe()
+        sub_key = sub_response['sub_key']
+
+        data = rand_string()
+        request = {'data': data}
+        response_publish = self.rest_client.post(config.path_publish, request) # type: stranydict
+
+        # We should have a correct message ID on output
+        msg_id = response_publish['msg_id'] # type: str
+        self.assertTrue(msg_id.startswith(MSG_PREFIX.MSG_ID))
+
+        # Wait a moment to make sure the message is delivered - the server's delivery task runs once in 2 seconds
+        sleep(2.1)
+
+        # Now, read the message back from our own queue - we can do it because
+        # we know that we are subscribed already.
+        response_received = self.rest_client.patch(config.path_receive)
+
+        # We do not know how many messages we receive because it is possible
+        # that there may be some left over from previous tests. However, we still
+        # expect that the message that we have just published will be the first one
+        # because messages are returned in the Last-In-First-Out order (LIFO).
+        msg_received = response_received[0]
+
+        self.assertEqual(msg_received['data'], data)
+        self.assertEqual(msg_received['size'], len(data))
+        self.assertEqual(msg_received['sub_key'], sub_key)
+        self.assertEqual(msg_received['delivery_count'], 1)
+        self.assertEqual(msg_received['priority'],   PUBSUB.PRIORITY.DEFAULT)
+        self.assertEqual(msg_received['mime_type'],  PUBSUB.DEFAULT.MIME_TYPE)
+        self.assertEqual(msg_received['expiration'], PUBSUB.DEFAULT.EXPIRATION)
+        self.assertEqual(msg_received['topic_name'], topic_name)
+
+        self.assertTrue(msg_received['has_gd'])
+        self.assertFalse(msg_received['is_in_sub_queue'])
+
+        # Dates will start with 2nnn, e.g. 2022, or 2107, depending on a particular field
+        date_start = '2'
+
+        self.assertTrue(msg_received['pub_time_iso'].startswith(date_start))
+        self.assertTrue(msg_received['expiration_time_iso'].startswith(date_start))
+        # self.assertTrue(msg_received['recv_time_iso'].startswith(date_start))
 
 # ################################################################################################################################
 # ################################################################################################################################
