@@ -39,6 +39,7 @@ from zato.common.odb.api import SessionWrapper, SQLConnectionPool
 from zato.common.odb.query import search_es_list
 from zato.common.simpleio_ import get_bytes_to_str_encoding, get_sio_server_config, simple_io_conf_contents
 from zato.common.py23_ import maxint
+from zato.common.typing_ import cast_
 from zato.common.util.api import is_port_taken, new_cid
 from zato.server.service import Service
 
@@ -160,7 +161,7 @@ def rand_object():
 def rand_date_utc(as_string=False):
     value = datetime.utcnow() # Now is as random as any other date
     if as_string:
-        return value.isoformat()
+        return cast_(str, value.isoformat())
     return value
 
 # ################################################################################################################################
