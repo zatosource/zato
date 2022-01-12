@@ -13,7 +13,7 @@ from time import sleep
 from zato.common import PUBSUB
 from zato.common.pubsub import MSG_PREFIX, prefix_sk, skip_to_external
 from zato.common.test import rand_date_utc
-from zato.common.test.rest_client import RESTClientTestCase
+from zato.common.test.rest_client import _RESTClient, RESTClientTestCase
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -40,9 +40,61 @@ class config:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class PubSubAPIRestImpl:
+    def __init__(self, test:'PubAPITestCase', rest_client:'_RESTClient') -> 'None':
+        self.test = test
+        self.rest_client = rest_client
+
+# ################################################################################################################################
+
+    def _publish(self, data:'any_') -> 'stranydict':
+        request = {'data': data}
+        response = self.rest_client.post(config.path_publish, request) # type: stranydict
+        sleep(0.1)
+        return response
+
+# ################################################################################################################################
+
+    def _receive(self, needs_sleep:'bool'=True, expect_ok:'bool'=True) -> 'anylist':
+
+        # If required, wait a moment to make sure a previously published message is delivered -
+        # # the server's delivery task runs once in 2 seconds.
+        if needs_sleep:
+            sleep(2.1)
+
+        return cast_('anylist', self.rest_client.patch(config.path_receive, expect_ok=expect_ok))
+
+# ################################################################################################################################
+
+    def _subscribe(self, needs_unsubscribe:'bool'=False) -> 'str':
+        if needs_unsubscribe:
+            self._unsubscribe()
+        response = self.rest_client.post(config.path_subscribe)
+        sleep(1.1)
+        return response['sub_key']
+
+# ################################################################################################################################
+
+    def _unsubscribe(self) -> 'anydict':
+
+        # Delete a potential subscription based on our credentials
+        response = self.rest_client.delete(config.path_unsubscribe) # type: anydict
+
+        # Wait a moment to make sure the subscription is deleted
+        sleep(0.1)
+
+        # We always expect an empty dict on reply from unsubscribe
+        self.test.assertDictEqual(response, {})
+
+        # Our caller may want to run its own assertion too
+        return response
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class FullPathTester:
 
-    def __init__(self, test: 'PubAPITestCase', sub_before_publish: 'bool') -> 'None':
+    def __init__(self, test:'PubAPITestCase', sub_before_publish:'bool') -> 'None':
         self.test = test
         self.sub_before_publish = sub_before_publish
         self.sub_after_publish = not self.sub_before_publish
@@ -118,54 +170,31 @@ class PubAPITestCase(RESTClientTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.rest_client.init(username=username, sec_name=sec_name)
+        self.api_impl = PubSubAPIRestImpl(self, self.rest_client)
 
 # ################################################################################################################################
 
     def _publish(self, data:'any_') -> 'stranydict':
-        request = {'data': data}
-        response = self.rest_client.post(config.path_publish, request) # type: stranydict
-        sleep(0.1)
-        return response
+        return self.api_impl._publish(data)
 
 # ################################################################################################################################
 
     def _receive(self, needs_sleep:'bool'=True, expect_ok:'bool'=True) -> 'anylist':
-
-        # If required, wait a moment to make sure a previously published message is delivered -
-        # # the server's delivery task runs once in 2 seconds.
-        if needs_sleep:
-            sleep(2.1)
-
-        return cast_('anylist', self.rest_client.patch(config.path_receive, expect_ok=expect_ok))
+        return self.api_impl._receive(needs_sleep, expect_ok)
 
 # ################################################################################################################################
 
     def _subscribe(self, needs_unsubscribe:'bool'=False) -> 'str':
-        if needs_unsubscribe:
-            self._unsubscribe()
-        response = self.rest_client.post(config.path_subscribe)
-        sleep(1.1)
-        return response['sub_key']
+        return self.api_impl._subscribe(needs_unsubscribe)
 
 # ################################################################################################################################
 
     def _unsubscribe(self) -> 'anydict':
-
-        # Delete a potential subscription based on our credentials
-        response = self.rest_client.delete(config.path_unsubscribe) # type: anydict
-
-        # Wait a moment to make sure the subscription is deleted
-        sleep(0.1)
-
-        # We always expect an empty dict on reply from unsubscribe
-        self.assertDictEqual(response, {})
-
-        # Our caller may want to run its own assertion too
-        return response
+        return self.api_impl._unsubscribe()
 
 # ################################################################################################################################
 
-    def test_self_subscribe(self):
+    def xtest_self_subscribe(self):
 
         # Before subscribing, make sure we are not currently subscribed
         self._unsubscribe()
@@ -203,7 +232,7 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def test_self_unsubscribe(self):
+    def xtest_self_unsubscribe(self):
 
         # Unsubscribe once ..
         response = self._unsubscribe()
@@ -218,7 +247,7 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def test_full_path_subscribe_before_publication(self):
+    def xtest_full_path_subscribe_before_publication(self):
         tester = FullPathTester(self, True)
         tester.run()
 
@@ -230,7 +259,7 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def test_receive_has_no_sub(self):
+    def xtest_receive_has_no_sub(self):
 
         # Make sure we are not subscribed
         self._unsubscribe()
@@ -244,7 +273,7 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def test_receive_many(self):
+    def xtest_receive_many(self):
 
         # Make sure we are subscribed
         self._subscribe(needs_unsubscribe=True)
