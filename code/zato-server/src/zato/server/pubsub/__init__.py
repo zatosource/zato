@@ -319,14 +319,23 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def get_subscription_by_endpoint_id(self, endpoint_id:'int', needs_error:'bool'=True) -> 'subnone':
+    def get_subscription_by_endpoint_id(
+        self,
+        endpoint_id,      # type: int
+        topic_name,       # type: str
+        needs_error=True, # type: bool
+        ) -> 'subnone':
+
         with self.lock:
             for sub in self.get_all_subscriptions().values():
                 if sub.endpoint_id == endpoint_id:
                     return sub
             else:
+                msg = f'No sub to topic `{topic_name}` for endpoint_id `{endpoint_id}`'
                 if needs_error:
-                    raise KeyError(f'No sub for endpoint_id `{endpoint_id}`')
+                    raise KeyError(msg)
+                else:
+                    logger.info(msg)
 
 # ################################################################################################################################
 

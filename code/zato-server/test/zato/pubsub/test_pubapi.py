@@ -126,14 +126,14 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def _receive(self, needs_sleep:'bool'=True) -> 'anylist':
+    def _receive(self, needs_sleep:'bool'=True, expect_ok:'bool'=True) -> 'anylist':
 
         # If required, wait a moment to make sure a previously published message is delivered -
         # # the server's delivery task runs once in 2 seconds.
         if needs_sleep:
             sleep(2.1)
 
-        return cast_('anylist', self.rest_client.patch(config.path_receive))
+        return cast_('anylist', self.rest_client.patch(config.path_receive, expect_ok=expect_ok))
 
 # ################################################################################################################################
 
@@ -213,21 +213,29 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def test_full_path_subscribe_before_publication(self):
+    def xtest_full_path_subscribe_before_publication(self):
         tester = FullPathTester(self, True)
         tester.run()
 
 # ################################################################################################################################
 
-    def test_full_path_subscribe_after_publication(self):
+    def xtest_full_path_subscribe_after_publication(self):
         tester = FullPathTester(self, False)
         tester.run()
 
 # ################################################################################################################################
 
-    def xtest_receive_has_no_sub(self):
-        # `{"result":"Error","cid":"2e1b541fead06e424551def1","details":["No sub for endpoint_id `2`"]}` (500)
-        pass
+    def test_receive_has_no_sub(self):
+
+        # Make sure we are not subscribed
+        self._unsubscribe()
+
+        # Try to receive messages without a subscription
+        response = cast_('anydict', self._receive(False, False))
+
+        self.assertIsNotNone(response['cid'])
+        self.assertEqual(response['result'], 'Error')
+        self.assertEqual(response['details'], f'You are not subscribed to topic `{topic_name}`')
 
 # ################################################################################################################################
 
