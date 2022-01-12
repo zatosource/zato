@@ -1,26 +1,27 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from unittest import main
+from unittest import main, TestCase
 
 # Zato
-from base import BaseTest
 from zato.common.test import CommandLineServiceInvoker
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CommandLineTestCase(BaseTest):
+class CommandLineServiceInvokeTest(TestCase):
 
-    def test_command_line(self) -> 'None':
-        service = 'zato.sso.sso-test-service'
-        invoker = CommandLineServiceInvoker()
+    def test_wsx_services(self) -> 'None':
+        service = 'zato.ping'
+        expected_stdout = b"{'pong': 'zato'}\n"
+
+        invoker = CommandLineServiceInvoker(expected_stdout)
         invoker.invoke_and_test(service)
 
 # ################################################################################################################################
