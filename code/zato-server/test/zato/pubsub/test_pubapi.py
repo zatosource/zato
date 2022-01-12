@@ -12,7 +12,7 @@ from time import sleep
 # Zato
 from zato.common import PUBSUB
 from zato.common.pubsub import MSG_PREFIX, prefix_sk
-from zato.common.test import rand_date_utc
+from zato.common.test import rand_date_utc, rand_int
 from zato.common.test.rest_client import RESTClientTestCase
 from zato.common.typing_ import cast_
 
@@ -225,7 +225,7 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def test_receive_has_no_sub(self):
+    def xtest_receive_has_no_sub(self):
 
         # Make sure we are not subscribed
         self._unsubscribe()
@@ -239,13 +239,28 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def xtest_receive_many(self):
+    def test_receive_many(self):
+
+        # Make sure we are not subscribed
+        self._subscribe()
+
+        data1 = rand_int() # type: int
+        data2 = rand_int() # type: int
+        data3 = rand_int() # type: int
 
         # Publish #1
+        response1 = self._publish(data1)
+
         # Publish #2
+        response2 = self._publish(data2)
+
         # Publish #3
+        response3 = self._publish(data3)
+
         # Receive and confirm the order of messages received
-        pass
+        response1
+        response2
+        response3
 
 # ################################################################################################################################
 # ################################################################################################################################

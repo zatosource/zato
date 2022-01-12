@@ -125,7 +125,7 @@ def rand_datetime(to_string=True):
 
 # ################################################################################################################################
 
-def rand_int(start=1, stop=100, count=1):
+def rand_int(start:'int'=1, stop:'int'=100, count:'int'=1) -> 'any_':
     if count == 1:
         return randint(start, stop)
     else:
