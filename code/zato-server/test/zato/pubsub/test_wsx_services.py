@@ -19,10 +19,10 @@ class WSXServicesTest(TestCase):
 
     def test_wsx_services(self) -> 'None':
         service = 'pubsub1.my-service'
-        expected_stdout = b"(None)\n"
 
-        invoker = CommandLineServiceInvoker(expected_stdout)
-        invoker.invoke_and_test(service)
+        invoker = CommandLineServiceInvoker(check_stdout=False)
+        out = invoker.invoke_and_test(service)
+        print(111, out)
 
 # ################################################################################################################################
 # ################################################################################################################################
