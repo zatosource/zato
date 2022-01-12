@@ -1998,7 +1998,9 @@ class PubSub:
     def get_messages(self,
         topic_name,            # type: str
         sub_key,               # type: str
+        /,
         needs_details=False,   # type: bool
+        needs_msg_id=False,    # type: bool
         _skip=skip_to_external # type: strtuple
         ) -> 'anylist':
         """ Returns messages from a subscriber's queue, deleting them from the queue in progress.
@@ -2017,7 +2019,9 @@ class PubSub:
         out = [] # type: anylist
         for item in response:
             for name in _skip:
-                item.pop(name, None)
+                value = item.pop(name, None)
+                if needs_msg_id and name == 'pub_msg_id':
+                    item['msg_id'] = value
             out.append(item)
         return out
 
