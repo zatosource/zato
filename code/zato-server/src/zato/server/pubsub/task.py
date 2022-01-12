@@ -704,7 +704,7 @@ class Message(PubSubMessage):
             self.expiration_time_iso = cast_('str', datetime_from_ms(self.expiration_time * 1000))
 
         if self.recv_time:
-            self.recv_time_iso = cast_('str', datetime_from_ms(self.recv_time))
+            self.recv_time_iso = cast_('str', datetime_from_ms(self.recv_time * 1000))
 
 # ################################################################################################################################
 
