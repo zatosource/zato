@@ -903,7 +903,9 @@ class Service:
                 # This is fine, there was only the actual response element here,
                 # without the '_meta' pagination
                 pass
-            response_elem = keys[0]
+
+            # It is possible that the dictionary is empty
+            response_elem = keys[0] if keys else None
 
             # This covers responses that have only one top-level element
             # and that element's name is 'response' or, e.g. 'zato_amqp_...'

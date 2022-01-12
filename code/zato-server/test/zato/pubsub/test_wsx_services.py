@@ -18,8 +18,8 @@ from zato.common.test import CommandLineServiceInvoker
 class WSXServicesTest(TestCase):
 
     def test_wsx_services(self) -> 'None':
-        service = 'zato.ping'
-        expected_stdout = b"{'pong': 'zato'}\n"
+        service = 'pubsub1.my-service'
+        expected_stdout = b"(None)\n"
 
         invoker = CommandLineServiceInvoker(expected_stdout)
         invoker.invoke_and_test(service)

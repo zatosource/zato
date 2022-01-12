@@ -43,7 +43,7 @@ class TopicSIO(BaseSIO):
     input_optional = ('data', AsIs('msg_id'), 'has_gd', Int('priority'),
         Int('expiration'), 'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time',
         'sub_key')
-    output_optional = (AsIs('msg_id'),)
+    output_optional = AsIs('msg_id')
 
 # ################################################################################################################################
 
@@ -328,8 +328,8 @@ class PublishMessage(Service):
     SimpleIO = TopicSIO
 
     def handle(self):
-        self.response.payload = self.invoke(
-            TopicService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'POST'})
+        response = self.invoke(TopicService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'POST'})
+        self.response.payload = response
 
 # ################################################################################################################################
 
@@ -339,8 +339,8 @@ class GetMessages(Service):
     SimpleIO = TopicSIO
 
     def handle(self):
-        self.response.payload = self.invoke(
-            TopicService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'PATCH'})
+        response = self.invoke(TopicService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'PATCH'})
+        self.response.payload = response
 
 # ################################################################################################################################
 
@@ -350,8 +350,8 @@ class Subscribe(Service):
     SimpleIO = SubSIO
 
     def handle(self):
-        self.response.payload = self.invoke(
-            SubscribeService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'POST'})
+        response = self.invoke(SubscribeService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'POST'})
+        self.response.payload = response
 
 # ################################################################################################################################
 
@@ -369,7 +369,7 @@ class Unsubscribe(Service):
     SimpleIO = SubSIO
 
     def handle(self):
-        self.response.payload = self.invoke(
-            SubscribeService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'DELETE'})
+        response = self.invoke(SubscribeService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'DELETE'})
+        self.response.payload = response
 
 # ################################################################################################################################
