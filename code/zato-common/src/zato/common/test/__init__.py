@@ -624,26 +624,34 @@ class CommandLineServiceInvoker:
     def __init__(
         self,
         expected_stdout=b'', # type: bytes
+        check_stdout=True,   # type: bool
+        check_exit_code=True,   # type: bool
         server_location=''   # type: str
         ) -> 'None':
+
+        self.check_stdout = check_stdout
+        self.check_exit_code = check_exit_code
 
         self.expected_stdout = expected_stdout or TestConfig.default_stdout
         self.server_location = server_location or TestConfig.server_location
 
     def _assert_command_line_result(self, out:'RunningCommand') -> 'None':
 
-        if out.exit_code != 0:
-            raise ValueError(f'Exit code should be 0 instead `{out.exit_code}`')
+        if self.check_exit_code:
+            if out.exit_code != 0:
+                raise ValueError(f'Exit code should be 0 instead `{out.exit_code}`')
 
-        if out.stdout != self.expected_stdout:
-            raise ValueError(f'Stdout should {self.expected_stdout} instead of {out.stdout}')
+        if self.check_stdout:
+            if out.stdout != self.expected_stdout:
+                raise ValueError(f'Stdout should {self.expected_stdout} instead of {out.stdout}')
 
 # ################################################################################################################################
 
-    def invoke_and_test(self, service:'str') -> 'None':
+    def invoke_and_test(self, service:'str') -> 'any_':
         command = sh.zato # type: ignore
         out = command('service', 'invoke', self.server_location, service)
         self._assert_command_line_result(out)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
