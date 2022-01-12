@@ -139,12 +139,18 @@ class TopicService(_PubSubService):
         """ POST /zato/pubsub/topic/{topic_name}
         """
 
+        # Local aliases
+        topic_name = self.request.input.topic_name
+
         # Not every channel may present a sub_key on input
         if self.chan.type in (CHANNEL.WEB_SOCKET, CHANNEL.SERVICE): # type: ignore
             sub_key = self.request.input.get('sub_key')
         else:
-            sub = self.pubsub.get_subscription_by_endpoint_id(endpoint_id)
-            sub_key = sub.sub_key # type: ignore
+            sub = self.pubsub.get_subscription_by_endpoint_id(endpoint_id, topic_name, needs_error=False)
+            if sub:
+                sub_key = sub.sub_key
+            else:
+                raise BadRequest(self.cid, 'You are not subscribed to topic `{}`'.format(topic_name), needs_msg=True)
 
         try:
             self.pubsub.get_subscription_by_sub_key(sub_key)
@@ -152,7 +158,7 @@ class TopicService(_PubSubService):
             self.logger.warning('Could not find sub_key:`%s`, e:`%s`', sub_key, format_exc())
             raise Forbidden(self.cid)
         else:
-            return self.pubsub.get_messages(self.request.input.topic_name, sub_key)
+            return self.pubsub.get_messages(topic_name, sub_key)
 
 # ################################################################################################################################
 
@@ -234,6 +240,9 @@ class SubscribeService(_PubSubService):
     def _handle_DELETE(self):
         """ Low-level implementation of DELETE /zato/pubsub/subscribe/topic/{topic_name}
         """
+        # Local aliases
+        topic_name = self.request.input.topic_name
+
         # This may be provided by WebSockets
         sub_key = self.request.input.get('sub_key')
 
@@ -257,7 +266,7 @@ class SubscribeService(_PubSubService):
             if sub_key:
                 sub = self.pubsub.get_subscription_by_sub_key(sub_key)
             else:
-                sub = self.pubsub.get_subscription_by_endpoint_id(endpoint_id, needs_error=False)
+                sub = self.pubsub.get_subscription_by_endpoint_id(endpoint_id, topic_name, needs_error=False)
         except KeyError:
             self.logger.warning('Could not find subscription by endpoint_id:`%s`, endpoint:`%s`',
                 endpoint_id, self.pubsub.get_endpoint_by_id(endpoint_id).name)
@@ -265,7 +274,7 @@ class SubscribeService(_PubSubService):
         else:
             if not sub:
                 self.logger.info('No subscription for sub_key: `%s` and endpoint_id: `%s` (%s) (delete)',
-                    sub_key, endpoint_id, self.request.input.topic_name)
+                    sub_key, endpoint_id, topic_name)
                 return
 
             # Raise an exception if current endpoint is not the one that created the subscription originally,
