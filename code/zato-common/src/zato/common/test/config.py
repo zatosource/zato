@@ -14,6 +14,7 @@ import os
 
 class TestConfig:
 
+    pubsub_topic_name_name = '/zato/demo/sample'
     default_stdout = b'(None)\n'
 
     current_app = 'CRM'
