@@ -165,10 +165,12 @@ class Create(AdminService):
 
         for item in gc.get_objects():
 
-            if isinstance(item, type):
-                item_impl_name = '{}.{}'.format(item.__module__, item.__name__)
-                if item_impl_name in model_name_list:
-                    model_classes.add(item)
+            # It may be None in case it has been already GC-collected
+            if item is not None:
+                if isinstance(item, type):
+                    item_impl_name = '{}.{}'.format(item.__module__, item.__name__)
+                    if item_impl_name in model_name_list:
+                        model_classes.add(item)
 
         for model_class in model_classes:
             for ref in gc.get_referrers(model_class):
