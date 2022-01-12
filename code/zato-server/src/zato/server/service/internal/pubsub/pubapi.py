@@ -158,7 +158,7 @@ class TopicService(_PubSubService):
             self.logger.warning('Could not find sub_key:`%s`, e:`%s`', sub_key, format_exc())
             raise Forbidden(self.cid)
         else:
-            return self.pubsub.get_messages(topic_name, sub_key)
+            return self.pubsub.get_messages(topic_name, sub_key, needs_msg_id=True)
 
 # ################################################################################################################################
 

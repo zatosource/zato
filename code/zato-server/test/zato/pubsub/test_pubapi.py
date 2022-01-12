@@ -11,8 +11,8 @@ from time import sleep
 
 # Zato
 from zato.common import PUBSUB
-from zato.common.pubsub import MSG_PREFIX, prefix_sk
-from zato.common.test import rand_date_utc, rand_int
+from zato.common.pubsub import MSG_PREFIX, prefix_sk, skip_to_external
+from zato.common.test import rand_date_utc
 from zato.common.test.rest_client import RESTClientTestCase
 from zato.common.typing_ import cast_
 
@@ -92,15 +92,18 @@ class FullPathTester:
         self.test.assertEqual(msg_received['expiration'], PUBSUB.DEFAULT.EXPIRATION)
         self.test.assertEqual(msg_received['topic_name'], topic_name)
 
-        self.test.assertTrue(msg_received['has_gd'])
-        self.test.assertFalse(msg_received['is_in_sub_queue'])
-
         # Dates will start with 2nnn, e.g. 2022, or 2107, depending on a particular field
         date_start = '2'
 
         self.test.assertTrue(msg_received['pub_time_iso'].startswith(date_start))
         self.test.assertTrue(msg_received['expiration_time_iso'].startswith(date_start))
         self.test.assertTrue(msg_received['recv_time_iso'].startswith(date_start))
+
+        # Make sure that keys that are not supposed to be returned to external callers
+        # are not returned in the message.
+        for name in skip_to_external:
+            if name in msg_received:
+                self.test.fail(f'Key `{name}` should not be in message {msg_received}')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -137,7 +140,9 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def _subscribe(self) -> 'str':
+    def _subscribe(self, needs_unsubscribe:'bool'=False) -> 'str':
+        if needs_unsubscribe:
+            self._unsubscribe()
         response = self.rest_client.post(config.path_subscribe)
         sleep(1.1)
         return response['sub_key']
@@ -160,7 +165,7 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def xtest_self_subscribe(self):
+    def test_self_subscribe(self):
 
         # Before subscribing, make sure we are not currently subscribed
         self._unsubscribe()
@@ -198,7 +203,7 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def xtest_self_unsubscribe(self):
+    def test_self_unsubscribe(self):
 
         # Unsubscribe once ..
         response = self._unsubscribe()
@@ -213,19 +218,19 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def xtest_full_path_subscribe_before_publication(self):
+    def test_full_path_subscribe_before_publication(self):
         tester = FullPathTester(self, True)
         tester.run()
 
 # ################################################################################################################################
 
-    def xtest_full_path_subscribe_after_publication(self):
+    def test_full_path_subscribe_after_publication(self):
         tester = FullPathTester(self, False)
         tester.run()
 
 # ################################################################################################################################
 
-    def xtest_receive_has_no_sub(self):
+    def test_receive_has_no_sub(self):
 
         # Make sure we are not subscribed
         self._unsubscribe()
@@ -241,26 +246,40 @@ class PubAPITestCase(RESTClientTestCase):
 
     def test_receive_many(self):
 
-        # Make sure we are not subscribed
-        self._subscribe()
+        # Make sure we are subscribed
+        self._subscribe(needs_unsubscribe=True)
 
-        data1 = rand_int() # type: int
-        data2 = rand_int() # type: int
-        data3 = rand_int() # type: int
+        data1 = '111'
+        data2 = '222'
+        data3 = '333'
 
         # Publish #1
         response1 = self._publish(data1)
+        expected_msg_id1 = response1['msg_id']
 
         # Publish #2
         response2 = self._publish(data2)
+        expected_msg_id2 = response2['msg_id']
 
         # Publish #3
         response3 = self._publish(data3)
+        expected_msg_id3 = response3['msg_id']
 
-        # Receive and confirm the order of messages received
-        response1
-        response2
-        response3
+        # Receive and confirm the order of messages received. This will be a list of messages
+        # and we expect to find all of them, in LIFO order.
+        received = self._receive()
+
+        received_msg1 = received[0]
+        received_msg2 = received[1]
+        received_msg3 = received[2]
+
+        self.assertEqual(expected_msg_id3, received_msg1['msg_id'])
+        self.assertEqual(expected_msg_id2, received_msg2['msg_id'])
+        self.assertEqual(expected_msg_id1, received_msg3['msg_id'])
+
+        self.assertEqual(data3, received_msg1['data'])
+        self.assertEqual(data2, received_msg2['data'])
+        self.assertEqual(data1, received_msg3['data'])
 
 # ################################################################################################################################
 # ################################################################################################################################
