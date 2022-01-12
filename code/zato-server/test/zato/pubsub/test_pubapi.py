@@ -20,7 +20,7 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, stranydict
+    from zato.common.typing_ import any_, anydict, anylist, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,12 +73,9 @@ class FullPathTester:
         if self.sub_after_publish:
             sub_key = self.test._subscribe()
 
-        # Wait a moment to make sure the message is delivered - the server's delivery task runs once in 2 seconds
-        sleep(2.1)
-
         # Now, read the message back from our own queue - we can do it because
         # we know that we are subscribed already.
-        response_received = self.test.rest_client.patch(config.path_receive)
+        response_received = self.test._receive()
 
         # We do not know how many messages we receive because it is possible
         # that there may be some left over from previous tests. However, we still
@@ -126,6 +123,17 @@ class PubAPITestCase(RESTClientTestCase):
         response = self.rest_client.post(config.path_publish, request) # type: stranydict
         sleep(0.1)
         return response
+
+# ################################################################################################################################
+
+    def _receive(self, needs_sleep:'bool'=True) -> 'anylist':
+
+        # If required, wait a moment to make sure a previously published message is delivered -
+        # # the server's delivery task runs once in 2 seconds.
+        if needs_sleep:
+            sleep(2.1)
+
+        return cast_('anylist', self.rest_client.patch(config.path_receive))
 
 # ################################################################################################################################
 
