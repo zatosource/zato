@@ -9,7 +9,7 @@ run-tests:
 	$(PY_DIR)/py $(CURDIR)/test/zato/file_transfer/test_*.py
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/apispec/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/pattern/test_*.py -s
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/pubsub/test_*.py -s
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/pubsub/test_pubapi.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/rest/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/server_rpc/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/stats/test_*.py -s

@@ -55,7 +55,7 @@ sk_lists = ('reply_to_sk', 'deliver_to_sk')
 skip_to_external = (
     'delivery_status', 'topic_id', 'cluster_id', 'pub_pattern_matched', 'sub_pattern_matched',
     'published_by_id', 'data_prefix', 'data_prefix_short', 'pub_time', 'expiration_time', 'recv_time',
-    'pub_msg_id', 'pub_correl_id', 'zato_ctx'
+    'pub_msg_id', 'pub_correl_id', 'zato_ctx', 'is_in_sub_queue', 'has_gd', 'server_name', 'server_pid'
 ) + sk_lists
 
 # ################################################################################################################################

@@ -515,7 +515,7 @@ class GetEndpointQueueMessagesGD(AdminService, _GetMessagesBase):
 
         if not sub:
             self.logger.info('Could not find subscription by input `%s` (#1)', input)
-            return
+            return []
 
         return self._search(
             pubsub_messages_for_queue, session, self.request.input.cluster_id, sub.sub_key, True, False)
