@@ -167,6 +167,8 @@ class SimpleIOPayload:
             response_name:str = list(value.keys())[0] # type: str
             if response_name.startswith('zato') and response_name.endswith('_response'):
                 return value[response_name]
+            else:
+                return value
         else:
             return value
 
