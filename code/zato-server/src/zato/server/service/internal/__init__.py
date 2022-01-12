@@ -249,7 +249,11 @@ class ChangePasswordBase(AdminService):
                     raise Exception('Either ID or name are required on input')
 
                 # If we are here, it means that we can find the instance.
-                instance = query.one()
+                instance = query.first()
+
+                if not instance:
+                    raise Exception('Could not find instance with id:`{}` and name:`{}` ({})'.format(
+                        instance_id, instance_name, class_))
 
                 auth_func(instance, password1)
 
