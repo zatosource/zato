@@ -22,6 +22,10 @@ from mock import MagicMock, Mock
 # nose
 from nose.tools import eq_
 
+# sh
+import sh
+from sh import RunningCommand
+
 # six
 from six import string_types
 
@@ -39,6 +43,7 @@ from zato.common.odb.api import SessionWrapper, SQLConnectionPool
 from zato.common.odb.query import search_es_list
 from zato.common.simpleio_ import get_bytes_to_str_encoding, get_sio_server_config, simple_io_conf_contents
 from zato.common.py23_ import maxint
+from zato.common.test.config import TestConfig
 from zato.common.typing_ import cast_
 from zato.common.util.api import is_port_taken, new_cid
 from zato.server.service import Service
@@ -611,6 +616,34 @@ class BaseSIOTestCase(TestCase):
         sio.build(class_)
 
         return sio
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CommandLineServiceInvoker:
+    def __init__(
+        self,
+        expected_stdout=b'', # type: bytes
+        server_location=''   # type: str
+        ) -> 'None':
+
+        self.expected_stdout = expected_stdout or TestConfig.default_stdout
+        self.server_location = server_location or TestConfig.server_location
+
+    def _assert_command_line_result(self, out:'RunningCommand') -> 'None':
+
+        if out.exit_code != 0:
+            raise ValueError(f'Exit code should be 0 instead `{out.exit_code}`')
+
+        if out.stdout != self.expected_stdout:
+            raise ValueError(f'Stdout should {self.expected_stdout} instead of {out.stdout}')
+
+# ################################################################################################################################
+
+    def invoke_and_test(self, service:'str') -> 'None':
+        command = sh.zato # type: ignore
+        out = command('service', 'invoke', self.server_location, service)
+        self._assert_command_line_result(out)
 
 # ################################################################################################################################
 # ################################################################################################################################
