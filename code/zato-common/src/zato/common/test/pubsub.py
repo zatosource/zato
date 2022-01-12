@@ -16,22 +16,19 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from unittest import TestCase
+class PubSubTestingClass:
 
-    class PubSubTestCase(TestCase):
+    def _subscribe(self, *args, **kwargs): # type: ignore
+        raise NotImplementedError()
 
-        def _subscribe(self, *args, **kwargs): # type: ignore
-            raise NotImplementedError()
+    def _unsubscribe(self, *args, **kwargs): # type: ignore
+        raise NotImplementedError()
 
-        def _unsubscribe(self, *args, **kwargs): # type: ignore
-            raise NotImplementedError()
+    def _publish(self, *args, **kwargs): # type: ignore
+        raise NotImplementedError()
 
-        def _publish(self, *args, **kwargs): # type: ignore
-            raise NotImplementedError()
-
-        def _receive(self, *args, **kwargs): # type: ignore
-            raise NotImplementedError()
+    def _receive(self, *args, **kwargs): # type: ignore
+        raise NotImplementedError()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,7 +40,7 @@ topic_name = TestConfig.pubsub_topic_name_name
 
 class FullPathTester:
 
-    def __init__(self, test:'PubSubTestCase', sub_before_publish:'bool') -> 'None':
+    def __init__(self, test:'PubSubTestingClass', sub_before_publish:'bool') -> 'None':
         self.test = test
         self.sub_before_publish = sub_before_publish
         self.sub_after_publish = not self.sub_before_publish
