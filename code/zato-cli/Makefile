@@ -3,6 +3,8 @@
 
 run-tests:
 	py $(CURDIR)/test/zato/test_enmasse.py
+	py $(CURDIR)/test/zato/test_openapi.py
+	py $(CURDIR)/test/zato/test_service_invoke.py
 
 pylint:
 	echo Running pylint in zato-cli

@@ -22,6 +22,10 @@ from mock import MagicMock, Mock
 # nose
 from nose.tools import eq_
 
+# sh
+import sh
+from sh import RunningCommand
+
 # six
 from six import string_types
 
@@ -39,6 +43,8 @@ from zato.common.odb.api import SessionWrapper, SQLConnectionPool
 from zato.common.odb.query import search_es_list
 from zato.common.simpleio_ import get_bytes_to_str_encoding, get_sio_server_config, simple_io_conf_contents
 from zato.common.py23_ import maxint
+from zato.common.test.config import TestConfig
+from zato.common.typing_ import cast_
 from zato.common.util.api import is_port_taken, new_cid
 from zato.server.service import Service
 
@@ -124,7 +130,7 @@ def rand_datetime(to_string=True):
 
 # ################################################################################################################################
 
-def rand_int(start=1, stop=100, count=1):
+def rand_int(start:'int'=1, stop:'int'=100, count:'int'=1) -> 'any_':
     if count == 1:
         return randint(start, stop)
     else:
@@ -160,7 +166,7 @@ def rand_object():
 def rand_date_utc(as_string=False):
     value = datetime.utcnow() # Now is as random as any other date
     if as_string:
-        return value.isoformat()
+        return cast_(str, value.isoformat())
     return value
 
 # ################################################################################################################################
@@ -610,6 +616,42 @@ class BaseSIOTestCase(TestCase):
         sio.build(class_)
 
         return sio
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CommandLineServiceInvoker:
+    def __init__(
+        self,
+        expected_stdout=b'', # type: bytes
+        check_stdout=True,   # type: bool
+        check_exit_code=True,   # type: bool
+        server_location=''   # type: str
+        ) -> 'None':
+
+        self.check_stdout = check_stdout
+        self.check_exit_code = check_exit_code
+
+        self.expected_stdout = expected_stdout or TestConfig.default_stdout
+        self.server_location = server_location or TestConfig.server_location
+
+    def _assert_command_line_result(self, out:'RunningCommand') -> 'None':
+
+        if self.check_exit_code:
+            if out.exit_code != 0:
+                raise ValueError(f'Exit code should be 0 instead `{out.exit_code}`')
+
+        if self.check_stdout:
+            if out.stdout != self.expected_stdout:
+                raise ValueError(f'Stdout should {self.expected_stdout} instead of {out.stdout}')
+
+# ################################################################################################################################
+
+    def invoke_and_test(self, service:'str') -> 'any_':
+        command = sh.zato # type: ignore
+        out = command('service', 'invoke', self.server_location, service)
+        self._assert_command_line_result(out)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

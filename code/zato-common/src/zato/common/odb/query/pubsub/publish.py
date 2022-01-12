@@ -156,7 +156,7 @@ def _insert_topic_messages(session, msg_list, msg_pub_ignore=msg_pub_ignore):
     # Delete keys that cannot be inserted in SQL
     for msg in msg_list: # type: dict
         for name in msg_pub_ignore:
-            msg.pop(name)
+            msg.pop(name, None)
 
     session.execute(MsgInsert().values(msg_list))
 
