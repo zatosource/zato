@@ -39,12 +39,23 @@ logger = logging.getLogger(__name__)
 
 def main():
 
-    store_pidfile(os.path.abspath('.'))
-    repo_dir = os.path.join('.', 'config', 'repo')
+    env_dir = os.environ.get('ZATO_DASHBOARD_BASE_DIR')
+
+    base_dir = env_dir or '.'
+    base_dir_abs = os.path.abspath(base_dir)
+
+    store_pidfile(base_dir_abs)
+    repo_dir = os.path.join(base_dir, 'config', 'repo')
 
     # Update Django settings
     config = loads(open_r(os.path.join(repo_dir, 'web-admin.conf')).read())
-    config['config_dir'] = os.path.abspath('.')
+    config['config_dir'] = base_dir_abs
+
+    if env_dir:
+        log_config = config['log_config']
+        log_config = os.path.join(env_dir, log_config)
+        config['log_config'] = log_config
+
     update_globals(config)
 
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
