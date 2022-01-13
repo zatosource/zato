@@ -177,10 +177,14 @@ class FieldCtx:
         # type: (DictCtx, Field, FieldCtx) -> None
 
         # We get these on input ..
-        self.dict_ctx = dict_ctx
-        self.field    = field
-        self.parent   = parent
-        self.name     = self.field.name # type: str
+        self.dict_ctx   = dict_ctx
+        self.field      = field
+        self.parent     = parent
+        self.name       = self.field.name # type: str
+
+        # This will be the same as self.field.type unless self.field.type is a union (e.g. optional[str]).
+        # In this case, self.field_type will be str whereas self.field.type will be the original type.
+        self.field_type = None # type: object
 
         # .. by default, assume we have no type information (we do not know what model class it is)
         self.model_class = None # type: object
@@ -190,6 +194,7 @@ class FieldCtx:
         self.is_class = None # type: bool
         self.is_model = None # type: bool
         self.is_list  = None # type: bool
+        self.is_required = None # type: bool
 
 # ################################################################################################################################
 
@@ -298,13 +303,27 @@ class MarshalAPI:
 
         for _ignored_name, _field in sorted(dict_ctx.fields.items()): # type: (str, Field)
 
+            # Assume we are required ..
+            is_required = True
+
+            # Use this by default ..
+            field_type = _field.type
+
+            # .. unless it is a union with None = this field is really optional[type_]
             if is_union(_field.type):
                 result = extract_from_union(_field.type)
-                _, field_type, _ = result
-                _field.type = field_type
+                _, field_type, union_with = result
+
+                # Extract the field type ..
+                #_field.type = field_type
+
+                # .. and check if this was an optional field.
+                is_required = False#union_with is type(None)
 
             # Represents a current field in the model in the context of the input dict ..
             field_ctx = FieldCtx(dict_ctx, _field, parent)
+            field_ctx.is_required = is_required
+            field_ctx.field_type = field_type
 
             # .. this call will populate the initial value of the field as well (field_ctx..
             field_ctx.init()
@@ -337,9 +356,22 @@ class MarshalAPI:
 
             # Let's check if found any value
             if field_ctx.value != ZatoNotGiven:
-                dict_ctx.attrs_container[field_ctx.name] = field_ctx.value
+                value = field_ctx.value
             else:
-                raise self.get_validation_error(field_ctx)
+                if field_ctx.is_required:
+                    raise self.get_validation_error(field_ctx)
+                else:
+                    if issubclass(field_ctx.field_type, str):
+                        value = ''
+                    elif issubclass(field_ctx.field_type, int):
+                        value = 0
+                    elif issubclass(field_ctx.field_type, float):
+                        value = 0.0
+                    else:
+                        value = None
+
+            # Assign the value now
+            dict_ctx.attrs_container[field_ctx.name] = value
 
             # If we have any extra elements, we need to add them as well
             if extra:
