@@ -270,7 +270,9 @@
                 <li><a href="#">Statistics &darr;</a>
                     <ul>
                         <li class='wide'><a href="{% url "stats-service-usage" %}?cluster={{ cluster_id|default:'' }}">Service usage</a></li>
+                        <li class='wide'><a href="{% url "stats-user" %}?cluster={{ cluster_id|default:'' }}">User defined</a></li>
                     </ul>
+
                 </li>
 
                 <!-- <li><a href="{% url "config-file" %}?cluster={{ cluster_id|default:'' }}">Config files</a></li> -->
