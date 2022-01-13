@@ -283,6 +283,7 @@ class _BaseView:
         self.req = None
         self.cluster_id = None
         self.clear_user_message()
+        self.ctx = {}
 
     def __call__(self, req, *args, **kwargs):
         self.req = req
@@ -296,6 +297,9 @@ class _BaseView:
 
     def on_before_append_item(self, item):
         return item
+
+    def get_output_class(self):
+        pass
 
     def on_after_set_input(self):
         pass
@@ -417,6 +421,7 @@ class Index(_BaseView):
         """ May be overridden by subclasses to dynamically decide which template to use,
         otherwise self.template will be employed.
         """
+
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
             func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
@@ -436,7 +441,13 @@ class Index(_BaseView):
 
         for msg_item in item_list:
 
-            item = self.output_class()
+            output_class = self.get_output_class()
+            item = output_class() if output_class else self.output_class()
+
+            # Use attributes that were definded upfront for the SimpleIO definition
+            # or use everything that we received from the service.
+            names = names if names else msg_item.keys()
+
             for name in sorted(names):
                 value = getattr(msg_item, name, None)
                 if value is not None:
