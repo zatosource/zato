@@ -10,23 +10,33 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-from .base import CreateAttrListRequest, CreatePhoneListRequest, CreateUserRequest
+try:
+    from .base import Address, AddressWithDefaults, CreateAttrListRequest, CreatePhoneListRequest, CreateUserRequest
+except ImportError:
+    from base import Address, AddressWithDefaults, CreateAttrListRequest, CreatePhoneListRequest, CreateUserRequest
+
 from zato.common.marshal_.api import ElementMissing, MarshalAPI
 from zato.common.test import rand_int, rand_string
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.server.service import Service
+    Service = Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ValidationTestCase(TestCase):
 
-# ################################################################################################################################
-
     def test_validate_top_simple_elem_missing(self):
 
         # Input is entirely missing here
         data = {}
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
@@ -47,7 +57,7 @@ class ValidationTestCase(TestCase):
             'role_list': [],
         }
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
@@ -72,7 +82,7 @@ class ValidationTestCase(TestCase):
             'role_list': [],
         }
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
@@ -111,7 +121,7 @@ class ValidationTestCase(TestCase):
             ]
         }
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
@@ -127,7 +137,7 @@ class ValidationTestCase(TestCase):
         # There is no input (and attr_list is a list that is missing)
         data = {}
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
@@ -144,7 +154,7 @@ class ValidationTestCase(TestCase):
             'attr_list': [{}],
         }
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
@@ -161,10 +171,10 @@ class ValidationTestCase(TestCase):
             'attr_list': [],
         }
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
-        result = api.from_dict(service, data, CreateAttrListRequest) # type: CreateAttrListRequest
+        result = cast_('CreateAttrListRequest', api.from_dict(service, data, CreateAttrListRequest))
 
         # It is not an error to send a list that is empty,
         # which is unlike not sending the list at all (as checked in other tests).
@@ -180,7 +190,7 @@ class ValidationTestCase(TestCase):
             ],
         }
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
@@ -200,7 +210,7 @@ class ValidationTestCase(TestCase):
             ],
         }
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
@@ -224,7 +234,7 @@ class ValidationTestCase(TestCase):
             ],
         }
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
@@ -245,7 +255,7 @@ class ValidationTestCase(TestCase):
             ]
         }
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
@@ -267,7 +277,7 @@ class ValidationTestCase(TestCase):
             ]
         }
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
@@ -288,7 +298,7 @@ class ValidationTestCase(TestCase):
             ]
         }
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
@@ -296,6 +306,91 @@ class ValidationTestCase(TestCase):
 
         e = cm.exception # type: ElementMissing
         self.assertEqual(e.reason, 'Element missing: /phone_list[2]/attr_list[1]/name')
+
+# ################################################################################################################################
+
+    def test_unmarshall_optional_missing(self):
+
+        data = {
+            'locality': 'abc'
+        }
+
+        service = cast_('Service', None)
+        api = MarshalAPI()
+
+        result = api.from_dict(service, data, Address) # type: Address
+
+        # This, we can test
+        self.assertEqual(result.locality, data['locality'])
+
+        # Here, it suffices that we can access these attributes, no matter what their value is.
+        # We check their default values in other tests.
+        result.post_code
+        result.details
+        result.characteristics
+
+# ################################################################################################################################
+
+    def test_unmarshall_optional_empty(self):
+
+        data = {
+            'locality': 'abc',
+            'post_code': '',
+            'details': {},
+            'characteristics': [],
+        }
+
+        service = cast_('Service', None)
+        api = MarshalAPI()
+
+        result = api.from_dict(service, data, Address) # type: Address
+
+        self.assertEqual(result.locality, data['locality'])
+        self.assertEqual(result.post_code, '')
+        self.assertEqual(result.details, {})
+        self.assertListEqual(result.characteristics, []) # type: ignore
+
+# ################################################################################################################################
+
+    def test_unmarshall_optional_missing_default_not_given(self):
+
+        data = {
+            'locality': 'abc',
+            'post_code': '',
+            'details': {},
+            'characteristics': [],
+        }
+
+        service = cast_('Service', None)
+        api = MarshalAPI()
+
+        result = api.from_dict(service, data, Address) # type: Address
+
+        self.assertEqual(result.locality, data['locality'])
+        self.assertEqual(result.post_code, '')
+        self.assertEqual(result.details, {})
+        self.assertListEqual(result.characteristics, []) # type: ignore
+
+# ################################################################################################################################
+
+    def test_unmarshall_optional_default_given(self):
+
+        data = {
+            'locality': 'abc',
+            'post_code': '',
+            'details': {},
+            'characteristics': [],
+        }
+
+        service = cast_('Service', None)
+        api = MarshalAPI()
+
+        result = api.from_dict(service, data, AddressWithDefaults) # type: AddressWithDefaults
+
+        self.assertEqual(result.locality, data['locality'])
+        self.assertEqual(result.post_code, '')
+        self.assertEqual(result.details, {})
+        self.assertListEqual(result.characteristics, []) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
