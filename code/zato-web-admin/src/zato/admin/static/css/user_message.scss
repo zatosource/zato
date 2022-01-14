@@ -1,0 +1,44 @@
+#user-message-div {
+    padding-top:16px;
+    font-size:12px;
+    margin-left:4px;
+    margin-right:4px;
+}
+
+.user-message {
+    padding:6px;
+    border-style:dotted;
+    color:#333333;
+    text-align:left;
+}
+
+.user-message-success {
+    border-color:#333333;
+    border-width:1px;
+    background-color:#bbdd55;
+}
+
+.user-message-failure {
+    border-color:red;
+    border-width:2px;
+    background-color:#eeee33;
+}
+
+.error-message {
+    background-color:#ffccbb;
+    padding:6px;
+    margin-bottom:12px;
+    border:1px dotted #999999;
+    font-weight:600;
+    color:#993333
+}
+
+.loading {
+    background: url(/static/gfx/ajax-loader.gif) no-repeat;
+    height: 16px;
+}
+
+.loading:after {
+    content: "Please wait ...";
+    padding-left:30px;
+}
