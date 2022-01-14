@@ -1,45 +1,28 @@
 {% extends "zato/index.html" %}
 {% load extras %}
-{% block html_title %}User defined statistics{% endblock %}
+{% block html_title %}Custom statistics{% endblock %}
 
 {% block "extra_css" %}
-    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
-
-    <style type="text/css">
-        a.stats {
-            font-size: 1.1em !important;
-        }
-
-        span.description {
-            color: #585858;
-            font-size: 1.05em !important;
-        }
-    </style>
-
+    <link rel="stylesheet" media="screen" href="/static/css/stats-user.css" />
 {% endblock %}
 
 {% block "extra_js" %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script>
+        $.fn.zato.data_table.get_columns = function() {
+            return [
+                '_numbering',
+                '_selection',
 
-<script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
-<script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
-<script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
-<script type="text/javascript" src="/static/js/common.js"></script>
-
-<script>
-    $.fn.zato.data_table.get_columns = function() {
-        return [
-            '_numbering',
-            '_selection',
-
-            'name',
-            'description',
-        ]
-    }
-</script>
+                'name',
+                'description',
+            ]
+        }
+    </script>
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">User defined statistics</h2>
+<h2 class="zato">Custom statistics</h2>
 
 {% if not zato_clusters %} {% include "zato/no-clusters.html" %} {% else %}
 
@@ -51,6 +34,7 @@
     <div style="text-align: center !important;">
     <br/>
 
+    {% if items %}
 
     <table id="data-table" style="width:50%; margin: auto">
         <thead>
@@ -63,7 +47,7 @@
         </thead>
 
         <tbody>
-            {% if items %} {% for item in items %}
+            {% for item in items %}
             <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                 <td class='numbering' style="width:10px">&nbsp;</td>
                 <td class="impexp"><input type="checkbox" /></td>
@@ -75,16 +59,20 @@
                     </span>
                 </td>
             </tr>
-            {% endfor %} {% else %}
-            <tr class='ignore'>
-                <td colspan='4'>No results</td>
-            </tr>
-            {% endif %}
-
+            {% endfor %}
         </tbody>
     </table>
 
+    {% else %}
 
+    No custom statistics found.
+    <a href="#">Click here</a>
+    to learn how to
+    create your own
+    statistics dashboard
+    in Zato.
+
+    {% endif %}
 
     </div>
 </div>
