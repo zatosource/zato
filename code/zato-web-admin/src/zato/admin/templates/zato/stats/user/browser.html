@@ -1,0 +1,91 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+{% block html_title %}User defined statistics{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+
+    <style type="text/css">
+        a.stats {
+            font-size: 1.1em !important;
+        }
+
+        span.description {
+            color: #585858;
+            font-size: 1.05em !important;
+        }
+    </style>
+
+{% endblock %}
+
+{% block "extra_js" %}
+
+<script type="text/javascript" src="/static/js/common.js"></script>
+
+<script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            'name',
+            'description',
+        ]
+    }
+</script>
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">User defined statistics</h2>
+
+{% if not zato_clusters %} {% include "zato/no-clusters.html" %} {% else %}
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% if cluster_id %}
+
+<div id="markup">
+    <div style="text-align: center !important;">
+    <br/>
+
+
+    <table id="data-table" style="width:40%; margin: auto">
+        <thead>
+            <tr class='ignore'>
+                <th>&nbsp;</th>
+                <th>&nbsp;</th>
+
+                <th style="text-align: left;"><a href="#">Name</a></th>
+                <th style="text-align: left;"><a href="#">Details</a></th>
+        </thead>
+
+        <tbody>
+            {% if items %} {% for item in items %}
+            <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                <td class='numbering' style="width:10px">&nbsp;</td>
+                <td class="impexp"><input type="checkbox" /></td>
+
+                <td style="text-align: left;"><a class="stats" href="?cluster_id={{ cluster_id }}&amp;action=BrowseStats&amp;item_id={{ item.id }}">{{ item.name }}</a></td>
+                <td style="text-align: left;">
+                    <span class="description">
+                        {{ item.description }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %} {% else %}
+            <tr class='ignore'>
+                <td colspan='4'>No results</td>
+            </tr>
+            {% endif %}
+
+        </tbody>
+    </table>
+
+
+
+    </div>
+</div>
+
+{% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %} {% endblock %}
