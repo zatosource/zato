@@ -499,6 +499,8 @@ class Invoke(AdminService):
 
             if not isinstance(response, basestring):
                 if not isinstance(response, bytes):
+                    #bson
+                    from bson.json_util import dumps as dumps_func
                     response = dumps(response)
 
             response = response if isinstance(response, bytes) else response.encode('utf8')
