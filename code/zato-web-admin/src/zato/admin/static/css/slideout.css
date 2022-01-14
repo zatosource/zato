@@ -1,0 +1,51 @@
+/* 
+	Taken from http://www.usabilitypost.com/2011/04/19/pure-css-slideout-interface/
+	and slightly modified for Zato's purposes.
+*/
+
+#slideout {
+	position: fixed;
+	top: 240px;
+	right: 0;
+	width: 35px;
+	height:64px;
+	vertical-align:bottom;
+	padding-top:26px;
+	padding-left:4px;
+	padding-right:4px;
+	
+	text-align: center;
+	background: #aaa;
+	border-top:1px solid #888;
+	border-bottom:1px solid #888;
+	border-left:1px solid #888;
+	-webkit-transition-duration: 0.2s;
+	-moz-transition-duration: 0.2s;
+	-o-transition-duration: 0.2s;
+	transition-duration: 0.2s;
+
+}
+#slideout_inner {
+	position: fixed;
+	top: 240px;
+	right: -450px;
+	background:#bbb;
+	width: 400px;
+	padding: 25px;
+	padding-bottom:15px;
+	
+	border-top:1px solid #888;
+	border-bottom:1px solid #888;
+	-webkit-transition-duration: 0.2s;
+	-moz-transition-duration: 0.2s;
+	-o-transition-duration: 0.2s;
+	transition-duration: 0.2s;
+	text-align: left;
+}
+
+#slideout:hover {
+	right: 450px;
+}
+#slideout:hover #slideout_inner {
+	right: 0;
+}

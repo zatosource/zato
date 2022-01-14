@@ -1,0 +1,101 @@
+
+h2.zato {
+    font-size:80%;
+	padding:10px;
+	padding-left:4px;
+    color: #222;
+    border-bottom:1px dotted #767676;
+}
+
+div.prompt {
+	font-size:11px;
+	padding:10px;
+	padding-left:4px;
+}
+
+div.prompt form {
+	padding-top:4px
+}
+
+a {
+    color: #000;
+    font-family: arial,helvetica,clean,sans-serif;
+	text-decoration:underline;
+	padding:3px;
+	padding-left:0px;
+}
+
+a:hover {
+    background-color: #e0e030;
+    color:#000033;
+    text-decoration:none
+}
+
+a.top {
+	color: #fff;
+	text-shadow: none
+}
+
+a.top:hover {
+	color: #000;
+}
+
+a.hint {
+	color: #333;
+	font-size:10px;
+}
+
+
+
+#footer {
+    border-top:1px solid #999999;
+    border-bottom:1px solid #999999;
+    margin:5px 5px 0px 0px;
+    padding:5px;
+    background-color:#e0e0e0;
+    text-align:right
+}
+
+.validation-advice {
+    color:#cc0000
+}
+
+.options-button {
+    cursor: pointer;
+}
+
+#markup {
+	width:94%;
+	text-align: center;
+}
+
+th.ignore, td.ignore, div.ignore {
+	display:none
+}
+
+div.page_prompt {
+	padding:4px;
+	font-size:12px;
+}
+
+div.page_prompt a.current {
+	font-weight:bolder;
+}
+
+#id_file {
+	width:100%
+}
+
+.hidden {
+	visibility: hidden;
+	display: none;
+}
+
+.visible {
+	visibility: visible;
+	
+	/* The question is whether this is a proper approach, I wish there was
+	   a 'browser-default' value instead of 'initial' available.
+	*/
+	
+}
