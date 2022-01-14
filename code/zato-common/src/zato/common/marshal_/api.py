@@ -42,11 +42,31 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+_None_Type = type(None)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def is_list(field_type, is_class):
     # type: (Field, bool) -> bool
-    is_list_base_class_instance = isinstance(field_type, _ListBaseClass)
-    is_list_sub_type = issubtype(field_type, list)
-    return is_list_base_class_instance or (is_class and is_list_sub_type)
+
+    # Using str is the only reliable method
+    if 'typing.Union' in str(field_type):
+        type_to_check = field_type.__args__[0] # type: ignore
+    else:
+        type_to_check = field_type
+
+    is_list_base_class_instance = isinstance(type_to_check, _ListBaseClass)
+    is_list_sub_type = issubtype(type_to_check, list) # type: ignore
+
+    if is_list_base_class_instance:
+        result = True
+    elif (is_class and is_list_sub_type):
+        result = True
+    else:
+        result = False
+
+    return result
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -296,12 +316,15 @@ class MarshalAPI:
 # ################################################################################################################################
 
     def from_dict(self, service, current_dict, DataClass, extra=None, list_idx=None, parent=None):
-        # type: (Service, dict, object, list, dict, int) -> object
+        # type: (Service, dict, object, list, dict, int) -> any_
 
         dict_ctx = DictCtx(service, current_dict, DataClass, list_idx)
         dict_ctx.init()
 
-        for _ignored_name, _field in sorted(dict_ctx.fields.items()): # type: (str, Field)
+        # All fields that we will visit
+        field_items = sorted(dict_ctx.fields.items()) # type: (str, Field)
+
+        for _ignored_name, _field in field_items:
 
             # Assume we are required ..
             is_required = True
@@ -314,11 +337,8 @@ class MarshalAPI:
                 result = extract_from_union(_field.type)
                 _, field_type, union_with = result
 
-                # Extract the field type ..
-                #_field.type = field_type
-
-                # .. and check if this was an optional field.
-                is_required = False#union_with is type(None)
+                # .. check if this was an optional field.
+                is_required = not (union_with is _None_Type)
 
             # Represents a current field in the model in the context of the input dict ..
             field_ctx = FieldCtx(dict_ctx, _field, parent)
@@ -365,6 +385,10 @@ class MarshalAPI:
                         value = ''
                     elif issubclass(field_ctx.field_type, int):
                         value = 0
+                    elif issubclass(field_ctx.field_type, list):
+                        value = []
+                    elif issubclass(field_ctx.field_type, dict):
+                        value = {}
                     elif issubclass(field_ctx.field_type, float):
                         value = 0.0
                     else:
