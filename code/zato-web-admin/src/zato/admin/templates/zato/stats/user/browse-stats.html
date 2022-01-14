@@ -1,0 +1,148 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+{% block html_title %}User defined statistics{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+
+    <style type="text/css">
+        a.stats {
+            font-size: 1.1em !important;
+        }
+
+        span.description {
+            color: #585858;
+            font-size: 1.05em !important;
+        }
+    </style>
+
+{% endblock %}
+
+{% block "extra_js" %}
+
+<script type="text/javascript" src="/static/js/common.js"></script>
+
+<script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            'name',
+            'description',
+        ]
+    }
+</script>
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">User defined statistics</h2>
+
+{% if not zato_clusters %} {% include "zato/no-clusters.html" %} {% else %}
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% if cluster_id %}
+
+<div id="markup">
+
+    <div style="text-align: cente2r !important;">
+    <br/>
+
+    <h3>All Types</h3>
+    <br/>
+
+    <table id="data-table" style="width:70%; margin: auto">
+        <thead>
+            <tr class='ignore'>
+                <td colspan="3" style="text-align: left;">
+                    ← <a href="#">Back to main page </a>
+                </td>
+                <td colspan="5" style="text-align: right;">
+                    <select>
+                        <option>---</option>
+                        <option>One week</option>
+                        <option>One month</option>
+                        <option>One year</option>
+                        <option>All</option>
+                    </select>
+                    <select>
+                        <option>---</option>
+                        <option>All types</option>
+                        <option>Type 1</option>
+                        <option>Type 2</option>
+                        <option>Type 3</option>
+                    </select>
+                    <select>
+                        <option>---</option>
+                        <option>Subtype 1</option>
+                        <option>Subtype 2</option>
+                        <option>Subtype 3</option>
+                        <option>Subtype 4</option>
+                    </select>
+                    <select>
+                        <option>---</option>
+                        <option>user1@example.com</option>
+                        <option>user2@example.com</option>
+                        <option>user3@example.com</option>
+                    </select>
+                    <input type="button" value="List" onclick="location.href='?cluster_id={{ cluster_id }}&amp;action=BrowseStats'"/>
+                    <input type="button" value="Display" onclick="location.href='?cluster_id={{ cluster_id }}&amp;action=DisplayStats'"/>
+                    <input type="button" value="Compare" onclick="location.href='?cluster_id={{ cluster_id }}&amp;action=CompareStats'"/>
+                </td>
+            </tr>
+        </thead>
+        <thead>
+            <tr class='ignore'>
+                <th><input type="checkbox" /></th>
+                <th>&nbsp;</th>
+
+                <th style="text-align: left;"><a href="#">Start time</a></th>
+                <th style="text-align: left;"><a href="#">Type</a></th>
+                <th style="text-align: left;"><a href="#">User</a></th>
+                <th style="text-align: left;"><a href="#">Details</a></th>
+                <th style="text-align: right;"><a href="#">Success</a></th>
+                <th style="text-align: right;"><a href="#">Progress</a></th>
+        </thead>
+
+        <tbody>
+            {% if items %} {% for item in items %}
+            <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                <td><input type="checkbox" /></td>
+                <td class='numbering' style="width:10px">&nbsp;</td>
+
+                <td style="text-align: left; width:15%">{{ item.date_started }}</td>
+
+                <td style="text-align: left; width:15%">{{ item.Type_type }}</td>
+
+                <td style="text-align: left;"><a class="stats" href="?cluster_id={{ cluster_id }}&amp;action=BrowseStats&amp;item_id={{ item.id }}">{{ item.username }}</a></td>
+
+                <td style="text-align: left;">
+                    <span class="description">
+                    </span>
+                </td>
+                <td style="text-align: center;">
+                    <span class="description" style="font-size: 1.2em !important;">
+                    </span>
+                </td>
+                <td style="text-align: center;">
+                    <a href="#">Display</a>
+                </td>
+            </tr>
+            {% endfor %} {% else %}
+            <tr class='ignore'>
+                <td colspan='4'>No results</td>
+            </tr>
+            {% endif %}
+
+        </tbody>
+    </table>
+
+
+
+    </div>
+</div>
+
+{% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %} {% endblock %}
