@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,6 +12,18 @@ from typing import List as list_
 # Zato
 from zato.common.ext.dataclasses import dataclass, field
 from zato.common.marshal_.api import Model
+from zato.common.typing_ import optional
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_default_address_details():
+    return {'hello':'world'}
+
+# ################################################################################################################################
+
+def get_default_address_characteristics():
+    return ['zzz', 'qqq']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -19,6 +31,19 @@ from zato.common.marshal_.api import Model
 @dataclass(init=False, repr=False)
 class Address(Model):
     locality: str
+    post_code: optional[str]
+    details: optional[dict]
+    characteristics: optional[list]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False, repr=False)
+class AddressWithDefaults(Model):
+    locality: str = 'abc'
+    post_code: optional[str] = '12345'
+    details: optional[dict] = field(default_factory=get_default_address_details) # type: ignore
+    characteristics: optional[list] = field(default_factory=get_default_address_characteristics) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,7 +68,7 @@ class Role(Model):
 class CreateUserRequest(Model):
     request_id: int
     user: User
-    role_list: list_[Role] = field(default_factory=list)
+    role_list: list_[Role] = field(default_factory=list) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,28 +83,28 @@ class Attr(Model):
 
 @dataclass(init=True, repr=False)
 class Phone(Model):
-    attr_list: list_[Attr] = field(default_factory=list)
+    attr_list: list_[Attr] = field(default_factory=list) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=True, repr=False)
 class Modem(Model):
-    attr_list: list_[Attr] = field(default_factory=list)
+    attr_list: list_[Attr] = field(default_factory=list) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=True, repr=False)
 class CreatePhoneListRequest(Model):
-    phone_list: list_[Phone] = field(default_factory=list)
+    phone_list: list_[Phone] = field(default_factory=list) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=True, repr=False)
 class CreateAttrListRequest(Model):
-    attr_list: list_[Attr] = field(default_factory=list)
+    attr_list: list_[Attr] = field(default_factory=list) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
