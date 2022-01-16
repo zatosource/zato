@@ -43,7 +43,7 @@
         <thead>
             <tr class='ignore'>
                 <td colspan="3" style="text-align: left;">
-                    ← <a href="#">Back to main page </a>
+                    ← <a href="?cluster={{ cluster_id }}">Back to main page </a>
                 </td>
                 <td colspan="5" style="text-align: right;">
                     <form action=".">
@@ -54,7 +54,7 @@
 
                             {% if container.datatype == "email" %}
                                 {% for key, values in container.elems.items %}
-                                    <option value="{{ key }}" class="group">➡️ {{ key|upper }}</option>
+                                    <option value="{{ key }}" class="group">◾️ {{ key|upper }}</option>
                                         {% for value in values %}
                                             <option value="{{ value.key }}" class="value">{{ value.key }}</option>
                                         {% endfor %}
@@ -87,7 +87,7 @@
                 </th>
                 <th>&nbsp;</th>
                 {% for column in columns %}
-                    <th style="text-align: {{ column.align }};"><a href="#">{{ column.name }}</a></th>
+                    <th style="text-align: {{ column.align }}"><a href="#">{{ column.data }}</a></th>
                 {% endfor %}
         </thead>
 
@@ -97,8 +97,24 @@
                 <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                     <td><input type="checkbox" /></td>
                     <td class='numbering' style="width:10px">&nbsp;</td>
-                        {% for column in item.columns %}
-                            <td>{{ column|default:"---" }}</td>
+                        {% for cell in item.cells %}
+                            {% with cell_idx=cell.idx %}
+                            {% with cell_column=columns|item_by_idx:cell_idx %}
+                            <td style="text-align: {{ cell.align|default:'left' }}">
+                                {% if cell.data %}
+                                    {% if cell.datatype == "link" %}
+                                        <a href="?item_id={{ item.id }}&amp;action=DisplayStats">{{ cell.data }}</a>
+                                    {% elif cell.datatype == "email" %}
+                                        <a href="?{{ cell_column.data }}={{ cell.data }}&amp;action=DisplayStats">{{ cell.data }}</a>
+                                    {% else %}
+                                        {{ cell.data }}
+                                    {% endif %}
+                                {% else %}
+                                    {{ cell|default:"---" }}
+                                {% endif %}
+                            </td>
+                            {% endwith %}
+                            {% endwith %}
                         {% endfor %}
                     </tr>
                 {% endfor %}
