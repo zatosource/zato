@@ -49,10 +49,10 @@ class Action(BaseEnum):
     CompareStats = 'CompareStats'
 
 action_to_service = {
-    Action.Index.value:   'stats1.get-stat-types',
-    Action.BrowseStats.value: 'stats1.browse-stats',
-    Action.DisplayStats.value: 'stats1.browse-stats',
-    Action.CompareStats.value: 'stats1.browse-stats',
+    Action.Index.value:   'stats.get-stat-types',
+    Action.BrowseStats.value: 'stats.browse-stats',
+    Action.DisplayStats.value: 'stats.browse-stats',
+    Action.CompareStats.value: 'stats.browse-stats',
 }
 
 action_to_template = {
@@ -113,6 +113,8 @@ class Index(_Index):
 # ################################################################################################################################
 
     def handle_return_data(self, return_data:'any_') -> 'any_':
+        response = self.req.zato.client.invoke('stats.get-dict-containers')
+        return_data['dicts'] = response.data
         return return_data
 
 # ################################################################################################################################
