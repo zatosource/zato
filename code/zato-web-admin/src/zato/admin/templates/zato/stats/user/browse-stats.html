@@ -107,7 +107,7 @@
             {% if items %}
                 {% for item in items %}
                 <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
-                    <td><input type="checkbox" class="row-checkbox" name="item-id-{{ item.id }}" /></td>
+                    <td><input type="checkbox" class="row-checkbox" name="{{ form_item_id_prefix }}{{ item.id }}" /></td>
                     <td class='numbering' style="width:10px">&nbsp;</td>
                         {% for cell in item.cells %}
                             {% with cell_idx=cell.idx %}

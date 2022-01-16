@@ -32,6 +32,11 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+form_item_id_prefix = 'item-id-'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class BaseEnum(Enum):
 
     @classmethod
@@ -74,10 +79,30 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'stats-user'
     paginate = True
+    update_request_with_self_input = False
 
     class SimpleIO(_Index.SimpleIO):
         input_optional = ('action',)
         output_repeated = True
+
+    def get_initial_input(self):
+        out = {}
+        query = {'id':[]}
+
+        for key, value in self.req.GET.items():
+            if key in {'action', 'cluster_id'}:
+                continue
+            else:
+                if key.startswith(form_item_id_prefix):
+                    data = key.split(form_item_id_prefix)
+                    value = data[1]
+                    query['id'].append(value)
+                else:
+                    query[key] = value
+
+        out['query'] = query
+
+        return out
 
     def on_after_set_input(self):
         action = self.input.get('action')
@@ -125,6 +150,7 @@ class Index(_Index):
         return_data['columns'] = columns
 
         return_data['action'] = self.ctx['action']
+        return_data['form_item_id_prefix'] = form_item_id_prefix
 
         return return_data
 
