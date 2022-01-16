@@ -66,8 +66,8 @@ action_to_service = {
 action_to_template = {
     Action.Index.value: 'zato/stats/user/index.html',
     Action.BrowseStats.value: 'zato/stats/user/browse-stats.html',
-    Action.DisplayStats.value: 'zato/stats/user/display-stats.html',
-    Action.CompareStats.value: 'zato/stats/user/compare-stats.html',
+    Action.DisplayStats.value: 'zato/stats/user/browse-stats.html',
+    Action.CompareStats.value: 'zato/stats/user/browse-stats.html',
 }
 
 default_action = Action.Index.value # type: str

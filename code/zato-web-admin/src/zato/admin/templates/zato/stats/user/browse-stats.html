@@ -3,7 +3,7 @@
 {% block html_title %}User defined statistics{% endblock %}
 
 {% block "extra_css" %}
-<link rel="stylesheet" type="text/css" href="/static/css/stats-user.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/stats-user.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -11,21 +11,11 @@
 <script type="text/javascript" src="/static/js/common.js"></script>
 
 <script>
-    $.fn.zato.data_table.get_columns = function() {
-        return [
-            '_numbering',
-            '_selection',
-            'name',
-            'description',
-        ]
-    }
-
     $(document).ready(function() {
         $('#check-all-rows').click(function () {
             $('.row-checkbox').prop('checked', this.checked)
         })
     });
-
 </script>
 {% endblock %}
 
@@ -59,7 +49,11 @@
                             {% if container.datatype == "email" %}
                                 {% for key, values in container.elems.items %}
 
-                                    <option value="{{ key }}" class="group">◾️ {{ key|upper }}</option>
+                                    <option value="{{ key }}" class="group"
+                                        {% if key|endswith:req_value %}
+                                            selected="selected"
+                                        {% endif %}
+                                    >◾️ {{ key|upper }}</option>
                                     {% for value in values %}
                                         <option value="{{ value.key }}" class="value"
                                             {% if req_value == value.key %}
