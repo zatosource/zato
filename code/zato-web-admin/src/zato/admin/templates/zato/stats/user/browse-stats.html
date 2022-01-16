@@ -45,25 +45,34 @@
                 <td colspan="5" style="text-align: right;">
                     <form action=".">
                         {% for container in dicts.containers %}
-                        <!-- {{ container.name }} -->
+                        {% with req_value=req.GET|get_item:container.name %}
                         <select name={{ container.name }}>
                             <option value="">---</option>
 
                             {% if container.datatype == "email" %}
                                 {% for key, values in container.elems.items %}
+
                                     <option value="{{ key }}" class="group">◾️ {{ key|upper }}</option>
-                                        {% for value in values %}
-                                            <option value="{{ value.key }}" class="value">{{ value.key }}</option>
-                                        {% endfor %}
-                                    </optgroup>
+                                    {% for value in values %}
+                                        <option value="{{ value.key }}" class="value"
+                                            {% if req_value == value.key %}
+                                                selected="selected"
+                                            {% endif %}
+                                        >{{ value.key }}</option>
+                                    {% endfor %}
                                 {% endfor %}
                             {% else %}
                                 {% for elem in container.elems %}
-                                    <option value="{{ elem.key.id }}">{{ elem.key.name }}</option>
+                                    <option value="{{ elem.key.id }}" class="value"
+                                        {% if req_value == elem.key.id %}
+                                            selected="selected"
+                                        {% endif %}
+                                    >{{ elem.key.name }}</option>
                                 {% endfor %}
                             {% endif %}
 
                         </select>
+                        {% endwith %}
                         {% endfor %}
 
                         <input type="hidden" name="action" value="BrowseStats"/>
@@ -96,7 +105,7 @@
                     <td class='numbering' style="width:10px">&nbsp;</td>
                         {% for cell in item.cells %}
                             {% with cell_idx=cell.idx %}
-                            {% with cell_column=columns|item_by_idx:cell_idx %}
+                            {% with cell_column=columns|get_item:cell_idx %}
                             <td style="text-align: {{ cell.align|default:'left' }}">
                                 {% if cell.data %}
                                     {% if cell.datatype == "link" %}
