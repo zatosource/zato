@@ -86,7 +86,7 @@ def stats_float(value):
 # ################################################################################################################################
 
 @register.filter
-def item_by_idx(elems, idx):
+def get_item(elems, idx):
     try:
         return elems[idx]
     except Exception:
