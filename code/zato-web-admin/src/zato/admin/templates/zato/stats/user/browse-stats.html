@@ -62,7 +62,7 @@
                                 {% endfor %}
                             {% else %}
                                 {% for elem in container.elems %}
-                                    <option value="{{ elem.key }}">{{ elem.key }}</option>
+                                    <option value="{{ elem.key.id }}">{{ elem.key.name }}</option>
                                 {% endfor %}
                             {% endif %}
 
