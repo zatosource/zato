@@ -380,6 +380,7 @@ class Index(_BaseView):
     template = 'template-must-be-defined-in-a-subclass-or-get-template-name'
 
     output_class = None
+    update_request_with_self_input = True
 
     def __init__(self):
         super(Index, self).__init__()
@@ -432,7 +433,11 @@ class Index(_BaseView):
             func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
             service_name = self.service_name if self.service_name else self.get_service_name(self.req)
             request = self.get_initial_input()
-            request.update(self.input)
+
+            if self.update_request_with_self_input:
+                request.update(self.input)
+            else:
+                logger.info('Not updating request with self.input')
 
             logger.info('Invoking `%s` with `%s`', service_name, request)
 
