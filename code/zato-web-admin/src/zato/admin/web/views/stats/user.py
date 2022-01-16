@@ -115,6 +115,7 @@ class Index(_Index):
 # ################################################################################################################################
 
     def handle_return_data(self, return_data:'any_') -> 'any_':
+
         dicts = self.req.zato.client.invoke('stats.get-dict-containers')
 
         columns = self.req.zato.client.invoke('stats.get-table-columns')
@@ -122,6 +123,8 @@ class Index(_Index):
 
         return_data['dicts']   = dicts.data
         return_data['columns'] = columns
+
+        return_data['action'] = self.ctx['action']
 
         return return_data
 

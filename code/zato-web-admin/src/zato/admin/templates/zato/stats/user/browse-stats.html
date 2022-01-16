@@ -36,9 +36,6 @@
     <div style="text-align: cente2r !important;">
     <br/>
 
-    <h3>All Types</h3>
-    <br/>
-
     <table id="data-table" style="width:70%; margin: auto">
         <thead>
             <tr class='ignore'>
@@ -103,9 +100,9 @@
                             <td style="text-align: {{ cell.align|default:'left' }}">
                                 {% if cell.data %}
                                     {% if cell.datatype == "link" %}
-                                        <a href="?item_id={{ item.id }}&amp;action=DisplayStats">{{ cell.data }}</a>
+                                        <a href="?item_id={{ item.id }}&amp;action={{ action }}">{{ cell.data }}</a>
                                     {% elif cell.datatype == "email" %}
-                                        <a href="?{{ cell_column.data }}={{ cell.data }}&amp;action=DisplayStats">{{ cell.data }}</a>
+                                        <a href="?{{ cell_column.key }}={{ cell.data }}&amp;action={{ action }}">{{ cell.data }}</a>
                                     {% else %}
                                         {{ cell.data }}
                                     {% endif %}
