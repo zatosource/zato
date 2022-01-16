@@ -379,6 +379,7 @@ class Index(_BaseView):
     url_name = 'url_name-must-be-defined-in-a-subclass'
     template = 'template-must-be-defined-in-a-subclass-or-get-template-name'
 
+    needs_all_keys = False
     output_class = None
 
     def __init__(self):
@@ -504,7 +505,7 @@ class Index(_BaseView):
                         if isinstance(response.data, dict):
                             response.data.pop('_meta', None)
                             keys = list(iterkeys(response.data))
-                            data = response.data[keys[0]]
+                            data = response.data if self.needs_all_keys else  response.data[keys[0]]
                         else:
                             data = response.data
                         self._handle_item_list(data)
