@@ -74,7 +74,6 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'stats-user'
     paginate = True
-    needs_all_keys = True
 
     class SimpleIO(_Index.SimpleIO):
         input_optional = ('action',)
@@ -117,10 +116,12 @@ class Index(_Index):
 
     def handle_return_data(self, return_data:'any_') -> 'any_':
         dicts = self.req.zato.client.invoke('stats.get-dict-containers')
-        columns = self.req.zato.client.invoke('stats.get-table-columns')
 
-        return_data['dicts'] = dicts.data
-        return_data['columns'] = columns.data
+        columns = self.req.zato.client.invoke('stats.get-table-columns')
+        columns = columns.data['columns']
+
+        return_data['dicts']   = dicts.data
+        return_data['columns'] = columns
 
         return return_data
 
