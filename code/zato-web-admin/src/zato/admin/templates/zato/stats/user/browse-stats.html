@@ -24,8 +24,6 @@
 
 {% if not zato_clusters %} {% include "zato/no-clusters.html" %} {% else %}
 
-<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
-
 {% if cluster_id %}
 
 <div id="markup">
@@ -109,7 +107,7 @@
                             <td style="text-align: {{ cell.align|default:'left' }}">
                                 {% if cell.data %}
                                     {% if cell.datatype == "link" %}
-                                        <a href="?item_id={{ item.id }}&amp;action={{ action }}">{{ cell.data }}</a>
+                                        <a href="?{{ form_item_id_prefix }}{{ item.id }}=on&amp;action=DisplayStats">{{ cell.data }}</a>
                                     {% elif cell.datatype == "email" %}
                                         <a href="?{{ cell_column.key }}={{ cell.data }}&amp;action={{ action }}">{{ cell.data }}</a>
                                     {% else %}

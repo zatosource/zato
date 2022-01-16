@@ -96,6 +96,6 @@ def get_item(elems, idx):
 
 @register.filter
 def endswith(value, suffix):
-    return (value or '').endswith(suffix)
+    return (value or '').endswith(suffix or '')
 
 # ################################################################################################################################
