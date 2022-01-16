@@ -36,17 +36,8 @@ from dacite import from_dict
 from typing_extensions import \
     TypeAlias as typealias_
 
-# Be explicit about which import error we want to catch
-try:
-    import dataclasses # noqa: F401
-
-# Python 3.6
-except ImportError:
-    from zato.common.ext.dataclasses import * # noqa: F401
-
-# Python 3.6+
-else:
-    from dataclasses import * # noqa: F401
+# stdlib
+from dataclasses import * # noqa: F401
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,6 +137,11 @@ def extract_from_union(elem:'any_') -> 'anytuple':
     union_with = field_type_args[1]
 
     return field_type_args, field_type, union_with
+
+# ################################################################################################################################
+
+def list_field() -> 'callable_[anylist]':
+    return field(default_factory=list)
 
 # ################################################################################################################################
 # ################################################################################################################################
