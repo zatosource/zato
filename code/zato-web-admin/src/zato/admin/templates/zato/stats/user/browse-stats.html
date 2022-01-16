@@ -80,15 +80,15 @@
         </thead>
         <thead>
             <tr class='ignore'>
-                <th><input type="checkbox" /></th>
+                <th>
+                    {% if items %}
+                        <input type="checkbox" id="check-all-rows"" />
+                    {% endif %}
+                </th>
                 <th>&nbsp;</th>
-
-                <th style="text-align: left;"><a href="#">Start time</a></th>
-                <th style="text-align: left;"><a href="#">Type</a></th>
-                <th style="text-align: left;"><a href="#">User</a></th>
-                <th style="text-align: left;"><a href="#">Details</a></th>
-                <th style="text-align: right;"><a href="#">Success</a></th>
-                <th style="text-align: right;"><a href="#">Progress</a></th>
+                {% for column in columns %}
+                    <th style="text-align: {{ column.align }};"><a href="#">{{ column.name }}</a></th>
+                {% endfor %}
         </thead>
 
         <tbody>

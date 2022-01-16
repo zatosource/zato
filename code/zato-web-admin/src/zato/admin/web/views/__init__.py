@@ -379,7 +379,6 @@ class Index(_BaseView):
     url_name = 'url_name-must-be-defined-in-a-subclass'
     template = 'template-must-be-defined-in-a-subclass-or-get-template-name'
 
-    needs_all_keys = False
     output_class = None
 
     def __init__(self):
@@ -445,7 +444,7 @@ class Index(_BaseView):
         """
         names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
 
-        for msg_item in item_list:
+        for msg_item in item_list or []:
 
             output_class = self.get_output_class()
             item = output_class() if output_class else self.output_class()
@@ -505,7 +504,7 @@ class Index(_BaseView):
                         if isinstance(response.data, dict):
                             response.data.pop('_meta', None)
                             keys = list(iterkeys(response.data))
-                            data = response.data if self.needs_all_keys else  response.data[keys[0]]
+                            data = response.data[keys[0]]
                         else:
                             data = response.data
                         self._handle_item_list(data)
