@@ -3,6 +3,7 @@
 {% block html_title %}User defined statistics{% endblock %}
 
 {% block "extra_css" %}
+<link rel="stylesheet" type="text/css" href="/static/css/stats-user.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -14,7 +15,6 @@
         return [
             '_numbering',
             '_selection',
-
             'name',
             'description',
         ]
@@ -54,9 +54,9 @@
 
                             {% if container.datatype == "email" %}
                                 {% for key, values in container.elems.items %}
-                                    <optgroup label="{{ key }}">
+                                    <option value="{{ key }}" class="group">➡️ {{ key|upper }}</option>
                                         {% for value in values %}
-                                            <option value="{{ value.key }}">{{ value.key }}</option>
+                                            <option value="{{ value.key }}" class="value">{{ value.key }}</option>
                                         {% endfor %}
                                     </optgroup>
                                 {% endfor %}
@@ -82,7 +82,7 @@
             <tr class='ignore'>
                 <th>
                     {% if items %}
-                        <input type="checkbox" id="check-all-rows"" />
+                        <input type="checkbox" id="check-all-rows" />
                     {% endif %}
                 </th>
                 <th>&nbsp;</th>
@@ -92,33 +92,20 @@
         </thead>
 
         <tbody>
-            {% if items %} {% for item in items %}
-            <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
-                <td><input type="checkbox" /></td>
-                <td class='numbering' style="width:10px">&nbsp;</td>
-
-                <td style="text-align: left; width:15%">{{ item.date_started }}</td>
-
-                <td style="text-align: left; width:15%">{{ item.Type_type }}</td>
-
-                <td style="text-align: left;"><a class="stats" href="?cluster_id={{ cluster_id }}&amp;action=BrowseStats&amp;item_id={{ item.id }}">{{ item.username }}</a></td>
-
-                <td style="text-align: left;">
-                    <span class="description">
-                    </span>
-                </td>
-                <td style="text-align: center;">
-                    <span class="description" style="font-size: 1.2em !important;">
-                    </span>
-                </td>
-                <td style="text-align: center;">
-                    <a href="#">Display</a>
-                </td>
-            </tr>
-            {% endfor %} {% else %}
-            <tr class='ignore'>
-                <td colspan='4'>No results</td>
-            </tr>
+            {% if items %}
+                {% for item in items %}
+                <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                    <td><input type="checkbox" /></td>
+                    <td class='numbering' style="width:10px">&nbsp;</td>
+                        {% for column in item.columns %}
+                            <td>{{ column|default:"---" }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr class='ignore'>
+                    <td colspan='4'>No results</td>
+                </tr>
             {% endif %}
 
         </tbody>
