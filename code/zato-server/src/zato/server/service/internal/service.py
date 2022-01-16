@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,10 +9,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from base64 import b64decode, b64encode
 from contextlib import closing
+from enum import Enum
+from json import dumps as stdlib_dumps
 from operator import attrgetter
 from tempfile import NamedTemporaryFile
 from traceback import format_exc
 from uuid import uuid4
+
+# bson
+from bson.json_util import dumps as bson_dumps
 
 # Python 2/3 compatibility
 from builtins import bytes
@@ -32,6 +37,7 @@ from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, 
 from zato.common.odb.query import service_list
 from zato.common.rate_limiting import DefinitionParser
 from zato.common.scheduler import get_startup_job_services
+from zato.common.typing_ import any_
 from zato.common.util.api import hot_deploy, payload_from_request
 from zato.common.util.stats import combine_table_data, collect_current_usage
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
@@ -47,6 +53,21 @@ ZatoService = ZatoService
 # ################################################################################################################################
 
 _no_such_service_name = uuid4().hex
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _default_dumps(elem:'any_') -> 'any_':
+    if isinstance(elem, Enum):
+        return elem.value
+    else:
+        return elem
+
+def _dumps(response:'any_') -> 'any_':
+    try:
+        return bson_dumps(response)
+    except TypeError:
+        return stdlib_dumps(response, default=_default_dumps)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -499,9 +520,7 @@ class Invoke(AdminService):
 
             if not isinstance(response, basestring):
                 if not isinstance(response, bytes):
-                    #bson
-                    from bson.json_util import dumps as dumps_func
-                    response = dumps(response)
+                    response = _dumps(response)
 
             response = response if isinstance(response, bytes) else response.encode('utf8')
             self.response.payload.response = b64encode(response).decode('utf8') if response else ''
