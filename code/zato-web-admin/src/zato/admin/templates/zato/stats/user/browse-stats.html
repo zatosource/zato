@@ -9,6 +9,7 @@
 {% block "extra_js" %}
 
 <script type="text/javascript" src="/static/js/common.js"></script>
+<script type="text/javascript" src="/static/frappe-charts/frappe-charts.min.iife.js"></script>
 
 <script>
     $(document).ready(function() {
@@ -33,6 +34,160 @@
 
     <form action=".">
     <table id="data-table" style="width:70%; margin: auto">
+
+        <thead>
+            <tr>
+                <td colspan="9999">
+
+                    <div id="chart3"></div>
+                    <div id="chart4"></div>
+
+                    <script>
+
+                        // ////////////////////////////////////////////////////////////////////////////////////////
+
+                        const data3 = {
+
+                            labels:
+                            [
+                                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                                21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+                                41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60
+                            ],
+
+                            yMarkers: [{
+                                label: "Max. result",
+                                value: 60,
+                                options: { labelPos: 'left' } // default: 'right'
+                                }
+                            ],
+
+                            datasets: [
+                                {
+                                    name: "janet.smith@example.com", type: "line",
+                                    values: [
+                                        2, 9, 9, 12,
+                                        12, 12, 12, 12,
+                                        15, 15,
+                                        19, 19, 19, 19,
+                                        19, 19, 19, 19,
+                                        19, 23, 26, 26,
+                                        26, 33, 33, 33,
+                                        33, 33, 33, 33,
+                                        37, 56, 56, 56,
+                                        56, 57, 59
+                                ]
+                                },
+                                {
+                                    name: "", type: "line",
+                                    values: []
+                                },
+
+                            ]
+                            }
+
+                            const chart3 = new frappe.Chart("#chart3", {
+                                title: "Result; 2022-02-13 11:56",
+                                data: data3,
+                                type: 'line', // or 'bar', 'line', 'scatter', 'pie', 'percentage', 'axis-mixed'
+                                colors: ['#6666ff', '#6666ff'],
+                                xvaluesOverPoints: 1,
+                                isNavigable: true,
+
+                            axisOptions: {
+                                xAxisMode: 'span',
+                                yAxisMode: 'span',
+                                xIsSeries: true
+                            },
+                            barOptions: {
+                                spaceRatio: 2 // default: 1
+                            },
+                            lineOptions: {
+                                dotSize: 2,
+                                //regionFill: 1,
+                                spline: 0,
+                                hideDots: false,
+                            },
+                            tooltipOptions: {
+                                formatTooltipX: d => d + ' min.',
+                                formatTooltipY: d => (d || '40') + ' pts.' ,
+                            }
+                            });
+
+
+                        // ////////////////////////////////////////////////////////////////////////////////////////
+
+                        const data4 = {
+
+                            labels:
+                            [
+                                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                                21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+                                41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60
+                            ],
+
+                            yMarkers: [{
+                                label: "Max. result",
+                                value: 60,
+                                options: { labelPos: 'left' } // default: 'right'
+                                }
+                            ],
+
+                            datasets: [
+                                {
+                                    name: "james.doe@example.com", type: "line",
+                                    values: [
+                                        2, 2, 2, 2,
+                                        2, 2, 2, 2,
+                                        15, 15,
+                                        19, 19, 19, 19,
+                                        19, 19, 19, 19,
+                                        19, 19, 19, 19,
+                                        27, 33, 33, 33,
+                                        42, 49, 53
+                                ]
+                                },
+                                {
+                                    name: "", type: "line",
+                                    values: []
+                                },
+
+                            ]
+                            }
+
+                            const chart4 = new frappe.Chart("#chart4", {
+                                title: "Result; 2022-02-07 13:30",
+                                data: data4,
+                                type: 'line', // or 'bar', 'line', 'scatter', 'pie', 'percentage', 'axis-mixed'
+                                colors: ['#ff6666', '#ff6666'],
+                                xvaluesOverPoints: 1,
+                                isNavigable: true,
+
+                            axisOptions: {
+                                xAxisMode: 'span',
+                                yAxisMode: 'span',
+                                xIsSeries: true
+                            },
+                            barOptions: {
+                                spaceRatio: 2 // default: 1
+                            },
+                            lineOptions: {
+                                dotSize: 2,
+                                //regionFill: 1,
+                                spline: 0,
+                                hideDots: false,
+                            },
+                            tooltipOptions: {
+                                formatTooltipX: d => d + ' min.',
+                                formatTooltipY: d => (d || '40') + ' pts.' ,
+                            }
+                            });
+
+                    </script>
+                </td>
+            </tr>
+        </thead>
+
         <thead>
             <tr class='ignore'>
                 <td colspan="3" style="text-align: left;">
@@ -132,6 +287,8 @@
     </table>
 </form>
 
+<br/>
+<br/>
 
 
     </div>
