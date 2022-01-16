@@ -11,5 +11,11 @@ span.description {
     text-align: left;
 }
 
-#data-table {
-}
+select {
+    -webkit-appearance: menulist-button;
+    color: black;
+  }
+
+  select:invalid {
+    color: green;
+  }

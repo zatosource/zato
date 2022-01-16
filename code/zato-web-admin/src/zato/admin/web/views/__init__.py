@@ -457,7 +457,7 @@ class Index(_BaseView):
                 value = getattr(msg_item, name, None)
                 if value is not None:
                     value = getattr(value, 'text', '') or value
-                if value or value == 0:
+                if value or value in (0, [], {}):
                     setattr(item, name, value)
 
             item = self.on_before_append_item(item)
