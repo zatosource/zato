@@ -46,32 +46,35 @@
                     ← <a href="#">Back to main page </a>
                 </td>
                 <td colspan="5" style="text-align: right;">
+                    <form action=".">
+                        {% for container in dicts.containers %}
+                        <!-- {{ container.name }} -->
+                        <select name={{ container.name }}>
+                            <option value="">---</option>
 
-                    {% for container in dicts.containers %}
-                    <!-- {{ container.name }} -->
-                    <select>
-                        <option>---</option>
+                            {% if container.datatype == "email" %}
+                                {% for key, values in container.elems.items %}
+                                    <optgroup label="{{ key }}">
+                                        {% for value in values %}
+                                            <option value="{{ value.key }}">{{ value.key }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                {% endfor %}
+                            {% else %}
+                                {% for elem in container.elems %}
+                                    <option value="{{ elem.key }}">{{ elem.key }}</option>
+                                {% endfor %}
+                            {% endif %}
 
-                        {% if container.datatype == "email" %}
-                            {% for key, values in container.elems.items %}
-                                <optgroup label="{{ key }}">
-                                    {% for value in values %}
-                                        <option value="{{ value }}">{{ value.key }}</option>
-                                    {% endfor %}
-                                </optgroup>
-                            {% endfor %}
-                        {% else %}
-                            {% for elem in container.elems %}
-                                <option value="{{ elem.key }}">{{ elem.key }}</option>
-                            {% endfor %}
-                        {% endif %}
+                        </select>
+                        {% endfor %}
 
-                    </select>
-                    {% endfor %}
+                        <input type="hidden" name="action" value="BrowseStats"/>
 
-                    <input type="button" value="List" onclick="location.href='?cluster_id={{ cluster_id }}&amp;action=BrowseStats'"/>
-                    <input type="button" value="Display" onclick="location.href='?cluster_id={{ cluster_id }}&amp;action=DisplayStats'"/>
-                    <input type="button" value="Compare" onclick="location.href='?cluster_id={{ cluster_id }}&amp;action=CompareStats'"/>
+                        <input type="submit" value="List">
+                        <input type="button" value="Display" onclick="location.href='?cluster_id={{ cluster_id }}&amp;action=DisplayStats'"/>
+                        <input type="button" value="Compare" onclick="location.href='?cluster_id={{ cluster_id }}&amp;action=CompareStats'"/>
+                    </form>
                 </td>
             </tr>
         </thead>
