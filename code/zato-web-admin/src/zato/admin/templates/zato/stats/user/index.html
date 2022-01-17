@@ -47,7 +47,7 @@
         </thead>
 
         <tbody>
-            {% for item in items %}
+            {% for item in items.items %}
             <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                 <td class='numbering' style="width:10px">&nbsp;</td>
                 <td class="impexp"><input type="checkbox" /></td>
