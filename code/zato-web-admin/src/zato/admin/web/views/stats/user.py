@@ -82,7 +82,6 @@ class Index(_Index):
     paginate = True
     clear_self_items = False
     update_request_with_self_input = False
-    extract_top_level_key_from_payload = False
 
     class SimpleIO(_Index.SimpleIO):
         input_optional = ('action',)
@@ -90,9 +89,15 @@ class Index(_Index):
 
     def before_invoke_admin_service(self):
         self.items = {
+            'items': [],
             'rows': [],
             'charts': [],
         }
+
+# ################################################################################################################################
+
+    def should_extract_top_level(self, _keys):
+        return False
 
 # ################################################################################################################################
 

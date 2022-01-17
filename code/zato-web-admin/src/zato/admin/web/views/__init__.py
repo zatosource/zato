@@ -57,7 +57,9 @@ slugify = slugify
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from requests import Response
+    from zato.client import ServiceInvokeResponse
+    from zato.common.typing_ import any_, anydict, cast_, optional
 
 # ################################################################################################################################
 
@@ -382,7 +384,6 @@ class Index(_BaseView):
     output_class = None
     clear_self_items = True
     update_request_with_self_input = True
-    extract_top_level_key_from_payload = True
 
     def __init__(self):
         super(Index, self).__init__()
@@ -430,7 +431,10 @@ class Index(_BaseView):
         otherwise self.template will be employed.
         """
 
-    def invoke_admin_service(self):
+    def should_extract_top_level(self, _keys):
+        return True
+
+    def invoke_admin_service(self) -> 'ServiceInvokeResponse':
         if self.req.zato.get('cluster'):
             func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
             service_name = self.service_name if self.service_name else self.get_service_name(self.req)
@@ -476,18 +480,21 @@ class Index(_BaseView):
 
             func(item)
 
-    def _handle_item_list(self, item_list):
+    def _handle_item_list(self, item_list, is_extracted):
 
         # We have a single list on input
-        if self.extract_top_level_key_from_payload:
+        if is_extracted:
             self._handle_single_item_list(self.items, item_list)
-
-        # Otherwise, it is a dictionary and we need to process each of its values.
-        # The initial keys in the container (self.items) will be set but a view's
-        # before_invoke_admin_service method.
-        for key, value_list in item_list.items():
-            container = self.items[key]
-            self._handle_single_item_list(container, value_list)
+        else:
+            # Otherwise, it is a dictionary and we need to process each of its values.
+            # The initial keys in the container (self.items) will be set but a view's
+            # before_invoke_admin_service method.
+            for key, value_list in item_list.items():
+                container = self.items.get(key, [])
+                container
+                self._handle_single_item_list(container, value_list)
+                container
+                container
 
     def _handle_item(self, item):
         pass
@@ -523,23 +530,26 @@ class Index(_BaseView):
 
                 logger.info('Response from service: `%s`', response.data)
 
-                if response.ok:
+                if response and response.ok:
                     return_data['response_inner'] = response.inner_service_response
 
                     if output_repeated:
-                        if isinstance(response.data, dict):
+                        if response and isinstance(response.data, dict):
                             response.data.pop('_meta', None)
-                            if self.extract_top_level_key_from_payload:
-                                keys = list(iterkeys(response.data))
+                            keys = list(iterkeys(response.data))
+                            if self.should_extract_top_level(keys):
                                 data = response.data[keys[0]]
+                                is_extracted = True
                             else:
                                 data = response.data
+                                is_extracted = False
                         else:
                             data = response.data
+                            is_extracted = False
 
-                        # At this point, this may be just a list of elements, if extract_top_level_key_from_payload is True,
+                        # At this point, this may be just a list of elements, if self.should_extract_top_level returns True,
                         # or a dictionary of keys pointing to lists with such elements.
-                        self._handle_item_list(data)
+                        self._handle_item_list(data, is_extracted)
 
                     else:
                         self._handle_item(response.data)
