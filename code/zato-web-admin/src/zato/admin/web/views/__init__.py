@@ -480,21 +480,30 @@ class Index(_BaseView):
 
             func(item)
 
-    def _handle_item_list(self, item_list, is_extracted):
+    def handle_item_list(self, item_list, _ignored_is_extracted):
+        """ Creates a new instance of the model class for each of the element received
+        and fills it in with received attributes.
+        """
+        names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
 
-        # We have a single list on input
-        if is_extracted:
-            self._handle_single_item_list(self.items, item_list)
-        else:
-            # Otherwise, it is a dictionary and we need to process each of its values.
-            # The initial keys in the container (self.items) will be set but a view's
-            # before_invoke_admin_service method.
-            for key, value_list in item_list.items():
-                container = self.items.get(key, [])
-                container
-                self._handle_single_item_list(container, value_list)
-                container
-                container
+        for msg_item in item_list:
+
+            item = self.output_class()
+            for name in sorted(names):
+                value = getattr(msg_item, name, None)
+                if value is not None:
+                    value = getattr(value, 'text', '') or value
+                if value or value == 0:
+                    setattr(item, name, value)
+
+            item = self.on_before_append_item(item)
+
+            if isinstance(item, (list, tuple)):
+                func = self.items.extend
+            else:
+                func = self.items.append
+
+            func(item)
 
     def _handle_item(self, item):
         pass
@@ -549,7 +558,7 @@ class Index(_BaseView):
 
                         # At this point, this may be just a list of elements, if self.should_extract_top_level returns True,
                         # or a dictionary of keys pointing to lists with such elements.
-                        self._handle_item_list(data, is_extracted)
+                        self.handle_item_list(data, is_extracted)
 
                     else:
                         self._handle_item(response.data)
