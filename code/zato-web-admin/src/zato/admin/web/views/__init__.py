@@ -57,9 +57,8 @@ slugify = slugify
 # ################################################################################################################################
 
 if 0:
-    from requests import Response
     from zato.client import ServiceInvokeResponse
-    from zato.common.typing_ import any_, anydict, cast_, optional
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 
