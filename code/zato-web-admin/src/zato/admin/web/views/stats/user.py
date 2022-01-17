@@ -101,6 +101,21 @@ class Index(_Index):
 
 # ################################################################################################################################
 
+    def handle_item_list(self, item_list, is_extracted):
+
+        # We have a single list on input
+        if is_extracted:
+            self._handle_single_item_list(self.items, item_list)
+        else:
+            # Otherwise, it is a dictionary and we need to process each of its values.
+            # The initial keys in the container (self.items) will be set but a view's
+            # before_invoke_admin_service method.
+            for key, value_list in item_list.items():
+                container = self.items.get(key, [])
+                self._handle_single_item_list(container, value_list)
+
+# ################################################################################################################################
+
     def get_initial_input(self):
         out = {}
         query = {'id':[]}
