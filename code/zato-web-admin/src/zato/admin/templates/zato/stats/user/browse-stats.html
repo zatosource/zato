@@ -39,55 +39,44 @@
             <tr>
                 <td colspan="9999">
 
-                    <div id="chart1"></div>
+                {% if items.charts %}
+                {% for item in items.charts %}
+
+                    {% with chart_idx=forloop.counter0 %}
+
+                    <div id="chart{{ forloop.counter0 }}"></div>
 
                     <script>
 
                         // ////////////////////////////////////////////////////////////////////////////////////////
 
-                        const data1 = {
+                        const data{{ chart_idx }} = {
 
-                            labels:
-                            [
-                                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-                                21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-                                41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60
-                            ],
+                            labels: {{ item.labels }},
 
                             yMarkers: [{
                                 label: "Max. result",
-                                value: 60,
+                                value: {{ item.max_y }},
                                 options: { labelPos: 'left' }
-                                }
-                            ],
+                                }],
 
                             datasets: [
+
+                                {% for dataset in item.datasets %}
                                 {
-                                    name: "janet.smith@example.com", type: "line",
-                                    values: [
-                                        2, 9, 9, 12,
-                                        12, 12, 12, 12,
-                                        15, 15,
-                                        19, 19, 19, 19,
-                                        19, 19, 19, 19,
-                                        19, 23, 26, 26,
-                                        26, 33, 33, 33,
-                                        33, 33, 33, 33,
-                                        37, 56, 56, 56,
-                                        56, 57, 59
-                                ]
+                                name: "{{ dataset.name }}", type: "line",
+                                values: {{ dataset.values }}
                                 },
-                                {
-                                    name: "", type: "line",
-                                    values: []
-                                },
+                                {% endfor %}
+
+                                {name: "", type: "line", values: []}, {% comment %} This is empty on purpose, to make the legend with the email longer {% endcomment %}
 
                             ]
                             }
 
-                            const chart1 = new frappe.Chart("#chart1", {
-                                title: "Result; 2022-02-13 11:56",
-                                data: data1,
+                            const frappe_chart{{ chart_idx }} = new frappe.Chart("#chart{{ chart_idx }}", {
+                                title: "{{ item.name }}",
+                                data: data{{ chart_idx }},
                                 type: 'line',
                                 colors: ['#6666ff', '#6666ff'],
                                 xvaluesOverPoints: 1,
@@ -99,7 +88,7 @@
                                 xIsSeries: true
                             },
                             barOptions: {
-                                spaceRatio: 2 // default: 1
+                                spaceRatio: 2
                             },
                             lineOptions: {
                                 dotSize: 2,
@@ -108,11 +97,17 @@
                             },
                             tooltipOptions: {
                                 formatTooltipX: d => d + ' min.',
-                                formatTooltipY: d => (d || '40') + ' pts.' ,
+                                formatTooltipY: d => '', //(d || 'Max. {{ item.max_x }}') + ' pts.' ,
                             }
                             });
 
-                    </script>
+                        </script>
+
+                        {% endwith %}
+
+                    {% endfor %}
+                    {% endif %}
+
                 </td>
             </tr>
         </thead>
@@ -160,9 +155,9 @@
 
                         <input type="hidden" name="action" value="BrowseStats"/>
 
-                        <input type="submit" value="List">
-                        <input type="button" value="Display" onclick="location.href='?cluster_id={{ cluster_id }}&amp;action=DisplayStats'"/>
-                        <input type="button" value="Compare" onclick="location.href='?cluster_id={{ cluster_id }}&amp;action=CompareStats'"/>
+                        <input type="submit" value="List" />
+                        <input type="submit" value="Display">
+                        <input type="submit" value="Compare">
                 </td>
             </tr>
         </thead>
@@ -180,8 +175,8 @@
         </thead>
 
         <tbody>
-            {% if items %}
-                {% for item in items %}
+            {% if items.rows %}
+                {% for item in items.rows %}
                 <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                     <td><input type="checkbox" class="row-checkbox" name="{{ form_item_id_prefix }}{{ item.id }}" /></td>
                     <td class='numbering' style="width:10px">&nbsp;</td>

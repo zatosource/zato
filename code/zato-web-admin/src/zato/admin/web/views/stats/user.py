@@ -76,14 +76,25 @@ default_action = Action.Index.value # type: str
 # ################################################################################################################################
 
 class Index(_Index):
+
     method_allowed = 'GET'
     url_name = 'stats-user'
     paginate = True
+    clear_self_items = False
     update_request_with_self_input = False
+    extract_top_level_key_from_payload = False
 
     class SimpleIO(_Index.SimpleIO):
         input_optional = ('action',)
         output_repeated = True
+
+    def before_invoke_admin_service(self):
+        self.items = {
+            'rows': [],
+            'charts': [],
+        }
+
+# ################################################################################################################################
 
     def get_initial_input(self):
         out = {}
@@ -103,6 +114,8 @@ class Index(_Index):
         out['query'] = query
 
         return out
+
+# ################################################################################################################################
 
     def on_after_set_input(self):
         action = self.input.get('action')
