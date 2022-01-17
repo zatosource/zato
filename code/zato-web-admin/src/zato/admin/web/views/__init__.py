@@ -380,7 +380,9 @@ class Index(_BaseView):
     template = 'template-must-be-defined-in-a-subclass-or-get-template-name'
 
     output_class = None
+    clear_self_items = True
     update_request_with_self_input = True
+    extract_top_level_key_from_payload = True
 
     def __init__(self):
         super(Index, self).__init__()
@@ -443,7 +445,7 @@ class Index(_BaseView):
 
             return func(service_name, request)
 
-    def _handle_item_list(self, item_list):
+    def _handle_single_item_list(self, container, item_list):
         """ Creates a new instance of the model class for each of the element received
         and fills it in with received attributes.
         """
@@ -468,11 +470,24 @@ class Index(_BaseView):
             item = self.on_before_append_item(item)
 
             if isinstance(item, (list, tuple)):
-                func = self.items.extend
+                func = container.extend
             else:
-                func = self.items.append
+                func = container.append
 
             func(item)
+
+    def _handle_item_list(self, item_list):
+
+        # We have a single list on input
+        if self.extract_top_level_key_from_payload:
+            self._handle_single_item_list(self.items, item_list)
+
+        # Otherwise, it is a dictionary and we need to process each of its values.
+        # The initial keys in the container (self.items) will be set but a view's
+        # before_invoke_admin_service method.
+        for key, value_list in item_list.items():
+            container = self.items[key]
+            self._handle_single_item_list(container, value_list)
 
     def _handle_item(self, item):
         pass
@@ -488,7 +503,12 @@ class Index(_BaseView):
 
         try:
             super(Index, self).__call__(req, *args, **kwargs)
-            del self.items[:]
+
+            # The value of clear_self_items if True if we are returning a single list of elements,
+            # based on self.extract_top_level_key_from_payload.
+            if self.clear_self_items:
+                del self.items[:]
+
             self.item = None
             self.set_input()
 
@@ -505,14 +525,22 @@ class Index(_BaseView):
 
                 if response.ok:
                     return_data['response_inner'] = response.inner_service_response
+
                     if output_repeated:
                         if isinstance(response.data, dict):
                             response.data.pop('_meta', None)
-                            keys = list(iterkeys(response.data))
-                            data = response.data[keys[0]]
+                            if self.extract_top_level_key_from_payload:
+                                keys = list(iterkeys(response.data))
+                                data = response.data[keys[0]]
+                            else:
+                                data = response.data
                         else:
                             data = response.data
+
+                        # At this point, this may be just a list of elements, if extract_top_level_key_from_payload is True,
+                        # or a dictionary of keys pointing to lists with such elements.
                         self._handle_item_list(data)
+
                     else:
                         self._handle_item(response.data)
                 else:
