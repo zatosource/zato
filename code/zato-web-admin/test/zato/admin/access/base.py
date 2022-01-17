@@ -156,6 +156,9 @@ class BaseTestCase(TestCase):
         self.client = webdriver.Firefox(options=options)
         self.client.get(self.config.web_admin_address)
 
+        # .. set a wait time in case pages do not load immediately ..
+        self.client.implicitly_wait(20)
+
         # .. confirm that by default we are not logged in ..
         self._confirm_not_logged_in()
 
