@@ -19,3 +19,7 @@ select {
   select:invalid {
     color: green;
   }
+
+table.charts-display-table td.desc {
+    vertical-align: middle;;
+}

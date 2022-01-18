@@ -40,11 +40,43 @@
                 <td colspan="9999">
 
                 {% if items.charts %}
-                {% for item in items.charts %}
+                <table class="charts-display-table" style="width:100%;">
+                {% for chart_item in items.charts %}
+                    <tr>
 
                     {% with chart_idx=forloop.counter0 %}
 
-                    <div id="chart{{ forloop.counter0 }}"></div>
+                    <td style="width:70%; border-bottom: 1px solid #ccc; style="vertical-align:middle; ">
+                        <div id="chart{{ forloop.counter0 }}" class="charts-div"></div>
+                    </td>
+                    <td class="desc" style="border-bottom: 1px solid #ccc; vertical-align: top; padding-top: 3%; color:#666;">
+                        <table style="width: 100%;">
+                            {% for column in columns %}
+                            {% with column_idx=forloop.counter0 %}
+                            {% with row=items.rows|get_item:chart_idx %}
+                            {% with cell=row.cells|get_item:column_idx %}
+                            <tr>
+                                <td style="vertical-align:middle; border: 1px dotted #ccc;">{{ column.data }}</td>
+                                <td style="vertical-align:middle; border: 1px dotted #ccc;">
+                                    {% if cell.data %}
+                                    {% if cell.datatype == "link" %}
+                                        <a href="?{{ form_item_id_prefix }}{{ item.id }}=on&amp;action=DisplayStats">{{ cell.data }}</a>
+                                    {% elif cell.datatype == "email" %}
+                                        <a href="?{{ cell_column.key }}={{ cell.data }}&amp;action={{ action }}">{{ cell.data }}</a>
+                                    {% else %}
+                                        {{ cell.data }}
+                                    {% endif %}
+                                {% else %}
+                                    {{ cell|default:"---" }}
+                                {% endif %}
+                                </td>
+                            </tr>
+                            {% endwith %}
+                            {% endwith %}
+                            {% endwith %}
+                            {% endfor %}
+                        </table>
+                    </td>
 
                     <script>
 
@@ -103,10 +135,12 @@
 
                         </script>
 
-                        {% endwith %}
+                    </tr>
+                    {% endwith %}
 
-                    {% endfor %}
-                    {% endif %}
+                {% endfor %}
+                </table>
+                {% endif %}
 
                 </td>
             </tr>

@@ -88,7 +88,8 @@ def stats_float(value):
 @register.filter
 def get_item(elems, idx):
     try:
-        return elems[idx]
+        value = elems[idx]
+        return value
     except Exception:
         return None
 
