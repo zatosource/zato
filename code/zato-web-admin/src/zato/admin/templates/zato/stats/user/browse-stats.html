@@ -12,16 +12,6 @@
 <script type="text/javascript" src="/static/frappe-charts/frappe-charts.min.iife.js"></script>
 
 <script>
-$.fn.zato.stats.custom.list = function(elem) {
-    var elem = $(elem);
-    var action = elem.attr("data-action");
-    var url_path = "{{ qs_no_action|safe }}" + "action=" + action;
-    location.href = "." + url_path;
-}
-
-</script>
-
-<script>
 
     $(document).ready(function() {
 
@@ -61,6 +51,56 @@ $.fn.zato.stats.custom.list = function(elem) {
         $(".row-checkbox").click(function(e) {
             maybe_toggle_compare();
         });
+
+        {% if items.charts %}
+            {% if action == "CompareStats" %}
+            var update_chart = function() {
+
+                //$.post("./update", function(data) {
+                $.getJSON("./update", function(data) {
+
+                    var charts_data = data.charts;
+                    if(!charts_data) {
+                        return
+                    }
+
+                    // Each chart will contain the same metadata
+                    var chart0 = charts_data[0];
+
+                    var frappe_data = {
+                        "labels": chart0.labels,
+                        "yMarkers": [{
+                            "label": chart0.label_y,
+                            "value": chart0.max_x,
+                            "options": {"labelPos": "left"}
+                        }],
+                        "datasets": [],
+                    };
+
+                    // This is needed to make legends wider
+                    const empty_dataset = {name: "", type: "line", values: []};
+
+                    for (chart_elem of charts_data) {
+                        var frappe_dataset = {
+                            "name":  chart_elem.datasets[0].name_short,
+                            "type":  "line",
+                            "values": chart_elem.datasets[0].values,
+                        }
+                        frappe_data.datasets.push(frappe_dataset);
+                        frappe_data.datasets.push(empty_dataset);
+                    }
+
+                    frappe_chart0.update(frappe_data);
+                });
+            }
+
+            $('#update-stats').click(function() {
+                update_chart();
+            });
+
+            setInterval(update_chart, 3000);
+            {% endif %}
+        {% endif %}
 
     })
 
@@ -230,7 +270,7 @@ $.fn.zato.stats.custom.list = function(elem) {
 
                             }
 
-                            const chart = new frappe.Chart("#chart0", {
+                            const frappe_chart0 = new frappe.Chart("#chart0", {
                                 title: "Comparison",
                                 data: data,
                                 type: 'line',
@@ -320,6 +360,10 @@ $.fn.zato.stats.custom.list = function(elem) {
                         {% endfor %}
 
                         <input type="hidden" id="charts-action" name="action" value="{{ action }}"/>
+
+                        {% comment %}
+                        <input id="update-stats" type="button" value="Update" />
+                        {% endcomment %}
 
                         <input id="submit-BrowseStats"  type="submit" data-action="BrowseStats"  value="List" />
                         <input id="submit-DisplayStats" type="submit" data-action="DisplayStats" value="Display" />
