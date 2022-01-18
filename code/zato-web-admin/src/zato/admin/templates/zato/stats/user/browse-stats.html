@@ -12,12 +12,35 @@
 <script type="text/javascript" src="/static/frappe-charts/frappe-charts.min.iife.js"></script>
 
 <script>
+$.fn.zato.stats.custom.list = function(elem) {
+    var elem = $(elem);
+    var action = elem.attr("data-action");
+    var url_path = "{{ qs_no_action|safe }}" + "action=" + action;
+    location.href = "." + url_path;
+}
+</script>
+
+<script>
+
     $(document).ready(function() {
+
+        var charts_form = $("#charts-form");
+        var charts_action = $("#charts-action");
+
         $('#check-all-rows').click(function () {
             $('.row-checkbox').prop('checked', this.checked)
-        })
-    });
+        });
+
+        $(charts_form).click(function(e) {
+            var elem = $(document.activeElement);
+            var action = elem.attr("data-action")
+            charts_action.attr("value", action)
+            return true;
+        });
+    })
+
 </script>
+
 {% endblock %}
 
 {% block "content" %}
@@ -32,7 +55,7 @@
     <div style="text-align: cente2r !important;">
     <br/>
 
-    <form action=".">
+    <form id="charts-form" action=".">
     <table id="data-table" style="width:70%; margin: auto">
 
         <thead>
@@ -187,11 +210,12 @@
                         {% endwith %}
                         {% endfor %}
 
-                        <input type="hidden" name="action" value="BrowseStats"/>
+                        <input type="hidden" id="charts-action" name="action" value="{{ action }}"/>
 
-                        <input type="submit" value="List" />
-                        <input type="submit" value="Display">
-                        <input type="submit" value="Compare">
+                        <input type="submit" data-action="BrowseStats"  value="List" />
+                        <input type="submit" data-action="DisplayStats" value="Display" />
+                        <input type="submit" data-action="CompareStats" value="Compare" />
+
                 </td>
             </tr>
         </thead>
@@ -212,7 +236,7 @@
             {% if items.rows %}
                 {% for item in items.rows %}
                 <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
-                    <td><input type="checkbox" class="row-checkbox" name="{{ form_item_id_prefix }}{{ item.id }}" /></td>
+                    <td><input type="checkbox" class="row-checkbox" name="{{ form_item_id_prefix }}{{ item.id }}" {% if item.id in id_checked %}checked="checked"{% endif %} /></td>
                     <td class='numbering' style="width:10px">&nbsp;</td>
                         {% for cell in item.cells %}
                             {% with cell_idx=cell.idx %}
