@@ -60,9 +60,9 @@
                                 <td style="vertical-align:middle; border: 1px dotted #ccc;">
                                     {% if cell.data %}
                                     {% if cell.datatype == "link" %}
-                                        <a href="?{{ form_item_id_prefix }}{{ item.id }}=on&amp;action=DisplayStats">{{ cell.data }}</a>
+                                        <a href="?{{ form_item_id_prefix }}{{ row.id }}=on&amp;action=DisplayStats">{{ cell.data }}</a>
                                     {% elif cell.datatype == "email" %}
-                                        <a href="?{{ cell_column.key }}={{ cell.data }}&amp;action={{ action }}">{{ cell.data }}</a>
+                                        <a href="?{{ column.key }}={{ cell.data }}&amp;action={{ action }}">{{ cell.data }}</a>
                                     {% else %}
                                         {{ cell.data }}
                                     {% endif %}
@@ -84,17 +84,17 @@
 
                         const data{{ chart_idx }} = {
 
-                            labels: {{ item.labels }},
+                            labels: {{ chart_item.labels }},
 
                             yMarkers: [{
                                 label: "Max. result",
-                                value: {{ item.max_y }},
+                                value: {{ chart_item.max_y }},
                                 options: { labelPos: 'left' }
                                 }],
 
                             datasets: [
 
-                                {% for dataset in item.datasets %}
+                                {% for dataset in chart_item.datasets %}
                                 {
                                 name: "{{ dataset.name }}", type: "line",
                                 values: {{ dataset.values }}
@@ -107,7 +107,7 @@
                             }
 
                             const frappe_chart{{ chart_idx }} = new frappe.Chart("#chart{{ chart_idx }}", {
-                                title: "{{ item.name }}",
+                                title: "{{ chart_item.name }}",
                                 data: data{{ chart_idx }},
                                 type: 'line',
                                 colors: ['#6666ff', '#6666ff'],
@@ -129,7 +129,7 @@
                             },
                             tooltipOptions: {
                                 formatTooltipX: d => d + ' min.',
-                                formatTooltipY: d => '', //(d || 'Max. {{ item.max_x }}') + ' pts.' ,
+                                formatTooltipY: d => '',
                             }
                             });
 
