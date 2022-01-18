@@ -23,3 +23,9 @@ select {
 table.charts-display-table td.desc {
     vertical-align: middle;;
 }
+
+#data-table * td,
+#data-table * th
+{
+    vertical-align: middle !important;
+}

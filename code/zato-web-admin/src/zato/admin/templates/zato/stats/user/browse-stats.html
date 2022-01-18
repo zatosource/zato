@@ -90,6 +90,8 @@ $.fn.zato.stats.custom.list = function(elem) {
 
                 {% if items.charts %}
                 <table class="charts-display-table" style="width:100%;">
+
+                {% if action == "DisplayStats" %}
                 {% for chart_item in items.charts %}
                     <tr>
 
@@ -143,7 +145,6 @@ $.fn.zato.stats.custom.list = function(elem) {
                                 }],
 
                             datasets: [
-
                                 {% for dataset in chart_item.datasets %}
                                 {
                                 name: "{{ dataset.name }}", type: "line",
@@ -151,9 +152,9 @@ $.fn.zato.stats.custom.list = function(elem) {
                                 },
                                 {% endfor %}
 
-                                {name: "", type: "line", values: []}, {% comment %} This is empty on purpose, to make the legend with the email longer {% endcomment %}
-
+                                {name: "", type: "line", values: []}, {% comment %} This is empty on purpose, to make the legend with the label longer {% endcomment %}
                             ]
+
                             }
 
                             const frappe_chart{{ chart_idx }} = new frappe.Chart("#chart{{ chart_idx }}", {
@@ -189,7 +190,87 @@ $.fn.zato.stats.custom.list = function(elem) {
                     {% endwith %}
 
                 {% endfor %}
+                {% elif action == "CompareStats" %}
+
+                {% with chart_item=items.charts.0 %}
+                {% with chart_max_x=chart_item.max_x chart_max_y=chart_item.max_y chart_label_y=chart_item.label_y %}
+
+                    <tr>
+                        <td style="width:100%; border-bottom: 1px solid #ccc; style="vertical-align:middle; ">
+                            <div id="chart0" class="charts-div"></div>
+                            <script>
+                            const data = {
+
+                                labels:
+                                [
+                                 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                                 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+                                 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60
+                                ],
+
+                                yMarkers: [{
+                                    label: "{{ chart_item.label_y }}",
+                                    value: {{ chart_max_x }},
+                                    options: { labelPos: 'left' }
+                                    }
+                                ],
+
+                                datasets: [
+
+                                {% for chart_item in items.charts %}
+                                    {% for dataset in chart_item.datasets %}
+                                    {
+                                    name: "{{ dataset.name_short }}", type: "line",
+                                    values: {{ dataset.values }}
+                                    },
+                                    {% endfor %}
+                                    {name: "", type: "line", values: []}, {% comment %} This is empty on purpose, to make the legend with the label longer {% endcomment %}
+                                {% endfor %}
+                            ]
+
+                            }
+
+                            const chart = new frappe.Chart("#chart0", {
+                                title: "Comparison",
+                                data: data,
+                                type: 'line',
+                                colors: [
+                                    {% for chart_item in items.charts %}
+                                        '{{ chart_item.colors.0 }}',
+                                        '{{ chart_item.colors.0 }}',
+                                    {% endfor %}
+                                ],
+                                xvaluesOverPoints: 1,
+                                isNavigable: true,
+
+                                axisOptions: {
+                                    xAxisMode: 'span',
+                                    yAxisMode: 'span',
+                                    xIsSeries: true
+                                },
+                                barOptions: {
+                                    spaceRatio: 2
+                                },
+                                lineOptions: {
+                                    dotSize: 2,
+                                    spline: 0,
+                                    hideDots: false,
+                                },
+                                tooltipOptions: {
+                                    formatTooltipX: d => d + ' min.',
+                                    formatTooltipY: d => '',
+                                }
+                            })
+                            </script>
+                        </td>
+                    </tr>
+
+                {% endwith %}
+                {% endwith %}
+
+                {% endif %}
                 </table>
+
                 {% endif %}
 
                 </td>
