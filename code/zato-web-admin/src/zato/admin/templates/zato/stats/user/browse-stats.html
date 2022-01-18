@@ -83,6 +83,7 @@ $.fn.zato.stats.custom.list = function(elem) {
     <form id="charts-form" action=".">
     <table id="data-table" style="width:70%; margin: auto">
 
+        {% if action != "BrowseStats" %}
         <thead>
             <tr>
                 <td colspan="9999">
@@ -194,6 +195,7 @@ $.fn.zato.stats.custom.list = function(elem) {
                 </td>
             </tr>
         </thead>
+        {% endif %}
 
         <thead>
             <tr class='ignore'>
