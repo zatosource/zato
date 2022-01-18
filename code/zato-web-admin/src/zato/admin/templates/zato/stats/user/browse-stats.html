@@ -85,6 +85,7 @@ $.fn.zato.stats.custom.list = function(elem) {
                                     {% if cell.datatype == "link" %}
                                         <a href="?{{ form_item_id_prefix }}{{ row.id }}=on&amp;action=DisplayStats">{{ cell.data }}</a>
                                     {% elif cell.datatype == "email" %}
+                                        <span {% if cell.color %}style="color:#{{ cell.color }}{% endif %}">⯀</span>
                                         <a href="?{{ column.key }}={{ cell.data }}&amp;action={{ action }}">{{ cell.data }}</a>
                                     {% else %}
                                         {{ cell.data }}
@@ -133,7 +134,7 @@ $.fn.zato.stats.custom.list = function(elem) {
                                 title: "{{ chart_item.name }}",
                                 data: data{{ chart_idx }},
                                 type: 'line',
-                                colors: ['#cc66cc', '#6666ff'],
+                                colors: ['#{{ dataset.color }}', '#{{ dataset.color }}'],
                                 xvaluesOverPoints: 1,
                                 isNavigable: true,
 
@@ -246,7 +247,7 @@ $.fn.zato.stats.custom.list = function(elem) {
                                     {% if cell.datatype == "link" %}
                                         <a href="?{{ form_item_id_prefix }}{{ item.id }}=on&amp;action=DisplayStats">{{ cell.data }}</a>
                                     {% elif cell.datatype == "email" %}
-                                        <span {% if cell.label_color %}style="color:#{{ cell.label_color }}{% endif %}">⯀</span>
+                                        <span{% if cell.color %} style="color:#{{ cell.color }}"{% endif %}>⯀</span>
                                         <a href="?{{ cell_column.key }}={{ cell.data }}&amp;action={{ action }}">{{ cell.data }}</a>
                                     {% else %}
                                         {{ cell.data }}
