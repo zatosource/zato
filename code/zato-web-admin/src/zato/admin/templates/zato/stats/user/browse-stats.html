@@ -85,7 +85,7 @@ $.fn.zato.stats.custom.list = function(elem) {
                                     {% if cell.datatype == "link" %}
                                         <a href="?{{ form_item_id_prefix }}{{ row.id }}=on&amp;action=DisplayStats">{{ cell.data }}</a>
                                     {% elif cell.datatype == "email" %}
-                                        <span {% if cell.color %}style="color:#{{ cell.color }}{% endif %}">⯀</span>
+                                        <span {% if cell.color %}style="color:{{ cell.color }}{% endif %}">⯀</span>
                                         <a href="?{{ column.key }}={{ cell.data }}&amp;action={{ action }}">{{ cell.data }}</a>
                                     {% else %}
                                         {{ cell.data }}
@@ -134,7 +134,7 @@ $.fn.zato.stats.custom.list = function(elem) {
                                 title: "{{ chart_item.name }}",
                                 data: data{{ chart_idx }},
                                 type: 'line',
-                                colors: ['#{{ dataset.color }}', '#{{ dataset.color }}'],
+                                colors: {{ chart_item.colors|safe }},
                                 xvaluesOverPoints: 1,
                                 isNavigable: true,
 
@@ -247,7 +247,7 @@ $.fn.zato.stats.custom.list = function(elem) {
                                     {% if cell.datatype == "link" %}
                                         <a href="?{{ form_item_id_prefix }}{{ item.id }}=on&amp;action=DisplayStats">{{ cell.data }}</a>
                                     {% elif cell.datatype == "email" %}
-                                        <span{% if cell.color %} style="color:#{{ cell.color }}"{% endif %}>⯀</span>
+                                        <span{% if cell.color %} style="color:{{ cell.color }}"{% endif %}>⯀</span>
                                         <a href="?{{ cell_column.key }}={{ cell.data }}&amp;action={{ action }}">{{ cell.data }}</a>
                                     {% else %}
                                         {{ cell.data }}
