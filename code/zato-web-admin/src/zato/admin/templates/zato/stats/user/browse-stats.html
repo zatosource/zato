@@ -110,7 +110,7 @@ $.fn.zato.stats.custom.list = function(elem) {
                             labels: {{ chart_item.labels }},
 
                             yMarkers: [{
-                                label: "Max. result",
+                                label: "{{ chart_item.label_y }}",
                                 value: {{ chart_item.max_y }},
                                 options: { labelPos: 'left' }
                                 }],
