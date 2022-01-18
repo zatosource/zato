@@ -18,20 +18,37 @@ $.fn.zato.stats.custom.list = function(elem) {
     var url_path = "{{ qs_no_action|safe }}" + "action=" + action;
     location.href = "." + url_path;
 }
+
 </script>
 
 <script>
 
     $(document).ready(function() {
 
-        var charts_form = $("#charts-form");
+        var charts_form   = $("#charts-form");
         var charts_action = $("#charts-action");
+        var compare_stats_button = $('#submit-CompareStats')
 
-        $('#check-all-rows').click(function () {
-            $('.row-checkbox').prop('checked', this.checked)
+        var maybe_toggle_compare = function() {
+            var checked = $('.row-checkbox:checkbox:checked');
+            var should_enable = checked.length >= 2;
+            if(should_enable) {
+                compare_stats_button.prop("disabled", false);
+            }
+            else {
+                compare_stats_button.prop("disabled", true);
+            }
+        }
 
-            $('#submit-CompareStats').attr("disabled", !this.checked);
+        $('#check-all-rows').click(function() {
+            $('.row-checkbox').prop('checked', this.checked);
 
+            if(this.checked) {
+                maybe_toggle_compare();
+            }
+            else {
+                compare_stats_button.prop("disabled", true);
+            }
         });
 
         $(charts_form).click(function(e) {
@@ -40,6 +57,11 @@ $.fn.zato.stats.custom.list = function(elem) {
             charts_action.attr("value", action)
             return true;
         });
+
+        $(".row-checkbox").click(function(e) {
+            maybe_toggle_compare();
+        });
+
     })
 
 </script>
@@ -216,9 +238,9 @@ $.fn.zato.stats.custom.list = function(elem) {
 
                         <input type="hidden" id="charts-action" name="action" value="{{ action }}"/>
 
-                        <input id="submit-BrowseStats"  disabled="false" type="submit" data-action="BrowseStats"  value="List" />
-                        <input id="submit-DisplayStats" disabled="false" type="submit" data-action="DisplayStats" value="Display" />
-                        <input id="submit-CompareStats" disabled="true"  type="submit" data-action="CompareStats" value="Compare" />
+                        <input id="submit-BrowseStats"  type="submit" data-action="BrowseStats"  value="List" />
+                        <input id="submit-DisplayStats" type="submit" data-action="DisplayStats" value="Display" />
+                        <input id="submit-CompareStats" {% if id_checked|length < 2 %}disabled="true"{% endif %}  type="submit" data-action="CompareStats" value="Compare" />
 
                 </td>
             </tr>
