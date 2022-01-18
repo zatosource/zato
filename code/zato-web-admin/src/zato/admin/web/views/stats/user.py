@@ -18,7 +18,7 @@ from bunch import Bunch
 from django.http import HttpResponse
 
 # Zato
-from zato.admin.web.views import Index as _Index, method_allowed
+from zato.admin.web.views import Index as _Index
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
