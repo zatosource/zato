@@ -29,6 +29,9 @@ $.fn.zato.stats.custom.list = function(elem) {
 
         $('#check-all-rows').click(function () {
             $('.row-checkbox').prop('checked', this.checked)
+
+            $('#submit-CompareStats').attr("disabled", !this.checked);
+
         });
 
         $(charts_form).click(function(e) {
@@ -80,7 +83,7 @@ $.fn.zato.stats.custom.list = function(elem) {
                             {% with cell=row.cells|get_item:column_idx %}
                             <tr>
                                 <td style="vertical-align:middle; border: 1px dotted #ccc;">{{ column.data }}</td>
-                                <td style="vertical-align:middle; border: 1px dotted #ccc;">
+                                <td style="vertical-align:middle; border: 1px dotted #ccc; ; font-size:{{ cell.size }}em">
                                     {% if cell.data %}
                                     {% if cell.datatype == "link" %}
                                         <a href="?{{ form_item_id_prefix }}{{ row.id }}=on&amp;action=DisplayStats">{{ cell.data }}</a>
@@ -213,9 +216,9 @@ $.fn.zato.stats.custom.list = function(elem) {
 
                         <input type="hidden" id="charts-action" name="action" value="{{ action }}"/>
 
-                        <input type="submit" data-action="BrowseStats"  value="List" />
-                        <input type="submit" data-action="DisplayStats" value="Display" />
-                        <input type="submit" data-action="CompareStats" value="Compare" />
+                        <input id="submit-BrowseStats"  disabled="false" type="submit" data-action="BrowseStats"  value="List" />
+                        <input id="submit-DisplayStats" disabled="false" type="submit" data-action="DisplayStats" value="Display" />
+                        <input id="submit-CompareStats" disabled="true"  type="submit" data-action="CompareStats" value="Compare" />
 
                 </td>
             </tr>
@@ -242,7 +245,7 @@ $.fn.zato.stats.custom.list = function(elem) {
                         {% for cell in item.cells %}
                             {% with cell_idx=cell.idx %}
                             {% with cell_column=columns|get_item:cell_idx %}
-                            <td style="text-align: {{ cell.align|default:'left' }}">
+                            <td style="text-align: {{ cell.align|default:'left' }}; font-size:{{ cell.size }}em">
                                 {% if cell.data %}
                                     {% if cell.datatype == "link" %}
                                         <a href="?{{ form_item_id_prefix }}{{ item.id }}=on&amp;action=DisplayStats">{{ cell.data }}</a>
