@@ -185,6 +185,17 @@ class Index(_Index):
         return_data['action'] = self.ctx['action']
         return_data['form_item_id_prefix'] = form_item_id_prefix
 
+        # This is needed by a checkbox in each to know whether it should be checked or not in each to know whether charts submit buttons - the string does not contain an action
+        id_checked = set()
+        for key in self.req.GET:
+            if key.startswith(form_item_id_prefix):
+                key = key.split(form_item_id_prefix)
+                key
+                value = key[1]
+                id_checked.add(value)
+
+        return_data['id_checked'] = id_checked
+
         return return_data
 
 # ################################################################################################################################
