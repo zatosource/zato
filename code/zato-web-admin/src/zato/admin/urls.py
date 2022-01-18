@@ -1569,6 +1569,9 @@ urlpatterns += [
     url(r'^zato/stats/user/$',
         login_required(stats_user.Index()), name=stats_user.Index.url_name),
 
+    # Statistics - user-defined - latest updates
+    url(r'^zato/stats/user/update/$',
+        login_required(stats_user.get_updates), name='stats-user-get-updates'),
     ]
 
 # ################################################################################################################################

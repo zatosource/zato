@@ -9,12 +9,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from enum import Enum, unique
+from json import dumps
 
 # Bunch
 from bunch import Bunch
 
+# Django
+from django.http import HttpResponse
+
 # Zato
-from zato.admin.web.views import Index as _Index
+from zato.admin.web.views import Index as _Index, method_allowed
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -33,6 +37,11 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 form_item_id_prefix = 'item-id-'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+browse_service = 'stats.browse-stats'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,10 +66,10 @@ class Action(BaseEnum):
     CompareStats = 'CompareStats'
 
 action_to_service = {
-    Action.Index.value:   'stats.get-stat-types',
-    Action.BrowseStats.value: 'stats.browse-stats',
-    Action.DisplayStats.value: 'stats.browse-stats',
-    Action.CompareStats.value: 'stats.browse-stats',
+    Action.Index.value:        'stats.get-stat-types',
+    Action.BrowseStats.value:  browse_service,
+    Action.DisplayStats.value: browse_service,
+    Action.CompareStats.value: browse_service,
 }
 
 action_to_template = {
@@ -185,18 +194,28 @@ class Index(_Index):
         return_data['action'] = self.ctx['action']
         return_data['form_item_id_prefix'] = form_item_id_prefix
 
-        # This is needed by a checkbox in each to know whether it should be checked or not in each to know whether charts submit buttons - the string does not contain an action
-        id_checked = set()
+        # This is needed by a checkbox in each row to make the checkbox know whether it should be checked or not.
+        id_checked = []
         for key in self.req.GET:
             if key.startswith(form_item_id_prefix):
                 key = key.split(form_item_id_prefix)
                 key
                 value = key[1]
-                id_checked.add(value)
+                id_checked.append(value)
 
         return_data['id_checked'] = id_checked
 
         return return_data
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_updates(req):
+    response = req.zato.client.invoke(browse_service, {'needs_rows':False})
+    response = response.data
+    response = dumps(response)
+
+    return HttpResponse(response)
 
 # ################################################################################################################################
 # ################################################################################################################################
