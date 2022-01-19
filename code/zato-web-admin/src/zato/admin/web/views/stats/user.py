@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from enum import Enum, unique
-from json import dumps
+from json import dumps, loads
 
 # Bunch
 from bunch import Bunch
@@ -211,11 +211,22 @@ class Index(_Index):
 # ################################################################################################################################
 
 def get_updates(req):
-    response = req.zato.client.invoke(browse_service, {'needs_rows':False})
-    response = response.data
-    response = dumps(response)
 
-    return HttpResponse(response)
+    # Assume we do not return anything ..
+    out = {}
+
+    # .. unless we have some query parameters on input
+    if req.body:
+        data = loads(req.body)
+        if 'id' in data:
+            response = req.zato.client.invoke(browse_service, {
+                'id': data['id'],
+                'needs_rows':False
+            })
+            out.update(response.data)
+
+    out = dumps(out)
+    return HttpResponse(out)
 
 # ################################################################################################################################
 # ################################################################################################################################
