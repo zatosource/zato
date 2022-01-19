@@ -54,43 +54,76 @@
 
         {% if items.charts %}
             {% if action == "CompareStats" %}
+
+            var on_success = function(data) {
+
+                var charts_data = data.charts;
+                if(!charts_data) {
+                    return
+                }
+
+                // Each chart will contain the same metadata
+                var chart0 = charts_data[0];
+
+                var frappe_data = {
+                    "labels": chart0.labels,
+                    "yMarkers": [{
+                        "label": chart0.label_y,
+                        "value": chart0.max_x,
+                        "options": {"labelPos": "left"}
+                    }],
+                    "datasets": [],
+                };
+
+                // This is needed to make legends wider
+                const empty_dataset = {name: "", type: "line", values: []};
+
+                for (chart_elem of charts_data) {
+                    var frappe_dataset = {
+                        "name":  chart_elem.datasets[0].name_short,
+                        "type":  "line",
+                        "values": chart_elem.datasets[0].values,
+                    }
+                    frappe_data.datasets.push(frappe_dataset);
+                    frappe_data.datasets.push(empty_dataset);
+                }
+
+                frappe_chart0.update(frappe_data);
+            }
+
             var update_chart = function() {
 
-                //$.post("./update", function(data) {
-                $.getJSON("./update", function(data) {
+                var item_id_list = {};
+                var item_id_elems = $(":input[name='item-id']").get();
 
-                    var charts_data = data.charts;
-                    if(!charts_data) {
-                        return
+                for (item_id_elem of item_id_elems) {
+                    item_id_list[item_id_elem.value] = item_id_elem.value;
+                }
+
+                if(!item_id_list) {
+                    return;
+                }
+
+                var request = {
+                    "id": [1,2,3],
+                }
+                request = JSON.stringify(request);
+
+                console.log("ZZZ-1 Sending -> ", request);
+
+                $.ajax({
+                    "contentType": "application/json; charset=utf-8",
+                    "dataType": "json",
+                    "type": "POST",
+                    "url": "./get-updates/",
+                    "data": request,
+                    "headers": {"X-CSRFToken": "{{ csrf_token }}"},
+                    success: function(response) {
+                        on_success(response);
+                    },
+                    failure: function(response) {
+                        console.log("Failed to invoke /update " + response.text)
                     }
-
-                    // Each chart will contain the same metadata
-                    var chart0 = charts_data[0];
-
-                    var frappe_data = {
-                        "labels": chart0.labels,
-                        "yMarkers": [{
-                            "label": chart0.label_y,
-                            "value": chart0.max_x,
-                            "options": {"labelPos": "left"}
-                        }],
-                        "datasets": [],
-                    };
-
-                    // This is needed to make legends wider
-                    const empty_dataset = {name: "", type: "line", values: []};
-
-                    for (chart_elem of charts_data) {
-                        var frappe_dataset = {
-                            "name":  chart_elem.datasets[0].name_short,
-                            "type":  "line",
-                            "values": chart_elem.datasets[0].values,
-                        }
-                        frappe_data.datasets.push(frappe_dataset);
-                        frappe_data.datasets.push(empty_dataset);
-                    }
-
-                    frappe_chart0.update(frappe_data);
                 });
             }
 
@@ -99,9 +132,9 @@
             });
 
             setInterval(update_chart, 3000);
+
             {% endif %}
         {% endif %}
-
     })
 
 </script>
@@ -361,9 +394,7 @@
 
                         <input type="hidden" id="charts-action" name="action" value="{{ action }}"/>
 
-                        {% comment %}
                         <input id="update-stats" type="button" value="Update" />
-                        {% endcomment %}
 
                         <input id="submit-BrowseStats"  type="submit" data-action="BrowseStats"  value="List" />
                         <input id="submit-DisplayStats" type="submit" data-action="DisplayStats" value="Display" />
@@ -388,6 +419,7 @@
         <tbody>
             {% if items.rows %}
                 {% for item in items.rows %}
+                <input type="button" name="item-id" value="{{ item.id }}" />
                 <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                     <td><input type="checkbox" class="row-checkbox" name="{{ form_item_id_prefix }}{{ item.id }}" {% if item.id in id_checked %}checked="checked"{% endif %} /></td>
                     <td class='numbering' style="width:10px">&nbsp;</td>
