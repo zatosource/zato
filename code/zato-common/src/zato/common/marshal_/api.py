@@ -184,6 +184,12 @@ class DictCtx:
     def init(self):
 
         # Whether the dataclass defines the __init__method
+        #params = getattr(self.DataClass, _PARAMS, None)
+        #if params:
+        #    self.has_init = params.init
+        #else:
+        #    self.has_init = False
+
         self.has_init = getattr(self.DataClass, _PARAMS).init
 
         self.attrs_container = self.init_attrs if self.has_init else self.setattr_attrs
@@ -367,7 +373,8 @@ class MarshalAPI:
                 if field_ctx.model_class:
 
                     if field_ctx.value and field_ctx.value != ZatoNotGiven:
-                        field_ctx.value = self._visit_list(field_ctx)
+                        if field_ctx.is_model:
+                            field_ctx.value = self._visit_list(field_ctx)
 
             # If we do not have a value yet, perhaps we will find a default one
             if field_ctx.value == ZatoNotGiven:
@@ -381,7 +388,10 @@ class MarshalAPI:
                 if field_ctx.is_required:
                     raise self.get_validation_error(field_ctx)
                 else:
-                    if issubclass(field_ctx.field_type, str):
+                    # This is most reliable
+                    if 'typing.List' in str(field_ctx.field_type):
+                        value = []
+                    elif issubclass(field_ctx.field_type, str):
                         value = ''
                     elif issubclass(field_ctx.field_type, int):
                         value = 0
