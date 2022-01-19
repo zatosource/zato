@@ -127,8 +127,8 @@ class Index(_Index):
 # ################################################################################################################################
 
     def get_initial_input(self):
-        out = {}
-        query = {'id':[]}
+
+        out = {'id':[]}
 
         for key, value in self.req.GET.items():
             if key in {'action', 'cluster_id'}:
@@ -137,11 +137,9 @@ class Index(_Index):
                 if key.startswith(form_item_id_prefix):
                     data = key.split(form_item_id_prefix)
                     value = data[1]
-                    query['id'].append(value)
+                    out['id'].append(value)
                 else:
-                    query[key] = value
-
-        out['query'] = query
+                    out[key] = value
 
         return out
 

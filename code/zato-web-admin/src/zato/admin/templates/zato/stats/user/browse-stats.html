@@ -93,11 +93,11 @@
 
             var update_chart = function() {
 
-                var item_id_list = {};
+                var item_id_list = [];
                 var item_id_elems = $(":input[name='item-id']").get();
 
                 for (item_id_elem of item_id_elems) {
-                    item_id_list[item_id_elem.value] = item_id_elem.value;
+                    item_id_list.push(item_id_elem.value);
                 }
 
                 if(!item_id_list) {
@@ -105,7 +105,7 @@
                 }
 
                 var request = {
-                    "id": [1,2,3],
+                    "id": item_id_list,
                 }
                 request = JSON.stringify(request);
 
@@ -392,7 +392,9 @@
 
                         <input type="hidden" id="charts-action" name="action" value="{{ action }}"/>
 
+                        {% comment %}
                         <input id="update-stats" type="button" value="Update" />
+                        {% endcomment %}
 
                         <input id="submit-BrowseStats"  type="submit" data-action="BrowseStats"  value="List" />
                         <input id="submit-DisplayStats" type="submit" data-action="DisplayStats" value="Display" />
