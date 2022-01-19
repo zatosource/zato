@@ -36,17 +36,8 @@ from dacite import from_dict
 from typing_extensions import \
     TypeAlias as typealias_
 
-# Be explicit about which import error we want to catch
-try:
-    import dataclasses # noqa: F401
-
-# Python 3.6
-except ImportError:
-    from zato.common.ext.dataclasses import * # noqa: F401
-
-# Python 3.6+
-else:
-    from dataclasses import * # noqa: F401
+# stdlib
+from dataclasses import * # noqa: F401
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,6 +84,7 @@ intdict      = dict_[int, int]
 intdictdict  = dict_[int, anydict]
 intlist      = list_[int]
 intnone      = optional[int]
+intlistempty = list_[intnone]
 intset       = set_[int]
 intsetdict   = dict_[int, anyset]
 intstrdict   = dict_[int, str]
@@ -108,6 +100,7 @@ strintnone   = union_[optional[str_], optional[int]]
 strlist      = list_[str]
 strlistdict  = dict_[str, anylist]
 strlistempty = list_[optional[str]]
+strlistnone  = optional[list_[str]]
 strnone      = optional[str]
 strorlist    = union_[str, anylist]
 strset       = set_[str]
@@ -120,7 +113,6 @@ type_        = type_
 typealias_   = typealias_
 typevar_     = typevar_
 union_       = union_
-
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,6 +138,11 @@ def extract_from_union(elem:'any_') -> 'anytuple':
     union_with = field_type_args[1]
 
     return field_type_args, field_type, union_with
+
+# ################################################################################################################################
+
+def list_field() -> 'callable_[anylist]':
+    return field(default_factory=list) # noqa: F405
 
 # ################################################################################################################################
 # ################################################################################################################################
