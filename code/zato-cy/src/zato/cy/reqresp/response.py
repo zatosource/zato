@@ -26,7 +26,6 @@ from sqlalchemy.util import KeyedTuple
 
 # Zato
 from zato.common.api import DATA_FORMAT, simple_types, ZATO_OK
-from zato.common.ext.dataclasses import asdict
 from zato.common.marshal_.api import Model
 from zato.cy.reqresp.payload import SimpleIOPayload
 
@@ -160,7 +159,7 @@ class Response:
                     if value:
                         if isinstance(value, Model):
                             if self.data_format == _json:
-                                self._payload = asdict(value)
+                                self._payload = value.to_dict()
                             else:
                                 self._payload = value
                         else:

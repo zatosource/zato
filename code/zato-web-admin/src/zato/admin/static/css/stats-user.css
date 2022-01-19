@@ -1,0 +1,31 @@
+a.stats {
+    font-size: 1.1em !important;
+}
+
+span.description {
+    color: #585858;
+    font-size: 1.05em !important;
+}
+
+.chosen-container {
+    text-align: left;
+}
+
+select {
+    -webkit-appearance: menulist-button;
+    color: black;
+  }
+
+  select:invalid {
+    color: green;
+  }
+
+table.charts-display-table td.desc {
+    vertical-align: middle;;
+}
+
+#data-table * td,
+#data-table * th
+{
+    vertical-align: middle !important;
+}
