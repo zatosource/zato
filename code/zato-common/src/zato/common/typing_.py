@@ -84,6 +84,7 @@ intdict      = dict_[int, int]
 intdictdict  = dict_[int, anydict]
 intlist      = list_[int]
 intnone      = optional[int]
+intlistempty = list_[intnone]
 intset       = set_[int]
 intsetdict   = dict_[int, anyset]
 intstrdict   = dict_[int, str]
@@ -99,6 +100,7 @@ strintnone   = union_[optional[str_], optional[int]]
 strlist      = list_[str]
 strlistdict  = dict_[str, anylist]
 strlistempty = list_[optional[str]]
+strlistnone  = optional[list_[str]]
 strnone      = optional[str]
 strorlist    = union_[str, anylist]
 strset       = set_[str]
@@ -111,7 +113,6 @@ type_        = type_
 typealias_   = typealias_
 typevar_     = typevar_
 union_       = union_
-
 
 # ################################################################################################################################
 # ################################################################################################################################
