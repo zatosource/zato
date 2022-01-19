@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass, field, Field, MISSING
 from inspect import isclass
+from logging import getLogger
 from operator import attrgetter
 
 # Bunch
@@ -29,6 +30,11 @@ if 0:
     from zato.common.typing_ import any_, anydict, anylist
     from zato.server.service import Service
     Service = Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -129,8 +135,19 @@ class FieldInfo:
                 _, field_type, _ = result
                 ref = field_type
 
-            info.ref = '#/components/schemas/{}.{}'.format(ref.__module__, ref.__name__)
-            type_info = '', ref.__name__
+            #
+            # If we have an element such as anylistnone, the extracted field
+            # will be actually Python's own internal type pointing to the Any type.
+            # Under Python 3.8, this will be _SpecialForm. In newer versions,
+            # it may be potentially ClassVar. Be as it may, it does not have a __name__attribute that could extract.
+            #
+            ref_name = getattr(ref, '__name__', None)
+
+            if ref_name:
+                info.ref = '#/components/schemas/{}.{}'.format(ref.__module__, ref_name)
+                type_info = '', ref_name
+            else:
+                type_info = '', ''
 
         elif is_class and issubclass(field_type, dict):
             type_info = api_spec_info.DICT

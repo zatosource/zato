@@ -142,7 +142,7 @@ class APISpecTestCase(TestCase):
             self.assertEqual(json_result['result'],  'Error')
             self.assertEqual(json_result['details'], 'Invalid input')
             self.assertIsInstance(json_result['cid'], str)
-            self.assertGreaterEqual(len(json_result['cid']), 24)
+            self.assertGreaterEqual(len(json_result['cid']), 20)
 
         except ErrorReturnCode as e:
 

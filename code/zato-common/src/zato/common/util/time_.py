@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from time import time
 import logging
 
@@ -28,6 +28,20 @@ logger = logging.getLogger(__name__)
 
 _epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
 local_tz = get_localzone()
+
+# ################################################################################################################################
+
+def utc_now():
+    """ Returns current time in UTC with the timezone information included.
+    """
+    return datetime.now(timezone.utc)
+
+# ################################################################################################################################
+
+def native_to_utc(dt):
+    """ Converts a native datetime object to a UTC one.
+    """
+    return dt.replace(tzinfo=timezone.utc)
 
 # ################################################################################################################################
 
