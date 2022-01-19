@@ -212,9 +212,15 @@ class FieldCtx:
         # .. while these we need to build ourselves in self.init ..
         self.value    = None # type: object
         self.is_class = None # type: bool
-        self.is_model = None # type: bool
         self.is_list  = None # type: bool
         self.is_required = None # type: bool
+
+        # This indicates if ourselves, we are a Model instance
+        self.is_model = None # type: bool
+
+        # This indicates whether we are a list that contains a Model instance.
+        # The value is based on whether self.model_class exists or not.
+        self.contains_model = False
 
 # ################################################################################################################################
 
@@ -234,6 +240,7 @@ class FieldCtx:
         #
         if self.is_list:
             self.model_class = extract_model_class(self.field.type)
+            self.contains_model = bool(self.model_class)
 
 # ################################################################################################################################
 
@@ -367,7 +374,7 @@ class MarshalAPI:
                 if field_ctx.model_class:
 
                     if field_ctx.value and field_ctx.value != ZatoNotGiven:
-                        if field_ctx.is_model:
+                        if field_ctx.is_model or field_ctx.contains_model:
                             field_ctx.value = self._visit_list(field_ctx)
 
             # If we do not have a value yet, perhaps we will find a default one
