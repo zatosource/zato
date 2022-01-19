@@ -232,7 +232,9 @@
                                 title: "{{ chart_item.name }}",
                                 data: data{{ chart_idx }},
                                 type: 'line',
-                                colors: {{ chart_item.colors|safe }},
+                                {% with chart_item_colors=chart_item.colors|safe %}
+                                colors: {{ chart_item_colors }}.concat({{ chart_item_colors }}),
+                                {% endwith %}
                                 xvaluesOverPoints: 1,
                                 isNavigable: true,
 
