@@ -185,6 +185,8 @@ class BaseTestCase(TestCase):
     def check_response_statuses(self):
         for item in self.client.requests:
             if item.url.startswith(Config.web_admin_address):
+                if 'zato/stats/user/' in item.url:
+                    continue
                 if item.response:
                     if item.response.status_code not in Config.status_ok: # type: ignore
                         if item.path not in Config.to_skip_status:
