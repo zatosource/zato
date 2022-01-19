@@ -249,13 +249,13 @@ zato_frappe_charts = {};
 
 {% if cluster_id %}
 
-<div id="markup">
+<div id="markup" style="width: 90% !important;">
 
-    <div style="text-align: cente2r !important;">
+    <div style="text-align: center !important;">
     <br/>
 
     <form id="charts-form" action=".">
-    <table id="data-table" style="width:70%; margin: auto">
+    <table id="data-table" style="width:80%; margin: auto">
 
         {% if action != "BrowseStats" %}
         <thead>
@@ -271,7 +271,7 @@ zato_frappe_charts = {};
 
                     {% with chart_idx=forloop.counter0 %}
 
-                    <td style="width:70%; border-bottom: 1px solid #ccc; style="vertical-align:middle; ">
+                    <td style="width:76%; border-bottom: 1px solid #ccc; vertical-align:middle; padding-right:0px; margin-right:0px; ">
                         <div id="chart{{ forloop.counter0 }}" class="charts-div"></div>
                     </td>
                     <td class="desc" style="border-bottom: 1px solid #ccc; vertical-align: top; padding-top: 3%; color:#666;">
