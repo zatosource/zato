@@ -12,7 +12,7 @@ from unittest import main, TestCase
 # Zato
 from .base import CreateUserRequest, Role, TestService, User
 from zato.common.ext.dataclasses import dataclass, field
-from zato.common.marshal_.api import MarshalAPI, Model, ModelCtx
+from zato.common.marshal_.api import MarshalAPI, Model
 from zato.common.marshal_.simpleio import DataClassSimpleIO
 from zato.common.test import BaseSIOTestCase, rand_int, rand_string
 from zato.common.typing_ import cast_, list_field, strlistnone
@@ -21,7 +21,9 @@ from zato.common.typing_ import cast_, list_field, strlistnone
 # ################################################################################################################################
 
 if 0:
+    from zato.common.marshal_.api import MarshalAPI, Model, ModelCtx
     from zato.server.service import Service
+    ModelCtx = ModelCtx
     Service = Service
 
 # ################################################################################################################################
@@ -107,7 +109,7 @@ class JSONToDataclassTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_optional_list_of_strings_not_given_on_input(self):
+    def test_unmarshall_optional_list_of_strings_not_given_on_input(self):
 
         @dataclass
         class MyRequest(Model):
