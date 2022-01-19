@@ -109,8 +109,6 @@
                 }
                 request = JSON.stringify(request);
 
-                console.log("ZZZ-1 Sending -> ", request);
-
                 $.ajax({
                     "contentType": "application/json; charset=utf-8",
                     "dataType": "json",
@@ -419,7 +417,7 @@
         <tbody>
             {% if items.rows %}
                 {% for item in items.rows %}
-                <input type="button" name="item-id" value="{{ item.id }}" />
+                <input type="hidden" name="item-id" value="{{ item.id }}" />
                 <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                     <td><input type="checkbox" class="row-checkbox" name="{{ form_item_id_prefix }}{{ item.id }}" {% if item.id in id_checked %}checked="checked"{% endif %} /></td>
                     <td class='numbering' style="width:10px">&nbsp;</td>
