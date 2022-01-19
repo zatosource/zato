@@ -21,7 +21,7 @@ from zato.common.typing_ import cast_, list_field, strlistnone
 # ################################################################################################################################
 
 if 0:
-    from zato.common.marshal_.api import MarshalAPI, Model, ModelCtx
+    from zato.common.marshal_.api import ModelCtx
     from zato.server.service import Service
     ModelCtx = ModelCtx
     Service = Service
