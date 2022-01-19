@@ -184,7 +184,8 @@ class DictCtx:
     def init(self):
 
         # Whether the dataclass defines the __init__method
-        self.has_init = getattr(self.DataClass, _PARAMS).init
+        dataclass_params = getattr(self.DataClass, _PARAMS, None)
+        self.has_init = dataclass_params.init if dataclass_params else False
 
         self.attrs_container = self.init_attrs if self.has_init else self.setattr_attrs
         self.fields = getattr(self.DataClass, _FIELDS) # type: dict
@@ -219,7 +220,9 @@ class FieldCtx:
         self.is_model = None # type: bool
 
         # This indicates whether we are a list that contains a Model instance.
-        # The value is based on whether self.model_class exists or not.
+        # The value is based on whether self.model_class exists or not
+        # and whether self.is_model points to a Model rather than, for instance, the str class,
+        # as the latter is possible in strlist definitions.
         self.contains_model = False
 
 # ################################################################################################################################
@@ -240,7 +243,7 @@ class FieldCtx:
         #
         if self.is_list:
             self.model_class = extract_model_class(self.field.type)
-            self.contains_model = bool(self.model_class)
+            self.contains_model = bool(self.model_class and hasattr(self.model_class, _FIELDS))
 
 # ################################################################################################################################
 
@@ -369,11 +372,16 @@ class MarshalAPI:
             # .. if this field points to a list ..
             elif field_ctx.is_list:
 
-                # If we have a model class the elements of the list are of
+                # If we have a model class the elements of the list are of,
                 # we need to visit each of them now.
                 if field_ctx.model_class:
 
+                    # Enter further only if we have any value at all to check
                     if field_ctx.value and field_ctx.value != ZatoNotGiven:
+
+                        # However, that model class may actually point to <type 'str'> types
+                        # in case of fields like strlist, and we need to take that into account
+                        # before entering the _visit_list method below.
                         if field_ctx.is_model or field_ctx.contains_model:
                             field_ctx.value = self._visit_list(field_ctx)
 
