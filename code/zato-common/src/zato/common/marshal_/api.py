@@ -184,12 +184,6 @@ class DictCtx:
     def init(self):
 
         # Whether the dataclass defines the __init__method
-        #params = getattr(self.DataClass, _PARAMS, None)
-        #if params:
-        #    self.has_init = params.init
-        #else:
-        #    self.has_init = False
-
         self.has_init = getattr(self.DataClass, _PARAMS).init
 
         self.attrs_container = self.init_attrs if self.has_init else self.setattr_attrs
