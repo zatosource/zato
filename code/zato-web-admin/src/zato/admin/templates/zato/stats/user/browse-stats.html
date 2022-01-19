@@ -83,35 +83,33 @@ zato_frappe_charts = {};
                 return;
             }
 
-            console.log('QQQ-1 -> '+ JSON.stringify(charts_data));
+            {% if action == "CompareStats" %}
+            // Each chart will contain the same metadata
+            var chart0 = charts_data[0];
 
             var frappe_data = {
-                "labels": "ZZZ",
+                "labels": chart0.labels,
                 "yMarkers": [{
-                    "label": "AAA",
-                    "value": "99",
+                    "label": chart0.label_y,
+                    "value": chart0.max_y,
                     "options": {"labelPos": "left"}
                 }],
                 "datasets": [],
             };
 
-            var frappe_dataset = {
-                "name": "SHORT",
-                "type": "line",
-                "values": [1,2,3,4,5,56,6,7,8,8,9],
+            for (chart_elem of charts_data) {
+                var frappe_dataset = {
+                    "name":  chart_elem.datasets[0].name_short,
+                    "type":  "line",
+                    "values": chart_elem.datasets[0].values,
+                }
+                frappe_data.datasets.push(frappe_dataset);
+                frappe_data.datasets.push(empty_dataset);
             }
-
-            // .. add current dataset to the chart along with the empty one needed to make the legend longer
-            frappe_data.datasets.push(frappe_dataset);
-            frappe_data.datasets.push(empty_dataset);
-
-            frappe_data.datasets.push(frappe_dataset);
-            frappe_data.datasets.push(empty_dataset);
-
-            // .. finally, update the chart with the new data.
             frappe_chart0.update(frappe_data);
 
-            /*
+            {% else %}
+
             // Go through each chart that we received ..
             for(const incoming_chart of charts_data) {
 
@@ -155,7 +153,7 @@ zato_frappe_charts = {};
                     }
                 }
             }
-            */
+            {% endif %}
         }
 
         var update_chart = function() {
@@ -196,7 +194,7 @@ zato_frappe_charts = {};
             update_chart();
         });
 
-        //setInterval(update_chart, 3000);
+        setInterval(update_chart, 3000);
 
         {% endif %}
     })
