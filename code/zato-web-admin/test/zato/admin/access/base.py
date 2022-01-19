@@ -156,6 +156,9 @@ class BaseTestCase(TestCase):
         self.client = webdriver.Firefox(options=options)
         self.client.get(self.config.web_admin_address)
 
+        # .. set a wait time in case pages do not load immediately ..
+        self.client.implicitly_wait(20)
+
         # .. confirm that by default we are not logged in ..
         self._confirm_not_logged_in()
 
@@ -182,6 +185,8 @@ class BaseTestCase(TestCase):
     def check_response_statuses(self):
         for item in self.client.requests:
             if item.url.startswith(Config.web_admin_address):
+                if 'zato/stats/user/' in item.url:
+                    continue
                 if item.response:
                     if item.response.status_code not in Config.status_ok: # type: ignore
                         if item.path not in Config.to_skip_status:
