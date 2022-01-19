@@ -71,6 +71,7 @@ from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, oa
 from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as tls_channel, key_cert as tls_key_cert
 from zato.admin.web.views.security.vault import connection as vault_conn
 from zato.admin.web.views.stats import service_usage as stats_service_usage
+from zato.admin.web.views.stats import user as stats_user
 
 urlpatterns = [
 
@@ -1560,9 +1561,17 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # Statistics
+    # Statistics - built-in
     url(r'^zato/stats/service-usage/$',
         login_required(stats_service_usage.Index()), name=stats_service_usage.Index.url_name),
+
+    # Statistics - user-defined
+    url(r'^zato/stats/user/$',
+        login_required(stats_user.Index()), name=stats_user.Index.url_name),
+
+    # Statistics - user-defined - latest updates
+    url(r'^zato/stats/user/get-updates/$',
+        login_required(stats_user.get_updates), name='stats-user-get-updates'),
     ]
 
 # ################################################################################################################################

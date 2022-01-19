@@ -161,6 +161,7 @@ $.namespace('zato.service');
 $.namespace('zato.sms');
 $.namespace('zato.sms.twilio');
 $.namespace('zato.stats');
+$.namespace('zato.stats.custom');
 $.namespace('zato.stats.top_n');
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
