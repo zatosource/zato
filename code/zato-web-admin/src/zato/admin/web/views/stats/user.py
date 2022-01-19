@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 form_item_id_prefix = 'item-id-'
+item_id_list_param = 'id'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -218,9 +219,9 @@ def get_updates(req):
     # .. unless we have some query parameters on input
     if req.body:
         data = loads(req.body)
-        if 'id' in data:
+        if item_id_list_param in data:
             response = req.zato.client.invoke(browse_service, {
-                'id': data['id'],
+                item_id_list_param: data[item_id_list_param],
                 'needs_rows':False
             })
             out.update(response.data)
