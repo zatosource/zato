@@ -84,3 +84,20 @@ def stats_float(value):
     return value if value else '< 0.01'
 
 # ################################################################################################################################
+
+@register.filter
+def get_item(elems, idx):
+    try:
+        value = elems[idx]
+        return value
+    except Exception:
+        return None
+
+# ################################################################################################################################
+
+@register.filter
+def endswith(value, suffix):
+    if value and suffix:
+        return value.endswith(suffix)
+
+# ################################################################################################################################
