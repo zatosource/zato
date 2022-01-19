@@ -83,11 +83,10 @@ zato_frappe_charts = {};
                 return;
             }
 
-            // console.log('QQQ-1 -> ' + JSON.stringify(zato_frappe_charts));
+            console.error('QQQQQQQQQ')
 
             // Go through each chart that we received ..
             for(const incoming_chart of charts_data) {
-                // console.log('QQQ-1 -> ' + JSON.stringify(incoming_chart));
 
                 // .. enter each dataset of each chart ..
                 for(const incoming_dataset of incoming_chart.datasets) {
@@ -108,7 +107,7 @@ zato_frappe_charts = {};
                             "labels": incoming_chart.labels,
                             "yMarkers": [{
                                 "label": incoming_chart.label_y,
-                                "value": incoming_chart.max_x,
+                                "value": incoming_chart.max_y,
                                 "options": {"labelPos": "left"}
                             }],
                             "datasets": [],
@@ -129,70 +128,6 @@ zato_frappe_charts = {};
                     }
                 }
             }
-
-            /*
-            for (frappe_chart of zato_frappe_charts) {
-
-                var id_list = frappe_chart.zato_options.id;
-                console.log('QQQ-1 -> ' + JSON.stringify(id_list));
-
-                for (chart_elem of charts_data) {
-                    var dataset = chart_elem.datasets[0];
-
-                    var frappe_dataset = {
-                        "name": chart_elem.datasets[0].name_short,
-                        "type": "line",
-                        "values": chart_elem.datasets[0].values,
-                    }
-
-                    console.log(' ---> ' + JSON.stringify(dataset.id));
-
-                //frappe_data.datasets.push(frappe_dataset);
-                //frappe_data.datasets.push(empty_dataset);
-                }
-            }
-            */
-
-            /*
-            var charts_data = data.charts;
-            if(!charts_data) {
-                return
-            }
-
-            // Each chart will contain the same metadata
-            var chart0 = charts_data[0];
-
-            var frappe_data = {
-                "labels": chart0.labels,
-                "yMarkers": [{
-                    "label": chart0.label_y,
-                    "value": chart0.max_x,
-                    "options": {"labelPos": "left"}
-                }],
-                "datasets": [],
-            };
-
-            // This is needed to make legends wider
-            const empty_dataset = {name: "", type: "line", values: []};
-
-            for (chart_elem of charts_data) {
-                var frappe_dataset = {
-                    "name":  chart_elem.datasets[0].name_short,
-                    "type":  "line",
-                    "values": chart_elem.datasets[0].values,
-                }
-                frappe_data.datasets.push(frappe_dataset);
-                frappe_data.datasets.push(empty_dataset);
-            }
-
-            var _chart0 = zato_frappe_charts[0];
-
-            console.log('QQQ-1 -> ' + JSON.stringify(charts_data));
-            console.log('QQQ-2 -> ' + JSON.stringify(_chart0.zato_options));
-
-            _chart0.update(frappe_data);
-            */
-
         }
 
         var update_chart = function() {
