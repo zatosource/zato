@@ -6,6 +6,9 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import os
+
 # Django
 from django import template
 from django.utils.safestring import mark_safe
@@ -99,5 +102,11 @@ def get_item(elems, idx):
 def endswith(value, suffix):
     if value and suffix:
         return value.endswith(suffix)
+
+# ################################################################################################################################
+
+@register.filter
+def get_os_variable(_ignored, name):
+    return os.environ.get(name)
 
 # ################################################################################################################################

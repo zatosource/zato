@@ -7,7 +7,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from http.client import OK
 from logging import getLogger
 
@@ -123,9 +122,6 @@ class ZatoMiddleware:
         req.zato.odb = SASession()
         req.zato.settings_db = settings_db
         req.zato.args = Bunch() # Arguments read from URL
-
-        # Custom statistics are enabled via environment variables
-        req.zato.args['has_custom_stats'] = os.environ.get('ZATO_HAS_CUSTOM_STATS') or False
 
         # Whether this request to web-admin was served over TLS
         req.zato.is_tls = req.META.get('HTTP_X_FORWARDED_PROTO', '').lower() == 'https'
