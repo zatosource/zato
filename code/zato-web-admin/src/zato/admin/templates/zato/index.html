@@ -1,4 +1,5 @@
 {% extends "zato/base.html" %}
+{% load extras %}
 
 {% block html_title %}Hello{% endblock %}
 
@@ -269,7 +270,7 @@
                 <li><a href="#">Statistics &darr;</a>
                     <ul>
                         <li class='wide'><a href="{% url "stats-service-usage" %}?cluster={{ cluster_id|default:'' }}">Service usage</a></li>
-                        {% if req.zato.args.has_custom_stats %}<li class='wide'><a href="{% url "stats-user" %}?cluster={{ cluster_id|default:'' }}">Custom</a></li>{% endif %}
+                        {% if True|get_os_variable:"ZATO_HAS_CUSTOM_STATS" %}<li class='wide'><a href="{% url "stats-user" %}?cluster={{ cluster_id|default:'' }}">Custom</a></li>{% endif %}
                     </ul>
 
                 </li>
