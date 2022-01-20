@@ -25,7 +25,7 @@ from zato.common.odb.query import jwt_list
 from zato.common.rate_limiting import DefinitionParser
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.connection.http_soap import Unauthorized
-from zato.server.jwt import JWT as JWTBackend
+from zato.server.jwt_ import JWT as JWTBackend
 from zato.server.service import Boolean, Integer, Service
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
