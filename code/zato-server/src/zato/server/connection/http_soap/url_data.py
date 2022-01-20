@@ -30,7 +30,7 @@ from zato.common.util.api import parse_tls_channel_security_definition, update_a
 from zato.common.util.auth import on_basic_auth, on_wsse_pwd, WSSE
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.connection.http_soap import Forbidden, Unauthorized
-from zato.server.jwt import JWT
+from zato.server.jwt_ import JWT
 from zato.url_dispatcher import CyURLData, Matcher
 
 # ################################################################################################################################
