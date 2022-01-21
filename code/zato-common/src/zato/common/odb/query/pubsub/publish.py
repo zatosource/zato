@@ -54,7 +54,7 @@ def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by
 
     #
     # We need to temporarily remove selected keys from gd_msg_list while we insert the topic
-    # messages only to that these keys later on when inserting the same messages for subscribers.
+    # messages only to bring back these keys later on when inserting the same messages for subscribers.
     #
     # The reason is that we want to avoid the "sqlalchemy.exc.CompileError: Unconsumed column names"
     # condition which is met when insert_topic_messages attempts to use columns that are needed
@@ -109,10 +109,8 @@ def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by
                 # No integrity error / no deadlock = all good
                 return True
 
-            except IntegrityError:
-
-                if has_debug:
-                    logger_zato.info('Caught IntegrityError (_sql_publish_with_retry) `%s` `%s`', cid, format_exc())
+            except IntegrityError as e:
+                logger_zato.warn('Caught IntegrityError (_sql_publish_with_retry) `%s` `%s`', e, cid)
 
                 # If we have an integrity error here it means that our transaction, the whole of it,
                 # was rolled back - this will happen on MySQL in case in case of deadlocks which may
