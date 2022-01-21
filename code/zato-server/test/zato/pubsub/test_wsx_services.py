@@ -10,7 +10,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-# from zato.common.test import CommandLineServiceInvoker
+from zato.common.test import CommandLineServiceInvoker
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from unittest.runner import TextTestResult
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -18,11 +24,10 @@ from unittest import main, TestCase
 class WSXServicesTest(TestCase):
 
     def test_wsx_services(self) -> 'None':
-        # service = 'pubsub1.my-service'
-        # invoker = CommandLineServiceInvoker(check_stdout=False)
-        # out = invoker.invoke_and_test(service)
-        # print(111, out)
-        pass
+        service = 'pubsub1.my-service'
+        invoker = CommandLineServiceInvoker(check_stdout=False)
+        out = invoker.invoke_and_test(service) # type: TextTestResult
+        print(111, out)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,15 +47,8 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from time import sleep
-
 # Zato
 from zato.server.service import Service
-
-
-#tester = FullPathTester(self, False) # type: ignore
-#tester.run()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,9 +80,9 @@ class MyService(Service):
                 response = self.invoke(service, {'topic_name': topic_name})
                 return response
 
-            def _publish(_self, *args, **kwargs): # type: ignore
+            def _publish(_self, data, **kwargs): # type: ignore
                 service = 'zato.pubsub.pubapi.publish-message'
-                response = self.invoke(service, {'topic_name': topic_name, 'data':'abc123'})
+                response = self.invoke(service, {'topic_name': topic_name, 'data':data})
                 return response
 
             def _receive(_self, *args, **kwargs): # type: ignore
@@ -129,5 +127,4 @@ class MyService(Service):
 
 # ################################################################################################################################
 # ################################################################################################################################
-
 '''

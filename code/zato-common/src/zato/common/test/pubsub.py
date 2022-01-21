@@ -7,6 +7,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import time
+from json import loads
 from logging import getLogger
 
 # Zato
@@ -83,12 +85,18 @@ class FullPathTester:
             logger.info('Subscribing FullPathTester (2)')
             sub_key = self.test._subscribe()
 
+        # Sync tasks run once per two seconds which is why we need to wait a bit more
+        time.sleep(2.1)
+
         # Now, read the message back from our own queue - we can do it because
         # we know that we are subscribed already.
         logger.info('Receiving by FullPathTester')
         response_received = self.test._receive()
 
-        return
+        # Right now, this is a string because handle_PATCH in pubapi.py:TopicService serializes data to JSON,
+        # which is why we need to load it here.
+        if isinstance(response_received, str):
+            response_received = loads(response_received)
 
         # We do not know how many messages we receive because it is possible
         # that there may be some left over from previous tests. However, we still
