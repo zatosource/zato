@@ -108,6 +108,16 @@ def pubsub_subscription_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
+def pubsub_sub_key_list(session):
+    """ Returns a list of sub_keys and IDs in the database.
+    """
+    return session.query(
+        PubSubSubscription.id,
+        PubSubSubscription.sub_key,
+        )
+
+# ################################################################################################################################
+
 @query_wrapper
 def pubsub_subscription_list_by_endpoint_id(session, cluster_id, endpoint_id, needs_columns=False):
     """ A list of all pub/sub subscriptions for a given endpoint with a search results wrapper.

@@ -42,8 +42,10 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Zato
+# stdlib
+from time import sleep
 
+# Zato
 from zato.server.service import Service
 
 
@@ -91,17 +93,19 @@ class MyService(Service):
                 return response
 
             def test_wsx_services_full_path_subscribe_before_publication(_self):
-                tester = FullPathTester(_self, False)
+                tester = FullPathTester(_self, True)
                 tester.run()
 
             def test_wsx_services_full_path_subscribe_after_publication(_self):
                 pass
 
         try:
-            suite = defaultTestLoader.loadTestsFromTestCase(WSXServicesTestCase)
-            result = TextTestRunner().run(suite)
-            result
-            topic_name
+            iters = 1
+            for _ in range(iters):
+                suite = defaultTestLoader.loadTestsFromTestCase(WSXServicesTestCase)
+                result = TextTestRunner().run(suite)
+                result
+                topic_name
 
             self.response.payload = str(result)
         except Exception as e:
