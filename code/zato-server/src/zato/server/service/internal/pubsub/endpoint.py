@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,7 +18,7 @@ from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_list, 
      pubsub_messages_for_queue, server_by_id
 from zato.common.odb.query.pubsub.endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id
-from zato.common.pubsub import msg_pub_attrs
+from zato.common.pubsub import ensure_subs_exist, msg_pub_attrs
 from zato.common.util.pubsub import get_endpoint_metadata, get_topic_sub_keys_from_sub_keys, make_short_msg_copy_from_msg
 from zato.common.simpleio_ import drop_sio_elems
 from zato.common.util.time_ import datetime_from_ms
@@ -729,11 +729,21 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
             }, pid=sk_server.server_pid)
 
             if response:
+
+                # Extract the actual list of messages ..
                 response = response.data
                 response = response[sk_server.server_pid]
                 response = response.pid_data
                 response = response['msg_list']
                 response = reversed(response)
+                response = list(response)
+
+                # .. and make sure that all of the sub_keys actually still exist.
+                topic_name = '(None)' # self.pubsub.get_topic_by_sub_key
+                gd_msg_list = []
+
+                with closing(self.odb.session()) as session:
+                    response = ensure_subs_exist(session, topic_name, gd_msg_list, response, 'returning to endpoint')
 
                 self.response.payload[:] = response
         else:
