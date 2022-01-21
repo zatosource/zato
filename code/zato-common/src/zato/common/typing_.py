@@ -92,6 +92,7 @@ iterator_    = iterator_
 noreturn     = noreturn
 set_         = set_
 stranydict   = dict_[str, any_]
+strlistdict  = dict_[str, anylist]
 strdictdict  = dict_[str, anydict]
 strint       = union_[str_, int]
 strintbool   = union_[str_, int, bool]
