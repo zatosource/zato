@@ -22,14 +22,11 @@ from gevent import spawn
 from zato.common.api import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
 from zato.common.json_internal import json_dumps
-from zato.common.odb.model import PubSubSubscription
 from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_enq_marked_deleted, delete_msg_delivered, \
      delete_msg_expired
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
-from zato.common.odb.query.pubsub.subscription import pubsub_sub_key_list
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
-from zato.common.pubsub import PubSubMessage
-from zato.common.pubsub import new_msg_id
+from zato.common.pubsub import ensure_subs_exist, new_msg_id, PubSubMessage
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_ms
 from zato.server.pubsub import get_expiration, get_priority, PubSub, Topic
@@ -40,7 +37,7 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_
     from zato.server.pubsub.model import sublist
 
     any_    = any_
@@ -419,45 +416,6 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def ensure_subs_exist(
-        self,
-        session:     'any_',
-        topic_name:  'str',
-        gd_msg_list: 'anylist',
-        subscriptions_by_topic:'sublist'
-        ) -> 'sublist':
-
-        # A list of Subscription objects that we will return, which will mean that they do exist in the database
-        out = []
-
-        # A list of sub keys from which we will potentially remove subscriptions that do not exist
-        sk_set = {elem.sub_key for elem in subscriptions_by_topic}
-
-        query  = pubsub_sub_key_list(session)
-        query  = query.filter(PubSubSubscription.sub_key.in_(sk_set))
-
-        existing_sk_list = query.all()
-        existing_sk_set  = {elem.sub_key for elem in existing_sk_list}
-
-        # Find the intersection (shared elements) of what we have on input and what the database actually contains ..
-        shared = sk_set & existing_sk_set
-
-        # .. log if there was anything removed ..
-        to_remove = sk_set - shared
-        if to_remove:
-            logger_pubsub.info('Removing sub_keys %s before publishing to topic `%s` -> %s',
-                to_remove, topic_name, [elem['pub_msg_id'] for elem in gd_msg_list])
-
-        # .. populate the output list ..
-        for sub in subscriptions_by_topic:
-            if sub.sub_key in shared:
-                out.append(sub)
-
-        # .. and remove the result to our caller.
-        return out
-
-# ################################################################################################################################
-
     def _publish(self, ctx):
         """ Publishes GD and non-GD messages to topics and, if subscribers exist, moves them to their queues / notifies them.
         """
@@ -525,8 +483,9 @@ class Publish(AdminService):
                 # we got this list and when this transaction started, some of the subscribers
                 # have been already deleted from the database so, if we were not filter them out, we would be
                 # potentially trying to insert rows pointing to foreign keys that no longer exist.
-                ctx.subscriptions_by_topic = self.ensure_subs_exist(
-                    session, ctx.topic.name, ctx.gd_msg_list, ctx.subscriptions_by_topic)
+                ctx.subscriptions_by_topic = ensure_subs_exist(
+                    session, ctx.topic.name, ctx.gd_msg_list, ctx.subscriptions_by_topic,
+                    'publishing to topic')
 
                 # This is the call that runs SQL INSERT statements with messages for topics and subscriber queues
                 sql_publish_with_retry(session, self.cid, ctx.cluster_id, ctx.topic.id, ctx.subscriptions_by_topic,
