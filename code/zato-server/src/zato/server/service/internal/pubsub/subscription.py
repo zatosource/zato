@@ -337,22 +337,20 @@ class SubscribeServiceImpl(_Subscribe):
         """
         with self.lock('zato.pubsub.subscribe.%s' % (ctx.topic_name)):
 
+            # Is it a WebSockets client?
+            is_wsx = bool(ctx.ws_channel_id)
+
             # Endpoint on whose behalf the subscription will be made
             endpoint = self.pubsub.get_endpoint_by_id(ctx.endpoint_id)
 
             with closing(self.odb.session()) as session:
-
                 with session.no_autoflush:
 
                     # Non-WebSocket clients cannot subscribe to the same topic multiple times
-                    if not ctx.ws_channel_id:
-
+                    if not is_wsx:
                         if has_subscription(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id):
                             raise PubSubSubscriptionExists(self.cid, 'Endpoint `{}` is already subscribed to topic `{}`'.format(
                                 endpoint.name, ctx.topic.name))
-
-                    # Is it a WebSockets client?
-                    is_wsx = bool(ctx.ws_channel_id)
 
                     ctx.creation_time = now = utcnow_as_ms()
                     sub_key = new_sub_key(self.endpoint_type, ctx.ext_client_id)
