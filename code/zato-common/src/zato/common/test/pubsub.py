@@ -6,12 +6,20 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from logging import getLogger
+
 # Zato
 from zato.common import PUBSUB
 from zato.common.pubsub import MSG_PREFIX, skip_to_external
 from zato.common.test import rand_date_utc
 from zato.common.test.config import TestConfig
 from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,14 +61,17 @@ class FullPathTester:
         sub_key = None
 
         # Always make sure that we are unsubscribed before the test runs
+        logger.info('Unsubscribing FullPathTester')
         self.test._unsubscribe()
 
         # We may potentially need to subscribe before the publication
         if self.sub_before_publish:
+            logger.info('Subscribing FullPathTester (1)')
             sub_key = self.test._subscribe()
 
         # Publish the message
         data = cast_(str, rand_date_utc(True))
+        logger.info('Publishing from FullPathTester')
         response_publish = self.test._publish(data)
 
         # We expect to have a correct message ID on output
@@ -69,11 +80,15 @@ class FullPathTester:
 
         # We may potentially need to subscribe after the publication
         if self.sub_after_publish:
+            logger.info('Subscribing FullPathTester (2)')
             sub_key = self.test._subscribe()
 
         # Now, read the message back from our own queue - we can do it because
         # we know that we are subscribed already.
+        logger.info('Receiving by FullPathTester')
         response_received = self.test._receive()
+
+        return
 
         # We do not know how many messages we receive because it is possible
         # that there may be some left over from previous tests. However, we still
