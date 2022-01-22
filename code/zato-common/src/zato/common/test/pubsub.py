@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import time
+from time import sleep
 from json import loads
 from logging import getLogger
 
@@ -55,6 +55,7 @@ class FullPathTester:
         self.test = test
         self.sub_before_publish = sub_before_publish
         self.sub_after_publish = not self.sub_before_publish
+        self.sub_key = '<no-sk>'
 
         #
         # If we subscribe to a topic before we publish, we can use the shared topic,
@@ -66,15 +67,16 @@ class FullPathTester:
         #
         if self.sub_before_publish:
             self.topic_name = topic_name_shared
+            self.needs_unique = False
+            self.runner_name = 'Shared{}'.format(self.__class__.__name__)
         else:
             self.topic_name = topic_name_unique
+            self.needs_unique = True
+            self.runner_name = 'Unique{}'.format(self.__class__.__name__)
 
 # ################################################################################################################################
 
     def _run(self):
-
-        # For type checking
-        sub_key = None
 
         # Always make sure that we are unsubscribed before the test runs
         self._unsubscribe('before')
@@ -82,12 +84,12 @@ class FullPathTester:
         # We may potentially need to subscribe before the publication,
         # in which case we can subscribe to a shared
         if self.sub_before_publish:
-            logger.info('Subscribing FullPathTester (1)')
-            sub_key = self.test._subscribe(self.topic_name)
+            logger.info('Subscribing %s (1) (%s)', self.runner_name, self.sub_key)
+            self.sub_key = self.test._subscribe(self.topic_name)
 
         # Publish the message
         data = cast_(str, rand_date_utc(True))
-        logger.info('Publishing from FullPathTester')
+        logger.info('Publishing from %s (%s)', self.runner_name, self.sub_key)
         response_publish = self.test._publish(self.topic_name, data)
 
         # We expect to have a correct message ID on output
@@ -96,24 +98,24 @@ class FullPathTester:
 
         # We may potentially need to subscribe after the publication
         if self.sub_after_publish:
-            logger.info('Subscribing FullPathTester (2)')
-            sub_key = self.test._subscribe(self.topic_name)
+            logger.info('Subscribing %s (2) (%s)', self.runner_name, self.sub_key)
+            self.sub_key = self.test._subscribe(self.topic_name)
 
         # Synchronization tasks run once in 0.5 second, which is why we wait a bit longer
         # to give them enough time to push the message to a delivery task.
-        time.sleep(0.6)
+        sleep_time = 2.6
+        logger.info('%s sleeping for %ss (%s)', self.runner_name, sleep_time, self.sub_key)
+        sleep(sleep_time)
 
         # Now, read the message back from our own queue - we can do it because
         # we know that we are subscribed already.
-        logger.info('Receiving by FullPathTester')
+        logger.info('Receiving by %s (%s)', self.runner_name, self.sub_key)
         response_received = self.test._receive(self.topic_name)
 
         # Right now, this is a string because handle_PATCH in pubapi.py:TopicService serializes data to JSON,
         # which is why we need to load it here.
         if isinstance(response_received, str):
             response_received = loads(response_received)
-
-        return
 
         # We do not know how many messages we receive because it is possible
         # that there may be some left over from previous tests. However, we still
@@ -123,7 +125,7 @@ class FullPathTester:
 
         self.test.assertEqual(msg_received['data'], data)
         self.test.assertEqual(msg_received['size'], len(data))
-        self.test.assertEqual(msg_received['sub_key'], sub_key)
+        self.test.assertEqual(msg_received['sub_key'], self.sub_key)
         self.test.assertEqual(msg_received['delivery_count'], 1)
         self.test.assertEqual(msg_received['priority'],   PUBSUB.PRIORITY.DEFAULT)
         self.test.assertEqual(msg_received['mime_type'],  PUBSUB.DEFAULT.MIME_TYPE)
@@ -146,8 +148,17 @@ class FullPathTester:
 # ################################################################################################################################
 
     def _unsubscribe(self, action:'str') -> 'None':
-        logger.info('Unsubscribing FullPathTester (%s)', action)
+
+        logger.info('Unsubscribing %s (%s) (%s)', self.runner_name, action, self.sub_key)
+
         self.test._unsubscribe(self.topic_name)
+
+        # If this is a topic with a single subscriber that needs exclusive access,
+        # we need to wait to make sure that we are truly unsubscribed
+        if self.needs_unique:
+            sleep_time = 1
+            logger.info('%s sleeping for %ss (%s) (%s)', self.runner_name, sleep_time, action, self.sub_key)
+            sleep(sleep_time)
 
 # ################################################################################################################################
 
