@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,6 +14,8 @@ from ujson import dumps
 
 # Zato
 from zato.common.api import GENERIC, PUBSUB
+from zato.common.odb.model import PubSubSubscription
+from zato.common.odb.query.pubsub.subscription import pubsub_sub_key_list
 from zato.common.util.api import new_cid
 from zato.common.util.time_ import utcnow_as_ms
 
@@ -378,6 +380,46 @@ class dict_keys:
 all_dict_keys = dict_keys.endpoint + dict_keys.subscription + dict_keys.topic + dict_keys.sks
 all_dict_keys = set(all_dict_keys)  # type: ignore[assignment]
 all_dict_keys = list(all_dict_keys) # type: ignore[assignment]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def ensure_subs_exist(
+    session:     'any_',
+    topic_name:  'str',
+    gd_msg_list: 'anylist',
+    sub_key_related_objects:'anylist',
+    log_action:'str',
+    ) -> 'anylist':
+
+    # A list of input objects that we will return, which will mean that they do exist in the database
+    out = []
+
+    # A list of sub keys from which we will potentially remove subscriptions that do not exist
+    sk_set = {elem['sub_key'] for elem in sub_key_related_objects}
+
+    query  = pubsub_sub_key_list(session)
+    query  = query.filter(PubSubSubscription.sub_key.in_(sk_set))
+
+    existing_sk_list = query.all()
+    existing_sk_set  = {elem.sub_key for elem in existing_sk_list}
+
+    # Find the intersection (shared elements) of what we have on input and what the database actually contains ..
+    shared = sk_set & existing_sk_set
+
+    # .. log if there was anything removed ..
+    to_remove = sk_set - shared
+    if to_remove:
+        logger.info('Removing sub_keys %s before %s `%s`; left -> %s',
+            to_remove, log_action, topic_name, [elem['pub_msg_id'] for elem in gd_msg_list])
+
+    # .. populate the output list ..
+    for sub in sub_key_related_objects:
+        if sub['sub_key'] in shared:
+            out.append(sub)
+
+    # .. and remove the result to our caller.
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
