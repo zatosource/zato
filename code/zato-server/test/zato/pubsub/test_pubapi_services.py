@@ -20,7 +20,7 @@ class WSXServicesInvokerTest(TestCase):
     def test_wsx_services_invoker(self) -> 'None':
 
         # This service invokes a test suite that invokes all the services
-        # that WebSocket clients use for publish/subscribe.
+        # that pubapi clients use for publish/subscribe.
         service = 'pubsub1.my-service'
 
         # Prepare the invoker
