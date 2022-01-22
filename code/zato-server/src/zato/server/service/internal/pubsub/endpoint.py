@@ -33,6 +33,18 @@ from past.builtins import unicode
 from six import add_metaclass
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from bunch import Bunch
+    from zato.server.pubsub.model import subnone
+    from zato.server.service import Service
+    Bunch   = Bunch
+    Service = Service
+    subnone = subnone
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 elem = 'pubsub_endpoint'
 model = PubSubEndpoint
@@ -490,7 +502,8 @@ class DeleteEndpointQueue(AdminService):
 # ################################################################################################################################
 
 class _GetMessagesBase:
-    def _get_sub_by_sub_input(self, input):
+
+    def _get_sub_by_sub_input(self:'Service', input:'Bunch') -> 'subnone':
 
         if input.get('sub_id'):
             return self.pubsub.get_subscription_by_id(input.sub_id)
@@ -738,12 +751,17 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
                 response = reversed(response)
                 response = list(response)
 
-                # .. and make sure that all of the sub_keys actually still exist.
-                topic_name = '(None)' # self.pubsub.get_topic_by_sub_key
-                gd_msg_list = []
+                # .. at this point the topic may have been already deleted ..
+                try:
+                    topic = self.pubsub.get_topic_by_sub_key(sub.sub_key)
+                    topic_name = topic.name
+                except KeyError:
+                    self.logger.info('Could not find topic by sk `%s`', sub.sub_key)
+                    topic_name = '(None)'
 
+                # .. make sure that all of the sub_keys actually still exist ..
                 with closing(self.odb.session()) as session:
-                    response = ensure_subs_exist(session, topic_name, gd_msg_list, response, 'returning to endpoint')
+                    response = ensure_subs_exist(session, topic_name, response, response, 'returning to endpoint')
 
                 self.response.payload[:] = response
         else:
