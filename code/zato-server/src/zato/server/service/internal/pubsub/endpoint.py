@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,7 +18,7 @@ from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_list, 
      pubsub_messages_for_queue, server_by_id
 from zato.common.odb.query.pubsub.endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id
-from zato.common.pubsub import msg_pub_attrs
+from zato.common.pubsub import ensure_subs_exist, msg_pub_attrs
 from zato.common.util.pubsub import get_endpoint_metadata, get_topic_sub_keys_from_sub_keys, make_short_msg_copy_from_msg
 from zato.common.simpleio_ import drop_sio_elems
 from zato.common.util.time_ import datetime_from_ms
@@ -32,6 +32,18 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 from past.builtins import unicode
 from six import add_metaclass
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from bunch import Bunch
+    from zato.server.pubsub.model import subnone
+    from zato.server.service import Service
+    Bunch   = Bunch
+    Service = Service
+    subnone = subnone
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 elem = 'pubsub_endpoint'
@@ -490,7 +502,8 @@ class DeleteEndpointQueue(AdminService):
 # ################################################################################################################################
 
 class _GetMessagesBase:
-    def _get_sub_by_sub_input(self, input):
+
+    def _get_sub_by_sub_input(self:'Service', input:'Bunch') -> 'subnone':
 
         if input.get('sub_id'):
             return self.pubsub.get_subscription_by_id(input.sub_id)
@@ -729,11 +742,26 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
             }, pid=sk_server.server_pid)
 
             if response:
+
+                # Extract the actual list of messages ..
                 response = response.data
                 response = response[sk_server.server_pid]
                 response = response.pid_data
                 response = response['msg_list']
                 response = reversed(response)
+                response = list(response)
+
+                # .. at this point the topic may have been already deleted ..
+                try:
+                    topic = self.pubsub.get_topic_by_sub_key(sub.sub_key)
+                    topic_name = topic.name
+                except KeyError:
+                    self.logger.info('Could not find topic by sk `%s`', sub.sub_key)
+                    topic_name = '(None)'
+
+                # .. make sure that all of the sub_keys actually still exist ..
+                with closing(self.odb.session()) as session:
+                    response = ensure_subs_exist(session, topic_name, response, response, 'returning to endpoint')
 
                 self.response.payload[:] = response
         else:
