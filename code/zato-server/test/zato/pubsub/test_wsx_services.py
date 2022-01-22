@@ -28,6 +28,7 @@ class WSXServicesInvokerTest(TestCase):
 
         # .. invoke the service and obtain its response ..
         out = invoker.invoke_and_test(service) # type: str
+        out = out.strip()
 
         # .. make sure that the response points to a success.
         self.assertEqual(out, 'OK')
@@ -71,7 +72,7 @@ class MyService(Service):
         from zato.common.test.config import TestConfig
         from zato.common.test.pubsub import FullPathTester, PubSubTestingClass
 
-        topic_name = TestConfig.pubsub_topic_name_name
+        topic_name = TestConfig.pubsub_topic_shared
 
         class WSXServicesTestCase(TestCase, PubSubTestingClass):
 
