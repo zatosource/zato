@@ -56,7 +56,7 @@ key1={secret_key1}
 
 [crypto]
 well_known_data={well_known_data}
-use_tls={use_tls}
+use_tls=False
 tls_protocol=TLSv1
 tls_ciphers=EECDH+AES:EDH+AES:-SHA1:EECDH+RC4:EDH+RC4:RC4-SHA:EECDH+AES256:EDH+AES256:AES256-SHA:!aNULL:!eNULL:!EXP:!LOW:!MD5
 tls_client_certs=optional
