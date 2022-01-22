@@ -15,19 +15,22 @@ from zato.common.test import CommandLineServiceInvoker
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from unittest.runner import TextTestResult
+class WSXServicesInvokerTest(TestCase):
 
-# ################################################################################################################################
-# ################################################################################################################################
+    def test_wsx_services_invoker(self) -> 'None':
 
-class WSXServicesTest(TestCase):
-
-    def test_wsx_services(self) -> 'None':
+        # This service invokes a test suite that invokes all the services
+        # that WebSocket clients use for publish/subscribe.
         service = 'pubsub1.my-service'
+
+        # Prepare the invoker
         invoker = CommandLineServiceInvoker(check_stdout=False)
-        out = invoker.invoke_and_test(service) # type: TextTestResult
-        print(111, out)
+
+        # .. invoke the service and obtain its response ..
+        out = invoker.invoke_and_test(service) # type: str
+
+        # .. make sure that the response points to a success.
+        self.assertEqual(out, 'OK')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,6 +50,9 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from traceback import format_exc
+
 # Zato
 from zato.server.service import Service
 
@@ -56,7 +62,6 @@ from zato.server.service import Service
 class MyService(Service):
     """ Tests services that WebSocket clients use.
     """
-
     def handle(self):
 
         # stdlib
@@ -98,32 +103,15 @@ class MyService(Service):
                 pass
 
         try:
-            iters = 1
+            iters = 5
             for _ in range(iters):
                 suite = defaultTestLoader.loadTestsFromTestCase(WSXServicesTestCase)
-                result = TextTestRunner().run(suite)
-                result
-                topic_name
-
-            self.response.payload = str(result)
-        except Exception as e:
-            self.logger.warn('QQQ-1 %r', e)
-
-        #sub_key = self._invoke_subscribe()
-
-        """
-        pub_service = 'zato.pubsub.pubapi.publish-message'
-        topic_name = '/zato/demo/sample'
-        data = 'abc123'
-
-        msg = {
-            'topic_name': topic_name,
-            'data': data,
-        }
-
-        response = self.invoke(pub_service, msg)
-        self.response.payload = response
-        """
+                TextTestRunner().run(suite)
+            self.response.payload = 'OK'
+        except Exception:
+            msg = 'Exception in {} -> {}'.format(self.__class__.__name__, format_exc())
+            self.logger.warn(msg)
+            self.response.payload = msg
 
 # ################################################################################################################################
 # ################################################################################################################################
