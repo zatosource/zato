@@ -12,6 +12,7 @@ from time import sleep
 # Zato
 from zato.common import PUBSUB
 from zato.common.pubsub import prefix_sk
+from zato.common.test.config import TestConfig
 from zato.common.test.pubsub import FullPathTester
 from zato.common.test.rest_client import _RESTClient, RESTClientTestCase
 from zato.common.typing_ import cast_
@@ -80,7 +81,7 @@ class PubSubAPIRestImpl:
         response = self.rest_client.delete(config.path_unsubscribe + topic_name) # type: anydict
 
         # Wait a moment to make sure the subscription is deleted
-        sleep(0.1)
+        sleep(0.2)
 
         # We always expect an empty dict on reply from unsubscribe
         self.test.assertDictEqual(response, {})
@@ -125,15 +126,18 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def xtest_self_subscribe(self):
+    def test_self_subscribe(self):
+
+        # In this test, we check subscriptions to shared topics
+        topic_name = TestConfig.pubsub_topic_shared
 
         # Before subscribing, make sure we are not currently subscribed
-        self._unsubscribe()
+        self._unsubscribe(topic_name)
 
-        response_initial = self.rest_client.post(config.path_subscribe) # + topic_name)
+        response_initial = self.rest_client.post(config.path_subscribe + topic_name)
 
         # Wait a moment to make sure the subscription data is created
-        sleep(0.1)
+        sleep(0.2)
 
         sub_key = response_initial['sub_key']
         queue_depth = response_initial['queue_depth']
@@ -157,23 +161,26 @@ class PubAPITestCase(RESTClientTestCase):
         self.assertIsInstance(queue_depth, int)
 
         # Subscribe once more - this should be allowed although we expect an empty response now
-        response_already_subscribed = self.rest_client.post(config.path_subscribe)
+        response_already_subscribed = self.rest_client.post(config.path_subscribe + topic_name)
 
         self.assertDictEqual(response_already_subscribed, {})
 
 # ################################################################################################################################
 
-    def xtest_self_unsubscribe(self):
+    def test_self_unsubscribe(self):
+
+        # In this test, we check subscriptions to shared topics
+        topic_name = TestConfig.pubsub_topic_shared
 
         # Unsubscribe once ..
-        response = self._unsubscribe()
+        response = self._unsubscribe(topic_name)
 
         # .. we expect an empty dict on reply
         self.assertDictEqual(response, {})
 
         # .. unsubscribe once more - it is not an error to unsubscribe
         # .. even if we are already unsubscribed.
-        response = self._unsubscribe()
+        response = self._unsubscribe(topic_name)
         self.assertDictEqual(response, {})
 
 # ################################################################################################################################
@@ -184,50 +191,56 @@ class PubAPITestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def xtest_full_path_subscribe_after_publication(self):
+    def test_full_path_subscribe_after_publication(self):
         tester = FullPathTester(self, False) # type: ignore
         tester.run()
 
 # ################################################################################################################################
 
-    def xtest_receive_has_no_sub(self):
+    def test_receive_has_no_sub(self):
+
+        # In this test, we check subscriptions to shared topics
+        topic_name = TestConfig.pubsub_topic_shared
 
         # Make sure we are not subscribed
-        self._unsubscribe()
+        self._unsubscribe(topic_name)
 
         # Try to receive messages without a subscription
-        response = cast_('anydict', self._receive(False, False))
+        response = cast_('anydict', self._receive(topic_name, False, False))
 
         self.assertIsNotNone(response['cid'])
         self.assertEqual(response['result'], 'Error')
-        # self.assertEqual(response['details'], 'You are not subscribed to topic ``')
+        self.assertEqual(response['details'], 'You are not subscribed to topic `{}`'.format(topic_name))
 
 # ################################################################################################################################
 
-    def xtest_receive_many(self):
+    def test_receive_many(self):
+
+        # In this test, we check subscriptions to shared topics
+        topic_name = TestConfig.pubsub_topic_shared
 
         # Make sure we are subscribed
-        self._subscribe(needs_unsubscribe=True)
+        self._subscribe(topic_name, needs_unsubscribe=True)
 
         data1 = '111'
         data2 = '222'
         data3 = '333'
 
         # Publish #1
-        response1 = self._publish(data1)
+        response1 = self._publish(topic_name, data1)
         expected_msg_id1 = response1['msg_id']
 
         # Publish #2
-        response2 = self._publish(data2)
+        response2 = self._publish(topic_name, data2)
         expected_msg_id2 = response2['msg_id']
 
         # Publish #3
-        response3 = self._publish(data3)
+        response3 = self._publish(topic_name, data3)
         expected_msg_id3 = response3['msg_id']
 
         # Receive and confirm the order of messages received. This will be a list of messages
         # and we expect to find all of them, in LIFO order.
-        received = self._receive()
+        received = self._receive(topic_name)
 
         received_msg1 = received[0]
         received_msg2 = received[1]
