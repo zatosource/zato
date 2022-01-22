@@ -1227,10 +1227,10 @@ class PubSubTool:
                     len_groups = len(groups)
 
                     # This we log using both loggers because we run during server startup so we should
-                    # let users know that their server have to do something extra
+                    # let users know that their server has to do something extra
                     for _logger in logger, logger_zato:
-                        _logger.info('Found %d initial message%sto enqueue for sub_key:`%s` (%s -> %s), `%s`, g:%d, gs:%d',
-                            len_msg_ids, suffix, sub_key, topic_name, endpoint_name, msg_ids, len(groups), _group_size)
+                        _logger.info('Found %d initial message%sto enqueue for sub_key:`%s` (%s -> %s), g:%d, gs:%d',
+                            len_msg_ids, suffix, sub_key, topic_name, endpoint_name, len(groups), _group_size)
 
                     for idx, group in enumerate(groups, 1): # type: ignore
                         group = cast_('strlist', group)
