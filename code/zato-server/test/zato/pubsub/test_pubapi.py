@@ -28,7 +28,7 @@ if 0:
 
 _default = PUBSUB.DEFAULT
 
-topic_name = TestConfig.pubsub_topic_name_name
+topic_name = TestConfig.pubsub_topic_shared
 sec_name   = _default.DEMO_SECDEF_NAME
 username   = _default.DEMO_USERNAME
 
