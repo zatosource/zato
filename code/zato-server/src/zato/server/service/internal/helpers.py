@@ -442,8 +442,6 @@ class HelperPubSubTarget(Service):
 
     def handle(self):
 
-        self.logger.info('AAA-1')
-
         # Our request
         msg = self.request.raw_request # type: PubSubMessage
 
