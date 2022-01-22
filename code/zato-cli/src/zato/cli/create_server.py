@@ -82,7 +82,7 @@ use_async_driver=True
 [scheduler]
 scheduler_host={{scheduler_host}}
 scheduler_port={{scheduler_port}}
-scheduler_use_tls={{scheduler_use_tls}}
+scheduler_use_tls=False
 
 [hot_deploy]
 pickup_dir=../../pickup/incoming/services
