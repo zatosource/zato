@@ -759,9 +759,10 @@ class WebSocket(_WebSocket):
 
                         _ts_before_invoke = _now()
 
-                        logger.info('Tok ext0: [%s / %s] ts:%s exp:%s -> %s',
-                            self.token.value, self.pub_client_id, _ts_before_invoke, self.token.expires_at,
-                             _ts_before_invoke > self.token.expires_at)
+                        if logger_has_debug:
+                            logger.info('Tok ext0: [%s / %s] ts:%s exp:%s -> %s',
+                                self.token.value, self.pub_client_id, _ts_before_invoke, self.token.expires_at,
+                                _ts_before_invoke > self.token.expires_at)
 
                         response = self.invoke_client(new_cid(), None, use_send=False)
                     except ConnectionError as e:
@@ -779,15 +780,17 @@ class WebSocket(_WebSocket):
                             self.pings_missed = 0
                             self.ping_last_response_time = _timestamp
 
-                            logger.info('Tok ext1: [%s / %s] ts:%s exp:%s -> %s',
-                                self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
-                                _timestamp > self.token.expires_at)
+                            if logger_has_debug:
+                                logger.info('Tok ext1: [%s / %s] ts:%s exp:%s -> %s',
+                                    self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
+                                    _timestamp > self.token.expires_at)
 
                             self.token.extend(ping_interval)
 
-                            logger.info('Tok ext2: [%s / %s] ts:%s exp:%s -> %s',
-                                self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
-                                _timestamp > self.token.expires_at)
+                            if logger_has_debug:
+                                logger.info('Tok ext2: [%s / %s] ts:%s exp:%s -> %s',
+                                    self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
+                                    _timestamp > self.token.expires_at)
 
                         else:
                             self.pings_missed += 1
