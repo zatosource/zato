@@ -6,7 +6,10 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+import os
 from playwright.sync_api import Playwright, sync_playwright
+
+password = os.environ['ZATO_TEST_DASHBOARD_PASSWORD']
 
 def run(playwright: Playwright) -> None:
     browser = playwright.chromium.launch(headless=False)
@@ -28,42 +31,41 @@ def run(playwright: Playwright) -> None:
     page.press("input[name=\"username\"]", "Tab")
 
     # Fill input[name="password"]
-    page.fill("input[name=\"password\"]", "************")
+    page.fill("input[name=\"password\"]", password)
 
     # Press Enter
     page.press("input[name=\"password\"]", "Enter")
-    # assert page.url == "http://localhost:8183/zato/"
+    assert page.url == "http://localhost:8183/zato/"
 
     # Click text=My settings
     page.click("text=My settings")
-    # assert page.url == "http://localhost:8183/account/settings/basic/"
+    assert page.url == "http://localhost:8183/account/settings/basic/"
 
     # Click text=Log out (admin)
     page.click("text=Log out (admin)")
-    # assert page.url == "http://localhost:8183/accounts/login/?next=/zato/"
+    assert page.url == "http://localhost:8183/accounts/login/?next=/zato/"
 
     # Click input[name="password"]
     page.click("input[name=\"password\"]")
 
     # Fill input[name="password"]
-    page.fill("input[name=\"password\"]", "************")
+    page.fill("input[name=\"password\"]", password)
 
     # Click text=Log in
     page.click("text=Log in")
-    # assert page.url == "http://localhost:8183/zato/"
+    assert page.url == "http://localhost:8183/accounts/login/"
 
     # Click text=My settings
     page.click("text=My settings")
-    # assert page.url == "http://localhost:8183/account/settings/basic/"
+    assert page.url == "http://localhost:8183/account/settings/basic/"
 
     # Click text=Log out (admin)
     page.click("text=Log out (admin)")
-    # assert page.url == "http://localhost:8183/accounts/login/?next=/zato/"
+    assert page.url == "http://localhost:8183/accounts/login/?next=/zato/"
 
     # ---------------------
     context.close()
     browser.close()
-
 
 with sync_playwright() as playwright:
     run(playwright)
