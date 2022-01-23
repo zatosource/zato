@@ -28,8 +28,7 @@ from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_en
      delete_msg_expired
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
-from zato.common.pubsub import PubSubMessage
-from zato.common.pubsub import new_msg_id
+from zato.common.pubsub import ensure_subs_exist, new_msg_id, PubSubMessage
 from zato.common.util.json_ import dumps
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
@@ -471,6 +470,18 @@ class Publish(AdminService):
                 if has_logger_pubsub_debug:
                     logger_pubsub.debug(_inserting_gd_msg, ctx.topic.name, pub_msg_list, ctx.endpoint_name,
                         ctx.ext_client_id, self.cid)
+
+                #
+                # Backported from v3.2
+                #
+                # We may possibly need to filter out subscriptions that do not already exist - this is needed because
+                # we took our list of subscribers from self.pubsub but it is possible that between the time
+                # we got this list and when this transaction started, some of the subscribers
+                # have been already deleted from the database so, if we were not filter them out, we would be
+                # potentially trying to insert rows pointing to foreign keys that no longer exist.
+                ctx.subscriptions_by_topic = ensure_subs_exist(
+                    session, ctx.topic.name, ctx.gd_msg_list, ctx.subscriptions_by_topic,
+                    'publishing to topic')
 
                 # This is the call that runs SQL INSERT statements with messages for topics and subscriber queues
                 sql_publish_with_retry(session, self.cid, ctx.cluster_id, ctx.topic.id, ctx.subscriptions_by_topic,
