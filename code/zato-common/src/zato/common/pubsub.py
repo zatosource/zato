@@ -229,13 +229,7 @@ all_dict_keys = list(set(all_dict_keys))
 # ################################################################################################################################
 # ################################################################################################################################
 
-def ensure_subs_exist(
-    session:     'any_',
-    topic_name:  'str',
-    gd_msg_list: 'anylist',
-    sub_key_related_objects:'anylist',
-    log_action:'str',
-    ) -> 'anylist':
+def ensure_subs_exist(session, topic_name, gd_msg_list, sub_key_related_objects, log_action):
 
     # A list of input objects that we will return, which will mean that they do exist in the database
     out = []
