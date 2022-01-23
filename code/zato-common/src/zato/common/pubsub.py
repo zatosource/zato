@@ -254,7 +254,7 @@ def ensure_subs_exist(session, topic_name, gd_msg_list, sub_key_related_objects,
 
     # .. populate the output list ..
     for sub in sub_key_related_objects:
-        if sub['sub_key'] in shared:
+        if sub.sub_key in shared:
             out.append(sub)
 
     # .. and remove the result to our caller.
