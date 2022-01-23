@@ -64,7 +64,8 @@ web-admin-tests:
 	cd $(CURDIR)/code/zato-web-admin && make run-tests
 
 install-qa-reqs:
-	$(CURDIR)/code/bin/pip install -r $(CURDIR)/code/qa-requirements.txt
+	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
+	npx --yes playwright install
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 
 run-tests:
