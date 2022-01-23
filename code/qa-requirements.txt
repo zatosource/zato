@@ -1,5 +1,6 @@
 mypy
 openapi-spec-validator
+playwright
 pylint
 requests-openapi
 selenium
