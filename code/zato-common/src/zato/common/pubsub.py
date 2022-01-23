@@ -235,7 +235,7 @@ def ensure_subs_exist(session, topic_name, gd_msg_list, sub_key_related_objects,
     out = []
 
     # A list of sub keys from which we will potentially remove subscriptions that do not exist
-    sk_set = {elem['sub_key'] for elem in sub_key_related_objects}
+    sk_set = {elem.sub_key for elem in sub_key_related_objects}
 
     query  = pubsub_sub_key_list(session)
     query  = query.filter(PubSubSubscription.sub_key.in_(sk_set))
