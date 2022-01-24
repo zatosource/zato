@@ -383,8 +383,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def set_up_class_attributes(self, class_, service_store=None, name=None):
-        # type: (Service, ServiceStore, str)
+    def set_up_class_attributes(self, class_:'Service', service_store:'ServiceStore'=None) -> 'None':
 
         # Set up enforcement of what other services a given service can invoke
         try:
@@ -451,6 +450,7 @@ class ServiceStore:
                 class_._out_plain_http = service_store.server.worker_store.worker_config.out_plain_http
                 class_.amqp.invoke = service_store.server.worker_store.amqp_invoke # .send is for pre-3.0 backward compat
                 class_.amqp.invoke_async = class_.amqp.send = service_store.server.worker_store.amqp_invoke_async
+                class_.commands.init(service_store.server)
 
                 class_.definition.kafka = service_store.server.worker_store.def_kafka
                 class_.im.slack = service_store.server.worker_store.outconn_im_slack
@@ -1242,7 +1242,7 @@ class ServiceStore:
         name = class_.get_name()
         impl_name = class_.get_impl_name()
 
-        self.set_up_class_attributes(class_, self, name)
+        self.set_up_class_attributes(class_, self)
 
         # Note that at this point we do not have the service's ID, is_active and slow_threshold values;
         # this is because this object is created prior to its deployment in ODB.

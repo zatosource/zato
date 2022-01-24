@@ -89,7 +89,7 @@ class CommandsFacade:
     """
     server: 'ParallelServer'
 
-    def __init__(self, server:'ParallelServer') -> 'None':
+    def init(self, server:'ParallelServer') -> 'None':
         self.server = server
 
     def _append_time_details(self, out:'CommandResult') -> 'None':
