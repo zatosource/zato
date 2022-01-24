@@ -10,12 +10,13 @@ run-tests:
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/apispec/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/pattern/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/pubsub/test_pubapi_rest.py -s
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/pubsub/test_pubapi_services.py -s
+	$(PY_DIR)/py $(CURDIR)/test/zato/pubsub/test_pubapi_services.py
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/pubsub/test_publish.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/rest/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/server_rpc/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/stats/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/test_*.py -s
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_commands.py
 
 pylint:
 	echo Running pylint in zato-server
