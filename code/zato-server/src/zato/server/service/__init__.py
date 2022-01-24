@@ -48,6 +48,7 @@ from zato.common.nav import DictNav, ListNav
 from zato.common.typing_ import anydict
 from zato.common.util.api import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, \
      spawn_greenlet, uncamelify
+from zato.server.commands import CommandsFacade
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
@@ -462,6 +463,7 @@ class Service:
     email = None  # type: EMailAPI
     search = None # type: SearchAPI
     amqp = AMQPFacade()
+    commands = CommandsFacade()
 
     # For WebSockets
     wsx = None # type: WSXFacade
