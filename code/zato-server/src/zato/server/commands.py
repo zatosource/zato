@@ -20,7 +20,7 @@ from humanize import naturalsize
 
 # Zato
 from zato.common.util import new_cid
-from zato.server.service import Model
+from zato.common.marshal_.api import Model
 
 # ################################################################################################################################
 # ################################################################################################################################
