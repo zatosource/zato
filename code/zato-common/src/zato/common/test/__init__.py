@@ -660,7 +660,7 @@ class CommandLineServiceTestCase(TestCase):
 
     maxDiff = 1234567890
 
-    def run_cli_test(self, service_name:'str') -> 'None':
+    def run_zato_test(self, service_name:'str') -> 'None':
 
         # Prepare the invoker
         invoker = CommandLineServiceInvoker(check_stdout=False)
