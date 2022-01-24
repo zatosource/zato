@@ -252,7 +252,8 @@ class Response:
     def write(self, arg, binary_type=binary_type, util_write=util.write):
         self.send_headers()
         if not isinstance(arg, binary_type):
-            raise TypeError('%r is not a byte' % arg)
+            #raise TypeError('{!r} is not a byte'.format(arg))
+            arg = repr(arg)
         arglen = len(arg)
         tosend = arglen
         if self.response_length is not None:
