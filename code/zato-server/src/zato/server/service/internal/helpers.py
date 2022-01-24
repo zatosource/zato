@@ -689,7 +689,7 @@ class PubAPIInvoker(Service):
                 tester = FullPathTester(_self, True)
                 tester.run()
 
-            def xtest_wsx_services_full_path_subscribe_after_publication(_self):
+            def test_wsx_services_full_path_subscribe_after_publication(_self):
                 tester = FullPathTester(_self, False)
                 tester.run()
 
