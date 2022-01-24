@@ -106,9 +106,9 @@ class CommandsFacade:
 
     def _append_result_details(
         self,
-        out:'CommandResult',
-        result:'CompletedProcess',
-        encoding:'str',
+        out:         'CommandResult',
+        result:      'CompletedProcess',
+        encoding:    'str',
         replace_char:'str',
         ) -> 'None':
 
@@ -150,7 +150,7 @@ class CommandsFacade:
     def _run(
         self,
         *,
-        cid: 'str',
+        cid:      'str',
         command:  'str',
         callback: 'any_',
         stdin:    'str',
@@ -250,12 +250,12 @@ class CommandsFacade:
         self,
         command:'str',
         *,
-        cid: 'str' = '',
-        timeout:'int'  = Config.Timeout,
-        callback: 'any_' = None,
-        stdin:'str'    = '',
-        encoding:'str' = Config.Encoding,
-        replace_char:'str' = Config.ReplaceChar,
+        cid:         'str'  = '',
+        timeout:     'int'  = Config.Timeout,
+        callback:    'any_' = None,
+        stdin:       'str'  = '',
+        encoding:    'str'  = Config.Encoding,
+        replace_char:'str'  = Config.ReplaceChar,
         ) -> 'CommandResult':
 
         # Accept input or create a new Correlation ID
@@ -286,12 +286,12 @@ class CommandsFacade:
         self,
         command:'str',
         *,
-        cid: 'str' = '',
-        timeout:'int' = Config.Timeout,
-        callback: 'any_' = None,
-        stdin:'str'   = '',
-        encoding:'str' = Config.Encoding,
-        replace_char:'str' = Config.ReplaceChar,
+        cid:         'str'  = '',
+        timeout:     'int'  = Config.Timeout,
+        callback:    'any_' = None,
+        stdin:       'str'  = '',
+        encoding:    'str'  = Config.Encoding,
+        replace_char:'str'  = Config.ReplaceChar,
         ) -> 'CommandResult':
 
         # Accept input or create a new Correlation ID
