@@ -520,6 +520,8 @@ class Invoke(AdminService):
 
             if not isinstance(response, basestring):
                 if not isinstance(response, bytes):
+                    if hasattr(response, 'to_dict'):
+                        response = response.to_dict()
                     response = _dumps(response)
 
             response = response if isinstance(response, bytes) else response.encode('utf8')
