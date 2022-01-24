@@ -28,6 +28,7 @@ from zato.server.service.internal.service import Invoke
 if 0:
     from zato.common.pubsub import PubSubMessage
     from zato.common.typing_ import any_, anydict, anytuple
+    from zato.server.commands import CommandResult
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -742,6 +743,27 @@ class PubAPIInvoker(Service):
             msg = 'Exception in {} -> {}'.format(self.__class__.__name__, format_exc())
             self.logger.warn(msg)
             self.response.payload = msg
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CommandsService(Service):
+    name = 'helpers.commands-service'
+
+    def _on_command_completed(self, result:'CommandResult') -> 'None':
+        result
+        result
+
+    def handle(self):
+
+        # Test command to run
+        command = 'whoami && uname -a'
+
+        # Invoke the command
+        result = self.commands.invoke(command, callback=self._on_command_completed)
+
+        # And let the user know what the result was
+        self.logger.info(result)
 
 # ################################################################################################################################
 # ################################################################################################################################
