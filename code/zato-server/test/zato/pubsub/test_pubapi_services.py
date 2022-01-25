@@ -1,39 +1,30 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from unittest import main, TestCase
+from unittest import main
 
 # Zato
-from zato.common.test import CommandLineServiceInvoker
+from zato.common.test import CommandLineServiceTestCase
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class WSXServicesInvokerTest(TestCase):
-
-    maxDiff = 1234567890
+class WSXServicesInvokerTest(CommandLineServiceTestCase):
 
     def test_wsx_services_invoker(self) -> 'None':
 
         # This service invokes a test suite that invokes all the services
         # that pubapi clients use for publish/subscribe.
-        service = 'helpers.pubsub.pubapi-invoker'
+        service_name = 'helpers.pubsub.pubapi-invoker'
 
-        # Prepare the invoker
-        invoker = CommandLineServiceInvoker(check_stdout=False)
-
-        # .. invoke the service and obtain its response ..
-        out = invoker.invoke_and_test(service) # type: str
-        out = out.strip()
-
-        # .. make sure that the response indicates a success.
-        self.assertEqual(out, 'OK')
+        # Run the test now
+        self.run_zato_test(service_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
