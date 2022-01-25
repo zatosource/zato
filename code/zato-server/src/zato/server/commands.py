@@ -259,7 +259,7 @@ class CommandsFacade:
         ) -> 'CommandResult':
 
         # Accept input or create a new Correlation ID
-        cid = cid = 'zcma' + new_cid()
+        cid = cid or 'zcma' + new_cid()
 
         # For consistency, we return the same object that self.invoke does
         out = CommandResult()
@@ -295,7 +295,7 @@ class CommandsFacade:
         ) -> 'CommandResult':
 
         # Accept input or create a new Correlation ID
-        cid = cid = 'zcmd' + new_cid()
+        cid = cid or 'zcmd' + new_cid()
 
         return self._run(
             cid=cid, command=command, callback=callback, stdin=stdin, timeout=timeout, encoding=encoding,
