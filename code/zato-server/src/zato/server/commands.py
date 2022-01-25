@@ -146,6 +146,9 @@ class CommandsFacade:
         out.stdout = stdout
         out.stderr = stderr
 
+        out.encoding = encoding
+        out.replace_char = replace_char
+
 # ################################################################################################################################
 
     def _run(
@@ -154,7 +157,7 @@ class CommandsFacade:
         cid:      'str',
         command:  'str',
         callback: 'any_',
-        stdin:    'str',
+        stdin:    'any_',
         timeout:  'float',
         encoding: 'str',
         replace_char: 'str',
@@ -163,10 +166,19 @@ class CommandsFacade:
         # Our response to produce
         out = CommandResult()
 
+        # Make sure stdin is a bytes object, as expected by the underlying implementation ..
+
+        # .. make a copy because we are returning it on output 1:1 in a moment ..
+        orig_stdin = stdin
+
+        # .. now,
+        if not isinstance(stdin, bytes):
+            stdin = stdin.encode(encoding)
+
         # This is taken 1:1 from input parameters
         out.cid = cid
         out.command  = command
-        out.stdin    = stdin
+        out.stdin    = orig_stdin
         out.timeout  = timeout
         out.encoding = encoding
 
