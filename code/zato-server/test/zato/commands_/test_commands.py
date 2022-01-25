@@ -128,19 +128,50 @@ class CommandsService(Service):
 
             # .. and run the actual tests now ..
 
-            self.assertEqual(result.exit_code, 0)
-            self.assertTrue(result.is_ok)
-            self.assertFalse(result.is_async)
-            self.assertFalse(result.is_timeout)
+            if timeout:
+                self.assertEqual(result.exit_code, -1)
+                self.assertEqual(result.timeout, timeout)
+                self.assertFalse(result.is_ok)
+                self.assertFalse(result.is_async)
+                self.assertTrue(result.is_timeout)
+
+                expected_timeout_msg = f'Command \'{command}\' timed out after {timeout} sec.'
+                self.assertEqual(result.timeout_msg, expected_timeout_msg)
+
+                self.assertEqual(result.stdin,  '')
+                self.assertEqual(result.stderr, '')
+                self.assertEqual(result.stdout, '')
+
+                self.assertEqual(result.len_stderr_bytes, 0)
+                self.assertEqual(result.len_stderr_human, '')
+
+                self.assertEqual(result.len_stdout_bytes, 0)
+                self.assertEqual(result.len_stdout_human, '')
+
+            else:
+                self.assertEqual(result.exit_code, 0)
+                self.assertEqual(result.timeout, Config.Timeout)
+                self.assertTrue(result.is_ok)
+                self.assertFalse(result.is_async)
+                self.assertFalse(result.is_timeout)
+                self.assertEqual(result.timeout_msg, '')
+
+                self.assertEqual(result.stdin,  '')
+                self.assertEqual(result.stderr, '')
+                self.assertEqual(result.stdout, data)
+
+                self.assertEqual(result.len_stderr_bytes, 0)
+                self.assertEqual(result.len_stderr_human, '0 Bytes')
+
+                self.assertEqual(result.len_stdout_bytes, len_data)
+                self.assertEqual(result.len_stdout_human, '{} Bytes'.format(len_data))
 
             if cid:
                 self.assertEqual(result.cid, cid)
             else:
                 self.assertTrue(result.cid.startswith('zcmd'))
 
-            self.assertEqual(result.timeout_msg, '')
 
-            self.assertEqual(result.timeout,      Config.Timeout)
             self.assertEqual(result.encoding,     Config.Encoding)
             self.assertEqual(result.replace_char, Config.ReplaceChar)
 
@@ -162,17 +193,6 @@ class CommandsService(Service):
 
             self.assertGreater(now_after_test, result.start_time)
             self.assertGreater(now_after_test, result.end_time)
-
-            self.assertEqual(result.stdin,  '')
-            self.assertEqual(result.stderr, '')
-            self.assertEqual(result.stdout, data)
-
-            self.assertEqual(result.len_stderr_bytes, 0)
-            self.assertEqual(result.len_stderr_human, '0 Bytes')
-
-            self.assertEqual(result.len_stdout_bytes, len_data)
-            self.assertEqual(result.len_stdout_human, '{} Bytes'.format(len_data))
-
 
 # ################################################################################################################################
 
@@ -263,14 +283,19 @@ class CommandsService(Service):
         #
         # self.test_invoke_async_core()
 
+        """
         # command = 'rm -rf /tmp/abc && mkdir /tmp/abc && cd /tmp/abc && git clone https://github.com/zatosource/zato'
+        """
         command = """
         whoami && \
             uname \
                 -a
+        """
 
+        """
         result = self.commands.invoke(command, callback=self._on_command_completed)
         self.logger.info(result)
+        """
 
         self.response.payload = 'OK'
 
