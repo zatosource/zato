@@ -39,7 +39,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class Config:
-    Timeout  = 600 # In seconds
+    Timeout  = 600.0 # In seconds
     Encoding = 'utf8'
     ReplaceChar = '�' # U+FFFD � REPLACEMENT CHARACTER
 
@@ -57,9 +57,9 @@ class CommandResult(Model):
     stderr:   'str'  = ''
     is_async: 'bool' = False
 
-    is_ok:     'bool' = False
-    timeout:   'int'  = Config.Timeout
-    exit_code: 'int'  = -1
+    is_ok:     'bool'  = False
+    timeout:   'float' = Config.Timeout
+    exit_code: 'int'   = -1
 
     len_stdout_bytes: 'int' = -1
     len_stderr_bytes: 'int' = -1
@@ -210,6 +210,11 @@ class CommandsFacade:
             out.is_timeout = True
             out.timeout_msg = str(e)
 
+            # .. replace ' seconds' with ' sec.' to avoid expressions like '1 seconds' ..
+            # .. (we assume that there will be only one such instance in the string) ..
+            if out.timeout_msg.endswith(' seconds'):
+                out.timeout_msg = out.timeout_msg.replace(' seconds', ' sec.')
+
         # .. we get here only if there was no timeout ..
         else:
             logger.info('Command `%s` completed in %s, exit_code -> %s; len-out=%s (%s); len-err=%s (%s); cid -> %s',
@@ -250,12 +255,12 @@ class CommandsFacade:
         self,
         command:'str',
         *,
-        cid:         'str'  = '',
-        timeout:     'int'  = Config.Timeout,
-        callback:    'any_' = None,
-        stdin:       'str'  = '',
-        encoding:    'str'  = Config.Encoding,
-        replace_char:'str'  = Config.ReplaceChar,
+        cid:         'str'   = '',
+        timeout:     'float' = Config.Timeout,
+        callback:    'any_'  = None,
+        stdin:       'str'   = '',
+        encoding:    'str'   = Config.Encoding,
+        replace_char:'str'   = Config.ReplaceChar,
         ) -> 'CommandResult':
 
         # Accept input or create a new Correlation ID
@@ -286,12 +291,12 @@ class CommandsFacade:
         self,
         command:'str',
         *,
-        cid:         'str'  = '',
-        timeout:     'int'  = Config.Timeout,
-        callback:    'any_' = None,
-        stdin:       'str'  = '',
-        encoding:    'str'  = Config.Encoding,
-        replace_char:'str'  = Config.ReplaceChar,
+        cid:         'str'   = '',
+        timeout:     'float' = Config.Timeout,
+        callback:    'any_'  = None,
+        stdin:       'str'   = '',
+        encoding:    'str'   = Config.Encoding,
+        replace_char:'str'   = Config.ReplaceChar,
         ) -> 'CommandResult':
 
         # Accept input or create a new Correlation ID
