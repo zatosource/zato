@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # JSON libraries used by Zato tend to be changed from time to time
 # and this is the place where .dumps and .loads can be imported from
@@ -36,7 +34,7 @@ loads = loads
 
 # ################################################################################################################################
 
-def dumps(value, indent=4, simple_type=(str, dict, int, float, list, tuple, set)):
+def _ensure_serializable(value, simple_type=(str, dict, int, float, list, tuple, set)):
 
     if value is not None:
 
@@ -58,6 +56,20 @@ def dumps(value, indent=4, simple_type=(str, dict, int, float, list, tuple, set)
                 # We do not know how to serialize it
                 raise TypeError('Cannot serialize `{}` ({})'.format(value, type(value)))
 
-    return json_dumps(value, indent=indent)
+    return value
+
+# ################################################################################################################################
+
+def dumps(data, indent=4):
+
+    if data is not None:
+
+        if isinstance(data, dict):
+            for key, value in data.items():
+                data[key] = _ensure_serializable(value)
+        else:
+            data = _ensure_serializable(value)
+
+    return json_dumps(data, indent=indent)
 
 # ################################################################################################################################

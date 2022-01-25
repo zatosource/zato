@@ -655,3 +655,22 @@ class CommandLineServiceInvoker:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class CommandLineServiceTestCase(TestCase):
+
+    maxDiff = 1234567890
+
+    def run_zato_test(self, service_name:'str') -> 'None':
+
+        # Prepare the invoker
+        invoker = CommandLineServiceInvoker(check_stdout=False)
+
+        # .. invoke the service and obtain its response ..
+        out = invoker.invoke_and_test(service_name) # type: str
+        out = out.strip()
+
+        # .. make sure that the response indicates a success.
+        self.assertEqual(out, 'OK')
+
+# ################################################################################################################################
+# ################################################################################################################################
