@@ -203,9 +203,6 @@ class CommandsFacade:
             # .. append details about how long the command took ..
             self._append_time_details(out)
 
-            # .. issue information about what happened ..
-            logger.warn('Timeout: %s (%s)', e, cid)
-
             # .. populate timeout metadata ..
             out.is_timeout = True
             out.timeout_msg = str(e)
@@ -214,6 +211,9 @@ class CommandsFacade:
             # .. (we assume that there will be only one such instance in the string) ..
             if out.timeout_msg.endswith(' seconds'):
                 out.timeout_msg = out.timeout_msg.replace(' seconds', ' sec.')
+
+            # .. issue information about what happened ..
+            logger.warn('Timeout: %s (%s)', out.timeout_msg, cid)
 
         # .. we get here only if there was no timeout ..
         else:
