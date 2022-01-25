@@ -1025,6 +1025,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def publish(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self.worker_store.pubsub.publish(*args, **kwargs)
+
+# ################################################################################################################################
+
     def invoke_async(self, service, request, callback, *args, **kwargs):
         """ Invokes a service in background.
         """
