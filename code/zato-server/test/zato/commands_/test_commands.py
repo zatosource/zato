@@ -45,10 +45,17 @@ from tempfile import gettempdir
 from unittest import TestCase
 
 # Zato
+from zato.common.typing_ import cast_
 from zato.common.util.open_ import open_w
 from zato.common.test import rand_csv, rand_string
 from zato.server.commands import CommandResult, Config
 from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,18 +80,28 @@ class CommandsService(Service):
 
         def _test_impl(
             self,
-            command:'str'       = '',
+            *,
+            cid:'str'       = '',
+            data:'str'      = '',
+            stdin:'str'     = '',
+            command:'str'   = '',
+            timeout:'float' = Config.Timeout,
+            encoding:'str'  = Config.Encoding,
+            callback:'any_' = None,
+            replace_char:'str'  = Config.ReplaceChar,
             is_multiline:'bool' = False,
-            cid:'str' = '',
-            timeout:'float' = 0.0
             ) -> 'None':
 
             # Local aliases
             tmp_dir = gettempdir()
 
             # Test data that we will expect to read back from a test file
-            data = rand_csv()
+            data = data or rand_csv()
             len_data = len(data)
+
+            # If we use the default timeout, it actually means that we do not want to have any
+            if timeout == Config.Timeout:
+                timeout = cast_('float', None)
 
             # Where our test data is
             test_file_name = rand_string(prefix='commands-test_invoke_core') + '.txt'
@@ -121,16 +138,27 @@ class CommandsService(Service):
             now_before_test = datetime.utcnow()
 
             # Invoke the commands to get the result
-            result = self.service.commands.invoke(command, timeout=timeout, cid=cid)
+            result = self.service.commands.invoke(
+                command,
+                cid=cid,
+                timeout=timeout,
+                callback=callback,
+                stdin=stdin,
+                replace_char=replace_char,
+                encoding=encoding,
+            )
+
+            logger.info('Result received -> %s', result)
 
             # To check that results contain correct timestamps
             now_after_test = datetime.utcnow()
 
             # .. and run the actual tests now ..
 
+            self.assertEqual(result.timeout, timeout)
+
             if timeout:
                 self.assertEqual(result.exit_code, -1)
-                self.assertEqual(result.timeout, timeout)
                 self.assertFalse(result.is_ok)
                 self.assertFalse(result.is_async)
                 self.assertTrue(result.is_timeout)
@@ -150,7 +178,6 @@ class CommandsService(Service):
 
             else:
                 self.assertEqual(result.exit_code, 0)
-                self.assertEqual(result.timeout, Config.Timeout)
                 self.assertTrue(result.is_ok)
                 self.assertFalse(result.is_async)
                 self.assertFalse(result.is_timeout)
@@ -172,8 +199,8 @@ class CommandsService(Service):
                 self.assertTrue(result.cid.startswith('zcmd'))
 
 
-            self.assertEqual(result.encoding,     Config.Encoding)
-            self.assertEqual(result.replace_char, Config.ReplaceChar)
+            self.assertEqual(result.encoding,     encoding)
+            self.assertEqual(result.replace_char, replace_char)
 
             self.assertIsInstance(result.total_time_sec, float)
 
@@ -218,13 +245,18 @@ class CommandsService(Service):
 
 # ################################################################################################################################
 
+        def test_invoke_with_encoding(self):
+            self._test_impl(encoding='ascii')
+
+# ################################################################################################################################
+
         def test_invoke_with_replace_char(self):
-            pass
+            self._test_impl(replace_char='?')
 
 # ################################################################################################################################
 
         def test_invoke_with_stdin(self):
-            pass
+            self._test_impl(stdin='hello')
 
 # ################################################################################################################################
 
@@ -263,14 +295,16 @@ class CommandsService(Service):
 
         # Build and run the test suite
         test_suite = self._CommandsServiceTestCase(self)
+        test_suite
 
         #
         # Sync invoke
         #
-        #test_suite.test_invoke_core()
+        # test_suite.test_invoke_core()
         # test_suite.test_invoke_multiline()
-        test_suite.test_invoke_with_timeout()
+        # test_suite.test_invoke_with_timeout()
         # test_suite.test_invoke_with_own_cid()
+        test_suite.test_invoke_with_encoding()
         # test_suite.test_invoke_with_replace_char()
         # test_suite.test_invoke_with_stdin()
         # test_suite.test_invoke_with_callback_function()
