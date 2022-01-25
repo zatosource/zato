@@ -61,8 +61,8 @@ class CommandResult(Model):
     timeout:   'float' = Config.Timeout
     exit_code: 'int'   = -1
 
-    len_stdout_bytes: 'int' = -1
-    len_stderr_bytes: 'int' = -1
+    len_stdout_bytes: 'int' = 0
+    len_stderr_bytes: 'int' = 0
 
     len_stdout_human: 'str' = ''
     len_stderr_human: 'str' = ''
