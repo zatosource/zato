@@ -19,6 +19,7 @@ from gevent.subprocess import run as subprocess_run, TimeoutExpired
 from humanize import naturalsize
 
 # Zato
+from zato.common.typing_ import cast_
 from zato.common.util import new_cid
 from zato.common.marshal_.api import Model
 
@@ -154,7 +155,7 @@ class CommandsFacade:
         command:  'str',
         callback: 'any_',
         stdin:    'str',
-        timeout:  'int',
+        timeout:  'float',
         encoding: 'str',
         replace_char: 'str',
         ) -> 'CommandResult':
@@ -177,6 +178,9 @@ class CommandsFacade:
             # .. start measuring the response time ..
             out.start_time = datetime.utcnow()
             out.start_time_iso = out.start_time.isoformat()
+
+            # .. this needs to be None if we do not want it
+            timeout = cast_('float', timeout or None)
 
             # .. invoke the command ..
             result = subprocess_run(
