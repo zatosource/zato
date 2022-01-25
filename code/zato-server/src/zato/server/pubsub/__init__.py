@@ -12,6 +12,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from contextlib import closing
 from datetime import datetime, timedelta
+from inspect import isclass
 from io import StringIO
 from operator import attrgetter
 from traceback import format_exc
@@ -1912,7 +1913,7 @@ class PubSub:
         else:
 
             # .. it may be a Python class representing the service ..
-            if issubclass(name, Service):
+            if isclass(name) and issubclass(name, Service):
                 name = name.get_name()
 
             # .. but if there is no such service at all, we give up.

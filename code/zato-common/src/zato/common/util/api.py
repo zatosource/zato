@@ -326,7 +326,7 @@ def tech_account_password(password_clear, salt):
 # ################################################################################################################################
 
 def new_cid(bytes:'int'=12, _random:'callable_'=random.getrandbits) -> 'str':
-    """ Returns a new 96-bit correlation identifier. It is *not* safe to use the ID
+    """ Returns a new 96-bit correlation identifier. It is not safe to use the ID
     for any cryptographical purposes; it is only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     """
@@ -1634,7 +1634,7 @@ def timeouting_popen(command, timeout, timeout_msg, rc_non_zero_msg, common_msg=
 # ################################################################################################################################
 
 def spawn_greenlet(callable, *args, **kwargs):
-    """ Spawns a new greenlet and wait up to timeout seconds for its response. It is expected that the response never arrives
+    """ Spawns a new greenlet and waits up to timeout seconds for its response. It is expected that the response never arrives
     because if it does, it means that there were some errors.
     """
     try:
