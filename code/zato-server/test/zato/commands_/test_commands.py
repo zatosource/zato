@@ -183,7 +183,7 @@ class CommandsService(Service):
                 self.assertFalse(result.is_timeout)
                 self.assertEqual(result.timeout_msg, '')
 
-                self.assertEqual(result.stdin,  '')
+                self.assertEqual(result.stdin,  stdin)
                 self.assertEqual(result.stderr, '')
                 self.assertEqual(result.stdout, data)
 
@@ -203,9 +203,6 @@ class CommandsService(Service):
             self.assertEqual(result.replace_char, replace_char)
 
             self.assertIsInstance(result.total_time_sec, float)
-
-            total_time_sec_as_str = str(result.total_time_sec)
-            self.assertTrue(result.total_time.endswith(total_time_sec_as_str))
 
             start_time_as_iso = result.start_time.isoformat()
             end_time_as_iso   = result.end_time.isoformat()
@@ -300,13 +297,13 @@ class CommandsService(Service):
         #
         # Sync invoke
         #
-        # test_suite.test_invoke_core()
-        # test_suite.test_invoke_multiline()
-        # test_suite.test_invoke_with_timeout()
-        # test_suite.test_invoke_with_own_cid()
+        test_suite.test_invoke_core()
+        test_suite.test_invoke_multiline()
+        test_suite.test_invoke_with_timeout()
+        test_suite.test_invoke_with_own_cid()
         test_suite.test_invoke_with_encoding()
-        # test_suite.test_invoke_with_replace_char()
-        # test_suite.test_invoke_with_stdin()
+        test_suite.test_invoke_with_replace_char()
+        test_suite.test_invoke_with_stdin()
         # test_suite.test_invoke_with_callback_function()
         # test_suite.test_invoke_with_callback_service_class()
         # test_suite.test_invoke_with_callback_service_name()
