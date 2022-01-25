@@ -30,6 +30,7 @@ from zato.common.broker_message import SERVICE
 from zato.common.const import ServiceConst
 from zato.common.exception import BadRequest, ZatoException
 from zato.common.ext.validate_ import is_boolean
+from zato.common.json_ import dumps as json_dumps
 from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import get_service_config
 from zato.common.marshal_.api import Model
@@ -522,7 +523,7 @@ class Invoke(AdminService):
                 if not isinstance(response, bytes):
                     if hasattr(response, 'to_dict'):
                         response = response.to_dict()
-                    response = _dumps(response)
+                    response = json_dumps(response)
 
             response = response if isinstance(response, bytes) else response.encode('utf8')
             self.response.payload.response = b64encode(response).decode('utf8') if response else ''

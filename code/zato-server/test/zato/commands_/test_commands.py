@@ -20,7 +20,7 @@ class ServiceCommandsTestCase(CommandLineServiceTestCase):
     def test_service_commands(self) -> 'None':
 
         # Test service to execute
-        service_name = 'commands1.commands-service'
+        service_name = 'helpers.commands-service'
 
         # Run the test now
         self.run_zato_test(service_name)

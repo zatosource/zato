@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass
 from datetime import datetime
+from inspect import isclass
 from logging import getLogger
 
 # gevent
@@ -40,8 +41,9 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class Config:
-    Timeout  = 600.0 # In seconds
-    Encoding = 'utf8'
+    UsePubSub   = False
+    Timeout     = 600.0 # In seconds
+    Encoding    = 'utf8'
     ReplaceChar = '�' # U+FFFD � REPLACEMENT CHARACTER
 
 # ################################################################################################################################
@@ -50,13 +52,14 @@ class Config:
 @dataclass(init=False)
 class CommandResult(Model):
 
-    cid:      'str'
-    command:  'str'
-    callback: 'any_' = None
-    stdin:    'str'  = ''
-    stdout:   'str'  = ''
-    stderr:   'str'  = ''
-    is_async: 'bool' = False
+    cid:        'str'
+    command:    'str'
+    callback:   'any_' = None
+    stdin:      'str'  = ''
+    stdout:     'str'  = ''
+    stderr:     'str'  = ''
+    is_async:   'bool' = False
+    use_pubsub: 'bool' = Config.UsePubSub
 
     is_ok:     'bool'  = False
     timeout:   'float' = Config.Timeout
@@ -161,6 +164,7 @@ class CommandsFacade:
         timeout:  'float',
         encoding: 'str',
         replace_char: 'str',
+        use_pubsub: 'bool'
         ) -> 'CommandResult':
 
         # Our response to produce
@@ -247,23 +251,54 @@ class CommandsFacade:
 
             # .. run the callback ..
             if callback:
-                self._run_callback(callback, out)
+                self._run_callback(cid, callback, out, use_pubsub)
 
             # .. return the output, assuming that the callback did not raise an exception.
             return out
 
 # ################################################################################################################################
 
-    def _run_callback(self, callback:'any_', result:'CommandResult') -> 'None':
+    def _run_callback(self, cid:'str', callback:'any_', result:'CommandResult', use_pubsub:'bool') -> 'None':
 
-        callback
-        callback
+        # We need to import it here to avoid circular references
+        from zato.server.service import Service
 
-        result
-        result
+        # Local aliases
+        is_service = isclass(callback) and issubclass(callback, Service)
 
-        self.server
-        self.server
+        # This is a function or another callable, but not a service, and we can invoke that callable as is
+        if callable(callback) and (not is_service):
+            callback(result)
+
+        else:
+
+            # We are going to publish a message to the target (service or topic) by its name ..
+            if use_pubsub:
+                func = self.server.publish
+                data_key   = 'data'
+                target_key = 'name'
+                result = result.to_dict() # type: ignore
+
+            # We are going to invoke the taret synchronously
+            else:
+                func = self.server.invoke
+                data_key = 'request'
+                target_key = 'service'
+
+            # Extract the service's name ..
+            if is_service:
+                target = callback.get_name() # type: ignore
+
+            # .. or use it directly ..
+            else:
+                target = callback
+
+            # Now, we are ready to invoke the callable
+            func(**{
+                data_key:   result,
+                target_key: target,
+                'cid': cid
+            }) # type: ignore
 
 # ################################################################################################################################
 
@@ -276,6 +311,7 @@ class CommandsFacade:
         callback:    'any_'  = None,
         stdin:       'str'   = '',
         encoding:    'str'   = Config.Encoding,
+        use_pubsub:  'bool'  = Config.UsePubSub,
         replace_char:'str'   = Config.ReplaceChar,
         ) -> 'CommandResult':
 
@@ -292,11 +328,12 @@ class CommandsFacade:
         out.replace_char = replace_char
         out.is_async = True
         out.is_ok = True
+        out.use_pubsub = use_pubsub
 
         # .. run in background ..
         _ = spawn(
             self.invoke, cid=cid, command=command, callback=callback, stdin=stdin, timeout=timeout,
-            encoding=encoding, replace_char=replace_char)
+            use_pubsub=use_pubsub, encoding=encoding, replace_char=replace_char)
 
         # .. and return the basic information to our caller ..
         return out
@@ -312,6 +349,7 @@ class CommandsFacade:
         callback:    'any_'  = None,
         stdin:       'str'   = '',
         encoding:    'str'   = Config.Encoding,
+        use_pubsub:  'bool'  = Config.UsePubSub,
         replace_char:'str'   = Config.ReplaceChar,
         ) -> 'CommandResult':
 
@@ -320,7 +358,7 @@ class CommandsFacade:
 
         return self._run(
             cid=cid, command=command, callback=callback, stdin=stdin, timeout=timeout, encoding=encoding,
-            replace_char=replace_char)
+            use_pubsub=use_pubsub, replace_char=replace_char)
 
 # ################################################################################################################################
 # ################################################################################################################################
