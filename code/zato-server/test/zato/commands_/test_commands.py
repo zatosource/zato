@@ -71,7 +71,16 @@ class CommandsService(Service):
 
 # ################################################################################################################################
 
-        def test_invoke_core(self):
+        def _test_impl(
+            self,
+            command:'str'       = '',
+            is_multiline:'bool' = False,
+            cid:'str' = '',
+            timeout:'float' = 0.0
+            ) -> 'None':
+
+            # Local aliases
+            tmp_dir = gettempdir()
 
             # Test data that we will expect to read back from a test file
             data = rand_csv()
@@ -79,7 +88,7 @@ class CommandsService(Service):
 
             # Where our test data is
             test_file_name = rand_string(prefix='commands-test_invoke_core') + '.txt'
-            full_path = os.path.join(gettempdir(), test_file_name)
+            full_path = os.path.join(tmp_dir, test_file_name)
 
             # Log useful details
             logger.info('Saving test data `%s` to file `%s`', data, full_path)
@@ -91,11 +100,28 @@ class CommandsService(Service):
             # Read the file back
             command = f'cat {full_path}'
 
+            # Prepend new lines if the command is multiline
+            if is_multiline:
+
+                # Let's add two lines in front of the actual command
+                line1 = 'cd {} \\ \n'.format(tmp_dir)
+                line2 = 'cd {} \\ \n'.format(tmp_dir)
+                command = line1 + line2 + command
+
+            # If we have a timeout on input, let's sleep for more than that
+            # before running the command. We use an integer instead of a smaller number like 1.1
+            # because whether the sleep time is considered a float or integer is up to the underlying shell.
+            # To stay on the safe side, it is an integer in our test.
+            if timeout:
+                sleep_time = timeout * 2
+                prefix = f'sleep {sleep_time}'
+                command = prefix + ' && ' + command
+
             # To check that results contain correct timestamps
             now_before_test = datetime.utcnow()
 
             # Invoke the commands to get the result
-            result = self.service.commands.invoke(command)
+            result = self.service.commands.invoke(command, timeout=timeout, cid=cid)
 
             # To check that results contain correct timestamps
             now_after_test = datetime.utcnow()
@@ -106,7 +132,11 @@ class CommandsService(Service):
             self.assertTrue(result.is_ok)
             self.assertFalse(result.is_async)
             self.assertFalse(result.is_timeout)
-            self.assertTrue(result.cid.startswith('zcmd'))
+
+            if cid:
+                self.assertEqual(result.cid, cid)
+            else:
+                self.assertTrue(result.cid.startswith('zcmd'))
 
             self.assertEqual(result.timeout_msg, '')
 
@@ -143,20 +173,28 @@ class CommandsService(Service):
             self.assertEqual(result.len_stdout_bytes, len_data)
             self.assertEqual(result.len_stdout_human, '{} Bytes'.format(len_data))
 
+
+# ################################################################################################################################
+
+        def test_invoke_core(self):
+
+            # This is the same as the core test
+            self._test_impl()
+
 # ################################################################################################################################
 
         def test_invoke_multiline(self):
-            pass
-
-# ################################################################################################################################
-
-        def test_invoke_with_own_cid(self):
-            pass
+            self._test_impl(is_multiline=True)
 
 # ################################################################################################################################
 
         def test_invoke_with_timeout(self):
-            pass
+            self._test_impl(timeout=1)
+
+# ################################################################################################################################
+
+        def test_invoke_with_own_cid(self):
+            self._test_impl(cid='abcdef')
 
 # ################################################################################################################################
 
@@ -209,10 +247,10 @@ class CommandsService(Service):
         #
         # Sync invoke
         #
-        test_suite.test_invoke_core()
+        #test_suite.test_invoke_core()
         # test_suite.test_invoke_multiline()
+        test_suite.test_invoke_with_timeout()
         # test_suite.test_invoke_with_own_cid()
-        # test_suite.test_invoke_with_timeout()
         # test_suite.test_invoke_with_replace_char()
         # test_suite.test_invoke_with_stdin()
         # test_suite.test_invoke_with_callback_function()
@@ -225,7 +263,6 @@ class CommandsService(Service):
         #
         # self.test_invoke_async_core()
 
-        """
         # command = 'rm -rf /tmp/abc && mkdir /tmp/abc && cd /tmp/abc && git clone https://github.com/zatosource/zato'
         command = """
         whoami && \
@@ -236,7 +273,6 @@ class CommandsService(Service):
         self.logger.info(result)
 
         self.response.payload = 'OK'
-        """
 
 # ################################################################################################################################
 # ################################################################################################################################
