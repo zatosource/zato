@@ -22,7 +22,7 @@ class PingTestCase(RESTClientTestCase):
     needs_current_app     = False
     payload_only_messages = False
 
-    def xtest_invoke_ping(self) -> 'None':
+    def test_invoke_ping(self) -> 'None':
 
         # Invoke the default ping service ..
         response = self.get('/zato/ping')
