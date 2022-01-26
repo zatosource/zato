@@ -1,27 +1,20 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
+# ################################################################################################################################
 # ################################################################################################################################
 
-# Type checking
-import typing
+if 0:
 
-if typing.TYPE_CHECKING:
-
-    # stdlib
     from argparse import Namespace
-
-    # Python 2/3 compatibility
     from past.builtins import unicode
+    from zato.common.typing_ import any_, anydict
 
-    # For pyflakes
     Namespace = Namespace
     unicode = unicode
 
@@ -98,5 +91,27 @@ def get_totp_info_from_args(args, default_key_label=None):
         key = TOTPManager.generate_totp_key()
 
     return key, args.key_label if args.key_label else default_key_label
+
+# ################################################################################################################################
+
+def run_cli_command(command_class:'any_', config:'anydict', path:'any_') -> 'None':
+
+    # stdlib
+    import os
+
+    # Bunch
+    from bunch import Bunch
+
+    args = Bunch()
+    args.verbose = True
+    args.store_log = False
+    args.store_config = False
+    args.path = path or os.environ['ZATO_SERVER_BASE_DIR']
+    args.password = None
+    args.skip_stdout = False
+    args.update(config)
+
+    command = command_class(args)
+    command.execute(args)
 
 # ################################################################################################################################
