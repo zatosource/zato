@@ -29,10 +29,19 @@ from zato.common.util.api import new_cid, spawn_greenlet
 from zato.scheduler.backend import Interval, Job, Scheduler as _Scheduler
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from bunch import Bunch
+    from zato.broker.client import BrokerClient
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger('zato_scheduler')
 _has_debug = logger.isEnabledFor(logging.DEBUG)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _start_date(job_data):
@@ -44,14 +53,15 @@ def _start_date(job_data):
     return job_data.start_date
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class SchedulerAPI:
     """ The job scheduler server. All of the operations assume the data was already validated
     by relevant Zato public API services.
     """
-    def __init__(self, config=None, run=False):
+    def __init__(self, config:'Bunch'=None, run:'bool'=False):
         self.config = config
-        self.broker_client = None
+        self.broker_client = None # type: BrokerClient
         self.config.on_job_executed_cb = self.on_job_executed
         self.sched = _Scheduler(self.config, self)
 

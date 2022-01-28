@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -31,7 +31,7 @@ from zato.common.util.platform_ import is_non_windows
 
 if 0:
     from zato.client import AnyServiceInvoker
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, optional
     from zato.server.connection.server.rpc.api import ServerRPC
 
     AnyServiceInvoker = AnyServiceInvoker
@@ -66,13 +66,18 @@ from_scheduler_actions = {
 class BrokerClient:
     """ Simulates previous Redis-based RPC.
     """
-    def __init__(self, server_rpc=None, scheduler_config=None, zato_client=None):
-        # type: (ServerRPC, Bunch, object) -> None
+    def __init__(
+        self,
+        *,
+        server_rpc:  'optional[ServerRPC]',
+        zato_client: 'optional[AnyServiceInvoker]',
+        scheduler_config: 'optional[Bunch]',
+        ) -> 'None':
 
         # This is used to invoke services
         self.server_rpc = server_rpc
 
-        self.zato_client = None # type: AnyServiceInvoker
+        self.zato_client = zato_client
         self.scheduler_url = ''
 
         # We are a server so we will have configuration needed to set up the scheduler's details ..
@@ -99,20 +104,18 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def _invoke_scheduler_from_server(self, msg):
-        # type: (dict) -> None
-        msg = dumps(msg)
-        requests_post(self.scheduler_url, msg, verify=False)
+    def _invoke_scheduler_from_server(self, msg:'anydict') -> 'None':
+        msg_bytes = dumps(msg)
+        requests_post(self.scheduler_url, msg_bytes, verify=False)
 
 # ################################################################################################################################
 
-    def _invoke_server_from_scheduler(self, msg):
-        # type: (dict) -> None
+    def _invoke_server_from_scheduler(self, msg:'anydict') -> 'None':
         self.zato_client.invoke_async(msg.get('service'), msg['payload'])
 
 # ################################################################################################################################
 
-    def _rpc_invoke(self, msg, from_scheduler=False):
+    def _rpc_invoke(self, msg:'Bunch', from_scheduler:'bool'=False) -> 'None':
 
         # Local aliases ..
         from_server = not from_scheduler
@@ -122,12 +125,18 @@ class BrokerClient:
 
             # Special cases messages that are actually destined to the scheduler, not to servers ..
             if from_server and action in to_scheduler_actions:
-                self._invoke_scheduler_from_server(msg)
+                try:
+                    self._invoke_scheduler_from_server(msg)
+                except Exception as e:
+                    logger.warn('Invocation error; server -> scheduler -> %s', e)
                 return
 
             # .. special-case messages from the scheduler to servers ..
             elif from_scheduler and action in from_scheduler_actions:
-                self._invoke_server_from_scheduler(msg)
+                try:
+                    self._invoke_server_from_scheduler(msg)
+                except Exception as e:
+                    logger.warn('Invocation error; scheduler -> server -> %s', e)
                 return
 
             # .. otherwise, we invoke servers.
