@@ -29,6 +29,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.cli import read_stdin_data
 from zato.scheduler.api import SchedulerAPI
 
+
 # ################################################################################################################################
 
 if 0:
@@ -58,6 +59,7 @@ class Config:
         self.stats_enabled = None
         self.job_log_level = 'info'
         self.broker_client = None
+        self.crypto_manager = None # type: SchedulerCryptoManager
         self._add_startup_jobs = True
         self._add_scheduler_jobs = True
 
@@ -66,7 +68,7 @@ class Config:
 class SchedulerServer:
     """ Main class spawning scheduler-related tasks and listening for HTTP API requests.
     """
-    def __init__(self, config:'Bunch', repo_location:'str') -> 'None':
+    def __init__(self, config:'Config', repo_location:'str') -> 'None':
         self.odb = config.odb
         self.config = config
         self.repo_location = repo_location
@@ -155,7 +157,7 @@ class SchedulerServer:
                     server_port,
                     server_username,
                     server_password
-                )
+                ) # type: ignore
 
         # .. no configuration, assume this is a default quickstart cluster.
         else:
