@@ -25,6 +25,7 @@ from zato.common.api import ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
+from zato.common.typing_ import cast_
 from zato.common.util.cli import read_stdin_data
 from zato.scheduler.api import SchedulerAPI
 
@@ -32,6 +33,7 @@ from zato.scheduler.api import SchedulerAPI
 
 if 0:
     from zato.client import AnyServiceInvoker
+    from zato.common.typing_ import any_, anydict, callable_
     AnyServiceInvoker = AnyServiceInvoker
 
 # ################################################################################################################################
@@ -64,7 +66,7 @@ class Config:
 class SchedulerServer:
     """ Main class spawning scheduler-related tasks and listening for HTTP API requests.
     """
-    def __init__(self, config, repo_location):
+    def __init__(self, config:'Bunch', repo_location:'str') -> 'None':
         self.odb = config.odb
         self.config = config
         self.repo_location = repo_location
@@ -106,7 +108,7 @@ class SchedulerServer:
 
         # SchedulerAPI
         self.scheduler_api = SchedulerAPI(self.config)
-        self.scheduler_api.broker_client = BrokerClient(zato_client=self.zato_client)
+        self.scheduler_api.broker_client = BrokerClient(zato_client=self.zato_client, server_rpc=None, scheduler_config=None)
 
 # ################################################################################################################################
 
@@ -120,8 +122,13 @@ class SchedulerServer:
 
 # ################################################################################################################################
 
-    def _set_up_zato_client_by_remote_details(self, server_host, server_port, server_username, server_password):
-        # type: (str, int, str, str) -> AnyServiceInvoker
+    def _set_up_zato_client_by_remote_details(
+        self,
+        server_host:     'str',
+        server_port:     'int',
+        server_username: 'str',
+        server_password: 'str'
+        ) -> 'None':
         pass
 
 # ################################################################################################################################
@@ -130,7 +137,7 @@ class SchedulerServer:
         # type: (Bunch) -> AnyServiceInvoker
 
         # New in 3.2, hence optional
-        server_config = config.get('server') # type: Bunch
+        server_config = cast_('Bunch', config.get('server'))
 
         # We do have server configuration available ..
         if server_config:
@@ -185,7 +192,7 @@ class SchedulerServer:
 
 # ################################################################################################################################
 
-    def __call__(self, env, start_response):
+    def __call__(self, env:'anydict', start_response:'callable_') -> 'any_':
         try:
             request = env['wsgi.input'].read()
 
