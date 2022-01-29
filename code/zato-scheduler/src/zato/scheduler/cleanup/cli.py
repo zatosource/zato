@@ -11,8 +11,22 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 def start_cleanup():
 
-    # Zato
-    from zato.common.util.proc import start_python_process
+    # stdlib
+    import os
+
+    # sh
+    import sh
+
+    # This is our interpreter, e.g. /opt/zato/current/bin/py
+    py_bin = sh.py # type: ignore
+
+    # Find our own directory ..
+    current_dir  = os.path.dirname(__file__)
+
+    # .. and build a full path to the module with the core cleanup logic.
+    cleanup_core_path = os.path.join(current_dir, 'core.py')
+
+    py_bin(cleanup_core_path)
 
 # ################################################################################################################################
 # ################################################################################################################################

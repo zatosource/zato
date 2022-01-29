@@ -11,24 +11,19 @@ from gevent import monkey
 monkey.patch_all()
 
 # stdlib
-import logging
 import os
-from logging.config import dictConfig
+from logging import captureWarnings, getLogger
 from traceback import format_exc
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 import cloghandler
 cloghandler = cloghandler # For pyflakes
 
-# YAML
-import yaml
-
 # Python 2/3 compatibility
 from future.utils import iteritems
 
 # Zato
-from zato.common.util.api import as_bool, absjoin, get_config, store_pidfile
-from zato.common.util.open_ import open_r
+from zato.common.util.api import get_config, set_up_logging, store_pidfile
 from zato.scheduler.server import Config, SchedulerServer
 
 # ################################################################################################################################
@@ -43,38 +38,29 @@ def main():
     store_pidfile(os.path.abspath('.'))
 
     # Capture warnings to log files
-    logging.captureWarnings(True)
+    captureWarnings(True)
 
-    config = Config()
+    # Where we keep our configuration
     repo_location = os.path.join('.', 'config', 'repo')
 
     # Logging configuration
-    with open_r(os.path.join(repo_location, 'logging.conf')) as f:
-        dictConfig(yaml.load(f, yaml.FullLoader))
+    set_up_logging(repo_location)
 
-    # Read config in and extend it with ODB-specific information
-    config.main = get_config(repo_location, 'scheduler.conf')
-    config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
-    config.main.crypto.use_tls = as_bool(config.main.crypto.use_tls)
+    # The main configuration object
+    config = Config.from_repo_location(repo_location)
 
-    # Make all paths absolute
-    if config.main.crypto.use_tls:
-        config.main.crypto.ca_certs_location = absjoin(repo_location, config.main.crypto.ca_certs_location)
-        config.main.crypto.priv_key_location = absjoin(repo_location, config.main.crypto.priv_key_location)
-        config.main.crypto.cert_location = absjoin(repo_location, config.main.crypto.cert_location)
-
-    logger = logging.getLogger(__name__)
+    logger = getLogger(__name__)
     logger.info('Scheduler starting (http{}://{}:{})'.format(
         's' if config.main.crypto.use_tls else '', config.main.bind.host, config.main.bind.port))
 
-    # Fix up configuration so it uses the format internal utilities expect
+    # Fix up configuration so it uses the format that internal utilities expect
     for name, job_config in iteritems(get_config(repo_location, 'startup_jobs.conf', needs_user_config=False)):
         job_config['name'] = name
         config.startup_jobs.append(job_config)
 
-    # Run the scheduler server
+    # Run the scheduler server now
     try:
-        SchedulerServer(config, repo_location).serve_forever()
+        SchedulerServer(config).serve_forever()
     except Exception:
         logger.warning(format_exc())
 
