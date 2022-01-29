@@ -20,10 +20,13 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from logging import captureWarnings, getLogger
 
+# Tabulate
+from tabulate import tabulate
+
 # Zato
 from zato.common.odb.query.cleanup import get_subscriptions
-from zato.common.util.api import set_up_logging
-from zato.common.util.time_ import datetime_to_ms
+from zato.common.util.api import set_up_logging, tabulate_dictlist
+from zato.common.util.time_ import datetime_from_ms, datetime_to_ms
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,6 +58,7 @@ class CleanupManager:
 
         # Make sure we are in the same directory that the scheduler is in
         base_dir = os.path.join(self.repo_location, '..', '..')
+        base_dir = os.path.abspath(base_dir)
         os.chdir(base_dir)
 
         # Build our main configuration object
@@ -71,16 +75,41 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _get_subscriptions(self, now:'datetime', max_hours_not_interacted:'int') -> 'anylist':
+    def _get_subscriptions(self, now:'datetime', delta_not_interacted:'int') -> 'anylist':
 
         # Turn hours into a UNIX time object, as expected by the database
-        max_last_interaction_time = now - timedelta(hours=max_hours_not_interacted)
-        max_last_interaction_time = datetime_to_ms(max_last_interaction_time)
+        max_last_interaction_time_dt = now - timedelta(hours=delta_not_interacted)
+        max_last_interaction_time = datetime_to_ms(max_last_interaction_time_dt)
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
             result = get_subscriptions(session, max_last_interaction_time)
-            return result
+
+        result = [elem._asdict() for elem in result]
+
+        for elem in result:
+            for key, value in elem.items():
+                if key == 'last_interaction_time':
+                    if not value:
+                        value = '---'
+                    else:
+                        value = datetime_from_ms(value * 1000) # type: ignore
+                elem[key] = value # type: ignore
+
+        len_result = len(result)
+        suffix = ' ' if len_result == 1 else 's '
+
+        self.logger.info('Returning %s subscription%swith last interaction older than %s (delta: %s hours)',
+            len_result, suffix, max_last_interaction_time_dt, delta_not_interacted)
+
+        table = tabulate_dictlist(result)
+        self.logger.info('** Subscriptions to clean up **\n%s', table)
+
+        return result
+
+# ################################################################################################################################
+
+    def _cleanup_queue_by_sub_key(self, sub_key:'str') -> 'None':
 
 # ################################################################################################################################
 
@@ -90,10 +119,12 @@ class CleanupManager:
         now = datetime.utcnow()
 
         # Find all subscribers that did not interact with us for at least that many hours
-        max_hours_not_interacted = 24
+        delta_not_interacted = 24
 
-        subs = self._get_subscriptions(now, max_hours_not_interacted)
-        print(111, subs)
+
+        subs = self._get_subscriptions(now, delta_not_interacted)
+
+
 
 # ################################################################################################################################
 
@@ -122,10 +153,18 @@ if __name__ == '__main__':
     # stdlib
     import sys
 
-    # Path to the scheduler's configuration file will be the first argument
-    # that we are invoked with.
-    repo_location = sys.argv[1] # type: str
+    # Path to the scheduler's configuration file will be the first argument that we are invoked with,
+    # unless we have an environment key that points to the scheduler's location.
+
+    base_dir = os.environ.get('ZATO_SCHEDULER_BASE_DIR')
+
+    if base_dir:
+        repo_location = os.path.join(base_dir, 'config', 'repo')
+    else:
+        repo_location = sys.argv[1] # type: str
+
     repo_location = os.path.expanduser(repo_location)
+    repo_location = os.path.abspath(repo_location)
 
     run_cleanup(repo_location)
 
