@@ -178,17 +178,17 @@ class SchedulerServer:
 
 # ################################################################################################################################
 
-    def handle_api_request(self, data):
+    def handle_api_request(self, request):
         # type: (bytes) -> None
 
         # Convert to a Python dict ..
-        data = loads(data)
+        request = loads(request)
 
         # .. callback functions expect Bunch instances on input ..
-        data = Bunch(data) # type: ignore
+        request = Bunch(request) # type: ignore
 
         # .. look up the action we need to invoke ..
-        action = data['action'] # type: ignore
+        action = request['action'] # type: ignore
         action_name = code_to_name[action] # type: ignore
 
         # .. convert it to an actual method to invoke ..
@@ -196,13 +196,16 @@ class SchedulerServer:
         func = getattr(self.scheduler_api, func_name)
 
         # .. finally, invoke the function with the input data.
-        func(data)
+        response = func(request)
+        return response
 
 # ################################################################################################################################
 
     def __call__(self, env:'anydict', start_response:'callable_') -> 'any_':
 
-        cid         = '<cid-unassigned>'
+        cid      = '<cid-unassigned>'
+        response = {}
+
         status_text = '<status_text-unassigned>'
         status_code = StatusCode.ServiceUnavailable
 
@@ -216,7 +219,7 @@ class SchedulerServer:
 
             # .. if there was any, invoke the business function ..
             if request:
-                self.handle_api_request(request)
+                response = self.handle_api_request(request)
 
             # If we are here, it means that there was no exception
             status_text = 'ok'
@@ -235,7 +238,8 @@ class SchedulerServer:
             # Build our response ..
             return_data = {
                 'cid': cid,
-                'status': status_text
+                'status': status_text,
+                'response': response
             }
 
             # .. make sure that we return bytes representing a JSON object ..

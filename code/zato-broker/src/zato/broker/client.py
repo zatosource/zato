@@ -8,10 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from json import loads
 from traceback import format_exc
-
-# Bunch
-from bunch import Bunch
 
 # gevent
 from gevent import spawn
@@ -21,6 +19,7 @@ from orjson import dumps
 
 # Requests
 from requests import post as requests_post
+from requests.models import Response
 
 # Zato
 from zato.common.broker_message import code_to_name, SCHEDULER
@@ -31,7 +30,7 @@ from zato.common.util.platform_ import is_non_windows
 
 if 0:
     from zato.client import AnyServiceInvoker
-    from zato.common.typing_ import any_, anydict, optional
+    from zato.common.typing_ import any_, anydict, anydictnone, optional
     from zato.server.connection.server.rpc.api import ServerRPC
 
     AnyServiceInvoker = AnyServiceInvoker
@@ -69,9 +68,9 @@ class BrokerClient:
     def __init__(
         self,
         *,
-        server_rpc:  'optional[ServerRPC]',
-        zato_client: 'optional[AnyServiceInvoker]',
-        scheduler_config: 'optional[Bunch]',
+        scheduler_config: 'anydictnone'                 = None,
+        server_rpc:       'optional[ServerRPC]'         = None,
+        zato_client:      'optional[AnyServiceInvoker]' = None,
         ) -> 'None':
 
         # This is used to invoke services
@@ -88,8 +87,8 @@ class BrokerClient:
 
             self.scheduler_url = 'http{}://{}:{}/'.format(
                 's' if scheduler_use_tls else '',
-                scheduler_config.scheduler_host,
-                scheduler_config.scheduler_port,
+                scheduler_config['scheduler_host'],
+                scheduler_config['scheduler_port'],
             )
 
         # .. otherwise, we are a scheduler so we have a client to invoke servers with.
@@ -104,21 +103,21 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def _invoke_scheduler_from_server(self, msg:'anydict') -> 'None':
+    def _invoke_scheduler_from_server(self, msg:'anydict') -> 'any_':
         msg_bytes = dumps(msg)
-        requests_post(self.scheduler_url, msg_bytes, verify=False)
+        return requests_post(self.scheduler_url, msg_bytes, verify=False)
 
 # ################################################################################################################################
 
-    def _invoke_server_from_scheduler(self, msg:'anydict') -> 'None':
+    def _invoke_server_from_scheduler(self, msg:'anydict') -> 'any_':
         if self.zato_client:
-            self.zato_client.invoke_async(msg.get('service'), msg['payload'])
+            return self.zato_client.invoke_async(msg.get('service'), msg['payload'])
         else:
-            logger.warn('Scheduler -> server invocation failure -> self.zato_client is not configured (%r)', self.zato_client)
+            logger.warn('Scheduler -> server invocation failure; self.zato_client is not configured (%r)', self.zato_client)
 
 # ################################################################################################################################
 
-    def _rpc_invoke(self, msg:'Bunch', from_scheduler:'bool'=False) -> 'None':
+    def _rpc_invoke(self, msg:'anydict', from_scheduler:'bool'=False) -> 'any_':
 
         # Local aliases ..
         from_server = not from_scheduler
@@ -129,7 +128,7 @@ class BrokerClient:
             # Special cases messages that are actually destined to the scheduler, not to servers ..
             if from_server and action in to_scheduler_actions:
                 try:
-                    self._invoke_scheduler_from_server(msg)
+                    return self._invoke_scheduler_from_server(msg)
                 except Exception as e:
                     logger.warn('Invocation error; server -> scheduler -> %s', e)
                 return
@@ -137,7 +136,7 @@ class BrokerClient:
             # .. special-case messages from the scheduler to servers ..
             elif from_scheduler and action in from_scheduler_actions:
                 try:
-                    self._invoke_server_from_scheduler(msg)
+                    return self._invoke_server_from_scheduler(msg)
                 except Exception as e:
                     logger.warn('Invocation error; scheduler -> server -> %s', e)
                 return
@@ -148,7 +147,7 @@ class BrokerClient:
                 logger.info('Invoking %s %s', code_name, msg)
 
             if self.server_rpc:
-                self.server_rpc.invoke_all('zato.service.rpc-service-invoker', msg, ping_timeout=10)
+                return self.server_rpc.invoke_all('zato.service.rpc-service-invoker', msg, ping_timeout=10)
             else:
                 logger.warn('RPC invocation failure -> self.server_rpc is not configured (%r)', self.server_rpc)
 
@@ -157,14 +156,23 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def publish(self, msg:'anydict', *ignored_args:'any_', **kwargs:'any_') -> 'None':
+    def publish(self, msg:'anydict', *ignored_args:'any_', **kwargs:'any_') -> 'any_':
         spawn(self._rpc_invoke, msg, **kwargs)
 
 # ################################################################################################################################
 
-    def invoke_async(self, msg, *ignored_args, **kwargs):
-        # type: (dict, object, object) -> None
+    def invoke_async(self, msg:'anydict', *ignored_args:'any_', **kwargs:'any_') -> 'any_':
         spawn(self._rpc_invoke, msg, **kwargs)
+
+# ################################################################################################################################
+
+    def invoke_sync(self, msg:'anydict', *ignored_args:'any_', **kwargs:'any_') -> 'any_':
+        response = self._rpc_invoke(msg, **kwargs) # type: Response
+        if response.text:
+            out = loads(response.text)
+            return out
+        else:
+            return response.text
 
 # ################################################################################################################################
 
