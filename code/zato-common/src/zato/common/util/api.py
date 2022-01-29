@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -398,19 +398,6 @@ def get_config_from_string(data):
 
     buff.close()
     return out
-
-# ################################################################################################################################
-
-def _get_ioc_config(location, config_class):
-    """ Instantiates an Inversion of Control container from the given location if the location exists at all.
-    """
-    stat = os.stat(location)
-    if stat.st_size:
-        config = config_class(location)
-    else:
-        config = None
-
-    return config
 
 # ################################################################################################################################
 
