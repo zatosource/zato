@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from json import dumps
 from traceback import format_exc
 
 # Bunch
@@ -26,9 +27,9 @@ from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.typing_ import cast_
+from zato.common.util.api import new_cid
 from zato.common.util.cli import read_stdin_data
 from zato.scheduler.api import SchedulerAPI
-
 
 # ################################################################################################################################
 
@@ -43,7 +44,11 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-ok = '200 OK'
+class StatusCode:
+    OK                 = '200 OK'
+    InternalError      = '500 Internal Server error'
+    ServiceUnavailable = '503 Service Unavailable'
+
 headers = [('Content-Type', 'application/json')]
 
 # ################################################################################################################################
@@ -195,19 +200,48 @@ class SchedulerServer:
 # ################################################################################################################################
 
     def __call__(self, env:'anydict', start_response:'callable_') -> 'any_':
+
+        cid         = '<cid-unassigned>'
+        status_text = '<status_text-unassigned>'
+        status_code = StatusCode.ServiceUnavailable
+
         try:
+
+            # Assign a new cid
+            cid = 'zsch{}'.format(new_cid())
+
+            # Get the contents of our request ..
             request = env['wsgi.input'].read()
 
+            # .. if there was any, invoke the business function ..
             if request:
-                return_data = '{}\n'
                 self.handle_api_request(request)
-            else:
-                return_data = ''
 
-            start_response(ok, headers)
-            return return_data
+            # If we are here, it means that there was no exception
+            status_text = 'ok'
+            status_code = StatusCode.OK
 
         except Exception:
+
+            # We are here because there was an exception
             logger.warning(format_exc())
+
+            status_text = 'error'
+            status_code = StatusCode.InternalError
+
+        finally:
+
+            # Build our response ..
+            return_data = {
+                'cid': cid,
+                'status': status_text
+            }
+
+            # .. make sure that we return bytes representing a JSON object ..
+            return_data = dumps(return_data)
+            return_data = return_data.encode('utf8')
+
+            start_response(status_code, headers)
+            return [return_data]
 
 # ################################################################################################################################
