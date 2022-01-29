@@ -17,11 +17,13 @@ cloghandler = cloghandler # For pyflakes
 # stdlib
 import os
 from contextlib import closing
+from datetime import datetime, timedelta
 from logging import captureWarnings, getLogger
 
 # Zato
-from zato.common.typing_ import cast_
+from zato.common.odb.query.cleanup import get_subscriptions
 from zato.common.util.api import set_up_logging
+from zato.common.util.time_ import datetime_to_ms
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,6 +31,7 @@ from zato.common.util.api import set_up_logging
 if 0:
     from logging import Logger
     from sqlalchemy.orm.session import Session as SASession
+    from zato.common.typing_ import anylist
     from zato.scheduler.server import Config
     SASession = SASession
 
@@ -68,19 +71,36 @@ class CleanupManager:
 
 # ################################################################################################################################
 
+    def _get_subscriptions(self, now:'datetime', max_hours_not_interacted:'int') -> 'anylist':
+
+        # Turn hours into a UNIX time object, as expected by the database
+        max_last_interaction_time = now - timedelta(hours=max_hours_not_interacted)
+        max_last_interaction_time = datetime_to_ms(max_last_interaction_time)
+
+        # Always create a new session so as not to block the database
+        with closing(self.config.odb.session()) as session: # type: ignore
+            result = get_subscriptions(session, max_last_interaction_time)
+            return result
+
+# ################################################################################################################################
+
     def cleanup_pub_sub(self):
-        pass
+
+        # Start of our cleanup procedure
+        now = datetime.utcnow()
+
+        # Find all subscribers that did not interact with us for at least that many hours
+        max_hours_not_interacted = 24
+
+        subs = self._get_subscriptions(now, max_hours_not_interacted)
+        print(111, subs)
 
 # ################################################################################################################################
 
     def run(self):
 
-        with closing(self.config.odb.session()) as session: # type: ignore
-            session = cast_('SASession', session)
-            query = 'select 1+1'
-            cursor = session.execute(query)
-            result = cursor.fetchall()
-            self.logger.info('QQQ-1 %s', result)
+        # Clean up old pub/sub objects
+        self.cleanup_pub_sub()
 
 # ################################################################################################################################
 # ################################################################################################################################
