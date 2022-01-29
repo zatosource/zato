@@ -30,8 +30,13 @@ class TestConfig:
     username_prefix = 'test.{}+{}'
     random_prefix = 'rand.{}+{}'
 
-    server_location = os.path.expanduser('~/env/sso.test/server1')
     server_address  = 'http://localhost:17010{}'
+    server_location = os.path.expanduser('~/env/sso.test/server1')
+
+    scheduler_address  = 'http://localhost:31530{}'
+    scheduler_location = os.path.expanduser('~/env/sso.test/scheduler')
+
+    invalid_base_address = '<invalid-base-address>'
 
 # ################################################################################################################################
 # ################################################################################################################################

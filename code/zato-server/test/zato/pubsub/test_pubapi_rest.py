@@ -14,7 +14,7 @@ from zato.common import PUBSUB
 from zato.common.pubsub import prefix_sk
 from zato.common.test.config import TestConfig
 from zato.common.test.pubsub import FullPathTester
-from zato.common.test.rest_client import _RESTClient, RESTClientTestCase
+from zato.common.test.rest_client import RESTClient, RESTClientTestCase
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -41,7 +41,7 @@ class config:
 # ################################################################################################################################
 
 class PubSubAPIRestImpl:
-    def __init__(self, test:'PubAPITestCase', rest_client:'_RESTClient') -> 'None':
+    def __init__(self, test:'PubAPITestCase', rest_client:'RESTClient') -> 'None':
         self.test = test
         self.rest_client = rest_client
 
