@@ -197,6 +197,7 @@ class RESTClient:
         else:
             if response.text:
                 response_data = loads(response.text)
+                response_data = bunchify(response_data)
             else:
                 response_data = response.text
 
