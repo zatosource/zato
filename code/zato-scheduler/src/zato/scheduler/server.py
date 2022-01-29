@@ -27,7 +27,7 @@ from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.typing_ import cast_
-from zato.common.util.api import new_cid
+from zato.common.util.api import as_bool, absjoin, get_config, new_cid
 from zato.common.util.cli import read_stdin_data
 from zato.scheduler.api import SchedulerAPI
 
@@ -71,28 +71,52 @@ class Config:
 
 # ################################################################################################################################
 
+    @staticmethod
+    def from_repo_location(repo_location:'str') -> 'Config':
+
+        # Response to produce
+        config = Config()
+
+        # Read config in and extend it with ODB-specific information
+        config.main = get_config(repo_location, 'scheduler.conf')
+        config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
+        config.main.crypto.use_tls = as_bool(config.main.crypto.use_tls)
+
+        # Make all paths absolute
+        if config.main.crypto.use_tls:
+            config.main.crypto.ca_certs_location = absjoin(repo_location, config.main.crypto.ca_certs_location)
+            config.main.crypto.priv_key_location = absjoin(repo_location, config.main.crypto.priv_key_location)
+            config.main.crypto.cert_location = absjoin(repo_location, config.main.crypto.cert_location)
+
+        # Set up the crypto manager need to access credentials
+        config.crypto_manager = SchedulerCryptoManager(repo_location, stdin_data=read_stdin_data())
+
+        # ODB connection
+        odb = ODBManager()
+        sql_pool_store = PoolStore()
+
+        if config.main.odb.engine != 'sqlite':
+            config.main.odb.password = config.crypto_manager.decrypt(config.main.odb.password)
+            config.main.odb.host = config.main.odb.host
+            config.main.odb.pool_size = config.main.odb.pool_size
+            config.main.odb.username = config.main.odb.username
+
+        sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
+
+        odb.pool = sql_pool_store[ZATO_ODB_POOL_NAME].pool
+        odb.init_session(ZATO_ODB_POOL_NAME, config.main.odb, odb.pool, False)
+
+        config.odb = odb
+
+        return config
+
+# ################################################################################################################################
+
 class SchedulerServer:
     """ Main class spawning scheduler-related tasks and listening for HTTP API requests.
     """
-    def __init__(self, config:'Config', repo_location:'str') -> 'None':
+    def __init__(self, config:'Config') -> 'None':
         self.config = config
-        self.repo_location = repo_location
-        self.sql_pool_store = PoolStore()
-
-        # Set up the crypto manager that will be used by both ODB and, possibly, KVDB
-        self.config.crypto_manager = SchedulerCryptoManager(self.repo_location, stdin_data=read_stdin_data())
-
-        # ODB connection
-        self.odb = ODBManager()
-
-        if self.config.main.odb.engine != 'sqlite':
-            self.config.main.odb.password = self.config.crypto_manager.decrypt(config.main.odb.password)
-            self.config.main.odb.host = config.main.odb.host
-            self.config.main.odb.pool_size = config.main.odb.pool_size
-            self.config.main.odb.username = config.main.odb.username
-
-        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.main.odb
-
         main = self.config.main
 
         if main.crypto.use_tls:
@@ -104,14 +128,10 @@ class SchedulerServer:
             tls_kwargs = {}
 
         # Configures a client to Zato servers
-        self.zato_client = self.set_up_zato_client(self.config.main)
+        self.zato_client = self.set_up_zato_client(main)
 
         # API server
         self.api_server = WSGIServer((main.bind.host, int(main.bind.port)), self, **tls_kwargs)
-
-        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
-        self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.main.odb, self.odb.pool, False)
-        self.config.odb = self.odb
 
         # SchedulerAPI
         self.scheduler_api = SchedulerAPI(self.config)

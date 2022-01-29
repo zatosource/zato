@@ -33,6 +33,7 @@ from hashlib import sha256
 from inspect import isfunction, ismethod
 from itertools import tee
 from io import StringIO
+from logging.config import dictConfig
 from operator import itemgetter
 from os.path import abspath, isabs, join
 from pathlib import Path
@@ -79,6 +80,9 @@ from sqlalchemy import orm
 # Texttable
 from texttable import Texttable
 
+# YAML
+import yaml
+
 # Python 2/3 compatibility
 from builtins import bytes
 from future.moves.itertools import zip_longest
@@ -107,6 +111,7 @@ from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_pin
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.logging_ import ColorFormatter
+from zato.common.util.open_ import open_r
 from zato.common.xml_ import soap_body_path, soap_body_xpath
 from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_request
 
@@ -383,6 +388,12 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
             return result
     else:
         return result
+
+# ################################################################################################################################
+
+def set_up_logging(repo_location:'str') -> 'None':
+    with open_r(os.path.join(repo_location, 'logging.conf')) as f:
+        dictConfig(yaml.load(f, yaml.FullLoader))
 
 # ################################################################################################################################
 
