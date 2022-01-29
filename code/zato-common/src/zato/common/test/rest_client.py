@@ -160,7 +160,7 @@ class RESTClient:
             if request:
                 request['current_app'] = TestConfig.current_app
 
-        data = dumps(request)
+        data = dumps(request) if request else ''
         auth = auth or self._auth
 
         logger.info('Invoking %s %s with %s (%s) (%s)', func_name, address, data, auth, qs)
@@ -182,9 +182,6 @@ class RESTClient:
                     response_data = bunchify(response_data)
             else:
                 response_data = response.text
-
-            if not response_data:
-                raise Exception('Flag expect_ok is True but response_data is {!r}`'.format(response_data))
 
             # This is used if everything about the response is in the payload itself,
             # e.g. HTTP headers are not used to signal or relay anything.
