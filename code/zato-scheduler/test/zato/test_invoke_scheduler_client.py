@@ -10,21 +10,40 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
+from zato.broker.client import BrokerClient
+from zato.common.broker_message import SCHEDULER
 from zato.common.test.config import TestConfig
-from zato.common.test.rest_client import RESTClientTestCase
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class InvokeSchedulerClientTestCase(TestCase):
 
-# ################################################################################################################################
+    def test_client_invoke_server_to_scheduler_message_valid(self):
 
-    def test_client_invoke_server_to_scheduler(self):
+        # Build our test configuration
+        scheduler_config = {
+            'scheduler_host': TestConfig.scheduler_host,
+            'scheduler_port': TestConfig.scheduler_port,
+            'scheduler_use_tls': False,
+        }
 
-        # This will check whether the scheduler replies with the expected metadata
-        #_ = self.post('/')
-        pass
+        # Client that invokes the scheduler from servers
+        client = BrokerClient(scheduler_config=scheduler_config)
+
+        # Build a valid test message
+        msg = {
+            'action': SCHEDULER.EXECUTE.value,
+            'name': 'zato.outgoing.sql.auto-ping'
+        }
+
+        response = client.invoke_sync(msg)
+
+        cid = response['cid'] # type: str
+
+        self.assertTrue(cid.startswith('zsch'))
+        self.assertGreaterEqual(len(cid), 20)
+        self.assertEqual(response['status'], 'ok')
 
 # ################################################################################################################################
 
