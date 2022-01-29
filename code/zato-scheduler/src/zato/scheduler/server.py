@@ -96,15 +96,20 @@ class Config:
         sql_pool_store = PoolStore()
 
         if config.main.odb.engine != 'sqlite':
-            config.main.odb.password = config.crypto_manager.decrypt(config.main.odb.password)
+
+
+            '''
             config.main.odb.host = config.main.odb.host
-            config.main.odb.pool_size = config.main.odb.pool_size
             config.main.odb.username = config.main.odb.username
+            config.main.odb.password = config.crypto_manager.decrypt(config.main.odb.password)
+            config.main.odb.pool_size = config.main.odb.pool_size
+            '''
 
         sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
 
         odb.pool = sql_pool_store[ZATO_ODB_POOL_NAME].pool
         odb.init_session(ZATO_ODB_POOL_NAME, config.main.odb, odb.pool, False)
+        odb.pool.ping(odb.fs_sql_config)
 
         config.odb = odb
 
