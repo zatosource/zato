@@ -195,7 +195,10 @@ class RESTClient:
 
         # We are here if expect_ok is not True
         else:
-            response_data = response.text
+            if response.text:
+                response_data = loads(response.text)
+            else:
+                response_data = response.text
 
         return response_data
 
