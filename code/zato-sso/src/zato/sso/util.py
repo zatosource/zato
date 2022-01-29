@@ -121,6 +121,7 @@ def validate_password(sso_conf, password):
     # Password may not contain most commonly used ones
     for elem in sso_conf.password.reject_list:
         if elem in password:
+            logger.warning('Password rejected because it contains a disallowed pattern from sso.conf -> password.reject_list')
             raise ValidationError(status_code.password.invalid, sso_conf.password.inform_if_invalid)
 
 # ################################################################################################################################
