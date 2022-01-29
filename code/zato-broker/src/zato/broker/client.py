@@ -111,7 +111,10 @@ class BrokerClient:
 # ################################################################################################################################
 
     def _invoke_server_from_scheduler(self, msg:'anydict') -> 'None':
-        self.zato_client.invoke_async(msg.get('service'), msg['payload'])
+        if self.zato_client:
+            self.zato_client.invoke_async(msg.get('service'), msg['payload'])
+        else:
+            logger.warn('Scheduler -> server invocation failure -> self.zato_client is not configured (%r)', self.zato_client)
 
 # ################################################################################################################################
 
@@ -144,7 +147,10 @@ class BrokerClient:
             if has_debug:
                 logger.info('Invoking %s %s', code_name, msg)
 
-            self.server_rpc.invoke_all('zato.service.rpc-service-invoker', msg, ping_timeout=10)
+            if self.server_rpc:
+                self.server_rpc.invoke_all('zato.service.rpc-service-invoker', msg, ping_timeout=10)
+            else:
+                logger.warn('RPC invocation failure -> self.server_rpc is not configured (%r)', self.server_rpc)
 
         except Exception:
             logger.warning(format_exc())
