@@ -77,6 +77,9 @@ import requests
 import sqlalchemy as sa
 from sqlalchemy import orm
 
+# Tabulate
+from tabulate import tabulate
+
 # Texttable
 from texttable import Texttable
 
@@ -120,7 +123,7 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 if 0:
     from typing import Iterable as iterable
     from simdjson import Parser as SIMDJSONParser
-    from zato.common.typing_ import any_, callable_
+    from zato.common.typing_ import any_, anydict, callable_, dictlist
 
     iterable = iterable
     SIMDJSONParser = SIMDJSONParser
@@ -1870,5 +1873,22 @@ def hex_sequence_to_bytes(elems):
     elems = [bytes(elem, 'utf8') for elem in elems]
 
     return b''.join(elems)
+
+# ################################################################################################################################
+
+def tabulate_dictlist(data:'dictlist') -> 'str':
+
+    # Return early if there is not anything that we can tabulate
+    if not data:
+        return ''
+
+    # We assume that all elements will have the same keys
+    elem0 = data[0]
+    len_keys = len(elem0)
+
+    # We align all the columns to the left hand side
+    col_align = ('left',) * len_keys
+
+    return tabulate(data, headers='keys', tablefmt='pretty', colalign=col_align)
 
 # ################################################################################################################################
