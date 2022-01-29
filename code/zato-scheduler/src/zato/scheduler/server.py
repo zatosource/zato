@@ -51,15 +51,16 @@ headers = [('Content-Type', 'application/json')]
 class Config:
     """ Encapsulates configuration of various scheduler-related layers.
     """
+    odb: 'ODBManager'
+    crypto_manager: 'SchedulerCryptoManager'
+
     def __init__(self):
         self.main = Bunch()
         self.startup_jobs = []
-        self.odb = None
         self.on_job_executed_cb = None
         self.stats_enabled = None
         self.job_log_level = 'info'
         self.broker_client = None
-        self.crypto_manager = None # type: SchedulerCryptoManager
         self._add_startup_jobs = True
         self._add_scheduler_jobs = True
 
@@ -69,7 +70,6 @@ class SchedulerServer:
     """ Main class spawning scheduler-related tasks and listening for HTTP API requests.
     """
     def __init__(self, config:'Config', repo_location:'str') -> 'None':
-        self.odb = config.odb
         self.config = config
         self.repo_location = repo_location
         self.sql_pool_store = PoolStore()
