@@ -815,6 +815,9 @@ class PUBSUB:
         DEMO_SECDEF_NAME = 'zato.pubsub.demo.secdef'
         DEMO_USERNAME = 'zato.pubsub.demo'
 
+        TEST_SECDEF_NAME = 'zato.pubsub.test.secdef'
+        TEST_USERNAME = 'zato.pubsub.test'
+
         INTERNAL_USERNAME = 'zato.pubsub.internal'
         INTERNAL_SECDEF_NAME = 'zato.pubsub.internal.secdef'
         INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
