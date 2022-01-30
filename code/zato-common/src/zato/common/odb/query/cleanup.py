@@ -36,7 +36,7 @@ QueueTable = PubSubEndpointEnqueuedMessage.__table__
 # ################################################################################################################################
 
 def get_subscriptions(session:'SASession', max_last_interaction_time:'float') -> 'anylist':
-    return session.query(
+    result = session.query(
         PubSubSubscription.id,
         PubSubSubscription.sub_key,
         PubSubSubscription.ext_client_id,
@@ -52,6 +52,8 @@ def get_subscriptions(session:'SASession', max_last_interaction_time:'float') ->
         )).\
         order_by(PubSubSubscription.last_interaction_time.asc()).\
         all()
+
+    return result
 
 # ################################################################################################################################
 # ################################################################################################################################

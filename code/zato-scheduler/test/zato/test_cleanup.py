@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from unittest import main
 
 # gevent
@@ -16,6 +17,7 @@ from gevent import sleep
 from zato.common import PUBSUB
 from zato.common.test.config import TestConfig
 from zato.common.test.unittest_ import BasePubSubRestTestCase, PubSubConfig, PubSubAPIRestImpl
+from zato.scheduler.cleanup.core import run_cleanup
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,6 +57,29 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
 
         sub_key = response_initial['sub_key']
         sub_key
+
+        data = 'abc'
+        len_messages = 2
+
+        for _ in range(len_messages):
+            self._publish(topic_name, data)
+
+        # Because each publication is synchronous, we now know that all of them are in the subscriber's queue
+        # which means that we can delete them already.
+
+        # Indicate after a passage of how many seconds we will consider a subscribers as gone,
+        # that is, after how many seconds since its last interaction time it will be deleted.
+        delta = 1
+
+        # Export a variable with delta as required by the underlying cleanup implementation
+        os.environ['ZATO_SCHED_DELTA_NOT_INTERACT'] = str(delta)
+
+        # Sleep a little bit longer to make sure that we actually exceed the delta
+        sleep_extra = delta * 0.1
+        sleep(delta + sleep_extra)
+
+        # Run the cleanup procedure now
+        run_cleanup()
 
 # ################################################################################################################################
 # ################################################################################################################################
