@@ -8,10 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # SQLAlchemy
 from sqlalchemy import or_
-from sqlalchemy.sql.functions import coalesce
 
 # Zato
-from zato.common.odb.model import PubSubSubscription
+from zato.common.odb.model import PubSubEndpoint, PubSubSubscription
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,12 +26,17 @@ def get_subscriptions(session:'SASession', max_last_interaction_time:'float') ->
     return session.query(
         PubSubSubscription.id,
         PubSubSubscription.sub_key,
+        PubSubSubscription.ext_client_id,
         PubSubSubscription.last_interaction_time,
+        PubSubEndpoint.name.label('endpoint_name'),
         ).\
+        filter(PubSubEndpoint.id == PubSubSubscription.endpoint_id).\
+        filter(PubSubEndpoint.is_internal.is_(False)).\
         filter(or_(
             PubSubSubscription.last_interaction_time < max_last_interaction_time,
             PubSubSubscription.last_interaction_time.is_(None),
         )).\
+        order_by(PubSubSubscription.last_interaction_time.asc()).\
         all()
 
 # ################################################################################################################################
