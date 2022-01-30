@@ -55,7 +55,7 @@ class CleanupConfig:
 
 class CleanupResult:
     sk_list:  'strlist'
-    total_msg_len: 'strlist'
+    total_messages: int
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -145,7 +145,7 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _cleanup_msg_list(self, sub_key:'str', msg_list:'dictlist') -> 'None':
+    def _cleanup_msg_list(self, cleanup_result:'CleanupResult', sub_key:'str', msg_list:'dictlist') -> 'None':
 
         batch_size = CleanupConfig.MsgDeleteBatchSize
 
@@ -175,12 +175,15 @@ class CleanupManager:
                 # .. make sure to commit the progress of the transaction ..
                 session.commit()
 
+                # .. store for later use ..
+                cleanup_result.total_messages += len(msg_id_list)
+
                 # .. and confirm that we did it.
                 self.logger.info('CleanSub: Deleted  group %s/%s (%s)', idx, len_groups, sub_key)
 
 # ################################################################################################################################
 
-    def _cleanup_sub(self, max_last:'MaxLast', sub:'stranydict') -> 'None':
+    def _cleanup_sub(self, cleanup_result:'CleanupResult', max_last:'MaxLast', sub:'stranydict') -> 'None':
 
         # Local aliases
         sub_key = sub['sub_key']
@@ -214,7 +217,7 @@ class CleanupManager:
         if result:
             table = tabulate_dictlist(result)
             self.logger.debug('CleanSub: ** Messages to clean up for sub_key `%s` **\n%s', sub_key, table)
-            self._cleanup_msg_list(sub_key, result)
+            self._cleanup_msg_list(cleanup_result, sub_key, result)
 
         # At this point, we have already deleted all the enqueued messages for all the subscribers
         # that we have not seen in DeltaNotInteracted hours. It means that we can proceed now
@@ -228,9 +231,17 @@ class CleanupManager:
         # to many rows in the queue table which in turn means that the database will not block for a long time.
         self.logger.info('CleanSub: Notifying server to delete sub_key `%s`', sub_key)
 
+        # Now, we can append the sub_key to the list of what has been processed
+        cleanup_result.sk_list.append(sub_key)
+
 # ################################################################################################################################
 
-    def cleanup_pub_sub(self):
+    def cleanup_pub_sub(self) -> 'CleanupResult':
+
+        # Response to produce
+        cleanup_result = CleanupResult()
+        cleanup_result.sk_list = []
+        cleanup_result.total_messages = 0
 
         # We will find all subscribers that did not interact with us for at least that many seconds
         delta_not_interacted = int(os.environ.get('ZATO_SCHED_DELTA_NOT_INTERACT') or 0)
@@ -256,19 +267,26 @@ class CleanupManager:
             sub_key = sub['sub_key']
             endpoint_name = sub['endpoint_name']
             self.logger.info('CleanSub: Cleaning up subscription %s/%s; %s -> %s', sub['idx'], len_subs, sub_key, endpoint_name)
-            self._cleanup_sub(max_last, sub)
+            self._cleanup_sub(cleanup_result, max_last, sub)
 
         #
         # TODO: Add cleanup of queue messages that have no subscribers because
         # ..... sub_key in pubsub_endp_msg_queue does not point to pubsub_sub.
         #
 
+        return cleanup_result
+
 # ################################################################################################################################
 
-    def run(self):
+    def run(self) -> 'CleanupResult':
 
         # Clean up old pub/sub objects
-        self.cleanup_pub_sub()
+        cleanup_result = self.cleanup_pub_sub()
+
+        self.logger.info('CleanSub: Processed %d message(s) from sk_list: %s',
+            cleanup_result.total_messages, cleanup_result.sk_list)
+
+        return cleanup_result
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -302,7 +320,7 @@ def run_cleanup():
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    run_cleanup()
+    _ = run_cleanup()
 
 # ################################################################################################################################
 # ################################################################################################################################

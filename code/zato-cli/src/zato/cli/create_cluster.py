@@ -69,6 +69,9 @@ class Create(ZatoCommand):
         from zato.common.api import IDEDeploy
         from zato.common.odb.model import Cluster, HTTPBasicAuth
         from zato.common.odb.post_process import ODBPostProcess
+        from zato.common.pubsub import PUBSUB
+
+        _pubsub_default = PUBSUB.DEFAULT
 
         engine = self._get_engine(args)
         session = self._get_session(engine)
@@ -112,7 +115,8 @@ class Create(ZatoCommand):
                 admin_invoke_password, cluster)
             session.add(admin_invoke_sec)
 
-            pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', self.generate_password(), cluster)
+            pubapi_sec = HTTPBasicAuth(None, _pubsub_default.PUBAPI_SECDEF_NAME, True, _pubsub_default.PUBAPI_USERNAME,
+                'Zato public API', self.generate_password(), cluster)
             session.add(pubapi_sec)
 
             internal_invoke_sec = HTTPBasicAuth(None, 'zato.internal.invoke', True, 'zato.internal.invoke.user',

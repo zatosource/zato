@@ -6,6 +6,10 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# This needs to be done as soon as possible
+from gevent.monkey import patch_all
+patch_all()
+
 # stdlib
 import os
 from unittest import main
@@ -41,7 +45,30 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def test_cleanup_old_subscriptions(self):
+    def test_cleanup_old_subscriptions_no_sub_keys(self):
+
+        # In this test, we check subscriptions to shared topics
+        topic_name = TestConfig.pubsub_topic_test
+
+        # Make sure we are not subscribed to anything
+        self._unsubscribe(topic_name)
+
+        # Indicate after a passage of how many seconds we will consider a subscribers as gone,
+        # that is, after how many seconds since its last interaction time it will be deleted.
+        delta = 1
+
+        # Export a variable with delta as required by the underlying cleanup implementation
+        os.environ['ZATO_SCHED_DELTA_NOT_INTERACT'] = str(delta)
+
+        # Run the cleanup procedure now
+        cleanup_result = run_cleanup()
+
+        self.assertEqual(cleanup_result.total_messages, 0)
+        self.assertListEqual(cleanup_result.sk_list, [])
+
+# ################################################################################################################################
+
+    def test_cleanup_old_subscriptions_one_sub_key(self):
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_test
@@ -79,7 +106,10 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
         sleep(delta + sleep_extra)
 
         # Run the cleanup procedure now
-        run_cleanup()
+        cleanup_result = run_cleanup()
+
+        self.assertEqual(cleanup_result.total_messages, len_messages)
+        self.assertListEqual(cleanup_result.sk_list, [sub_key])
 
 # ################################################################################################################################
 # ################################################################################################################################
