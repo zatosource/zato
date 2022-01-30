@@ -321,7 +321,7 @@ class Scheduler:
         self._add_startup_jobs = config._add_startup_jobs
         self._add_scheduler_jobs = config._add_scheduler_jobs
         self.job_log = getattr(logger, config.job_log_level)
-        self.initial_sleep_time = 0.1 # self.config.main.get('misc', {}).get('initial_sleep_time', SCHEDULER.InitialSleepTime)
+        self.initial_sleep_time = self.config.main.get('misc', {}).get('initial_sleep_time', SCHEDULER.InitialSleepTime)
 
     def on_max_repeats_reached(self, job):
         with self.lock:
