@@ -45,7 +45,7 @@ class PubSubAPIRestImpl:
 # ################################################################################################################################
 
     def _publish(self, topic_name:'str', data:'any_') -> 'stranydict':
-        request = {'data': data}
+        request = {'data': data, 'has_gd':True}
         response = self.rest_client.post(PubSubConfig.PathPublish + topic_name, request) # type: stranydict
         sleep(0.1)
         return response
