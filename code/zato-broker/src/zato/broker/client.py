@@ -57,6 +57,7 @@ to_scheduler_actions = {
 from_scheduler_actions = {
     SCHEDULER.JOB_EXECUTED.value,
     SCHEDULER.DELETE.value,
+    SCHEDULER.DELETE_PUBSUB_SUBSCRIBER.value,
 }
 
 # ################################################################################################################################

@@ -97,7 +97,6 @@ class Config:
 
         if config.main.odb.engine != 'sqlite':
 
-
             config.main.odb.host = config.main.odb.host
             config.main.odb.username = config.main.odb.username
             config.main.odb.password = config.crypto_manager.decrypt(config.main.odb.password)

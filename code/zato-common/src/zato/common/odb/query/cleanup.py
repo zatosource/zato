@@ -6,18 +6,31 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from logging import getLogger
+
 # SQLAlchemy
-from sqlalchemy import or_
+from sqlalchemy import delete, or_
 
 # Zato
-from zato.common.odb.model import PubSubEndpoint, PubSubSubscription
+from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubSubscription
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import anylist, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger('zato_pubsub.sql')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+QueueTable = PubSubEndpointEnqueuedMessage.__table__
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,6 +52,20 @@ def get_subscriptions(session:'SASession', max_last_interaction_time:'float') ->
         )).\
         order_by(PubSubSubscription.last_interaction_time.asc()).\
         all()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def delete_queue_messages(session:'SASession', msg_id_list:'strlist') -> 'None':
+
+    logger.info('Deleting %d queue message(s): %s', len(msg_id_list), msg_id_list)
+
+    session.execute(
+        delete(QueueTable).\
+        where(
+            QueueTable.c.pub_msg_id.in_(msg_id_list),
+        )
+    )
 
 # ################################################################################################################################
 # ################################################################################################################################
