@@ -36,6 +36,7 @@ class PubAPITestCase(BasePubSubRestTestCase):
         # Before subscribing, make sure we are not currently subscribed
         self._unsubscribe(topic_name)
 
+        # Subscribe to the topic
         response_initial = self.rest_client.post(PubSubConfig.PathSubscribe + topic_name)
 
         # Wait a moment to make sure the subscription data is created
