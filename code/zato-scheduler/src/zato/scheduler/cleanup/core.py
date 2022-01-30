@@ -20,11 +20,8 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from logging import captureWarnings, getLogger
 
-# Tabulate
-from tabulate import tabulate
-
 # Zato
-from zato.common.odb.query.cleanup import get_subscriptions
+from zato.common.odb.query.cleanup import delete_queue_messages, get_subscriptions
 from zato.common.odb.query.pubsub.delivery import get_sql_msg_ids_by_sub_key
 from zato.common.util.api import grouper, set_up_logging, tabulate_dictlist
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms
@@ -49,7 +46,7 @@ class MaxLast:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Config:
+class CleanupConfig:
     DeltaNotInteracted = 24 # In hours
     MsgDeleteBatchSize = 2
 
@@ -101,7 +98,6 @@ class CleanupManager:
 
     def _get_subscriptions(self, max_last:'MaxLast', delta_not_interacted:'int') -> 'anylist':
 
-        '''
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
             result = get_subscriptions(session, max_last.as_float)
@@ -128,34 +124,52 @@ class CleanupManager:
 
             out_elem.update(elem)
             out.append(out_elem)
-        '''
-
-        out = out[:1]
-        print(out)
 
         suffix = self._get_suffix(out)
 
-        self.logger.info('CLEANSUB: Returning %s subscription%swith last interaction older than %s (delta: %s hours)',
+        self.logger.info('CleanSub: Returning %s subscription%swith last interaction time older than %s (delta: %s hours)',
             len(out), suffix, max_last.as_datetime, delta_not_interacted)
 
-        table = tabulate_dictlist(out)
-        self.logger.info('CLEANSUB: ** Subscriptions to clean up **\n%s', table)
+        if out:
+            table = tabulate_dictlist(out)
+            self.logger.info('CleanSub: ** Subscriptions to clean up **\n%s', table)
 
         return out
 
 # ################################################################################################################################
 
-    def _cleanup_msg_group(self, sub_key:'str', msg_group:'dictlist') -> 'None':
+    def _cleanup_msg_list(self, sub_key:'str', msg_list:'dictlist') -> 'None':
 
-        batch_size = Config.MsgDeleteBatchSize
+        batch_size = CleanupConfig.MsgDeleteBatchSize
 
-        split = grouper(batch_size, msg_group)
-        split = list(split)
-        len_split = len(split)
+        groups = grouper(batch_size, msg_list)
+        groups = list(groups)
+        len_groups = len(groups)
 
-        suffix = self._get_suffix(split, needs_space=False)
-        self.logger.info('CLEANSUB: Message(s) for `%s` turned into %s group%s, batch_size:%s',
-            sub_key, len_split, suffix, batch_size)
+        suffix = self._get_suffix(groups, needs_space=False)
+        self.logger.info('CleanSub: Message(s) for `%s` turned into %s group%s, batch_size:%s',
+            sub_key, len_groups, suffix, batch_size)
+
+        # Note that messages for each subscriber are deleted under a new session
+        with closing(self.config.odb.session()) as session: # type: ignore
+
+            # Iterate over groups to delete each of them ..
+            for idx, group in enumerate(groups, 1):
+
+                # .. extract message IDs from each group ..
+                msg_id_list = [elem['pub_msg_id'] for elem in group if elem]
+
+                # .. log what we are about to do ..
+                self.logger.info('CleanSub: Deleting group %s/%s (%s)', idx, len_groups, sub_key)
+
+                # .. delete the group ..
+                delete_queue_messages(session, msg_id_list)
+
+                # .. make sure to commit the progress of the transaction ..
+                session.commit()
+
+                # .. and confirm that we did it.
+                self.logger.info('CleanSub: Deleted  group %s/%s (%s)', idx, len_groups, sub_key)
 
 # ################################################################################################################################
 
@@ -164,8 +178,8 @@ class CleanupManager:
         # Local aliases
         sub_key = sub['sub_key']
 
-        self.logger.info('CLEANSUB: ---------------')
-        self.logger.info('CLEANSUB: Looking up queue messages for %s', sub_key)
+        self.logger.info('CleanSub: ---------------')
+        self.logger.info('CleanSub: Looking up queue messages for %s', sub_key)
 
         # We look up all the messages in the database which is why the last_sql_run
         # needs to be set to a value that will be always matched
@@ -179,31 +193,39 @@ class CleanupManager:
         cluster_id = None
 
         # Always create a new session so as not to block the database
-        '''
         with closing(self.config.odb.session()) as session: # type: ignore
             result = get_sql_msg_ids_by_sub_key(
                 session, cluster_id, sub_key, last_sql_run, pub_time_max, include_unexpired_only=False, needs_result=True)
 
         # Convert SQL results to a dict that we can easily work with
         result = [elem._asdict() for elem in result]
-        '''
-
-        print(111, result)
 
         suffix = self._get_suffix(result)
-        self.logger.info('CLEANSUB: Found %s message%sfor sub_key `%s` (ext: %s)', len(result), suffix, sub_key, sub['ext_client_id'])
+        self.logger.info('CleanSub: Found %s message%sfor sub_key `%s` (ext: %s)', len(result), suffix, sub_key, sub['ext_client_id'])
 
         if result:
             table = tabulate_dictlist(result)
-            self.logger.info('CLEANSUB: ** Messages to clean up for sub_key `%s` **\n%s', sub_key, table)
-            self._cleanup_msg_group(sub_key, result)
+            self.logger.info('CleanSub: ** Messages to clean up for sub_key `%s` **\n%s', sub_key, table)
+            self._cleanup_msg_list(sub_key, result)
+
+        # At this point, we have already deleted all the enqueued messages for all the subscribers
+        # that we have not seen in DeltaNotInteracted hours. It means that we can proceed now
+        # to delete each subscriber too because we know that it was not cascade to any of its
+        # now-already-deleted messages. However, we do not do it using SQL queries
+        # because there may still exist references to such subscribers among self.pubsub and tasks in servers.
+        # Thus, we invoke our server, telling it that a given subscriber can be deleted, and the server
+        # will know what to delete and clean up next. Again, note that at this point there are no outstanding
+        # messages for that subscribers because we have just deleted them (or, possibly, a few more will have been enqueued
+        # by the time the server receives our request) which means that the server's action will not cascade
+        # to many rows in the queue table which in turn means that the database will not block for a long time.
+        self.logger.info('CleanSub: Notifying server to delete sub_key `%s`', sub_key)
 
 # ################################################################################################################################
 
     def cleanup_pub_sub(self):
 
         # We will find all subscribers that did not interact with us for at least that many hours
-        delta_not_interacted = Config.DeltaNotInteracted
+        delta_not_interacted = CleanupConfig.DeltaNotInteracted
 
         # Start of our cleanup procedure
         now = datetime.utcnow()
@@ -222,9 +244,15 @@ class CleanupManager:
 
         # .. and clean up them all, if needed.
         for sub in subs:
-            self.logger.info('CLEANSUB: Cleaning up subscription %s/%s; %s -> %s',
-                sub['idx'], len_subs, sub['sub_key'], sub['endpoint_name'])
+            sub_key = sub['sub_key']
+            endpoint_name = sub['endpoint_name']
+            self.logger.info('CleanSub: Cleaning up subscription %s/%s; %s -> %s', sub['idx'], len_subs, sub_key, endpoint_name)
             self._cleanup_sub(max_last, sub)
+
+        #
+        # TODO: Add cleanup of queue messages that have no subscribers because
+        # ..... sub_key in pubsub_endp_msg_queue does not point to pubsub_sub.
+        #
 
 # ################################################################################################################################
 
