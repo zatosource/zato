@@ -13,24 +13,36 @@ from unittest import main
 from gevent import sleep
 
 # Zato
+from zato.common import PUBSUB
 from zato.common.test.config import TestConfig
-from zato.common.test.unittest_ import BasePubSubRestTestCase, PubSubConfig
+from zato.common.test.unittest_ import BasePubSubRestTestCase, PubSubConfig, PubSubAPIRestImpl
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_default = PUBSUB.DEFAULT
+
+sec_name = _default.TEST_SECDEF_NAME
+username = _default.TEST_USERNAME
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class PubSubCleanupTestCase(BasePubSubRestTestCase):
 
+    should_init_rest_client = False
+
     def setUp(self) -> None:
+        self.rest_client.init(username=username, sec_name=sec_name)
+        self.api_impl = PubSubAPIRestImpl(self, self.rest_client)
         super().setUp()
-        # self.rest_client.base_address = TestConfig.scheduler_address
 
 # ################################################################################################################################
 
     def test_cleanup_old_subscriptions(self):
 
         # In this test, we check subscriptions to shared topics
-        topic_name = TestConfig.pubsub_topic_shared
+        topic_name = TestConfig.pubsub_topic_test
 
         # Before subscribing, make sure we are not currently subscribed
         self._unsubscribe(topic_name)

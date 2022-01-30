@@ -17,6 +17,9 @@ class TestConfig:
     # This is a shared topic with multiple subscribers
     pubsub_topic_shared = '/zato/demo/sample'
 
+    # This is a different shared topic
+    pubsub_topic_test = '/zato/test/sample'
+
     # This topic has only one subscriber
     pubsub_topic_name_unique = '/zato/demo/unique'
 
