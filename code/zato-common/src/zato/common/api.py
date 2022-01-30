@@ -812,14 +812,17 @@ class PUBSUB:
         SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
         UnsubOnWSXClose = True
 
+        DEMO_USERNAME    = 'zato.pubsub.demo'
         DEMO_SECDEF_NAME = 'zato.pubsub.demo.secdef'
-        DEMO_USERNAME = 'zato.pubsub.demo'
 
+        TEST_USERNAME    = 'zato.pubsub.test'
         TEST_SECDEF_NAME = 'zato.pubsub.test.secdef'
-        TEST_USERNAME = 'zato.pubsub.test'
 
-        INTERNAL_USERNAME = 'zato.pubsub.internal'
-        INTERNAL_SECDEF_NAME = 'zato.pubsub.internal.secdef'
+        PUBAPI_USERNAME    = 'pubapi'
+        PUBAPI_SECDEF_NAME = 'pubapi'
+
+        INTERNAL_USERNAME      = 'zato.pubsub.internal'
+        INTERNAL_SECDEF_NAME   = 'zato.pubsub.internal.secdef'
         INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
 
     class SERVICE_SUBSCRIBER:
