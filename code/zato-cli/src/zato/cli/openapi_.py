@@ -130,7 +130,7 @@ class OpenAPI(ZatoCommand):
 
         # .. otherwise, report an error.
         else:
-            self.logger.warn('No OpenAPI definition (%s) found among files received -> %s', def_name, sorted(data))
+            self.logger.warning('No OpenAPI definition (%s) found among files received -> %s', def_name, sorted(data))
 
 # ################################################################################################################################
 # ################################################################################################################################
