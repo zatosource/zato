@@ -21,10 +21,13 @@ from datetime import datetime, timedelta
 from logging import captureWarnings, getLogger
 
 # Zato
+from zato.broker.client import BrokerClient
+from zato.common.broker_message import SCHEDULER
 from zato.common.odb.query.cleanup import delete_queue_messages, get_subscriptions
 from zato.common.odb.query.pubsub.delivery import get_sql_msg_ids_by_sub_key
 from zato.common.util.api import grouper, set_up_logging, tabulate_dictlist
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms
+from zato.scheduler.util import set_up_zato_client
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,6 +67,7 @@ class CleanupManager:
     logger:        'Logger'
     config:        'Config'
     repo_location: 'str'
+    broker_client: 'BrokerClient'
 
     def __init__(self, repo_location:'str') -> 'None':
         self.repo_location = repo_location
@@ -82,6 +86,10 @@ class CleanupManager:
 
         # Build our main configuration object
         self.config = Config.from_repo_location(self.repo_location)
+
+        # Configures a client to Zato servers
+        self.zato_client = set_up_zato_client(self.config.main)
+        self.broker_client = BrokerClient(zato_client=self.zato_client, server_rpc=None, scheduler_config=None)
 
         # Capture warnings to log files
         captureWarnings(True)
@@ -212,7 +220,8 @@ class CleanupManager:
         result = [elem._asdict() for elem in result]
 
         suffix = self._get_suffix(result)
-        self.logger.info('CleanSub: Found %s message%sfor sub_key `%s` (ext: %s)', len(result), suffix, sub_key, sub['ext_client_id'])
+        self.logger.info('CleanSub: Found %s message%sfor sub_key `%s` (ext: %s)',
+            len(result), suffix, sub_key, sub['ext_client_id'])
 
         if result:
             table = tabulate_dictlist(result)
@@ -230,6 +239,14 @@ class CleanupManager:
         # by the time the server receives our request) which means that the server's action will not cascade
         # to many rows in the queue table which in turn means that the database will not block for a long time.
         self.logger.info('CleanSub: Notifying server to delete sub_key `%s`', sub_key)
+
+        self.broker_client.invoke_async({
+            'service': 'zato.pubsub.endpoint.delete-endpoint-queue',
+            'action': SCHEDULER.DELETE_PUBSUB_SUBSCRIBER.value,
+            'payload': {
+                'sub_key': sub_key,
+            }
+        }, from_scheduler=True)
 
         # Now, we can append the sub_key to the list of what has been processed
         cleanup_result.sk_list.append(sub_key)

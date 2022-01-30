@@ -21,7 +21,15 @@ from gevent import sleep
 from zato.common import PUBSUB
 from zato.common.test.config import TestConfig
 from zato.common.test.unittest_ import BasePubSubRestTestCase, PubSubConfig, PubSubAPIRestImpl
+from zato.common.typing_ import cast_
 from zato.scheduler.cleanup.core import run_cleanup
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anydict
+    anydict = anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -80,7 +88,7 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
         response_initial = self.rest_client.post(PubSubConfig.PathSubscribe + topic_name)
 
         # Wait a moment to make sure the subscription data is created
-        sleep(0.2)
+        sleep(2)
 
         sub_key = response_initial['sub_key']
         sub_key
@@ -110,6 +118,24 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
 
         self.assertEqual(cleanup_result.total_messages, len_messages)
         self.assertListEqual(cleanup_result.sk_list, [sub_key])
+
+        # The cleanup procedure invoked the server which in turn deleted our subscription,
+        # which means that we can sleep for a moment now to make sure that it is actually
+        # deleted and then we can try to get message for the now-already-deleted sub_key.
+        # We expect that it will result in a permissioned denied, as though this sub_key never existed.
+
+        # Wait a moment ..
+        sleep(0.1)
+
+        receive_result = cast_('anydict', self._receive(topic_name, expect_ok=False))
+
+        cid = receive_result['cid']
+
+        self.assertIsInstance(cid, str)
+        self.assertTrue(len(cid) >= 20)
+
+        self.assertEqual(receive_result['result'], 'Error')
+        self.assertEqual(receive_result['details'], f'You are not subscribed to topic `{topic_name}`')
 
 # ################################################################################################################################
 # ################################################################################################################################

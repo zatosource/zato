@@ -26,17 +26,15 @@ from zato.common.api import ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
-from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool, absjoin, get_config, new_cid
 from zato.common.util.cli import read_stdin_data
 from zato.scheduler.api import SchedulerAPI
+from zato.scheduler.util import set_up_zato_client
 
 # ################################################################################################################################
 
 if 0:
-    from zato.client import AnyServiceInvoker
     from zato.common.typing_ import any_, anydict, callable_
-    AnyServiceInvoker = AnyServiceInvoker
 
 # ################################################################################################################################
 
@@ -65,7 +63,6 @@ class Config:
         self.on_job_executed_cb = None
         self.stats_enabled = None
         self.job_log_level = 'info'
-        self.broker_client = None
         self._add_startup_jobs = True
         self._add_scheduler_jobs = True
 
@@ -130,7 +127,7 @@ class SchedulerServer:
             tls_kwargs = {}
 
         # Configures a client to Zato servers
-        self.zato_client = self.set_up_zato_client(main)
+        self.zato_client = set_up_zato_client(main)
 
         # API server
         self.api_server = WSGIServer((main.bind.host, int(main.bind.port)), self, **tls_kwargs)
@@ -138,59 +135,6 @@ class SchedulerServer:
         # SchedulerAPI
         self.scheduler_api = SchedulerAPI(self.config)
         self.scheduler_api.broker_client = BrokerClient(zato_client=self.zato_client, server_rpc=None, scheduler_config=None)
-
-# ################################################################################################################################
-
-    def _set_up_zato_client_by_server_path(self, server_path):
-        # type: (str) -> AnyServiceInvoker
-
-        # Zato
-        from zato.common.util.api import get_client_from_server_conf
-
-        return get_client_from_server_conf(server_path, require_server=False)
-
-# ################################################################################################################################
-
-    def _set_up_zato_client_by_remote_details(
-        self,
-        server_host:     'str',
-        server_port:     'int',
-        server_username: 'str',
-        server_password: 'str'
-        ) -> 'None':
-        pass
-
-# ################################################################################################################################
-
-    def set_up_zato_client(self, config):
-        # type: (Bunch) -> AnyServiceInvoker
-
-        # New in 3.2, hence optional
-        server_config = cast_('Bunch', config.get('server'))
-
-        # We do have server configuration available ..
-        if server_config:
-
-            if server_config.get('server_path'):
-                return self._set_up_zato_client_by_server_path(server_config.server_path)
-            else:
-                server_host = server_config.server_host
-                server_port = server_config.server_port
-                server_username = server_config.server_username
-                server_password = server_config.server_password
-
-                return self._set_up_zato_client_by_remote_details(
-                    server_host,
-                    server_port,
-                    server_username,
-                    server_password
-                ) # type: ignore
-
-        # .. no configuration, assume this is a default quickstart cluster.
-        else:
-            # This is what quickstart environments use by default
-            server_path = '/opt/zato/env/qs-1'
-            return self._set_up_zato_client_by_server_path(server_path)
 
 # ################################################################################################################################
 
