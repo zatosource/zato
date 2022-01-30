@@ -32,7 +32,7 @@ from zato.common.util.time_ import datetime_from_ms, datetime_to_ms
 if 0:
     from logging import Logger
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anylist, dictlist, stranydict
+    from zato.common.typing_ import any_, anylist, dictlist, stranydict, strlist
     from zato.scheduler.server import Config
     SASession = SASession
 
@@ -47,8 +47,15 @@ class MaxLast:
 # ################################################################################################################################
 
 class CleanupConfig:
-    DeltaNotInteracted = 24 # In hours
-    MsgDeleteBatchSize = 2
+    DeltaNotInteracted = 86_400 # In seconds, 60 seconds * 60 minutes * 24 hours = 86_400 seconds
+    MsgDeleteBatchSize = 50
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CleanupResult:
+    sk_list:  'strlist'
+    total_msg_len: 'strlist'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -127,7 +134,7 @@ class CleanupManager:
 
         suffix = self._get_suffix(out)
 
-        self.logger.info('CleanSub: Returning %s subscription%swith last interaction time older than %s (delta: %s hours)',
+        self.logger.info('CleanSub: Returning %s subscription%swith last interaction time older than %s (delta: %s seconds)',
             len(out), suffix, max_last.as_datetime, delta_not_interacted)
 
         if out:
@@ -186,8 +193,9 @@ class CleanupManager:
         # and the start of UNIX time, as expressed as a float, will always do.
         last_sql_run = 0.0
 
-        # We look up messages up to this point in time, which is equal to the start of our job.
-        pub_time_max = max_last.as_float
+        # We look up messages up to this point in time, which is equal to the start of our job
+        # (in seconds, hence the division, because we go from milliseconds up to seconds).
+        pub_time_max = max_last.as_float / 1000
 
         # We assume there is always one cluster in the database and we can skip its ID
         cluster_id = None
@@ -205,7 +213,7 @@ class CleanupManager:
 
         if result:
             table = tabulate_dictlist(result)
-            self.logger.info('CleanSub: ** Messages to clean up for sub_key `%s` **\n%s', sub_key, table)
+            self.logger.debug('CleanSub: ** Messages to clean up for sub_key `%s` **\n%s', sub_key, table)
             self._cleanup_msg_list(sub_key, result)
 
         # At this point, we have already deleted all the enqueued messages for all the subscribers
@@ -224,14 +232,15 @@ class CleanupManager:
 
     def cleanup_pub_sub(self):
 
-        # We will find all subscribers that did not interact with us for at least that many hours
-        delta_not_interacted = CleanupConfig.DeltaNotInteracted
+        # We will find all subscribers that did not interact with us for at least that many seconds
+        delta_not_interacted = int(os.environ.get('ZATO_SCHED_DELTA_NOT_INTERACT') or 0)
+        delta_not_interacted = delta_not_interacted or CleanupConfig.DeltaNotInteracted
 
         # Start of our cleanup procedure
         now = datetime.utcnow()
 
         # Turn hours into a UNIX time object, as expected by the database
-        max_last_dt    = now - timedelta(hours=delta_not_interacted)
+        max_last_dt    = now - timedelta(seconds=delta_not_interacted)
         max_last_float = datetime_to_ms(max_last_dt)
 
         max_last = MaxLast()
@@ -264,19 +273,7 @@ class CleanupManager:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def run_cleanup(repo_location:'str'):
-
-    # Build and initialize object responsible for cleanup tasks ..
-    cleanup_manager = CleanupManager(repo_location)
-    cleanup_manager.init()
-
-    # .. if we are here, it means that we can start our work.
-    cleanup_manager.run()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if __name__ == '__main__':
+def run_cleanup():
 
     # stdlib
     import sys
@@ -294,7 +291,18 @@ if __name__ == '__main__':
     repo_location = os.path.expanduser(repo_location)
     repo_location = os.path.abspath(repo_location)
 
-    run_cleanup(repo_location)
+    # Build and initialize object responsible for cleanup tasks ..
+    cleanup_manager = CleanupManager(repo_location)
+    cleanup_manager.init()
+
+    # .. if we are here, it means that we can start our work.
+    return cleanup_manager.run()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+    run_cleanup()
 
 # ################################################################################################################################
 # ################################################################################################################################

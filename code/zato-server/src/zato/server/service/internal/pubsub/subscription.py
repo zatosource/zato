@@ -690,7 +690,10 @@ class UpdateInteractionMetadata(AdminService):
         req = self.request.input
 
         # Convert from string to milliseconds as expected by the database
-        last_interaction_time = datetime_to_ms(req.last_interaction_time) / 1000.0
+        if not isinstance(req.last_interaction_time, float):
+            last_interaction_time = datetime_to_ms(req.last_interaction_time) / 1000.0
+        else:
+            last_interaction_time = req.last_interaction_time
 
         with closing(self.odb.session()) as session:
 
