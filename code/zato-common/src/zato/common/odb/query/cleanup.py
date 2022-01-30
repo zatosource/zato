@@ -29,6 +29,7 @@ def get_subscriptions(session:'SASession', max_last_interaction_time:'float') ->
         PubSubSubscription.ext_client_id,
         PubSubSubscription.last_interaction_time,
         PubSubEndpoint.name.label('endpoint_name'),
+        PubSubEndpoint.id.label('endpoint_id'),
         ).\
         filter(PubSubEndpoint.id == PubSubSubscription.endpoint_id).\
         filter(PubSubEndpoint.is_internal.is_(False)).\
@@ -39,4 +40,5 @@ def get_subscriptions(session:'SASession', max_last_interaction_time:'float') ->
         order_by(PubSubSubscription.last_interaction_time.asc()).\
         all()
 
+# ################################################################################################################################
 # ################################################################################################################################
