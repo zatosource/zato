@@ -114,7 +114,7 @@ class BrokerClient:
         if self.zato_client:
             return self.zato_client.invoke_async(msg.get('service'), msg['payload'])
         else:
-            logger.warn('Scheduler -> server invocation failure; self.zato_client is not configured (%r)', self.zato_client)
+            logger.warning('Scheduler -> server invocation failure; self.zato_client is not configured (%r)', self.zato_client)
 
 # ################################################################################################################################
 
@@ -131,8 +131,8 @@ class BrokerClient:
                 try:
                     return self._invoke_scheduler_from_server(msg)
                 except Exception as e:
-                    logger.warn(format_exc())
-                    logger.warn('Invocation error; server -> scheduler -> %s (%d:%r)', e, from_server, action)
+                    logger.warning(format_exc())
+                    logger.warning('Invocation error; server -> scheduler -> %s (%d:%r)', e, from_server, action)
                 return
 
             # .. special-case messages from the scheduler to servers ..
@@ -140,8 +140,8 @@ class BrokerClient:
                 try:
                     return self._invoke_server_from_scheduler(msg)
                 except Exception as e:
-                    logger.warn(format_exc())
-                    logger.warn('Invocation error; scheduler -> server -> %s (%d:%r)', e, from_server, action)
+                    logger.warning(format_exc())
+                    logger.warning('Invocation error; scheduler -> server -> %s (%d:%r)', e, from_server, action)
                 return
 
             # .. otherwise, we invoke servers.
@@ -152,11 +152,11 @@ class BrokerClient:
             if self.server_rpc:
                 return self.server_rpc.invoke_all('zato.service.rpc-service-invoker', msg, ping_timeout=10)
             else:
-                logger.warn('Server-to-server RPC invocation failure -> self.server_rpc is not configured (%r) (%d:%r)',
+                logger.warning('Server-to-server RPC invocation failure -> self.server_rpc is not configured (%r) (%d:%r)',
                     self.server_rpc, from_server, action)
 
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
             logger.warning(format_exc())
 
 # ################################################################################################################################

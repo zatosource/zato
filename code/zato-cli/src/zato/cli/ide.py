@@ -51,7 +51,7 @@ class SetIDEPassword(ManageCommand):
         path = os.path.abspath(path)
 
         if not os.path.exists(path):
-            self.logger.warn('Path not found: %s', path)
+            self.logger.warning('Path not found: %s', path)
             sys.exit(self.SYS_ERROR.NOT_A_ZATO_SERVER)
 
         encrypted = self._encrypt(ServerCryptoManager, self.args, password, False)
