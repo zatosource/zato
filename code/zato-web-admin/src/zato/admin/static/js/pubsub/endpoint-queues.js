@@ -150,7 +150,7 @@ $.fn.zato.pubsub.endpoint_queue.get_current_depth_link = function(data, cluster_
     var current_depth_non_gd = $.fn.zato.pubsub.endpoint_queue.get_depth_link('false', data.id, data.name_slug, cluster_id,
         data.current_depth_non_gd)
 
-    return current_depth = current_depth_gd + ' / ' + current_depth_non_gd;
+    return current_depth = current_depth_gd + ' / ' + data.current_depth_non_gd;
 }
 
 $.fn.zato.pubsub.endpoint_queue.clear = function(id, cluster_id) {
