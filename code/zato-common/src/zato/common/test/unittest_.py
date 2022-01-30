@@ -91,15 +91,17 @@ class PubSubAPIRestImpl:
 
 class BasePubSubRestTestCase(RESTClientTestCase):
 
-    needs_current_app     = False
-    payload_only_messages = False
+    needs_current_app       = False
+    payload_only_messages   = False
+    should_init_rest_client = True
 
 # ################################################################################################################################
 
     def setUp(self) -> None:
         super().setUp()
-        self.rest_client.init(username=username, sec_name=sec_name)
-        self.api_impl = PubSubAPIRestImpl(self, self.rest_client)
+        if self.should_init_rest_client:
+            self.rest_client.init(username=username, sec_name=sec_name)
+            self.api_impl = PubSubAPIRestImpl(self, self.rest_client)
 
 # ################################################################################################################################
 
