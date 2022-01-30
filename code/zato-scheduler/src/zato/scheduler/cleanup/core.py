@@ -85,31 +85,48 @@ class CleanupManager:
         with closing(self.config.odb.session()) as session: # type: ignore
             result = get_subscriptions(session, max_last_interaction_time)
 
+        # Convert SQL results to a dict that we can easily work with
         result = [elem._asdict() for elem in result]
 
-        for elem in result:
+        # This is what we will return. We need a new dict because we are adding
+        # a new columns and we what to preserve the insertion order.
+        out = []
+
+        for idx, elem in enumerate(result, 1):
+            out_elem = {
+                'idx': idx,
+            }
             for key, value in elem.items():
-                if key == 'last_interaction_time':
+                if key in ('last_interaction_time', 'ext_client_id'):
                     if not value:
                         value = '---'
                     else:
-                        value = datetime_from_ms(value * 1000) # type: ignore
+                        if key == 'last_interaction_time':
+                            value = datetime_from_ms(value * 1000) # type: ignore
                 elem[key] = value # type: ignore
 
-        len_result = len(result)
-        suffix = ' ' if len_result == 1 else 's '
+            out_elem.update(elem)
+            out.append(out_elem)
+
+        print(out)
+
+        # out = []
+
+        len_out = len(out)
+        suffix = ' ' if len_out == 1 else 's '
 
         self.logger.info('Returning %s subscription%swith last interaction older than %s (delta: %s hours)',
-            len_result, suffix, max_last_interaction_time_dt, delta_not_interacted)
+            len_out, suffix, max_last_interaction_time_dt, delta_not_interacted)
 
-        table = tabulate_dictlist(result)
+        table = tabulate_dictlist(out)
         self.logger.info('** Subscriptions to clean up **\n%s', table)
 
-        return result
+        return out
 
 # ################################################################################################################################
 
     def _cleanup_queue_by_sub_key(self, sub_key:'str') -> 'None':
+        pass
 
 # ################################################################################################################################
 
