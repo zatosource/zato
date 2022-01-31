@@ -30,7 +30,8 @@ logger = getLogger('zato_pubsub.sql')
 # ################################################################################################################################
 # ################################################################################################################################
 
-QueueTable = PubSubEndpointEnqueuedMessage.__table__
+QueueTable   = PubSubEndpointEnqueuedMessage.__table__
+MessageTable = PubSubMessage.__table__
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,7 +70,6 @@ def get_messages(task_id:'str', session:'SASession', topic_id:'int', topic_name:
 
     result = session.query(
         PubSubMessage.pub_msg_id,
-        in_how_many_queues,
         ).\
         group_by(PubSubMessage.pub_msg_id).\
         outerjoin(PubSubEndpointEnqueuedMessage, PubSubMessage.id==PubSubEndpointEnqueuedMessage.pub_msg_id).\
@@ -90,6 +90,20 @@ def delete_queue_messages(session:'SASession', msg_id_list:'strlist') -> 'None':
         delete(QueueTable).\
         where(
             QueueTable.c.pub_msg_id.in_(msg_id_list),
+        )
+    )
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def delete_topic_messages(session:'SASession', msg_id_list:'strlist') -> 'None':
+
+    logger.info('Deleting %d topic message(s): %s', len(msg_id_list), msg_id_list)
+
+    session.execute(
+        delete(MessageTable).\
+        where(
+            MessageTable.c.pub_msg_id.in_(msg_id_list),
         )
     )
 
