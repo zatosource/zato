@@ -60,7 +60,7 @@ class CleanupConfig:
 class CleanupResult:
     run_id: 'str'
     pubsub_sk_list:  'strlist'
-    pubsub_total_messages: 'int'
+    pubsub_total_queue_messages: 'int'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -186,7 +186,7 @@ class CleanupManager:
                 session.commit()
 
                 # .. store for later use ..
-                cleanup_result.pubsub_total_messages += len(msg_id_list)
+                cleanup_result.pubsub_total_queue_messages += len(msg_id_list)
 
                 # .. and confirm that we did it.
                 self.logger.info('%s: Deleted  group %s/%s (%s)', task_id, idx, len_groups, sub_key)
@@ -288,7 +288,18 @@ class CleanupManager:
             queue_msg_list.extend(sk_queue_msg_list)
 
         self.logger.info(f'{task_id}: Cleaned up %d pub/sub queue message(s) from sk_list: %s',
-            cleanup_result.pubsub_total_messages, cleanup_result.pubsub_sk_list)
+            cleanup_result.pubsub_total_queue_messages, cleanup_result.pubsub_sk_list)
+
+        return cleanup_result
+
+# ################################################################################################################################
+
+    def _cleanup_message_objects(
+        self,
+        task_id:'str',
+        cleanup_result:'CleanupResult',
+        delta_ctx:'DeltaCtx'
+        ) -> 'CleanupResult':
 
         return cleanup_result
 
@@ -301,13 +312,16 @@ class CleanupManager:
         delta_ctx:'DeltaCtx'
         ) -> 'CleanupResult':
 
-        # Now, we can proceed and delete the actual message because we know that their
-        # queue references are already deleted.
+        # First, clean up all the old messages from subscription queues ..
         self._cleanup_sub_queue_messages(task_id, cleanup_result, delta_ctx)
 
+        # Now, we can proceed and delete the actual message objects because we know that their
+        # queue references are already deleted.
+        self._cleanup_message_objects(task_id, cleanup_result, delta_ctx)
+
         #
-        # TODO: Add cleanup of queue messages that have no subscribers because
-        # ..... sub_key in pubsub_endp_msg_queue does not point to pubsub_sub.
+        # TODO: Add cleanup of queue messages that have no subscribers,
+        # ..... i.e. their sub_key in pubsub_endp_msg_queue does not point to pubsub_sub.
         #
 
         return cleanup_result
@@ -326,7 +340,7 @@ class CleanupManager:
         cleanup_result = CleanupResult()
         cleanup_result.run_id = run_id
         cleanup_result.pubsub_sk_list = []
-        cleanup_result.pubsub_total_messages = 0
+        cleanup_result.pubsub_total_queue_messages = 0
 
         # We will find all objects, such as subscribers or messages
         # that did not interact with us for at least that many seconds
