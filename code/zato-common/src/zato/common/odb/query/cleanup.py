@@ -58,7 +58,7 @@ def get_subscriptions(session:'SASession', max_last_interaction_time:'float') ->
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_mesages(session:'SASession', max_last_interaction_time:'float') -> 'anylist':
+def get_messages(session:'SASession', max_last_interaction_time:'float') -> 'anylist':
 
     in_how_many_queues = func.count(PubSubEndpointEnqueuedMessage.pub_msg_id).label('in_how_many_queues')
 
