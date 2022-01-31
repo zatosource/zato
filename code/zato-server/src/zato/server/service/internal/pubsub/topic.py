@@ -46,7 +46,7 @@ get_list_docs = 'pub/sub topics'
 broker_message = BROKER_MSG_PUBSUB
 broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
-skip_input_params = ['is_internal', 'current_depth_gd', 'last_pub_time', 'last_pub_msg_id', 'last_endpoint_id',
+skip_input_params = ['cluster_id', 'is_internal', 'current_depth_gd', 'last_pub_time', 'last_pub_msg_id', 'last_endpoint_id',
     'last_endpoint_name']
 input_optional_extra = ['needs_details', 'on_no_subs_pub', 'hook_service_name']
 output_optional_extra = ['is_internal', Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time',
@@ -197,8 +197,7 @@ class Get(AdminService):
     """ Returns a pub/sub topic by its ID.
     """
     class SimpleIO:
-        input_required = 'cluster_id'
-        input_optional = AsIs('id'), 'name'
+        input_optional = 'cluster_id', AsIs('id'), 'name'
         output_required = 'id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd', \
             'current_depth_gd'
         output_optional = 'last_pub_time', 'on_no_subs_pub'
@@ -206,12 +205,13 @@ class Get(AdminService):
     def handle(self):
 
         # Local aliases
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
         topic_id   = self.request.input.id
         topic_name = self.request.input.name
 
         with closing(self.odb.session()) as session: # type: ignore
-            topic = pubsub_topic(session, self.request.input.cluster_id, topic_id, topic_name)
-            topic['current_depth_gd'] = get_gd_depth_topic(session, self.request.input.cluster_id, topic_id)
+            topic = pubsub_topic(session, cluster_id, topic_id, topic_name)
+            topic['current_depth_gd'] = get_gd_depth_topic(session, cluster_id, topic_id)
 
         # Now, we know that we have this object so we can just make use of its ID
         topic_id = topic.id
@@ -243,12 +243,13 @@ class Clear(AdminService):
     """ Clears a topic from GD and non-GD messages.
     """
     class SimpleIO:
-        input_required = ('cluster_id', 'id')
+        input_required = 'id'
+        input_required = 'cluster_id'
 
     def handle(self):
 
         # Local aliases
-        cluster_id = self.request.input.cluster_id
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
         topic_id = self.request.input.id
 
         with closing(self.odb.session()) as session:
@@ -282,19 +283,24 @@ class GetPublisherList(AdminService):
     """ Returns all publishers that sent at least one message to a given topic.
     """
     class SimpleIO:
-        input_required = ('cluster_id', 'topic_id')
+        input_required = 'topic_id'
+        input_optional = 'cluster_id'
         output_required = ('name', 'is_active', 'is_internal', 'pub_pattern_matched')
         output_optional = ('service_id', 'security_id', 'ws_channel_id', 'last_seen', 'last_pub_time', AsIs('last_msg_id'),
             AsIs('last_correl_id'), 'last_in_reply_to', 'service_name', 'sec_name', 'ws_channel_name', AsIs('ext_client_id'))
         output_repeated = True
 
     def handle(self):
+
+        # Local aliases
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
+
         response = []
 
         with closing(self.odb.session()) as session:
 
             # Get last pub time for that specific endpoint to this very topic
-            last_data = pubsub_publishers_for_topic(session, self.request.input.cluster_id, self.request.input.topic_id).all()
+            last_data = pubsub_publishers_for_topic(session, cluster_id, self.request.input.topic_id).all()
 
             for item in last_data:
                 item.last_seen = datetime_from_ms(item.last_seen)
@@ -312,8 +318,8 @@ class GetGDMessageList(AdminService):
     _filter_by = PubSubMessage.data_prefix,
 
     class SimpleIO(GetListAdminSIO):
-        input_required = ('cluster_id', 'topic_id')
-        input_optional = GetListAdminSIO.input_optional + ('has_gd',)
+        input_required = 'topic_id'
+        input_optional = GetListAdminSIO.input_optional + ('cluster_id', 'has_gd')
         output_required = (AsIs('msg_id'), 'pub_time', 'data_prefix_short', 'pub_pattern_matched')
         output_optional = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id',
             'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name', 'server_pid', 'server_name')
@@ -322,8 +328,12 @@ class GetGDMessageList(AdminService):
 # ################################################################################################################################
 
     def get_gd_data(self, session):
+
+        # Local aliases
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
+
         return self._search(
-            pubsub_messages_for_topic, session, self.request.input.cluster_id, self.request.input.topic_id, False)
+            pubsub_messages_for_topic, session, cluster_id, self.request.input.topic_id, False)
 
 # ################################################################################################################################
 
