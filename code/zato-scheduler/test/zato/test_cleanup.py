@@ -53,7 +53,7 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def test_cleanup_old_subscriptions_no_sub_keys(self):
+    def xtest_cleanup_old_subscriptions_no_sub_keys(self):
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_test
@@ -71,12 +71,16 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
         # Run the cleanup procedure now
         cleanup_result = run_cleanup()
 
-        self.assertEqual(cleanup_result.total_messages, 0)
-        self.assertListEqual(cleanup_result.sk_list, [])
+        self.assertEqual(cleanup_result.pubsub_total_messages, 0)
+        self.assertListEqual(cleanup_result.pubsub_sk_list, [])
 
 # ################################################################################################################################
 
     def test_cleanup_old_subscriptions_one_sub_key(self):
+
+        # Filter our warnings coming from requests
+        import warnings
+        warnings.filterwarnings(action='ignore', message='unclosed', category=ResourceWarning)
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_test
@@ -116,8 +120,8 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
         # Run the cleanup procedure now
         cleanup_result = run_cleanup()
 
-        self.assertEqual(cleanup_result.total_messages, len_messages)
-        self.assertListEqual(cleanup_result.sk_list, [sub_key])
+        self.assertEqual(cleanup_result.pubsub_total_messages, len_messages)
+        self.assertListEqual(cleanup_result.pubsub_sk_list, [sub_key])
 
         # The cleanup procedure invoked the server which in turn deleted our subscription,
         # which means that we can sleep for a moment now to make sure that it is actually
