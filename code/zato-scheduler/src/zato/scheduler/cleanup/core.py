@@ -42,9 +42,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MaxLast:
-    as_float:    'float'
-    as_datetime: 'datetime'
+class DeltaCtx:
+    max_last_as_float:    'float'
+    max_last_as_datetime: 'datetime'
+    delta_not_interacted: 'int'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,8 +58,9 @@ class CleanupConfig:
 # ################################################################################################################################
 
 class CleanupResult:
+    run_id: 'str'
     pubsub_sk_list:  'strlist'
-    pubsub_total_messages: int
+    pubsub_total_messages: 'int'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -111,11 +113,11 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _get_subscriptions(self, task_id:'str', max_last:'MaxLast', delta_not_interacted:'int') -> 'anylist':
+    def _get_subscriptions(self, task_id:'str', delta_ctx:'DeltaCtx') -> 'anylist':
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
-            result = get_subscriptions(session, max_last.as_float)
+            result = get_subscriptions(session, delta_ctx.max_last_as_float)
 
         # Convert SQL results to a dict that we can easily work with
         result = [elem._asdict() for elem in result]
@@ -143,7 +145,7 @@ class CleanupManager:
         suffix = self._get_suffix(out)
 
         self.logger.info('%s: Returning %s subscription%swith last interaction time older than %s (delta: %s seconds)',
-            task_id, len(out), suffix, max_last.as_datetime, delta_not_interacted)
+            task_id, len(out), suffix, delta_ctx.max_last_as_datetime, delta_ctx.delta_not_interacted)
 
         if out:
             table = tabulate_dictlist(out)
@@ -191,7 +193,7 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _cleanup_sub(self, task_id:'str', cleanup_result:'CleanupResult', max_last:'MaxLast', sub:'stranydict') -> 'None':
+    def _cleanup_sub(self, task_id:'str', cleanup_result:'CleanupResult', delta_ctx:'DeltaCtx', sub:'stranydict') -> 'strlist':
 
         # Local aliases
         sub_key = sub['sub_key']
@@ -206,27 +208,27 @@ class CleanupManager:
 
         # We look up messages up to this point in time, which is equal to the start of our job
         # (in seconds, hence the division, because we go from milliseconds up to seconds).
-        pub_time_max = max_last.as_float / 1000
+        pub_time_max = delta_ctx.max_last_as_float / 1000
 
         # We assume there is always one cluster in the database and we can skip its ID
         cluster_id = None
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
-            result = get_sql_msg_ids_by_sub_key(
+            sk_queue_msg_list = get_sql_msg_ids_by_sub_key(
                 session, cluster_id, sub_key, last_sql_run, pub_time_max, include_unexpired_only=False, needs_result=True)
 
         # Convert SQL results to a dict that we can easily work with
-        result = [elem._asdict() for elem in result]
+        sk_queue_msg_list = [elem._asdict() for elem in sk_queue_msg_list]
 
-        suffix = self._get_suffix(result)
+        suffix = self._get_suffix(sk_queue_msg_list)
         self.logger.info('%s: Found %s message%sfor sub_key `%s` (ext: %s)',
-            task_id, len(result), suffix, sub_key, sub['ext_client_id'])
+            task_id, len(sk_queue_msg_list), suffix, sub_key, sub['ext_client_id'])
 
-        if result:
-            table = tabulate_dictlist(result)
+        if sk_queue_msg_list:
+            table = tabulate_dictlist(sk_queue_msg_list)
             self.logger.debug('%s: ** Messages to clean up for sub_key `%s` **\n%s', task_id, sub_key, table)
-            self._cleanup_msg_list(task_id, cleanup_result, sub_key, result)
+            self._cleanup_msg_list(task_id, cleanup_result, sub_key, sk_queue_msg_list)
 
         # At this point, we have already deleted all the enqueued messages for all the subscribers
         # that we have not seen in DeltaNotInteracted hours. It means that we can proceed now
@@ -251,40 +253,57 @@ class CleanupManager:
         # Now, we can append the sub_key to the list of what has been processed
         cleanup_result.pubsub_sk_list.append(sub_key)
 
+        # Finally, we can return all the IDs of messages enqueued for that sub_key
+        return sk_queue_msg_list
+
 # ################################################################################################################################
 
-    def cleanup_pub_sub(self, task_id:'str') -> 'CleanupResult':
+    def _cleanup_sub_queue_messages(
+        self,
+        task_id:'str',
+        cleanup_result:'CleanupResult',
+        delta_ctx:'DeltaCtx'
+        ) -> 'CleanupResult':
 
-        # Response to produce
-        cleanup_result = CleanupResult()
-        cleanup_result.pubsub_sk_list = []
-        cleanup_result.pubsub_total_messages = 0
-
-        # We will find all subscribers that did not interact with us for at least that many seconds
-        delta_not_interacted = int(os.environ.get('ZATO_SCHED_DELTA_NOT_INTERACT') or 0)
-        delta_not_interacted = delta_not_interacted or CleanupConfig.DeltaNotInteracted
-
-        # Start of our cleanup procedure
-        now = datetime.utcnow()
-
-        # Turn hours into a UNIX time object, as expected by the database
-        max_last_dt    = now - timedelta(seconds=delta_not_interacted)
-        max_last_float = datetime_to_ms(max_last_dt)
-
-        max_last = MaxLast()
-        max_last.as_float    = max_last_float
-        max_last.as_datetime = max_last_dt
+        # This is a list of all the pub_msg_id objects that we are going to remove from subsciption queues.
+        # It does not contain messages residing in topics that do not have any subscribers.
+        # Currently, we populate this list but we do not use it for anything.
+        queue_msg_list = []
 
         # Find all subscribers in the database ..
-        subs = self._get_subscriptions(task_id, max_last, delta_not_interacted)
+        subs = self._get_subscriptions(task_id, delta_ctx)
         len_subs = len(subs)
 
-        # .. and clean up them all, if needed.
+        # .. and clean up their queues, if any were found ..
         for sub in subs:
             sub_key = sub['sub_key']
             endpoint_name = sub['endpoint_name']
-            self.logger.info('%s: Cleaning up subscription %s/%s; %s -> %s', task_id, sub['idx'], len_subs, sub_key, endpoint_name)
-            self._cleanup_sub(task_id, cleanup_result, max_last, sub)
+            self.logger.info('%s: Cleaning up subscription %s/%s; %s -> %s',
+                task_id, sub['idx'], len_subs, sub_key, endpoint_name)
+
+            # Clean up this sub_key and get the list of message IDs found for it ..
+            sk_queue_msg_list = self._cleanup_sub(task_id, cleanup_result, delta_ctx, sub)
+
+            # .. append the per-sub_key message to the overall list of messages found for subscribers.
+            queue_msg_list.extend(sk_queue_msg_list)
+
+        self.logger.info(f'{task_id}: Cleaned up %d pub/sub queue message(s) from sk_list: %s',
+            cleanup_result.pubsub_total_messages, cleanup_result.pubsub_sk_list)
+
+        return cleanup_result
+
+# ################################################################################################################################
+
+    def cleanup_pub_sub(
+        self,
+        task_id:'str',
+        cleanup_result:'CleanupResult',
+        delta_ctx:'DeltaCtx'
+        ) -> 'CleanupResult':
+
+        # Now, we can proceed and delete the actual message because we know that their
+        # queue references are already deleted.
+        self._cleanup_sub_queue_messages(task_id, cleanup_result, delta_ctx)
 
         #
         # TODO: Add cleanup of queue messages that have no subscribers because
@@ -303,18 +322,43 @@ class CleanupManager:
         # This uniquely identifies our run
         run_id = f'{now.year}{now.month}{now.day}-{now.hour:02}{now.minute:02}{now.second:02}'
 
+        # Response to produce
+        cleanup_result = CleanupResult()
+        cleanup_result.run_id = run_id
+        cleanup_result.pubsub_sk_list = []
+        cleanup_result.pubsub_total_messages = 0
+
+        # We will find all objects, such as subscribers or messages
+        # that did not interact with us for at least that many seconds
+        delta_not_interacted = int(os.environ.get('ZATO_SCHED_DELTA_NOT_INTERACT') or 0)
+        delta_not_interacted = delta_not_interacted or CleanupConfig.DeltaNotInteracted
+
+        # Turn hours into a UNIX time object, as expected by the database
+        max_last_dt    = now - timedelta(seconds=delta_not_interacted)
+        max_last_float = datetime_to_ms(max_last_dt)
+
+        # This is reusable across tasks
+        delta_ctx = DeltaCtx()
+        delta_ctx.max_last_as_float    = max_last_float
+        delta_ctx.max_last_as_datetime = max_last_dt
+        delta_ctx.delta_not_interacted = delta_not_interacted
+
         self.logger.info('Starting cleanup tasks: %s', run_id)
 
         # IDs for each of the tasks
         clean_pubsub_id = f'CleanSub-{run_id}'
 
         # Clean up old pub/sub objects
-        pubsub_cleanup_result = self.cleanup_pub_sub(clean_pubsub_id)
+        cleanup_result = self.cleanup_pub_sub(clean_pubsub_id, cleanup_result, delta_ctx)
 
-        self.logger.info(f'{clean_pubsub_id}: Processed %d message(s) from sk_list: %s',
-            pubsub_cleanup_result.pubsub_total_messages, pubsub_cleanup_result.pubsub_sk_list)
+        # At this point, we have already cleaned up all the old pub/sub messages
+        # which means that we can clean up any old WebSocket connections. We do not need
+        # to consider the that deleting them will trigger deletions of messages
+        # because the latter already no longer exist.
 
-        return pubsub_cleanup_result
+        # TODO: Clean up WSX connections
+
+        return cleanup_result
 
 # ################################################################################################################################
 # ################################################################################################################################
