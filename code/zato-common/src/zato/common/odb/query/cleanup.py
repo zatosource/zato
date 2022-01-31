@@ -35,7 +35,10 @@ QueueTable = PubSubEndpointEnqueuedMessage.__table__
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_subscriptions(session:'SASession', max_last_interaction_time:'float') -> 'anylist':
+def get_subscriptions(task_id:'str', session:'SASession', max_last_interaction_time:'float') -> 'anylist':
+
+    logger.info('%s: Getting subscriptions with max_last_interaction_time `%s`', task_id, max_last_interaction_time)
+
     result = session.query(
         PubSubSubscription.id,
         PubSubSubscription.sub_key,
@@ -58,7 +61,9 @@ def get_subscriptions(session:'SASession', max_last_interaction_time:'float') ->
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_messages(session:'SASession', max_last_interaction_time:'float') -> 'anylist':
+def get_messages(task_id:'str', session:'SASession', topic_id:'int', topic_name:'str') -> 'anylist':
+
+    logger.info('%s: Getting messages for topic `%s`', task_id, topic_name)
 
     in_how_many_queues = func.count(PubSubEndpointEnqueuedMessage.pub_msg_id).label('in_how_many_queues')
 
@@ -69,6 +74,7 @@ def get_messages(session:'SASession', max_last_interaction_time:'float') -> 'any
         group_by(PubSubMessage.pub_msg_id).\
         outerjoin(PubSubEndpointEnqueuedMessage, PubSubMessage.id==PubSubEndpointEnqueuedMessage.pub_msg_id).\
         having(in_how_many_queues == 0).\
+        filter(PubSubMessage.topic_id == topic_id).\
         all()
 
     return result
