@@ -63,6 +63,7 @@ class CreateTopic(ServerAwareCommand):
             'pub_buffer_size_gd': _default.PUB_BUFFER_SIZE_GD,
             'task_sync_interval': _default.TASK_SYNC_INTERVAL,
             'task_delivery_interval': _default.TASK_DELIVERY_INTERVAL,
+            'delete_at': 60,
         }
 
         response = self.zato_client.invoke(**{
