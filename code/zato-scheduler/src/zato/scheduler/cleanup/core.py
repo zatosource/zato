@@ -18,6 +18,7 @@ cloghandler = cloghandler # For pyflakes
 import os
 from contextlib import closing
 from datetime import datetime, timedelta
+from json import loads
 from logging import captureWarnings, getLogger
 
 # Zato
@@ -25,6 +26,8 @@ from zato.broker.client import BrokerClient
 from zato.common.broker_message import SCHEDULER
 from zato.common.odb.query.cleanup import delete_queue_messages, get_subscriptions
 from zato.common.odb.query.pubsub.delivery import get_sql_msg_ids_by_sub_key
+from zato.common.odb.query.pubsub.topic import get_topics_basic_data
+from zato.common.typing_ import cast_
 from zato.common.util.api import grouper, set_up_logging, tabulate_dictlist
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms
 from zato.scheduler.util import set_up_zato_client
@@ -45,13 +48,15 @@ if 0:
 class DeltaCtx:
     max_last_as_float:    'float'
     max_last_as_datetime: 'datetime'
+    topic_min_retention:  'int'
     delta_not_interacted: 'int'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class CleanupConfig:
-    DeltaNotInteracted = 86_400 # In seconds, 60 seconds * 60 minutes * 24 hours = 86_400 seconds
+    TopicRetentionTime = 86_400 # In seconds, 60 seconds * 60 minutes * 24 hours = 86_400 seconds
+    DeltaNotInteracted = 86_400 # (As above)
     MsgDeleteBatchSize = 50
 
 # ################################################################################################################################
@@ -59,6 +64,7 @@ class CleanupConfig:
 
 class CleanupResult:
     run_id: 'str'
+    all_topics: 'int'
     pubsub_sk_list:  'strlist'
     pubsub_total_queue_messages: 'int'
 
@@ -294,12 +300,51 @@ class CleanupManager:
 
 # ################################################################################################################################
 
+    def _get_topics(self, task_id:'str', delta_ctx:'DeltaCtx') -> 'dictlist':
+
+        # Always create a new session so as not to block the database
+        with closing(self.config.odb.session()) as session: # type: ignore
+            result = get_topics_basic_data(session)
+
+        # Convert SQL results to a dict that we can easily work with
+        result = [elem._asdict() for elem in result]
+
+        # Extrat minimum retention time from each topic. If it is not found, use the default one.
+        for topic_dict in result:
+
+            # This is always a dict
+            topic_dict = cast_('dict', topic_dict)
+
+            # Remove all the opaque attributes because we need only the minimum retention time
+            opaque = topic_dict.pop('opaque1')
+            if opaque:
+                opaque = loads(opaque)
+            else:
+                opaque = opaque or {}
+
+            # Not all topics will have the minimum retention time configured,
+            # in which case we use the relevant value from our configuration object.
+            min_retention_time = opaque.get('min_retention_time') or delta_ctx.topic_min_retention
+
+            # Populate it for our caller's benefit
+            topic_dict['min_retention_time'] = min_retention_time
+
+        self.logger.info('%s: Topics found -> %s', task_id, result)
+
+        return result
+
+# ################################################################################################################################
+
     def _cleanup_message_objects(
         self,
         task_id:'str',
         cleanup_result:'CleanupResult',
         delta_ctx:'DeltaCtx'
         ) -> 'CleanupResult':
+
+        # First, get all the topics that we can process
+        topics = self._get_topics(task_id, delta_ctx)
+        topics
 
         return cleanup_result
 
@@ -313,7 +358,7 @@ class CleanupManager:
         ) -> 'CleanupResult':
 
         # First, clean up all the old messages from subscription queues ..
-        self._cleanup_sub_queue_messages(task_id, cleanup_result, delta_ctx)
+        # self._cleanup_sub_queue_messages(task_id, cleanup_result, delta_ctx)
 
         # Now, we can proceed and delete the actual message objects because we know that their
         # queue references are already deleted.
@@ -339,13 +384,16 @@ class CleanupManager:
         # Response to produce
         cleanup_result = CleanupResult()
         cleanup_result.run_id = run_id
+        cleanup_result.all_topics = 0
         cleanup_result.pubsub_sk_list = []
         cleanup_result.pubsub_total_queue_messages = 0
 
         # We will find all objects, such as subscribers or messages
         # that did not interact with us for at least that many seconds
-        delta_not_interacted = int(os.environ.get('ZATO_SCHED_DELTA_NOT_INTERACT') or 0)
-        delta_not_interacted = delta_not_interacted or CleanupConfig.DeltaNotInteracted
+        delta = int(os.environ.get('ZATO_SCHED_DELTA') or 0)
+
+        topic_min_retention  = delta or CleanupConfig.TopicRetentionTime
+        delta_not_interacted = delta or CleanupConfig.DeltaNotInteracted
 
         # Turn hours into a UNIX time object, as expected by the database
         max_last_dt    = now - timedelta(seconds=delta_not_interacted)
@@ -355,6 +403,7 @@ class CleanupManager:
         delta_ctx = DeltaCtx()
         delta_ctx.max_last_as_float    = max_last_float
         delta_ctx.max_last_as_datetime = max_last_dt
+        delta_ctx.topic_min_retention  = topic_min_retention
         delta_ctx.delta_not_interacted = delta_not_interacted
 
         self.logger.info('Starting cleanup tasks: %s', run_id)

@@ -39,6 +39,8 @@ _default = PUBSUB.DEFAULT
 sec_name = _default.TEST_SECDEF_NAME
 username = _default.TEST_USERNAME
 
+delta_environ_key = 'ZATO_SCHED_DELTA'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -66,7 +68,7 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
         delta = 1
 
         # Export a variable with delta as required by the underlying cleanup implementation
-        os.environ['ZATO_SCHED_DELTA_NOT_INTERACT'] = str(delta)
+        os.environ[delta_environ_key] = str(delta)
 
         # Run the cleanup procedure now
         cleanup_result = run_cleanup()
@@ -76,7 +78,7 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def test_cleanup_old_subscriptions_one_sub_key(self):
+    def xtest_cleanup_old_subscriptions_one_sub_key(self):
 
         # Filter our warnings coming from requests
         import warnings
@@ -111,7 +113,7 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
         delta = 1
 
         # Export a variable with delta as required by the underlying cleanup implementation
-        os.environ['ZATO_SCHED_DELTA_NOT_INTERACT'] = str(delta)
+        os.environ[delta_environ_key] = str(delta)
 
         # Sleep a little bit longer to make sure that we actually exceed the delta
         sleep_extra = delta * 0.1
