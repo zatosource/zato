@@ -71,7 +71,7 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
         # Run the cleanup procedure now
         cleanup_result = run_cleanup()
 
-        self.assertEqual(cleanup_result.pubsub_total_messages, 0)
+        self.assertEqual(cleanup_result.pubsub_total_queue_messages, 0)
         self.assertListEqual(cleanup_result.pubsub_sk_list, [])
 
 # ################################################################################################################################
@@ -120,7 +120,7 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
         # Run the cleanup procedure now
         cleanup_result = run_cleanup()
 
-        self.assertEqual(cleanup_result.pubsub_total_messages, len_messages)
+        self.assertEqual(cleanup_result.pubsub_total_queue_messages, len_messages)
         self.assertListEqual(cleanup_result.pubsub_sk_list, [sub_key])
 
         # The cleanup procedure invoked the server which in turn deleted our subscription,
