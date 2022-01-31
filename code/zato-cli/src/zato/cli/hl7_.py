@@ -16,7 +16,6 @@ import sys
 from zato.cli import ZatoCommand
 from zato.hl7.mllp.client import send_data as send_mllp_data
 
-
 # ################################################################################################################################
 
 class MLLPSend(ZatoCommand):
