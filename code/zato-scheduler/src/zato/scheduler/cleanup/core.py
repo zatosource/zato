@@ -57,8 +57,8 @@ class CleanupConfig:
 # ################################################################################################################################
 
 class CleanupResult:
-    sk_list:  'strlist'
-    total_messages: int
+    pubsub_sk_list:  'strlist'
+    pubsub_total_messages: int
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -111,7 +111,7 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _get_subscriptions(self, max_last:'MaxLast', delta_not_interacted:'int') -> 'anylist':
+    def _get_subscriptions(self, task_id:'str', max_last:'MaxLast', delta_not_interacted:'int') -> 'anylist':
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
@@ -142,18 +142,18 @@ class CleanupManager:
 
         suffix = self._get_suffix(out)
 
-        self.logger.info('CleanSub: Returning %s subscription%swith last interaction time older than %s (delta: %s seconds)',
-            len(out), suffix, max_last.as_datetime, delta_not_interacted)
+        self.logger.info('%s: Returning %s subscription%swith last interaction time older than %s (delta: %s seconds)',
+            task_id, len(out), suffix, max_last.as_datetime, delta_not_interacted)
 
         if out:
             table = tabulate_dictlist(out)
-            self.logger.info('CleanSub: ** Subscriptions to clean up **\n%s', table)
+            self.logger.info('%s: ** Subscriptions to clean up **\n%s', task_id, table)
 
         return out
 
 # ################################################################################################################################
 
-    def _cleanup_msg_list(self, cleanup_result:'CleanupResult', sub_key:'str', msg_list:'dictlist') -> 'None':
+    def _cleanup_msg_list(self, task_id:'str', cleanup_result:'CleanupResult', sub_key:'str', msg_list:'dictlist') -> 'None':
 
         batch_size = CleanupConfig.MsgDeleteBatchSize
 
@@ -162,8 +162,8 @@ class CleanupManager:
         len_groups = len(groups)
 
         suffix = self._get_suffix(groups, needs_space=False)
-        self.logger.info('CleanSub: Message(s) for `%s` turned into %s group%s, batch_size:%s',
-            sub_key, len_groups, suffix, batch_size)
+        self.logger.info('%s: Message(s) for `%s` turned into %s group%s, batch_size:%s',
+            task_id, sub_key, len_groups, suffix, batch_size)
 
         # Note that messages for each subscriber are deleted under a new session
         with closing(self.config.odb.session()) as session: # type: ignore
@@ -175,7 +175,7 @@ class CleanupManager:
                 msg_id_list = [elem['pub_msg_id'] for elem in group if elem]
 
                 # .. log what we are about to do ..
-                self.logger.info('CleanSub: Deleting group %s/%s (%s)', idx, len_groups, sub_key)
+                self.logger.info('%s: Deleting group %s/%s (%s)', task_id, idx, len_groups, sub_key)
 
                 # .. delete the group ..
                 delete_queue_messages(session, msg_id_list)
@@ -184,20 +184,20 @@ class CleanupManager:
                 session.commit()
 
                 # .. store for later use ..
-                cleanup_result.total_messages += len(msg_id_list)
+                cleanup_result.pubsub_total_messages += len(msg_id_list)
 
                 # .. and confirm that we did it.
-                self.logger.info('CleanSub: Deleted  group %s/%s (%s)', idx, len_groups, sub_key)
+                self.logger.info('%s: Deleted  group %s/%s (%s)', task_id, idx, len_groups, sub_key)
 
 # ################################################################################################################################
 
-    def _cleanup_sub(self, cleanup_result:'CleanupResult', max_last:'MaxLast', sub:'stranydict') -> 'None':
+    def _cleanup_sub(self, task_id:'str', cleanup_result:'CleanupResult', max_last:'MaxLast', sub:'stranydict') -> 'None':
 
         # Local aliases
         sub_key = sub['sub_key']
 
-        self.logger.info('CleanSub: ---------------')
-        self.logger.info('CleanSub: Looking up queue messages for %s', sub_key)
+        self.logger.info('%s: ---------------', task_id)
+        self.logger.info('%s: Looking up queue messages for %s', task_id, sub_key)
 
         # We look up all the messages in the database which is why the last_sql_run
         # needs to be set to a value that will be always matched
@@ -220,13 +220,13 @@ class CleanupManager:
         result = [elem._asdict() for elem in result]
 
         suffix = self._get_suffix(result)
-        self.logger.info('CleanSub: Found %s message%sfor sub_key `%s` (ext: %s)',
-            len(result), suffix, sub_key, sub['ext_client_id'])
+        self.logger.info('%s: Found %s message%sfor sub_key `%s` (ext: %s)',
+            task_id, len(result), suffix, sub_key, sub['ext_client_id'])
 
         if result:
             table = tabulate_dictlist(result)
-            self.logger.debug('CleanSub: ** Messages to clean up for sub_key `%s` **\n%s', sub_key, table)
-            self._cleanup_msg_list(cleanup_result, sub_key, result)
+            self.logger.debug('%s: ** Messages to clean up for sub_key `%s` **\n%s', task_id, sub_key, table)
+            self._cleanup_msg_list(task_id, cleanup_result, sub_key, result)
 
         # At this point, we have already deleted all the enqueued messages for all the subscribers
         # that we have not seen in DeltaNotInteracted hours. It means that we can proceed now
@@ -238,7 +238,7 @@ class CleanupManager:
         # messages for that subscribers because we have just deleted them (or, possibly, a few more will have been enqueued
         # by the time the server receives our request) which means that the server's action will not cascade
         # to many rows in the queue table which in turn means that the database will not block for a long time.
-        self.logger.info('CleanSub: Notifying server to delete sub_key `%s`', sub_key)
+        self.logger.info('%s: Notifying server to delete sub_key `%s`', task_id, sub_key)
 
         self.broker_client.invoke_async({
             'service': 'zato.pubsub.endpoint.delete-endpoint-queue',
@@ -249,16 +249,16 @@ class CleanupManager:
         }, from_scheduler=True)
 
         # Now, we can append the sub_key to the list of what has been processed
-        cleanup_result.sk_list.append(sub_key)
+        cleanup_result.pubsub_sk_list.append(sub_key)
 
 # ################################################################################################################################
 
-    def cleanup_pub_sub(self) -> 'CleanupResult':
+    def cleanup_pub_sub(self, task_id:'str') -> 'CleanupResult':
 
         # Response to produce
         cleanup_result = CleanupResult()
-        cleanup_result.sk_list = []
-        cleanup_result.total_messages = 0
+        cleanup_result.pubsub_sk_list = []
+        cleanup_result.pubsub_total_messages = 0
 
         # We will find all subscribers that did not interact with us for at least that many seconds
         delta_not_interacted = int(os.environ.get('ZATO_SCHED_DELTA_NOT_INTERACT') or 0)
@@ -276,15 +276,15 @@ class CleanupManager:
         max_last.as_datetime = max_last_dt
 
         # Find all subscribers in the database ..
-        subs = self._get_subscriptions(max_last, delta_not_interacted)
+        subs = self._get_subscriptions(task_id, max_last, delta_not_interacted)
         len_subs = len(subs)
 
         # .. and clean up them all, if needed.
         for sub in subs:
             sub_key = sub['sub_key']
             endpoint_name = sub['endpoint_name']
-            self.logger.info('CleanSub: Cleaning up subscription %s/%s; %s -> %s', sub['idx'], len_subs, sub_key, endpoint_name)
-            self._cleanup_sub(cleanup_result, max_last, sub)
+            self.logger.info('%s: Cleaning up subscription %s/%s; %s -> %s', task_id, sub['idx'], len_subs, sub_key, endpoint_name)
+            self._cleanup_sub(task_id, cleanup_result, max_last, sub)
 
         #
         # TODO: Add cleanup of queue messages that have no subscribers because
@@ -297,18 +297,29 @@ class CleanupManager:
 
     def run(self) -> 'CleanupResult':
 
+        # Local aliases
+        now = datetime.utcnow()
+
+        # This uniquely identifies our run
+        run_id = f'{now.year}{now.month}{now.day}-{now.hour:02}{now.minute:02}{now.second:02}'
+
+        self.logger.info('Starting cleanup tasks: %s', run_id)
+
+        # IDs for each of the tasks
+        clean_pubsub_id = f'CleanSub-{run_id}'
+
         # Clean up old pub/sub objects
-        cleanup_result = self.cleanup_pub_sub()
+        pubsub_cleanup_result = self.cleanup_pub_sub(clean_pubsub_id)
 
-        self.logger.info('CleanSub: Processed %d message(s) from sk_list: %s',
-            cleanup_result.total_messages, cleanup_result.sk_list)
+        self.logger.info(f'{clean_pubsub_id}: Processed %d message(s) from sk_list: %s',
+            pubsub_cleanup_result.pubsub_total_messages, pubsub_cleanup_result.pubsub_sk_list)
 
-        return cleanup_result
+        return pubsub_cleanup_result
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def run_cleanup():
+def run_cleanup() -> 'CleanupResult':
 
     # stdlib
     import sys
@@ -330,8 +341,9 @@ def run_cleanup():
     cleanup_manager = CleanupManager(repo_location)
     cleanup_manager.init()
 
-    # .. if we are here, it means that we can start our work.
-    return cleanup_manager.run()
+    # .. if we are here, it means that we can start our work ..
+    result = cleanup_manager.run()
+    return result
 
 # ################################################################################################################################
 # ################################################################################################################################
