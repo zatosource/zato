@@ -23,15 +23,15 @@ from json import loads
 from logging import captureWarnings, getLogger
 
 # gevent
-# from gevent import sleep
+from gevent import sleep
 
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common.broker_message import SCHEDULER
-from zato.common.odb.query.cleanup import delete_queue_messages, get_messages, get_subscriptions
+from zato.common.odb.query.cleanup import delete_queue_messages, delete_topic_messages, get_messages, get_subscriptions
 from zato.common.odb.query.pubsub.delivery import get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.topic import get_topics_basic_data
-from zato.common.typing_ import cast_
+from zato.common.typing_ import cast_, list_
 from zato.common.util.api import grouper, set_up_logging, tabulate_dictlist
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms
 from zato.scheduler.util import set_up_zato_client
@@ -45,6 +45,11 @@ if 0:
     from zato.common.typing_ import any_, anylist, dictlist, stranydict, strlist
     from zato.scheduler.server import Config
     SASession = SASession
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+topic_ctx_list = list_['TopicCtx']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,6 +73,19 @@ class DeltaCtx:
 class GroupsCtx:
     items: 'anylist'
     len_items: 'int'
+    len_groups: 'int'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class TopicCtx:
+    id:   'int'
+    name: 'str'
+    messages: 'dictlist'
+    groups_ctx: 'GroupsCtx'
+    len_messages: 'int'
+    min_retention_time: 'int'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,6 +94,7 @@ class CleanupConfig:
     TopicRetentionTime = 86_400 # In seconds, 60 seconds * 60 minutes * 24 hours = 86_400 seconds
     DeltaNotInteracted = 86_400 # (As above)
     DeleteBatchSize    = 50
+    DeleteSleepTime    = 0.2    # In seconds
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -85,6 +104,7 @@ class CleanupResult:
     all_topics: 'int'
     pubsub_sk_list:  'strlist'
     pubsub_total_queue_messages: 'int'
+    topics_cleaned_up: 'topic_ctx_list'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -137,7 +157,7 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _build_groups(self, task_id:'str', label:'str', msg_list:'dictlist', group_size:'int') -> 'GroupsCtx':
+    def _build_groups(self, task_id:'str', label:'str', msg_list:'dictlist', group_size:'int', ctx_id:'str') -> 'GroupsCtx':
         out = GroupsCtx()
 
         groups = grouper(group_size, msg_list)
@@ -146,9 +166,11 @@ class CleanupManager:
 
         out.items = groups
         out.len_items = len_groups
+        out.len_groups = len_groups
 
         suffix = self._get_suffix(groups, needs_space=False)
-        self.logger.info('%s: %s turned into %s group%s, group_size:%s', task_id, label, len_groups, suffix, group_size)
+        self.logger.info('%s: %s %s turned into %s group%s, group_size:%s (%s)',
+            task_id, len(msg_list), label, len_groups, suffix, group_size, ctx_id)
 
         return out
 
@@ -199,7 +221,7 @@ class CleanupManager:
     def _cleanup_msg_list(self, task_id:'str', cleanup_result:'CleanupResult', sub_key:'str', msg_list:'dictlist') -> 'None':
 
         self.logger.info('%s: Building groups for sub_key -> %s', task_id, sub_key)
-        groups_ctx = self._build_groups(task_id, 'Queue message(s)', msg_list, CleanupConfig.DeleteBatchSize)
+        groups_ctx = self._build_groups(task_id, 'queue message(s)', msg_list, CleanupConfig.DeleteBatchSize, sub_key)
 
         # Note that messages for each subscriber are deleted under a new session
         with closing(self.config.odb.session()) as session: # type: ignore
@@ -211,7 +233,7 @@ class CleanupManager:
                 msg_id_list = [elem['pub_msg_id'] for elem in group if elem]
 
                 # .. log what we are about to do ..
-                self.logger.info('%s: Deleting group %s/%s (%s)', task_id, idx, groups_ctx.len_items, sub_key)
+                self.logger.info('%s: Deleting queue message group %s/%s (%s)', task_id, idx, groups_ctx.len_items, sub_key)
 
                 # .. delete the group ..
                 delete_queue_messages(session, msg_id_list)
@@ -222,8 +244,11 @@ class CleanupManager:
                 # .. store for later use ..
                 cleanup_result.pubsub_total_queue_messages += len(msg_id_list)
 
-                # .. and confirm that we did it.
+                # .. confirm that we did it ..
                 self.logger.info('%s: Deleted  group %s/%s (%s)', task_id, idx, groups_ctx.len_items, sub_key)
+
+                # .. and sleep for a moment so as not to overwhelm the database.
+                sleep(CleanupConfig.DeleteSleepTime)
 
 # ################################################################################################################################
 
@@ -328,7 +353,16 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _get_topics(self, task_id:'str', delta_ctx:'DeltaCtx') -> 'dictlist':
+    def _get_topics(self, task_id:'str', delta_ctx:'DeltaCtx') -> topic_ctx_list:
+
+        # Our response to produce
+        out = []
+
+        # Topics found represented as dicts, not TopicCtx objects.
+        # We use it for logging purposes because otherwise TopicCtx objects
+        # would log their still empty information about messages, which could be misleading,
+        # as though there were no messages for topics.
+        topics_found = []
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
@@ -353,36 +387,115 @@ class CleanupManager:
             # Not all topics will have the minimum retention time configured,
             # in which case we use the relevant value from our configuration object.
             min_retention_time = opaque.get('min_retention_time') or delta_ctx.topic_min_retention
-
-            # Populate it for our caller's benefit
             topic_dict['min_retention_time'] = min_retention_time
 
-        self.logger.info('%s: Topics found -> %s', task_id, result)
+            # Add the now ready topic dict to a list that the logger will use later
+            topics_found.append(topic_dict)
 
-        return result
+            # Populate the result for our caller's benefit
+            topic_ctx = TopicCtx()
+            topic_ctx.id   = topic_dict['id']
+            topic_ctx.name = topic_dict['name']
+            topic_ctx.min_retention_time = topic_dict['min_retention_time']
+            topic_ctx.messages = []
+            topic_ctx.len_messages = 0
+
+            out.append(topic_ctx)
+
+        self.logger.info('%s: Topics found -> %s', task_id, topics_found)
+
+        return out
 
 # ################################################################################################################################
 
-    def _cleanup_message_objects(
+    def _delete_messages_from_topic_group(self, task_id:'str', topic_ctx:'TopicCtx') -> 'None':
+
+        # Always create a new session so as not to block the database
+        with closing(self.config.odb.session()) as session: # type: ignore
+
+            for idx, group in enumerate(topic_ctx.groups_ctx.items, 1):
+
+                # Local alias ..
+                groups_ctx = topic_ctx.groups_ctx
+
+                # .. log what we are about to do ..
+                self.logger.info('%s: Deleting topic message group %s/%s (%s)',
+                    task_id, idx, groups_ctx.len_groups, topic_ctx.name)
+
+                # .. extract msg IDs from each dictionary in the group ..
+                msg_id_list = [elem['pub_msg_id'] for elem in group if elem]
+
+                # .. delete the group ..
+                delete_topic_messages(session, msg_id_list)
+
+                # .. make sure to commit the progress of the transaction ..
+                session.commit()
+
+                # .. sleep for a moment so as not to overwhelm the database ..
+                sleep(CleanupConfig.DeleteSleepTime)
+
+# ################################################################################################################################
+
+    def _delete_messages_from_topics(
+        self,
+        task_id:'str',
+        topics_to_clean_up: 'topic_ctx_list'
+        ) -> 'None':
+
+        # Iterate through each topic to clean it up
+        for topic_ctx in topics_to_clean_up:
+
+            # .. og what we are about to do ..
+            self.logger.info('%s: Cleaning up %s message(s) from topic %s', task_id, topic_ctx.len_messages, topic_ctx.name)
+
+            # .. assign to each topics individual groups of messages to be deleted ..
+            topic_ctx.groups_ctx = self._build_groups(
+                task_id, 'topic message(s)', topic_ctx.messages, CleanupConfig.DeleteBatchSize, topic_ctx.name)
+
+            # .. and clean it up now.
+            self._delete_messages_from_topic_group(task_id, topic_ctx)
+
+# ################################################################################################################################
+
+    def _cleanup_topics(
         self,
         task_id:'str',
         cleanup_result:'CleanupResult',
         delta_ctx:'DeltaCtx'
-        ) -> 'CleanupResult':
+        ):
+
+        # A dictionary mapping all the topics that have any messages to be deleted
+        topics_to_clean_up = [] # type: topic_ctx_list
 
         # First, get all the topics that we can process
         topics = self._get_topics(task_id, delta_ctx)
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
-            for topic in topics:
-                messages_for_topic = get_messages(task_id, session, topic['id'], topic['name'])
-                self.logger.info('%s: Found %d message(s) for topic %s', task_id, len(messages_for_topic), topic['name'])
 
-        # Convert SQL results to a dict that we can easily work with
-        # result = [elem._asdict() for elem in result]
+            for topic_ctx in topics:
 
-        return cleanup_result
+                # Look up all the messages that can be deleted from that topic in the database
+                messages_for_topic = get_messages(task_id, session, topic_ctx.id, topic_ctx.name)
+
+                # .. convert the messages to dicts so as not to keep references to database objects ..
+                messages_for_topic = [elem._asdict() for elem in messages_for_topic]
+
+                # .. populate the context object with the newest information ..
+                topic_ctx.messages.extend(messages_for_topic)
+                topic_ctx.len_messages = len(messages_for_topic)
+
+                self.logger.info('%s: Found %d message(s) for topic %s', task_id, topic_ctx.len_messages, topic_ctx.name)
+
+                # Save for later use if there are any messages that can be deleted for that topic
+                if topic_ctx.len_messages:
+                    topics_to_clean_up.append(topic_ctx)
+
+        # Remove messages from all the topics found ..
+        self._delete_messages_from_topics(task_id, topics_to_clean_up)
+
+        # .. and assign the context object for later use, e.g. in tests.
+        cleanup_result.topics_cleaned_up = topics_to_clean_up
 
 # ################################################################################################################################
 
@@ -398,7 +511,7 @@ class CleanupManager:
 
         # Now, we can proceed and delete the actual message objects because we know that their
         # queue references are already deleted.
-        self._cleanup_message_objects(task_id, cleanup_result, delta_ctx)
+        self._cleanup_topics(task_id, cleanup_result, delta_ctx)
 
         #
         # TODO: Add cleanup of queue messages that have no subscribers,
