@@ -53,7 +53,7 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def xtest_cleanup_old_subscriptions_no_sub_keys(self):
+    def test_cleanup_old_subscriptions_no_sub_keys(self):
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_test
