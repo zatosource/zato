@@ -10,10 +10,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import delete, or_
+from sqlalchemy import delete, func, or_
 
 # Zato
-from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubSubscription
+from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,6 +51,24 @@ def get_subscriptions(session:'SASession', max_last_interaction_time:'float') ->
             PubSubSubscription.last_interaction_time.is_(None),
         )).\
         order_by(PubSubSubscription.last_interaction_time.asc()).\
+        all()
+
+    return result
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_mesages(session:'SASession', max_last_interaction_time:'float') -> 'anylist':
+
+    in_how_many_queues = func.count(PubSubEndpointEnqueuedMessage.pub_msg_id).label('in_how_many_queues')
+
+    result = session.query(
+        PubSubMessage.pub_msg_id,
+        in_how_many_queues,
+        ).\
+        group_by(PubSubMessage.pub_msg_id).\
+        outerjoin(PubSubEndpointEnqueuedMessage, PubSubMessage.id==PubSubEndpointEnqueuedMessage.pub_msg_id).\
+        having(in_how_many_queues == 0).\
         all()
 
     return result
