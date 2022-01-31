@@ -17,14 +17,18 @@ cloghandler = cloghandler # For pyflakes
 # stdlib
 import os
 from contextlib import closing
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from json import loads
 from logging import captureWarnings, getLogger
 
+# gevent
+# from gevent import sleep
+
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common.broker_message import SCHEDULER
-from zato.common.odb.query.cleanup import delete_queue_messages, get_subscriptions
+from zato.common.odb.query.cleanup import delete_queue_messages, get_messages, get_subscriptions
 from zato.common.odb.query.pubsub.delivery import get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.topic import get_topics_basic_data
 from zato.common.typing_ import cast_
@@ -45,11 +49,25 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass(init=False)
 class DeltaCtx:
-    max_last_as_float:    'float'
-    max_last_as_datetime: 'datetime'
+
     topic_min_retention:  'int'
     delta_not_interacted: 'int'
+
+    not_iteracted_max_last_as_float:    'float'
+    not_iteracted_max_last_as_datetime: 'datetime'
+
+    topic_min_retention_as_float:    'float'
+    topic_min_retention_as_datetime: 'datetime'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class GroupsCtx:
+    items: 'anylist'
+    len_items: 'int'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,7 +75,7 @@ class DeltaCtx:
 class CleanupConfig:
     TopicRetentionTime = 86_400 # In seconds, 60 seconds * 60 minutes * 24 hours = 86_400 seconds
     DeltaNotInteracted = 86_400 # (As above)
-    MsgDeleteBatchSize = 50
+    DeleteBatchSize    = 50
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -119,11 +137,28 @@ class CleanupManager:
 
 # ################################################################################################################################
 
+    def _build_groups(self, task_id:'str', label:'str', msg_list:'dictlist', group_size:'int') -> 'GroupsCtx':
+        out = GroupsCtx()
+
+        groups = grouper(group_size, msg_list)
+        groups = list(groups)
+        len_groups = len(groups)
+
+        out.items = groups
+        out.len_items = len_groups
+
+        suffix = self._get_suffix(groups, needs_space=False)
+        self.logger.info('%s: %s turned into %s group%s, group_size:%s', task_id, label, len_groups, suffix, group_size)
+
+        return out
+
+# ################################################################################################################################
+
     def _get_subscriptions(self, task_id:'str', delta_ctx:'DeltaCtx') -> 'anylist':
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
-            result = get_subscriptions(session, delta_ctx.max_last_as_float)
+            result = get_subscriptions(task_id, session, delta_ctx.not_iteracted_max_last_as_float)
 
         # Convert SQL results to a dict that we can easily work with
         result = [elem._asdict() for elem in result]
@@ -151,7 +186,7 @@ class CleanupManager:
         suffix = self._get_suffix(out)
 
         self.logger.info('%s: Returning %s subscription%swith last interaction time older than %s (delta: %s seconds)',
-            task_id, len(out), suffix, delta_ctx.max_last_as_datetime, delta_ctx.delta_not_interacted)
+            task_id, len(out), suffix, delta_ctx.not_iteracted_max_last_as_datetime, delta_ctx.delta_not_interacted)
 
         if out:
             table = tabulate_dictlist(out)
@@ -163,27 +198,20 @@ class CleanupManager:
 
     def _cleanup_msg_list(self, task_id:'str', cleanup_result:'CleanupResult', sub_key:'str', msg_list:'dictlist') -> 'None':
 
-        batch_size = CleanupConfig.MsgDeleteBatchSize
-
-        groups = grouper(batch_size, msg_list)
-        groups = list(groups)
-        len_groups = len(groups)
-
-        suffix = self._get_suffix(groups, needs_space=False)
-        self.logger.info('%s: Message(s) for `%s` turned into %s group%s, batch_size:%s',
-            task_id, sub_key, len_groups, suffix, batch_size)
+        self.logger.info('%s: Building groups for sub_key -> %s', task_id, sub_key)
+        groups_ctx = self._build_groups(task_id, 'Queue message(s)', msg_list, CleanupConfig.DeleteBatchSize)
 
         # Note that messages for each subscriber are deleted under a new session
         with closing(self.config.odb.session()) as session: # type: ignore
 
             # Iterate over groups to delete each of them ..
-            for idx, group in enumerate(groups, 1):
+            for idx, group in enumerate(groups_ctx.items, 1):
 
                 # .. extract message IDs from each group ..
                 msg_id_list = [elem['pub_msg_id'] for elem in group if elem]
 
                 # .. log what we are about to do ..
-                self.logger.info('%s: Deleting group %s/%s (%s)', task_id, idx, len_groups, sub_key)
+                self.logger.info('%s: Deleting group %s/%s (%s)', task_id, idx, groups_ctx.len_items, sub_key)
 
                 # .. delete the group ..
                 delete_queue_messages(session, msg_id_list)
@@ -195,7 +223,7 @@ class CleanupManager:
                 cleanup_result.pubsub_total_queue_messages += len(msg_id_list)
 
                 # .. and confirm that we did it.
-                self.logger.info('%s: Deleted  group %s/%s (%s)', task_id, idx, len_groups, sub_key)
+                self.logger.info('%s: Deleted  group %s/%s (%s)', task_id, idx, groups_ctx.len_items, sub_key)
 
 # ################################################################################################################################
 
@@ -214,7 +242,7 @@ class CleanupManager:
 
         # We look up messages up to this point in time, which is equal to the start of our job
         # (in seconds, hence the division, because we go from milliseconds up to seconds).
-        pub_time_max = delta_ctx.max_last_as_float / 1000
+        pub_time_max = delta_ctx.not_iteracted_max_last_as_float / 1000
 
         # We assume there is always one cluster in the database and we can skip its ID
         cluster_id = None
@@ -344,7 +372,15 @@ class CleanupManager:
 
         # First, get all the topics that we can process
         topics = self._get_topics(task_id, delta_ctx)
-        topics
+
+        # Always create a new session so as not to block the database
+        with closing(self.config.odb.session()) as session: # type: ignore
+            for topic in topics:
+                messages_for_topic = get_messages(task_id, session, topic['id'], topic['name'])
+                self.logger.info('%s: Found %d message(s) for topic %s', task_id, len(messages_for_topic), topic['name'])
+
+        # Convert SQL results to a dict that we can easily work with
+        # result = [elem._asdict() for elem in result]
 
         return cleanup_result
 
@@ -358,7 +394,7 @@ class CleanupManager:
         ) -> 'CleanupResult':
 
         # First, clean up all the old messages from subscription queues ..
-        # self._cleanup_sub_queue_messages(task_id, cleanup_result, delta_ctx)
+        self._cleanup_sub_queue_messages(task_id, cleanup_result, delta_ctx)
 
         # Now, we can proceed and delete the actual message objects because we know that their
         # queue references are already deleted.
@@ -396,17 +432,26 @@ class CleanupManager:
         delta_not_interacted = delta or CleanupConfig.DeltaNotInteracted
 
         # Turn hours into a UNIX time object, as expected by the database
-        max_last_dt    = now - timedelta(seconds=delta_not_interacted)
-        max_last_float = datetime_to_ms(max_last_dt)
+
+        not_iteracted_max_last_dt    = now - timedelta(seconds=delta_not_interacted)
+        not_iteracted_max_last_float = datetime_to_ms(not_iteracted_max_last_dt)
+
+        topic_min_retention_dt    = now - timedelta(seconds=topic_min_retention)
+        topic_min_retention_float = datetime_to_ms(topic_min_retention_dt)
 
         # This is reusable across tasks
         delta_ctx = DeltaCtx()
-        delta_ctx.max_last_as_float    = max_last_float
-        delta_ctx.max_last_as_datetime = max_last_dt
+
         delta_ctx.topic_min_retention  = topic_min_retention
         delta_ctx.delta_not_interacted = delta_not_interacted
 
-        self.logger.info('Starting cleanup tasks: %s', run_id)
+        delta_ctx.topic_min_retention_as_float    = topic_min_retention_float
+        delta_ctx.topic_min_retention_as_datetime = topic_min_retention_dt
+
+        delta_ctx.not_iteracted_max_last_as_float    = not_iteracted_max_last_float
+        delta_ctx.not_iteracted_max_last_as_datetime = not_iteracted_max_last_dt
+
+        self.logger.info('Starting cleanup tasks: %s; delta_ctx -> %s', run_id, delta_ctx)
 
         # IDs for each of the tasks
         clean_pubsub_id = f'CleanSub-{run_id}'
