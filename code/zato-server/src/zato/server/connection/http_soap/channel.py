@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 import logging
+import sys
 from datetime import datetime
 from gzip import GzipFile
 from hashlib import sha256
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
 from io import StringIO
-from traceback import format_exc
+from traceback import format_exc, TracebackException
 
 # Django
 from django.http import QueryDict
@@ -29,7 +30,7 @@ from six import PY3
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common.api import CHANNEL, DATA_FORMAT, JSON_RPC, HL7, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
+from zato.common.api import CHANNEL, DATA_FORMAT, JSON_RPC, HL7, HTTP_SOAP, MISC, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE, ZATO_OK
 from zato.common.audit_log import DataReceived, DataSent
 from zato.common.const import ServiceConst
@@ -445,7 +446,13 @@ class RequestDispatcher:
 
                     elif isinstance(e, (BadRequest, ModelValidationError)):
                         status = _status_bad_request
-                        response = e.msg if e.needs_msg else 'Invalid input'
+
+                        # This is the channel that Dashboard uses and we want to return
+                        # all the details in such cases because it is useful during development
+                        if channel_item['name'] == MISC.DefaultAdminInvokeChannel:
+                            response = e.msg
+                        else:
+                            response = e.msg if e.needs_msg else 'Invalid input'
 
                     elif isinstance(e, NotFound):
                         status = _status_not_found
@@ -478,7 +485,17 @@ class RequestDispatcher:
 
                     else:
                         status_code = INTERNAL_SERVER_ERROR
-                        response = e.args if self.return_tracebacks else self.default_error_message
+
+                        # Same comment as in BadRequest, ModelValidationError above
+                        if channel_item['name'] == MISC.DefaultAdminInvokeChannel:
+                            tb = TracebackException.from_exception(e)
+                            tb
+                            response = str(e.args)
+                            response += '\n'
+                            response += _format_exc
+                            response = """⯆⯆⯆ Error ⯆⯆⯆"""
+                        else:
+                            response = e.args if self.return_tracebacks else self.default_error_message
 
                 _exc = _stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
                     add_summary=True, source_lines=20) if _stack_format else _format_exc
