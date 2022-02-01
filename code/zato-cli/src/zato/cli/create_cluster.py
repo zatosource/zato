@@ -345,11 +345,11 @@ class Create(ZatoCommand):
         """
 
         # Zato
-        from zato.common.api import SIMPLE_IO
+        from zato.common.api import MISC, SIMPLE_IO
         from zato.common.odb.model import HTTPSOAP
 
         channel = HTTPSOAP(
-            None, 'admin.invoke.json', True, True, 'channel', 'plain_http',
+            None, MISC.DefaultAdminInvokeChannel, True, True, 'channel', 'plain_http',
             None, '/zato/admin/invoke', None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
             security=admin_invoke_sec)
         session.add(channel)
