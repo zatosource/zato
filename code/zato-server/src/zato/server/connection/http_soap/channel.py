@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -29,7 +29,7 @@ from six import PY3
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common.api import CHANNEL, DATA_FORMAT, JSON_RPC, HL7, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
+from zato.common.api import CHANNEL, DATA_FORMAT, JSON_RPC, HL7, HTTP_SOAP, MISC, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE, ZATO_OK
 from zato.common.audit_log import DataReceived, DataSent
 from zato.common.const import ServiceConst
@@ -40,6 +40,7 @@ from zato.common.json_schema import DictError as JSONSchemaDictError, Validation
 from zato.common.marshal_.api import ModelValidationError
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.util.api import payload_from_request
+from zato.common.util.exception import pretty_format_exception
 from zato.common.xml_ import zato_namespace
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
@@ -51,13 +52,11 @@ stack_format = None
 
 if 0:
     from zato.server.service import Service
-    from zato.server.service.reqresp import Response
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.http_soap.url_data import URLData
 
     # For pyflakes
     ParallelServer = ParallelServer
-    Response = Response
     Service = Service
     URLData = URLData
 
@@ -445,7 +444,13 @@ class RequestDispatcher:
 
                     elif isinstance(e, (BadRequest, ModelValidationError)):
                         status = _status_bad_request
-                        response = e.msg if e.needs_msg else 'Invalid input'
+
+                        # This is the channel that Dashboard uses and we want to return
+                        # all the details in such cases because it is useful during development
+                        if channel_item['name'] == MISC.DefaultAdminInvokeChannel:
+                            response = e.msg
+                        else:
+                            response = e.msg if e.needs_msg else 'Invalid input'
 
                     elif isinstance(e, NotFound):
                         status = _status_not_found
@@ -478,7 +483,12 @@ class RequestDispatcher:
 
                     else:
                         status_code = INTERNAL_SERVER_ERROR
-                        response = e.args if self.return_tracebacks else self.default_error_message
+
+                        # Same comment as in BadRequest, ModelValidationError above
+                        if channel_item['name'] == MISC.DefaultAdminInvokeChannel:
+                            response = pretty_format_exception(e, cid)
+                        else:
+                            response = e.args if self.return_tracebacks else self.default_error_message
 
                 _exc = _stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
                     add_summary=True, source_lines=20) if _stack_format else _format_exc
@@ -747,7 +757,6 @@ class RequestHandler:
         """ Sets the actual payload to represent the service's response out of what the service produced.
         This includes converting dictionaries into JSON, adding Zato metadata and wrapping the mesasge in SOAP if need be.
         """
-        # type: (Response, str, str, Service)
 
         if self._needs_admin_response(service_instance):
             if data_format == _sio_json:
@@ -788,8 +797,6 @@ class RequestHandler:
     def set_content_type(self, response, data_format, transport, ignored_url_match, channel_item):
         """ Sets a response's content type if one hasn't been supplied by the user.
         """
-        # type: (Response, str, str, object, object)
-
         # A user provided his or her own content type ..
         if response.content_type_changed:
             content_type = response.content_type
