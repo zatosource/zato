@@ -530,7 +530,8 @@ class SCHEDULER:
     InitialSleepTime = 0.1
     DefaultHost = '127.0.0.1'
     DefaultPort = 31530
-    EmbeddedIndicator = 'zato_embedded'
+    EmbeddedIndicator      = 'zato_embedded'
+    EmbeddedIndicatorBytes = EmbeddedIndicator.encode('utf8')
 
     class JOB_TYPE(Attrs):
         ONE_TIME = 'one_time'
