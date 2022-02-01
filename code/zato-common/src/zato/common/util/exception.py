@@ -7,12 +7,22 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from datetime import datetime
 from traceback import TracebackException
 
+# Zato
+from zato.common.version import get_version
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-def pretty_format_exception(e:'Exception') -> 'str':
+if 0:
+    from zato.common.typing_ import callnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def pretty_format_exception(e:'Exception', cid:'str', utcnow_func:'callnone'=None) -> 'str':
 
     # Response to produce
     out = []
@@ -26,7 +36,6 @@ def pretty_format_exception(e:'Exception') -> 'str':
 
     # Extract the traceback from the exception
     tb = TracebackException.from_exception(e)
-    tb
 
     exc_arg  = e.args[0]
     exc_type = e.__class__.__name__
@@ -39,9 +48,13 @@ def pretty_format_exception(e:'Exception') -> 'str':
     line_number = frame.lineno
     func_name   = frame.name
 
-    error_line = f'⮚⮚⮚ {exc_type}: {exc_arg}'
+    error_line = f'⮚⮚⮚ {exc_type}: \'{exc_arg}\''
     file_line  = f'⮚⮚⮚ File "{file_path}", line {line_number}, in {func_name}'
     code_line  = f'⮚⮚⮚   {frame.line}'
+
+    details = ''.join(list(tb.format()))
+
+    now = utcnow_func() if utcnow_func else datetime.utcnow().isoformat() + ' (UTC)'
 
     out.append(header1)
     out.append('\n')
@@ -59,12 +72,28 @@ def pretty_format_exception(e:'Exception') -> 'str':
 
     out.append(header2)
     out.append('\n')
+    out.append('\n')
+
+    out.append(details)
+    out.append('\n')
 
     out.append(header3)
     out.append('\n')
+    out.append('\n')
 
-    return ''.join(out)
+    out.append(cid)
+    out.append('\n')
 
+    out.append(now)
+    out.append('\n')
+
+    out.append(get_version())
+    out.append('\n')
+
+    result = ''.join(out)
+    result = result.strip()
+
+    return result
 
 # ################################################################################################################################
 # ################################################################################################################################
