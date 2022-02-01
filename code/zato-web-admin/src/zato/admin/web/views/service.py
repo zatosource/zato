@@ -554,10 +554,10 @@ def invoke(req, name, cluster_id):
 
         response = req.zato.client.invoke(name, **input_dict)
 
-    except Exception:
-        msg = 'Could not invoke the service. name:`{}`, cluster_id:`{}`, e:`{}`'.format(name, cluster_id, format_exc())
+    except Exception as e:
+        msg = 'Service could not be invoke; name:`{}`, cluster_id:`{}`, e:`{}`'.format(name, cluster_id, format_exc())
         logger.error(msg)
-        return HttpResponseServerError(msg)
+        return HttpResponseServerError(e.args)
     else:
         try:
             if response.ok:

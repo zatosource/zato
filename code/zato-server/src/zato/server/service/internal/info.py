@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from base64 import b64decode
@@ -14,7 +12,7 @@ from contextlib import closing
 
 # Zato
 from zato.client import AnyServiceInvoker
-from zato.common.api import INFO_FORMAT, SERVER_JOIN_STATUS, SERVER_UP_STATUS
+from zato.common.api import INFO_FORMAT, MISC, SERVER_JOIN_STATUS, SERVER_UP_STATUS
 from zato.common.broker_message import SERVER_STATUS
 from zato.common.component_info import format_info, get_info, get_worker_pids
 from zato.common.json_internal import dumps, loads
@@ -30,7 +28,7 @@ class GetInfo(Service):
 
         # Let's prepare as much as we can upfront.
         sec_def = self.server.worker_store.basic_auth_get('admin.invoke').config
-        channel = self.server.worker_store.get_channel_rest('admin.invoke.json')
+        channel = self.server.worker_store.get_channel_rest(MISC.DefaultAdminInvokeChannel)
         out = {}
 
         with closing(self.odb.session()) as session:
