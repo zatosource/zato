@@ -549,15 +549,19 @@ def invoke(req, name, cluster_id):
     try:
         input_dict = {}
         for attr in('payload', 'data_format', 'transport'):
-            input_dict[attr] = req.POST.get(attr, '')
+            value = req.POST.get(attr, '')
+            if attr == 'data_format':
+                if not value:
+                    value = DATA_FORMAT.JSON
+            input_dict[attr] = value
             input_dict['to_json'] = True if input_dict.get('data_format') == DATA_FORMAT.JSON else False
 
         response = req.zato.client.invoke(name, **input_dict)
 
-    except Exception:
-        msg = 'Could not invoke the service. name:`{}`, cluster_id:`{}`, e:`{}`'.format(name, cluster_id, format_exc())
+    except Exception as e:
+        msg = 'Service could not be invoke; name:`{}`, cluster_id:`{}`, e:`{}`'.format(name, cluster_id, format_exc())
         logger.error(msg)
-        return HttpResponseServerError(msg)
+        return HttpResponseServerError(e.args)
     else:
         try:
             if response.ok:
