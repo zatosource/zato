@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,9 +11,11 @@ from unittest import main, TestCase
 
 # Zato
 try:
-    from .base import Address, AddressWithDefaults, CreateAttrListRequest, CreatePhoneListRequest, CreateUserRequest
+    from .base import Address, AddressWithDefaults, CreateAttrListRequest, CreatePhoneListRequest, CreateUserRequest, \
+        LineParent
 except ImportError:
-    from base import Address, AddressWithDefaults, CreateAttrListRequest, CreatePhoneListRequest, CreateUserRequest
+    from base import Address, AddressWithDefaults, CreateAttrListRequest, CreatePhoneListRequest, CreateUserRequest, \
+        LineParent
 
 from zato.common.marshal_.api import ElementMissing, MarshalAPI
 from zato.common.test import rand_int, rand_string
@@ -391,6 +393,96 @@ class ValidationTestCase(TestCase):
         self.assertEqual(result.post_code, '')
         self.assertEqual(result.details, {})
         self.assertListEqual(result.characteristics, []) # type: ignore
+
+# ################################################################################################################################
+
+    def test_extra_top_level_no_value_in_current_dict(self):
+
+        # Note that locality does not exist in the input dict ..
+        data = {}
+
+        # .. but it does exist in extra data, which is why we expect to find it in the result later on.
+        extra = {
+            'locality': 'qwerty'
+        }
+
+        service = cast_('Service', None)
+        api = MarshalAPI()
+
+        result = api.from_dict(service, data, Address, extra=extra) # type: Address
+
+        self.assertEqual(result.locality, extra['locality'])
+        self.assertEqual(result.post_code, '')
+        self.assertEqual(result.details, {})
+        self.assertListEqual(result.characteristics, []) # type: ignore
+
+# ################################################################################################################################
+
+    def test_extra_top_level_with_value_in_current_dict(self):
+
+        data_value  = 'zzz'
+        extra_value = 'qqq'
+
+        # Note that locality exists both here ..
+        data = {
+            'locality': data_value
+        }
+
+        # .. as well as here. The one from the extra dictionary will override the default one.
+        extra = {
+            'locality': extra_value
+        }
+
+        service = cast_('Service', None)
+        api = MarshalAPI()
+
+        result = api.from_dict(service, data, Address, extra=extra) # type: Address
+
+        self.assertEqual(result.locality, extra_value)
+        self.assertEqual(result.post_code, '')
+        self.assertEqual(result.details, {})
+        self.assertListEqual(result.characteristics, []) # type: ignore
+
+        # We still expect for dictionaries to be the same as originally,
+        # i.e. extra should not permanently overwrite the data dictionary or the other way around.
+        self.assertEqual(data['locality'], data_value)
+        self.assertEqual(extra['locality'], extra_value)
+
+# ################################################################################################################################
+
+    def test_extra_non_top_level(self):
+
+        child_value  = 'zzz'
+        parent_value = 'qqq'
+        extra_value  = '123'
+
+        # Note that name exists both here ..
+        data = {
+            'name': parent_value,
+            'details': {
+                'name': child_value
+            }
+        }
+
+        # .. as well as here. However, the extra data should override only the parent data,
+        # .. not what the child model contains. This is because extra applies only to root, top-level elements.
+
+        extra = {
+            'name': extra_value
+        }
+
+        service = cast_('Service', None)
+        api = MarshalAPI()
+
+        result = api.from_dict(service, data, LineParent, extra=extra) # type: LineParent
+
+        self.assertEqual(result.name, extra_value)
+        self.assertEqual(result.details.name, child_value)
+
+        # We still expect for dictionaries to be the same as originally,
+        # i.e. extra should not permanently overwrite either of dictionaries or the other way around.
+        self.assertEqual(data['name'], parent_value)
+        self.assertEqual(extra['name'], extra_value)
 
 # ################################################################################################################################
 # ################################################################################################################################
