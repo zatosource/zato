@@ -106,13 +106,15 @@ class BrokerClient:
 
     def _invoke_scheduler_from_server(self, msg:'anydict') -> 'any_':
         msg_bytes = dumps(msg)
-        return requests_post(self.scheduler_url, msg_bytes, verify=False)
+        response = requests_post(self.scheduler_url, msg_bytes, verify=False)
+        return response
 
 # ################################################################################################################################
 
     def _invoke_server_from_scheduler(self, msg:'anydict') -> 'any_':
         if self.zato_client:
-            return self.zato_client.invoke_async(msg.get('service'), msg['payload'])
+            response = self.zato_client.invoke_async(msg.get('service'), msg['payload'])
+            return response
         else:
             logger.warning('Scheduler -> server invocation failure; self.zato_client is not configured (%r)', self.zato_client)
 
