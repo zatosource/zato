@@ -77,6 +77,7 @@ callnone     = optional[callable_]
 cast_        = cast_
 commondict   = dict_[str, union_[int, str_, bool, float, anydict, anylist, None]]
 dictlist     = list_[anydict]
+dictnone     = optional[anydict]
 floatnone    = optional[float]
 generator_   = generator_
 intanydict   = dict_[int, any_]
