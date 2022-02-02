@@ -9,6 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 
+# SQLAlchemy
+from sqlalchemy import delete
+
 # Zato
 from zato.common.api import PUBSUB as COMMON_PUBSUB
 from zato.common.broker_message import PUBSUB
@@ -56,6 +59,8 @@ list_func = pubsub_endpoint_list
 skip_input_params = ['sub_key', 'is_sub_allowed']
 output_optional_extra = ['ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key']
 delete_require_instance = False
+
+SubTable = PubSubSubscription.__table__
 
 # ################################################################################################################################
 
@@ -457,8 +462,7 @@ class DeleteEndpointQueue(AdminService):
     and their parent subscription object.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id',)
-        input_optional = ('sub_key', List('sub_key_list'))
+        input_optional = ('cluster_id', 'sub_key', List('sub_key_list'))
 
     def handle(self):
 
@@ -474,22 +478,25 @@ class DeleteEndpointQueue(AdminService):
         if sub_key:
             sub_key_list = [sub_key] # Otherwise, we already had sub_key_list on input so 'else' is not needed
 
-        cluster_id = self.request.input.cluster_id
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
 
         with closing(self.odb.session()) as session:
 
             # First we need a list of topics to which sub_keys were related - required by broker messages.
             topic_sub_keys = get_topic_sub_keys_from_sub_keys(session, cluster_id, sub_key_list)
 
-            # Remove the subscription object which in turn cascades and removes all dependant objects
-            session.query(PubSubSubscription).\
-                filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
-                filter(PubSubSubscription.sub_key.in_(sub_key_list)).\
-                delete(synchronize_session=False)
-
+            # .. log what we are about to do ..
             self.logger.info('Deleting subscriptions `%s`', topic_sub_keys)
 
-            session.expire_all()
+            # .. delete all subscriptions from the sub_key list ..
+            session.execute(
+                delete(SubTable).\
+                where(
+                    SubTable.c.sub_key.in_(sub_key_list),
+                )
+            )
+
+            # .. and commit the changes permanently.
             session.commit()
 
         # Notify workers about deleted subscription(s)

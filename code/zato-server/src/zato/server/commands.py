@@ -233,7 +233,7 @@ class CommandsFacade:
                 out.timeout_msg = out.timeout_msg.replace(' seconds', ' sec.')
 
             # .. issue information about what happened ..
-            logger.warn('Timeout: %s (%s)', out.timeout_msg, cid)
+            logger.warning('Timeout: %s (%s)', out.timeout_msg, cid)
 
         # .. we get here only if there was no timeout ..
         else:

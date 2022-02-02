@@ -1,16 +1,21 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# ################################################################################################################################
-
 # Zato
 from zato.common.util.open_ import open_r, open_w
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.client import ZatoClient
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 # Some objects are re-defined here to avoid importing them from zato.common = improves CLI performance.
@@ -932,4 +937,18 @@ def is_arg_given(args, *arg_names):
             if result:
                 return True
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ServerAwareCommand(ZatoCommand):
+    """ A subclass that knows how to assign a Zato client object based on command line arguments.
+    """
+    zato_client: 'ZatoClient'
+
+    def before_execute(self, args):
+        # Zato
+        from zato.common.util.api import get_client_from_server_conf
+        self.zato_client = get_client_from_server_conf(args.path)
+
+# ################################################################################################################################
 # ################################################################################################################################
