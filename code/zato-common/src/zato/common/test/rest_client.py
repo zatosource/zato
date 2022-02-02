@@ -33,6 +33,7 @@ if 0:
     from requests import Response
     from zato.common.typing_ import any_, anydictnone, anytuple, callable_, optional
 
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -50,7 +51,7 @@ class RESTClientTestCase(TestCase):
 
     def __init__(self, *args, **kwargs) -> 'None': # type: ignore
         super().__init__(*args, **kwargs)
-        self.rest_client = _RESTClient(self.needs_bunch, self.needs_current_app, self.payload_only_messages)
+        self.rest_client = RESTClient(self.needs_bunch, self.needs_current_app, self.payload_only_messages)
 
 # ################################################################################################################################
 
@@ -80,7 +81,7 @@ class RESTClientTestCase(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _RESTClient:
+class RESTClient:
 
     def __init__(
         self,
@@ -88,6 +89,7 @@ class _RESTClient:
         needs_current_app=True,    # type: bool
         payload_only_messages=True # type: bool
         ) -> 'None':
+
         self.needs_bunch = needs_bunch
         self.needs_current_app = needs_current_app
         self.payload_only_messages = payload_only_messages
@@ -95,6 +97,8 @@ class _RESTClient:
         self._api_invoke_username = 'pubapi'
         self._api_invoke_password = ''
         self._auth = None
+
+        self.base_address = '<invalid-base-address>'
 
 # ################################################################################################################################
 
@@ -146,11 +150,18 @@ class _RESTClient:
         _unexpected=object() # type: any_
         ) -> 'Bunch':
 
-        address = TestConfig.server_address.format(url_path)
-        if self.needs_current_app:
-            request['current_app'] = TestConfig.current_app
-        data = dumps(request)
+        if self.base_address != TestConfig.invalid_base_address:
+            base_adddress = self.base_address
+        else:
+            base_adddress = TestConfig.server_address
 
+        address = base_adddress.format(url_path)
+
+        if self.needs_current_app:
+            if request:
+                request['current_app'] = TestConfig.current_app
+
+        data = dumps(request) if request else ''
         auth = auth or self._auth
 
         logger.info('Invoking %s %s with %s (%s) (%s)', func_name, address, data, auth, qs)
@@ -158,29 +169,40 @@ class _RESTClient:
 
         logger.info('Response received %s %s', response.status_code, response.text)
 
-        data = loads(response.text)
-
-        if self.needs_bunch:
-            data = bunchify(data)
-
-        # Most SSO tests require status OK and CID
+        # Most tests require for responses to indicate a successful invocation
         if expect_ok:
+
+            # This checks HTTP headers only
+            if response.status_code != OK:
+                raise Exception('Unexpected response.status_code found in response_data `{}` ({})'.format(
+                    response.text, response.status_code))
+
+            if response.text:
+                response_data = loads(response.text)
+                if self.needs_bunch:
+                    response_data = bunchify(response_data)
+            else:
+                response_data = response.text
 
             # This is used if everything about the response is in the payload itself,
             # e.g. HTTP headers are not used to signal or relay anything.
             if self.payload_only_messages:
-                cid = data.get('cid', _unexpected)
+                cid = response_data.get('cid', _unexpected)
                 if cid is _unexpected:
                     raise Exception('Unexpected CID found in response `{}`'.format(response.text))
-                if data['status'] != status_code.ok:
-                    raise Exception('Unexpected data.status found in response `{}` ({})'.format(response.text, data['status']))
+                if response_data['status'] != status_code.ok:
+                    raise Exception('Unexpected response_data.status found in response `{}` ({})'.format(
+                        response.text, response_data['status']))
 
-            # This checks HTTP headers only
-            if response.status_code != OK:
-                raise Exception('Unexpected response.status_code found in request `{}` ({})'.format(
-                    response.text, response.status_code))
+        # We are here if expect_ok is not True
+        else:
+            if response.text:
+                response_data = loads(response.text)
+                response_data = bunchify(response_data)
+            else:
+                response_data = response.text
 
-        return data
+        return response_data
 
 # ################################################################################################################################
 

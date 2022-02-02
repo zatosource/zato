@@ -76,10 +76,10 @@ class PubCtx:
     """
     __slots__ = ('cluster_id', 'pubsub', 'topic', 'endpoint_id', 'endpoint_name', 'subscriptions_by_topic', 'msg_id_list',
         'gd_msg_list', 'non_gd_msg_list', 'pub_pattern_matched', 'ext_client_id', 'is_re_run', 'now', 'current_depth',
-        'last_msg')
+        'last_msg', 'is_wsx')
 
     def __init__(self, cluster_id, pubsub, topic, endpoint_id, endpoint_name, subscriptions_by_topic, msg_id_list, gd_msg_list,
-            non_gd_msg_list, pub_pattern_matched, ext_client_id, is_re_run, now):
+            non_gd_msg_list, pub_pattern_matched, ext_client_id, is_re_run, now, is_wsx):
         self.cluster_id = cluster_id
         self.pubsub = pubsub # type: PubSub
         self.topic = topic
@@ -93,6 +93,7 @@ class PubCtx:
         self.ext_client_id = ext_client_id
         self.is_re_run = is_re_run
         self.now = now
+        self.is_wsx = is_wsx
         self.current_depth = None
         self.last_msg = self.gd_msg_list[-1] if self.gd_msg_list else self.non_gd_msg_list[-1]
 
@@ -399,9 +400,10 @@ class Publish(AdminService):
             has_no_sk_server, input.get('reply_to_sk', None))
 
         # Create a wrapper object for all the input data and metadata
+        is_wsx = bool(input.get('ws_channel_id'))
         ctx = PubCtx(self.server.cluster_id, pubsub, topic, endpoint_id, pubsub.get_endpoint_by_id(endpoint_id).name,
             subscriptions_by_topic, msg_id_list, gd_msg_list, non_gd_msg_list, pub_pattern_matched,
-            input.get('ext_client_id'), False, now)
+            input.get('ext_client_id'), False, now, is_wsx)
 
         # We have all the input data, publish the message(s) now
         self._publish(ctx)
@@ -416,10 +418,9 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _publish(self, ctx):
+    def _publish(self, ctx:'PubCtx') -> 'None':
         """ Publishes GD and non-GD messages to topics and, if subscribers exist, moves them to their queues / notifies them.
         """
-        # Type: PubCtx
         len_gd_msg_list = len(ctx.gd_msg_list)
         has_gd_msg_list = bool(len_gd_msg_list)
 
@@ -585,7 +586,7 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _update_pub_metadata(self, ctx, has_topic, has_endpoint, endpoint_data_len, endpoint_max_history,
+    def _update_pub_metadata(self, ctx:'PubCtx', has_topic, has_endpoint, endpoint_data_len, endpoint_max_history,
         _topic_optional=_meta_topic_optional, _topic_key=_meta_topic_key, _endpoint_key=_meta_endpoint_key,
         _sort_key=itemgetter('pub_time', 'ext_pub_time')):
         """ Updates in background metadata about a topic and/or publisher.
@@ -669,6 +670,18 @@ class Publish(AdminService):
 
                 # Same as for topics, store data in RAM
                 self.server.pub_sub_metadata.set(endpoint_key, endpoint_topic_list)
+
+                # WSX connections update their SQL pub/sub metadata on their own because
+                # each possibly handles multiple sub_keys. Other types of connections
+                # update their SQL pub/sub metadata here.
+                if not ctx.is_wsx:
+                    request = {
+                        'sub_key': [sub.sub_key for sub in ctx.subscriptions_by_topic],
+                        'last_interaction_time': ctx.now,
+                        'last_interaction_type': 'publish',
+                        'last_interaction_details': 'zzz',
+                    }
+                    self.invoke('zato.pubsub.subscription.update-interaction-metadata', request)
 
         except Exception:
             self.logger.warning('Error while updating pub metadata `%s`', format_exc())

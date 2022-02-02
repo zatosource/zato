@@ -524,6 +524,14 @@ class RawDataClient(_Client):
 
 # ################################################################################################################################
 
+class ZatoClient(AnyServiceInvoker):
+    def __init__(self, *args, **kwargs):
+        super(ZatoClient, self).__init__(*args, **kwargs)
+        self.cluster_id = None
+        self.odb_session = None
+
+# ################################################################################################################################
+
 def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, server_url=None, stdin_data=None):
     """ Returns a Zato client built out of data found in a given server's config files.
     """
@@ -535,12 +543,6 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
     from zato.common.ext.configobj_ import ConfigObj
     from zato.common.util.api import get_odb_session_from_server_config, get_repo_dir_from_component_dir
     from zato.common.util.cli import read_stdin_data
-
-    class ZatoClient(AnyServiceInvoker):
-        def __init__(self, *args, **kwargs):
-            super(ZatoClient, self).__init__(*args, **kwargs)
-            self.cluster_id = None
-            self.odb_session = None
 
     repo_location = get_repo_dir_from_component_dir(server_dir)
     stdin_data = stdin_data or read_stdin_data()

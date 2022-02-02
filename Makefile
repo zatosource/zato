@@ -63,6 +63,9 @@ type-check:
 web-admin-tests:
 	cd $(CURDIR)/code/zato-web-admin && make run-tests
 
+scheduler-tests:
+	cd $(CURDIR)/code/zato-scheduler && make run-tests
+
 install-qa-reqs:
 	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
 	npx --yes playwright install
@@ -75,6 +78,7 @@ run-tests:
 	$(MAKE) common-tests
 	$(MAKE) server-tests
 	$(MAKE) cli-tests
+	$(MAKE) scheduler-tests
 	$(MAKE) sso-tests
 	$(MAKE) web-admin-tests
 	$(MAKE) cy-tests
