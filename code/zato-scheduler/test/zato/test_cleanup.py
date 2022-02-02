@@ -78,7 +78,7 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def xtest_cleanup_old_subscriptions_one_sub_key(self):
+    def test_cleanup_old_subscriptions_one_sub_key(self):
 
         # Filter our warnings coming from requests
         import warnings
