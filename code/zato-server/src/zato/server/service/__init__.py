@@ -524,7 +524,7 @@ class Service:
         self.response = _Response(self.logger)
         self.time = None # type: TimeUtil
         self.patterns = None
-        self.user_config = None
+        self.user_config = {}
         self.dictnav = _DictNav
         self.listnav = _ListNav
         self.has_validate_input = False
