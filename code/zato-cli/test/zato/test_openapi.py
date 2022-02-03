@@ -130,7 +130,7 @@ class APISpecTestCase(TestCase):
             client.load_spec_from_file(file_path)
 
             # Note that we provide no request here
-            response = client.post__zato_api_invoke_helpers_dataclass_service()# type: Response
+            response = client.post__zato_api_invoke_helpers_dataclass_service() # type: Response
             json_result = response.json() # type: anydict
 
             # The response and JSON result will point to a 400 error because

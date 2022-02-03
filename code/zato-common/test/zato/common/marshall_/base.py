@@ -28,6 +28,20 @@ def get_default_address_characteristics():
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Note that the two classes below have the same 'name' attribute which is used by validation tests.
+
+@dataclass(init=False, repr=False)
+class LineDetails(Model):
+    name: str
+
+@dataclass(init=False, repr=False)
+class LineParent(Model):
+    name: str
+    details: LineDetails
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass(init=False, repr=False)
 class Address(Model):
     locality: str

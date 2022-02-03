@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -33,6 +33,7 @@ from hashlib import sha256
 from inspect import isfunction, ismethod
 from itertools import tee
 from io import StringIO
+from logging.config import dictConfig
 from operator import itemgetter
 from os.path import abspath, isabs, join
 from pathlib import Path
@@ -76,8 +77,14 @@ import requests
 import sqlalchemy as sa
 from sqlalchemy import orm
 
+# Tabulate
+from tabulate import tabulate
+
 # Texttable
 from texttable import Texttable
+
+# YAML
+import yaml
 
 # Python 2/3 compatibility
 from builtins import bytes
@@ -107,6 +114,7 @@ from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_pin
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.logging_ import ColorFormatter
+from zato.common.util.open_ import open_r
 from zato.common.xml_ import soap_body_path, soap_body_xpath
 from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_request
 
@@ -115,7 +123,7 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 if 0:
     from typing import Iterable as iterable
     from simdjson import Parser as SIMDJSONParser
-    from zato.common.typing_ import any_, callable_
+    from zato.common.typing_ import any_, callable_, dictlist
 
     iterable = iterable
     SIMDJSONParser = SIMDJSONParser
@@ -386,6 +394,12 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
 
 # ################################################################################################################################
 
+def set_up_logging(repo_location:'str') -> 'None':
+    with open_r(os.path.join(repo_location, 'logging.conf')) as f:
+        dictConfig(yaml.load(f, yaml.FullLoader))
+
+# ################################################################################################################################
+
 def get_config_from_string(data):
     """ A simplified version of get_config which creates a config object from string, skipping any user-defined config files.
     """
@@ -398,19 +412,6 @@ def get_config_from_string(data):
 
     buff.close()
     return out
-
-# ################################################################################################################################
-
-def _get_ioc_config(location, config_class):
-    """ Instantiates an Inversion of Control container from the given location if the location exists at all.
-    """
-    stat = os.stat(location)
-    if stat.st_size:
-        config = config_class(location)
-    else:
-        config = None
-
-    return config
 
 # ################################################################################################################################
 
@@ -1872,5 +1873,22 @@ def hex_sequence_to_bytes(elems):
     elems = [bytes(elem, 'utf8') for elem in elems]
 
     return b''.join(elems)
+
+# ################################################################################################################################
+
+def tabulate_dictlist(data:'dictlist') -> 'str':
+
+    # Return early if there is not anything that we can tabulate
+    if not data:
+        return ''
+
+    # We assume that all elements will have the same keys
+    elem0 = data[0]
+    len_keys = len(elem0)
+
+    # We align all the columns to the left hand side
+    col_align = ('left',) * len_keys
+
+    return tabulate(data, headers='keys', tablefmt='pretty', colalign=col_align)
 
 # ################################################################################################################################

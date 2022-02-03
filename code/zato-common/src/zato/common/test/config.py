@@ -17,6 +17,9 @@ class TestConfig:
     # This is a shared topic with multiple subscribers
     pubsub_topic_shared = '/zato/demo/sample'
 
+    # This is a different shared topic
+    pubsub_topic_test = '/zato/test/sample'
+
     # This topic has only one subscriber
     pubsub_topic_name_unique = '/zato/demo/unique'
 
@@ -30,8 +33,16 @@ class TestConfig:
     username_prefix = 'test.{}+{}'
     random_prefix = 'rand.{}+{}'
 
-    server_location = os.path.expanduser('~/env/sso.test/server1')
     server_address  = 'http://localhost:17010{}'
+    server_location = os.path.expanduser('~/env/sso.test/server1')
+
+    scheduler_host = 'localhost'
+    scheduler_port = 31530
+
+    scheduler_address  = 'http://{}:{}{{}}'.format(scheduler_host, scheduler_port)
+    scheduler_location = os.path.expanduser('~/env/sso.test/scheduler')
+
+    invalid_base_address = '<invalid-base-address>'
 
 # ################################################################################################################################
 # ################################################################################################################################

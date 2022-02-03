@@ -11,7 +11,7 @@ from http.client import BAD_REQUEST
 from inspect import isclass
 
 try:
-    from typing import _GenericAlias as _ListBaseClass
+    from typing import _GenericAlias as _ListBaseClass # type: ignore
 except ImportError:
     class _Sentinel:
         pass
@@ -33,7 +33,7 @@ from zato.common.typing_ import extract_from_union, is_union
 
 if 0:
     from dataclasses import Field
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, boolnone, dictnone, intnone, optional
     from zato.server.service import Service
 
     Field = Field
@@ -154,21 +154,30 @@ class ElementMissing(ModelValidationError):
 # ################################################################################################################################
 
 class DictCtx:
-    def __init__(self, service, current_dict, DataClass, list_idx):
-        # type: (Service, dict, object, int) -> None
+    def __init__(
+        self,
+        service:      'Service',
+        current_dict: 'anydict',
+        DataClass:    'any_',
+        extra:        'dictnone',
+        list_idx:     'intnone',
+        parent:       'optional[FieldCtx]' = None
+        ) -> 'None':
 
         # We get these on input ..
         self.service      = service
         self.current_dict = current_dict
+        self.extra        = extra
         self.DataClass    = DataClass
         self.list_idx     = list_idx
+        self.parent       = parent
 
         # .. while these we need to build ourselves in self.init.
-        self.has_init = None # type: bool
+        self.has_init = None # type: boolnone
 
         # These are the Field object that we expect this dict will contain,
         # i.e. it will be possible to map ourselves to these Field objects.
-        self.fields = None # type: dict
+        self.fields = None # type: dictnone
 
         # This will be populated with parameters to the dataclass's __init__ method, assuming that the class has one.
         self.init_attrs = {}
@@ -177,7 +186,7 @@ class DictCtx:
         self.setattr_attrs = {}
 
         # We can check it once upfront and make it point to either init_attrs or setattr_attrs
-        self.attrs_container = None # type: dict
+        self.attrs_container = None # type: dictnone
 
 # ################################################################################################################################
 
@@ -188,14 +197,14 @@ class DictCtx:
         self.has_init = dataclass_params.init if dataclass_params else False
 
         self.attrs_container = self.init_attrs if self.has_init else self.setattr_attrs
-        self.fields = getattr(self.DataClass, _FIELDS) # type: dict
+        self.fields = getattr(self.DataClass, _FIELDS) # type: dictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class FieldCtx:
     def __init__(self, dict_ctx, field, parent):
-        # type: (DictCtx, Field, FieldCtx) -> None
+        # type: (DictCtx, Field, optional[FieldCtx]) -> None
 
         # We get these on input ..
         self.dict_ctx   = dict_ctx
@@ -211,13 +220,13 @@ class FieldCtx:
         self.model_class = None # type: object
 
         # .. while these we need to build ourselves in self.init ..
-        self.value    = None # type: object
-        self.is_class = None # type: bool
-        self.is_list  = None # type: bool
-        self.is_required = None # type: bool
+        self.value    = None # type: any_
+        self.is_class = None # type: boolnone
+        self.is_list  = None # type: boolnone
+        self.is_required = None # type: boolnone
 
         # This indicates if ourselves, we are a Model instance
-        self.is_model = None # type: bool
+        self.is_model = None # type: boolnone
 
         # This indicates whether we are a list that contains a Model instance.
         # The value is based on whether self.model_class exists or not
@@ -225,11 +234,30 @@ class FieldCtx:
         # as the latter is possible in strlist definitions.
         self.contains_model = False
 
+        # We set this flag to True only if there is some extra data that we have
+        # and if we are a top-level element, as indicated by the lack of parent.
+        self.has_extra = self.dict_ctx.extra and (not self.dict_ctx.parent)
+
 # ################################################################################################################################
 
     def init(self):
 
-        self.value = self.dict_ctx.current_dict.get(self.name, ZatoNotGiven)
+        # Assume that we do not have any value
+        value = ZatoNotGiven
+
+        # If we have extra data, that will take priority over our regular dict, which is why we check it first here.
+        if self.has_extra:
+            if self.dict_ctx.extra:
+                value = self.dict_ctx.extra.get(self.name, ZatoNotGiven)
+
+        # If we do not have a value here, it means that we have no extra,
+        # or that it did not contain the expected value so we look it up in the current dictionary.
+        if value == ZatoNotGiven:
+            value = self.dict_ctx.current_dict.get(self.name, ZatoNotGiven)
+
+        # At this point, we know there will be something to assign although it still may be ZatoNotGiven.
+        self.value = value
+
         self.is_class = isclass(self.field.type)
         self.is_model = self.is_class and issubclass(self.field.type, Model)
         self.is_list = is_list(self.field.type, self.is_class)
@@ -319,16 +347,23 @@ class MarshalAPI:
 # ################################################################################################################################
 
     def from_field_ctx(self, field_ctx):
-        # type: (FieldCtx) -> object
+        # type: (FieldCtx) -> any_
         return self.from_dict(field_ctx.dict_ctx.service, field_ctx.value, field_ctx.field.type,
             extra=None, list_idx=field_ctx.dict_ctx.list_idx, parent=field_ctx)
 
 # ################################################################################################################################
 
-    def from_dict(self, service, current_dict, DataClass, extra=None, list_idx=None, parent=None):
-        # type: (Service, dict, object, list, dict, int) -> any_
+    def from_dict(
+        self,
+        service:      'Service',
+        current_dict: 'dict',
+        DataClass:    'any_',
+        extra:        'dictnone' = None,
+        list_idx:     'intnone'  = None,
+        parent:       'optional[FieldCtx]' = None
+        ) -> 'any_':
 
-        dict_ctx = DictCtx(service, current_dict, DataClass, list_idx)
+        dict_ctx = DictCtx(service, current_dict, DataClass, extra, list_idx, parent)
         dict_ctx.init()
 
         # All fields that we will visit
@@ -415,12 +450,6 @@ class MarshalAPI:
 
             # Assign the value now
             dict_ctx.attrs_container[field_ctx.name] = value
-
-            # If we have any extra elements, we need to add them as well
-            if extra:
-                for param, value in extra.items():
-                    if param not in dict_ctx.attrs_container:
-                        dict_ctx.attrs_container[param] = value
 
         # Create a new instance, potentially with attributes ..
         instance = DataClass(**dict_ctx.init_attrs) # type: Model

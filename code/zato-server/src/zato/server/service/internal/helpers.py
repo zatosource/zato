@@ -725,7 +725,7 @@ class PubAPIInvoker(Service):
                             'error_test': test,
                             'error_reason': reason,
                         }
-                        self.logger.warn('Test error -> %s', result.errors)
+                        self.logger.warning('Test error -> %s', result.errors)
                         errors.append(_error)
 
                     for failure in result.failures:
@@ -736,7 +736,7 @@ class PubAPIInvoker(Service):
                             'failure_test': test,
                             'failure_reason': reason,
                         }
-                        self.logger.warn('Test Failure -> %s', result.errors)
+                        self.logger.warning('Test Failure -> %s', result.errors)
                         errors.append(_failure)
 
                     # Serialize all the warnings and errors ..
@@ -751,7 +751,7 @@ class PubAPIInvoker(Service):
 
         except Exception:
             msg = 'Exception in {} -> {}'.format(self.__class__.__name__, format_exc())
-            self.logger.warn(msg)
+            self.logger.warning(msg)
             self.response.payload = msg
 
 # ################################################################################################################################
