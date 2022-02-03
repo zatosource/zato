@@ -301,8 +301,9 @@ class GetListMeta(AdminServiceMeta):
 
     @staticmethod
     def handle(attrs):
-        def handle_impl(self):
-            # type: (Service)
+        def handle_impl(self:'Service') -> 'None':
+            input = self.request.input
+            input.cluster_id = input.get('cluster_id') or self.server.cluster_id
 
             with closing(self.odb.session()) as session:
                 self.response.payload[:] = elems_with_opaque(self.get_data(session))
@@ -333,6 +334,7 @@ class CreateEditMeta(AdminServiceMeta):
             # type: (Service)
 
             input = self.request.input
+            input.cluster_id = input.get('cluster_id') or self.server.cluster_id
             input.update(attrs.initial_input)
             verb = 'edit' if attrs.is_edit else 'create'
             old_name = None

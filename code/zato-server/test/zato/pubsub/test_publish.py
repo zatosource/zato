@@ -35,8 +35,8 @@ if 0:
 
 _default = PUBSUB.DEFAULT
 
-sec_name = _default.INTERNAL_SECDEF_NAME
-username = _default.INTERNAL_USERNAME
+username = _default.PUBAPI_USERNAME
+sec_name = _default.PUBAPI_SECDEF_NAME
 
 # ################################################################################################################################
 # ################################################################################################################################

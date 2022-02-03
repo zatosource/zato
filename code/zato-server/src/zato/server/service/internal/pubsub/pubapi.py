@@ -248,14 +248,14 @@ class SubscribeService(_PubSubService):
 
         # Not every channel may present a sub_key on input
         if sub_key and self.chan.type not in (CHANNEL.WEB_SOCKET, CHANNEL.SERVICE): # type: ignore
-            self.logger.warn('Channel type `%s` may not use sub_key on input (%s)', self.chan.type, sub_key)
+            self.logger.warning('Channel type `%s` may not use sub_key on input (%s)', self.chan.type, sub_key)
             raise Forbidden(self.cid)
 
         # Checks credentials and returns endpoint_id if valid
         endpoint_id = self._pubsub_check_credentials()
 
         if not endpoint_id:
-            self.logger.warn('Could not find endpoint_for input credentials')
+            self.logger.warning('Could not find endpoint for input credentials')
             return
 
         # To unsubscribe, we also need to have the right subscription permissions first (patterns) ..
