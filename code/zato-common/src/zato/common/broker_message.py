@@ -76,6 +76,7 @@ class SCHEDULER(Constants):
     EXECUTE = ValueConstant('')
     JOB_EXECUTED = ValueConstant('')
     SET_JOB_INACTIVE = ValueConstant('')
+    DELETE_PUBSUB_SUBSCRIBER = ValueConstant('')
 
 class ZMQ_SOCKET(Constants):
     code_start = 100200

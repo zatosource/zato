@@ -359,9 +359,8 @@ class Execute(AdminService):
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_SCHEDULER)
 
             except Exception:
-                session.rollback()
                 self.logger.error('Could not execute the job, e:`%s`', format_exc())
-
+                session.rollback()
                 raise
 
 # ################################################################################################################################

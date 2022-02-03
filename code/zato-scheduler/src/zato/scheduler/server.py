@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from json import dumps
 from traceback import format_exc
 
 # Bunch
@@ -25,14 +26,15 @@ from zato.common.api import ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
+from zato.common.util.api import as_bool, absjoin, get_config, new_cid
 from zato.common.util.cli import read_stdin_data
 from zato.scheduler.api import SchedulerAPI
+from zato.scheduler.util import set_up_zato_client
 
 # ################################################################################################################################
 
 if 0:
-    from zato.client import AnyServiceInvoker
-    AnyServiceInvoker = AnyServiceInvoker
+    from zato.common.typing_ import any_, anydict, callable_
 
 # ################################################################################################################################
 
@@ -40,7 +42,11 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-ok = '200 OK'
+class StatusCode:
+    OK                 = '200 OK'
+    InternalError      = '500 Internal Server error'
+    ServiceUnavailable = '503 Service Unavailable'
+
 headers = [('Content-Type', 'application/json')]
 
 # ################################################################################################################################
@@ -48,42 +54,68 @@ headers = [('Content-Type', 'application/json')]
 class Config:
     """ Encapsulates configuration of various scheduler-related layers.
     """
+    odb: 'ODBManager'
+    crypto_manager: 'SchedulerCryptoManager'
+
     def __init__(self):
         self.main = Bunch()
         self.startup_jobs = []
-        self.odb = None
         self.on_job_executed_cb = None
         self.stats_enabled = None
         self.job_log_level = 'info'
-        self.broker_client = None
         self._add_startup_jobs = True
         self._add_scheduler_jobs = True
+
+# ################################################################################################################################
+
+    @staticmethod
+    def from_repo_location(repo_location:'str') -> 'Config':
+
+        # Response to produce
+        config = Config()
+
+        # Read config in and extend it with ODB-specific information
+        config.main = get_config(repo_location, 'scheduler.conf')
+        config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
+        config.main.crypto.use_tls = as_bool(config.main.crypto.use_tls)
+
+        # Make all paths absolute
+        if config.main.crypto.use_tls:
+            config.main.crypto.ca_certs_location = absjoin(repo_location, config.main.crypto.ca_certs_location)
+            config.main.crypto.priv_key_location = absjoin(repo_location, config.main.crypto.priv_key_location)
+            config.main.crypto.cert_location = absjoin(repo_location, config.main.crypto.cert_location)
+
+        # Set up the crypto manager need to access credentials
+        config.crypto_manager = SchedulerCryptoManager(repo_location, stdin_data=read_stdin_data())
+
+        # ODB connection
+        odb = ODBManager()
+        sql_pool_store = PoolStore()
+
+        if config.main.odb.engine != 'sqlite':
+
+            config.main.odb.host = config.main.odb.host
+            config.main.odb.username = config.main.odb.username
+            config.main.odb.password = config.crypto_manager.decrypt(config.main.odb.password)
+            config.main.odb.pool_size = config.main.odb.pool_size
+
+        sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
+
+        odb.pool = sql_pool_store[ZATO_ODB_POOL_NAME].pool
+        odb.init_session(ZATO_ODB_POOL_NAME, config.main.odb, odb.pool, False)
+        odb.pool.ping(odb.fs_sql_config)
+
+        config.odb = odb
+
+        return config
 
 # ################################################################################################################################
 
 class SchedulerServer:
     """ Main class spawning scheduler-related tasks and listening for HTTP API requests.
     """
-    def __init__(self, config, repo_location):
-        self.odb = config.odb
+    def __init__(self, config:'Config') -> 'None':
         self.config = config
-        self.repo_location = repo_location
-        self.sql_pool_store = PoolStore()
-
-        # Set up the crypto manager that will be used by both ODB and, possibly, KVDB
-        self.config.crypto_manager = SchedulerCryptoManager(self.repo_location, stdin_data=read_stdin_data())
-
-        # ODB connection
-        self.odb = ODBManager()
-
-        if self.config.main.odb.engine != 'sqlite':
-            self.config.main.odb.password = self.config.crypto_manager.decrypt(config.main.odb.password)
-            self.config.main.odb.host = config.main.odb.host
-            self.config.main.odb.pool_size = config.main.odb.pool_size
-            self.config.main.odb.username = config.main.odb.username
-
-        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.main.odb
-
         main = self.config.main
 
         if main.crypto.use_tls:
@@ -95,66 +127,14 @@ class SchedulerServer:
             tls_kwargs = {}
 
         # Configures a client to Zato servers
-        self.zato_client = self.set_up_zato_client(self.config.main)
+        self.zato_client = set_up_zato_client(main)
 
         # API server
         self.api_server = WSGIServer((main.bind.host, int(main.bind.port)), self, **tls_kwargs)
 
-        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
-        self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.main.odb, self.odb.pool, False)
-        self.config.odb = self.odb
-
         # SchedulerAPI
         self.scheduler_api = SchedulerAPI(self.config)
-        self.scheduler_api.broker_client = BrokerClient(zato_client=self.zato_client)
-
-# ################################################################################################################################
-
-    def _set_up_zato_client_by_server_path(self, server_path):
-        # type: (str) -> AnyServiceInvoker
-
-        # Zato
-        from zato.common.util.api import get_client_from_server_conf
-
-        return get_client_from_server_conf(server_path, require_server=False)
-
-# ################################################################################################################################
-
-    def _set_up_zato_client_by_remote_details(self, server_host, server_port, server_username, server_password):
-        # type: (str, int, str, str) -> AnyServiceInvoker
-        pass
-
-# ################################################################################################################################
-
-    def set_up_zato_client(self, config):
-        # type: (Bunch) -> AnyServiceInvoker
-
-        # New in 3.2, hence optional
-        server_config = config.get('server') # type: Bunch
-
-        # We do have server configuration available ..
-        if server_config:
-
-            if server_config.get('server_path'):
-                return self._set_up_zato_client_by_server_path(server_config.server_path)
-            else:
-                server_host = server_config.server_host
-                server_port = server_config.server_port
-                server_username = server_config.server_username
-                server_password = server_config.server_password
-
-                return self._set_up_zato_client_by_remote_details(
-                    server_host,
-                    server_port,
-                    server_username,
-                    server_password
-                )
-
-        # .. no configuration, assume this is a default quickstart cluster.
-        else:
-            # This is what quickstart environments use by default
-            server_path = '/opt/zato/env/qs-1'
-            return self._set_up_zato_client_by_server_path(server_path)
+        self.scheduler_api.broker_client = BrokerClient(zato_client=self.zato_client, server_rpc=None, scheduler_config=None)
 
 # ################################################################################################################################
 
@@ -164,41 +144,75 @@ class SchedulerServer:
 
 # ################################################################################################################################
 
-    def handle_api_request(self, data):
+    def handle_api_request(self, request):
         # type: (bytes) -> None
 
         # Convert to a Python dict ..
-        data = loads(data)
+        request = loads(request)
 
         # .. callback functions expect Bunch instances on input ..
-        data = Bunch(data) # type: ignore
+        request = Bunch(request) # type: ignore
 
         # .. look up the action we need to invoke ..
-        action_name = code_to_name[data['action']] # type: ignore
+        action = request['action'] # type: ignore
+        action_name = code_to_name[action] # type: ignore
 
         # .. convert it to an actual method to invoke ..
         func_name = 'on_broker_msg_{}'.format(action_name)
         func = getattr(self.scheduler_api, func_name)
 
         # .. finally, invoke the function with the input data.
-        func(data)
+        response = func(request)
+        return response
 
 # ################################################################################################################################
 
-    def __call__(self, env, start_response):
+    def __call__(self, env:'anydict', start_response:'callable_') -> 'any_':
+
+        cid      = '<cid-unassigned>'
+        response = {}
+
+        status_text = '<status_text-unassigned>'
+        status_code = StatusCode.ServiceUnavailable
+
         try:
+
+            # Assign a new cid
+            cid = 'zsch{}'.format(new_cid())
+
+            # Get the contents of our request ..
             request = env['wsgi.input'].read()
 
+            # .. if there was any, invoke the business function ..
             if request:
-                return_data = '{}\n'
-                self.handle_api_request(request)
-            else:
-                return_data = ''
+                response = self.handle_api_request(request)
 
-            start_response(ok, headers)
-            return return_data
+            # If we are here, it means that there was no exception
+            status_text = 'ok'
+            status_code = StatusCode.OK
 
         except Exception:
+
+            # We are here because there was an exception
             logger.warning(format_exc())
+
+            status_text = 'error'
+            status_code = StatusCode.InternalError
+
+        finally:
+
+            # Build our response ..
+            return_data = {
+                'cid': cid,
+                'status': status_text,
+                'response': response
+            }
+
+            # .. make sure that we return bytes representing a JSON object ..
+            return_data = dumps(return_data)
+            return_data = return_data.encode('utf8')
+
+            start_response(status_code, headers)
+            return [return_data]
 
 # ################################################################################################################################
