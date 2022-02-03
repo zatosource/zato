@@ -31,7 +31,7 @@ class Config:
 
     KeyStyle:        str = 'width: 340.0px;'
     ValueStyle:      str = 'width: 340.0px;'
-    UserLinkPattern: str = '<ac:link><ri:user ri:userkey="{user_key}" />'
+    UserLinkPattern: str = '<ac:link><ri:user ri:account-id="{account_id}" /></ac:link>'
     RowPattern:      str = """
 <tr>
     <th>
@@ -100,8 +100,8 @@ class PageProperties:
 
 # ################################################################################################################################
 
-    def get_user_link(self, user_key:'str') -> 'str':
-        value = self.user_link_pattern.format(user_key=user_key)
+    def get_user_link(self, account_id:'str') -> 'str':
+        value = self.user_link_pattern.format(account_id=account_id)
         return value
 
 # ################################################################################################################################
