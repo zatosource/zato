@@ -17,6 +17,8 @@ from zato.common.util.cloud.atlassian.confluence import PageProperties
 
 class PagePropertiesTestCase(TestCase):
 
+    maxDiff = 1234567890
+
     def test_create_page_properties(self):
 
         param_name = 'My Parameter'
@@ -77,7 +79,7 @@ class PagePropertiesTestCase(TestCase):
         <p>my.user</p>
     </th>
     <td>
-        <p><ac:link><ri:user ri:userkey="my.user" /></p>
+        <p><ac:link><ri:user ri:account-id="my.user" /></ac:link></p>
     </td>
 </tr>
             </tbody>
