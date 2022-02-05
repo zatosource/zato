@@ -580,11 +580,6 @@ class CleanupManager:
         # Clean up old pub/sub objects
         cleanup_result = self.cleanup_pub_sub(task_id, cleanup_result, delta_ctx)
 
-        # TODO: Clean up queue messages that genuinely expired
-        # TODO: Clean up topic messages that genuinely expired
-        # TODO: Add maximum expiry time to topics and queues
-        # TODO: Add max. number of subscribers per topic
-
         return cleanup_result
 
 # ################################################################################################################################
