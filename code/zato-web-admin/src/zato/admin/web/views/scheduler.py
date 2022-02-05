@@ -97,7 +97,7 @@ def _interval_based_job_def(user_profile, start_date, repeats, weeks, days, hour
         elif repeats == 2:
             buf.write(' Repeat twice.')
         # .. thrice or more
-        elif repeats > 2:
+        elif int(repeats) > 2:
             buf.write(' Repeat ')
             if isinstance(repeats, int):
                 repeats = str(repeats)
