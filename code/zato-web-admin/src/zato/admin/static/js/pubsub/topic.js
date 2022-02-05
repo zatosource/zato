@@ -21,7 +21,8 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.topic.before_submit_hook;
     $.fn.zato.data_table.setup_forms(['name', 'max_depth_gd', 'max_depth_non_gd', 'depth_check_freq',
-        'pub_buffer_size_gd', 'pub_buffer_size_non_gd', 'deliv_task_sync_interv_gd', 'deliv_task_sync_interv_non_gd']);
+        'pub_buffer_size_gd', 'pub_buffer_size_non_gd', 'deliv_task_sync_interv_gd',
+        'deliv_task_sync_interv_non_gd', 'limit_retention', 'limit_expiry']);
 })
 
 
@@ -85,6 +86,9 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", data.task_sync_interval);
     row += String.format("<td class='ignore'>{0}</td>", data.task_delivery_interval);
 
+    row += String.format("<td class='ignore'>{0}</td>", data.limit_retention);
+    row += String.format("<td class='ignore'>{0}</td>", data.limit_expiry);
+
     if(include_tr) {
         row += '</tr>';
     }
@@ -95,7 +99,7 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.pubsub.topic.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Pub/sub topic `{0}` deleted',
-        'Are you sure you want to delete the pub/sub topic `{0}`?',
+        'Are you sure you want to delete pub/sub topic `{0}`?',
         true);
 }
 
