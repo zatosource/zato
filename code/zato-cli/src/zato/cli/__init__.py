@@ -6,6 +6,9 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from json import dumps
+
 # Zato
 from zato.common.util.open_ import open_r, open_w
 
@@ -14,6 +17,7 @@ from zato.common.util.open_ import open_r, open_w
 
 if 0:
     from zato.client import ZatoClient
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -950,6 +954,25 @@ class ServerAwareCommand(ZatoCommand):
         # Zato
         from zato.common.util.api import get_client_from_server_conf
         self.zato_client = get_client_from_server_conf(args.path)
+
+# ################################################################################################################################
+
+    def _invoke_service_and_log_response(self, service:'str', request:'anydict') -> 'None':
+
+        # stdlib
+        import sys
+
+        response = self.zato_client.invoke(**{
+            'name':    service,
+            'payload': request
+        })
+
+        if response.data:
+            data = dumps(response.data)
+        else:
+            data = response.details
+
+        sys.stdout.write(data + '\n')
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -6,9 +6,6 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from json import dumps
-
 # Zato
 from zato.cli import ServerAwareCommand
 
@@ -17,7 +14,6 @@ from zato.cli import ServerAwareCommand
 
 if 0:
     from argparse import Namespace
-    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,21 +30,6 @@ class CreateTopic(ServerAwareCommand):
         {'name':'--limit-message-expiry', 'help':'Limit max. message expiration time to that many seconds', 'required':False},
         {'name':'--path', 'help':'Path to a Zato server', 'required':False},
     ]
-
-# ################################################################################################################################
-
-    def _invoke_service_and_log_response(self, service:'str', request:'anydict') -> 'None':
-
-        # stdlib
-        import sys
-
-        response = self.zato_client.invoke(**{
-            'name':    service,
-            'payload': request
-        })
-
-        data = dumps(response.data)
-        sys.stdout.write(data + '\n')
 
 # ################################################################################################################################
 
