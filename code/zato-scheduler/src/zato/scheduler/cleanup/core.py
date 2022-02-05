@@ -457,7 +457,7 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _cleanup_topics(
+    def _cleanup_messages_from_topics(
         self,
         task_id:'str',
         cleanup_result:'CleanupResult',
@@ -511,7 +511,7 @@ class CleanupManager:
 
         # Now, we can proceed and delete the actual message objects because we know that their
         # queue references are already deleted.
-        self._cleanup_topics(task_id, cleanup_result, delta_ctx)
+        self._cleanup_messages_from_topics(task_id, cleanup_result, delta_ctx)
 
         #
         # TODO: Add cleanup of queue messages that have no subscribers,
