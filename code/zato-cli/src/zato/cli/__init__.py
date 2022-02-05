@@ -970,16 +970,7 @@ class ServerAwareCommand(ZatoCommand):
         if response.data:
             data = dumps(response.data)
         else:
-            #data = response.details
-
-            msg = response.inner.headers.get('X-Zato-Message')
-            if msg:
-                data = {'msg':msg}
-            else:
-                data = {
-                    'headers':str(response.inner.headers)
-                }
-            data = dumps(data)
+            data = response.details
 
         sys.stdout.write(data + '\n')
 
