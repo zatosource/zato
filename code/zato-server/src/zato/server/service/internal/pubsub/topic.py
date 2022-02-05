@@ -31,6 +31,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 # Type checking
 if 0:
     from bunch import Bunch
+    from zato.common.typing_ import any_
     from zato.server.service import Service
 
     # For pyflakes
@@ -38,6 +39,8 @@ if 0:
     Service = Service
 
 # ################################################################################################################################
+
+topic_limit_fields = [Int('limit_retention'), Int('limit_message_expiry')]
 
 elem = 'pubsub_topic'
 model = PubSubTopic
@@ -48,10 +51,11 @@ broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
 skip_input_params = ['cluster_id', 'is_internal', 'current_depth_gd', 'last_pub_time', 'last_pub_msg_id', 'last_endpoint_id',
     'last_endpoint_name']
-input_optional_extra = ['needs_details', 'on_no_subs_pub', 'hook_service_name']
+input_optional_extra = ['needs_details', 'on_no_subs_pub', 'hook_service_name'] + topic_limit_fields
 output_optional_extra = ['is_internal', Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time',
     'hook_service_name', 'last_pub_time', AsIs('last_pub_msg_id'), 'last_endpoint_id', 'last_endpoint_name',
-    Bool('last_pub_has_gd'), 'last_pub_server_pid', 'last_pub_server_name', 'on_no_subs_pub']
+    Bool('last_pub_has_gd'), 'last_pub_server_pid', 'last_pub_server_name', 'on_no_subs_pub',
+    ] + topic_limit_fields
 
 # ################################################################################################################################
 
@@ -86,12 +90,22 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
 # ################################################################################################################################
 
+def _add_limits(item:'any_') -> 'None':
+    item.limit_retention      = item.get('limit_retention')      or PUBSUB.DEFAULT.LimitTopicRetention
+    item.limit_message_expiry = item.get('limit_message_expiry') or PUBSUB.DEFAULT.LimitMessageExpiry
+
+# ################################################################################################################################
+
 def response_hook(self, input, instance, attrs, service_type):
     # type: (Service, Bunch, PubSubTopic, Bunch, str)
 
     if service_type == 'get_list':
 
-        # Details are needed when the main list of topics is requested but if only basic information
+        # Limit-related fields were introduced post-3.2 release which is why they may not exist
+        for item in self.response.payload:
+            _add_limits(item)
+
+        # Details are needed when the main list of topics is requested. However, if only basic information
         # is needed, like a list of topic IDs and their names, we don't need to look up additional details.
         # The latter is the case of the message publication screen which simply needs a list of topic IDs/names.
         if input.get('needs_details', True):
@@ -199,7 +213,7 @@ class Get(AdminService):
     class SimpleIO:
         input_optional = 'cluster_id', AsIs('id'), 'name'
         output_required = 'id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd', \
-            'current_depth_gd'
+            'current_depth_gd', Int('limit_retention'), Int('limit_message_expiry')
         output_optional = 'last_pub_time', 'on_no_subs_pub'
 
     def handle(self):
@@ -219,6 +233,9 @@ class Get(AdminService):
         last_data = get_last_pub_metadata(self.server, [topic_id])
         if last_data:
             topic['last_pub_time'] = last_data[int(topic_id)]['pub_time']
+
+        # Limits were added post-3.2 release
+        _add_limits(topic)
 
         self.response.payload = topic
 

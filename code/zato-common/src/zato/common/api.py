@@ -814,6 +814,9 @@ class PUBSUB:
         SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
         UnsubOnWSXClose = True
 
+        LimitMessageExpiry  = 86_400 # In seconds = 1 days
+        LimitTopicRetention = 86_400 # In seconds = 1 days
+
         DEMO_USERNAME    = 'zato.pubsub.demo'
         DEMO_SECDEF_NAME = 'zato.pubsub.demo.secdef'
 
