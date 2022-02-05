@@ -91,10 +91,18 @@ class TopicCtx:
 # ################################################################################################################################
 
 class CleanupConfig:
-    TopicRetentionTime = 86_400 # In seconds, 60 seconds * 60 minutes * 24 hours = 86_400 seconds
-    DeltaNotInteracted = 86_400 # (As above)
-    DeleteBatchSize    = 50
-    DeleteSleepTime    = 0.2    # In seconds
+
+    # One day in seconds; 60 seconds * 60 minutes * 24 hours = 86_400 seconds
+    TopicRetentionTime = 86_400
+
+    # (As above)
+    DeltaNotInteracted = 86_400
+
+    # How many messages to delete from a queue or topic in one batch
+    MsgDeleteBatchSize = 50
+
+    # How long to sleep after deleting messages from a single group (no matter if queue, topic or subscriber)
+    DeleteSleepTime = 0.2 # In seconds
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -221,7 +229,7 @@ class CleanupManager:
     def _cleanup_msg_list(self, task_id:'str', cleanup_result:'CleanupResult', sub_key:'str', msg_list:'dictlist') -> 'None':
 
         self.logger.info('%s: Building groups for sub_key -> %s', task_id, sub_key)
-        groups_ctx = self._build_groups(task_id, 'queue message(s)', msg_list, CleanupConfig.DeleteBatchSize, sub_key)
+        groups_ctx = self._build_groups(task_id, 'queue message(s)', msg_list, CleanupConfig.MsgDeleteBatchSize, sub_key)
 
         # Note that messages for each subscriber are deleted under a new session
         with closing(self.config.odb.session()) as session: # type: ignore
@@ -253,6 +261,9 @@ class CleanupManager:
 # ################################################################################################################################
 
     def _cleanup_sub(self, task_id:'str', cleanup_result:'CleanupResult', delta_ctx:'DeltaCtx', sub:'stranydict') -> 'strlist':
+        """ Cleans up an individual subscription. First it deletes old queue messages, then it notifies servers
+        that a subscription object should be deleted as well.
+        """
 
         # Local aliases
         sub_key = sub['sub_key']
@@ -291,7 +302,7 @@ class CleanupManager:
 
         # At this point, we have already deleted all the enqueued messages for all the subscribers
         # that we have not seen in DeltaNotInteracted hours. It means that we can proceed now
-        # to delete each subscriber too because we know that it was not cascade to any of its
+        # to delete each subscriber too because we know that it will not cascade to any of its
         # now-already-deleted messages. However, we do not do it using SQL queries
         # because there may still exist references to such subscribers among self.pubsub and tasks in servers.
         # Thus, we invoke our server, telling it that a given subscriber can be deleted, and the server
@@ -317,12 +328,14 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _cleanup_sub_queue_messages(
+    def _cleanup_subscriptions(
         self,
         task_id:'str',
         cleanup_result:'CleanupResult',
         delta_ctx:'DeltaCtx'
         ) -> 'CleanupResult':
+        """ Cleans up all subscriptions - all the old queue messages as well as their subscribers.
+        """
 
         # This is a list of all the pub_msg_id objects that we are going to remove from subsciption queues.
         # It does not contain messages residing in topics that do not have any subscribers.
@@ -450,7 +463,7 @@ class CleanupManager:
 
             # .. assign to each topics individual groups of messages to be deleted ..
             topic_ctx.groups_ctx = self._build_groups(
-                task_id, 'topic message(s)', topic_ctx.messages, CleanupConfig.DeleteBatchSize, topic_ctx.name)
+                task_id, 'topic message(s)', topic_ctx.messages, CleanupConfig.MsgDeleteBatchSize, topic_ctx.name)
 
             # .. and clean it up now.
             self._delete_messages_from_topic_group(task_id, topic_ctx)
@@ -462,7 +475,7 @@ class CleanupManager:
         task_id:'str',
         cleanup_result:'CleanupResult',
         delta_ctx:'DeltaCtx'
-        ):
+        ) -> 'None':
 
         # A dictionary mapping all the topics that have any messages to be deleted
         topics_to_clean_up = [] # type: topic_ctx_list
@@ -507,16 +520,11 @@ class CleanupManager:
         ) -> 'CleanupResult':
 
         # First, clean up all the old messages from subscription queues ..
-        self._cleanup_sub_queue_messages(task_id, cleanup_result, delta_ctx)
+        self._cleanup_subscriptions(task_id, cleanup_result, delta_ctx)
 
         # Now, we can proceed and delete the actual message objects because we know that their
         # queue references are already deleted.
         self._cleanup_messages_from_topics(task_id, cleanup_result, delta_ctx)
-
-        #
-        # TODO: Add cleanup of queue messages that have no subscribers,
-        # ..... i.e. their sub_key in pubsub_endp_msg_queue does not point to pubsub_sub.
-        #
 
         return cleanup_result
 
@@ -566,11 +574,11 @@ class CleanupManager:
 
         self.logger.info('Starting cleanup tasks: %s; delta_ctx -> %s', run_id, delta_ctx)
 
-        # IDs for each of the tasks
-        clean_pubsub_id = f'CleanSub-{run_id}'
+        # IDs for our task
+        task_id = f'CleanUp-{run_id}'
 
         # Clean up old pub/sub objects
-        cleanup_result = self.cleanup_pub_sub(clean_pubsub_id, cleanup_result, delta_ctx)
+        cleanup_result = self.cleanup_pub_sub(task_id, cleanup_result, delta_ctx)
 
         # At this point, we have already cleaned up all the old pub/sub messages
         # which means that we can clean up any old WebSocket connections. We do not need
