@@ -88,6 +88,7 @@ if __name__ == '__main__':
     from bunch import Bunch
 
     args = Bunch()
+    args.name = 'aaa'
     args.verbose      = True
     args.store_log    = False
     args.store_config = False
