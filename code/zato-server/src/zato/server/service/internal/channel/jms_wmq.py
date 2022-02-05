@@ -257,7 +257,7 @@ class OnMessageReceived(Service):
             encoding = CCSIDConfig.default_encoding
 
         # Encode the input Unicode data into bytes
-        msg['text'] = msg['text'].encode(encoding)
+        msg['text'] = msg['text'].encode(encoding, errors='replace')
 
         # Extract the business payload
         data = payload_from_request(self.server.json_parser, self.cid, msg['text'], request['data_format'], None)
