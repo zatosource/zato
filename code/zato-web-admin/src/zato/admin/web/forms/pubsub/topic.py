@@ -40,6 +40,12 @@ class CreateForm(forms.Form):
     task_delivery_interval = forms.CharField(widget=forms.TextInput(
         attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.TASK_DELIVERY_INTERVAL)
 
+    limit_retention = forms.CharField(widget=forms.TextInput(
+        attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.LimitTopicRetention)
+
+    limit_message_expiry = forms.CharField(widget=forms.TextInput(
+        attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.LimitMessageExpiry)
+
     def __init__(self, req, *args, **kwargs):
         super(CreateForm, self).__init__(*args, **kwargs)
         add_select(self, 'on_no_subs_pub', [
