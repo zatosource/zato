@@ -151,6 +151,7 @@ command_imports = (
     ('hl7_mllp_send', 'zato.cli.hl7_.MLLPSend'),
     ('info', 'zato.cli.info.Info'),
     ('openapi', 'zato.cli.openapi_.OpenAPI'),
+    ('pubsub_create_topic', 'zato.cli.pubsub.topic.CreateTopic'),
     ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
     ('quickstart_create', 'zato.cli.quickstart.Create'),
     ('service_invoke', 'zato.cli.service.Invoke'),

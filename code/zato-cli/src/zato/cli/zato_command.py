@@ -124,6 +124,10 @@ class CommandStore:
              wait                as wait_mod,                \
              web_admin_auth      as web_admin_auth_mod # noqa: E272
 
+        # Zato - Pub/sub
+        from zato.cli.pubsub import \
+            topic                as pubsub_topic_mod # noqa: E272
+
         parser, base_parser, subs, formatter_class = self.build_core_parser()
         self._add_version(parser)
 
@@ -360,6 +364,17 @@ class CommandStore:
         openapi.set_defaults(command='openapi')
         openapi.add_argument('path', help='Path to a Zato server')
         self.add_opts(openapi, openapi_mod.OpenAPI.opts)
+
+        #
+        # pubsub
+        #
+        pubsub = subs.add_parser('pubsub', description='Publish/subscribe topics and message queues')
+        pubsub_subs = pubsub.add_subparsers()
+
+        pubsub_create_topic = pubsub_subs.add_parser('create-topic',
+            description=pubsub_topic_mod.CreateTopic.__doc__, parents=[base_parser])
+        pubsub_create_topic.set_defaults(command='pubsub_create_topic')
+        self.add_opts(pubsub_create_topic, pubsub_topic_mod.CreateTopic.opts)
 
         #
         # reset-totp-key
