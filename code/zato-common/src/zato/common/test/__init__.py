@@ -41,7 +41,7 @@ from zato.common.simpleio_ import get_bytes_to_str_encoding, get_sio_server_conf
 from zato.common.py23_ import maxint
 from zato.common.typing_ import cast_
 from zato.common.util.api import is_port_taken, new_cid
-from zato.common.util.cli import CommandLineServiceInvoker
+from zato.common.util.cli import CommandLineInvoker, CommandLineServiceInvoker
 from zato.server.service import Service
 
 # Zato - Cython
@@ -53,7 +53,7 @@ from past.builtins import basestring, cmp, unicode, xrange
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anylist
     from zato.common.util.search import SearchResults
     SearchResults = SearchResults
 
@@ -616,21 +616,77 @@ class BaseSIOTestCase(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CommandLineServiceTestCase(TestCase):
+class _CommandLineTestCase(TestCase):
 
     maxDiff = 1234567890
 
-    def run_zato_test(self, service_name:'str') -> 'None':
+    def _handle_cli_out(
+        self,
+        out:'str',
+        assert_ok:'bool',
+        load_json:'bool' = False
+        ) -> 'str':
+
+        # We do not need any extra new lines
+        out = out.strip()
+
+        # If told do, make sure that the response indicates a success ..
+        if assert_ok:
+            self.assertEqual(out, 'OK')
+
+        # .. load a JSON response if configured to do so ..
+        if load_json:
+            out = loads(out)
+
+        # .. and return our output.
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CommandLineTestCase(_CommandLineTestCase):
+
+    def run_zato_cli_command(
+        self,
+        cli_params:'anylist',
+        command_name:'str'='zato',
+        assert_ok:'bool'=False,
+        load_json:'bool'=False,
+        ) -> 'any_':
+
+        # Prepare the invoker ..
+        invoker = CommandLineInvoker(check_stdout=False)
+
+        # .. append the path to our test server ..
+        cli_params.append('--path')
+        cli_params.append(invoker.server_location)
+
+        # .. invoke the service and obtain its response ..
+        out = invoker.invoke_cli(cli_params, command_name) # type: str
+
+        # .. and let the parent class handle the result
+        return self._handle_cli_out(out, assert_ok, load_json)
+
+# ################################################################################################################################
+
+    def run_zato_cli_json_command(self, *args, **kwargs) -> 'any_':
+        return self.run_zato_cli_command(*args, **kwargs, load_json=True)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CommandLineServiceTestCase(_CommandLineTestCase):
+
+    def run_zato_service_test(self, service_name:'str', assert_ok:'bool'=True) -> 'str':
 
         # Prepare the invoker
         invoker = CommandLineServiceInvoker(check_stdout=False)
 
         # .. invoke the service and obtain its response ..
         out = invoker.invoke_and_test(service_name) # type: str
-        out = out.strip()
 
-        # .. make sure that the response indicates a success.
-        self.assertEqual(out, 'OK')
+        # .. and let the parent class handle the result
+        return self._handle_cli_out(out, assert_ok)
 
 # ################################################################################################################################
 # ################################################################################################################################
