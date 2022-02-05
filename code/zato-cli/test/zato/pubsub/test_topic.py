@@ -23,10 +23,35 @@ if 0:
 
 class PubSubTopicTestCase(CommandLineTestCase):
 
-    def test_create_topic(self) -> 'None':
+    def xtest_create_topic_does_not_exist(self) -> 'None':
 
         # Command to invoke ..
         cli_params = ['pubsub', 'create-topic']
+
+        # .. and its response as a dict
+        out = self.run_zato_cli_json_command(cli_params) # type: anydict
+
+        # We expect only for two keys to exist - id and name
+        self.assertEqual(len(out), 2)
+
+        topic_id   = out['id']   # type: int
+        topic_name = out['name'] # type: str
+
+        self.assertIsInstance(topic_id,   int)
+        self.assertIsInstance(topic_name, str)
+
+        self.assertTrue(topic_name.startswith('/auto/topic.2')) # E.g. /auto/topic.2022_01_31T12_28_42_280577
+        self.assertTrue(len(topic_name) >= 30)
+
+# ################################################################################################################################
+
+    def test_create_topic_already_exists(self) -> 'None':
+
+        # Test data
+        topic_name = 'aaa'
+
+        # Command to invoke ..
+        cli_params = ['pubsub', 'create-topic', '--name', topic_name]
 
         # .. and its response as a dict
         out = self.run_zato_cli_json_command(cli_params) # type: anydict
