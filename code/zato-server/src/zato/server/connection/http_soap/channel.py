@@ -486,8 +486,8 @@ class RequestDispatcher:
 
                         # Same comment as in BadRequest, ModelValidationError above
                         if channel_item['name'] == MISC.DefaultAdminInvokeChannel:
+                            wsgi_environ['zato.http.response.headers']['X-Zato-Message'] = str(e.args)
                             response = pretty_format_exception(e, cid)
-                            wsgi_environ['zato.http.response.headers']['X-Zato-Message'] = 'QQQ'
                         else:
                             response = e.args if self.return_tracebacks else self.default_error_message
 

@@ -79,6 +79,17 @@ class CreateTopic(ServerAwareCommand):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class GetTopic(ServerAwareCommand):
+    """ Returns a topic by its name or a part of its exact name.
+    """
+    opts = [
+        {'name':'--name', 'help':'Name of the topic to return', 'required':False},
+        {'name':'--path', 'help':'Path to a Zato server', 'required':False},
+    ]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
 
     # stdlib
@@ -88,7 +99,6 @@ if __name__ == '__main__':
     from bunch import Bunch
 
     args = Bunch()
-    args.name = 'aaa'
     args.verbose      = True
     args.store_log    = False
     args.store_config = False

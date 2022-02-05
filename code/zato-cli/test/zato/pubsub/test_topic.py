@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from datetime import datetime
 from unittest import main
 
 # Zato
@@ -23,13 +24,7 @@ if 0:
 
 class PubSubTopicTestCase(CommandLineTestCase):
 
-    def xtest_create_topic_does_not_exist(self) -> 'None':
-
-        # Command to invoke ..
-        cli_params = ['pubsub', 'create-topic']
-
-        # .. and its response as a dict
-        out = self.run_zato_cli_json_command(cli_params) # type: anydict
+    def _confirm_topic_created(self, out:'anydict', expected_prefix:'str') -> 'None':
 
         # We expect only for two keys to exist - id and name
         self.assertEqual(len(out), 2)
@@ -40,33 +35,57 @@ class PubSubTopicTestCase(CommandLineTestCase):
         self.assertIsInstance(topic_id,   int)
         self.assertIsInstance(topic_name, str)
 
-        self.assertTrue(topic_name.startswith('/auto/topic.2')) # E.g. /auto/topic.2022_01_31T12_28_42_280577
+        self.assertTrue(topic_name.startswith(expected_prefix))
         self.assertTrue(len(topic_name) >= 30)
+
+# ################################################################################################################################
+
+    def test_create_topic_does_not_exist(self) -> 'None':
+
+        # Test data
+        expected_prefix = '/auto/topic.2'  # E.g. /auto/topic.2022_01_31T12_28_42_280577
+
+        # Command to invoke ..
+        cli_params = ['pubsub', 'create-topic']
+
+        # .. get its response as a dict ..
+        out = self.run_zato_cli_json_command(cli_params) # type: anydict
+
+        # .. and confirm that the topic was created.
+        self._confirm_topic_created(out, expected_prefix)
 
 # ################################################################################################################################
 
     def test_create_topic_already_exists(self) -> 'None':
 
         # Test data
-        topic_name = 'aaa'
+        prefix = 'test.already-exists.'
+        topic_name = prefix + datetime.utcnow().isoformat()
 
         # Command to invoke ..
         cli_params = ['pubsub', 'create-topic', '--name', topic_name]
 
-        # .. and its response as a dict
+        # Create the topic once ..
         out = self.run_zato_cli_json_command(cli_params) # type: anydict
 
-        # We expect only for two keys to exist - id and name
-        self.assertEqual(len(out), 2)
+        # .. there should be no error yet
+        self._confirm_topic_created(out, prefix)
 
-        topic_id   = out['id']   # type: int
-        topic_name = out['name'] # type: str
+        # .. create it once more ..
+        out = self.run_zato_cli_json_command(cli_params) # type: anydict
 
-        self.assertIsInstance(topic_id,   int)
-        self.assertIsInstance(topic_name, str)
+        # now, we expect for three keys to exist - cid, result, and details
+        self.assertEqual(len(out), 3)
 
-        self.assertTrue(topic_name.startswith('/auto/topic.2')) # E.g. /auto/topic.2022_01_31T12_28_42_280577
-        self.assertTrue(len(topic_name) >= 30)
+        cid     = out['cid']    # type: str
+        result  = out['result']  # type: str
+        details = out['details'] # type: str
+
+        expected_details_message = f'A pub/sub topic `{topic_name}` already exists in this cluster'
+
+        self.assertTrue(len(cid) >= 20)
+        self.assertEqual(result,  'Error')
+        self.assertEqual(details, expected_details_message)
 
 # ################################################################################################################################
 # ################################################################################################################################
