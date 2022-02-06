@@ -54,7 +54,7 @@ skip_input_params = ['cluster_id', 'is_internal', 'current_depth_gd', 'last_pub_
 input_optional_extra = ['needs_details', 'on_no_subs_pub', 'hook_service_name'] + topic_limit_fields
 output_optional_extra = ['is_internal', Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time',
     'hook_service_name', 'last_pub_time', AsIs('last_pub_msg_id'), 'last_endpoint_id', 'last_endpoint_name',
-    Bool('last_pub_has_gd'), 'last_pub_server_pid', 'last_pub_server_name', 'on_no_subs_pub',
+    Bool('last_pub_has_gd'), Opaque('last_pub_server_pid'), 'last_pub_server_name', 'on_no_subs_pub',
     ] + topic_limit_fields
 
 # ################################################################################################################################
@@ -145,6 +145,11 @@ def response_hook(self, input, instance, attrs, service_type):
                     item.last_endpoint_name = last_data['endpoint_name']
                     item.last_pub_server_pid = last_data.get('server_pid')
                     item.last_pub_server_name = last_data.get('server_name')
+
+                    # PIDs are integers
+                    if item.last_pub_server_pid:
+                        item.last_pub_server_pid = int(item.last_pub_server_pid)
+                        pass
 
 # ################################################################################################################################
 

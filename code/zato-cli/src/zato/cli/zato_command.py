@@ -371,10 +371,32 @@ class CommandStore:
         pubsub = subs.add_parser('pubsub', description='Publish/subscribe topics and message queues')
         pubsub_subs = pubsub.add_subparsers()
 
+        #
+        # pubsub create-topic
+        #
+
         pubsub_create_topic = pubsub_subs.add_parser('create-topic',
             description=pubsub_topic_mod.CreateTopic.__doc__, parents=[base_parser])
         pubsub_create_topic.set_defaults(command='pubsub_create_topic')
         self.add_opts(pubsub_create_topic, pubsub_topic_mod.CreateTopic.opts)
+
+        #
+        # pubsub get-topic (alias to get-topics)
+        #
+
+        pubsub_get_topic = pubsub_subs.add_parser('get-topic',
+            description=pubsub_topic_mod.GetTopic.__doc__, parents=[base_parser])
+        pubsub_get_topic.set_defaults(command='pubsub_get_topic')
+        self.add_opts(pubsub_get_topic, pubsub_topic_mod.GetTopic.opts)
+
+        #
+        # pubsub get-topics
+        #
+
+        pubsub_get_topics = pubsub_subs.add_parser('get-topics',
+            description=pubsub_topic_mod.GetTopics.__doc__, parents=[base_parser])
+        pubsub_get_topics.set_defaults(command='pubsub_get_topics')
+        self.add_opts(pubsub_get_topics, pubsub_topic_mod.GetTopics.opts)
 
         #
         # reset-totp-key
