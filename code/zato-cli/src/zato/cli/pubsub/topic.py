@@ -20,6 +20,7 @@ from zato.common.typing_ import cast_
 if 0:
     from argparse import Namespace
     from zato.common.typing_ import anydict, anylist
+    Namespace = Namespace
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -109,7 +110,21 @@ class GetTopics(ServerAwareCommand):
     def execute(self, args:'Namespace'):
 
         # Make sure that keys are always a set object to look up information in
-        args.keys = args.keys or set()
+        args_keys = getattr(args, 'keys', '')
+        if args_keys:
+            if isinstance(args_keys, str):
+                args_keys = args_keys.split(',')
+                args_keys = [elem.strip() for elem in args_keys]
+        else:
+            args_keys = Config.DefaultTopicKeys
+
+        args_keys = set(args_keys)
+        has_all = 'all' in args_keys
+        needs_default_keys = has_all or (not args_keys)
+
+        # We do not need it in the set anymore
+        if has_all:
+            args_keys.remove('all')
 
         def hook_func(data:'anydict') -> 'anylist':
 
@@ -130,12 +145,25 @@ class GetTopics(ServerAwareCommand):
                     if opaque:
                         elem.update(opaque)
 
-                # .. Make sure we return only the requested keys ..
-                # .. Note that we build a new dictionary because we want to preserve the order
-                # .. of DefaultConfigKeys in case we do not return them all.
+                # Make sure we return only the requested keys. Note that we build a new dictionary
+                # because we want to preserve the order of DefaultConfigKeys. Also note that if all keys
+                # are requested, for consistency, we still initially populate the dictionary
+                # with keys from DefaultTopicKeys and only then do we proceed to the remaining keys.
                 out_elem = {}
-                for name in args.keys:
-                    out_elem[name] = elem.get(name) # Use .get to guard against keys that do not exist
+
+                # We are possibly return the default keys
+                if needs_default_keys:
+
+                    # First, populate the default keys ..
+                    for name in Config.DefaultTopicKeys:
+                        value = elem.get(name)
+                        out_elem[name] = value
+
+                # .. otherwise, we return only the specifically requested keys
+                for name, value in sorted(elem.items()):
+                    if name not in out_elem:
+                        if name in args_keys:
+                            out_elem[name] = value
 
                 # .. we are finished with pre-processing of this element ..
                 out.append(out_elem)
@@ -169,11 +197,20 @@ class GetTopic(GetTopics):
 if __name__ == '__main__':
 
     # stdlib
+    from argparse import Namespace
     from os import environ
 
-    # Bunch
-    from bunch import Bunch
+    args = Namespace()
+    args.keys         = ('id', 'name')
+    args.verbose      = True
+    args.store_log    = False
+    args.store_config = False
+    args.path = environ['ZATO_SERVER_BASE_DIR']
 
+    command = GetTopics(args)
+    command.run(args)
+
+    """
     args = Bunch()
     args.verbose      = True
     args.store_log    = False
@@ -182,6 +219,7 @@ if __name__ == '__main__':
 
     command = CreateTopic(args)
     command.run(args)
+    """
 
 # ################################################################################################################################
 # ################################################################################################################################
