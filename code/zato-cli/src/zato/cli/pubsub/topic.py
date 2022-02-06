@@ -6,14 +6,29 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from json import loads
+
 # Zato
 from zato.cli import ServerAwareCommand
+from zato.common.api import GENERIC
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from argparse import Namespace
+    from zato.common.typing_ import anydict, anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_opaque_attr = GENERIC.ATTR_NAME
+
+class Config:
+    DefaultTopicKeys = ('id', 'name', 'current_depth_gd', 'last_pub_time', 'last_pub_msg_id', 'last_endpoint_name',
+        'last_pub_server_name', 'last_pub_server_pid', 'last_pub_has_gd')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,13 +94,74 @@ class CreateTopic(ServerAwareCommand):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetTopic(ServerAwareCommand):
-    """ Returns a topic by its name or a part of its exact name.
+class GetTopics(ServerAwareCommand):
+    """ Returns one or more topic by their name. Accepts partial names, e.g. "demo" will match "/my/demo/topic".
     """
     opts = [
-        {'name':'--name', 'help':'Name of the topic to return', 'required':False},
-        {'name':'--path', 'help':'Path to a Zato server', 'required':False},
+        {'name':'--query', 'help':'Query to look up topics by', 'required':False},
+        {'name':'--keys',  'help':'What JSON keys to return on put. Use "all" to return them all',
+            'required':False, 'default':Config.DefaultTopicKeys},
+        {'name':'--path',  'help':'Path to a Zato server', 'required':False},
     ]
+
+# ################################################################################################################################
+
+    def execute(self, args:'Namespace'):
+
+        # Make sure that keys are always a set object to look up information in
+        args.keys = args.keys or set()
+
+        def hook_func(data:'anydict') -> 'anylist':
+
+            # Response to produce ..
+            out = []
+
+            # .. extract the top-level element ..
+            data = data['zato_pubsub_topic_get_list_response']
+
+            # .. go through each response element found ..
+            for elem in data: # type: dict
+                elem = cast_('anydict', elem)
+
+                # .. turn opaque data into path of the response ..
+                opaque = elem.pop(_opaque_attr, '')
+                if opaque:
+                    opaque = loads(opaque)
+                    if opaque:
+                        elem.update(opaque)
+
+                # .. Make sure we return only the requested keys ..
+                # .. Note that we build a new dictionary because we want to preserve the order
+                # .. of DefaultConfigKeys in case we do not return them all.
+                out_elem = {}
+                for name in args.keys:
+                    out_elem[name] = elem.get(name) # Use .get to guard against keys that do not exist
+
+                # .. we are finished with pre-processing of this element ..
+                out.append(out_elem)
+
+            # .. and return the output to our caller.
+            return out
+
+        # Our service to invoke
+        service = 'zato.pubsub.topic.get-list'
+
+        # Get a list of topics matching the input query, if any
+        request = {
+            'paginate': True,
+            'needs_details': True,
+            'query': getattr(args, 'query', ''),
+        }
+
+        # Invoke and log, pre-processing the data first with a hook function
+        self._invoke_service_and_log_response(service, request, hook_func=hook_func)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetTopic(GetTopics):
+    """ A convenience alias for get-topics. It does exactly the same.
+    """
 
 # ################################################################################################################################
 # ################################################################################################################################

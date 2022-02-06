@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from json import dumps
+from json import dumps, loads
 
 # Zato
 from zato.common.util.open_ import open_r, open_w
@@ -17,7 +17,7 @@ from zato.common.util.open_ import open_r, open_w
 
 if 0:
     from zato.client import ZatoClient
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import anydict, callnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,6 +156,8 @@ command_imports = (
     ('info', 'zato.cli.info.Info'),
     ('openapi', 'zato.cli.openapi_.OpenAPI'),
     ('pubsub_create_topic', 'zato.cli.pubsub.topic.CreateTopic'),
+    ('pubsub_get_topic', 'zato.cli.pubsub.topic.GetTopics'),
+    ('pubsub_get_topics', 'zato.cli.pubsub.topic.GetTopics'),
     ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
     ('quickstart_create', 'zato.cli.quickstart.Create'),
     ('service_invoke', 'zato.cli.service.Invoke'),
@@ -957,21 +959,36 @@ class ServerAwareCommand(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _invoke_service_and_log_response(self, service:'str', request:'anydict') -> 'None':
+    def _invoke_service_and_log_response(self, service:'str', request:'anydict', hook_func:'callnone'=None) -> 'None':
 
         # stdlib
         import sys
 
+        # Pass all the data to the underlying service and get its response ..
         response = self.zato_client.invoke(**{
             'name':    service,
             'payload': request
         })
 
+        # We enter here if there is genuine business data to process
         if response.data:
-            data = dumps(response.data)
+
+            # .. let's extract it ..
+            data = response.data
+
+            # .. if we have a hook callable to pre-process data, let's invoke it ..
+            if hook_func:
+                data = hook_func(data)
+
+        # We enter here if there was an invocation error
         else:
             data = response.details
+            data = loads(data)
 
+        # .. at this point, we are ready to serialize the data to JSON
+        data = dumps(data, indent=2)
+
+        # No matter what data we have, we can log it now
         sys.stdout.write(data + '\n')
 
 # ################################################################################################################################
