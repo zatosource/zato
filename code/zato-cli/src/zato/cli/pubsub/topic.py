@@ -99,7 +99,7 @@ class GetTopics(ServerAwareCommand):
     """ Returns one or more topic by their name. Accepts partial names, e.g. "demo" will match "/my/demo/topic".
     """
     opts = [
-        {'name':'--query', 'help':'Query to look up topics by', 'required':False},
+        {'name':'--name',  'help':'Name query to look up topics by', 'required':False},
         {'name':'--keys',  'help':'What JSON keys to return on put. Use "all" to return them all', 'required':False},
         {'name':'--path',  'help':'Path to a Zato server', 'required':False},
     ]
@@ -177,7 +177,7 @@ class GetTopics(ServerAwareCommand):
         request = {
             'paginate': True,
             'needs_details': True,
-            'query': getattr(args, 'query', ''),
+            'query': getattr(args, 'name', ''),
         }
 
         # Invoke and log, pre-processing the data first with a hook function
