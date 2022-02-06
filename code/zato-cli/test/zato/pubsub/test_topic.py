@@ -14,6 +14,8 @@ from unittest import main
 from gevent import sleep
 
 # Zato
+from zato.cli.pubsub.topic import Config as CLITopicConfig
+from zato.common.api import PUBSUB
 from zato.common.test import CommandLineTestCase
 
 # ################################################################################################################################
@@ -21,6 +23,11 @@ from zato.common.test import CommandLineTestCase
 
 if 0:
     from zato.common.typing_ import any_, anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_default = PUBSUB.DEFAULT
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -115,10 +122,10 @@ class PubSubTopicTestCase(CommandLineTestCase):
         # Command to invoke ..
         create_cli_params = ['pubsub', 'create-topic', '--name', topic_name]
 
-        # Create the topic once ..
+        # Create one topic  ..
         create_out = self.run_zato_cli_json_command(create_cli_params) # type: anydict
 
-        # Command to get the topic with ..
+        # Command to get the topic back with ..
         get_cli_params = ['pubsub', command, '--name', topic_name]
 
         # Now, we expect to get that one topic back
@@ -128,22 +135,22 @@ class PubSubTopicTestCase(CommandLineTestCase):
         self.assertTrue(len(out_get), 1)
 
         # Extract it now ..
-        out0 = out_get[0] # type: anydict
+        out = out_get[0] # type: anydict
 
         # .. and run our assertions.
 
-        self.assertEqual(out0['id'],   create_out['id'])
-        self.assertEqual(out0['name'], create_out['name'])
-        self.assertEqual(out0['name'], topic_name)
+        self.assertEqual(out['id'],   create_out['id'])
+        self.assertEqual(out['name'], create_out['name'])
+        self.assertEqual(out['name'], topic_name)
 
-        # This is a new topic and we do not expect any sort of publication-related information associated with it
-        self.assertEqual(out0['current_depth_gd'], 0)
-        self.assertIsNone(out0['last_pub_time'])
-        self.assertIsNone(out0['last_pub_msg_id'])
-        self.assertIsNone(out0['last_endpoint_name'])
-        self.assertIsNone(out0['last_pub_server_name'])
-        self.assertIsNone(out0['last_pub_server_pid'])
-        self.assertIsNone(out0['last_pub_has_gd'])
+        # This is a new topic and we do not expect any sort of publication-related information associated with it.
+        self.assertEqual(out['current_depth_gd'], 0)
+        self.assertIsNone(out['last_pub_time'])
+        self.assertIsNone(out['last_pub_msg_id'])
+        self.assertIsNone(out['last_endpoint_name'])
+        self.assertIsNone(out['last_pub_server_name'])
+        self.assertIsNone(out['last_pub_server_pid'])
+        self.assertIsNone(out['last_pub_has_gd'])
 
 # ################################################################################################################################
 
@@ -193,7 +200,7 @@ class PubSubTopicTestCase(CommandLineTestCase):
         self.assertEqual(out1['name'], create_out1['name'])
         self.assertEqual(out1['name'], topic_name1)
 
-        # .. these are new topics and we do not expect any sort of publication-related information associated with it
+        # .. these are new topics and we do not expect any sort of publication-related information associated with it.
 
         self.assertEqual(out0['current_depth_gd'], 0)
         self.assertIsNone(out0['last_pub_time'])
@@ -214,22 +221,146 @@ class PubSubTopicTestCase(CommandLineTestCase):
 # ################################################################################################################################
 
     def _run_get_topic_default_keys(self, command:'str') -> 'None':
-        pass
+
+        # Test data
+        prefix = '/test/'
+        topic_name = prefix + datetime.utcnow().isoformat()
+
+        # Command to invoke ..
+        create_cli_params = ['pubsub', 'create-topic', '--name', topic_name]
+
+        # Create one topic  ..
+        _ = self.run_zato_cli_json_command(create_cli_params) # type: anydict
+
+        # Command to get the topic back with ..
+        get_cli_params = ['pubsub', command, '--name', topic_name]
+
+        # Now, we expect to get that one topic back
+        out_get = self.run_zato_cli_json_command(get_cli_params) # type: any_
+
+        # There must be one topic on output
+        self.assertTrue(len(out_get), 1)
+
+        # Extract it now ..
+        out = out_get[0] # type: anydict
+
+        # .. and confirm that all the default keys, and only the default ones, are returned.
+        default_keys = CLITopicConfig.DefaultTopicKeys
+
+        len_out = len(out)
+        len_default_keys = len(default_keys)
+
+        self.assertEqual(len_out, len_default_keys)
+
+        for key in default_keys:
+            self.assertIn(key, out)
 
 # ################################################################################################################################
 
     def _run_get_topic_all_keys(self, command:'str') -> 'None':
-        pass
+
+        # Test data
+        prefix = '/test/'
+        topic_name = prefix + datetime.utcnow().isoformat()
+
+        # Command to invoke ..
+        create_cli_params = ['pubsub', 'create-topic', '--name', topic_name]
+
+        # Create one topic  ..
+        create_out = self.run_zato_cli_json_command(create_cli_params) # type: anydict
+
+        # Command to get the topic back with - note that we request for all the keys to be returned ..
+        get_cli_params = ['pubsub', command, '--name', topic_name, '--keys', 'all']
+
+        # Now, we expect to get that one topic back
+        out_get = self.run_zato_cli_json_command(get_cli_params) # type: any_
+
+        # There must be one topic on output
+        self.assertTrue(len(out_get), 1)
+
+        # Extract it now ..
+        out = out_get[0] # type: anydict
+
+        # .. make sure that the default keys are still returned if all of them are requested ..
+        default_keys = CLITopicConfig.DefaultTopicKeys
+
+        len_out = len(out)
+        self.assertEqual(len_out, 24)
+
+        # .. each default key is expected to be returned ..
+        for key in default_keys:
+            self.assertIn(key, out)
+
+        # This, we can compare based on the response from create-topic
+        self.assertEqual(out['id'],   create_out['id'])
+        self.assertEqual(out['name'], create_out['name'])
+        self.assertEqual(out['name'], topic_name)
+
+        # These are default keys
+        self.assertEqual(out['current_depth_gd'], 0)
+        self.assertIsNone(out['last_pub_time'])
+        self.assertIsNone(out['last_pub_msg_id'])
+        self.assertIsNone(out['last_endpoint_name'])
+        self.assertIsNone(out['last_pub_server_name'])
+        self.assertIsNone(out['last_pub_server_pid'])
+        self.assertIsNone(out['last_pub_has_gd'])
+
+        # And this is the rest of the keys
+
+        self.assertEqual(out['max_depth_gd'], _default.TOPIC_MAX_DEPTH_GD)
+        self.assertEqual(out['limit_retention'], _default.LimitTopicRetention)
+        self.assertEqual(out['depth_check_freq'], _default.DEPTH_CHECK_FREQ)
+        self.assertEqual(out['max_depth_non_gd'], _default.TOPIC_MAX_DEPTH_NON_GD)
+        self.assertEqual(out['task_sync_interval'], _default.TASK_SYNC_INTERVAL)
+        self.assertEqual(out['task_delivery_interval'], _default.TASK_DELIVERY_INTERVAL)
+
+        self.assertEqual(out['limit_message_expiry'], _default.LimitMessageExpiry)
+        self.assertEqual(out['pub_buffer_size_gd'], 0)
+
+        self.assertTrue(out['is_active'])
+
+        self.assertFalse(out['has_gd'])
+        self.assertFalse(out['is_api_sub_allowed'])
+        self.assertFalse(out['is_internal'])
+
+        self.assertIsNone(out['hook_service_id'])
+        self.assertIsNone(out['hook_service_name'])
+        self.assertIsNone(out['on_no_subs_pub'])
 
 # ################################################################################################################################
 
     def _run_get_topic_only_selected_keys(self, command:'str') -> 'None':
-        pass
 
-# ################################################################################################################################
+        # Test data
+        prefix = '/test/'
+        topic_name = prefix + datetime.utcnow().isoformat()
 
-    def _run_get_topic_already_published_to(self, command:'str') -> 'None':
-        pass
+        # Command to invoke ..
+        create_cli_params = ['pubsub', 'create-topic', '--name', topic_name]
+
+        # Create one topic  ..
+        create_out = self.run_zato_cli_json_command(create_cli_params) # type: anydict
+
+        # Command to get the topic back with - note that we request for all the keys to be returned ..
+        get_cli_params = ['pubsub', command, '--name', topic_name, '--keys', 'id, is_active, is_internal']
+
+        # Now, we expect to get that one topic back
+        out_get = self.run_zato_cli_json_command(get_cli_params) # type: any_
+
+        # There must be one topic on output
+        self.assertTrue(len(out_get), 1)
+
+        # Extract it now ..
+        out = out_get[0] # type: anydict
+
+        # We expect to find only three keys here
+        len_out = len(out)
+        self.assertEqual(len_out, 3)
+
+        # Run our assertions name
+        self.assertEqual(out['id'], create_out['id'])
+        self.assertTrue(out['is_active'])
+        self.assertFalse(out['is_internal'])
 
 # ################################################################################################################################
 
@@ -242,10 +373,9 @@ class PubSubTopicTestCase(CommandLineTestCase):
         self._run_get_topic_no_such_topic(command)
         self._run_get_topic_test_one_topic(command)
         self._run_get_topic_test_multiple_topics(command)
-        # self._run_get_topic_default_keys(command)
-        # self._run_get_topic_all_keys(command)
-        # self._run_get_topic_only_selected_keys(command)
-        # self._run_get_topic_already_published_to(command)
+        self._run_get_topic_default_keys(command)
+        self._run_get_topic_all_keys(command)
+        self._run_get_topic_only_selected_keys(command)
 
 # ################################################################################################################################
 
@@ -258,10 +388,9 @@ class PubSubTopicTestCase(CommandLineTestCase):
         self._run_get_topic_no_such_topic(command)
         self._run_get_topic_test_one_topic(command)
         self._run_get_topic_test_multiple_topics(command)
-        # self._run_get_topic_default_keys(command)
-        # self._run_get_topic_all_keys(command)
-        # self._run_get_topic_only_selected_keys(command)
-        # self._run_get_topic_already_published_to(command)
+        self._run_get_topic_default_keys(command)
+        self._run_get_topic_all_keys(command)
+        self._run_get_topic_only_selected_keys(command)
 
 # ################################################################################################################################
 # ################################################################################################################################

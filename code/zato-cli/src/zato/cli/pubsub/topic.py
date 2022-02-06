@@ -6,9 +6,6 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from json import loads
-
 # Zato
 from zato.cli import ServerAwareCommand
 from zato.common.api import GENERIC
@@ -137,12 +134,8 @@ class GetTopics(ServerAwareCommand):
             for elem in data: # type: dict
                 elem = cast_('anydict', elem)
 
-                # .. turn opaque data into path of the response ..
-                opaque = elem.pop(_opaque_attr, '')
-                if opaque:
-                    opaque = loads(opaque)
-                    if opaque:
-                        elem.update(opaque)
+                # Delete the opaque attributes container
+                elem.pop(_opaque_attr, '')
 
                 # Make sure we return only the requested keys. Note that we build a new dictionary
                 # because we want to preserve the order of DefaultConfigKeys. Also note that if all keys
