@@ -39,6 +39,7 @@ _default = PUBSUB.DEFAULT
 sec_name = _default.TEST_SECDEF_NAME
 username = _default.TEST_USERNAME
 
+
 delta_environ_key = 'ZATO_SCHED_DELTA'
 
 # ################################################################################################################################
@@ -73,12 +74,12 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
         # Run the cleanup procedure now
         cleanup_result = run_cleanup()
 
-        self.assertEqual(cleanup_result.pubsub_total_queue_messages, 0)
-        self.assertListEqual(cleanup_result.pubsub_sk_list, [])
+        self.assertEqual(cleanup_result.found_total_queue_messages, 0)
+        self.assertListEqual(cleanup_result.found_sk_list, [])
 
 # ################################################################################################################################
 
-    def test_cleanup_old_subscriptions_one_sub_key(self):
+    def xtest_cleanup_old_subscriptions_one_sub_key(self):
 
         # Filter our warnings coming from requests
         import warnings
@@ -122,8 +123,8 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
         # Run the cleanup procedure now
         cleanup_result = run_cleanup()
 
-        self.assertEqual(cleanup_result.pubsub_total_queue_messages, len_messages)
-        self.assertListEqual(cleanup_result.pubsub_sk_list, [sub_key])
+        self.assertEqual(cleanup_result.found_total_queue_messages, len_messages)
+        self.assertListEqual(cleanup_result.found_sk_list, [sub_key])
 
         # The cleanup procedure invoked the server which in turn deleted our subscription,
         # which means that we can sleep for a moment now to make sure that it is actually

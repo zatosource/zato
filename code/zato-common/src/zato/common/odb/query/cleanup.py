@@ -13,7 +13,7 @@ from logging import getLogger
 from sqlalchemy import delete, func, or_
 
 # Zato
-from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription
+from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,8 +47,10 @@ def get_subscriptions(task_id:'str', session:'SASession', max_last_interaction_t
         PubSubSubscription.last_interaction_time,
         PubSubEndpoint.name.label('endpoint_name'),
         PubSubEndpoint.id.label('endpoint_id'),
+        PubSubTopic.opaque1.label('topic_opaque')
         ).\
-        filter(PubSubEndpoint.id == PubSubSubscription.endpoint_id).\
+        filter(PubSubSubscription.topic_id    == PubSubTopic.id).\
+        filter(PubSubSubscription.endpoint_id == PubSubEndpoint.id).\
         filter(PubSubEndpoint.is_internal.is_(False)).\
         filter(or_(
             PubSubSubscription.last_interaction_time < max_last_interaction_time,
