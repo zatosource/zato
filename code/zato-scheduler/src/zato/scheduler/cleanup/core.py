@@ -27,6 +27,7 @@ from gevent import sleep
 
 # Zato
 from zato.broker.client import BrokerClient
+from zato.common.api import PUBSUB
 from zato.common.broker_message import SCHEDULER
 from zato.common.odb.query.cleanup import delete_queue_messages, delete_topic_messages, get_messages, get_subscriptions
 from zato.common.odb.query.pubsub.delivery import get_sql_msg_ids_by_sub_key
@@ -49,6 +50,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+_default_pubsub = PUBSUB.DEFAULT
+
 topic_ctx_list = list_['TopicCtx']
 
 # ################################################################################################################################
@@ -58,11 +61,6 @@ topic_ctx_list = list_['TopicCtx']
 class DeltaCtx:
 
     topic_min_retention:  'int'
-    delta_not_interacted: 'int'
-
-    not_iteracted_max_last_as_float:    'float'
-    not_iteracted_max_last_as_datetime: 'datetime'
-
     topic_min_retention_as_float:    'float'
     topic_min_retention_as_datetime: 'datetime'
 
@@ -83,9 +81,11 @@ class TopicCtx:
     id:   'int'
     name: 'str'
     messages: 'dictlist'
-    groups_ctx: 'GroupsCtx'
     len_messages: 'int'
-    min_retention_time: 'int'
+    limit_retention:      'int'
+    limit_message_expiry: 'int'
+    limit_sub_inactivity: 'int'
+    groups_ctx: 'GroupsCtx'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,12 +107,24 @@ class CleanupConfig:
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass(init=False)
 class CleanupCtx:
     run_id: 'str'
     found_all_topics: 'int'
     found_sk_list:  'strlist'
     found_total_queue_messages: 'int'
+
+    now: 'float'
+    now_dt: 'datetime'
+
+    all_topics:        'topic_ctx_list'
     topics_cleaned_up: 'topic_ctx_list'
+
+    max_limit_sub_inactivity:    'int'
+    max_limit_sub_inactivity_dt: 'datetime'
+
+    max_last_interaction_time:    'float'
+    max_last_interaction_time_dt: 'datetime'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -184,11 +196,11 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _get_subscriptions(self, task_id:'str', delta_ctx:'DeltaCtx') -> 'anylist':
+    def _get_subscriptions(self, task_id:'str', cleanup_ctx:'CleanupCtx') -> 'anylist':
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
-            result = get_subscriptions(task_id, session, delta_ctx.not_iteracted_max_last_as_float)
+            result = get_subscriptions(task_id, session, cleanup_ctx.max_last_interaction_time)
 
         # Convert SQL results to a dict that we can easily work with
         result = [elem._asdict() for elem in result]
@@ -215,11 +227,12 @@ class CleanupManager:
 
         suffix = self._get_suffix(out)
 
-        self.logger.info('%s: Returning %s subscription%swith last interaction time older than %s (delta: %s seconds)',
-            task_id, len(out), suffix, delta_ctx.not_iteracted_max_last_as_datetime, delta_ctx.delta_not_interacted)
+        msg = '%s: Returning %s subscription%swith with no interaction or last interaction time older than %s (delta: %s seconds)'
+        self.logger.info(msg, task_id, len(out), suffix, cleanup_ctx.max_last_interaction_time_dt,
+            cleanup_ctx.max_limit_sub_inactivity)
 
         if out:
-            table = tabulate_dictlist(out)
+            table = tabulate_dictlist(out, skip_keys='topic_opaque')
             self.logger.info('%s: ** Subscriptions to clean up **\n%s', task_id, table)
 
         return out
@@ -260,7 +273,7 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _cleanup_sub(self, task_id:'str', cleanup_ctx:'CleanupCtx', delta_ctx:'DeltaCtx', sub:'stranydict') -> 'strlist':
+    def _cleanup_sub(self, task_id:'str', cleanup_ctx:'CleanupCtx', sub:'stranydict') -> 'strlist':
         """ Cleans up an individual subscription. First it deletes old queue messages, then it notifies servers
         that a subscription object should be deleted as well.
         """
@@ -277,8 +290,7 @@ class CleanupManager:
         last_sql_run = 0.0
 
         # We look up messages up to this point in time, which is equal to the start of our job
-        # (in seconds, hence the division, because we go from milliseconds up to seconds).
-        pub_time_max = delta_ctx.not_iteracted_max_last_as_float / 1000
+        pub_time_max = cleanup_ctx.now
 
         # We assume there is always one cluster in the database and we can skip its ID
         cluster_id = None
@@ -331,8 +343,7 @@ class CleanupManager:
     def _cleanup_subscriptions(
         self,
         task_id:'str',
-        cleanup_ctx:'CleanupCtx',
-        delta_ctx:'DeltaCtx'
+        cleanup_ctx:'CleanupCtx'
         ) -> 'CleanupCtx':
         """ Cleans up all subscriptions - all the old queue messages as well as their subscribers.
         """
@@ -343,7 +354,7 @@ class CleanupManager:
         queue_msg_list = []
 
         # Find all subscribers in the database ..
-        subs = self._get_subscriptions(task_id, delta_ctx)
+        subs = self._get_subscriptions(task_id, cleanup_ctx)
         len_subs = len(subs)
 
         # .. and clean up their queues, if any were found ..
@@ -354,7 +365,7 @@ class CleanupManager:
                 task_id, sub['idx'], len_subs, sub_key, endpoint_name)
 
             # Clean up this sub_key and get the list of message IDs found for it ..
-            sk_queue_msg_list = self._cleanup_sub(task_id, cleanup_ctx, delta_ctx, sub)
+            sk_queue_msg_list = self._cleanup_sub(task_id, cleanup_ctx, sub)
 
             # .. append the per-sub_key message to the overall list of messages found for subscribers.
             queue_msg_list.extend(sk_queue_msg_list)
@@ -366,7 +377,7 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _get_topics(self, task_id:'str', delta_ctx:'DeltaCtx') -> topic_ctx_list:
+    def _get_topics(self, task_id:'str') -> topic_ctx_list:
 
         # Our response to produce
         out = []
@@ -397,10 +408,15 @@ class CleanupManager:
             else:
                 opaque = opaque or {}
 
-            # Not all topics will have the minimum retention time configured,
+            # Not all topics will have the minimum retention time and related data configured,
             # in which case we use the relevant value from our configuration object.
-            min_retention_time = opaque.get('min_retention_time') or delta_ctx.topic_min_retention
-            topic_dict['min_retention_time'] = min_retention_time
+            limit_retention      = opaque.get('limit_retention')   or _default_pubsub.LimitTopicRetention
+            limit_message_expiry = opaque.get('limit_message_expiry') or _default_pubsub.LimitMessageExpiry
+            limit_sub_inactivity = opaque.get('limit_sub_inactivity') or _default_pubsub.LimitSubInactivity
+
+            topic_dict['limit_retention']      = limit_retention
+            topic_dict['limit_message_expiry'] = limit_message_expiry
+            topic_dict['limit_sub_inactivity'] = limit_sub_inactivity
 
             # Add the now ready topic dict to a list that the logger will use later
             topics_found.append(topic_dict)
@@ -409,7 +425,9 @@ class CleanupManager:
             topic_ctx = TopicCtx()
             topic_ctx.id   = topic_dict['id']
             topic_ctx.name = topic_dict['name']
-            topic_ctx.min_retention_time = topic_dict['min_retention_time']
+            topic_ctx.limit_retention = topic_dict['limit_retention']
+            topic_ctx.limit_message_expiry = topic_dict['limit_message_expiry']
+            topic_ctx.limit_sub_inactivity = topic_dict['limit_sub_inactivity']
             topic_ctx.messages = []
             topic_ctx.len_messages = 0
 
@@ -473,20 +491,16 @@ class CleanupManager:
     def _cleanup_messages_from_topics(
         self,
         task_id:'str',
-        cleanup_ctx:'CleanupCtx',
-        delta_ctx:'DeltaCtx'
+        cleanup_ctx:'CleanupCtx'
         ) -> 'None':
 
         # A dictionary mapping all the topics that have any messages to be deleted
         topics_to_clean_up = [] # type: topic_ctx_list
 
-        # First, get all the topics that we can process
-        topics = self._get_topics(task_id, delta_ctx)
-
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
 
-            for topic_ctx in topics:
+            for topic_ctx in cleanup_ctx.all_topics:
 
                 # Look up all the messages that can be deleted from that topic in the database
                 messages_for_topic = get_messages(task_id, session, topic_ctx.id, topic_ctx.name)
@@ -515,16 +529,15 @@ class CleanupManager:
     def cleanup_pub_sub(
         self,
         task_id:'str',
-        cleanup_ctx:'CleanupCtx',
-        delta_ctx:'DeltaCtx'
+        cleanup_ctx:'CleanupCtx'
         ) -> 'CleanupCtx':
 
         # First, clean up all the old messages from subscription queues ..
-        self._cleanup_subscriptions(task_id, cleanup_ctx, delta_ctx)
+        self._cleanup_subscriptions(task_id, cleanup_ctx)
 
         # Now, we can proceed and delete the actual message objects because we know that their
         # queue references are already deleted.
-        self._cleanup_messages_from_topics(task_id, cleanup_ctx, delta_ctx)
+        # self._cleanup_messages_from_topics(task_id, cleanup_ctx)
 
         return cleanup_ctx
 
@@ -533,52 +546,58 @@ class CleanupManager:
     def run(self) -> 'CleanupCtx':
 
         # Local aliases
-        now = datetime.utcnow()
+        now_dt = datetime.utcnow()
 
         # This uniquely identifies our run
-        run_id = f'{now.year}{now.month}{now.day}-{now.hour:02}{now.minute:02}{now.second:02}'
+        run_id = f'{now_dt.year}{now_dt.month}{now_dt.day}-{now_dt.hour:02}{now_dt.minute:02}{now_dt.second:02}'
 
-        # Response to produce
+        # IDs for our task
+        task_id = f'CleanUp-{run_id}'
+
+        # Overall context of the procedure, including a response to produce
         cleanup_ctx = CleanupCtx()
         cleanup_ctx.run_id = run_id
         cleanup_ctx.found_all_topics = 0
         cleanup_ctx.found_sk_list = []
         cleanup_ctx.found_total_queue_messages = 0
 
+        cleanup_ctx.now_dt = now_dt
+        cleanup_ctx.now = datetime_to_ms(cleanup_ctx.now_dt)
+
+        # Assign a list of topics found in the database
+        cleanup_ctx.all_topics = self._get_topics(task_id)
+
+        # Note that this limit is in seconds ..
+        cleanup_ctx.max_limit_sub_inactivity = max(item.limit_sub_inactivity for item in cleanup_ctx.all_topics)
+
+        # Max. inactivity allowed can be always overridden through this environment variable
+        env_max_limit_sub_inactivity = int(os.environ.get('ZATO_SCHED_DELTA') or 0)
+        if env_max_limit_sub_inactivity:
+            cleanup_ctx.max_limit_sub_inactivity = env_max_limit_sub_inactivity
+
+        max_last_interaction_time_dt = now_dt - timedelta(seconds=cleanup_ctx.max_limit_sub_inactivity)
+        max_last_interaction_time    = datetime_to_ms(max_last_interaction_time_dt) / 1000
+
+        cleanup_ctx.max_last_interaction_time    = max_last_interaction_time
+        cleanup_ctx.max_last_interaction_time_dt = max_last_interaction_time_dt
+
         # We will find all objects, such as subscribers or messages
         # that did not interact with us for at least that many seconds
         delta = int(os.environ.get('ZATO_SCHED_DELTA') or 0)
 
-        topic_min_retention  = delta or CleanupConfig.TopicRetentionTime
-        delta_not_interacted = delta or CleanupConfig.DeltaNotInteracted
-
-        # Turn hours into a UNIX time object, as expected by the database
-
-        not_iteracted_max_last_dt    = now - timedelta(seconds=delta_not_interacted)
-        not_iteracted_max_last_float = datetime_to_ms(not_iteracted_max_last_dt)
-
-        topic_min_retention_dt    = now - timedelta(seconds=topic_min_retention)
+        topic_min_retention       = delta or CleanupConfig.TopicRetentionTime
+        topic_min_retention_dt    = now_dt - timedelta(seconds=topic_min_retention)
         topic_min_retention_float = datetime_to_ms(topic_min_retention_dt)
 
         # This is reusable across tasks
         delta_ctx = DeltaCtx()
-
-        delta_ctx.topic_min_retention  = topic_min_retention
-        delta_ctx.delta_not_interacted = delta_not_interacted
-
         delta_ctx.topic_min_retention_as_float    = topic_min_retention_float
         delta_ctx.topic_min_retention_as_datetime = topic_min_retention_dt
 
-        delta_ctx.not_iteracted_max_last_as_float    = not_iteracted_max_last_float
-        delta_ctx.not_iteracted_max_last_as_datetime = not_iteracted_max_last_dt
-
-        self.logger.info('Starting cleanup tasks: %s; delta_ctx -> %s', run_id, delta_ctx)
-
-        # IDs for our task
-        task_id = f'CleanUp-{run_id}'
+        self.logger.info('Starting cleanup tasks: %s', task_id)
 
         # Clean up old pub/sub objects
-        cleanup_ctx = self.cleanup_pub_sub(task_id, cleanup_ctx, delta_ctx)
+        cleanup_ctx = self.cleanup_pub_sub(task_id, cleanup_ctx)
 
         return cleanup_ctx
 

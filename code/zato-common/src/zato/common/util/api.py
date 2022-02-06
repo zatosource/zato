@@ -123,7 +123,7 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 if 0:
     from typing import Iterable as iterable
     from simdjson import Parser as SIMDJSONParser
-    from zato.common.typing_ import any_, callable_, dictlist
+    from zato.common.typing_ import any_, callable_, dictlist, listnone
 
     iterable = iterable
     SIMDJSONParser = SIMDJSONParser
@@ -1876,11 +1876,25 @@ def hex_sequence_to_bytes(elems):
 
 # ################################################################################################################################
 
-def tabulate_dictlist(data:'dictlist') -> 'str':
+def tabulate_dictlist(data:'dictlist', skip_keys:'listnone'=None) -> 'str':
+
+    # stdlib
+    from copy import deepcopy
 
     # Return early if there is not anything that we can tabulate
     if not data:
         return ''
+
+    # If we have keys to skip, we need re-build the dictionary without these keys first.
+    if skip_keys:
+        skip_keys = skip_keys if isinstance(skip_keys, list) else [skip_keys]
+        _data = []
+        for elem in data:
+            _elem = deepcopy(elem)
+            for key in skip_keys:
+                _elem.pop(key, None)
+            _data.append(_elem)
+        data = _data
 
     # We assume that all elements will have the same keys
     elem0 = data[0]
