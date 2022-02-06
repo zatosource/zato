@@ -40,7 +40,7 @@ if 0:
 
 # ################################################################################################################################
 
-topic_limit_fields = [Int('limit_retention'), Int('limit_message_expiry')]
+topic_limit_fields = [Int('limit_retention'), Int('limit_message_expiry'), Int('limit_sub_inactivity')]
 
 elem = 'pubsub_topic'
 model = PubSubTopic
@@ -92,7 +92,8 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
 def _add_limits(item:'any_') -> 'None':
     item.limit_retention      = item.get('limit_retention')      or PUBSUB.DEFAULT.LimitTopicRetention
-    item.limit_message_expiry = item.get('limit_message_expiry') or PUBSUB.DEFAULT.LimitMessageExpiry
+    item.limit_sub_inactivity = item.get('limit_sub_inactivity') or PUBSUB.DEFAULT.LimitMessageExpiry
+    item.limit_message_expiry = item.get('limit_message_expiry') or PUBSUB.DEFAULT.LimitSubInactivity
 
 # ################################################################################################################################
 
@@ -217,7 +218,7 @@ class Get(AdminService):
     class SimpleIO:
         input_optional = 'cluster_id', AsIs('id'), 'name'
         output_required = 'id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd', \
-            'current_depth_gd', Int('limit_retention'), Int('limit_message_expiry')
+            'current_depth_gd', Int('limit_retention'), Int('limit_message_expiry'), Int('limit_sub_inactivity')
         output_optional = 'last_pub_time', 'on_no_subs_pub'
 
     def handle(self):
