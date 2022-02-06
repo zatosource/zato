@@ -537,7 +537,7 @@ class CleanupManager:
 
         # Now, we can proceed and delete the actual message objects because we know that their
         # queue references are already deleted.
-        # self._cleanup_messages_from_topics(task_id, cleanup_ctx)
+        self._cleanup_messages_from_topics(task_id, cleanup_ctx)
 
         return cleanup_ctx
 
