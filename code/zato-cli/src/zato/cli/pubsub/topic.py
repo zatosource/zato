@@ -100,8 +100,7 @@ class GetTopics(ServerAwareCommand):
     """
     opts = [
         {'name':'--query', 'help':'Query to look up topics by', 'required':False},
-        {'name':'--keys',  'help':'What JSON keys to return on put. Use "all" to return them all',
-            'required':False, 'default':Config.DefaultTopicKeys},
+        {'name':'--keys',  'help':'What JSON keys to return on put. Use "all" to return them all', 'required':False},
         {'name':'--path',  'help':'Path to a Zato server', 'required':False},
     ]
 
@@ -115,16 +114,16 @@ class GetTopics(ServerAwareCommand):
             if isinstance(args_keys, str):
                 args_keys = args_keys.split(',')
                 args_keys = [elem.strip() for elem in args_keys]
+
+            has_all = 'all' in args_keys
+            needs_default_keys = has_all or (not args_keys)
+
         else:
+            has_all = False
+            needs_default_keys = True
             args_keys = Config.DefaultTopicKeys
 
         args_keys = set(args_keys)
-        has_all = 'all' in args_keys
-        needs_default_keys = has_all or (not args_keys)
-
-        # We do not need it in the set anymore
-        if has_all:
-            args_keys.remove('all')
 
         def hook_func(data:'anydict') -> 'anylist':
 
@@ -161,8 +160,8 @@ class GetTopics(ServerAwareCommand):
 
                 # .. otherwise, we return only the specifically requested keys
                 for name, value in sorted(elem.items()):
-                    if name not in out_elem:
-                        if name in args_keys:
+                    if has_all or (name in args_keys):
+                        if name not in out_elem:
                             out_elem[name] = value
 
                 # .. we are finished with pre-processing of this element ..
@@ -201,7 +200,7 @@ if __name__ == '__main__':
     from os import environ
 
     args = Namespace()
-    args.keys         = ('id', 'name')
+    args.keys         = 'all'
     args.verbose      = True
     args.store_log    = False
     args.store_config = False
