@@ -88,6 +88,38 @@ class PubSubTopicTestCase(CommandLineTestCase):
         self.assertEqual(details, expected_details_message)
 
 # ################################################################################################################################
+
+    def _run_get_topic_test_one_topic(self, command:'str') -> 'None':
+        pass
+
+# ################################################################################################################################
+
+    def _run_get_topic_test_multiple_topics(self, command:'str') -> 'None':
+        pass
+
+# ################################################################################################################################
+
+    def test_get_topics(self) -> 'None':
+
+        # Pub/sub command to run
+        command = 'get-topics'
+
+        # Run all tests
+        self._run_get_topic_test_one_topic(command)
+        self._run_get_topic_test_one_topic(command)
+
+# ################################################################################################################################
+
+    def test_get_topic(self) -> 'None':
+
+        # Pub/sub command to run
+        command = 'get-topic'
+
+        # Run all tests
+        self._run_get_topic_test_one_topic(command)
+        self._run_get_topic_test_one_topic(command)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
