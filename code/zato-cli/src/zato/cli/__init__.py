@@ -255,6 +255,7 @@ class ZatoCommand:
         SERVER_TIMEOUT = 28
         PARAMETER_MISSING = 29
         PATH_NOT_A_FILE = 30
+        NO_SUCH_PATH = 31
 
 # ################################################################################################################################
 
@@ -692,6 +693,25 @@ class ZatoCommand:
 
 # ################################################################################################################################
 
+    def ensure_path_is_a_server(self, path):
+
+        # stdlib
+        import os
+        import sys
+
+        # Zato
+        from zato.common.util.api import get_config
+
+        repo_location = os.path.join(path, 'config', 'repo')
+        secrets_conf = get_config(repo_location, 'secrets.conf', needs_user_config=False)
+
+        # This file must exist, otherwise it's not a path to a server
+        if not secrets_conf:
+            self.logger.warning('No server found at `%s`', path)
+            sys.exit(self.SYS_ERROR.NOT_A_ZATO_SERVER)
+
+# ################################################################################################################################
+
 class FromConfig(ZatoCommand):
     """ Executes commands from a command config file.
     """
@@ -953,9 +973,20 @@ class ServerAwareCommand(ZatoCommand):
     zato_client: 'ZatoClient'
 
     def before_execute(self, args):
+
+        # stdlib
+        import os
+
         # Zato
         from zato.common.util.api import get_client_from_server_conf
-        self.zato_client = get_client_from_server_conf(args.path)
+
+        server_path = args.path or '.'
+        server_path = os.path.abspath(server_path)
+
+        # This will exist the process if path does not point to a server
+        self.ensure_path_is_a_server(server_path)
+
+        self.zato_client = get_client_from_server_conf(server_path)
 
 # ################################################################################################################################
 

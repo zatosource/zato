@@ -53,6 +53,8 @@
             'on_no_subs_pub',
             'limit_retention',
             'limit_message_expiry',
+
+            'limit_sub_inactivity',
         ]
     }
     </script>
@@ -113,6 +115,8 @@
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -188,6 +192,8 @@
                         <td class='ignore'>{{ item.limit_retention }}</td>
                         <td class='ignore'>{{ item.limit_message_expiry }}</td>
 
+                        <td class='ignore'>{{ item.limit_sub_inactivity }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -207,7 +213,7 @@
                 <form action="{% url "pubsub-topic-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:17%">Name</td>
+                            <td style="vertical-align:middle; width:13%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
@@ -285,7 +291,7 @@
                                 <br/>
                                 <span class="form_hint">(in sec.)</span>
                             </td>
-                            <td>
+                            <td style="vertical-align:middle">
                                 <label>
                                     Retention
                                     {{ create_form.limit_retention }}
@@ -294,6 +300,11 @@
                                 <label>
                                     Expiry
                                     {{ create_form.limit_message_expiry }}
+                                </label>
+                                |
+                                <label>
+                                    Sub. inactivity
+                                    {{ create_form.limit_sub_inactivity }}
                                 </label>
                             </td>
                         </tr>
@@ -412,6 +423,11 @@
                                 <label>
                                     Expiry
                                     {{ edit_form.limit_message_expiry }}
+                                </label>
+                                |
+                                <label>
+                                    Sub. inactivity
+                                    {{ edit_form.limit_sub_inactivity }}
                                 </label>
                             </td>
                         </tr>
