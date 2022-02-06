@@ -107,11 +107,11 @@ class CleanupConfig:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CleanupResult:
+class CleanupCtx:
     run_id: 'str'
-    all_topics: 'int'
-    pubsub_sk_list:  'strlist'
-    pubsub_total_queue_messages: 'int'
+    found_all_topics: 'int'
+    found_sk_list:  'strlist'
+    found_total_queue_messages: 'int'
     topics_cleaned_up: 'topic_ctx_list'
 
 # ################################################################################################################################
@@ -226,7 +226,7 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _cleanup_msg_list(self, task_id:'str', cleanup_result:'CleanupResult', sub_key:'str', msg_list:'dictlist') -> 'None':
+    def _cleanup_msg_list(self, task_id:'str', cleanup_ctx:'CleanupCtx', sub_key:'str', msg_list:'dictlist') -> 'None':
 
         self.logger.info('%s: Building groups for sub_key -> %s', task_id, sub_key)
         groups_ctx = self._build_groups(task_id, 'queue message(s)', msg_list, CleanupConfig.MsgDeleteBatchSize, sub_key)
@@ -250,7 +250,7 @@ class CleanupManager:
                 session.commit()
 
                 # .. store for later use ..
-                cleanup_result.pubsub_total_queue_messages += len(msg_id_list)
+                cleanup_ctx.found_total_queue_messages += len(msg_id_list)
 
                 # .. confirm that we did it ..
                 self.logger.info('%s: Deleted  group %s/%s (%s)', task_id, idx, groups_ctx.len_items, sub_key)
@@ -260,7 +260,7 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _cleanup_sub(self, task_id:'str', cleanup_result:'CleanupResult', delta_ctx:'DeltaCtx', sub:'stranydict') -> 'strlist':
+    def _cleanup_sub(self, task_id:'str', cleanup_ctx:'CleanupCtx', delta_ctx:'DeltaCtx', sub:'stranydict') -> 'strlist':
         """ Cleans up an individual subscription. First it deletes old queue messages, then it notifies servers
         that a subscription object should be deleted as well.
         """
@@ -298,7 +298,7 @@ class CleanupManager:
         if sk_queue_msg_list:
             table = tabulate_dictlist(sk_queue_msg_list)
             self.logger.debug('%s: ** Messages to clean up for sub_key `%s` **\n%s', task_id, sub_key, table)
-            self._cleanup_msg_list(task_id, cleanup_result, sub_key, sk_queue_msg_list)
+            self._cleanup_msg_list(task_id, cleanup_ctx, sub_key, sk_queue_msg_list)
 
         # At this point, we have already deleted all the enqueued messages for all the subscribers
         # that we have not seen in DeltaNotInteracted hours. It means that we can proceed now
@@ -321,7 +321,7 @@ class CleanupManager:
         }, from_scheduler=True)
 
         # Now, we can append the sub_key to the list of what has been processed
-        cleanup_result.pubsub_sk_list.append(sub_key)
+        cleanup_ctx.found_sk_list.append(sub_key)
 
         # Finally, we can return all the IDs of messages enqueued for that sub_key
         return sk_queue_msg_list
@@ -331,9 +331,9 @@ class CleanupManager:
     def _cleanup_subscriptions(
         self,
         task_id:'str',
-        cleanup_result:'CleanupResult',
+        cleanup_ctx:'CleanupCtx',
         delta_ctx:'DeltaCtx'
-        ) -> 'CleanupResult':
+        ) -> 'CleanupCtx':
         """ Cleans up all subscriptions - all the old queue messages as well as their subscribers.
         """
 
@@ -354,15 +354,15 @@ class CleanupManager:
                 task_id, sub['idx'], len_subs, sub_key, endpoint_name)
 
             # Clean up this sub_key and get the list of message IDs found for it ..
-            sk_queue_msg_list = self._cleanup_sub(task_id, cleanup_result, delta_ctx, sub)
+            sk_queue_msg_list = self._cleanup_sub(task_id, cleanup_ctx, delta_ctx, sub)
 
             # .. append the per-sub_key message to the overall list of messages found for subscribers.
             queue_msg_list.extend(sk_queue_msg_list)
 
         self.logger.info(f'{task_id}: Cleaned up %d pub/sub queue message(s) from sk_list: %s',
-            cleanup_result.pubsub_total_queue_messages, cleanup_result.pubsub_sk_list)
+            cleanup_ctx.found_total_queue_messages, cleanup_ctx.found_sk_list)
 
-        return cleanup_result
+        return cleanup_ctx
 
 # ################################################################################################################################
 
@@ -473,7 +473,7 @@ class CleanupManager:
     def _cleanup_messages_from_topics(
         self,
         task_id:'str',
-        cleanup_result:'CleanupResult',
+        cleanup_ctx:'CleanupCtx',
         delta_ctx:'DeltaCtx'
         ) -> 'None':
 
@@ -508,29 +508,29 @@ class CleanupManager:
         self._delete_messages_from_topics(task_id, topics_to_clean_up)
 
         # .. and assign the context object for later use, e.g. in tests.
-        cleanup_result.topics_cleaned_up = topics_to_clean_up
+        cleanup_ctx.topics_cleaned_up = topics_to_clean_up
 
 # ################################################################################################################################
 
     def cleanup_pub_sub(
         self,
         task_id:'str',
-        cleanup_result:'CleanupResult',
+        cleanup_ctx:'CleanupCtx',
         delta_ctx:'DeltaCtx'
-        ) -> 'CleanupResult':
+        ) -> 'CleanupCtx':
 
         # First, clean up all the old messages from subscription queues ..
-        self._cleanup_subscriptions(task_id, cleanup_result, delta_ctx)
+        self._cleanup_subscriptions(task_id, cleanup_ctx, delta_ctx)
 
         # Now, we can proceed and delete the actual message objects because we know that their
         # queue references are already deleted.
-        self._cleanup_messages_from_topics(task_id, cleanup_result, delta_ctx)
+        self._cleanup_messages_from_topics(task_id, cleanup_ctx, delta_ctx)
 
-        return cleanup_result
+        return cleanup_ctx
 
 # ################################################################################################################################
 
-    def run(self) -> 'CleanupResult':
+    def run(self) -> 'CleanupCtx':
 
         # Local aliases
         now = datetime.utcnow()
@@ -539,11 +539,11 @@ class CleanupManager:
         run_id = f'{now.year}{now.month}{now.day}-{now.hour:02}{now.minute:02}{now.second:02}'
 
         # Response to produce
-        cleanup_result = CleanupResult()
-        cleanup_result.run_id = run_id
-        cleanup_result.all_topics = 0
-        cleanup_result.pubsub_sk_list = []
-        cleanup_result.pubsub_total_queue_messages = 0
+        cleanup_ctx = CleanupCtx()
+        cleanup_ctx.run_id = run_id
+        cleanup_ctx.found_all_topics = 0
+        cleanup_ctx.found_sk_list = []
+        cleanup_ctx.found_total_queue_messages = 0
 
         # We will find all objects, such as subscribers or messages
         # that did not interact with us for at least that many seconds
@@ -578,14 +578,14 @@ class CleanupManager:
         task_id = f'CleanUp-{run_id}'
 
         # Clean up old pub/sub objects
-        cleanup_result = self.cleanup_pub_sub(task_id, cleanup_result, delta_ctx)
+        cleanup_ctx = self.cleanup_pub_sub(task_id, cleanup_ctx, delta_ctx)
 
-        return cleanup_result
+        return cleanup_ctx
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def run_cleanup() -> 'CleanupResult':
+def run_cleanup() -> 'CleanupCtx':
 
     # stdlib
     import sys
