@@ -38,13 +38,16 @@ class CreateForm(forms.Form):
         attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.TASK_SYNC_INTERVAL)
 
     task_delivery_interval = forms.CharField(widget=forms.TextInput(
-        attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.TASK_DELIVERY_INTERVAL)
+        attrs={'class':'required', 'style':'width:15%'}), initial=PUBSUB.DEFAULT.TASK_DELIVERY_INTERVAL)
 
     limit_retention = forms.CharField(widget=forms.TextInput(
-        attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.LimitTopicRetention)
+        attrs={'class':'required', 'style':'width:15%'}), initial=PUBSUB.DEFAULT.LimitTopicRetention)
 
     limit_message_expiry = forms.CharField(widget=forms.TextInput(
-        attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.LimitMessageExpiry)
+        attrs={'class':'required', 'style':'width:15%'}), initial=PUBSUB.DEFAULT.LimitMessageExpiry)
+
+    limit_sub_inactivity = forms.CharField(widget=forms.TextInput(
+        attrs={'class':'required', 'style':'width:15%'}), initial=PUBSUB.DEFAULT.LimitSubInactivity)
 
     def __init__(self, req, *args, **kwargs):
         super(CreateForm, self).__init__(*args, **kwargs)

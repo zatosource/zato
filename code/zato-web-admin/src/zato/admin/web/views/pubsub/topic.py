@@ -39,7 +39,8 @@ class Index(_Index):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'is_api_sub_allowed', 'max_depth_gd',
             'max_depth_non_gd', 'current_depth_gd', 'current_depth_non_gd', 'depth_check_freq', 'hook_service_id',
-            'pub_buffer_size_gd', 'task_sync_interval', 'task_delivery_interval', 'limit_retention', 'limit_message_expiry')
+            'pub_buffer_size_gd', 'task_sync_interval', 'task_delivery_interval', 'limit_retention', 'limit_message_expiry',
+            'limit_sub_inactivity')
         output_optional = ('last_pub_time', 'last_pub_msg_id', 'last_endpoint_id', 'last_endpoint_name', 'last_pub_has_gd',
             'last_pub_server_pid', 'last_pub_server_name', 'on_no_subs_pub')
         output_repeated = True
@@ -69,7 +70,7 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'is_internal', 'has_gd', 'is_api_sub_allowed', 'max_depth_gd',
             'max_depth_non_gd', 'depth_check_freq', 'pub_buffer_size_gd', 'task_sync_interval', 'task_delivery_interval',
-            'on_no_subs_pub', 'limit_retention', 'limit_message_expiry')
+            'on_no_subs_pub', 'limit_retention', 'limit_message_expiry', 'limit_sub_inactivity')
         input_optional = ('hook_service_id', 'exp_from_now')
         output_required = ('id', 'name', 'has_gd')
 

@@ -285,7 +285,7 @@ class PubSubTopicTestCase(CommandLineTestCase):
         default_keys = CLITopicConfig.DefaultTopicKeys
 
         len_out = len(out)
-        self.assertEqual(len_out, 24)
+        self.assertEqual(len_out, 25)
 
         # .. each default key is expected to be returned ..
         for key in default_keys:
@@ -314,8 +314,9 @@ class PubSubTopicTestCase(CommandLineTestCase):
         self.assertEqual(out['task_sync_interval'], _default.TASK_SYNC_INTERVAL)
         self.assertEqual(out['task_delivery_interval'], _default.TASK_DELIVERY_INTERVAL)
 
-        self.assertEqual(out['limit_message_expiry'], _default.LimitMessageExpiry)
         self.assertEqual(out['pub_buffer_size_gd'], 0)
+        self.assertEqual(out['limit_sub_inactivity'], _default.LimitSubInactivity)
+        self.assertEqual(out['limit_message_expiry'], _default.LimitMessageExpiry)
 
         self.assertTrue(out['is_active'])
 
