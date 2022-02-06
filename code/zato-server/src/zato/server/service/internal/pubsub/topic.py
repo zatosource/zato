@@ -149,7 +149,6 @@ def response_hook(self, input, instance, attrs, service_type):
                     # PIDs are integers
                     if item.last_pub_server_pid:
                         item.last_pub_server_pid = int(item.last_pub_server_pid)
-                        pass
 
 # ################################################################################################################################
 
