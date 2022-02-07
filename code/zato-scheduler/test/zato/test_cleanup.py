@@ -12,7 +12,6 @@ patch_all()
 
 # stdlib
 import os
-from datetime import datetime
 from unittest import main
 
 # gevent
