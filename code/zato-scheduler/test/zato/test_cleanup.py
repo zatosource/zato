@@ -49,14 +49,14 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
 
     should_init_rest_client = False
 
-    def setUp(self) -> None:
+    def setUp(self) -> 'None':
         self.rest_client.init(username=username, sec_name=sec_name)
         self.api_impl = PubSubAPIRestImpl(self, self.rest_client)
         super().setUp()
 
 # ################################################################################################################################
 
-    def test_cleanup_old_subscriptions_no_sub_keys(self):
+    def xtest_cleanup_old_subscriptions_no_sub_keys(self) -> 'None':
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_test
@@ -79,7 +79,7 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def test_cleanup_old_subscriptions_one_sub_key(self):
+    def _run_cleanup_old_subscriptions_one_sub_key(self, env_delta:'int') -> 'None':
 
         # Filter our warnings coming from requests
         import warnings
@@ -109,16 +109,17 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
         # Because each publication is synchronous, we now know that all of them are in the subscriber's queue
         # which means that we can delete them already.
 
-        # Indicate after a passage of how many seconds we will consider a subscribers as gone,
+        # Use the delta value from the environment to override any per-topic cleanup time configuration.
+        # Such a delta indicates after a passage of how many seconds we will consider a subscribers as gone,
         # that is, after how many seconds since its last interaction time it will be deleted.
-        delta = 1
+        if env_delta:
 
-        # Export a variable with delta as required by the underlying cleanup implementation
-        os.environ[delta_environ_key] = str(delta)
+            # Export a variable with delta as required by the underlying cleanup implementation
+            os.environ[delta_environ_key] = str(env_delta)
 
-        # Sleep a little bit longer to make sure that we actually exceed the delta
-        sleep_extra = delta * 0.1
-        sleep(delta + sleep_extra)
+            # Sleep a little bit longer to make sure that we actually exceed the delta
+            sleep_extra = env_delta * 0.1
+            sleep(env_delta + sleep_extra)
 
         # Run the cleanup procedure now
         cleanup_result = run_cleanup()
@@ -143,6 +144,27 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
 
         self.assertEqual(receive_result['result'], 'Error')
         self.assertEqual(receive_result['details'], f'You are not subscribed to topic `{topic_name}`')
+
+# ################################################################################################################################
+
+    def xtest_cleanup_old_subscriptions_one_sub_key_with_env_delta(self):
+
+        # In this test, we explicitly specify a seconds delta to clean up messages by.
+        env_delta = 1
+
+        # Run the actual test
+        self._run_cleanup_old_subscriptions_one_sub_key(env_delta)
+
+# ################################################################################################################################
+
+    def xtest_cleanup_old_subscriptions_one_sub_key_no_env_delta(self):
+
+        # In this test, we do not specify a seconds delta to clean up messages by
+        # which means that its value will be taken from each topic separately.
+        env_delta = 0
+
+        # Run the actual test
+        self._run_cleanup_old_subscriptions_one_sub_key(env_delta)
 
 # ################################################################################################################################
 # ################################################################################################################################
