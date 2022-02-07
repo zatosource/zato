@@ -104,7 +104,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
         # We get here if there was no delta, in which case we still need to sleep
         # based on the topic's subscription inactivity limit.
-        if limit_sub_inactivity:
+        elif limit_sub_inactivity:
             sleep_extra = limit_sub_inactivity * 0.1
             sleep(limit_sub_inactivity + sleep_extra)
 
@@ -134,7 +134,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def xtest_cleanup_old_subscriptions_no_sub_keys(self) -> 'None':
+    def test_cleanup_old_subscriptions_no_sub_keys(self) -> 'None':
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_test
@@ -160,7 +160,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def xtest_cleanup_old_subscriptions_one_sub_key_with_env_delta_default_topic(self):
+    def test_cleanup_old_subscriptions_one_sub_key_with_env_delta_default_topic(self):
 
         # In this test, we explicitly specify a seconds delta to clean up messages by.
         env_delta = 1
@@ -173,7 +173,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def xtest_cleanup_old_subscriptions_one_sub_key_with_env_delta_new_topic(self):
+    def test_cleanup_old_subscriptions_one_sub_key_with_env_delta_new_topic(self):
 
         # In this test, we explicitly specify a seconds delta to clean up messages by.
         # I.e. even if we use a new test topic below, the delta is given on input too.
@@ -203,8 +203,30 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         # We explcitly request that inactive subscriptions should be deleted after that many seconds
         limit_sub_inactivity = 1
 
-        # Use the default topic here
-        topic_name = TestConfig.pubsub_topic_test
+        # Create a new topic for this test
+        prefix = '/zato/test/'
+        topic_name = prefix + datetime.utcnow().isoformat()
+
+        # Command to invoke ..
+        cli_params = ['pubsub', 'create-topic', '--name', topic_name, '--limit-sub-inactivity', limit_sub_inactivity]
+
+        # Create the test topic here ..
+        _ = self.run_zato_cli_json_command(cli_params) # type: anydict
+
+        # Run the actual test
+        self._run_cleanup_old_subscriptions_one_sub_key(topic_name, env_delta, limit_sub_inactivity)
+
+# ################################################################################################################################
+
+    def test_cleanup_old_subscriptions_one_sub_key_env_delta_overrides_topic_delta(self):
+
+        # In this test, we specify a short delta in the environment and we expect
+        # that it will override the explicit inactivity limit configured for a new topic.
+        # In other words, the environment variable has priority over what the topic has configured
+        env_delta = 1
+
+        # We explcitly request that inactive subscriptions should be deleted after that many seconds
+        limit_sub_inactivity = 123456789
 
         # Create a new topic for this test
         prefix = '/zato/test/'
