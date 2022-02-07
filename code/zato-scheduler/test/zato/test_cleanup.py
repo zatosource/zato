@@ -12,6 +12,7 @@ patch_all()
 
 # stdlib
 import os
+from datetime import datetime
 from unittest import main
 
 # gevent
@@ -136,23 +137,48 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
         # Indicate after a passage of how many seconds we will consider a subscribers as gone,
         # that is, after how many seconds since its last interaction time it will be deleted.
-        delta = 1
+        env_delta = 1
 
-        # Create a new topic for this test
-        prefix = '/zato/test/'
-        _ = self.create_pubsub_topic(topic_prefix=prefix)
+        # Create a new topic for this test with a unique prefix,
+        # which will ensure that there are no other subscriptions for it.
+        now = datetime.utcnow().isoformat()
+        prefix = f'/zato/test/{now}/'
+        out = self.create_pubsub_topic(topic_prefix=prefix)
+        topic_name = out['name']
 
         # Export a variable with delta as required by the underlying cleanup implementation
-        os.environ[delta_environ_key] = str(delta)
+        os.environ[delta_environ_key] = str(env_delta)
+
+        # Sleep for that many seconds to make sure that we are the only pub/sub participant
+        # currently using the system. This will allow us to reliably check below
+        # that there were no sub_keys used during the delta time since we created the topic
+        # and when the cleanup procedure ran.
+        sleep_extra = env_delta * 0.1
+        sleep(env_delta + sleep_extra)
 
         # Run the cleanup procedure now
         cleanup_result = run_cleanup()
 
-        self.assertEqual(cleanup_result.found_all_topics, 0)
-        self.assertEqual(cleanup_result.found_total_queue_messages, 0)
-        self.assertEqual(cleanup_result.max_limit_sub_inactivity, delta)
+        # We expect for the environment variable to have been taken into account
+        self.assertEqual(cleanup_result.max_limit_sub_inactivity, env_delta)
+
+        # We do not know how topics will have been cleaned up
+        # because this test may be part of a bigger test suite
+        # with other topics, subscribers and message publications.
+        # However, because we do not have any subscription to that very topic,
+        # it means that we do not expect to find it in the list of topics cleaned up
+        # and this is what we are testing below, i.e. that it was not cleaned up.
+
+        for item in cleanup_result.topics_cleaned_up:
+            if item.name == topic_name:
+                self.fail('Topic `{}` should not be among `{}`'.format(topic_name, cleanup_result.topics_cleaned_up))
+
+        # We are sure that have been the only potential user of the pub/sub system
+        # while the test was running and, because we did not publish anything,
+        # nor did we subscribe to anything, we can be sure that there have been
+        # no subscriptions found when the cleanup procedure ran.
+        self.assertEqual(len(cleanup_result.found_sk_list), 0)
         self.assertListEqual(cleanup_result.found_sk_list, [])
-        self.assertListEqual(cleanup_result.topics_cleaned_up, [])
 
 # ################################################################################################################################
 

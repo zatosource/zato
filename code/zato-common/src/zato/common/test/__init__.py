@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime
+from logging import getLogger
 from tempfile import NamedTemporaryFile
 from random import choice, randint
 from unittest import TestCase
@@ -615,6 +616,10 @@ class BaseSIOTestCase(TestCase):
 class BaseZatoTestCase(TestCase):
 
     maxDiff = 1234567890
+
+    def __init__(self, *args, **kwargs) -> 'None':
+        self.logger = getLogger('zato.test')
+        super().__init__(*args, **kwargs)
 
     def create_pubsub_topic(
         self,
