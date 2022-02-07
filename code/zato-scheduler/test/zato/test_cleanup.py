@@ -56,7 +56,7 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def xtest_cleanup_old_subscriptions_no_sub_keys(self) -> 'None':
+    def test_cleanup_old_subscriptions_no_sub_keys(self) -> 'None':
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_test
@@ -74,8 +74,11 @@ class PubSubCleanupTestCase(BasePubSubRestTestCase):
         # Run the cleanup procedure now
         cleanup_result = run_cleanup()
 
+        self.assertEqual(cleanup_result.found_all_topics, 0)
         self.assertEqual(cleanup_result.found_total_queue_messages, 0)
+        self.assertEqual(cleanup_result.max_limit_sub_inactivity, delta)
         self.assertListEqual(cleanup_result.found_sk_list, [])
+        self.assertListEqual(cleanup_result.topics_cleaned_up, [])
 
 # ################################################################################################################################
 
