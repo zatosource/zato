@@ -53,7 +53,7 @@ from past.builtins import basestring, cmp, unicode, xrange
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, intnone
+    from zato.common.typing_ import any_, anydict, anylist, intnone, strnone
     from zato.common.util.search import SearchResults
     SearchResults = SearchResults
 
