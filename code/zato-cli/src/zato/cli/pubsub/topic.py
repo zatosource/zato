@@ -63,9 +63,9 @@ class CreateTopic(ServerAwareCommand):
         is_internal        = getattr(args, 'is_internal', None)
         is_api_sub_allowed = getattr(args, 'is_api_sub_allowed', True)
 
-        limit_expiry         = getattr(args, 'limit_expiry',    0) or _default.LimitMessageExpiry
-        limit_retention      = getattr(args, 'limit_retention', 0) or _default.LimitTopicRetention
-        limit_sub_inactivity = getattr(args, 'limit_retention', 0) or _default.LimitSubInactivity
+        limit_expiry         = getattr(args, 'limit_expiry',         0) or _default.LimitMessageExpiry
+        limit_retention      = getattr(args, 'limit_retention',      0) or _default.LimitTopicRetention
+        limit_sub_inactivity = getattr(args, 'limit_sub_inactivity', 0) or _default.LimitSubInactivity
 
         limit_expiry    = int(limit_expiry)
         limit_retention = int(limit_retention)

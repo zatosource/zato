@@ -19,6 +19,7 @@ from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage,
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import anylist, strlist
 
@@ -36,9 +37,17 @@ MessageTable = PubSubMessage.__table__
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_subscriptions(task_id:'str', session:'SASession', max_last_interaction_time:'float') -> 'anylist':
+def get_subscriptions(
+    task_id:'str',
+    session:'SASession',
+    topic_id: 'int',
+    topic_name: 'str',
+    max_last_interaction_time:'float',
+    topic_max_last_interaction_time_dt:'datetime'
+    ) -> 'anylist':
 
-    logger.info('%s: Getting subscriptions with max_last_interaction_time `%s`', task_id, max_last_interaction_time)
+    msg = '%s: Getting subscriptions for topic `%s` (id:%s) with max_last_interaction_time `%s` -> %s'
+    logger.info(msg, task_id, topic_name, topic_id, max_last_interaction_time, topic_max_last_interaction_time_dt)
 
     result = session.query(
         PubSubSubscription.id,
@@ -47,9 +56,10 @@ def get_subscriptions(task_id:'str', session:'SASession', max_last_interaction_t
         PubSubSubscription.last_interaction_time,
         PubSubEndpoint.name.label('endpoint_name'),
         PubSubEndpoint.id.label('endpoint_id'),
-        PubSubTopic.opaque1.label('topic_opaque')
+        PubSubTopic.opaque1.label('topic_opaque'),
         ).\
-        filter(PubSubSubscription.topic_id    == PubSubTopic.id).\
+        filter(PubSubSubscription.topic_id == topic_id).\
+        filter(PubSubSubscription.topic_id == PubSubTopic.id).\
         filter(PubSubSubscription.endpoint_id == PubSubEndpoint.id).\
         filter(PubSubEndpoint.is_internal.is_(False)).\
         filter(or_(
