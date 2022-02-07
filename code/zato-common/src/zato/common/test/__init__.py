@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -53,7 +53,7 @@ from past.builtins import basestring, cmp, unicode, xrange
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anydict, anylist, intnone
     from zato.common.util.search import SearchResults
     SearchResults = SearchResults
 
@@ -574,12 +574,8 @@ class MyZatoClass:
 
 class BaseSIOTestCase(TestCase):
 
-# ################################################################################################################################
-
     def setUp(self):
         self.maxDiff = maxint
-
-# ################################################################################################################################
 
     def get_server_config(self, needs_response_elem=False):
 
@@ -616,9 +612,39 @@ class BaseSIOTestCase(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _CommandLineTestCase(TestCase):
+class BaseZatoTestCase(TestCase):
 
     maxDiff = 1234567890
+
+    def create_pubsub_topic(
+        self,
+        *,
+        topic_name:  'strnone' = None,
+        topic_prefix:'strnone' = '/zato/test/',
+        limit_sub_inactivity:'intnone' = None
+        ) -> 'anydict':
+
+        if not (topic_name or topic_prefix):
+            raise Exception('Either topic_name or topic_prefix is required')
+
+        if topic_name and topic_prefix:
+            raise Exception('Cannot provide both topic_name and topic_prefix')
+
+        if not topic_name:
+            topic_name = topic_prefix + datetime.utcnow().isoformat()
+
+        # These parameters for the Command to invoke will always exist ..
+        cli_params = ['pubsub', 'create-topic', '--name', topic_name]
+
+        # .. whereas this is optional
+        if limit_sub_inactivity:
+            cli_params.append('--limit-sub-inactivity')
+            cli_params.append(limit_sub_inactivity)
+
+        # Create the test topic here ..
+        return self.run_zato_cli_json_command(cli_params) # type: anydict
+
+# ################################################################################################################################
 
     def _handle_cli_out(
         self,
@@ -642,9 +668,6 @@ class _CommandLineTestCase(TestCase):
         return out
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-class CommandLineTestCase(_CommandLineTestCase):
 
     def run_zato_cli_command(
         self,
@@ -675,7 +698,13 @@ class CommandLineTestCase(_CommandLineTestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CommandLineServiceTestCase(_CommandLineTestCase):
+class CommandLineTestCase(BaseZatoTestCase):
+    pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CommandLineServiceTestCase(BaseZatoTestCase):
 
     def run_zato_service_test(self, service_name:'str', assert_ok:'bool'=True) -> 'str':
 

@@ -21,7 +21,6 @@ from gevent import sleep
 # Zato
 from zato.common import PUBSUB
 from zato.common.test import CommandLineTestCase
-from zato.common.test.config import TestConfig
 from zato.common.test.unittest_ import BasePubSubRestTestCase, PubSubConfig, PubSubAPIRestImpl
 from zato.common.typing_ import cast_
 from zato.scheduler.cleanup.core import run_cleanup
@@ -136,15 +135,13 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
     def test_cleanup_old_subscriptions_no_sub_keys(self) -> 'None':
 
-        # In this test, we check subscriptions to shared topics
-        topic_name = TestConfig.pubsub_topic_test
-
-        # Make sure we are not subscribed to anything
-        self._unsubscribe(topic_name)
-
         # Indicate after a passage of how many seconds we will consider a subscribers as gone,
         # that is, after how many seconds since its last interaction time it will be deleted.
         delta = 1
+
+        # Create a new topic for this test
+        prefix = '/zato/test/'
+        _ = self.create_pubsub_topic(topic_prefix=prefix)
 
         # Export a variable with delta as required by the underlying cleanup implementation
         os.environ[delta_environ_key] = str(delta)
@@ -165,8 +162,9 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         # In this test, we explicitly specify a seconds delta to clean up messages by.
         env_delta = 1
 
-        # Use the default topic here
-        topic_name = TestConfig.pubsub_topic_test
+        # Create a new topic for this test
+        out = self.create_pubsub_topic()
+        topic_name = out['name']
 
         # Run the actual test
         self._run_cleanup_old_subscriptions_one_sub_key(topic_name, env_delta)
@@ -180,14 +178,8 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         env_delta = 1
 
         # Create a new topic for this test
-        prefix = '/zato/test/'
-        topic_name = prefix + datetime.utcnow().isoformat()
-
-        # Command to invoke ..
-        cli_params = ['pubsub', 'create-topic', '--name', topic_name]
-
-        # Create the test topic here ..
-        _ = self.run_zato_cli_json_command(cli_params) # type: anydict
+        out = self.create_pubsub_topic()
+        topic_name = out['name']
 
         # Run the actual test
         self._run_cleanup_old_subscriptions_one_sub_key(topic_name, env_delta)
@@ -204,14 +196,8 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         limit_sub_inactivity = 1
 
         # Create a new topic for this test
-        prefix = '/zato/test/'
-        topic_name = prefix + datetime.utcnow().isoformat()
-
-        # Command to invoke ..
-        cli_params = ['pubsub', 'create-topic', '--name', topic_name, '--limit-sub-inactivity', limit_sub_inactivity]
-
-        # Create the test topic here ..
-        _ = self.run_zato_cli_json_command(cli_params) # type: anydict
+        out = self.create_pubsub_topic()
+        topic_name = out['name']
 
         # Run the actual test
         self._run_cleanup_old_subscriptions_one_sub_key(topic_name, env_delta, limit_sub_inactivity)
@@ -229,14 +215,8 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         limit_sub_inactivity = 123456789
 
         # Create a new topic for this test
-        prefix = '/zato/test/'
-        topic_name = prefix + datetime.utcnow().isoformat()
-
-        # Command to invoke ..
-        cli_params = ['pubsub', 'create-topic', '--name', topic_name, '--limit-sub-inactivity', limit_sub_inactivity]
-
-        # Create the test topic here ..
-        _ = self.run_zato_cli_json_command(cli_params) # type: anydict
+        out = self.create_pubsub_topic()
+        topic_name = out['name']
 
         # Run the actual test
         self._run_cleanup_old_subscriptions_one_sub_key(topic_name, env_delta, limit_sub_inactivity)
