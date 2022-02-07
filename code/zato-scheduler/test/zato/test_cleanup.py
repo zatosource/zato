@@ -134,7 +134,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def test_cleanup_old_subscriptions_no_sub_keys(self) -> 'None':
+    def xtest_cleanup_old_subscriptions_no_sub_keys(self) -> 'None':
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_test
@@ -160,7 +160,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def test_cleanup_old_subscriptions_one_sub_key_with_env_delta_default_topic(self):
+    def xtest_cleanup_old_subscriptions_one_sub_key_with_env_delta_default_topic(self):
 
         # In this test, we explicitly specify a seconds delta to clean up messages by.
         env_delta = 1
@@ -173,7 +173,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def test_cleanup_old_subscriptions_one_sub_key_with_env_delta_new_topic(self):
+    def xtest_cleanup_old_subscriptions_one_sub_key_with_env_delta_new_topic(self):
 
         # In this test, we explicitly specify a seconds delta to clean up messages by.
         # I.e. even if we use a new test topic below, the delta is given on input too.
@@ -194,7 +194,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def xtest_cleanup_old_subscriptions_one_sub_key_no_env_delta(self):
+    def test_cleanup_old_subscriptions_one_sub_key_no_env_delta(self):
 
         # In this test, we do not specify a seconds delta to clean up messages by
         # which means that its value will be taken from each topic separately.

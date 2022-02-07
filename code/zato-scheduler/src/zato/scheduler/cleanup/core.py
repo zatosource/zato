@@ -196,11 +196,18 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _get_subscriptions(self, task_id:'str', cleanup_ctx:'CleanupCtx') -> 'anylist':
+    def _get_subscriptions(self, task_id:'str', topic_ctx:'TopicCtx', cleanup_ctx:'CleanupCtx') -> 'anylist':
+
+        # Each topic has its own limit_sub_inactivity delta which means that we compute
+        # the max_last_interaction time for each of them separately.
+
+        topic_max_last_interaction_time_dt = cleanup_ctx.now_dt - timedelta(seconds=topic_ctx.limit_sub_inactivity)
+        topic_max_last_interaction_time    = datetime_to_ms(topic_max_last_interaction_time_dt) / 1000
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
-            result = get_subscriptions(task_id, session, cleanup_ctx.max_last_interaction_time)
+            result = get_subscriptions(task_id, session, topic_ctx.id, topic_ctx.name,
+                topic_max_last_interaction_time, topic_max_last_interaction_time_dt)
 
         # Convert SQL results to a dict that we can easily work with
         result = [elem._asdict() for elem in result]
@@ -227,9 +234,11 @@ class CleanupManager:
 
         suffix = self._get_suffix(out)
 
-        msg = '%s: Returning %s subscription%swith with no interaction or last interaction time older than %s (delta: %s seconds)'
-        self.logger.info(msg, task_id, len(out), suffix, cleanup_ctx.max_last_interaction_time_dt,
-            cleanup_ctx.max_limit_sub_inactivity)
+        msg = '%s: Returning %s subscription%sfor topic %s '
+        msg += 'with no interaction or last interaction time older than `%s` (delta: %s seconds)'
+
+        self.logger.info(msg, task_id, len(out), suffix, topic_ctx.name, topic_max_last_interaction_time_dt,
+            topic_ctx.limit_sub_inactivity)
 
         if out:
             table = tabulate_dictlist(out, skip_keys='topic_opaque')
@@ -348,30 +357,33 @@ class CleanupManager:
         """ Cleans up all subscriptions - all the old queue messages as well as their subscribers.
         """
 
-        # This is a list of all the pub_msg_id objects that we are going to remove from subsciption queues.
-        # It does not contain messages residing in topics that do not have any subscribers.
-        # Currently, we populate this list but we do not use it for anything.
-        queue_msg_list = []
+        # For each topic we already know it exists ..
+        for topic_ctx in cleanup_ctx.all_topics:
 
-        # Find all subscribers in the database ..
-        subs = self._get_subscriptions(task_id, cleanup_ctx)
-        len_subs = len(subs)
+            # This is a list of all the pub_msg_id objects that we are going to remove from subsciption queues.
+            # It does not contain messages residing in topics that do not have any subscribers.
+            # Currently, we populate this list but we do not use it for anything.
+            queue_msg_list = []
 
-        # .. and clean up their queues, if any were found ..
-        for sub in subs:
-            sub_key = sub['sub_key']
-            endpoint_name = sub['endpoint_name']
-            self.logger.info('%s: Cleaning up subscription %s/%s; %s -> %s',
-                task_id, sub['idx'], len_subs, sub_key, endpoint_name)
+            # Find all subscribers in the database ..
+            subs = self._get_subscriptions(task_id, topic_ctx, cleanup_ctx)
+            len_subs = len(subs)
 
-            # Clean up this sub_key and get the list of message IDs found for it ..
-            sk_queue_msg_list = self._cleanup_sub(task_id, cleanup_ctx, sub)
+            # .. and clean up their queues, if any were found ..
+            for sub in subs:
+                sub_key = sub['sub_key']
+                endpoint_name = sub['endpoint_name']
+                self.logger.info('%s: Cleaning up subscription %s/%s; %s -> %s (%s)',
+                    task_id, sub['idx'], len_subs, sub_key, endpoint_name, topic_ctx.name)
 
-            # .. append the per-sub_key message to the overall list of messages found for subscribers.
-            queue_msg_list.extend(sk_queue_msg_list)
+                # Clean up this sub_key and get the list of message IDs found for it ..
+                sk_queue_msg_list = self._cleanup_sub(task_id, cleanup_ctx, sub)
 
-        self.logger.info(f'{task_id}: Cleaned up %d pub/sub queue message(s) from sk_list: %s',
-            cleanup_ctx.found_total_queue_messages, cleanup_ctx.found_sk_list)
+                # .. append the per-sub_key message to the overall list of messages found for subscribers.
+                queue_msg_list.extend(sk_queue_msg_list)
+
+            self.logger.info(f'{task_id}: Cleaned up %d pub/sub queue message(s) from sk_list: %s (%s)',
+                cleanup_ctx.found_total_queue_messages, cleanup_ctx.found_sk_list, topic_ctx.name)
 
         return cleanup_ctx
 
@@ -574,12 +586,6 @@ class CleanupManager:
         env_max_limit_sub_inactivity = int(os.environ.get('ZATO_SCHED_DELTA') or 0)
         if env_max_limit_sub_inactivity:
             cleanup_ctx.max_limit_sub_inactivity = env_max_limit_sub_inactivity
-
-        max_last_interaction_time_dt = now_dt - timedelta(seconds=cleanup_ctx.max_limit_sub_inactivity)
-        max_last_interaction_time    = datetime_to_ms(max_last_interaction_time_dt) / 1000
-
-        cleanup_ctx.max_last_interaction_time    = max_last_interaction_time
-        cleanup_ctx.max_last_interaction_time_dt = max_last_interaction_time_dt
 
         # We will find all objects, such as subscribers or messages
         # that did not interact with us for at least that many seconds
