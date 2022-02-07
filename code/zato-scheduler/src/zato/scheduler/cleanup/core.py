@@ -120,6 +120,7 @@ class CleanupCtx:
     all_topics:        'topic_ctx_list'
     topics_cleaned_up: 'topic_ctx_list'
 
+    has_env_delta:               'bool'
     max_limit_sub_inactivity:    'int'
     max_limit_sub_inactivity_dt: 'datetime'
 
@@ -200,14 +201,24 @@ class CleanupManager:
 
         # Each topic has its own limit_sub_inactivity delta which means that we compute
         # the max_last_interaction time for each of them separately.
+        # However, it is always possible to override the per-topic configuration
+        # with an environment variable which is why we need to check that too.
 
-        topic_max_last_interaction_time_dt = cleanup_ctx.now_dt - timedelta(seconds=topic_ctx.limit_sub_inactivity)
-        topic_max_last_interaction_time    = datetime_to_ms(topic_max_last_interaction_time_dt) / 1000
+        if cleanup_ctx.has_env_delta:
+            topic_max_last_interaction_time_source = 'env'
+            limit_sub_inactivity = cleanup_ctx.max_limit_sub_inactivity
+            topic_max_last_interaction_time_dt = cleanup_ctx.max_last_interaction_time_dt
+            topic_max_last_interaction_time = cleanup_ctx.max_last_interaction_time
+        else:
+            topic_max_last_interaction_time_source = 'topic'
+            limit_sub_inactivity = topic_ctx.limit_sub_inactivity
+            topic_max_last_interaction_time_dt = cleanup_ctx.now_dt - timedelta(seconds=limit_sub_inactivity)
+            topic_max_last_interaction_time = datetime_to_ms(topic_max_last_interaction_time_dt) / 1000
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
             result = get_subscriptions(task_id, session, topic_ctx.id, topic_ctx.name,
-                topic_max_last_interaction_time, topic_max_last_interaction_time_dt)
+                topic_max_last_interaction_time, topic_max_last_interaction_time_dt, topic_max_last_interaction_time_source)
 
         # Convert SQL results to a dict that we can easily work with
         result = [elem._asdict() for elem in result]
@@ -235,10 +246,13 @@ class CleanupManager:
         suffix = self._get_suffix(out)
 
         msg = '%s: Returning %s subscription%sfor topic %s '
-        msg += 'with no interaction or last interaction time older than `%s` (delta: %s seconds)'
+        msg += 'with no interaction or last interaction time older than `%s` (s:%s; delta: %s; topic-delta:%s)'
 
         self.logger.info(msg, task_id, len(out), suffix, topic_ctx.name, topic_max_last_interaction_time_dt,
-            topic_ctx.limit_sub_inactivity)
+            topic_max_last_interaction_time_source,
+            limit_sub_inactivity,
+            topic_ctx.limit_sub_inactivity,
+        )
 
         if out:
             table = tabulate_dictlist(out, skip_keys='topic_opaque')
@@ -451,7 +465,7 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _delete_messages_from_topic_group(self, task_id:'str', topic_ctx:'TopicCtx') -> 'None':
+    def _delete_messages_from_group(self, task_id:'str', topic_ctx:'TopicCtx') -> 'None':
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
@@ -479,7 +493,7 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _delete_messages_from_topics(
+    def _delete_messages(
         self,
         task_id:'str',
         topics_to_clean_up: 'topic_ctx_list'
@@ -489,18 +503,18 @@ class CleanupManager:
         for topic_ctx in topics_to_clean_up:
 
             # .. og what we are about to do ..
-            self.logger.info('%s: Cleaning up %s message(s) from topic %s', task_id, topic_ctx.len_messages, topic_ctx.name)
+            self.logger.info('%s: Cleaning up %s message(s) %s', task_id, topic_ctx.len_messages, topic_ctx.name)
 
             # .. assign to each topics individual groups of messages to be deleted ..
             topic_ctx.groups_ctx = self._build_groups(
-                task_id, 'topic message(s)', topic_ctx.messages, CleanupConfig.MsgDeleteBatchSize, topic_ctx.name)
+                task_id, 'message(s)', topic_ctx.messages, CleanupConfig.MsgDeleteBatchSize, topic_ctx.name)
 
             # .. and clean it up now.
-            self._delete_messages_from_topic_group(task_id, topic_ctx)
+            self._delete_messages_from_group(task_id, topic_ctx)
 
 # ################################################################################################################################
 
-    def _cleanup_messages_from_topics(
+    def _cleanup_messages(
         self,
         task_id:'str',
         cleanup_ctx:'CleanupCtx'
@@ -531,7 +545,7 @@ class CleanupManager:
                     topics_to_clean_up.append(topic_ctx)
 
         # Remove messages from all the topics found ..
-        self._delete_messages_from_topics(task_id, topics_to_clean_up)
+        self._delete_messages(task_id, topics_to_clean_up)
 
         # .. and assign the context object for later use, e.g. in tests.
         cleanup_ctx.topics_cleaned_up = topics_to_clean_up
@@ -549,7 +563,7 @@ class CleanupManager:
 
         # Now, we can proceed and delete the actual message objects because we know that their
         # queue references are already deleted.
-        self._cleanup_messages_from_topics(task_id, cleanup_ctx)
+        self._cleanup_messages(task_id, cleanup_ctx)
 
         return cleanup_ctx
 
@@ -584,8 +598,20 @@ class CleanupManager:
 
         # Max. inactivity allowed can be always overridden through this environment variable
         env_max_limit_sub_inactivity = int(os.environ.get('ZATO_SCHED_DELTA') or 0)
+
         if env_max_limit_sub_inactivity:
+
+            cleanup_ctx.has_env_delta = True
             cleanup_ctx.max_limit_sub_inactivity = env_max_limit_sub_inactivity
+
+            max_last_interaction_time_dt = cleanup_ctx.now_dt - timedelta(seconds=env_max_limit_sub_inactivity)
+            max_last_interaction_time    = datetime_to_ms(max_last_interaction_time_dt) / 1000
+
+            cleanup_ctx.max_last_interaction_time = max_last_interaction_time
+            cleanup_ctx.max_last_interaction_time_dt = max_last_interaction_time_dt
+
+        else:
+            cleanup_ctx.has_env_delta = False
 
         # We will find all objects, such as subscribers or messages
         # that did not interact with us for at least that many seconds

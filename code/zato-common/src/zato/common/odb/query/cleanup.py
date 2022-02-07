@@ -43,11 +43,13 @@ def get_subscriptions(
     topic_id: 'int',
     topic_name: 'str',
     max_last_interaction_time:'float',
-    topic_max_last_interaction_time_dt:'datetime'
+    topic_max_last_interaction_time_dt:'datetime',
+    topic_max_last_interaction_time_source:'str'
     ) -> 'anylist':
 
-    msg = '%s: Getting subscriptions for topic `%s` (id:%s) with max_last_interaction_time `%s` -> %s'
-    logger.info(msg, task_id, topic_name, topic_id, max_last_interaction_time, topic_max_last_interaction_time_dt)
+    msg = '%s: Getting subscriptions for topic `%s` (id:%s) with max_last_interaction_time `%s` -> %s (s:%s)'
+    logger.info(msg, task_id, topic_name, topic_id,
+        max_last_interaction_time, topic_max_last_interaction_time_dt, topic_max_last_interaction_time_source)
 
     result = session.query(
         PubSubSubscription.id,
