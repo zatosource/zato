@@ -81,11 +81,12 @@ def get_topic_messages_without_subscribers(
     session:'SASession',
     topic_id:'int',
     topic_name:'str',
-    max_pub_time:'float',
-    max_pub_time_str:'datetime',
+    max_pub_time_dt:'datetime',
+    max_pub_time_float:'float',
     ) -> 'anylist':
 
-    logger.info('%s: Getting messages for topic `%s` (%s -> %s)', task_id, topic_name, max_pub_time, max_pub_time_str)
+    logger.info('%s: Looking for messages without subscribers for topic `%s` (%s -> %s)',
+        task_id, topic_name, max_pub_time_float, max_pub_time_dt)
 
     in_how_many_queues = func.count(PubSubEndpointEnqueuedMessage.pub_msg_id).label('in_how_many_queues')
 
@@ -96,7 +97,7 @@ def get_topic_messages_without_subscribers(
         outerjoin(PubSubEndpointEnqueuedMessage, PubSubMessage.id==PubSubEndpointEnqueuedMessage.pub_msg_id).\
         having(in_how_many_queues == 0).\
         filter(PubSubMessage.topic_id == topic_id).\
-        filter(PubSubMessage.pub_time < max_pub_time).\
+        filter(PubSubMessage.pub_time < max_pub_time_float).\
         all()
 
     return result
