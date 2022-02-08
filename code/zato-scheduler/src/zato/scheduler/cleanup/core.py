@@ -29,7 +29,7 @@ from gevent import sleep
 from zato.broker.client import BrokerClient
 from zato.common.api import PUBSUB
 from zato.common.broker_message import SCHEDULER
-from zato.common.odb.query.cleanup import delete_queue_messages, delete_topic_messages, get_topic_messages_to_clean_up, \
+from zato.common.odb.query.cleanup import delete_queue_messages, delete_topic_messages, get_topic_messages_without_subscribers, \
     get_subscriptions
 from zato.common.odb.query.pubsub.delivery import get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.topic import get_topics_basic_data
@@ -541,7 +541,7 @@ class CleanupManager:
                 # in case they never see any subscribers, or perhaps their max. retention time will be reached,
                 # but we are not concerned with them in the current run here.
                 #
-                messages_for_topic = get_topic_messages_to_clean_up(
+                messages_for_topic = get_topic_messages_without_subscribers(
                     task_id,
                     session,
                     topic_ctx.id,
