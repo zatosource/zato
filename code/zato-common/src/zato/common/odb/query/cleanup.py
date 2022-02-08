@@ -76,7 +76,7 @@ def get_subscriptions(
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_messages(task_id:'str', session:'SASession', topic_id:'int', topic_name:'str') -> 'anylist':
+def get_topic_messages_to_clean_up(task_id:'str', session:'SASession', topic_id:'int', topic_name:'str') -> 'anylist':
 
     logger.info('%s: Getting messages for topic `%s`', task_id, topic_name)
 

@@ -29,7 +29,8 @@ from gevent import sleep
 from zato.broker.client import BrokerClient
 from zato.common.api import PUBSUB
 from zato.common.broker_message import SCHEDULER
-from zato.common.odb.query.cleanup import delete_queue_messages, delete_topic_messages, get_messages, get_subscriptions
+from zato.common.odb.query.cleanup import delete_queue_messages, delete_topic_messages, get_topic_messages_to_clean_up, \
+    get_subscriptions
 from zato.common.odb.query.pubsub.delivery import get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.topic import get_topics_basic_data
 from zato.common.typing_ import cast_, list_
@@ -436,7 +437,7 @@ class CleanupManager:
 
             # Not all topics will have the minimum retention time and related data configured,
             # in which case we use the relevant value from our configuration object.
-            limit_retention      = opaque.get('limit_retention')   or _default_pubsub.LimitTopicRetention
+            limit_retention      = opaque.get('limit_retention')      or _default_pubsub.LimitTopicRetention
             limit_message_expiry = opaque.get('limit_message_expiry') or _default_pubsub.LimitMessageExpiry
             limit_sub_inactivity = opaque.get('limit_sub_inactivity') or _default_pubsub.LimitSubInactivity
 
@@ -465,7 +466,7 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _delete_messages_from_group(self, task_id:'str', topic_ctx:'TopicCtx') -> 'None':
+    def _delete_topic_messages_from_group(self, task_id:'str', topic_ctx:'TopicCtx') -> 'None':
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
@@ -493,7 +494,7 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _delete_messages(
+    def _delete_topic_messages(
         self,
         task_id:'str',
         topics_to_clean_up: 'topic_ctx_list'
@@ -510,11 +511,11 @@ class CleanupManager:
                 task_id, 'message(s)', topic_ctx.messages, CleanupConfig.MsgDeleteBatchSize, topic_ctx.name)
 
             # .. and clean it up now.
-            self._delete_messages_from_group(task_id, topic_ctx)
+            self._delete_topic_messages_from_group(task_id, topic_ctx)
 
 # ################################################################################################################################
 
-    def _cleanup_messages(
+    def _cleanup_topic_messages(
         self,
         task_id:'str',
         cleanup_ctx:'CleanupCtx'
@@ -529,7 +530,7 @@ class CleanupManager:
             for topic_ctx in cleanup_ctx.all_topics:
 
                 # Look up all the messages that can be deleted from that topic in the database
-                messages_for_topic = get_messages(task_id, session, topic_ctx.id, topic_ctx.name)
+                messages_for_topic = get_topic_messages_to_clean_up(task_id, session, topic_ctx.id, topic_ctx.name)
 
                 # .. convert the messages to dicts so as not to keep references to database objects ..
                 messages_for_topic = [elem._asdict() for elem in messages_for_topic]
@@ -545,7 +546,7 @@ class CleanupManager:
                     topics_to_clean_up.append(topic_ctx)
 
         # Remove messages from all the topics found ..
-        self._delete_messages(task_id, topics_to_clean_up)
+        self._delete_topic_messages(task_id, topics_to_clean_up)
 
         # .. and assign the context object for later use, e.g. in tests.
         cleanup_ctx.topics_cleaned_up = topics_to_clean_up
@@ -558,12 +559,12 @@ class CleanupManager:
         cleanup_ctx:'CleanupCtx'
         ) -> 'CleanupCtx':
 
-        # First, clean up all the old messages from subscription queues ..
+        # First, clean up all the old messages from subscription queues
+        # as well as subscribers that have not used the system in the last delta seconds.
         self._cleanup_subscriptions(task_id, cleanup_ctx)
 
-        # Now, we can proceed and delete the actual message objects because we know that their
-        # queue references are already deleted.
-        self._cleanup_messages(task_id, cleanup_ctx)
+        # Now, we can delete topic messages whose retention time has been exceeded.
+        self._cleanup_topic_messages(task_id, cleanup_ctx)
 
         return cleanup_ctx
 
