@@ -29,7 +29,8 @@ from gevent import sleep
 from zato.broker.client import BrokerClient
 from zato.common.api import PUBSUB
 from zato.common.broker_message import SCHEDULER
-from zato.common.odb.query.cleanup import delete_queue_messages, delete_topic_messages, get_topic_messages_without_subscribers, \
+from zato.common.odb.query.cleanup import delete_queue_messages, delete_topic_messages, \
+    get_topic_messages_with_max_retention_reached, get_topic_messages_without_subscribers, \
     get_subscriptions
 from zato.common.odb.query.pubsub.delivery import get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.topic import get_topics_basic_data
@@ -44,7 +45,7 @@ from zato.scheduler.util import set_up_zato_client
 if 0:
     from logging import Logger
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anylist, callable_, dictlist, stranydict, strlist, strlistdict
+    from zato.common.typing_ import any_, anylist, callable_, dictlist, dtnone, floatnone, stranydict, strlist, strlistdict
     from zato.scheduler.server import Config
     SASession = SASession
 
@@ -518,8 +519,10 @@ class CleanupManager:
         cleanup_ctx:'CleanupCtx',
         query:'callable_',
         message_type_label:'str',
-        max_time_dt: 'datetime',
-        max_time_float: 'float',
+        *,
+        use_topic_retention_time:'bool',
+        max_time_dt: 'dtnone' = None,
+        max_time_float: 'floatnone' = None,
         ) -> 'topic_ctx_list':
 
         # A dictionary mapping all the topics that have any messages to be deleted
@@ -533,14 +536,28 @@ class CleanupManager:
 
             for topic_ctx in cleanup_ctx.all_topics:
 
+                # We enter here if we check the max. allowed publication time
+                # for each topic separately, based on its max. allowed retention time.
+                # In other words, we are interested in topics that contain messages
+                # whose retention time has been reached ..
+                if use_topic_retention_time:
+                    per_topic_max_time_dt = topic_ctx.limit_retention_dt
+                    per_topic_max_time_float = topic_ctx.limit_retention_float
+
+                # .. we enter here if simply want to find messages published
+                # at any point in the past as long as it was before our task started.
+                else:
+                    per_topic_max_time_dt = max_time_dt
+                    per_topic_max_time_float = max_time_float
+
                 # Run our input query to look up messages to delete
                 messages_for_topic = query(
                     task_id,
                     session,
                     topic_ctx.id,
                     topic_ctx.name,
-                    max_time_dt,
-                    max_time_float,
+                    per_topic_max_time_dt,
+                    per_topic_max_time_float,
                 )
 
                 # .. convert the messages to dicts so as not to keep references to database objects ..
@@ -590,7 +607,32 @@ class CleanupManager:
         max_time_dt = cleanup_ctx.now_dt
         max_time_float = cleanup_ctx.now
 
-        return self._cleanup_topic_messages(task_id, cleanup_ctx, query, message_type_label, max_time_dt, max_time_float)
+        return self._cleanup_topic_messages(task_id, cleanup_ctx, query, message_type_label,
+            use_topic_retention_time=False, max_time_dt=max_time_dt, max_time_float=max_time_float)
+
+# ################################################################################################################################
+
+    def _cleanup_topic_messages_with_max_retention_reached(
+        self,
+        task_id:'str',
+        cleanup_ctx:'CleanupCtx'
+        ) -> 'topic_ctx_list':
+
+        #
+        # This query will look up all the messages that are still in topics
+        # but their max. retention time has been reached.
+        #
+        query = get_topic_messages_with_max_retention_reached
+        message_type_label = 'with max. retention reached'
+
+        # These are explictly set to None because the max. publication time will be computed
+        # for each topic separately in the cleanup function that we are calling below,
+        # based on each of the topic's max retention time allowed.
+        max_time_dt = None
+        max_time_float = None
+
+        return self._cleanup_topic_messages(task_id, cleanup_ctx, query, message_type_label,
+            use_topic_retention_time=True, max_time_dt=max_time_dt, max_time_float=max_time_float)
 
 # ################################################################################################################################
 
@@ -609,8 +651,8 @@ class CleanupManager:
         cleanup_ctx.topics_cleaned_up.extend(topics_without_subscribers)
 
         # Clean up topics that contain messages whose max. retention time has been reached
-        # topics_max_retention_reached = self._cleanup_topic_messages(task_id, cleanup_ctx)
-        # cleanup_ctx.topics_cleaned_up.extend(topics_max_retention_reached)
+        topics_with_max_retention_reached = self._cleanup_topic_messages_with_max_retention_reached(task_id, cleanup_ctx)
+        cleanup_ctx.topics_cleaned_up.extend(topics_with_max_retention_reached)
 
         return cleanup_ctx
 
