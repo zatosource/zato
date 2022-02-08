@@ -541,7 +541,14 @@ class CleanupManager:
                 # in case they never see any subscribers, or perhaps their max. retention time will be reached,
                 # but we are not concerned with them in the current run here.
                 #
-                messages_for_topic = get_topic_messages_to_clean_up(task_id, session, topic_ctx.id, topic_ctx.name)
+                messages_for_topic = get_topic_messages_to_clean_up(
+                    task_id,
+                    session,
+                    topic_ctx.id,
+                    topic_ctx.name,
+                    cleanup_ctx.now,
+                    cleanup_ctx.now_dt,
+                )
 
                 # .. convert the messages to dicts so as not to keep references to database objects ..
                 messages_for_topic = [elem._asdict() for elem in messages_for_topic]

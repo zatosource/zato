@@ -76,9 +76,16 @@ def get_subscriptions(
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_topic_messages_to_clean_up(task_id:'str', session:'SASession', topic_id:'int', topic_name:'str') -> 'anylist':
+def get_topic_messages_to_clean_up(
+    task_id:'str',
+    session:'SASession',
+    topic_id:'int',
+    topic_name:'str',
+    max_pub_time:'float',
+    max_pub_time_str:'datetime',
+    ) -> 'anylist':
 
-    logger.info('%s: Getting messages for topic `%s`', task_id, topic_name)
+    logger.info('%s: Getting messages for topic `%s` (%s -> %s)', task_id, topic_name, max_pub_time, max_pub_time_str)
 
     in_how_many_queues = func.count(PubSubEndpointEnqueuedMessage.pub_msg_id).label('in_how_many_queues')
 
@@ -89,6 +96,7 @@ def get_topic_messages_to_clean_up(task_id:'str', session:'SASession', topic_id:
         outerjoin(PubSubEndpointEnqueuedMessage, PubSubMessage.id==PubSubEndpointEnqueuedMessage.pub_msg_id).\
         having(in_how_many_queues == 0).\
         filter(PubSubMessage.topic_id == topic_id).\
+        filter(PubSubMessage.pub_time < max_pub_time).\
         all()
 
     return result
