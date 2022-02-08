@@ -44,7 +44,7 @@ from zato.scheduler.util import set_up_zato_client
 if 0:
     from logging import Logger
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anylist, dictlist, stranydict, strlist
+    from zato.common.typing_ import any_, anylist, callable_, dictlist, stranydict, strlist, strlistdict
     from zato.scheduler.server import Config
     SASession = SASession
 
@@ -54,16 +54,6 @@ if 0:
 _default_pubsub = PUBSUB.DEFAULT
 
 topic_ctx_list = list_['TopicCtx']
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False)
-class DeltaCtx:
-
-    topic_min_retention:  'int'
-    topic_min_retention_as_float:    'float'
-    topic_min_retention_as_datetime: 'datetime'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,6 +74,8 @@ class TopicCtx:
     messages: 'dictlist'
     len_messages: 'int'
     limit_retention:      'int'
+    limit_retention_dt: 'datetime'
+    limit_retention_float: 'float'
     limit_message_expiry: 'int'
     limit_sub_inactivity: 'int'
     groups_ctx: 'GroupsCtx'
@@ -404,7 +396,7 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _get_topics(self, task_id:'str') -> topic_ctx_list:
+    def _get_topics(self, task_id:'str', cleanup_ctx:'CleanupCtx') -> topic_ctx_list:
 
         # Our response to produce
         out = []
@@ -437,13 +429,14 @@ class CleanupManager:
 
             # Not all topics will have the minimum retention time and related data configured,
             # in which case we use the relevant value from our configuration object.
+            # Observe that these are limits, expressed as integers, not timestamps based on these limits.
             limit_retention      = opaque.get('limit_retention')      or _default_pubsub.LimitTopicRetention
             limit_message_expiry = opaque.get('limit_message_expiry') or _default_pubsub.LimitMessageExpiry
             limit_sub_inactivity = opaque.get('limit_sub_inactivity') or _default_pubsub.LimitSubInactivity
 
-            topic_dict['limit_retention']      = limit_retention
-            topic_dict['limit_message_expiry'] = limit_message_expiry
-            topic_dict['limit_sub_inactivity'] = limit_sub_inactivity
+            # Timestamps are computed here
+            limit_retention_dt    = cleanup_ctx.now_dt - timedelta(seconds=limit_retention)
+            limit_retention_float = datetime_to_sec(limit_retention_dt)
 
             # Add the now ready topic dict to a list that the logger will use later
             topics_found.append(topic_dict)
@@ -452,9 +445,11 @@ class CleanupManager:
             topic_ctx = TopicCtx()
             topic_ctx.id   = topic_dict['id']
             topic_ctx.name = topic_dict['name']
-            topic_ctx.limit_retention = topic_dict['limit_retention']
-            topic_ctx.limit_message_expiry = topic_dict['limit_message_expiry']
-            topic_ctx.limit_sub_inactivity = topic_dict['limit_sub_inactivity']
+            topic_ctx.limit_retention = limit_retention
+            topic_ctx.limit_retention_dt = limit_retention_dt
+            topic_ctx.limit_retention_float = limit_retention_float
+            topic_ctx.limit_message_expiry = limit_message_expiry
+            topic_ctx.limit_sub_inactivity = limit_sub_inactivity
             topic_ctx.messages = []
             topic_ctx.len_messages = 0
 
@@ -466,19 +461,16 @@ class CleanupManager:
 
 # ################################################################################################################################
 
-    def _delete_topic_messages_from_group(self, task_id:'str', topic_ctx:'TopicCtx') -> 'None':
+    def _delete_topic_messages_from_group(self, task_id:'str', groups_ctx:'GroupsCtx', topic_name:'str') -> 'None':
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
 
-            for idx, group in enumerate(topic_ctx.groups_ctx.items, 1):
-
-                # Local alias ..
-                groups_ctx = topic_ctx.groups_ctx
+            for idx, group in enumerate(groups_ctx.items, 1):
 
                 # .. log what we are about to do ..
                 self.logger.info('%s: Deleting topic message group %s/%s (%s)',
-                    task_id, idx, groups_ctx.len_groups, topic_ctx.name)
+                    task_id, idx, groups_ctx.len_groups, topic_name)
 
                 # .. extract msg IDs from each dictionary in the group ..
                 msg_id_list = [elem['pub_msg_id'] for elem in group if elem]
@@ -497,77 +489,108 @@ class CleanupManager:
     def _delete_topic_messages(
         self,
         task_id:'str',
-        topics_to_clean_up: 'topic_ctx_list'
+        topics_to_clean_up: 'topic_ctx_list',
+        messages_to_delete: 'strlistdict',
+        message_type_label: 'str',
         ) -> 'None':
 
         # Iterate through each topic to clean it up
         for topic_ctx in topics_to_clean_up:
 
+            per_topic_messages_to_delete = messages_to_delete[topic_ctx.name]
+
             # .. og what we are about to do ..
-            self.logger.info('%s: Cleaning up %s message(s) %s', task_id, topic_ctx.len_messages, topic_ctx.name)
+            self.logger.info('%s: Cleaning up %s message(s) %s -> %s',
+                task_id, len(per_topic_messages_to_delete), message_type_label, topic_ctx.name)
 
             # .. assign to each topics individual groups of messages to be deleted ..
-            topic_ctx.groups_ctx = self._build_groups(
-                task_id, 'message(s)', topic_ctx.messages, CleanupConfig.MsgDeleteBatchSize, topic_ctx.name)
+            groups_ctx = self._build_groups(
+                task_id, 'message(s)', per_topic_messages_to_delete, CleanupConfig.MsgDeleteBatchSize, topic_ctx.name)
 
             # .. and clean it up now.
-            self._delete_topic_messages_from_group(task_id, topic_ctx)
+            self._delete_topic_messages_from_group(task_id, groups_ctx, topic_ctx.name)
 
 # ################################################################################################################################
 
     def _cleanup_topic_messages(
         self,
         task_id:'str',
-        cleanup_ctx:'CleanupCtx'
-        ) -> 'None':
+        cleanup_ctx:'CleanupCtx',
+        query:'callable_',
+        message_type_label:'str',
+        max_time_dt: 'datetime',
+        max_time_float: 'float',
+        ) -> 'topic_ctx_list':
 
         # A dictionary mapping all the topics that have any messages to be deleted
         topics_to_clean_up = [] # type: topic_ctx_list
+
+        # A dictionary mapping topic names to messages that need to be deleted from them
+        messages_to_delete = {} # type: strlistdict
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
 
             for topic_ctx in cleanup_ctx.all_topics:
 
-                #
-                # Look up all the messages that can be deleted from that topic in the database.
-                # That means two conditions:
-                #
-                # 1) A message must not have any subscribers
-                # 2) A message must have been published before our task started
-                #
-                # Thanks to the second condition we do not delete messages that have been
-                # published after our task started. Such messages may be included in a future run
-                # in case they never see any subscribers, or perhaps their max. retention time will be reached,
-                # but we are not concerned with them in the current run here.
-                #
-                messages_for_topic = get_topic_messages_without_subscribers(
+                # Run our input query to look up messages to delete
+                messages_for_topic = query(
                     task_id,
                     session,
                     topic_ctx.id,
                     topic_ctx.name,
-                    cleanup_ctx.now,
-                    cleanup_ctx.now_dt,
+                    max_time_dt,
+                    max_time_float,
                 )
 
                 # .. convert the messages to dicts so as not to keep references to database objects ..
                 messages_for_topic = [elem._asdict() for elem in messages_for_topic]
 
                 # .. populate the context object with the newest information ..
-                topic_ctx.messages.extend(messages_for_topic)
                 topic_ctx.len_messages = len(messages_for_topic)
 
-                self.logger.info('%s: Found %d message(s) for topic %s', task_id, topic_ctx.len_messages, topic_ctx.name)
+                # .. populate the map of messages that need to be deleted
+                per_topic_messages_to_delete_list = messages_to_delete.setdefault(topic_ctx.name, [])
+                per_topic_messages_to_delete_list.extend(messages_for_topic)
+
+                self.logger.info('%s: Found %d message(s) %s for topic %s',
+                    task_id, topic_ctx.len_messages, message_type_label, topic_ctx.name)
 
                 # Save for later use if there are any messages that can be deleted for that topic
                 if topic_ctx.len_messages:
                     topics_to_clean_up.append(topic_ctx)
 
         # Remove messages from all the topics found ..
-        self._delete_topic_messages(task_id, topics_to_clean_up)
+        self._delete_topic_messages(task_id, topics_to_clean_up, messages_to_delete, message_type_label)
 
-        # .. and assign the context object for later use, e.g. in tests.
-        cleanup_ctx.topics_cleaned_up = topics_to_clean_up
+        # .. and return all the processed topics to our caller.
+        return topics_to_clean_up
+
+# ################################################################################################################################
+
+    def _cleanup_topic_messages_without_subscribers(
+        self,
+        task_id:'str',
+        cleanup_ctx:'CleanupCtx'
+        ) -> 'topic_ctx_list':
+
+        #
+        # This query will look up all the messages that can be deleted from a topic in the database based on two conditions.
+        #
+        # 1) A message must not have any subscribers
+        # 2) A message must have been published before our task started
+        #
+        # Thanks to the second condition we do not delete messages that have been
+        # published after our task started. Such messages may be included in a future run
+        # in case they never see any subscribers, or perhaps their max. retention time will be reached,
+        # but we are not concerned with them in the current run and the current query here.
+        #
+        query = get_topic_messages_without_subscribers
+        message_type_label = 'without subscribers'
+        max_time_dt = cleanup_ctx.now_dt
+        max_time_float = cleanup_ctx.now
+
+        return self._cleanup_topic_messages(task_id, cleanup_ctx, query, message_type_label, max_time_dt, max_time_float)
 
 # ################################################################################################################################
 
@@ -581,8 +604,13 @@ class CleanupManager:
         # as well as subscribers that have not used the system in the last delta seconds.
         self._cleanup_subscriptions(task_id, cleanup_ctx)
 
-        # Now, we can delete topic messages whose retention time has been exceeded.
-        self._cleanup_topic_messages(task_id, cleanup_ctx)
+        # Clean up topics that contain messages without subscribers
+        topics_without_subscribers = self._cleanup_topic_messages_without_subscribers(task_id, cleanup_ctx)
+        cleanup_ctx.topics_cleaned_up.extend(topics_without_subscribers)
+
+        # Clean up topics that contain messages whose max. retention time has been reached
+        # topics_max_retention_reached = self._cleanup_topic_messages(task_id, cleanup_ctx)
+        # cleanup_ctx.topics_cleaned_up.extend(topics_max_retention_reached)
 
         return cleanup_ctx
 
@@ -605,12 +633,13 @@ class CleanupManager:
         cleanup_ctx.found_all_topics = 0
         cleanup_ctx.found_sk_list = []
         cleanup_ctx.found_total_queue_messages = 0
+        cleanup_ctx.topics_cleaned_up = []
 
         cleanup_ctx.now_dt = now_dt
         cleanup_ctx.now = datetime_to_sec(cleanup_ctx.now_dt)
 
         # Assign a list of topics found in the database
-        cleanup_ctx.all_topics = self._get_topics(task_id)
+        cleanup_ctx.all_topics = self._get_topics(task_id, cleanup_ctx)
 
         # Note that this limit is in seconds ..
         cleanup_ctx.max_limit_sub_inactivity = max(item.limit_sub_inactivity for item in cleanup_ctx.all_topics)
@@ -631,19 +660,6 @@ class CleanupManager:
 
         else:
             cleanup_ctx.has_env_delta = False
-
-        # We will find all objects, such as subscribers or messages
-        # that did not interact with us for at least that many seconds
-        delta = int(os.environ.get('ZATO_SCHED_DELTA') or 0)
-
-        topic_min_retention       = delta or CleanupConfig.TopicRetentionTime
-        topic_min_retention_dt    = now_dt - timedelta(seconds=topic_min_retention)
-        topic_min_retention_float = datetime_to_sec(topic_min_retention_dt)
-
-        # This is reusable across tasks
-        delta_ctx = DeltaCtx()
-        delta_ctx.topic_min_retention_as_float    = topic_min_retention_float
-        delta_ctx.topic_min_retention_as_datetime = topic_min_retention_dt
 
         self.logger.info('Starting cleanup tasks: %s', task_id)
 
