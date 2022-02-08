@@ -247,6 +247,11 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         self._run_cleanup_old_subscriptions_one_sub_key(topic_name, env_delta, limit_sub_inactivity)
 
 # ################################################################################################################################
+
+    def test_cleanup_max_topic_retention_exceeded(self) -> 'None':
+        pass
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
