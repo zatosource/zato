@@ -35,7 +35,7 @@ from zato.common.odb.query.pubsub.delivery import get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.topic import get_topics_basic_data
 from zato.common.typing_ import cast_, list_
 from zato.common.util.api import grouper, set_up_logging, tabulate_dictlist
-from zato.common.util.time_ import datetime_from_ms, datetime_to_ms
+from zato.common.util.time_ import datetime_from_ms, datetime_to_sec
 from zato.scheduler.util import set_up_zato_client
 
 # ################################################################################################################################
@@ -214,7 +214,7 @@ class CleanupManager:
             topic_max_last_interaction_time_source = 'topic'
             limit_sub_inactivity = topic_ctx.limit_sub_inactivity
             topic_max_last_interaction_time_dt = cleanup_ctx.now_dt - timedelta(seconds=limit_sub_inactivity)
-            topic_max_last_interaction_time = datetime_to_ms(topic_max_last_interaction_time_dt) / 1000
+            topic_max_last_interaction_time = datetime_to_sec(topic_max_last_interaction_time_dt)
 
         # Always create a new session so as not to block the database
         with closing(self.config.odb.session()) as session: # type: ignore
@@ -529,7 +529,18 @@ class CleanupManager:
 
             for topic_ctx in cleanup_ctx.all_topics:
 
-                # Look up all the messages that can be deleted from that topic in the database
+                #
+                # Look up all the messages that can be deleted from that topic in the database.
+                # That means two conditions:
+                #
+                # 1) A message must not have any subscribers
+                # 2) A message must have been published before our task started
+                #
+                # Thanks to the second condition we do not delete messages that have been
+                # published after our task started. Such messages may be included in a future run
+                # in case they never see any subscribers, or perhaps their max. retention time will be reached,
+                # but we are not concerned with them in the current run here.
+                #
                 messages_for_topic = get_topic_messages_to_clean_up(task_id, session, topic_ctx.id, topic_ctx.name)
 
                 # .. convert the messages to dicts so as not to keep references to database objects ..
@@ -589,7 +600,7 @@ class CleanupManager:
         cleanup_ctx.found_total_queue_messages = 0
 
         cleanup_ctx.now_dt = now_dt
-        cleanup_ctx.now = datetime_to_ms(cleanup_ctx.now_dt)
+        cleanup_ctx.now = datetime_to_sec(cleanup_ctx.now_dt)
 
         # Assign a list of topics found in the database
         cleanup_ctx.all_topics = self._get_topics(task_id)
@@ -606,7 +617,7 @@ class CleanupManager:
             cleanup_ctx.max_limit_sub_inactivity = env_max_limit_sub_inactivity
 
             max_last_interaction_time_dt = cleanup_ctx.now_dt - timedelta(seconds=env_max_limit_sub_inactivity)
-            max_last_interaction_time    = datetime_to_ms(max_last_interaction_time_dt) / 1000
+            max_last_interaction_time    = datetime_to_sec(max_last_interaction_time_dt)
 
             cleanup_ctx.max_last_interaction_time = max_last_interaction_time
             cleanup_ctx.max_last_interaction_time_dt = max_last_interaction_time_dt
@@ -620,7 +631,7 @@ class CleanupManager:
 
         topic_min_retention       = delta or CleanupConfig.TopicRetentionTime
         topic_min_retention_dt    = now_dt - timedelta(seconds=topic_min_retention)
-        topic_min_retention_float = datetime_to_ms(topic_min_retention_dt)
+        topic_min_retention_float = datetime_to_sec(topic_min_retention_dt)
 
         # This is reusable across tasks
         delta_ctx = DeltaCtx()
