@@ -95,6 +95,7 @@ UUID = UUID
 # ################################################################################################################################
 
 if 0:
+    from logging import Logger
     from typing import Callable
     from zato.broker.client import BrokerClient
     from zato.common.audit import AuditPII
@@ -508,7 +509,7 @@ class Service:
             *ignored_args, **ignored_kwargs):
         self.name = self.__class__.__service_name # Will be set through .get_name by Service Store
         self.impl_name = self.__class__.__service_impl_name # Ditto
-        self.logger = _get_logger(self.name)
+        self.logger = _get_logger(self.name) # type: Logger
         self.server = None        # type: ParallelServer
         self.broker_client = None # type: BrokerClient
         self.channel = None # type: ChannelInfo
@@ -520,11 +521,11 @@ class Service:
         self.wsgi_environ = None # type: anydict
         self.job_type = None     # type: str
         self.environ = _Bunch()
-        self.request = _Request(self)
-        self.response = _Response(self.logger)
+        self.request = _Request(self) # type: Request
+        self.response = _Response(self.logger) # type: Response
         self.time = None # type: TimeUtil
         self.patterns = None
-        self.user_config = {}
+        self.user_config = Bunch()
         self.dictnav = _DictNav
         self.listnav = _ListNav
         self.has_validate_input = False
@@ -565,7 +566,7 @@ class Service:
             self._worker_store.def_kafka,
             HL7API(self._worker_store.outconn_hl7_mllp) if self.component_enabled_hl7 else None,
             self.kvdb
-        )
+        ) # type: Outgoing
 
 # ################################################################################################################################
 
