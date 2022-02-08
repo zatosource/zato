@@ -105,6 +105,30 @@ def get_topic_messages_without_subscribers(
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_topic_messages_with_max_retention_reached(
+    task_id:'str',
+    session:'SASession',
+    topic_id:'int',
+    topic_name:'str',
+    max_pub_time_dt:'datetime',
+    max_pub_time_float:'float',
+    ) -> 'anylist':
+
+    logger.info('%s: Looking for messages with max. retention reached for topic `%s` (%s -> %s)',
+        task_id, topic_name, max_pub_time_float, max_pub_time_dt)
+
+    result = session.query(
+        PubSubMessage.pub_msg_id,
+        ).\
+        filter(PubSubMessage.topic_id == topic_id).\
+        filter(PubSubMessage.pub_time < max_pub_time_float).\
+        all()
+
+    return result
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def delete_queue_messages(session:'SASession', msg_id_list:'strlist') -> 'None':
 
     logger.info('Deleting %d queue message(s): %s', len(msg_id_list), msg_id_list)
