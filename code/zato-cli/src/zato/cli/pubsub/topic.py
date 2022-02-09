@@ -188,23 +188,40 @@ class DeleteTopics(ServerAwareCommand):
     """ Returns one or more topic by their name. Accepts partial names, e.g. "demo" will match "/my/demo/topic".
     """
     opts = [
-        {'name':'--name',    'help':'Name of a topic to delete', 'required':False},
-        {'name':'--list',    'help':'List of topics to delete', 'required':False},
-        {'name':'--pattern', 'help':'All topics with names matching this pattern will be deleted', 'required':False},
-        {'name':'--path',    'help':'Path to a Zato server', 'required':False},
+        {'name':'--id',       'help':'An exact ID of a topic to delete', 'required':False},
+        {'name':'--id-list',  'help':'A list of topic IDs to delete', 'required':False},
+        {'name':'--name',     'help':'An exact name of a topic to delete', 'required':False},
+        {'name':'--name-list','help':'List of topics to delete', 'required':False},
+        {'name':'--pattern',  'help':'All topics with names matching this pattern will be deleted', 'required':False},
+        {'name':'--path',     'help':'Path to a Zato server', 'required':False},
     ]
 
 # ################################################################################################################################
 
     def execute(self, args:'Namespace'):
 
+        # stdlib
+        import sys
+
+        # This will be built based on the option provided by user
+        request = {}
+
+        options = ['--id', '--id-list', '--name', '--name-list', '--pattern']
+        for name in options:
+            arg_attr = name.replace('--', '')
+            arg_attr = arg_attr.replace('-', '-s')
+            value = getattr(args, arg_attr, None)
+            if value:
+                request[arg_attr] = value
+                break
+
+        if not request:
+            options = ', '.join(options)
+            self.logger.warn(f'Input missing. One of the following is expected: {options}')
+            sys.exit(self.SYS_ERROR.PARAMETER_MISSING)
+
         # Our service to invoke
         service = 'zato.pubsub.topic.delete-topics'
-
-        # Build a request Delete the topic(s) matching the input parameters
-        request = {
-            'pattern': '/zato/test'
-        }
 
         # Invoke the service and log the response it produced
         self._invoke_service_and_log_response(service, request)
