@@ -57,16 +57,24 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def _run_cleanup_old_subscriptions_one_sub_key(
+    def _run_cleanup_old_pubsub_one_sub_key(
         self,
         topic_name:'str',
-        env_delta:'int',
-        limit_sub_inactivity:'intnone' = None
+        *,
+        env_delta:'intnone',
+        limit_retention:'intnone',
+        limit_sub_inactivity:'intnone',
+        clean_up_subscriptions: 'bool' = True,
+        clean_up_topics_without_subscribers: 'bool' = True,
+        clean_up_topics_with_max_retention_reached: 'bool' = True,
         ) -> 'None':
 
         # Filter our warnings coming from requests
         import warnings
         warnings.filterwarnings(action='ignore', message='unclosed', category=ResourceWarning)
+
+        # Assume we are not going to sleep after publishing
+        after_publish_sleep_base = 0
 
         # Before subscribing, make sure we are not currently subscribed
         self._unsubscribe(topic_name)
@@ -97,43 +105,57 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             # Export a variable with delta as required by the underlying cleanup implementation
             os.environ[delta_environ_key] = str(env_delta)
 
-            # Sleep a little bit longer to make sure that we actually exceed the delta
-            sleep_extra = env_delta * 0.1
-            sleep(env_delta + sleep_extra)
+            # Our sleep time is based on the delta environment variable
+            after_publish_sleep_base = env_delta
 
-        # We get here if there was no delta, in which case we still need to sleep
-        # based on the topic's subscription inactivity limit.
+        elif limit_retention:
+            # We are going to sleep based on the topic's max. retention time
+            after_publish_sleep_base = limit_retention
+
         elif limit_sub_inactivity:
-            sleep_extra = limit_sub_inactivity * 0.1
-            sleep(limit_sub_inactivity + sleep_extra)
+            # We need to sleep based on the topic's subscription inactivity limit.
+            after_publish_sleep_base = limit_sub_inactivity
+
+        # If requested to, sleep a little bit longer to make sure that we actually exceed the delta or retention time
+        if after_publish_sleep_base:
+            sleep_extra = after_publish_sleep_base * 0.1
+            sleep(after_publish_sleep_base + sleep_extra)
 
         # Run the cleanup procedure now
-        cleanup_result = run_cleanup()
+        cleanup_result = run_cleanup(
+            clean_up_subscriptions,
+            clean_up_topics_without_subscribers,
+            clean_up_topics_with_max_retention_reached,
+        )
 
-        self.assertEqual(cleanup_result.found_total_queue_messages, len_messages)
-        self.assertListEqual(cleanup_result.found_sk_list, [sub_key])
+        # We enter and check the assertions here only if we were to clean up subscriptions
+        # as otherwise the subscription will be still around.
+        if clean_up_subscriptions:
 
-        # The cleanup procedure invoked the server which in turn deleted our subscription,
-        # which means that we can sleep for a moment now to make sure that it is actually
-        # deleted and then we can try to get message for the now-already-deleted sub_key.
-        # We expect that it will result in a permissioned denied, as though this sub_key never existed.
+            self.assertEqual(cleanup_result.found_total_queue_messages, len_messages)
+            self.assertListEqual(cleanup_result.found_sk_list, [sub_key])
 
-        # Wait a moment ..
-        sleep(0.1)
+            # The cleanup procedure invoked the server which in turn deleted our subscription,
+            # which means that we can sleep for a moment now to make sure that it is actually
+            # deleted and then we can try to get message for the now-already-deleted sub_key.
+            # We expect that it will result in a permissioned denied, as though this sub_key never existed.
 
-        receive_result = cast_('anydict', self._receive(topic_name, expect_ok=False))
+            # Wait a moment ..
+            sleep(0.1)
 
-        cid = receive_result['cid']
+            receive_result = cast_('anydict', self._receive(topic_name, expect_ok=False))
 
-        self.assertIsInstance(cid, str)
-        self.assertTrue(len(cid) >= 20)
+            cid = receive_result['cid']
 
-        self.assertEqual(receive_result['result'], 'Error')
-        self.assertEqual(receive_result['details'], f'You are not subscribed to topic `{topic_name}`')
+            self.assertIsInstance(cid, str)
+            self.assertTrue(len(cid) >= 20)
+
+            self.assertEqual(receive_result['result'], 'Error')
+            self.assertEqual(receive_result['details'], f'You are not subscribed to topic `{topic_name}`')
 
 # ################################################################################################################################
 
-    def test_cleanup_old_subscriptions_no_sub_keys(self) -> 'None':
+    def xtest_cleanup_old_subscriptions_no_sub_keys(self) -> 'None':
 
         # Indicate after a passage of how many seconds we will consider a subscribers as gone,
         # that is, after how many seconds since its last interaction time it will be deleted.
@@ -157,7 +179,11 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         sleep(env_delta + sleep_extra)
 
         # Run the cleanup procedure now
-        cleanup_result = run_cleanup()
+        cleanup_result = run_cleanup(
+            clean_up_subscriptions = True,
+            clean_up_topics_without_subscribers = True,
+            clean_up_topics_with_max_retention_reached = True,
+        )
 
         # We expect for the environment variable to have been taken into account
         self.assertEqual(cleanup_result.max_limit_sub_inactivity, env_delta)
@@ -182,7 +208,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def test_cleanup_old_subscriptions_one_sub_key_with_env_delta_default_topic(self):
+    def xtest_cleanup_old_subscriptions_one_sub_key_with_env_delta_default_topic(self):
 
         # In this test, we explicitly specify a seconds delta to clean up messages by.
         env_delta = 1
@@ -192,11 +218,16 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         topic_name = out['name']
 
         # Run the actual test
-        self._run_cleanup_old_subscriptions_one_sub_key(topic_name, env_delta)
+        self._run_cleanup_old_pubsub_one_sub_key(
+            topic_name,
+            env_delta=env_delta,
+            limit_retention=None,
+            limit_sub_inactivity=None,
+        )
 
 # ################################################################################################################################
 
-    def test_cleanup_old_subscriptions_one_sub_key_with_env_delta_new_topic(self):
+    def xtest_cleanup_old_subscriptions_one_sub_key_with_env_delta_new_topic(self):
 
         # In this test, we explicitly specify a seconds delta to clean up messages by.
         # I.e. even if we use a new test topic below, the delta is given on input too.
@@ -207,15 +238,16 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         topic_name = out['name']
 
         # Run the actual test
-        self._run_cleanup_old_subscriptions_one_sub_key(topic_name, env_delta)
+        self._run_cleanup_old_pubsub_one_sub_key(
+            topic_name,
+            env_delta=env_delta,
+            limit_retention=None,
+            limit_sub_inactivity=None,
+        )
 
 # ################################################################################################################################
 
-    def test_cleanup_old_subscriptions_one_sub_key_no_env_delta(self):
-
-        # In this test, we do not specify a seconds delta to clean up messages by
-        # which means that its value will be taken from each topic separately.
-        env_delta = 0
+    def xtest_cleanup_old_subscriptions_one_sub_key_no_env_delta(self):
 
         # We explcitly request that inactive subscriptions should be deleted after that many seconds
         limit_sub_inactivity = 1
@@ -225,11 +257,16 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         topic_name = out['name']
 
         # Run the actual test
-        self._run_cleanup_old_subscriptions_one_sub_key(topic_name, env_delta, limit_sub_inactivity)
+        self._run_cleanup_old_pubsub_one_sub_key(
+            topic_name,
+            env_delta=None,
+            limit_retention=None,
+            limit_sub_inactivity=limit_sub_inactivity,
+        )
 
 # ################################################################################################################################
 
-    def test_cleanup_old_subscriptions_one_sub_key_env_delta_overrides_topic_delta(self):
+    def xtest_cleanup_old_subscriptions_one_sub_key_env_delta_overrides_topic_delta(self):
 
         # In this test, we specify a short delta in the environment and we expect
         # that it will override the explicit inactivity limit configured for a new topic.
@@ -244,12 +281,37 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         topic_name = out['name']
 
         # Run the actual test
-        self._run_cleanup_old_subscriptions_one_sub_key(topic_name, env_delta, limit_sub_inactivity)
+        self._run_cleanup_old_pubsub_one_sub_key(
+            topic_name,
+            env_delta=env_delta,
+            limit_retention=None,
+            limit_sub_inactivity=limit_sub_inactivity,
+        )
 
 # ################################################################################################################################
 
     def test_cleanup_max_topic_retention_exceeded(self) -> 'None':
-        pass
+
+        # Messages without subscribers will be eligible for deletion from topics after that many seconds
+        limit_retention = 1
+
+        # Create a new topic for this test with a unique prefix,
+        # which will ensure that there are no other subscriptions for it.
+        now = datetime.utcnow().isoformat()
+        prefix = f'/zato/test/retention/{now}/'
+        out = self.create_pubsub_topic(topic_prefix=prefix, limit_retention=limit_retention)
+        topic_name = out['name']
+
+        # Run the actual test
+        self._run_cleanup_old_pubsub_one_sub_key(
+            topic_name,
+            env_delta=None,
+            limit_retention=limit_retention,
+            limit_sub_inactivity=None,
+            clean_up_subscriptions = False,
+            clean_up_topics_without_subscribers = False,
+            clean_up_topics_with_max_retention_reached = True,
+        )
 
 # ################################################################################################################################
 # ################################################################################################################################
