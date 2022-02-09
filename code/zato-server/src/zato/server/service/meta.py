@@ -475,7 +475,7 @@ class DeleteMeta(AdminServiceMeta):
                     # but enmasse does not know, hence delete_require_instance is True in pubsub_endpoint's endpoint.py.
                     if not instance:
                         if attrs.delete_require_instance:
-                            raise Exception('Could not find {} instance with ID `{}`'.format(attrs.label, input.id))
+                            raise BadRequest(self.cid, 'Could not find {} instance with ID `{}`'.format(attrs.label, input.id))
                         else:
                             return
 
