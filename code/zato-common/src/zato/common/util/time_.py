@@ -52,6 +52,13 @@ def datetime_to_ms(dt):
 
 # ################################################################################################################################
 
+def datetime_to_sec(dt):
+    """ Converts a datetime object to a number of seconds since UNIX epoch.
+    """
+    return (dt - _epoch).total_seconds()
+
+# ################################################################################################################################
+
 def utcnow_as_ms(_time=time):
     """ Returns current UTC time in milliseconds since epoch. As of now, uses time.time but may eventually choose
     to use alternative implementations on different systems.
