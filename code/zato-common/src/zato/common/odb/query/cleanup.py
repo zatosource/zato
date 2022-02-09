@@ -13,12 +13,13 @@ from logging import getLogger
 from sqlalchemy import delete, func, or_
 
 # Zato
-from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription
+from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import anylist, strlist
 
@@ -36,9 +37,19 @@ MessageTable = PubSubMessage.__table__
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_subscriptions(task_id:'str', session:'SASession', max_last_interaction_time:'float') -> 'anylist':
+def get_subscriptions(
+    task_id:'str',
+    session:'SASession',
+    topic_id: 'int',
+    topic_name: 'str',
+    max_last_interaction_time:'float',
+    topic_max_last_interaction_time_dt:'datetime',
+    topic_max_last_interaction_time_source:'str'
+    ) -> 'anylist':
 
-    logger.info('%s: Getting subscriptions with max_last_interaction_time `%s`', task_id, max_last_interaction_time)
+    msg = '%s: Getting subscriptions for topic `%s` (id:%s) with max_last_interaction_time `%s` -> %s (s:%s)'
+    logger.info(msg, task_id, topic_name, topic_id,
+        max_last_interaction_time, topic_max_last_interaction_time_dt, topic_max_last_interaction_time_source)
 
     result = session.query(
         PubSubSubscription.id,
@@ -47,8 +58,11 @@ def get_subscriptions(task_id:'str', session:'SASession', max_last_interaction_t
         PubSubSubscription.last_interaction_time,
         PubSubEndpoint.name.label('endpoint_name'),
         PubSubEndpoint.id.label('endpoint_id'),
+        PubSubTopic.opaque1.label('topic_opaque'),
         ).\
-        filter(PubSubEndpoint.id == PubSubSubscription.endpoint_id).\
+        filter(PubSubSubscription.topic_id == topic_id).\
+        filter(PubSubSubscription.topic_id == PubSubTopic.id).\
+        filter(PubSubSubscription.endpoint_id == PubSubEndpoint.id).\
         filter(PubSubEndpoint.is_internal.is_(False)).\
         filter(or_(
             PubSubSubscription.last_interaction_time < max_last_interaction_time,
@@ -62,9 +76,17 @@ def get_subscriptions(task_id:'str', session:'SASession', max_last_interaction_t
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_messages(task_id:'str', session:'SASession', topic_id:'int', topic_name:'str') -> 'anylist':
+def get_topic_messages_without_subscribers(
+    task_id:'str',
+    session:'SASession',
+    topic_id:'int',
+    topic_name:'str',
+    max_pub_time_dt:'datetime',
+    max_pub_time_float:'float',
+    ) -> 'anylist':
 
-    logger.info('%s: Getting messages for topic `%s`', task_id, topic_name)
+    logger.info('%s: Looking for messages without subscribers for topic `%s` (%s -> %s)',
+        task_id, topic_name, max_pub_time_float, max_pub_time_dt)
 
     in_how_many_queues = func.count(PubSubEndpointEnqueuedMessage.pub_msg_id).label('in_how_many_queues')
 
@@ -75,6 +97,31 @@ def get_messages(task_id:'str', session:'SASession', topic_id:'int', topic_name:
         outerjoin(PubSubEndpointEnqueuedMessage, PubSubMessage.id==PubSubEndpointEnqueuedMessage.pub_msg_id).\
         having(in_how_many_queues == 0).\
         filter(PubSubMessage.topic_id == topic_id).\
+        filter(PubSubMessage.pub_time < max_pub_time_float).\
+        all()
+
+    return result
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_topic_messages_with_max_retention_reached(
+    task_id:'str',
+    session:'SASession',
+    topic_id:'int',
+    topic_name:'str',
+    max_pub_time_dt:'datetime',
+    max_pub_time_float:'float',
+    ) -> 'anylist':
+
+    logger.info('%s: Looking for messages with max. retention reached for topic `%s` (%s -> %s)',
+        task_id, topic_name, max_pub_time_float, max_pub_time_dt)
+
+    result = session.query(
+        PubSubMessage.pub_msg_id,
+        ).\
+        filter(PubSubMessage.topic_id == topic_id).\
+        filter(PubSubMessage.pub_time < max_pub_time_float).\
         all()
 
     return result

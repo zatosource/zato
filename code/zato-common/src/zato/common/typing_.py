@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 # stdlib
+from datetime import datetime
 from typing import           \
     Any as any_,             \
     BinaryIO as binaryio_,   \
@@ -78,6 +79,7 @@ cast_        = cast_
 commondict   = dict_[str, union_[int, str_, bool, float, anydict, anylist, None]]
 dictlist     = list_[anydict]
 dictnone     = optional[anydict]
+dtnone       = optional[datetime]
 floatnone    = optional[float]
 generator_   = generator_
 intanydict   = dict_[int, any_]
@@ -86,6 +88,7 @@ intdictdict  = dict_[int, anydict]
 intlist      = list_[int]
 intnone      = optional[int]
 intlistempty = list_[intnone]
+intlistnone  = optional[list_[int]]
 intset       = set_[int]
 intsetdict   = dict_[int, anyset]
 intstrdict   = dict_[int, str]

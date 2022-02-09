@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 from datetime import datetime
+from logging import getLogger
 from tempfile import NamedTemporaryFile
 from random import choice, randint
 from unittest import TestCase
@@ -41,7 +42,7 @@ from zato.common.simpleio_ import get_bytes_to_str_encoding, get_sio_server_conf
 from zato.common.py23_ import maxint
 from zato.common.typing_ import cast_
 from zato.common.util.api import is_port_taken, new_cid
-from zato.common.util.cli import CommandLineServiceInvoker
+from zato.common.util.cli import CommandLineInvoker, CommandLineServiceInvoker
 from zato.server.service import Service
 
 # Zato - Cython
@@ -51,16 +52,19 @@ from zato.simpleio import CySimpleIO
 from past.builtins import basestring, cmp, unicode, xrange
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict, anylist, intnone, strnone
     from zato.common.util.search import SearchResults
     SearchResults = SearchResults
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 test_class_name = '<my-test-class>'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class test_odb_data:
@@ -71,6 +75,17 @@ class test_odb_data:
     es_timeout = 111
     es_body_as = 'my.body_as'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PubSubConfig:
+    PathPublish     = '/zato/pubsub/topic/'
+    PathReceive     = '/zato/pubsub/topic/'
+    PathSubscribe   = '/zato/pubsub/subscribe/topic/'
+    PathUnsubscribe = '/zato/pubsub/subscribe/topic/'
+    TestTopicPrefix = '/zato/test/internal/'
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def rand_bool():
@@ -574,12 +589,8 @@ class MyZatoClass:
 
 class BaseSIOTestCase(TestCase):
 
-# ################################################################################################################################
-
     def setUp(self):
         self.maxDiff = maxint
-
-# ################################################################################################################################
 
     def get_server_config(self, needs_response_elem=False):
 
@@ -616,21 +627,124 @@ class BaseSIOTestCase(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CommandLineServiceTestCase(TestCase):
+class BaseZatoTestCase(TestCase):
 
     maxDiff = 1234567890
 
-    def run_zato_test(self, service_name:'str') -> 'None':
+    def __init__(self, *args, **kwargs) -> 'None':
+        self.logger = getLogger('zato.test')
+        super().__init__(*args, **kwargs)
+
+    def create_pubsub_topic(
+        self,
+        *,
+        topic_name:  'strnone' = None,
+        topic_prefix:'strnone' = PubSubConfig.TestTopicPrefix,
+        limit_retention:'intnone' = None,
+        limit_message_expiry:'intnone' = None,
+        limit_sub_inactivity:'intnone' = None
+        ) -> 'anydict':
+
+        if not (topic_name or topic_prefix):
+            raise Exception('Either topic_name or topic_prefix is required')
+
+        if topic_name and topic_prefix:
+            raise Exception('Cannot provide both topic_name and topic_prefix')
+
+        if not topic_name:
+            topic_name = topic_prefix + datetime.utcnow().isoformat()
+
+        # These parameters for the Command to invoke will always exist ..
+        cli_params = ['pubsub', 'create-topic', '--name', topic_name]
+
+        # .. whereas these ones are optional ..
+        if limit_retention:
+            cli_params.append('--limit-retention')
+            cli_params.append(limit_retention)
+
+        if limit_message_expiry:
+            cli_params.append('--limit-message-expiry')
+            cli_params.append(limit_message_expiry)
+
+        if limit_sub_inactivity:
+            cli_params.append('--limit-sub-inactivity')
+            cli_params.append(limit_sub_inactivity)
+
+        # Create the test topic here ..
+        return self.run_zato_cli_json_command(cli_params) # type: anydict
+
+# ################################################################################################################################
+
+    def _handle_cli_out(
+        self,
+        out:'str',
+        assert_ok:'bool',
+        load_json:'bool' = False
+        ) -> 'str':
+
+        # We do not need any extra new lines
+        out = out.strip()
+
+        # If told do, make sure that the response indicates a success ..
+        if assert_ok:
+            self.assertEqual(out, 'OK')
+
+        # .. load a JSON response if configured to do so ..
+        if load_json:
+            out = loads(out)
+
+        # .. and return our output.
+        return out
+
+# ################################################################################################################################
+
+    def run_zato_cli_command(
+        self,
+        cli_params:'anylist',
+        command_name:'str'='zato',
+        assert_ok:'bool'=False,
+        load_json:'bool'=False,
+        ) -> 'any_':
+
+        # Prepare the invoker ..
+        invoker = CommandLineInvoker(check_stdout=False)
+
+        # .. append the path to our test server ..
+        cli_params.append('--path')
+        cli_params.append(invoker.server_location)
+
+        # .. invoke the service and obtain its response ..
+        out = invoker.invoke_cli(cli_params, command_name) # type: str
+
+        # .. and let the parent class handle the result
+        return self._handle_cli_out(out, assert_ok, load_json)
+
+# ################################################################################################################################
+
+    def run_zato_cli_json_command(self, *args, **kwargs) -> 'any_':
+        return self.run_zato_cli_command(*args, **kwargs, load_json=True)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CommandLineTestCase(BaseZatoTestCase):
+    pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CommandLineServiceTestCase(BaseZatoTestCase):
+
+    def run_zato_service_test(self, service_name:'str', assert_ok:'bool'=True) -> 'str':
 
         # Prepare the invoker
         invoker = CommandLineServiceInvoker(check_stdout=False)
 
         # .. invoke the service and obtain its response ..
         out = invoker.invoke_and_test(service_name) # type: str
-        out = out.strip()
 
-        # .. make sure that the response indicates a success.
-        self.assertEqual(out, 'OK')
+        # .. and let the parent class handle the result
+        return self._handle_cli_out(out, assert_ok)
 
 # ################################################################################################################################
 # ################################################################################################################################

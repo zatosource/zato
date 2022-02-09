@@ -124,13 +124,11 @@ class SSOCommand(ZatoCommand):
         # Zato
         from zato.common.util.api import get_config
 
+        # This will exist the process if path does not point to a server
+        self.ensure_path_is_a_server(args.path)
+
         repo_location = os.path.join(args.path, 'config', 'repo')
         secrets_conf = get_config(repo_location, 'secrets.conf', needs_user_config=False)
-
-        # This file must exist, otherwise it's not a path to a server
-        if not secrets_conf:
-            self.logger.warning('Could not find file `secrets.conf` in `%s`', repo_location)
-            return self.SYS_ERROR.NOT_A_ZATO_SERVER
 
         user_api = self._get_sso_config(args, repo_location, secrets_conf)
 

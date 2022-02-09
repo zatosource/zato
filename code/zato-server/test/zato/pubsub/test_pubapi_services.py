@@ -24,7 +24,7 @@ class WSXServicesInvokerTest(CommandLineServiceTestCase):
         service_name = 'helpers.pubsub.pubapi-invoker'
 
         # Run the test now
-        self.run_zato_test(service_name)
+        self.run_zato_service_test(service_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

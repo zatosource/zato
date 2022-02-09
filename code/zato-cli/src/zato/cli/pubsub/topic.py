@@ -6,17 +6,27 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from json import dumps
-
 # Zato
 from zato.cli import ServerAwareCommand
+from zato.common.api import GENERIC
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from argparse import Namespace
+    from zato.common.typing_ import anydict, anylist
+    Namespace = Namespace
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_opaque_attr = GENERIC.ATTR_NAME
+
+class Config:
+    DefaultTopicKeys = ('id', 'name', 'current_depth_gd', 'last_pub_time', 'last_pub_msg_id', 'last_endpoint_name',
+        'last_pub_server_name', 'last_pub_server_pid', 'last_pub_has_gd')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,7 +37,163 @@ class CreateTopic(ServerAwareCommand):
     opts = [
         {'name':'--name', 'help':'Name of the topic to create', 'required':False},
         {'name':'--gd',   'help':'Should the topic use Guaranteed Delivery', 'required':False},
-        {'name':'--path', 'help':'Path to a Zato server',   'required':False},
+        {'name':'--is-internal', 'help':'Is it a topic internal to the platform', 'required':False},
+        {'name':'--is-api-sub-allowed', 'help':'Can applications subscribe to the topic via a public API', 'required':False},
+        {'name':'--limit-retention', 'help':'Limit retention time in topic to that many seconds', 'required':False},
+        {'name':'--limit-message-expiry', 'help':'Limit max. message expiration time to that many seconds', 'required':False},
+        {'name':'--limit-sub-inactivity',
+            'help':'After how many seconds an inactive subscription will be deleted', 'required':False},
+        {'name':'--path', 'help':'Path to a Zato server', 'required':False},
+    ]
+
+# ################################################################################################################################
+
+    def execute(self, args:'Namespace'):
+
+        # Zato
+        from zato.common.api import PUBSUB
+        from zato.common.util.file_system import fs_safe_now
+
+        _default = PUBSUB.DEFAULT
+
+        # Topic name will be generated if it is now given on input
+        topic_name  = getattr(args, 'name', None)
+
+        has_gd             = getattr(args, 'gd',   False)
+        is_internal        = getattr(args, 'is_internal', None)
+        is_api_sub_allowed = getattr(args, 'is_api_sub_allowed', True)
+
+        limit_expiry         = getattr(args, 'limit_expiry',         0) or _default.LimitMessageExpiry
+        limit_retention      = getattr(args, 'limit_retention',      0) or _default.LimitTopicRetention
+        limit_sub_inactivity = getattr(args, 'limit_sub_inactivity', 0) or _default.LimitSubInactivity
+
+        limit_expiry    = int(limit_expiry)
+        limit_retention = int(limit_retention)
+        limit_sub_inactivity = int(limit_sub_inactivity)
+
+        if not topic_name:
+            topic_name = '/auto/topic.{}'.format(fs_safe_now())
+
+        service = 'zato.pubsub.topic.create'
+        request = {
+            'name': topic_name,
+            'is_active': True,
+            'is_internal': is_internal,
+            'has_gd': has_gd,
+            'is_api_sub_allowed': is_api_sub_allowed,
+            'max_depth_gd': _default.TOPIC_MAX_DEPTH_GD,
+            'max_depth_non_gd': _default.TOPIC_MAX_DEPTH_NON_GD,
+            'depth_check_freq': _default.DEPTH_CHECK_FREQ,
+            'pub_buffer_size_gd': _default.PUB_BUFFER_SIZE_GD,
+            'task_sync_interval': _default.TASK_SYNC_INTERVAL,
+            'task_delivery_interval': _default.TASK_DELIVERY_INTERVAL,
+            'limit_expiry': limit_expiry,
+            'limit_retention': limit_retention,
+            'limit_sub_inactivity': limit_sub_inactivity,
+        }
+
+        self._invoke_service_and_log_response(service, request)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetTopics(ServerAwareCommand):
+    """ Returns one or more topic by their name. Accepts partial names, e.g. "demo" will match "/my/demo/topic".
+    """
+    opts = [
+        {'name':'--name',  'help':'Query to look up topics by', 'required':False},
+        {'name':'--keys',  'help':'What JSON keys to return on put. Use "all" to return them all', 'required':False},
+        {'name':'--path',  'help':'Path to a Zato server', 'required':False},
+    ]
+
+# ################################################################################################################################
+
+    def execute(self, args:'Namespace'):
+
+        # Make sure that keys are always a set object to look up information in
+        args_keys = getattr(args, 'keys', '')
+        if args_keys:
+            if isinstance(args_keys, str):
+                args_keys = args_keys.split(',')
+                args_keys = [elem.strip() for elem in args_keys]
+
+            has_all = 'all' in args_keys
+            needs_default_keys = has_all or (not args_keys)
+
+        else:
+            has_all = False
+            needs_default_keys = True
+            args_keys = Config.DefaultTopicKeys
+
+        args_keys = set(args_keys)
+
+        def hook_func(data:'anydict') -> 'anylist':
+
+            # Response to produce ..
+            out = []
+
+            # .. extract the top-level element ..
+            data = data['zato_pubsub_topic_get_list_response']
+
+            # .. go through each response element found ..
+            for elem in data: # type: dict
+                elem = cast_('anydict', elem)
+
+                # Delete the opaque attributes container
+                elem.pop(_opaque_attr, '')
+
+                # Make sure we return only the requested keys. Note that we build a new dictionary
+                # because we want to preserve the order of DefaultConfigKeys. Also note that if all keys
+                # are requested, for consistency, we still initially populate the dictionary
+                # with keys from DefaultTopicKeys and only then do we proceed to the remaining keys.
+                out_elem = {}
+
+                # We are possibly return the default keys
+                if needs_default_keys:
+
+                    # First, populate the default keys ..
+                    for name in Config.DefaultTopicKeys:
+                        value = elem.get(name)
+                        out_elem[name] = value
+
+                # .. otherwise, we return only the specifically requested keys
+                for name, value in sorted(elem.items()):
+                    if has_all or (name in args_keys):
+                        if name not in out_elem:
+                            out_elem[name] = value
+
+                # .. we are finished with pre-processing of this element ..
+                out.append(out_elem)
+
+            # .. and return the output to our caller.
+            return out
+
+        # Our service to invoke
+        service = 'zato.pubsub.topic.get-list'
+
+        # Get a list of topics matching the input query, if any
+        request = {
+            'paginate': True,
+            'needs_details': True,
+            'query': getattr(args, 'name', ''),
+        }
+
+        # Invoke and log, pre-processing the data first with a hook function
+        self._invoke_service_and_log_response(service, request, hook_func=hook_func)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DeleteTopics(ServerAwareCommand):
+    """ Returns one or more topic by their name. Accepts partial names, e.g. "demo" will match "/my/demo/topic".
+    """
+    opts = [
+        {'name':'--id',       'help':'An exact ID of a topic to delete', 'required':False},
+        {'name':'--id-list',  'help':'A list of topic IDs to delete', 'required':False},
+        {'name':'--name',     'help':'An exact name of a topic to delete', 'required':False},
+        {'name':'--name-list','help':'List of topics to delete', 'required':False},
+        {'name':'--pattern',  'help':'All topics with names matching this pattern will be deleted', 'required':False},
+        {'name':'--path',     'help':'Path to a Zato server', 'required':False},
     ]
 
 # ################################################################################################################################
@@ -37,42 +203,28 @@ class CreateTopic(ServerAwareCommand):
         # stdlib
         import sys
 
-        # Zato
-        from zato.common.api import PUBSUB
-        from zato.common.util.file_system import fs_safe_now
+        # This will be built based on the option provided by user
+        request = {}
 
-        _default = PUBSUB.DEFAULT
+        options = ['--id', '--id-list', '--name', '--name-list', '--pattern']
+        for name in options:
+            arg_attr = name.replace('--', '')
+            arg_attr = arg_attr.replace('-', '-s')
+            value = getattr(args, arg_attr, None)
+            if value:
+                request[arg_attr] = value
+                break
 
-        # Topic name will be generated if it is now given on input
-        topic_name = getattr(args, 'name', None)
-        has_gd = getattr(args, 'gd', True)
+        if not request:
+            options = ', '.join(options)
+            self.logger.warn(f'Input missing. One of the following is expected: {options}')
+            sys.exit(self.SYS_ERROR.PARAMETER_MISSING)
 
-        if not topic_name:
-            topic_name = '/auto/topic.{}'.format(fs_safe_now())
+        # Our service to invoke
+        service = 'zato.pubsub.topic.delete-topics'
 
-        service = 'zato.pubsub.topic.create'
-        request = {
-            'name': topic_name,
-            'is_active': True,
-            'is_internal': True,
-            'has_gd': has_gd,
-            'is_api_sub_allowed': True,
-            'max_depth_gd': _default.TOPIC_MAX_DEPTH_GD,
-            'max_depth_non_gd': _default.TOPIC_MAX_DEPTH_NON_GD,
-            'depth_check_freq': _default.DEPTH_CHECK_FREQ,
-            'pub_buffer_size_gd': _default.PUB_BUFFER_SIZE_GD,
-            'task_sync_interval': _default.TASK_SYNC_INTERVAL,
-            'task_delivery_interval': _default.TASK_DELIVERY_INTERVAL,
-            'delete_at': 60,
-        }
-
-        response = self.zato_client.invoke(**{
-            'name': service,
-            'payload': request
-        })
-
-        data = dumps(response.data)
-        sys.stdout.write(data + '\n')
+        # Invoke the service and log the response it produced
+        self._invoke_service_and_log_response(service, request)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -80,12 +232,32 @@ class CreateTopic(ServerAwareCommand):
 if __name__ == '__main__':
 
     # stdlib
+    from argparse import Namespace
     from os import environ
 
-    # Bunch
-    from bunch import Bunch
+    args = Namespace()
+    args.verbose      = True
+    args.store_log    = False
+    args.store_config = False
+    args.path = environ['ZATO_SERVER_BASE_DIR']
 
-    args = Bunch()
+    command = DeleteTopics(args)
+    command.run(args)
+
+    """
+    args = Namespace()
+    args.keys         = 'all'
+    args.verbose      = True
+    args.store_log    = False
+    args.store_config = False
+    args.path = environ['ZATO_SERVER_BASE_DIR']
+
+    command = GetTopics(args)
+    command.run(args)
+    """
+
+    """
+    args = Namespace()
     args.verbose      = True
     args.store_log    = False
     args.store_config = False
@@ -93,6 +265,7 @@ if __name__ == '__main__':
 
     command = CreateTopic(args)
     command.run(args)
+    """
 
 # ################################################################################################################################
 # ################################################################################################################################
