@@ -626,6 +626,8 @@ class BaseZatoTestCase(TestCase):
         *,
         topic_name:  'strnone' = None,
         topic_prefix:'strnone' = '/zato/test/',
+        limit_retention:'intnone' = None,
+        limit_message_expiry:'intnone' = None,
         limit_sub_inactivity:'intnone' = None
         ) -> 'anydict':
 
@@ -641,7 +643,15 @@ class BaseZatoTestCase(TestCase):
         # These parameters for the Command to invoke will always exist ..
         cli_params = ['pubsub', 'create-topic', '--name', topic_name]
 
-        # .. whereas this is optional
+        # .. whereas these ones are optional ..
+        if limit_retention:
+            cli_params.append('--limit-retention')
+            cli_params.append(limit_retention)
+
+        if limit_message_expiry:
+            cli_params.append('--limit-message-expiry')
+            cli_params.append(limit_message_expiry)
+
         if limit_sub_inactivity:
             cli_params.append('--limit-sub-inactivity')
             cli_params.append(limit_sub_inactivity)
