@@ -308,7 +308,7 @@ class CleanupManager:
                 cleanup_ctx.found_total_queue_messages += len(msg_id_list)
 
                 # .. confirm that we did it ..
-                self.logger.info('%s: Deleted  group %s/%s (%s)', task_id, idx, groups_ctx.len_items, sub_key)
+                self.logger.info('%s: Deleted group %s/%s (%s)', task_id, idx, groups_ctx.len_items, sub_key)
 
                 # .. and sleep for a moment so as not to overwhelm the database.
                 sleep(CleanupConfig.DeleteSleepTime)
@@ -525,7 +525,7 @@ class CleanupManager:
 
             per_topic_messages_to_delete = messages_to_delete[topic_ctx.name]
 
-            # .. og what we are about to do ..
+            # .. log what we are about to do ..
             self.logger.info('%s: Cleaning up %s message(s) %s -> %s',
                 task_id, len(per_topic_messages_to_delete), message_type_label, topic_ctx.name)
 
