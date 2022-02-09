@@ -51,6 +51,10 @@
             'task_delivery_interval',
 
             'on_no_subs_pub',
+            'limit_retention',
+            'limit_message_expiry',
+
+            'limit_sub_inactivity',
         ]
     }
     </script>
@@ -105,6 +109,10 @@
                         <th class='ignore'>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -181,6 +189,10 @@
                         <td class='ignore'>{{ item.task_delivery_interval }}</td>
 
                         <td class='ignore'>{{ item.on_no_subs_pub }}</td>
+                        <td class='ignore'>{{ item.limit_retention }}</td>
+                        <td class='ignore'>{{ item.limit_message_expiry }}</td>
+
+                        <td class='ignore'>{{ item.limit_sub_inactivity }}</td>
 
                     </tr>
                 {% endfor %}
@@ -256,32 +268,48 @@
                             </td>
 
                         </tr>
-
                         <tr>
                             <td style="vertical-align:middle">
-                            Intervals
-                            <br/>
-                            <span class="form_hint">(in ms)</span>
+                                Intervals
+                                <br/>
+                                <span class="form_hint">(in ms)</span>
                             </td>
-
                             <td>
-
-                            <label>
-                            Sync
-                            {{ create_form.task_sync_interval }}
-                            </label>
-
-                            |
-
-                            <label>
-                            Delivery {{ create_form.task_delivery_interval }}
-                            </label>
-
+                                <label>
+                                    Sync
+                                    {{ create_form.task_sync_interval }}
+                                </label>
+                                |
+                                <label>
+                                    Delivery {{ create_form.task_delivery_interval }}
+                                </label>
                             </td>
-
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Service</td>
+                            <td style="vertical-align:middle">
+                                Limits
+                                <br/>
+                                <span class="form_hint">(in sec.)</span>
+                            </td>
+                            <td style="vertical-align:middle">
+                                <label>
+                                    Retention
+                                    {{ create_form.limit_retention }}
+                                </label>
+                                |
+                                <label>
+                                    Expiry
+                                    {{ create_form.limit_message_expiry }}
+                                </label>
+                                |
+                                <label>
+                                    Sub. inactivity
+                                    {{ create_form.limit_sub_inactivity }}
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Hook service</td>
                             <td>{{ create_form.hook_service_id }} </td>
                         </tr>
                         <tr>
@@ -379,7 +407,29 @@
                             </label>
 
                             </td>
-
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Limits
+                                <br/>
+                                <span class="form_hint">(in sec.)</span>
+                            </td>
+                            <td>
+                                <label>
+                                    Retention
+                                    {{ edit_form.limit_retention }}
+                                </label>
+                                |
+                                <label>
+                                    Expiry
+                                    {{ edit_form.limit_message_expiry }}
+                                </label>
+                                |
+                                <label>
+                                    Sub. inactivity
+                                    {{ edit_form.limit_sub_inactivity }}
+                                </label>
+                            </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Service</td>

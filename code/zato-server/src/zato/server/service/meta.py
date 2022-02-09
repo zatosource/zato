@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -27,6 +25,7 @@ from sqlalchemy.exc import IntegrityError
 from zato.common.api import ZATO_NOT_GIVEN
 from zato.common.odb.model import Base, Cluster
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
+from zato.server.connection.http_soap import BadRequest
 from zato.server.service import AsIs, Bool as BoolSIO, Int as IntSIO
 from zato.server.service.internal import AdminSIO, GetListAdminSIO
 
@@ -364,13 +363,13 @@ class CreateEditMeta(AdminServiceMeta):
                                 if attrs.skip_if_exists:
                                     pass # Ignore it explicitly
                                 else:
-                                    raise Exception('{} `{}` already exists in this cluster'.format(
+                                    raise BadRequest(self.cid, '{} `{}` already exists in this cluster'.format(
                                         attrs.label[0].upper() + attrs.label[1:], input.name))
                             else:
                                 if attrs.skip_if_missing:
                                     pass # Ignore it explicitly
                                 else:
-                                    raise Exception('No such {} `{}` in this cluster'.format(
+                                    raise BadRequest(self.cid, 'No such {} `{}` in this cluster'.format(
                                         attrs.label[0].upper() + attrs.label[1:], input.name))
 
                     if attrs.is_edit:
@@ -476,7 +475,7 @@ class DeleteMeta(AdminServiceMeta):
                     # but enmasse does not know, hence delete_require_instance is True in pubsub_endpoint's endpoint.py.
                     if not instance:
                         if attrs.delete_require_instance:
-                            raise Exception('Could not find {} instance with ID `{}`'.format(attrs.label, input.id))
+                            raise BadRequest(self.cid, 'Could not find {} instance with ID `{}`'.format(attrs.label, input.id))
                         else:
                             return
 

@@ -11,6 +11,7 @@ from time import sleep
 
 # Zato
 from zato.common import PUBSUB
+from zato.common.test import PubSubConfig
 from zato.common.test.rest_client import RESTClient, RESTClientTestCase
 from zato.common.typing_ import cast_
 
@@ -27,12 +28,6 @@ _default = PUBSUB.DEFAULT
 
 sec_name = _default.DEMO_SECDEF_NAME
 username = _default.DEMO_USERNAME
-
-class PubSubConfig:
-    PathPublish     = '/zato/pubsub/topic/'
-    PathReceive     = '/zato/pubsub/topic/'
-    PathSubscribe   = '/zato/pubsub/subscribe/topic/'
-    PathUnsubscribe = '/zato/pubsub/subscribe/topic/'
 
 # ################################################################################################################################
 # ################################################################################################################################
