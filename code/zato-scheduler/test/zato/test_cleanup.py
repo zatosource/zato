@@ -76,6 +76,9 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         # Assume we are not going to sleep after publishing
         after_publish_sleep_base = 0
 
+        # All the messages published during this test
+        messages_published = []
+
         # Before subscribing, make sure we are not currently subscribed
         self._unsubscribe(topic_name)
 
@@ -92,7 +95,11 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         len_messages = 2
 
         for _ in range(len_messages):
-            self._publish(topic_name, data)
+            msg = self._publish(topic_name, data)
+            messages_published.append(msg['msg_id'])
+
+        # Sort all the message IDs published for later use
+        messages_published.sort()
 
         # Because each publication is synchronous, we now know that all of them are in the subscriber's queue
         # which means that we can delete them already.
@@ -153,9 +160,53 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             self.assertEqual(receive_result['result'], 'Error')
             self.assertEqual(receive_result['details'], f'You are not subscribed to topic `{topic_name}`')
 
+            # This topic was cleaned up based on the fact that it had no subscribers,
+            # which left no messages in the topic at all. That means that there must have been
+            # no messages with a max. retention time left which in turn means that we do not
+            # expect this topic to be among ones that still contained such messages
+            # when the cleanup procedure went on to clean up topics based on max. retention time.
+            for item in cleanup_result.topics_with_max_retention_reached:
+                if item.name == topic_name:
+                    self.fail('Topic `{}` should not be among `{}` (topics_cleaned_up)'.format(
+                        topic_name, cleanup_result.topics_with_max_retention_reached))
+
+        elif clean_up_topics_with_max_retention_reached:
+
+            # Confirm that the environment variable was not used
+            self.assertFalse(cleanup_result.has_env_delta)
+
+            # We expect for no subscriptions to have been cleaned up in this if branch
+            self.assertListEqual(cleanup_result.topics_without_subscribers, [])
+
+            # Because its name is unique, there should be only one topic that was cleaned up
+            self.assertEqual(len(cleanup_result.topics_cleaned_up), 1)
+            self.assertEqual(len(cleanup_result.topics_with_max_retention_reached), 1)
+
+            # This is our topic that was cleaned up
+            topic_from_cleaned_up_list = cleanup_result.topics_cleaned_up[0]
+            topic_based_on_max_retention_reached = cleanup_result.topics_with_max_retention_reached[0]
+
+            # These two objects should be the same
+            self.assertIs(topic_from_cleaned_up_list, topic_based_on_max_retention_reached)
+
+            # Let's use a shorter name
+            topic_ctx = cleanup_result.topics_cleaned_up[0]
+
+            # These must be equal
+            self.assertTrue(topic_ctx.name, topic_name)
+            self.assertEqual(topic_ctx.limit_retention, limit_retention)
+            self.assertEqual(topic_ctx.len_messages, len(messages_published))
+
+            # Messages received are going to be a list of Bunch objects in an unspecified order.
+            # We need to convert them to a simple list of sorted message IDs.
+            cleaned_up_msg_id_list = [elem['pub_msg_id'] for elem in topic_ctx.messages]
+            cleaned_up_msg_id_list.sort()
+
+            self.assertListEqual(messages_published, cleaned_up_msg_id_list)
+
 # ################################################################################################################################
 
-    def xtest_cleanup_old_subscriptions_no_sub_keys(self) -> 'None':
+    def test_cleanup_old_subscriptions_no_sub_keys(self) -> 'None':
 
         # Indicate after a passage of how many seconds we will consider a subscribers as gone,
         # that is, after how many seconds since its last interaction time it will be deleted.
@@ -197,7 +248,13 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
         for item in cleanup_result.topics_cleaned_up:
             if item.name == topic_name:
-                self.fail('Topic `{}` should not be among `{}`'.format(topic_name, cleanup_result.topics_cleaned_up))
+                self.fail('Topic `{}` should not be among `{}` (topics_cleaned_up)'.format(
+                    topic_name, cleanup_result.topics_cleaned_up))
+
+        for item in cleanup_result.topics_without_subscribers:
+            if item.name == topic_name:
+                self.fail('Topic `{}` should not be among `{}` (topics_cleaned_up)'.format(
+                    topic_name, cleanup_result.topics_without_subscribers))
 
         # We are sure that have been the only potential user of the pub/sub system
         # while the test was running and, because we did not publish anything,
@@ -208,7 +265,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def xtest_cleanup_old_subscriptions_one_sub_key_with_env_delta_default_topic(self):
+    def test_cleanup_old_subscriptions_one_sub_key_with_env_delta_default_topic(self):
 
         # In this test, we explicitly specify a seconds delta to clean up messages by.
         env_delta = 1
@@ -290,7 +347,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def test_cleanup_max_topic_retention_exceeded(self) -> 'None':
+    def xtest_cleanup_max_topic_retention_exceeded(self) -> 'None':
 
         # Messages without subscribers will be eligible for deletion from topics after that many seconds
         limit_retention = 1
