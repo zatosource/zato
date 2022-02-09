@@ -121,6 +121,20 @@ class CleanupCtx:
     max_last_interaction_time:    'float'
     max_last_interaction_time_dt: 'datetime'
 
+    clean_up_subscriptions: 'bool'
+    clean_up_topics_without_subscribers: 'bool'
+    clean_up_topics_with_max_retention_reached: 'bool'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class CleanupPartsEnabled:
+
+    subscriptions: 'bool'
+    topics_without_subscribers: 'bool'
+    topics_with_max_retention_reached: 'bool'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -129,9 +143,11 @@ class CleanupManager:
     config:        'Config'
     repo_location: 'str'
     broker_client: 'BrokerClient'
+    parts_enabled: 'CleanupPartsEnabled'
 
-    def __init__(self, repo_location:'str') -> 'None':
+    def __init__(self, repo_location:'str', parts_enabled:'CleanupPartsEnabled') -> 'None':
         self.repo_location = repo_location
+        self.parts_enabled = parts_enabled
 
 # ################################################################################################################################
 
@@ -536,6 +552,9 @@ class CleanupManager:
 
             for topic_ctx in cleanup_ctx.all_topics:
 
+                if 'retention' not in topic_ctx.name:
+                    continue
+
                 # We enter here if we check the max. allowed publication time
                 # for each topic separately, based on its max. allowed retention time.
                 # In other words, we are interested in topics that contain messages
@@ -644,15 +663,18 @@ class CleanupManager:
 
         # First, clean up all the old messages from subscription queues
         # as well as subscribers that have not used the system in the last delta seconds.
-        self._cleanup_subscriptions(task_id, cleanup_ctx)
+        if cleanup_ctx.clean_up_subscriptions:
+            self._cleanup_subscriptions(task_id, cleanup_ctx)
 
         # Clean up topics that contain messages without subscribers
-        topics_without_subscribers = self._cleanup_topic_messages_without_subscribers(task_id, cleanup_ctx)
-        cleanup_ctx.topics_cleaned_up.extend(topics_without_subscribers)
+        if cleanup_ctx.clean_up_topics_without_subscribers:
+            topics_without_subscribers = self._cleanup_topic_messages_without_subscribers(task_id, cleanup_ctx)
+            cleanup_ctx.topics_cleaned_up.extend(topics_without_subscribers)
 
         # Clean up topics that contain messages whose max. retention time has been reached
-        topics_with_max_retention_reached = self._cleanup_topic_messages_with_max_retention_reached(task_id, cleanup_ctx)
-        cleanup_ctx.topics_cleaned_up.extend(topics_with_max_retention_reached)
+        if cleanup_ctx.clean_up_topics_with_max_retention_reached:
+            topics_with_max_retention_reached = self._cleanup_topic_messages_with_max_retention_reached(task_id, cleanup_ctx)
+            cleanup_ctx.topics_cleaned_up.extend(topics_with_max_retention_reached)
 
         return cleanup_ctx
 
@@ -676,6 +698,11 @@ class CleanupManager:
         cleanup_ctx.found_sk_list = []
         cleanup_ctx.found_total_queue_messages = 0
         cleanup_ctx.topics_cleaned_up = []
+
+        # What cleanup parts to run
+        cleanup_ctx.clean_up_subscriptions = self.parts_enabled.subscriptions
+        cleanup_ctx.clean_up_topics_without_subscribers = self.parts_enabled.topics_without_subscribers
+        cleanup_ctx.clean_up_topics_with_max_retention_reached = self.parts_enabled.topics_with_max_retention_reached
 
         cleanup_ctx.now_dt = now_dt
         cleanup_ctx.now = datetime_to_sec(cleanup_ctx.now_dt)
@@ -713,7 +740,11 @@ class CleanupManager:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def run_cleanup() -> 'CleanupCtx':
+def run_cleanup(
+    clean_up_subscriptions: 'bool',
+    clean_up_topics_without_subscribers: 'bool',
+    clean_up_topics_with_max_retention_reached: 'bool',
+) -> 'CleanupCtx':
 
     # stdlib
     import sys
@@ -731,8 +762,14 @@ def run_cleanup() -> 'CleanupCtx':
     repo_location = os.path.expanduser(repo_location)
     repo_location = os.path.abspath(repo_location)
 
+    # Information about what cleanup parts / tasks are enabled
+    parts_enabled = CleanupPartsEnabled()
+    parts_enabled.subscriptions = clean_up_subscriptions
+    parts_enabled.topics_without_subscribers = clean_up_topics_without_subscribers
+    parts_enabled.topics_with_max_retention_reached = clean_up_topics_with_max_retention_reached
+
     # Build and initialize object responsible for cleanup tasks ..
-    cleanup_manager = CleanupManager(repo_location)
+    cleanup_manager = CleanupManager(repo_location, parts_enabled)
     cleanup_manager.init()
 
     # .. if we are here, it means that we can start our work ..
@@ -743,7 +780,11 @@ def run_cleanup() -> 'CleanupCtx':
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    _ = run_cleanup()
+    _ = run_cleanup(
+        clean_up_subscriptions = True,
+        clean_up_topics_without_subscribers = True,
+        clean_up_topics_with_max_retention_reached = True,
+    )
 
 # ################################################################################################################################
 # ################################################################################################################################
