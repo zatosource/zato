@@ -101,7 +101,7 @@ class GetTopics(ServerAwareCommand):
     """ Returns one or more topic by their name. Accepts partial names, e.g. "demo" will match "/my/demo/topic".
     """
     opts = [
-        {'name':'--name',  'help':'Name query to look up topics by', 'required':False},
+        {'name':'--name',  'help':'Query to look up topics by', 'required':False},
         {'name':'--keys',  'help':'What JSON keys to return on put. Use "all" to return them all', 'required':False},
         {'name':'--path',  'help':'Path to a Zato server', 'required':False},
     ]
@@ -184,9 +184,30 @@ class GetTopics(ServerAwareCommand):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetTopic(GetTopics):
-    """ A convenience alias for get-topics. It does exactly the same.
+class DeleteTopics(ServerAwareCommand):
+    """ Returns one or more topic by their name. Accepts partial names, e.g. "demo" will match "/my/demo/topic".
     """
+    opts = [
+        {'name':'--name',    'help':'Name of a topic to delete', 'required':False},
+        {'name':'--list',    'help':'List of topics to delete', 'required':False},
+        {'name':'--pattern', 'help':'All topics with names matching this pattern will be deleted', 'required':False},
+        {'name':'--path',    'help':'Path to a Zato server', 'required':False},
+    ]
+
+# ################################################################################################################################
+
+    def execute(self, args:'Namespace'):
+
+        # Our service to invoke
+        service = 'zato.pubsub.topic.delete-topics'
+
+        # Build a request Delete the topic(s) matching the input parameters
+        request = {
+            'pattern': '/zato/test'
+        }
+
+        # Invoke the service and log the response it produced
+        self._invoke_service_and_log_response(service, request)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -198,6 +219,16 @@ if __name__ == '__main__':
     from os import environ
 
     args = Namespace()
+    args.verbose      = True
+    args.store_log    = False
+    args.store_config = False
+    args.path = environ['ZATO_SERVER_BASE_DIR']
+
+    command = DeleteTopics(args)
+    command.run(args)
+
+    """
+    args = Namespace()
     args.keys         = 'all'
     args.verbose      = True
     args.store_log    = False
@@ -206,9 +237,10 @@ if __name__ == '__main__':
 
     command = GetTopics(args)
     command.run(args)
+    """
 
     """
-    args = Bunch()
+    args = Namespace()
     args.verbose      = True
     args.store_log    = False
     args.store_config = False

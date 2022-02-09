@@ -20,8 +20,8 @@ from gevent import sleep
 
 # Zato
 from zato.common import PUBSUB
-from zato.common.test import CommandLineTestCase
-from zato.common.test.unittest_ import BasePubSubRestTestCase, PubSubConfig, PubSubAPIRestImpl
+from zato.common.test import CommandLineTestCase, PubSubConfig
+from zato.common.test.unittest_ import BasePubSubRestTestCase, PubSubAPIRestImpl
 from zato.common.typing_ import cast_
 from zato.scheduler.cleanup.core import run_cleanup
 
@@ -40,7 +40,7 @@ _default = PUBSUB.DEFAULT
 sec_name = _default.TEST_SECDEF_NAME
 username = _default.TEST_USERNAME
 
-
+test_topic_prefix = PubSubConfig.TestTopicPrefix
 delta_environ_key = 'ZATO_SCHED_DELTA'
 
 # ################################################################################################################################
@@ -51,8 +51,16 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
     should_init_rest_client = False
 
     def setUp(self) -> 'None':
+
+        # Set up a test client before each test ..
         self.rest_client.init(username=username, sec_name=sec_name)
         self.api_impl = PubSubAPIRestImpl(self, self.rest_client)
+
+        # .. clean up any left over topics as well ..
+        cli_params = ['pubsub', 'delete-topics', '--pattern', test_topic_prefix]
+        _ = self.run_zato_cli_json_command(cli_params)
+
+        # .. and call our parent
         super().setUp()
 
 # ################################################################################################################################
@@ -215,7 +223,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         # Create a new topic for this test with a unique prefix,
         # which will ensure that there are no other subscriptions for it.
         now = datetime.utcnow().isoformat()
-        prefix = f'/zato/test/{now}/'
+        prefix = f'{test_topic_prefix}{now}/'
         out = self.create_pubsub_topic(topic_prefix=prefix)
         topic_name = out['name']
 
@@ -284,7 +292,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def xtest_cleanup_old_subscriptions_one_sub_key_with_env_delta_new_topic(self):
+    def test_cleanup_old_subscriptions_one_sub_key_with_env_delta_new_topic(self):
 
         # In this test, we explicitly specify a seconds delta to clean up messages by.
         # I.e. even if we use a new test topic below, the delta is given on input too.
@@ -304,7 +312,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def xtest_cleanup_old_subscriptions_one_sub_key_no_env_delta(self):
+    def test_cleanup_old_subscriptions_one_sub_key_no_env_delta(self):
 
         # We explcitly request that inactive subscriptions should be deleted after that many seconds
         limit_sub_inactivity = 1
@@ -323,7 +331,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def xtest_cleanup_old_subscriptions_one_sub_key_env_delta_overrides_topic_delta(self):
+    def test_cleanup_old_subscriptions_one_sub_key_env_delta_overrides_topic_delta(self):
 
         # In this test, we specify a short delta in the environment and we expect
         # that it will override the explicit inactivity limit configured for a new topic.
@@ -347,7 +355,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def xtest_cleanup_max_topic_retention_exceeded(self) -> 'None':
+    def test_cleanup_max_topic_retention_exceeded(self) -> 'None':
 
         # Messages without subscribers will be eligible for deletion from topics after that many seconds
         limit_retention = 1
@@ -355,7 +363,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         # Create a new topic for this test with a unique prefix,
         # which will ensure that there are no other subscriptions for it.
         now = datetime.utcnow().isoformat()
-        prefix = f'/zato/test/retention/{now}/'
+        prefix = f'{test_topic_prefix}retention/{now}/'
         out = self.create_pubsub_topic(topic_prefix=prefix, limit_retention=limit_retention)
         topic_name = out['name']
 
