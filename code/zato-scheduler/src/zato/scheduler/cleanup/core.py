@@ -111,8 +111,17 @@ class CleanupCtx:
     now: 'float'
     now_dt: 'datetime'
 
+    # This is a list of all topics in the system that will be processed. The list is built upfront, when the task starts.
     all_topics:        'topic_ctx_list'
+
+    # All topics that will have been cleaned up, no matter why
     topics_cleaned_up: 'topic_ctx_list'
+
+    # Topics cleaned up because they had no subscribers
+    topics_without_subscribers: 'topic_ctx_list'
+
+    # Topics cleaned up because their messages reached max. retention time allowed
+    topics_with_max_retention_reached: 'topic_ctx_list'
 
     has_env_delta:               'bool'
     max_limit_sub_inactivity:    'int'
@@ -552,9 +561,6 @@ class CleanupManager:
 
             for topic_ctx in cleanup_ctx.all_topics:
 
-                if 'retention' not in topic_ctx.name:
-                    continue
-
                 # We enter here if we check the max. allowed publication time
                 # for each topic separately, based on its max. allowed retention time.
                 # In other words, we are interested in topics that contain messages
@@ -594,6 +600,7 @@ class CleanupManager:
 
                 # Save for later use if there are any messages that can be deleted for that topic
                 if topic_ctx.len_messages:
+                    topic_ctx.messages.extend(per_topic_messages_to_delete_list)
                     topics_to_clean_up.append(topic_ctx)
 
         # Remove messages from all the topics found ..
@@ -668,13 +675,15 @@ class CleanupManager:
 
         # Clean up topics that contain messages without subscribers
         if cleanup_ctx.clean_up_topics_without_subscribers:
-            topics_without_subscribers = self._cleanup_topic_messages_without_subscribers(task_id, cleanup_ctx)
-            cleanup_ctx.topics_cleaned_up.extend(topics_without_subscribers)
+            topics_cleaned_up = self._cleanup_topic_messages_without_subscribers(task_id, cleanup_ctx)
+            cleanup_ctx.topics_cleaned_up.extend(topics_cleaned_up)
+            cleanup_ctx.topics_without_subscribers.extend(topics_cleaned_up)
 
         # Clean up topics that contain messages whose max. retention time has been reached
         if cleanup_ctx.clean_up_topics_with_max_retention_reached:
-            topics_with_max_retention_reached = self._cleanup_topic_messages_with_max_retention_reached(task_id, cleanup_ctx)
-            cleanup_ctx.topics_cleaned_up.extend(topics_with_max_retention_reached)
+            topics_cleaned_up = self._cleanup_topic_messages_with_max_retention_reached(task_id, cleanup_ctx)
+            cleanup_ctx.topics_cleaned_up.extend(topics_cleaned_up)
+            cleanup_ctx.topics_with_max_retention_reached.extend(topics_cleaned_up)
 
         return cleanup_ctx
 
@@ -698,6 +707,8 @@ class CleanupManager:
         cleanup_ctx.found_sk_list = []
         cleanup_ctx.found_total_queue_messages = 0
         cleanup_ctx.topics_cleaned_up = []
+        cleanup_ctx.topics_without_subscribers = []
+        cleanup_ctx.topics_with_max_retention_reached = []
 
         # What cleanup parts to run
         cleanup_ctx.clean_up_subscriptions = self.parts_enabled.subscriptions
