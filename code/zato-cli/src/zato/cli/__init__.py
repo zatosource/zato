@@ -156,6 +156,8 @@ command_imports = (
     ('info', 'zato.cli.info.Info'),
     ('openapi', 'zato.cli.openapi_.OpenAPI'),
     ('pubsub_create_topic', 'zato.cli.pubsub.topic.CreateTopic'),
+    ('pubsub_delete_topic', 'zato.cli.pubsub.topic.DeleteTopic'),
+    ('pubsub_delete_topics', 'zato.cli.pubsub.topic.DeleteTopics'),
     ('pubsub_get_topic', 'zato.cli.pubsub.topic.GetTopics'),
     ('pubsub_get_topics', 'zato.cli.pubsub.topic.GetTopics'),
     ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),

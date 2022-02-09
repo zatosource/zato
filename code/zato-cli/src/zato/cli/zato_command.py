@@ -381,13 +381,31 @@ class CommandStore:
         self.add_opts(pubsub_create_topic, pubsub_topic_mod.CreateTopic.opts)
 
         #
+        # pubsub delete-topic (alias to delete-topics)
+        #
+
+        pubsub_delete_topic = pubsub_subs.add_parser('delete-topic',
+            description=pubsub_topic_mod.DeleteTopics.__doc__, parents=[base_parser])
+        pubsub_delete_topic.set_defaults(command='pubsub_delete_topic')
+        self.add_opts(pubsub_delete_topic, pubsub_topic_mod.DeleteTopics.opts)
+
+        #
+        # pubsub delete-topics
+        #
+
+        pubsub_delete_topics = pubsub_subs.add_parser('delete-topics',
+            description=pubsub_topic_mod.DeleteTopics.__doc__, parents=[base_parser])
+        pubsub_delete_topics.set_defaults(command='pubsub_delete_topics')
+        self.add_opts(pubsub_delete_topics, pubsub_topic_mod.DeleteTopics.opts)
+
+        #
         # pubsub get-topic (alias to get-topics)
         #
 
         pubsub_get_topic = pubsub_subs.add_parser('get-topic',
-            description=pubsub_topic_mod.GetTopic.__doc__, parents=[base_parser])
+            description=pubsub_topic_mod.GetTopics.__doc__, parents=[base_parser])
         pubsub_get_topic.set_defaults(command='pubsub_get_topic')
-        self.add_opts(pubsub_get_topic, pubsub_topic_mod.GetTopic.opts)
+        self.add_opts(pubsub_get_topic, pubsub_topic_mod.GetTopics.opts)
 
         #
         # pubsub get-topics
