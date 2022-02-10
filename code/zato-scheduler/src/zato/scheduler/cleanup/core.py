@@ -124,6 +124,12 @@ class CleanupCtx:
     # Topics cleaned up because their messages reached max. retention time allowed
     topics_with_max_retention_reached: 'topic_ctx_list'
 
+    # Topics cleaned up because they contained messages that were expired
+    topics_with_expired_messages: 'topic_ctx_list'
+
+    # A lits of IDs of messages that were found to have expired
+    expired_messages: 'dictlist'
+
     has_env_delta:               'bool'
     max_limit_sub_inactivity:    'int'
     max_limit_sub_inactivity_dt: 'datetime'
@@ -557,6 +563,7 @@ class CleanupManager:
         query:'callable_',
         message_type_label:'str',
         *,
+        use_as_dict:'bool',
         use_topic_retention_time:'bool',
         max_time_dt: 'dtnone' = None,
         max_time_float: 'floatnone' = None,
@@ -598,7 +605,12 @@ class CleanupManager:
                 )
 
                 # .. convert the messages to dicts so as not to keep references to database objects ..
-                messages_for_topic = [elem._asdict() for elem in messages_for_topic]
+                # .. What method to choose depends on whether the underlying query uses SQLAlchemy ORM (with _asdict)
+                # .. or whether it is a regular select statement, in which case dict() is used over a series of tuples.
+                if use_as_dict:
+                    messages_for_topic = [elem._asdict() for elem in messages_for_topic]
+                else:
+                    messages_for_topic = [dict(elem) for elem in messages_for_topic]
 
                 # .. populate the context object with the newest information ..
                 topic_ctx.len_messages = len(messages_for_topic)
@@ -650,6 +662,7 @@ class CleanupManager:
         max_time_float = cleanup_ctx.now
 
         return self._cleanup_topic_messages(task_id, cleanup_ctx, query, message_type_label,
+            use_as_dict=True,
             use_topic_retention_time=False, max_time_dt=max_time_dt, max_time_float=max_time_float)
 
 # ################################################################################################################################
@@ -674,6 +687,7 @@ class CleanupManager:
         max_time_float = None
 
         return self._cleanup_topic_messages(task_id, cleanup_ctx, query, message_type_label,
+            use_as_dict=True,
             use_topic_retention_time=True, max_time_dt=max_time_dt, max_time_float=max_time_float)
 
 # ################################################################################################################################
@@ -699,11 +713,12 @@ class CleanupManager:
         # explicitly looks up messages that have no subscribers - no matter if they are expired or not.
         #
         query = get_topic_messages_already_expired
-        message_type_label = 'with expired messages'
+        message_type_label = 'that are already expired'
         max_time_dt = cleanup_ctx.now_dt
         max_time_float = cleanup_ctx.now
 
         return self._cleanup_topic_messages(task_id, cleanup_ctx, query, message_type_label,
+            use_as_dict=False,
             use_topic_retention_time=False, max_time_dt=max_time_dt, max_time_float=max_time_float)
 
 # ################################################################################################################################
@@ -733,8 +748,12 @@ class CleanupManager:
 
         # Clean up queues that contain messages which were already expired
         if cleanup_ctx.clean_up_queues_with_expired_messages:
-            messages_expired = self._clean_up_queues_with_expired_messages(task_id, cleanup_ctx)
-            cleanup_ctx.found_total_expired_messages += len(messages_expired)
+            topics_cleaned_up = self._clean_up_queues_with_expired_messages(task_id, cleanup_ctx)
+            cleanup_ctx.topics_cleaned_up.extend(topics_cleaned_up)
+            cleanup_ctx.topics_with_expired_messages.extend(topics_cleaned_up)
+            for topic_ctx in topics_cleaned_up:
+                cleanup_ctx.expired_messages.extend(topic_ctx.messages)
+                cleanup_ctx.found_total_expired_messages += len(topic_ctx.messages)
 
         return cleanup_ctx
 
@@ -761,6 +780,8 @@ class CleanupManager:
         cleanup_ctx.topics_cleaned_up = []
         cleanup_ctx.topics_without_subscribers = []
         cleanup_ctx.topics_with_max_retention_reached = []
+        cleanup_ctx.topics_with_expired_messages = []
+        cleanup_ctx.expired_messages = []
 
         # What cleanup parts to run
         cleanup_ctx.clean_up_subscriptions = self.parts_enabled.subscriptions
