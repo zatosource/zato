@@ -32,6 +32,7 @@ if 0:
     from zato.common.typing_ import anydict, intnone
     anydict = anydict
 
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -71,10 +72,12 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         *,
         env_delta:'intnone',
         limit_retention:'intnone',
+        limit_message_expiry:'intnone',
         limit_sub_inactivity:'intnone',
-        clean_up_subscriptions: 'bool' = True,
-        clean_up_topics_without_subscribers: 'bool' = True,
-        clean_up_topics_with_max_retention_reached: 'bool' = True,
+        clean_up_subscriptions: 'bool',
+        clean_up_topics_without_subscribers: 'bool',
+        clean_up_topics_with_max_retention_reached: 'bool',
+        clean_up_queues_with_expired_messages: 'bool',
         ) -> 'None':
 
         # Filter our warnings coming from requests
@@ -127,6 +130,12 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             # We are going to sleep based on the topic's max. retention time
             after_publish_sleep_base = limit_retention
 
+        elif limit_message_expiry:
+            # We are going to sleep based on each of the message's expiration time
+            # Note that, because we are not assigning any explicit expiration time to messages,
+            # that value was taken from the topic's default expiration time when a message was published above.
+            after_publish_sleep_base = limit_message_expiry
+
         elif limit_sub_inactivity:
             # We need to sleep based on the topic's subscription inactivity limit.
             after_publish_sleep_base = limit_sub_inactivity
@@ -141,6 +150,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             clean_up_subscriptions,
             clean_up_topics_without_subscribers,
             clean_up_topics_with_max_retention_reached,
+            clean_up_queues_with_expired_messages,
         )
 
         # We enter and check the assertions here only if we were to clean up subscriptions
@@ -183,8 +193,9 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             # Confirm that the environment variable was not used
             self.assertFalse(cleanup_result.has_env_delta)
 
-            # We expect for no subscriptions to have been cleaned up in this if branch
+            # We expect for no other tasks to have been performed in this
             self.assertListEqual(cleanup_result.topics_without_subscribers, [])
+            self.assertListEqual(cleanup_result.topics_with_expired_messages, [])
 
             # Because its name is unique, there should be only one topic that was cleaned up
             self.assertEqual(len(cleanup_result.topics_cleaned_up), 1)
@@ -211,6 +222,48 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             cleaned_up_msg_id_list.sort()
 
             self.assertListEqual(messages_published, cleaned_up_msg_id_list)
+
+        elif clean_up_queues_with_expired_messages:
+            cleanup_result
+
+            # Confirm that the environment variable was not used
+            self.assertFalse(cleanup_result.has_env_delta)
+
+            # We expect for no other tasks to have been performed in this
+            self.assertListEqual(cleanup_result.topics_without_subscribers, [])
+            self.assertListEqual(cleanup_result.topics_with_max_retention_reached, [])
+
+            # Because its name is unique, there should be only one topic that was cleaned up
+            self.assertEqual(len(cleanup_result.topics_cleaned_up), 1)
+            self.assertEqual(len(cleanup_result.topics_with_expired_messages), 1)
+
+            # This is our topic that was cleaned up
+            topic_from_cleaned_up_list = cleanup_result.topics_cleaned_up[0]
+            topic_based_on_expired_messages = cleanup_result.topics_with_expired_messages[0]
+
+            # These two objects should be the same
+            self.assertIs(topic_from_cleaned_up_list, topic_based_on_expired_messages)
+
+            # Let's use a shorter name
+            topic_ctx = cleanup_result.topics_cleaned_up[0]
+
+            # These must be equal
+            self.assertTrue(topic_ctx.name, topic_name)
+            self.assertEqual(topic_ctx.limit_message_expiry, limit_message_expiry)
+            self.assertEqual(topic_ctx.len_messages, len(messages_published))
+
+            # Messages received are going to be a list of Bunch objects in an unspecified order.
+            # We need to convert them to a simple list of sorted message IDs.
+            cleaned_up_msg_id_list_from_topic = [elem['pub_msg_id'] for elem in topic_ctx.messages]
+            cleaned_up_msg_id_list_from_topic.sort()
+
+            self.assertListEqual(messages_published, cleaned_up_msg_id_list_from_topic)
+
+            # We have another list in the same format as well and we need to check it too
+            cleaned_up_msg_id_list_from_expired_messages = [elem['pub_msg_id'] for elem in cleanup_result.expired_messages]
+            cleaned_up_msg_id_list_from_expired_messages.sort()
+
+            self.assertListEqual(messages_published, cleaned_up_msg_id_list_from_topic)
 
 # ################################################################################################################################
 
@@ -242,6 +295,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             clean_up_subscriptions = True,
             clean_up_topics_without_subscribers = True,
             clean_up_topics_with_max_retention_reached = True,
+            clean_up_queues_with_expired_messages = True,
         )
 
         # We expect for the environment variable to have been taken into account
@@ -287,7 +341,12 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             topic_name,
             env_delta=env_delta,
             limit_retention=None,
+            limit_message_expiry=None,
             limit_sub_inactivity=None,
+            clean_up_subscriptions = True,
+            clean_up_topics_without_subscribers = True,
+            clean_up_topics_with_max_retention_reached = True,
+            clean_up_queues_with_expired_messages = True,
         )
 
 # ################################################################################################################################
@@ -307,7 +366,12 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             topic_name,
             env_delta=env_delta,
             limit_retention=None,
+            limit_message_expiry=None,
             limit_sub_inactivity=None,
+            clean_up_subscriptions = True,
+            clean_up_topics_without_subscribers = True,
+            clean_up_topics_with_max_retention_reached = True,
+            clean_up_queues_with_expired_messages = True,
         )
 
 # ################################################################################################################################
@@ -326,7 +390,12 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             topic_name,
             env_delta=None,
             limit_retention=None,
+            limit_message_expiry=None,
             limit_sub_inactivity=limit_sub_inactivity,
+            clean_up_subscriptions = True,
+            clean_up_topics_without_subscribers = True,
+            clean_up_topics_with_max_retention_reached = True,
+            clean_up_queues_with_expired_messages = True,
         )
 
 # ################################################################################################################################
@@ -350,7 +419,12 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             topic_name,
             env_delta=env_delta,
             limit_retention=None,
+            limit_message_expiry=None,
             limit_sub_inactivity=limit_sub_inactivity,
+            clean_up_subscriptions = True,
+            clean_up_topics_without_subscribers = True,
+            clean_up_topics_with_max_retention_reached = True,
+            clean_up_queues_with_expired_messages = True,
         )
 
 # ################################################################################################################################
@@ -372,10 +446,39 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             topic_name,
             env_delta=None,
             limit_retention=limit_retention,
+            limit_message_expiry=None,
             limit_sub_inactivity=None,
             clean_up_subscriptions = False,
             clean_up_topics_without_subscribers = False,
             clean_up_topics_with_max_retention_reached = True,
+            clean_up_queues_with_expired_messages = False,
+        )
+
+# ################################################################################################################################
+
+    def test_cleanup_messages_already_expired(self) -> 'None':
+
+        # Messages will be considered expired after that many seconds
+        limit_message_expiry = 1
+
+        # Create a new topic for this test with a unique prefix,
+        # which will ensure that there are no other subscriptions for it.
+        now = datetime.utcnow().isoformat()
+        prefix = f'{test_topic_prefix}expiration/{now}/'
+        out = self.create_pubsub_topic(topic_prefix=prefix, limit_message_expiry=limit_message_expiry)
+        topic_name = out['name']
+
+        # Run the actual test
+        self._run_cleanup_old_pubsub_one_sub_key(
+            topic_name,
+            env_delta=None,
+            limit_retention=None,
+            limit_message_expiry=limit_message_expiry,
+            limit_sub_inactivity=None,
+            clean_up_subscriptions = False,
+            clean_up_topics_without_subscribers = False,
+            clean_up_topics_with_max_retention_reached = False,
+            clean_up_queues_with_expired_messages = True,
         )
 
 # ################################################################################################################################
