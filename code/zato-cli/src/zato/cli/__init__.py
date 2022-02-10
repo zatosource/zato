@@ -6,6 +6,10 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# This needs to be done as soon as possible
+from gevent.monkey import patch_all
+patch_all()
+
 # stdlib
 from json import dumps, loads
 
@@ -155,6 +159,7 @@ command_imports = (
     ('hl7_mllp_send', 'zato.cli.hl7_.MLLPSend'),
     ('info', 'zato.cli.info.Info'),
     ('openapi', 'zato.cli.openapi_.OpenAPI'),
+    ('pubsub_cleanup', 'zato.cli.pubsub.cleanup.Cleanup'),
     ('pubsub_create_topic', 'zato.cli.pubsub.topic.CreateTopic'),
     ('pubsub_delete_topic', 'zato.cli.pubsub.topic.DeleteTopic'),
     ('pubsub_delete_topics', 'zato.cli.pubsub.topic.DeleteTopics'),
