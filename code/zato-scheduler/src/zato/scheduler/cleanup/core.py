@@ -29,6 +29,7 @@ from gevent import sleep
 from zato.broker.client import BrokerClient
 from zato.common.api import PUBSUB
 from zato.common.broker_message import SCHEDULER
+from zato.common.marshal_.api import Model
 from zato.common.odb.query.cleanup import delete_queue_messages, delete_topic_messages, \
     get_topic_messages_already_expired, get_topic_messages_with_max_retention_reached, \
     get_topic_messages_without_subscribers, get_subscriptions
@@ -146,7 +147,7 @@ class CleanupCtx:
 # ################################################################################################################################
 
 @dataclass(init=False)
-class CleanupPartsEnabled:
+class CleanupPartsEnabled(Model):
 
     subscriptions: 'bool'
     topics_without_subscribers: 'bool'
@@ -769,6 +770,10 @@ class CleanupManager:
 
         # IDs for our task
         task_id = f'CleanUp-{run_id}'
+
+        # Log what parts of the cleanup procedure are enabled
+        parts_enabled_log_msg = tabulate_dictlist([self.parts_enabled.to_dict()])
+        self.logger.info('%s: Parts enabled: \n%s', task_id, parts_enabled_log_msg)
 
         # Overall context of the procedure, including a response to produce
         cleanup_ctx = CleanupCtx()
