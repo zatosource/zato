@@ -32,6 +32,7 @@ if 0:
     from zato.common.typing_ import anydict, intnone
     anydict = anydict
 
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -72,9 +73,10 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         env_delta:'intnone',
         limit_retention:'intnone',
         limit_sub_inactivity:'intnone',
-        clean_up_subscriptions: 'bool' = True,
-        clean_up_topics_without_subscribers: 'bool' = True,
-        clean_up_topics_with_max_retention_reached: 'bool' = True,
+        clean_up_subscriptions: 'bool',
+        clean_up_topics_without_subscribers: 'bool',
+        clean_up_topics_with_max_retention_reached: 'bool',
+        clean_up_queues_with_expired_messages: 'bool',
         ) -> 'None':
 
         # Filter our warnings coming from requests
@@ -141,6 +143,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             clean_up_subscriptions,
             clean_up_topics_without_subscribers,
             clean_up_topics_with_max_retention_reached,
+            clean_up_queues_with_expired_messages,
         )
 
         # We enter and check the assertions here only if we were to clean up subscriptions
@@ -242,6 +245,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             clean_up_subscriptions = True,
             clean_up_topics_without_subscribers = True,
             clean_up_topics_with_max_retention_reached = True,
+            clean_up_queues_with_expired_messages = True,
         )
 
         # We expect for the environment variable to have been taken into account
@@ -288,6 +292,10 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             env_delta=env_delta,
             limit_retention=None,
             limit_sub_inactivity=None,
+            clean_up_subscriptions = True,
+            clean_up_topics_without_subscribers = True,
+            clean_up_topics_with_max_retention_reached = True,
+            clean_up_queues_with_expired_messages = True,
         )
 
 # ################################################################################################################################
@@ -308,6 +316,10 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             env_delta=env_delta,
             limit_retention=None,
             limit_sub_inactivity=None,
+            clean_up_subscriptions = True,
+            clean_up_topics_without_subscribers = True,
+            clean_up_topics_with_max_retention_reached = True,
+            clean_up_queues_with_expired_messages = True,
         )
 
 # ################################################################################################################################
@@ -327,6 +339,10 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             env_delta=None,
             limit_retention=None,
             limit_sub_inactivity=limit_sub_inactivity,
+            clean_up_subscriptions = True,
+            clean_up_topics_without_subscribers = True,
+            clean_up_topics_with_max_retention_reached = True,
+            clean_up_queues_with_expired_messages = True,
         )
 
 # ################################################################################################################################
@@ -351,6 +367,10 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             env_delta=env_delta,
             limit_retention=None,
             limit_sub_inactivity=limit_sub_inactivity,
+            clean_up_subscriptions = True,
+            clean_up_topics_without_subscribers = True,
+            clean_up_topics_with_max_retention_reached = True,
+            clean_up_queues_with_expired_messages = True,
         )
 
 # ################################################################################################################################
@@ -376,6 +396,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             clean_up_subscriptions = False,
             clean_up_topics_without_subscribers = False,
             clean_up_topics_with_max_retention_reached = True,
+            clean_up_queues_with_expired_messages = False,
         )
 
 # ################################################################################################################################
