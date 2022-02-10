@@ -7,11 +7,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import operator
 from logging import getLogger
-from operator import eq as op_eq, gt as op_ge
 
 # SQLAlchemy
-from sqlalchemy import delete, func, or_
+from sqlalchemy import and_, delete, func, or_, select
 
 # Zato
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic
@@ -34,7 +34,7 @@ logger = getLogger('zato_pubsub.sql')
 # ################################################################################################################################
 
 QueueTable   = PubSubEndpointEnqueuedMessage.__table__
-MessageTable = PubSubMessage.__table__
+MsgTable = PubSubMessage.__table__
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -150,7 +150,7 @@ def get_topic_messages_without_subscribers(
     #
     # We are building a query condition of this form: having(in_how_many_queues == 0)
     #
-    queue_len_operator = op_eq # eq = equal
+    queue_len_operator = operator.eq # eq = equal
     queue_len = 0
 
     # Build a base query ..
@@ -187,29 +187,20 @@ def get_topic_messages_already_expired(
     max_pub_time_float:'float',
     ) -> 'anylist':
 
-    logger.info('%s: Looking for already expired messages with at least one subscriber for topic `%s` (%s -> %s)',
+    logger.info('%s: Looking for already expired messages for topic `%s` (%s -> %s)',
         task_id, topic_name, max_pub_time_float, max_pub_time_dt)
 
-    #
-    # We are building a query condition of this form: having(in_how_many_queues >= 1)
-    #
-    queue_len_operator = op_ge # ge = greater or equal
-    queue_len = 1
-
-    # Build a base query ..
-    query = _get_topic_messages_by_in_how_many_queues(
-        session,
-        topic_id,
-        queue_len_operator,
-        queue_len
-    )
-
-    # .. add our own condition around the max. publication time ..
-    query = query.\
-        filter(PubSubMessage.pub_time < max_pub_time_float)
+    # Build a query to find all the expired messages for the topic ..
+    query = select([
+        MsgTable.c.pub_msg_id,
+        ]).\
+        where(and_(
+            MsgTable.c.topic_id == topic_id,
+            MsgTable.c.expiration_time < max_pub_time_float,
+        ))
 
     # .. obtain the result  ..
-    result = query.all()
+    result = session.execute(query).fetchall()
 
     # .. and return it to the caller.
     return result
@@ -236,9 +227,9 @@ def delete_topic_messages(session:'SASession', msg_id_list:'strlist') -> 'None':
     logger.info('Deleting %d topic message(s): %s', len(msg_id_list), msg_id_list)
 
     session.execute(
-        delete(MessageTable).\
+        delete(MsgTable).\
         where(
-            MessageTable.c.pub_msg_id.in_(msg_id_list),
+            MsgTable.c.pub_msg_id.in_(msg_id_list),
         )
     )
 
