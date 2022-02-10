@@ -148,15 +148,26 @@ def get_priority(
 
 # ################################################################################################################################
 
-def get_expiration(cid:'str', input:'anydict', default_expiration:'int'=_default_expiration) -> 'int':
+def get_expiration(
+    cid:'str',
+    input:'anydict',
+    topic_limit_message_expiry:'int',
+    default_expiration:'int'=_default_expiration) -> 'int':
     """ Get and validate message expiration.
-    Returns (2 ** 31 - 1) * 1000 milliseconds (around 68 years) if expiration is not set explicitly.
     """
-    expiration = input.get('expiration')
+    expiration = input.get('expiration', 0)
     if expiration is not None and expiration < 0:
         raise BadRequest(cid, 'Expiration `{}` must not be negative'.format(expiration))
 
-    return expiration or default_expiration
+    # If there is no expiration set, try the default one ..
+    expiration = expiration or default_expiration
+
+    # .. however, we can never exceed the limit set by the topic object,
+    # .. so we need to take that into account as well.
+    expiration = min(expiration, topic_limit_message_expiry)
+
+    # We can return the final value now
+    return expiration
 
 # ################################################################################################################################
 
