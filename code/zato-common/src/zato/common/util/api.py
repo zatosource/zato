@@ -101,7 +101,7 @@ if PY3:
 
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, HL7, KVDB, MISC, \
-     SECRET_SHADOW, SIMPLE_IO, TLS, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
+     SCHEDULER, SECRET_SHADOW, SIMPLE_IO, TLS, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
 from zato.common.const import SECRETS
 from zato.common.crypto.api import CryptoManager
@@ -372,7 +372,7 @@ def _get_config(conf, bunchified, needs_user_config, repo_location=None):
 # ################################################################################################################################
 
 def get_config(repo_location, config_name, bunchified=True, needs_user_config=True, crypto_manager=None, secrets_conf=None,
-    raise_on_error=False, log_exception=True):
+    raise_on_error=False, log_exception=True, require_exists=True):
     """ Returns the configuration object. Will load additional user-defined config files, if any are available.
     """
     # Default output to produce
@@ -380,6 +380,13 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
 
     try:
         conf_location = os.path.join(repo_location, config_name)
+        conf_location = os.path.abspath(conf_location)
+
+        if require_exists:
+            if not os.path.exists(conf_location):
+                raise Exception(f'Path does not exist -> `{conf_location}`', )
+
+        logger.info('Getting configuration from `%s`', conf_location)
         conf = ConfigObj(conf_location, zato_crypto_manager=crypto_manager, zato_secrets_conf=secrets_conf)
         result = _get_config(conf, bunchified, needs_user_config, repo_location)
     except Exception:
@@ -1273,9 +1280,16 @@ class StaticConfig(Bunch):
 # ################################################################################################################################
 
 def add_scheduler_jobs(api, odb, cluster_id, spawn=True):
+
+    job_list = odb.get_job_list(cluster_id)
+
     for(id, name, is_active, job_type, start_date, extra, service_name, _,
-        _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
-            in odb.get_job_list(cluster_id):
+        _, weeks, days, hours, minutes, seconds, repeats, cron_definition) in job_list:
+
+        # Ignore jobs that have been removed
+        if name in SCHEDULER.JobsToIgnore:
+            logger.info('Ignoring job `%s (%s)`', name, 'add_scheduler_jobs')
+            continue
 
         job_data = Bunch({
             'id':id, 'name':name, 'is_active':is_active,

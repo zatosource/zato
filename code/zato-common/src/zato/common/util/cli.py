@@ -78,7 +78,7 @@ class CommandLineInvoker:
 
 # ################################################################################################################################
 
-    def invoke_cli(self, cli_params:'anylist', command_name:'str'='zato') -> 'any_':
+    def invoke_cli(self, cli_params:'anylist', command_name:'str'='zato') -> 'RunningCommand':
         command = getattr(sh, command_name) # type: ignore
         out = command(*cli_params)
         return out

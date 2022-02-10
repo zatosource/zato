@@ -29,6 +29,7 @@ from gevent import sleep
 from zato.broker.client import BrokerClient
 from zato.common.api import PUBSUB
 from zato.common.broker_message import SCHEDULER
+from zato.common.marshal_.api import Model
 from zato.common.odb.query.cleanup import delete_queue_messages, delete_topic_messages, \
     get_topic_messages_already_expired, get_topic_messages_with_max_retention_reached, \
     get_topic_messages_without_subscribers, get_subscriptions
@@ -45,7 +46,8 @@ from zato.scheduler.util import set_up_zato_client
 if 0:
     from logging import Logger
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anylist, callable_, dictlist, dtnone, floatnone, stranydict, strlist, strlistdict
+    from zato.common.typing_ import any_, anylist, callable_, dictlist, dtnone, floatnone, stranydict, strlist, \
+        strlistdict
     from zato.scheduler.server import Config
     SASession = SASession
 
@@ -146,7 +148,7 @@ class CleanupCtx:
 # ################################################################################################################################
 
 @dataclass(init=False)
-class CleanupPartsEnabled:
+class CleanupPartsEnabled(Model):
 
     subscriptions: 'bool'
     topics_without_subscribers: 'bool'
@@ -436,6 +438,9 @@ class CleanupManager:
             self.logger.info(f'{task_id}: Cleaned up %d pub/sub queue message(s) from sk_list: %s (%s)',
                 cleanup_ctx.found_total_queue_messages, cleanup_ctx.found_sk_list, topic_ctx.name)
 
+            # .. and sleep for a moment so as not to overwhelm the database.
+            sleep(CleanupConfig.DeleteSleepTime)
+
         return cleanup_ctx
 
 # ################################################################################################################################
@@ -627,6 +632,9 @@ class CleanupManager:
                     topic_ctx.messages.extend(per_topic_messages_to_delete_list)
                     topics_to_clean_up.append(topic_ctx)
 
+                # .. sleep for a moment so as not to overwhelm the database ..
+                sleep(CleanupConfig.DeleteSleepTime)
+
         # Remove messages from all the topics found ..
         self._delete_topic_messages(task_id, topics_to_clean_up, messages_to_delete, message_type_label)
 
@@ -713,7 +721,7 @@ class CleanupManager:
         # explicitly looks up messages that have no subscribers - no matter if they are expired or not.
         #
         query = get_topic_messages_already_expired
-        message_type_label = 'that are already expired'
+        message_type_label = 'already expired'
         max_time_dt = cleanup_ctx.now_dt
         max_time_float = cleanup_ctx.now
 
@@ -769,6 +777,10 @@ class CleanupManager:
 
         # IDs for our task
         task_id = f'CleanUp-{run_id}'
+
+        # Log what parts of the cleanup procedure are enabled
+        parts_enabled_log_msg = tabulate_dictlist([self.parts_enabled.to_dict()])
+        self.logger.info('%s: Parts enabled: \n%s', task_id, parts_enabled_log_msg)
 
         # Overall context of the procedure, including a response to produce
         cleanup_ctx = CleanupCtx()
@@ -829,24 +841,19 @@ def run_cleanup(
     clean_up_subscriptions: 'bool',
     clean_up_topics_without_subscribers: 'bool',
     clean_up_topics_with_max_retention_reached: 'bool',
-    clean_up_queues_with_expired_messages: 'bool'
+    clean_up_queues_with_expired_messages: 'bool',
+    scheduler_path:'str',
 ) -> 'CleanupCtx':
 
-    # stdlib
-    import sys
+    # Always work with absolute paths
+    scheduler_path = os.path.abspath(scheduler_path)
 
-    # Path to the scheduler's configuration file will be the first argument that we are invoked with,
-    # unless we have an environment key that points to the scheduler's location.
+    # Make sure that the path exists
+    if not os.path.exists(scheduler_path):
+        raise Exception(f'Scheduler path not found: `{scheduler_path}')
 
-    base_dir = os.environ.get('ZATO_SCHEDULER_BASE_DIR')
-
-    if base_dir:
-        repo_location = os.path.join(base_dir, 'config', 'repo')
-    else:
-        repo_location = sys.argv[1] # type: str
-
+    repo_location = os.path.join(scheduler_path, 'config', 'repo')
     repo_location = os.path.expanduser(repo_location)
-    repo_location = os.path.abspath(repo_location)
 
     # Information about what cleanup parts / tasks are enabled
     parts_enabled = CleanupPartsEnabled()
@@ -867,11 +874,15 @@ def run_cleanup(
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
+    scheduler_path = os.environ['ZATO_SCHEDULER_BASE_DIR']
+
     _ = run_cleanup(
         clean_up_subscriptions = True,
         clean_up_topics_without_subscribers = True,
         clean_up_topics_with_max_retention_reached = True,
         clean_up_queues_with_expired_messages = True,
+        scheduler_path=scheduler_path
     )
 
 # ################################################################################################################################
