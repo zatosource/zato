@@ -46,7 +46,8 @@ from zato.scheduler.util import set_up_zato_client
 if 0:
     from logging import Logger
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anylist, callable_, dictlist, dtnone, floatnone, stranydict, strlist, strlistdict
+    from zato.common.typing_ import any_, anylist, callable_, dictlist, dtnone, floatnone, stranydict, strlist, \
+        strlistdict
     from zato.scheduler.server import Config
     SASession = SASession
 
@@ -840,24 +841,19 @@ def run_cleanup(
     clean_up_subscriptions: 'bool',
     clean_up_topics_without_subscribers: 'bool',
     clean_up_topics_with_max_retention_reached: 'bool',
-    clean_up_queues_with_expired_messages: 'bool'
+    clean_up_queues_with_expired_messages: 'bool',
+    scheduler_path:'str',
 ) -> 'CleanupCtx':
 
-    # stdlib
-    import sys
+    # Always work with absolute paths
+    scheduler_path = os.path.abspath(scheduler_path)
 
-    # Path to the scheduler's configuration file will be the first argument that we are invoked with,
-    # unless we have an environment key that points to the scheduler's location.
+    # Make sure that the path exists
+    if not os.path.exists(scheduler_path):
+        raise Exception(f'Scheduler path not found: `{scheduler_path}')
 
-    base_dir = os.environ.get('ZATO_SCHEDULER_BASE_DIR')
-
-    if base_dir:
-        repo_location = os.path.join(base_dir, 'config', 'repo')
-    else:
-        repo_location = sys.argv[1] # type: str
-
+    repo_location = os.path.join(scheduler_path, 'config', 'repo')
     repo_location = os.path.expanduser(repo_location)
-    repo_location = os.path.abspath(repo_location)
 
     # Information about what cleanup parts / tasks are enabled
     parts_enabled = CleanupPartsEnabled()
@@ -878,11 +874,15 @@ def run_cleanup(
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
+    scheduler_path = os.environ['ZATO_SCHEDULER_BASE_DIR']
+
     _ = run_cleanup(
         clean_up_subscriptions = True,
         clean_up_topics_without_subscribers = True,
         clean_up_topics_with_max_retention_reached = True,
         clean_up_queues_with_expired_messages = True,
+        scheduler_path=scheduler_path
     )
 
 # ################################################################################################################################

@@ -32,7 +32,6 @@ if 0:
     from zato.common.typing_ import anydict, intnone
     anydict = anydict
 
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -60,6 +59,9 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         # .. clean up any left over topics as well ..
         cli_params = ['pubsub', 'delete-topics', '--pattern', test_topic_prefix]
         _ = self.run_zato_cli_json_command(cli_params)
+
+        # A path to the scheduler that the tests will use
+        self.scheduler_path = os.environ['ZATO_SCHEDULER_BASE_DIR']
 
         # .. and call our parent
         super().setUp()
@@ -151,6 +153,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             clean_up_topics_without_subscribers,
             clean_up_topics_with_max_retention_reached,
             clean_up_queues_with_expired_messages,
+            scheduler_path=self.scheduler_path,
         )
 
         # We enter and check the assertions here only if we were to clean up subscriptions
@@ -296,6 +299,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
             clean_up_topics_without_subscribers = True,
             clean_up_topics_with_max_retention_reached = True,
             clean_up_queues_with_expired_messages = True,
+            scheduler_path=self.scheduler_path,
         )
 
         # We expect for the environment variable to have been taken into account
