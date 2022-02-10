@@ -437,6 +437,9 @@ class CleanupManager:
             self.logger.info(f'{task_id}: Cleaned up %d pub/sub queue message(s) from sk_list: %s (%s)',
                 cleanup_ctx.found_total_queue_messages, cleanup_ctx.found_sk_list, topic_ctx.name)
 
+            # .. and sleep for a moment so as not to overwhelm the database.
+            sleep(CleanupConfig.DeleteSleepTime)
+
         return cleanup_ctx
 
 # ################################################################################################################################
@@ -628,6 +631,9 @@ class CleanupManager:
                     topic_ctx.messages.extend(per_topic_messages_to_delete_list)
                     topics_to_clean_up.append(topic_ctx)
 
+                # .. sleep for a moment so as not to overwhelm the database ..
+                sleep(CleanupConfig.DeleteSleepTime)
+
         # Remove messages from all the topics found ..
         self._delete_topic_messages(task_id, topics_to_clean_up, messages_to_delete, message_type_label)
 
@@ -714,7 +720,7 @@ class CleanupManager:
         # explicitly looks up messages that have no subscribers - no matter if they are expired or not.
         #
         query = get_topic_messages_already_expired
-        message_type_label = 'that are already expired'
+        message_type_label = 'already expired'
         max_time_dt = cleanup_ctx.now_dt
         max_time_float = cleanup_ctx.now
 
