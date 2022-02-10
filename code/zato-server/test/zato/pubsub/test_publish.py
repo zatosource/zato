@@ -131,7 +131,7 @@ class PubSubTestCase(RESTClientTestCase):
         self.assertEqual(pub_sub_data['data_prefix_short'], '')
         self.assertEqual(pub_sub_data['delivery_count'], 0)
         self.assertEqual(pub_sub_data['delivery_status'], '')
-        self.assertEqual(pub_sub_data['expiration'], _default.EXPIRATION)
+        self.assertEqual(pub_sub_data['expiration'], _default.LimitMessageExpiry)
         self.assertEqual(pub_sub_data['ext_pub_time_iso'], '')
         self.assertEqual(pub_sub_data['mime_type'], _default.MIME_TYPE)
         self.assertEqual(pub_sub_data['priority'], 5)
