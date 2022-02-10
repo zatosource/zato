@@ -40,9 +40,9 @@ class CreateTopic(ServerAwareCommand):
         {'name':'--is-internal', 'help':'Is it a topic internal to the platform', 'required':False},
         {'name':'--is-api-sub-allowed', 'help':'Can applications subscribe to the topic via a public API', 'required':False},
         {'name':'--limit-retention', 'help':'Limit retention time in topic to that many seconds', 'required':False},
-        {'name':'--limit-message-expiry', 'help':'Limit max. message expiration time to that many seconds', 'required':False},
         {'name':'--limit-sub-inactivity',
             'help':'After how many seconds an inactive subscription will be deleted', 'required':False},
+        {'name':'--limit-message-expiry', 'help':'Limit max. message expiration time to that many seconds', 'required':False},
         {'name':'--path', 'help':'Path to a Zato server', 'required':False},
     ]
 
@@ -63,13 +63,13 @@ class CreateTopic(ServerAwareCommand):
         is_internal        = getattr(args, 'is_internal', None)
         is_api_sub_allowed = getattr(args, 'is_api_sub_allowed', True)
 
-        limit_expiry         = getattr(args, 'limit_expiry',         0) or _default.LimitMessageExpiry
         limit_retention      = getattr(args, 'limit_retention',      0) or _default.LimitTopicRetention
         limit_sub_inactivity = getattr(args, 'limit_sub_inactivity', 0) or _default.LimitSubInactivity
+        limit_message_expiry = getattr(args, 'limit_message_expiry', 0) or _default.LimitMessageExpiry
 
-        limit_expiry    = int(limit_expiry)
         limit_retention = int(limit_retention)
         limit_sub_inactivity = int(limit_sub_inactivity)
+        limit_message_expiry = int(limit_message_expiry)
 
         if not topic_name:
             topic_name = '/auto/topic.{}'.format(fs_safe_now())
@@ -87,9 +87,9 @@ class CreateTopic(ServerAwareCommand):
             'pub_buffer_size_gd': _default.PUB_BUFFER_SIZE_GD,
             'task_sync_interval': _default.TASK_SYNC_INTERVAL,
             'task_delivery_interval': _default.TASK_DELIVERY_INTERVAL,
-            'limit_expiry': limit_expiry,
             'limit_retention': limit_retention,
             'limit_sub_inactivity': limit_sub_inactivity,
+            'limit_message_expiry': limit_message_expiry,
         }
 
         self._invoke_service_and_log_response(service, request)

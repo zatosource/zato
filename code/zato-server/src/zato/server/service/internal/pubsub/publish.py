@@ -133,8 +133,8 @@ class Publish(AdminService):
         if priority == _default_pri:
             priority = None
 
-        expiration = get_expiration(self.cid, input)
-        expiration_time = now + (expiration / 1000.0)
+        expiration = get_expiration(self.cid, input, topic.limit_message_expiry)
+        expiration_time = now + expiration
 
         pub_msg_id = input.get('msg_id', '') or new_msg_id()
 
