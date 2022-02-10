@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from operator import eq as op_eq, gt as op_ge
 
 # SQLAlchemy
 from sqlalchemy import delete, func, or_
@@ -20,8 +21,9 @@ from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage,
 
 if 0:
     from datetime import datetime
+    from sqlalchemy.orm.query import Query
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import anylist, strlist
+    from zato.common.typing_ import any_, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,35 +78,6 @@ def get_subscriptions(
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_topic_messages_without_subscribers(
-    task_id:'str',
-    session:'SASession',
-    topic_id:'int',
-    topic_name:'str',
-    max_pub_time_dt:'datetime',
-    max_pub_time_float:'float',
-    ) -> 'anylist':
-
-    logger.info('%s: Looking for messages without subscribers for topic `%s` (%s -> %s)',
-        task_id, topic_name, max_pub_time_float, max_pub_time_dt)
-
-    in_how_many_queues = func.count(PubSubEndpointEnqueuedMessage.pub_msg_id).label('in_how_many_queues')
-
-    result = session.query(
-        PubSubMessage.pub_msg_id,
-        ).\
-        group_by(PubSubMessage.pub_msg_id).\
-        outerjoin(PubSubEndpointEnqueuedMessage, PubSubMessage.id==PubSubEndpointEnqueuedMessage.pub_msg_id).\
-        having(in_how_many_queues == 0).\
-        filter(PubSubMessage.topic_id == topic_id).\
-        filter(PubSubMessage.pub_time < max_pub_time_float).\
-        all()
-
-    return result
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def get_topic_messages_with_max_retention_reached(
     task_id:'str',
     session:'SASession',
@@ -124,6 +97,121 @@ def get_topic_messages_with_max_retention_reached(
         filter(PubSubMessage.pub_time < max_pub_time_float).\
         all()
 
+    return result
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_topic_messages_by_in_how_many_queues(
+    session:'SASession',
+    topic_id:'int',
+    queue_len_operator: 'any_',
+    queue_len: 'int',
+    ) -> 'Query':
+
+    # If it is zero, it means that there are no subscribers for a given message.
+    # Otherwise, the message is in at least one subscription queue.
+    in_how_many_queues = func.count(PubSubEndpointEnqueuedMessage.pub_msg_id).label('in_how_many_queues')
+
+    #
+    # This is used to build conditions representing two cases:
+    #
+    # 1) having(in_how_many_queues == 0) # No subscribers for message
+    # 2) having(in_how_many_queues >= 1) # At least one subscriber for message
+    #
+    #
+    condition = queue_len_operator(in_how_many_queues, queue_len)
+
+    query = session.query(
+        PubSubMessage.pub_msg_id,
+        ).\
+        group_by(PubSubMessage.pub_msg_id).\
+        outerjoin(PubSubEndpointEnqueuedMessage, PubSubMessage.id==PubSubEndpointEnqueuedMessage.pub_msg_id).\
+        having(condition).\
+        filter(PubSubMessage.topic_id == topic_id)
+
+    return query
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_topic_messages_without_subscribers(
+    task_id:'str',
+    session:'SASession',
+    topic_id:'int',
+    topic_name:'str',
+    max_pub_time_dt:'datetime',
+    max_pub_time_float:'float',
+    ) -> 'anylist':
+
+    logger.info('%s: Looking for messages without subscribers for topic `%s` (%s -> %s)',
+        task_id, topic_name, max_pub_time_float, max_pub_time_dt)
+
+    #
+    # We are building a query condition of this form: having(in_how_many_queues == 0)
+    #
+    queue_len_operator = op_eq # eq = equal
+    queue_len = 0
+
+    # Build a base query ..
+    query = _get_topic_messages_by_in_how_many_queues(
+        session,
+        topic_id,
+        queue_len_operator,
+        queue_len
+    )
+
+    # Add our own condition around the max. publication time - we need it because we do not want
+    # to return messages that have not reached their retention time yet. E.g. if a message was published
+    # during a cleanup procedure, it may still see its subscriber in the next N seconds,
+    # which is why we cannot return it. If it never receives a subscriber, or if its max. retention time
+    # is eventually reached, it will be cleaned up in another pass of the cleanup procedure.
+    query = query.\
+        filter(PubSubMessage.pub_time < max_pub_time_float)
+
+    # .. obtain the result  ..
+    result = query.all()
+
+    # .. and return it to the caller.
+    return result
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_topic_messages_already_expired(
+    task_id:'str',
+    session:'SASession',
+    topic_id:'int',
+    topic_name:'str',
+    max_pub_time_dt:'datetime',
+    max_pub_time_float:'float',
+    ) -> 'anylist':
+
+    logger.info('%s: Looking for already expired messages with at least one subscriber for topic `%s` (%s -> %s)',
+        task_id, topic_name, max_pub_time_float, max_pub_time_dt)
+
+    #
+    # We are building a query condition of this form: having(in_how_many_queues >= 1)
+    #
+    queue_len_operator = op_ge # ge = greater or equal
+    queue_len = 1
+
+    # Build a base query ..
+    query = _get_topic_messages_by_in_how_many_queues(
+        session,
+        topic_id,
+        queue_len_operator,
+        queue_len
+    )
+
+    # .. add our own condition around the max. publication time ..
+    query = query.\
+        filter(PubSubMessage.pub_time < max_pub_time_float)
+
+    # .. obtain the result  ..
+    result = query.all()
+
+    # .. and return it to the caller.
     return result
 
 # ################################################################################################################################
