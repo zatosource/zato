@@ -75,7 +75,7 @@ class Config:
         config = Config()
 
         # Read config in and extend it with ODB-specific information
-        config.main = get_config(repo_location, 'scheduler.conf')
+        config.main = get_config(repo_location, 'scheduler.conf', require_exists=True)
         config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
         config.main.crypto.use_tls = as_bool(config.main.crypto.use_tls)
 
@@ -147,6 +147,9 @@ class SchedulerServer:
     def handle_api_request(self, request):
         # type: (bytes) -> None
 
+        # Log what we are about to do
+        logger.info('Handling API request -> `%s`', request)
+
         # Convert to a Python dict ..
         request = loads(request)
 
@@ -154,7 +157,12 @@ class SchedulerServer:
         request = Bunch(request) # type: ignore
 
         # .. look up the action we need to invoke ..
-        action = request['action'] # type: ignore
+        action = request.get('action') # type: ignore
+
+        # .. make sure that the basic information was given on input ..
+        if not action:
+            raise Exception('No action key found in API request')
+
         action_name = code_to_name[action] # type: ignore
 
         # .. convert it to an actual method to invoke ..

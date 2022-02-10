@@ -155,6 +155,7 @@ command_imports = (
     ('hl7_mllp_send', 'zato.cli.hl7_.MLLPSend'),
     ('info', 'zato.cli.info.Info'),
     ('openapi', 'zato.cli.openapi_.OpenAPI'),
+    ('pubsub_cleanup', 'zato.cli.pubsub.cleanup.Cleanup'),
     ('pubsub_create_topic', 'zato.cli.pubsub.topic.CreateTopic'),
     ('pubsub_delete_topic', 'zato.cli.pubsub.topic.DeleteTopic'),
     ('pubsub_delete_topics', 'zato.cli.pubsub.topic.DeleteTopics'),
