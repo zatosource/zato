@@ -372,7 +372,7 @@ def _get_config(conf, bunchified, needs_user_config, repo_location=None):
 # ################################################################################################################################
 
 def get_config(repo_location, config_name, bunchified=True, needs_user_config=True, crypto_manager=None, secrets_conf=None,
-    raise_on_error=False, log_exception=True):
+    raise_on_error=False, log_exception=True, require_exists=True):
     """ Returns the configuration object. Will load additional user-defined config files, if any are available.
     """
     # Default output to produce
@@ -380,6 +380,13 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
 
     try:
         conf_location = os.path.join(repo_location, config_name)
+        conf_location = os.path.abspath(conf_location)
+
+        if require_exists:
+            if not os.path.exists(conf_location):
+                raise Exception(f'Path does not exist -> `{conf_location}`', )
+
+        logger.info('Getting configuration from `%s`', conf_location)
         conf = ConfigObj(conf_location, zato_crypto_manager=crypto_manager, zato_secrets_conf=secrets_conf)
         result = _get_config(conf, bunchified, needs_user_config, repo_location)
     except Exception:

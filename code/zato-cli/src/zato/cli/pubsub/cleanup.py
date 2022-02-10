@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.cli import ServerAwareCommand
+from zato.cli import ZatoCommand
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -19,7 +19,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Cleanup(ServerAwareCommand):
+class Cleanup(ZatoCommand):
     """ Cleans up the pub/sub database.
     """
     opts = [
@@ -39,7 +39,7 @@ class Cleanup(ServerAwareCommand):
             'help':'Whether to delete messages whose expiration time has been reached',
             'required':False, 'default':True},
 
-        {'name':'--path',     'help':'Path to a Zato server', 'required':False},
+        {'name':'--path', 'help':'Local path to a Zato scheduler', 'required':True},
     ]
 
 # ################################################################################################################################
@@ -65,8 +65,8 @@ class Cleanup(ServerAwareCommand):
             clean_up_topics_without_subscribers,
             clean_up_topics_with_max_retention_reached,
             clean_up_queues_with_expired_messages,
+            path = args.path
         )
-
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,7 +81,7 @@ if __name__ == '__main__':
     args.verbose      = True
     args.store_log    = False
     args.store_config = False
-    args.path = environ['ZATO_SERVER_BASE_DIR']
+    args.path = environ['ZATO_SCHEDULER_BASE_DIR']
 
     command = Cleanup(args)
     command.run(args)
