@@ -129,7 +129,7 @@ class FullPathTester:
         self.test.assertEqual(msg_received['delivery_count'], 1)
         self.test.assertEqual(msg_received['priority'],   PUBSUB.PRIORITY.DEFAULT)
         self.test.assertEqual(msg_received['mime_type'],  PUBSUB.DEFAULT.MIME_TYPE)
-        self.test.assertEqual(msg_received['expiration'], PUBSUB.DEFAULT.EXPIRATION)
+        self.test.assertEqual(msg_received['expiration'], PUBSUB.DEFAULT.LimitMessageExpiry)
         self.test.assertEqual(msg_received['topic_name'], self.topic_name)
 
         # Dates will start with 2nnn, e.g. 2022, or 2107, depending on a particular field

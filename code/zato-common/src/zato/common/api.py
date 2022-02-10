@@ -533,6 +533,12 @@ class SCHEDULER:
     EmbeddedIndicator      = 'zato_embedded'
     EmbeddedIndicatorBytes = EmbeddedIndicator.encode('utf8')
 
+    # These jobs were removed in 3.2 and should be ignored
+    JobsToIgnore = {'zato.wsx.cleanup.pub-sub', 'zato.wsx.cleanup'}
+
+    # This is the job that cleans up pub/sub data
+    PubSubCleanupJob = 'zato.pubsub.cleanup'
+
     class JOB_TYPE(Attrs):
         ONE_TIME = 'one_time'
         INTERVAL_BASED = 'interval_based'
@@ -800,7 +806,7 @@ class PUBSUB:
         TOPIC_MAX_DEPTH_GD = 10000
         TOPIC_MAX_DEPTH_NON_GD = 1000
         DEPTH_CHECK_FREQ = 100
-        EXPIRATION = 2147483647 * 1000 # (2 ** 31 - 1) * 1000 milliseconds = around 70 years
+        EXPIRATION = 2147483647 # (2 ** 31 - 1) = around 70 years
         GET_BATCH_SIZE = 50
         DELIVERY_BATCH_SIZE = 500
         DELIVERY_MAX_RETRY = 123456789
@@ -813,6 +819,10 @@ class PUBSUB:
         ON_NO_SUBS_PUB = 'accept'
         SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
         UnsubOnWSXClose = True
+
+        LimitMessageExpiry  = 86_400 # In seconds = 1 day
+        LimitTopicRetention = 86_400 # In seconds = 1 day
+        LimitSubInactivity  = 86_400 # In seconds = 1 day
 
         DEMO_USERNAME    = 'zato.pubsub.demo'
         DEMO_SECDEF_NAME = 'zato.pubsub.demo.secdef'

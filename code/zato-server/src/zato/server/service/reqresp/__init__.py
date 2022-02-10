@@ -47,6 +47,7 @@ if 0:
     # Zato
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import PoolStore
+    from zato.common.typing_ import any_
     from zato.hl7.mllp.server import ConnCtx as HL7ConnCtx
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.email import EMailAPI
@@ -202,7 +203,7 @@ class Request:
         self.logger = service.logger # type: Logger
         self.payload = ''
         self.raw_request = ''
-        self.input = {} # Will be overwritten in self.init if necessary
+        self.input = None # type: any_
         self.cid = None # type: str
         self.data_format = data_format # type: str
         self.transport = transport # type: str

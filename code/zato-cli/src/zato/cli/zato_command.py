@@ -124,6 +124,11 @@ class CommandStore:
              wait                as wait_mod,                \
              web_admin_auth      as web_admin_auth_mod # noqa: E272
 
+        # Zato - Pub/sub
+        from zato.cli.pubsub import \
+            cleanup              as pubsub_cleanup_mod,      \
+            topic                as pubsub_topic_mod # noqa: E272
+
         parser, base_parser, subs, formatter_class = self.build_core_parser()
         self._add_version(parser)
 
@@ -360,6 +365,66 @@ class CommandStore:
         openapi.set_defaults(command='openapi')
         openapi.add_argument('path', help='Path to a Zato server')
         self.add_opts(openapi, openapi_mod.OpenAPI.opts)
+
+        #
+        # pubsub
+        #
+        pubsub = subs.add_parser('pubsub', description='Publish/subscribe topics and message queues')
+        pubsub_subs = pubsub.add_subparsers()
+
+        #
+        # pubsub cleanup
+        #
+
+        pubsub_cleanup = pubsub_subs.add_parser('cleanup',
+            description=pubsub_cleanup_mod.Cleanup.__doc__, parents=[base_parser])
+        pubsub_cleanup.set_defaults(command='pubsub_cleanup')
+        self.add_opts(pubsub_cleanup, pubsub_cleanup_mod.Cleanup.opts)
+
+        #
+        # pubsub create-topic
+        #
+
+        pubsub_create_topic = pubsub_subs.add_parser('create-topic',
+            description=pubsub_topic_mod.CreateTopic.__doc__, parents=[base_parser])
+        pubsub_create_topic.set_defaults(command='pubsub_create_topic')
+        self.add_opts(pubsub_create_topic, pubsub_topic_mod.CreateTopic.opts)
+
+        #
+        # pubsub delete-topic (alias to delete-topics)
+        #
+
+        pubsub_delete_topic = pubsub_subs.add_parser('delete-topic',
+            description=pubsub_topic_mod.DeleteTopics.__doc__, parents=[base_parser])
+        pubsub_delete_topic.set_defaults(command='pubsub_delete_topic')
+        self.add_opts(pubsub_delete_topic, pubsub_topic_mod.DeleteTopics.opts)
+
+        #
+        # pubsub delete-topics
+        #
+
+        pubsub_delete_topics = pubsub_subs.add_parser('delete-topics',
+            description=pubsub_topic_mod.DeleteTopics.__doc__, parents=[base_parser])
+        pubsub_delete_topics.set_defaults(command='pubsub_delete_topics')
+        self.add_opts(pubsub_delete_topics, pubsub_topic_mod.DeleteTopics.opts)
+
+        #
+        # pubsub get-topic (alias to get-topics)
+        #
+
+        pubsub_get_topic = pubsub_subs.add_parser('get-topic',
+            description=pubsub_topic_mod.GetTopics.__doc__, parents=[base_parser])
+        pubsub_get_topic.set_defaults(command='pubsub_get_topic')
+        self.add_opts(pubsub_get_topic, pubsub_topic_mod.GetTopics.opts)
+
+        #
+        # pubsub get-topics
+        #
+
+        pubsub_get_topics = pubsub_subs.add_parser('get-topics',
+            description=pubsub_topic_mod.GetTopics.__doc__, parents=[base_parser])
+        pubsub_get_topics.set_defaults(command='pubsub_get_topics')
+        self.add_opts(pubsub_get_topics, pubsub_topic_mod.GetTopics.opts)
 
         #
         # reset-totp-key
