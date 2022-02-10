@@ -101,7 +101,7 @@ if PY3:
 
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, HL7, KVDB, MISC, \
-     SECRET_SHADOW, SIMPLE_IO, TLS, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
+     SCHEDULER, SECRET_SHADOW, SIMPLE_IO, TLS, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
 from zato.common.const import SECRETS
 from zato.common.crypto.api import CryptoManager
@@ -1273,9 +1273,16 @@ class StaticConfig(Bunch):
 # ################################################################################################################################
 
 def add_scheduler_jobs(api, odb, cluster_id, spawn=True):
+
+    job_list = odb.get_job_list(cluster_id)
+
     for(id, name, is_active, job_type, start_date, extra, service_name, _,
-        _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
-            in odb.get_job_list(cluster_id):
+        _, weeks, days, hours, minutes, seconds, repeats, cron_definition) in job_list:
+
+        # Ignore jobs that have been removed
+        if name in SCHEDULER.JobsToIgnore:
+            logger.info('Ignoring job `%s (%s)`', name, 'add_scheduler_jobs')
+            continue
 
         job_data = Bunch({
             'id':id, 'name':name, 'is_active':is_active,

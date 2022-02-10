@@ -533,6 +533,12 @@ class SCHEDULER:
     EmbeddedIndicator      = 'zato_embedded'
     EmbeddedIndicatorBytes = EmbeddedIndicator.encode('utf8')
 
+    # These jobs were removed in 3.2 and should be ignored
+    JobsToIgnore = {'zato.wsx.cleanup.pub-sub', 'zato.wsx.cleanup'}
+
+    # This is the job that cleans up pub/sub data
+    PubSubCleanupJob = 'zato.pubsub.cleanup'
+
     class JOB_TYPE(Attrs):
         ONE_TIME = 'one_time'
         INTERVAL_BASED = 'interval_based'

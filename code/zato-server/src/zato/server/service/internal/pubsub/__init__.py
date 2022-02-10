@@ -1,29 +1,20 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from contextlib import closing
 from logging import getLogger
-from random import choice
 from traceback import format_exc
-
-# gevent
-from gevent import sleep
 
 # Zato
 from zato.common.api import PUBSUB
 from zato.common.exception import Forbidden
 from zato.common.odb.model import PubSubSubscription, PubSubTopic
-from zato.common.odb.query.pubsub.cleanup import delete_msg_delivered, delete_msg_expired, delete_enq_delivered, \
-     delete_enq_marked_deleted
-from zato.common.util.time_ import utcnow_as_ms
 from zato.server.service import AsIs, Bool, DateTime, Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -349,86 +340,29 @@ class ResumeWSXSubscription(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+#
+# Since v3.2, these services are no longer in use.
+# They were replaced by zato pubsub cleanup.
+#
+
 class _BaseCleanup(AdminService):
-    """ Base class for services performing periodical cleanup of messages that are, for instance, expired or already delivered.
-    """
     def handle(self):
-        try:
-            # Sleep for a moment but add jitter to make it more random
-            jitter = choice(cleanup_sleep_jitter)
-            sleep(jitter)
-
-            with closing(self.odb.session()) as session:
-
-                # Clean up what is needed
-                total, kind = self._cleanup(session)
-
-                # Log what was done
-                suffix = 's' if total > 1 else ''
-                if total:
-                    self.logger.info('GD. Deleted %s pub/sub message%s (%s)' % (total, suffix, kind))
-
-                # Actually commit on SQL level
-                session.commit()
-
-        except Exception:
-            self.logger.warning('Error in cleanup: `%s`', format_exc())
-
-# ################################################################################################################################
-
-    def _cleanup(self):
-        raise NotImplementedError('Must be implemented in subclasses')
-
-# ################################################################################################################################
-# ################################################################################################################################
+        pass
 
 class DeleteMsgDelivered(_BaseCleanup):
-    """ Deletes messages from topics that have been already delivered from their queues.
-    """
-    def _cleanup(self, session):
-        total = delete_msg_delivered(session, self.server.cluster_id, None)
-        return total, 'delivered (from topic)'
-
-# ################################################################################################################################
-# ################################################################################################################################
+    pass
 
 class DeleteMsgExpired(_BaseCleanup):
-    """ Deletes expired messages from all topics.
-    """
-    def _cleanup(self, session):
-        total = delete_msg_expired(session, self.server.cluster_id, None, utcnow_as_ms())
-        return total, 'expired'
-
-# ################################################################################################################################
-# ################################################################################################################################
+    pass
 
 class DeleteEnqDelivered(_BaseCleanup):
-    """ Deletes delivered messages from all message queues.
-    """
-    def _cleanup(self, session):
-        total = delete_enq_delivered(session, self.server.cluster_id, None)
-        return total, 'delivered (from queue)'
-
-# ################################################################################################################################
-# ################################################################################################################################
+    pass
 
 class DeleteEnqMarkedDeleted(_BaseCleanup):
-    """ Deletes from all message queues messages that have been explicitly marked for deletion (e.g. by hook services).
-    """
-    def _cleanup(self, session):
-        total = delete_enq_marked_deleted(session, self.server.cluster_id, None)
-        return total, 'marked to be deleted'
-
-# ################################################################################################################################
-# ################################################################################################################################
+    pass
 
 class CleanupService(AdminService):
-    """ Deletes SQL ODB pub/sub messages that can be cleaned up because they expired or have been already delivered.
-    """
-    def handle(self):
-        services = [DeleteMsgDelivered, DeleteMsgExpired, DeleteEnqDelivered, DeleteEnqMarkedDeleted]
-        for service in services:
-            self.invoke(service.get_name())
+    pass
 
 # ################################################################################################################################
 # ################################################################################################################################
