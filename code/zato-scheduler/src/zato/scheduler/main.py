@@ -23,6 +23,7 @@ cloghandler = cloghandler # For pyflakes
 from future.utils import iteritems
 
 # Zato
+from zato.common.api import SCHEDULER
 from zato.common.util.api import get_config, set_up_logging, store_pidfile
 from zato.scheduler.server import Config, SchedulerServer
 
@@ -53,8 +54,17 @@ def main():
     logger.info('Scheduler starting (http{}://{}:{})'.format(
         's' if config.main.crypto.use_tls else '', config.main.bind.host, config.main.bind.port))
 
+    # Reusable
+    startup_jobs_config_file = 'startup_jobs.conf'
+
     # Fix up configuration so it uses the format that internal utilities expect
-    for name, job_config in iteritems(get_config(repo_location, 'startup_jobs.conf', needs_user_config=False)):
+    for name, job_config in iteritems(get_config(repo_location, startup_jobs_config_file, needs_user_config=False)):
+
+        # Ignore jobs that have been removed
+        if name in SCHEDULER.JobsToIgnore:
+            logger.info('Ignoring job `%s (%s)`', name, startup_jobs_config_file)
+            continue
+
         job_config['name'] = name
         config.startup_jobs.append(job_config)
 

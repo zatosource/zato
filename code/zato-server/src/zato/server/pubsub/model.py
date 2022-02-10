@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -298,6 +298,10 @@ class Topic(ToDictBase):
     meta_store_frequency:   'int'
     task_delivery_interval: 'int'
 
+    limit_retention: 'int'
+    limit_message_expiry: 'int'
+    limit_sub_inactivity: 'int'
+
     def __init__(self, config:'anydict', server_name:'str', server_pid:'int') -> 'None':
         self.config = config
         self.server_name = server_name
@@ -313,6 +317,9 @@ class Topic(ToDictBase):
         self.pub_buffer_size_gd = config['pub_buffer_size_gd']
         self.task_delivery_interval = config['task_delivery_interval']
         self.meta_store_frequency = config['meta_store_frequency']
+        self.limit_retention= config['limit_retention']
+        self.limit_message_expiry = config['limit_message_expiry'] or PUBSUB.DEFAULT.LimitMessageExpiry
+        self.limit_sub_inactivity = config['limit_sub_inactivity']
         self.set_hooks()
 
         # For now, task sync interval is the same for GD and non-GD messages
