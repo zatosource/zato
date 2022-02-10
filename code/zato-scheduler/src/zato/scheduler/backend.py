@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import datetime
@@ -29,19 +27,29 @@ from future.utils import iterkeys, itervalues
 # Zato
 from zato.common.api import FILE_TRANSFER, SCHEDULER
 from zato.common.util.api import add_scheduler_jobs, add_startup_jobs, asbool, make_repr, new_cid, spawn_greenlet
+from zato.scheduler.cleanup.cli import start_cleanup
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import stranydict
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 initial_sleep = 0.1
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Interval:
-    def __init__(self, days=0, hours=0, minutes=0, seconds=0, in_seconds=0):
+    def __init__(self, days:'int'=0, hours:'int'=0, minutes:'int'=0, seconds:'int'=0, in_seconds:'int'=0) -> 'None':
         self.days = days
         self.hours = hours
         self.minutes = minutes
@@ -185,7 +193,7 @@ class Job:
                 self.max_repeats_reached_at = next_run_time
                 self.keep_running = False
 
-                logger.warning(
+                logger.info(
                     'Cannot compute start_time. Job `%s` max repeats reached at `%s` (UTC)',
                     self.name, self.max_repeats_reached_at)
 
@@ -432,13 +440,20 @@ class Scheduler:
             else:
                 logger.warning('No such job `%s` in `%s`', name, [elem.get_context() for elem in itervalues(self.jobs)])
 
-    def on_job_executed(self, ctx, unschedule_one_time=True):
-        logger.info('Executing `%s`, `%s`', ctx['name'], ctx)
-        self.on_job_executed_cb(ctx)
-        self.job_log('Job executed `%s`, `%s`', ctx['name'], ctx)
+    def on_job_executed(self, ctx:'stranydict', unschedule_one_time:'bool'=True) -> 'None':
 
-        if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME and unschedule_one_time:
-            self.unschedule_by_name(ctx['name'])
+        # If this is a specal, pub/sub cleanup job, run its underlying command in background ..
+        if ctx['name'] == SCHEDULER.PubSubCleanupJob:
+            start_cleanup()
+
+        # .. otherwise, this is a job that runs in a server.
+        else:
+            logger.info('Executing `%s`, `%s`', ctx['name'], ctx)
+            self.on_job_executed_cb(ctx)
+            self.job_log('Job executed `%s`, `%s`', ctx['name'], ctx)
+
+            if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME and unschedule_one_time:
+                self.unschedule_by_name(ctx['name'])
 
     def _spawn(self, *args, **kwargs):
         """ As in the Job class, this is a thin wrapper so that it is easier to mock this method out in unit-tests.

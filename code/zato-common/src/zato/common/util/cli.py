@@ -19,7 +19,7 @@ import sh
 
 if 0:
     from sh import RunningCommand
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,7 +45,8 @@ def read_stdin_data(strip=True):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CommandLineServiceInvoker:
+class CommandLineInvoker:
+
     def __init__(
         self,
         expected_stdout=b'',  # type: bytes
@@ -63,6 +64,8 @@ class CommandLineServiceInvoker:
         self.expected_stdout = expected_stdout or TestConfig.default_stdout
         self.server_location = server_location or TestConfig.server_location
 
+# ################################################################################################################################
+
     def _assert_command_line_result(self, out:'RunningCommand') -> 'None':
 
         if self.check_exit_code:
@@ -75,11 +78,19 @@ class CommandLineServiceInvoker:
 
 # ################################################################################################################################
 
+    def invoke_cli(self, cli_params:'anylist', command_name:'str'='zato') -> 'RunningCommand':
+        command = getattr(sh, command_name) # type: ignore
+        out = command(*cli_params)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CommandLineServiceInvoker(CommandLineInvoker):
+
     def invoke(self, service:'str', request:'anydict') -> 'any_':
-        command = sh.zato # type: ignore
 
         cli_params = []
-
         cli_params.append('service')
         cli_params.append('invoke')
 
@@ -91,8 +102,7 @@ class CommandLineServiceInvoker:
         cli_params.append(self.server_location)
         cli_params.append(service)
 
-        out = command(*cli_params)
-        return out
+        return self.invoke_cli(cli_params)
 
 # ################################################################################################################################
 
