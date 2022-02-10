@@ -126,6 +126,7 @@ class CommandStore:
 
         # Zato - Pub/sub
         from zato.cli.pubsub import \
+            cleanup              as pubsub_cleanup_mod,      \
             topic                as pubsub_topic_mod # noqa: E272
 
         parser, base_parser, subs, formatter_class = self.build_core_parser()
@@ -370,6 +371,15 @@ class CommandStore:
         #
         pubsub = subs.add_parser('pubsub', description='Publish/subscribe topics and message queues')
         pubsub_subs = pubsub.add_subparsers()
+
+        #
+        # pubsub cleanup
+        #
+
+        pubsub_cleanup = pubsub_subs.add_parser('cleanup',
+            description=pubsub_cleanup_mod.Cleanup.__doc__, parents=[base_parser])
+        pubsub_cleanup.set_defaults(command='pubsub_cleanup')
+        self.add_opts(pubsub_cleanup, pubsub_cleanup_mod.Cleanup.opts)
 
         #
         # pubsub create-topic

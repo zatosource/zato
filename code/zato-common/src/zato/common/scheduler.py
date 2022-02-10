@@ -6,26 +6,28 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Zato
+from zato.common.api import SCHEDULER
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-startup_jobs="""
+pubsub_cleanup_job = SCHEDULER.PubSubCleanupJob
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+startup_jobs=f"""
 [zato.outgoing.sql.auto-ping]
 minutes=3
 service=zato.outgoing.sql.auto-ping
-
-[zato.wsx.cleanup.pub-sub]
-minutes=30
-service=pub.zato.channel.web-socket.cleanup-wsx-pub-sub
-extra=
-is_extra_list=True
 
 [zato.wsx.cleanup]
 minutes=30
 service=pub.zato.channel.web-socket.cleanup-wsx
 
-[zato.pubsub.cleanup]
-minutes=5
+[{pubsub_cleanup_job}]
+minutes=60
 service=zato.pubsub.cleanup-service
 extra=
 """.lstrip()
