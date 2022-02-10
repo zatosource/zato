@@ -155,7 +155,7 @@ def get_expiration(
     default_expiration:'int'=_default_expiration) -> 'int':
     """ Get and validate message expiration.
     """
-    expiration = input.get('expiration')
+    expiration = input.get('expiration', 0)
     if expiration is not None and expiration < 0:
         raise BadRequest(cid, 'Expiration `{}` must not be negative'.format(expiration))
 
