@@ -34,6 +34,7 @@ from zato.scheduler.cleanup.cli import start_cleanup
 
 if 0:
     from zato.common.typing_ import stranydict
+    from zato.scheduler.server import Config, SchedulerAPI
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -312,7 +313,7 @@ class Job:
 # ################################################################################################################################
 
 class Scheduler:
-    def __init__(self, config, api):
+    def __init__(self, config:'Config', api:'SchedulerAPI') -> 'None':
         self.config = config
         self.api = api
         self.on_job_executed_cb = config.on_job_executed_cb
@@ -444,7 +445,7 @@ class Scheduler:
 
         # If this is a specal, pub/sub cleanup job, run its underlying command in background ..
         if ctx['name'] == SCHEDULER.PubSubCleanupJob:
-            start_cleanup()
+            start_cleanup(self.config.component_dir)
 
         # .. otherwise, this is a job that runs in a server.
         else:
