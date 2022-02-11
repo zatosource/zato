@@ -6,10 +6,6 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# This needs to be done as soon as possible
-from gevent.monkey import patch_all
-patch_all()
-
 # Check comments in zato-server's main.py for why it is needed here
 import cloghandler
 cloghandler = cloghandler # For pyflakes
