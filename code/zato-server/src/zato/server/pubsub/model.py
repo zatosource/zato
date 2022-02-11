@@ -317,9 +317,9 @@ class Topic(ToDictBase):
         self.pub_buffer_size_gd = config['pub_buffer_size_gd']
         self.task_delivery_interval = config['task_delivery_interval']
         self.meta_store_frequency = config['meta_store_frequency']
-        self.limit_retention= config['limit_retention']
-        self.limit_message_expiry = config['limit_message_expiry'] or PUBSUB.DEFAULT.LimitMessageExpiry
-        self.limit_sub_inactivity = config['limit_sub_inactivity']
+        self.limit_retention = config.get('limit_retention') or PUBSUB.DEFAULT.LimitTopicRetention
+        self.limit_message_expiry = config.get('limit_message_expiry') or PUBSUB.DEFAULT.LimitMessageExpiry
+        self.limit_sub_inactivity = config.get('limit_sub_inactivity') or PUBSUB.DEFAULT.LimitSubInactivity
         self.set_hooks()
 
         # For now, task sync interval is the same for GD and non-GD messages
