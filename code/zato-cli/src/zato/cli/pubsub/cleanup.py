@@ -65,7 +65,7 @@ class Cleanup(ZatoCommand):
             clean_up_topics_without_subscribers,
             clean_up_topics_with_max_retention_reached,
             clean_up_queues_with_expired_messages,
-            path = args.path
+            scheduler_path = args.path
         )
 
 # ################################################################################################################################
