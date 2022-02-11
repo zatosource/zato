@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 import logging
+import os
 from json import dumps
 from traceback import format_exc
 
@@ -63,6 +64,7 @@ class Config:
         self.on_job_executed_cb = None
         self.stats_enabled = None
         self.job_log_level = 'info'
+        self.component_dir = 'not-set-component_dir'
         self._add_startup_jobs = True
         self._add_scheduler_jobs = True
 
@@ -73,6 +75,9 @@ class Config:
 
         # Response to produce
         config = Config()
+
+        # Path to the scheduler can be built from its repository location
+        config.component_dir = os.path.join(repo_location, '..', '..')
 
         # Read config in and extend it with ODB-specific information
         config.main = get_config(repo_location, 'scheduler.conf', require_exists=True)
