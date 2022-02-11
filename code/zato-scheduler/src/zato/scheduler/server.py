@@ -77,7 +77,9 @@ class Config:
         config = Config()
 
         # Path to the scheduler can be built from its repository location
-        config.component_dir = os.path.join(repo_location, '..', '..')
+        component_dir = os.path.join(repo_location, '..', '..')
+        component_dir = os.path.abspath(component_dir)
+        config.component_dir = component_dir
 
         # Read config in and extend it with ODB-specific information
         config.main = get_config(repo_location, 'scheduler.conf', require_exists=True)
