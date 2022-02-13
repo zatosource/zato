@@ -680,7 +680,7 @@ class WebSocket(_WebSocket):
                 else:
                     self_token = new_cid()
 
-                self.token = 'ws.token.{}'.format(self_token)
+                self.token = 'zwsxt.{}'.format(self_token)
 
                 self.has_session_opened = True
                 self.ext_client_id = request.ext_client_id
@@ -931,31 +931,43 @@ class WebSocket(_WebSocket):
         while not self._initialized:
             sleep(0.1)
 
-        return self.config.on_message_callback({
+        environ = {
+            'web_socket': self,
+            'sql_ws_client_id': self.sql_ws_client_id,
+            'ws_channel_config': self.config,
+            'ws_token': self.token,
+            'ext_token': self.ext_token,
+            'pub_client_id': self.pub_client_id,
+            'ext_client_id': self.ext_client_id,
+            'ext_client_name': self.ext_client_name,
+            'peer_conn_info_pretty': self.peer_conn_info_pretty,
+            'connection_time': self.connection_time,
+            'pings_missed': self.pings_missed,
+            'pings_missed_threshold': self.pings_missed_threshold,
+            'peer_host': self._peer_host,
+            'peer_fqdn': self._peer_fqdn,
+            'forwarded_for': self.forwarded_for,
+            'forwarded_for_fqdn': self.forwarded_for_fqdn,
+            'initial_http_wsgi_environ': self.initial_http_wsgi_environ,
+        }
+
+        request = {
             'cid': cid or new_cid(),
             'data_format': _data_format,
             'service': service_name,
             'payload': data,
-            'environ': {
-                'web_socket': self,
-                'sql_ws_client_id': self.sql_ws_client_id,
-                'ws_channel_config': self.config,
-                'ws_token': self.token,
-                'ext_token': self.ext_token,
-                'pub_client_id': self.pub_client_id,
-                'ext_client_id': self.ext_client_id,
-                'ext_client_name': self.ext_client_name,
-                'peer_conn_info_pretty': self.peer_conn_info_pretty,
-                'connection_time': self.connection_time,
-                'pings_missed': self.pings_missed,
-                'pings_missed_threshold': self.pings_missed_threshold,
-                'peer_host': self._peer_host,
-                'peer_fqdn': self._peer_fqdn,
-                'forwarded_for': self.forwarded_for,
-                'forwarded_for_fqdn': self.forwarded_for_fqdn,
-                'initial_http_wsgi_environ': self.initial_http_wsgi_environ,
-            },
-        }, CHANNEL.WEB_SOCKET, None, needs_response=needs_response, serialize=serialize)
+            'environ': environ,
+        }
+
+        response = self.config.on_message_callback(
+            request,
+            CHANNEL.WEB_SOCKET,
+            None,
+            needs_response=needs_response,
+            serialize=serialize
+        )
+
+        return response
 
 # ################################################################################################################################
 
