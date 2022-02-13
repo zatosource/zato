@@ -11,7 +11,7 @@ import sys
 
 # Zato
 from zato.cli import ServerAwareCommand
-from zato.common.api import DATA_FORMAT, WEB_SOCKET
+from zato.common.api import DATA_FORMAT, GENERIC, WEB_SOCKET
 from zato.common.test import get_free_tcp_port
 from zato.common.util.api import fs_safe_now
 
@@ -31,6 +31,7 @@ class Config:
     TokenTTL = WEB_SOCKET.DEFAULT.TOKEN_TTL
     PingInterval = WEB_SOCKET.DEFAULT.PING_INTERVAL
     PingMissedThreshold = WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD
+    WSXOutconnType = GENERIC.CONNECTION.TYPE.OUTCONN_WSX
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,7 +41,8 @@ class CreateChannel(ServerAwareCommand):
     """
     opts = [
         {'name':'--name', 'help':'Name of the channel to create', 'required':False,},
-        {'name':'--address',   'help':'TCP address for the channel to use', 'required':False},
+        {'name':'--address', 'help':'TCP address for the channel to use', 'required':False},
+        {'name':'--is-active', 'help':'Should the channel be active upon creation', 'required':False},
         {'name':'--service', 'help':'Service reacting to requests sent to the channel', 'required':False,
             'default':Config.ServiceName},
         {'name':'--security', 'help':'Service reacting to requests sent to the channel', 'required':False},
@@ -55,8 +57,6 @@ class CreateChannel(ServerAwareCommand):
         {'name':'--path', 'help':'Path to a Zato server', 'required':True},
     ]
 
-# ################################################################################################################################
-
     def execute(self, args:'Namespace'):
 
         name = getattr(args, 'name', None)
@@ -67,6 +67,7 @@ class CreateChannel(ServerAwareCommand):
         ping_missed_threshold = getattr(args, 'ping_missed_threshold', None) or Config.PingMissedThreshold
         token_ttl = getattr(args, 'token_ttl', None) or Config.TokenTTL
         new_token_wait_time = getattr(args, 'new_token_wait_time', None) or Config.NewTokenWaitTime
+        is_active = getattr(args, 'is_active', True)
 
         # Assign default values if required
         ping_interval = ping_interval or Config.PingInterval
@@ -75,7 +76,7 @@ class CreateChannel(ServerAwareCommand):
         new_token_wait_time = new_token_wait_time or Config.NewTokenWaitTime
 
         # Generate a name if one is not given
-        name = name or 'auto.wsx.' + fs_safe_now()
+        name = name or 'auto.wsx.channel.' + fs_safe_now()
 
         # If we have no address to listen on, generate one here
         if not address:
@@ -91,7 +92,7 @@ class CreateChannel(ServerAwareCommand):
             'address': address,
             'service_name': service_name,
             'security': security,
-            'is_active': True,
+            'is_active': is_active,
             'is_internal': False,
             'data_format': DATA_FORMAT.JSON,
             'token_ttl': token_ttl,
@@ -114,8 +115,6 @@ class DeleteChannel(ServerAwareCommand):
         {'name':'--path', 'help':'Path to a Zato server', 'required':True},
     ]
 
-# ################################################################################################################################
-
     def execute(self, args:'Namespace'):
 
         id = getattr(args, 'id', None)
@@ -133,6 +132,66 @@ class DeleteChannel(ServerAwareCommand):
         request = {
             'id': id,
             'name': name,
+        }
+
+        self._invoke_service_and_log_response(service, request)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CreateOutconn(ServerAwareCommand):
+    """ Creates a new outgoing WebSocket connection.
+    """
+    opts = [
+        {'name':'--name', 'help':'Name of the connection to create', 'required':False,},
+        {'name':'--address',   'help':'TCP address of a WebSocket server to connect to', 'required':False},
+        {'name':'--on-connect-service',
+            'help':'Service to invoke when the WebSocket connects to a remote server', 'required':False},
+        {'name':'--on-message-service',
+            'help':'Service to invoke when the WebSocket receives a message from the remote server', 'required':False},
+        {'name':'--on-close-service',
+            'help':'Service to invoke when the remote server closes its WebSocket connection', 'required':False},
+        {'name':'--path', 'help':'Path to a Zato server', 'required':True},
+    ]
+
+    def execute(self, args:'Namespace'):
+
+        name = getattr(args, 'name', None)
+        address = getattr(args, 'address', None)
+        on_connect_service_name = getattr(args, 'on_connect_service', None)
+        on_message_service_name = getattr(args, 'on_message_service', None)
+        on_close_service_name = getattr(args, 'on_close_service', None)
+        subscription_list = getattr(args, 'sub_list', None)
+
+        is_zato = getattr(args, 'is_zato', True)
+        is_active = getattr(args, 'is_active', True)
+
+        # Generate a name if one is not given
+        name = name or 'auto.wsx.outconn.' + fs_safe_now()
+
+        # If we have no address to connect to, use the on employed for testing
+        if not address:
+            address = 'ws://127.0.0.1:47043/zato.wsx.apitests'
+
+        # API service to invoke
+        service = 'zato.generic.connection.create'
+
+        # API request to send
+        request = {
+            'name': name,
+            'address': address,
+            'is_zato': is_zato,
+            'is_active': is_active,
+            'on_connect_service_name': on_connect_service_name,
+            'on_message_service_name': on_message_service_name,
+            'on_close_service_name': on_close_service_name,
+            'subscription_list': subscription_list,
+            'pool_size': 1,
+            'is_channel': False,
+            'is_outconn': True,
+            'is_internal': False,
+            'sec_use_rbac': False,
+            'type_': Config.WSXOutconnType,
         }
 
         self._invoke_service_and_log_response(service, request)
