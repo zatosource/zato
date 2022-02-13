@@ -613,6 +613,15 @@ class CommandStore:
         self.add_opts(wsx_create_channel, wsx_mod.CreateChannel.opts)
 
         #
+        # wsx create-outconn
+        #
+
+        wsx_create_outconn = wsx_subs.add_parser('create-outconn',
+            description=wsx_mod.CreateOutconn.__doc__, parents=[base_parser])
+        wsx_create_outconn.set_defaults(command='wsx_create_outconn')
+        self.add_opts(wsx_create_outconn, wsx_mod.CreateOutconn.opts)
+
+        #
         # wsx delete-channel
         #
 
