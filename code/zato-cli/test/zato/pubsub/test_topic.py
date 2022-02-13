@@ -50,7 +50,7 @@ class PubSubTopicTestCase(CommandLineTestCase):
 
 # ################################################################################################################################
 
-    def xtest_create_topic_does_not_exist(self) -> 'None':
+    def test_create_topic_does_not_exist(self) -> 'None':
 
         # Test data
         expected_prefix = '/auto/topic.2'  # E.g. /auto/topic.2022_01_31T12_28_42_280577
@@ -66,7 +66,7 @@ class PubSubTopicTestCase(CommandLineTestCase):
 
 # ################################################################################################################################
 
-    def xtest_create_topic_already_exists(self) -> 'None':
+    def test_create_topic_already_exists(self) -> 'None':
 
         # Test data
         prefix = 'test.already-exists.'
