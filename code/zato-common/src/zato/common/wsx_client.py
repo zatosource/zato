@@ -20,7 +20,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http.client import OK
 from traceback import format_exc
-from uuid import uuid4
 
 # gevent
 from gevent import sleep, spawn
@@ -52,10 +51,10 @@ def new_cid(bytes:'int'=12, _random:'callable_'=random.getrandbits) -> 'str':
 # ################################################################################################################################
 
 class MSG_PREFIX:
-    _COMMON = 'zwsxc{}'
-    INVOKE_SERVICE = _COMMON.format('inv{}')
-    SEND_AUTH = _COMMON.format('auth{}')
-    SEND_RESP = _COMMON.format('rsp{}')
+    _COMMON = 'zwsxc.{}'
+    INVOKE_SERVICE = _COMMON.format('inv.{}')
+    SEND_AUTH = _COMMON.format('auth.{}')
+    SEND_RESP = _COMMON.format('rsp.{}')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -484,9 +483,6 @@ if __name__ == '__main__':
     # First thing in the process
     from gevent import monkey
     monkey.patch_all()
-
-    # stdlib
-    import logging
 
     log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=log_format)
