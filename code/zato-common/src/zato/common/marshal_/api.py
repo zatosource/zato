@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from dataclasses import asdict, _FIELDS, MISSING, _PARAMS
 from http.client import BAD_REQUEST
 from inspect import isclass
 
@@ -25,7 +26,6 @@ from typing_utils import issubtype
 
 # Zato
 from zato.common.api import ZatoNotGiven
-from zato.common.ext.dataclasses import asdict, _FIELDS, MISSING, _PARAMS
 from zato.common.typing_ import extract_from_union, is_union
 
 # ################################################################################################################################
@@ -470,6 +470,13 @@ class MarshalAPI:
 
         # .. and return the new dataclass to our caller.
         return instance
+
+# ################################################################################################################################
+
+    def unmarshall(self, data:'dict', class_:'any_') -> 'any_':
+        """ A publicly available convenience method to unmarshall arbitrary dicts into model classes.
+        """
+        return self.from_dict(None, data, class_)
 
 # ################################################################################################################################
 # ################################################################################################################################
