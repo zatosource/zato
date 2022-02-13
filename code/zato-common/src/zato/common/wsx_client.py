@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 """
-Copyright (C) 2019 Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -196,7 +194,7 @@ class _WSClient(WebSocketClient):
         self.on_connected_callback = on_connected_callback
         self.on_message_callback = on_message_callback
         self.on_error_callback = on_error_callback
-        self.on_closed_callback = on_closed_callback
+        #self.on_closed_callback = on_closed_callback
         super(_WSClient, self).__init__(*args, **kwargs)
 
     def opened(self):
@@ -227,7 +225,7 @@ class Client:
         self.is_auth_needed = bool(self.config.username)
         self.auth_token = None
         self.on_request_callback = self.config.on_request_callback
-        self.on_closed_callback = self.config.on_closed_callback
+        self.on_closed_callback = None #self.config.on_closed_callback
         self.needs_auth = self.config.needs_auth
 
         # Keyed by IDs of requests sent from this client to Zato
@@ -434,7 +432,7 @@ if __name__ == '__main__':
 
     config.client_name = 'My Client'
     config.client_id = '32351b3f5d16'
-    address = 'ws://127.0.0.1:47043/zato.ws.apitests'
+    address = 'ws://127.0.0.1:47043/zato.wsx.apitests'
 
     config.address = address
     config.username = 'user1'
