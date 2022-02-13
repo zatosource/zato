@@ -122,7 +122,8 @@ class CommandStore:
              sso                 as sso_mod,                 \
              stop                as stop_mod,                \
              wait                as wait_mod,                \
-             web_admin_auth      as web_admin_auth_mod # noqa: E272
+             web_admin_auth      as web_admin_auth_mod,      \
+             wsx                 as wsx_mod # noqa: E272
 
         # Zato - Pub/sub
         from zato.cli.pubsub import \
@@ -595,6 +596,30 @@ class CommandStore:
         wait = subs.add_parser('wait', description=wait_mod.Wait.__doc__, parents=[base_parser])
         wait.set_defaults(command='wait')
         self.add_opts(wait, wait_mod.Wait.opts)
+
+        #
+        # WebSockets
+        #
+        wsx = subs.add_parser('wsx', description='WebSockets')
+        wsx_subs = wsx.add_subparsers()
+
+        #
+        # wsx create-channel
+        #
+
+        wsx_create_channel = wsx_subs.add_parser('create-channel',
+            description=wsx_mod.CreateChannel.__doc__, parents=[base_parser])
+        wsx_create_channel.set_defaults(command='wsx_create_channel')
+        self.add_opts(wsx_create_channel, wsx_mod.CreateChannel.opts)
+
+        #
+        # wsx delete-channel
+        #
+
+        wsx_delete_channel = wsx_subs.add_parser('delete-channel',
+            description=wsx_mod.DeleteChannel.__doc__, parents=[base_parser])
+        wsx_delete_channel.set_defaults(command='wsx_delete_channel')
+        self.add_opts(wsx_delete_channel, wsx_mod.DeleteChannel.opts)
 
         return parser
 
