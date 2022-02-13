@@ -6,13 +6,6 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-#
-# Note that this module must not have any runtime Zato-related dependencies, e.g. imports from zato.common,
-# because it is distributed via PyPI as well under the name of zato-wsx-client.
-#
-# It may have any external dependencies, as required.
-#
-
 # stdlib
 import logging
 import random
@@ -33,11 +26,14 @@ from ujson import dumps as json_dumps
 # ws4py
 from ws4py.client.geventclient import WebSocketClient
 
+# Zato
+from zato.common.marshal_.api import MarshalAPI, Model
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    # Type-checking dependencies are acceptable
+    from ws4py.messaging import TextMessage
     from zato.common.typing_ import any_, anydict, callable_, callnone, strnone
 
 # ################################################################################################################################
@@ -50,11 +46,11 @@ def new_cid(bytes:'int'=12, _random:'callable_'=random.getrandbits) -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MSG_PREFIX:
-    _COMMON = 'zwsxc.{}'
-    INVOKE_SERVICE = _COMMON.format('inv.{}')
-    SEND_AUTH = _COMMON.format('auth.{}')
-    SEND_RESP = _COMMON.format('rsp.{}')
+class MsgPrefix:
+    _Common = 'zwsxc.{}'
+    InvokeService = _Common.format('inv.{}')
+    SendAuth = _Common.format('auth.{}')
+    SendResponse = _Common.format('rsp.{}')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,7 +85,30 @@ class Config:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MessageToZato:
+@dataclass(init=False)
+class ClientMeta(Model):
+    action: 'str'
+    id: 'str'
+    timestamp: 'str'
+    client_id: 'str'
+    client_name: 'str'
+    token: 'strnone'
+    username: 'strnone' = None
+    secret: 'strnone' = None
+    in_reply_to: 'strnone' = None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class ClientToServerModel(Model):
+    meta: 'ClientMeta'
+    data: 'anydict'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ClientToServerMessage:
     """ An individual message from a WebSocket client to Zato, either request or response to a previous request from Zato.
     """
     action = _invalid
@@ -100,19 +119,32 @@ class MessageToZato:
         self.token = token
 
     def serialize(self) -> 'str':
-        return json_dumps(self.enrich({
-            'data': {},
-            'meta': {
-                'action': self.action,
-                'id': self.msg_id,
-                'timestamp': utcnow().isoformat(),
-                'token': self.token,
-                'client_id': self.config.client_id,
-                'client_name': self.config.client_name,
-            }
-        }))
 
-    def enrich(self, msg:'anydict') -> 'anydict':
+        # Base metadata that we can always produce
+        # and subclasses can always write to, if needed.
+        meta = ClientMeta()
+        meta.action = self.action
+        meta.id = self.msg_id
+        meta.timestamp = utcnow().isoformat()
+        meta.token = self.token
+        meta.client_id = self.config.client_id
+        meta.client_name = self.config.client_name
+
+        # We can build an empty request that subclasses will fill out with actual data
+        request = ClientToServerModel()
+        request.meta = meta
+        request.data = {}
+
+        # Each subclass can enrich the message with is own specific information
+        enriched = self.enrich(request)
+
+        # Now, we are ready to serialize the message ..
+        serialized = json_dumps(enriched.to_dict())
+
+        # .. and to finally return it
+        return serialized
+
+    def enrich(self, msg:'ClientToServerModel') -> 'ClientToServerModel':
         """ Implemented by subclasses that need to add extra information.
         """
         return msg
@@ -120,36 +152,54 @@ class MessageToZato:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class AuthRequest(MessageToZato):
+class AuthRequest(ClientToServerMessage):
     """ Logs a client into a WebSocket connection.
     """
     action = 'create-session'
 
-    def enrich(self, msg:'anydict') -> 'anydict':
-        msg['meta']['username'] = self.config.username
-        msg['meta']['secret'] = self.config.secret
+    def enrich(self, msg:'ClientToServerModel') -> 'ClientToServerModel':
+        msg.meta.username = self.config.username
+        msg.meta.secret = self.config.secret
         return msg
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ServiceInvokeRequest(MessageToZato):
+class ServiceInvocationRequest(ClientToServerMessage):
     """ Encapsulates information about an invocation of a Zato service.
     """
     action = 'invoke-service'
 
     def __init__(self, request_id:'str', data:'any_', *args:'any_', **kwargs:'any_') -> 'None':
         self.data = data
-        super(ServiceInvokeRequest, self).__init__(request_id, *args, **kwargs)
+        super(ServiceInvocationRequest, self).__init__(request_id, *args, **kwargs)
 
-    def enrich(self, msg:'anydict') -> 'anydict':
-        msg['data'].update(self.data)
+    def enrich(self, msg:'ClientToServerModel') -> 'ClientToServerModel':
+        msg.data.update(self.data)
         return msg
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ResponseFromZato:
+class ResponseToServer(ClientToServerMessage):
+    """ A response from this client to a previous request from Zato.
+    """
+    action = 'client-response'
+
+    def __init__(self, in_reply_to:'str', data:'any_', *args:'any_', **kwargs:'any_') -> 'None':
+        self.in_reply_to = in_reply_to
+        self.data = data
+        super(ResponseToServer, self).__init__(*args, **kwargs)
+
+    def enrich(self, msg:'ClientToServerModel') -> 'ClientToServerModel':
+        msg.meta.in_reply_to = self.in_reply_to
+        msg.data['response'] = self.data
+        return msg
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ResponseFromServer:
     """ A response from Zato to a previous request by this client.
     """
     id: 'str'
@@ -161,8 +211,8 @@ class ResponseFromZato:
     msg_impl: 'any_'
 
     @staticmethod
-    def from_json(msg:'anydict') -> 'ResponseFromZato':
-        response = ResponseFromZato()
+    def from_json(msg:'anydict') -> 'ResponseFromServer':
+        response = ResponseFromServer()
         response.msg_impl = msg
         meta = msg['meta']
         response.id = meta['id']
@@ -177,7 +227,7 @@ class ResponseFromZato:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RequestFromZato:
+class RequestFromServer:
     """ A request from Zato to this client.
     """
     id: 'str'
@@ -186,32 +236,14 @@ class RequestFromZato:
     msg_impl: 'any_'
 
     @staticmethod
-    def from_json(msg:'anydict') -> 'RequestFromZato':
-        request = RequestFromZato()
+    def from_json(msg:'anydict') -> 'RequestFromServer':
+        request = RequestFromServer()
         request.msg_impl = msg
         request.id = msg['meta']['id']
         request.timestamp = msg['meta']['timestamp']
         request.data = msg['data']
 
         return request
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ResponseToZato(MessageToZato):
-    """ A response from this client to a previous request from Zato.
-    """
-    action = 'client-response'
-
-    def __init__(self, in_reply_to:'str', data:'any_', *args:'any_', **kwargs:'any_') -> 'None':
-        self.in_reply_to = in_reply_to
-        self.data = data
-        super(ResponseToZato, self).__init__(*args, **kwargs)
-
-    def enrich(self, msg:'anydict') -> 'anydict':
-        msg['meta']['in_reply_to'] = self.in_reply_to
-        msg['data']['response'] = self.data
-        return msg
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -265,6 +297,7 @@ class Client:
         self.on_closed_callback = self.config.on_closed_callback
         self.needs_auth = bool(self.config.username)
         self._json_parser = SIMDJSONParser()
+        self._marshall_api = MarshalAPI()
         self.logger = logging.getLogger(__name__)
 
         # Keyed by IDs of requests sent from this client to Zato
@@ -282,7 +315,7 @@ class Client:
 
 # ################################################################################################################################
 
-    def send(self, msg_id:'str', msg:'MessageToZato', wait_time:'int'=2) -> 'None':
+    def send(self, msg_id:'str', msg:'ClientToServerMessage', wait_time:'int'=2) -> 'None':
         """ Spawns a greenlet to send a message to Zato.
         """
         _ = spawn(self._send, msg_id, msg, msg.serialize(), wait_time)
@@ -340,7 +373,7 @@ class Client:
             'as `{}`'.format(self.config.username) if self.config.username else 'without credentials',
             self.config.client_name, self.config.client_id)
 
-        request_id = MSG_PREFIX.SEND_AUTH.format(new_cid())
+        request_id = MsgPrefix.SendAuth.format(new_cid())
         self.authenticate(request_id)
 
         response = self._wait_for_response(request_id)
@@ -357,7 +390,7 @@ class Client:
 
 # ################################################################################################################################
 
-    def on_message(self, msg:'ResponseFromZato') -> 'None':
+    def on_message(self, msg:'TextMessage') -> 'None':
         """ Invoked for each message received from Zato, both for responses to previous requests and for incoming requests.
         """
         _msg_parsed = self._json_parser.parse(msg.data) # type: any_
@@ -368,13 +401,13 @@ class Client:
 
         # Reply from Zato to one of our requests
         if in_reply_to:
-            self.responses_received[in_reply_to] = ResponseFromZato.from_json(_msg)
+            self.responses_received[in_reply_to] = ResponseFromServer.from_json(_msg)
 
         # Request from Zato
         else:
-            data = self.on_request_callback(RequestFromZato.from_json(_msg))
-            response_id = MSG_PREFIX.SEND_RESP.format(new_cid())
-            self.send(response_id, ResponseToZato(_msg['meta']['id'], data, response_id, self.config, self.auth_token))
+            data = self.on_request_callback(RequestFromServer.from_json(_msg))
+            response_id = MsgPrefix.SendResponse.format(new_cid())
+            self.send(response_id, ResponseToServer(_msg['meta']['id'], data, response_id, self.config, self.auth_token))
 
 # ################################################################################################################################
 
@@ -465,8 +498,8 @@ class Client:
         if self.needs_auth and (not self.is_authenticated):
             raise Exception('Client is not authenticated')
 
-        request_id = MSG_PREFIX.INVOKE_SERVICE.format(new_cid())
-        spawn(self.send, request_id, ServiceInvokeRequest(request_id, data, self.config, self.auth_token))
+        request_id = MsgPrefix.InvokeService.format(new_cid())
+        spawn(self.send, request_id, ServiceInvocationRequest(request_id, data, self.config, self.auth_token))
 
         response = self._wait_for_response(request_id, wait_time=timeout)
 
@@ -489,7 +522,7 @@ if __name__ == '__main__':
 
     _cli_logger = logging.getLogger('zato')
 
-    def on_request_from_zato(msg:'RequestFromZato') -> 'any_':
+    def on_request_from_zato(msg:'RequestFromServer') -> 'any_':
         try:
             _cli_logger.info('Message from Zato received -> %s', msg)
             return 'Hello'
