@@ -194,7 +194,7 @@ class _WSClient(WebSocketClient):
         self.on_connected_callback = on_connected_callback
         self.on_message_callback = on_message_callback
         self.on_error_callback = on_error_callback
-        #self.on_closed_callback = on_closed_callback
+        self.on_closed_callback = on_closed_callback
         super(_WSClient, self).__init__(*args, **kwargs)
 
     def opened(self):
@@ -225,7 +225,7 @@ class Client:
         self.is_auth_needed = bool(self.config.username)
         self.auth_token = None
         self.on_request_callback = self.config.on_request_callback
-        self.on_closed_callback = None #self.config.on_closed_callback
+        self.on_closed_callback = self.config.on_closed_callback
         self.needs_auth = self.config.needs_auth
 
         # Keyed by IDs of requests sent from this client to Zato
