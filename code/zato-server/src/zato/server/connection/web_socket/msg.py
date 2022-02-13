@@ -19,7 +19,7 @@ from traceback import format_exc
 from bunch import Bunch
 
 # Zato
-from zato.common.api import DATA_FORMAT
+from zato.common.api import DATA_FORMAT, WEB_SOCKET
 from zato.common.util.api import make_repr, new_cid
 from zato.cy.reqresp.payload import SimpleIOPayload
 
@@ -27,9 +27,17 @@ from zato.cy.reqresp.payload import SimpleIOPayload
 from past.builtins import basestring
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 logger = getLogger('zato')
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+# This is an from our WSX gateway that the actual response, if any, is wrapped in that element
+wsx_gateway_response_elem = WEB_SOCKET.GatewayResponseElem
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 xml_error_template = '<?xml version="1.0" encoding="utf-8"?><error>{}</error>'
@@ -146,6 +154,13 @@ class ServerMessage:
                     else:
                         response_key = keys[0]
                         data = data[response_key]
+
+                        # If this is a response from a WSX gateway (helpers.web-sockets-gateway),
+                        # we need to extract its actual payload.
+                        if isinstance(data, dict):
+                            if wsx_gateway_response_elem in data:
+                                data = data[wsx_gateway_response_elem]
+
                 else:
                     data = self.data
 
