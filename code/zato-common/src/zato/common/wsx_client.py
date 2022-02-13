@@ -15,6 +15,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import random
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http.client import OK
@@ -43,17 +44,24 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def new_cid(bytes:'int'=12, _random:'callable_'=random.getrandbits) -> 'str':
+    # Copied over from zato.common.util.api
+    return hex(_random(bytes * 8))[2:]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class MSG_PREFIX:
-    _COMMON = 'zato.ws.client.{}'
-    INVOKE_SERVICE = _COMMON.format('invs.{}')
-    SEND_AUTH = _COMMON.format('auth.{}')
-    SEND_RESP = _COMMON.format('resp.{}')
+    _COMMON = 'zwsxc{}'
+    INVOKE_SERVICE = _COMMON.format('inv{}')
+    SEND_AUTH = _COMMON.format('auth{}')
+    SEND_RESP = _COMMON.format('rsp{}')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 zato_keep_alive_ping = 'zato-keep-alive-ping'
-_invalid = '_invalid.' + uuid4().hex
+_invalid = '_invalid.' + new_cid()
 
 utcnow = datetime.utcnow
 
@@ -111,6 +119,7 @@ class MessageToZato:
         return msg
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class AuthRequest(MessageToZato):
     """ Logs a client into a WebSocket connection.
@@ -122,6 +131,7 @@ class AuthRequest(MessageToZato):
         msg['meta']['secret'] = self.config.secret
         return msg
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ServiceInvokeRequest(MessageToZato):
@@ -137,6 +147,7 @@ class ServiceInvokeRequest(MessageToZato):
         msg['data'].update(self.data)
         return msg
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ResponseFromZato:
@@ -165,6 +176,7 @@ class ResponseFromZato:
         return response
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class RequestFromZato:
     """ A request from Zato to this client.
@@ -185,6 +197,7 @@ class RequestFromZato:
         return request
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ResponseToZato(MessageToZato):
     """ A response from this client to a previous request from Zato.
@@ -202,8 +215,9 @@ class ResponseToZato(MessageToZato):
         return msg
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class _WSClient(WebSocketClient):
+class _WebSocketClientImpl(WebSocketClient):
     """ A low-level subclass of ws4py's WebSocket client functionality.
     """
     def __init__(
@@ -219,7 +233,7 @@ class _WSClient(WebSocketClient):
         self.on_message_callback = on_message_callback
         self.on_error_callback = on_error_callback
         self.on_closed_callback = on_closed_callback
-        super(_WSClient, self).__init__(*args, **kwargs)
+        super(_WebSocketClientImpl, self).__init__(*args, **kwargs)
 
     def opened(self) -> 'None':
         _ = spawn(self.on_connected_callback)
@@ -231,9 +245,10 @@ class _WSClient(WebSocketClient):
         _ = spawn(self.on_error_callback, error)
 
     def closed(self, code:'int', reason:'strnone'=None) -> 'None':
-        super(_WSClient, self).closed(code, reason)
+        super(_WebSocketClientImpl, self).closed(code, reason)
         self.on_closed_callback(code, reason)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Client:
@@ -241,7 +256,7 @@ class Client:
     """
     def __init__(self, config:'Config') -> 'None':
         self.config = config
-        self.conn = _WSClient(self.on_connected, self.on_message, self.on_error, self.on_closed, self.config.address)
+        self.conn = _WebSocketClientImpl(self.on_connected, self.on_message, self.on_error, self.on_closed, self.config.address)
         self.keep_running = True
         self.is_authenticated = False
         self.is_connected = False
@@ -326,7 +341,7 @@ class Client:
             'as `{}`'.format(self.config.username) if self.config.username else 'without credentials',
             self.config.client_name, self.config.client_id)
 
-        request_id = MSG_PREFIX.SEND_AUTH.format(uuid4().hex)
+        request_id = MSG_PREFIX.SEND_AUTH.format(new_cid())
         self.authenticate(request_id)
 
         response = self._wait_for_response(request_id)
@@ -346,9 +361,8 @@ class Client:
     def on_message(self, msg:'ResponseFromZato') -> 'None':
         """ Invoked for each message received from Zato, both for responses to previous requests and for incoming requests.
         """
-        data = msg.data
-        data = data.decode('utf8') if isinstance(data, bytes) else data
-        _msg = self._json_parser.parse(data)
+        _msg_parsed = self._json_parser.parse(msg.data) # type: any_
+        _msg = _msg_parsed.as_dict() # type: anydict
         self.logger.info('Received message `%s`', _msg)
 
         in_reply_to = _msg['meta'].get('in_reply_to')
@@ -360,7 +374,7 @@ class Client:
         # Request from Zato
         else:
             data = self.on_request_callback(RequestFromZato.from_json(_msg))
-            response_id = MSG_PREFIX.SEND_RESP.format(uuid4().hex)
+            response_id = MSG_PREFIX.SEND_RESP.format(new_cid())
             self.send(response_id, ResponseToZato(_msg['meta']['id'], data, response_id, self.config, self.auth_token))
 
 # ################################################################################################################################
@@ -380,7 +394,8 @@ class Client:
 # ################################################################################################################################
 
     def _run(self, max_wait:'int'=10, _sleep_time:'int'=2) -> 'None':
-
+        """ Attempts to connects to a remote WSX server or raises an exception if max_wait time is exceeded.
+        """
         needs_connect = True
         start = now = datetime.utcnow()
 
@@ -411,7 +426,7 @@ class Client:
 
                 log_func('Exception caught `%s` while connecting to WSX `%s (%s)`', e, self.config.address, format_exc())
                 sleep(_sleep_time)
-                now = datetime.utcnow()
+                now = utcnow()
             else:
                 needs_connect = False
                 self.is_connected = True
@@ -419,16 +434,24 @@ class Client:
 # ################################################################################################################################
 
     def run(self, max_wait:'int'=20) -> 'None':
+
+        # Actually try to connect ..
         self._run()
 
-        now = datetime.utcnow()
+        # .. wait for the connection for that much time ..
+        now = utcnow()
         until = now + timedelta(seconds=max_wait)
 
+        # .. do wait and return if max. wait time is exceeded ..
         while not self.is_connected:
             sleep(0.01)
-            now = datetime.utcnow()
+            now = utcnow()
             if now >= until:
                 return
+
+        # .. otherwise, if we are here, it means that we are connected,
+        # .. although we may be still not authenticated as this step
+        # .. is carried out by the on_connected_callback method.
 
 # ################################################################################################################################
 
@@ -443,7 +466,7 @@ class Client:
         if self.needs_auth and (not self.is_authenticated):
             raise Exception('Client is not authenticated')
 
-        request_id = MSG_PREFIX.INVOKE_SERVICE.format(uuid4().hex)
+        request_id = MSG_PREFIX.INVOKE_SERVICE.format(new_cid())
         spawn(self.send, request_id, ServiceInvokeRequest(request_id, data, self.config, self.auth_token))
 
         response = self._wait_for_response(request_id, wait_time=timeout)
@@ -453,9 +476,14 @@ class Client:
         else:
             return response
 
+################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
+    # First thing in the process
+    from gevent import monkey
+    monkey.patch_all()
 
     # stdlib
     import logging
@@ -487,6 +515,9 @@ if __name__ == '__main__':
 
     client = Client(config)
     client.run()
+
+    # Wait until we are authenticated to invoke a test service
+    sleep(0.5)
     client.invoke({'service':'zato.ping'})
 
     _cli_logger.info('Press Ctrl-C to quit')
@@ -499,3 +530,4 @@ if __name__ == '__main__':
         client.stop()
 
 # ################################################################################################################################
+################################################################################################################################
