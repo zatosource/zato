@@ -145,6 +145,7 @@ class CreateOutconn(ServerAwareCommand):
     opts = [
         {'name':'--name', 'help':'Name of the connection to create', 'required':False,},
         {'name':'--address',   'help':'TCP address of a WebSocket server to connect to', 'required':False},
+        {'name':'--sub-list',   'help':'A comma-separate list of topics the connection should subscribe to', 'required':False},
         {'name':'--on-connect-service',
             'help':'Service to invoke when the WebSocket connects to a remote server', 'required':False},
         {'name':'--on-message-service',
@@ -156,13 +157,15 @@ class CreateOutconn(ServerAwareCommand):
 
     def execute(self, args:'Namespace'):
 
+        # This can be specified by users
         name = getattr(args, 'name', None)
         address = getattr(args, 'address', None)
         on_connect_service_name = getattr(args, 'on_connect_service', None)
         on_message_service_name = getattr(args, 'on_message_service', None)
         on_close_service_name = getattr(args, 'on_close_service', None)
-        subscription_list = getattr(args, 'sub_list', None)
+        subscription_list = getattr(args, 'sub_list', '')
 
+        # This is fixed
         is_zato = getattr(args, 'is_zato', True)
         is_active = getattr(args, 'is_active', True)
 
@@ -172,6 +175,12 @@ class CreateOutconn(ServerAwareCommand):
         # If we have no address to connect to, use the on employed for testing
         if not address:
             address = 'ws://127.0.0.1:47043/zato.wsx.apitests'
+
+        # Convert the subscription list to the format that the service expects
+        if subscription_list:
+            subscription_list = subscription_list.split(',')
+            subscription_list = [elem.strip() for elem in subscription_list]
+            subscription_list = '\n'.join(subscription_list)
 
         # API service to invoke
         service = 'zato.generic.connection.create'
@@ -210,9 +219,10 @@ if __name__ == '__main__':
     args.store_log    = False
     args.store_config = False
     args.service = Config.ServiceName
+    args.sub_list = 'zato.ping, zato.ping2'
     args.path = environ['ZATO_SERVER_BASE_DIR']
 
-    command = CreateChannel(args)
+    command = CreateOutconn(args)
     command.run(args)
 
 # ################################################################################################################################
