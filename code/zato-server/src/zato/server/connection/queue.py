@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C), Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
-import logging
+from logging import getLogger
 from datetime import datetime, timedelta
 from time import sleep
 from traceback import format_exc
@@ -19,12 +17,21 @@ import gevent
 from gevent.lock import RLock
 from gevent.queue import Empty, Queue
 
-# A set of utilities for constructing greenlets-safe outgoing connection objects.
-# Used, for instance, in SOAP Suds connections.
+# Zato
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-logger = logging.getLogger(__name__)
+if 0:
+    from logging import Logger
+    from zato.common.typing_ import any_, callable_, intnone, optional, stranydict, strnone
+    from zato.server.base.parallel import ParallelServer
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,15 +40,26 @@ class _Connection:
     """ Meant to be used as a part of a 'with' block - returns a connection from its queue each time 'with' is entered
     assuming the queue isn't empty.
     """
-    def __init__(self, client_queue, conn_name, should_block=False, block_timeout=None):
-        # type: (Queue, str, bool, int)
+    client_queue: 'Queue'
+    conn_name: 'str'
+    should_block: 'bool'
+    block_timeout: 'intnone'
+    client:'any_' = None
+
+    def __init__(
+        self,
+        client_queue:'Queue',
+        conn_name:'str',
+        should_block:'bool'=False,
+        block_timeout:'intnone'=None
+    ) -> 'None':
+
         self.queue = client_queue
         self.conn_name = conn_name
         self.should_block = should_block
         self.block_timeout = block_timeout
-        self.client = None # type: object
 
-    def __enter__(self):
+    def __enter__(self) -> 'None':
         try:
             self.client = self.queue.get(self.should_block, self.block_timeout)
         except Empty:
@@ -52,7 +70,7 @@ class _Connection:
         else:
             return self.client
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, _type:'any_', _value:'any_', _traceback:'any_') -> 'None':
         if self.client:
             self.queue.put(self.client)
 
@@ -63,30 +81,53 @@ class ConnectionQueue:
     """ Holds connections to resources. Each time it's called a connection is fetched from its underlying queue
     assuming any connection is still available.
     """
-    def __init__(self, pool_size, queue_build_cap, conn_name, conn_type, address, add_client_func):
+
+    queue: 'Queue'
+    queue_build_cap: 'int'
+    queue_max_size: 'int'
+    conn_name: 'str'
+    conn_type: 'str'
+    address: 'str'
+    add_client_func: 'callable_'
+    keep_connecting: 'bool' = True
+    is_building_conn_queue: 'bool' = False
+    queue_building_stopped: 'bool' = False
+    lock: 'RLock'
+    logger: 'Logger'
+
+    # How many add_client_func instances are running currently. This value must be updated with self.lock held.
+    in_progress_count:'int' = 0
+
+    def __init__(
+        self,
+        pool_size:'int',
+        queue_build_cap:'int',
+        conn_name:'str',
+        conn_type:'str',
+        address:'str',
+        add_client_func:'callable_'
+    ) -> 'None':
 
         self.queue = Queue(pool_size)
+        self.queue_max_size = cast_('int', self.queue.maxsize) # Force static typing as we know that it will not be None
         self.queue_build_cap = queue_build_cap
         self.conn_name = conn_name
         self.conn_type = conn_type
         self.address = address
         self.add_client_func = add_client_func
-        self.keep_connecting = True
-        self.is_building_conn_queue = False
-        self.queue_building_stopped = False
         self.lock = RLock()
 
-        # How many add_client_func instances are running currently,
-        # must be updated with self.lock held.
-        self.in_progress_count = 0
+        # We are ready now
+        self.logger = getLogger(self.__class__.__name__)
 
-        self.logger = logging.getLogger(self.__class__.__name__)
+# ################################################################################################################################
 
-    def __call__(self, should_block=False, block_timeout=None):
-        # type: (bool, int) -> _Connection
+    def __call__(self, should_block:'bool'=False, block_timeout:'intnone'=None) -> '_Connection':
         return _Connection(self.queue, self.conn_name, should_block, block_timeout)
 
-    def put_client(self, client):
+# ################################################################################################################################
+
+    def put_client(self, client:'any_') -> 'bool':
         with self.lock:
             if self.queue.full():
                 is_accepted = False
@@ -101,11 +142,13 @@ class ConnectionQueue:
             log_func(msg, self.conn_name, self.address, self.conn_type)
             return is_accepted
 
-    def _build_queue(self):
+# ################################################################################################################################
+
+    def _build_queue(self) -> 'None':
 
         start = datetime.utcnow()
         build_until = start + timedelta(seconds=self.queue_build_cap)
-        suffix = 's ' if self.queue.maxsize > 1 else ' '
+        suffix = 's ' if self.queue_max_size > 1 else ' '
 
         try:
             self.is_building_conn_queue = True
@@ -114,7 +157,7 @@ class ConnectionQueue:
                 now = datetime.utcnow()
 
                 self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
-                    self.queue.qsize(), self.queue.maxsize,
+                    self.queue.qsize(), self.queue_max_size,
                     self.conn_type, self.address, self.conn_name, now - start, self.queue_build_cap)
 
                 if now >= build_until:
@@ -130,8 +173,8 @@ class ConnectionQueue:
                     # Spawn additional greenlets to fill up the queue but make sure not to spawn
                     # more greenlets than there are slots in the queue still available.
                     with self.lock:
-                        if self.in_progress_count < self.queue.maxsize:
-                            self._spawn_add_client_func(self.queue.maxsize - self.in_progress_count)
+                        if self.in_progress_count < self.queue_max_size:
+                            self._spawn_add_client_func(self.queue_max_size - self.in_progress_count)
 
                     start = datetime.utcnow()
                     build_until = start + timedelta(seconds=self.queue_build_cap)
@@ -150,12 +193,16 @@ class ConnectionQueue:
             self.keep_connecting = False
             self.queue_building_stopped = True
 
-    def _spawn_add_client_func_no_lock(self, count):
+# ################################################################################################################################
+
+    def _spawn_add_client_func_no_lock(self, count:'int') -> 'None':
         for _x in range(count):
-            gevent.spawn(self.add_client_func)
+            _ = gevent.spawn(self.add_client_func)
             self.in_progress_count += 1
 
-    def _spawn_add_client_func(self, count=1):
+# ################################################################################################################################
+
+    def _spawn_add_client_func(self, count:'int'=1) -> 'None':
         """ Spawns as many greenlets to populate the connection queue as there are free slots in the queue available.
         """
         with self.lock:
@@ -164,18 +211,22 @@ class ConnectionQueue:
                 return
             self._spawn_add_client_func_no_lock(count)
 
-    def decr_in_progress_count(self):
+# ################################################################################################################################
+
+    def decr_in_progress_count(self) -> 'None':
         with self.lock:
             self.in_progress_count -= 1
 
-    def build_queue(self):
+# ################################################################################################################################
+
+    def build_queue(self) -> 'None':
         """ Spawns greenlets to populate the queue and waits up to self.queue_build_cap seconds until the queue is full.
         If it never is, raises an exception stating so.
         """
-        self._spawn_add_client_func(self.queue.maxsize)
+        self._spawn_add_client_func(self.queue_max_size)
 
         # Build the queue in background
-        gevent.spawn(self._build_queue)
+        _ = gevent.spawn(self._build_queue)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -183,25 +234,35 @@ class ConnectionQueue:
 class Wrapper:
     """ Base class for queue-based connections wrappers.
     """
-    def __init__(self, config, conn_type, server=None):
+    def __init__(self, config:'stranydict', conn_type:'str', server:'optional[ParallelServer]'=None) -> 'None':
         self.conn_type = conn_type
         self.config = config
-        self.config.username_pretty = self.config.username or '(None)'
+        self.config['username_pretty'] = self.config['username'] or '(None)'
         self.server = server
 
         self.client = ConnectionQueue(
-            self.config.pool_size, self.config.queue_build_cap, self.config.name, self.conn_type, self.config.auth_url,
-            self.add_client)
+            self.config['pool_size'],
+            self.config['queue_build_cap'],
+            self.config['name'],
+            self.conn_type,
+            self.config['auth_url'],
+            self.add_client
+        )
 
         self.delete_requested = False
         self.update_lock = RLock()
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__name__)
 
 # ################################################################################################################################
 
-    def build_queue(self):
+    def add_client(self):
+        logger.warning('Calling Wrapper.add_client which has not been overloaded in a subclass -> %s', self.__class__)
+
+# ################################################################################################################################
+
+    def build_queue(self) -> 'None':
         with self.update_lock:
-            if self.config.is_active:
+            if self.config['is_active']:
                 try:
                     self.client.build_queue()
                 except Exception:
@@ -215,23 +276,29 @@ class Wrapper:
 
 # ################################################################################################################################
 
-    def delete_queue_connections(self, reason=None):
+    def delete_queue_connections(self, reason:'strnone'=None) -> 'None':
         for item in self.client.queue.queue:
             try:
-                logger.info('Deleting connection from queue for `%s`', self.config.name)
+                logger.info('Deleting connection from queue for `%s`', self.config['name'])
 
-                # Some connections (e.g. LDAP) want to expose .delete to user API
-                # which conflicts with our own needs.
+                # Some connections (e.g. LDAP) want to expose .delete to user API which conflicts with our own needs.
                 delete_func = getattr(item, 'zato_delete_impl', None)
-                if not delete_func:
+
+                # A delete function is optional which is why we need this series of checks
+                if delete_func:
+                    delete_func = cast_('callable_', delete_func)
+                else:
                     delete_func = getattr(item, 'delete', None)
-                delete_func(reason) if reason else delete_func()
+
+                if delete_func:
+                    delete_func(reason) if reason else delete_func()
+
             except Exception:
-                logger.warning('Could not delete connection from queue for `%s`, e:`%s`', self.config.name, format_exc())
+                logger.warning('Could not delete connection from queue for `%s`, e:`%s`', self.config['name'], format_exc())
 
 # ################################################################################################################################
 
-    def delete(self):
+    def delete(self) -> 'None':
         """ Deletes all connections from queue and sets flag that disallow for this client to connect again.
         """
         with self.update_lock:
