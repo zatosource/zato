@@ -24,6 +24,7 @@ from zato.server.connection.queue import Wrapper
 
 if 0:
     from zato.common.typing_ import any_, callable_, stranydict, strnone
+    from zato.common.wsx_client import MessageFromServer
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -44,7 +45,7 @@ class WSXCtx:
     """
     type = None
 
-    def __init__(self, config:'stranydict', conn) -> 'None':
+    def __init__(self, config:'stranydict', conn:'OutconnWSXWrapper') -> 'None':
         self.config = config
         self.conn = conn
 
@@ -60,7 +61,7 @@ class Connected(WSXCtx):
 class OnMessage(WSXCtx):
     type = WEB_SOCKET.OUT_MSG_TYPE.MESSAGE
 
-    def __init__(self, data:'any_', *args:'any_', **kwargs:'any_') -> 'None':
+    def __init__(self, data:'MessageFromServer', *args:'any_', **kwargs:'any_') -> 'None':
         self.data = data
         super(OnMessage, self).__init__(*args, **kwargs)
 
@@ -100,7 +101,7 @@ class _BaseWSXClient:
 
 # ################################################################################################################################
 
-    def received_message(self, msg) -> 'None':
+    def received_message(self, msg:'MessageFromServer') -> 'None':
         self.on_message_cb(msg.data)
 
 # ################################################################################################################################
@@ -210,12 +211,20 @@ class ZatoWSXClient(_BaseWSXClient):
 class WSXClient:
     """ A client through which outgoing WebSocket messages can be sent.
     """
+    is_zato:'bool'
+
     def __init__(self, config:'stranydict') -> 'None':
         self.config = config
+        self.is_zato = self.config['is_zato']
         self._init()
 
     def _init(self) -> 'None':
-        _impl_class = ZatoWSXClient if self.config['is_zato'] else _NonZatoWSXClient
+
+        if self.is_zato:
+            _impl_class = ZatoWSXClient
+        else:
+            _impl_class = _NonZatoWSXClient
+
         self.impl = _impl_class(self.config, self.on_connected_cb, self.on_message_cb, self.on_close_cb, self.config['address'])
 
         self.send = self.impl.send
@@ -225,20 +234,23 @@ class WSXClient:
         self.impl.connect()
         self.impl.run_forever()
 
-    def on_connected_cb(self, conn) -> 'None':
+    def on_connected_cb(self, conn:'OutconnWSXWrapper') -> 'None':
         self.config['parent'].on_connected_cb(conn)
 
-    def on_message_cb(self, msg) -> 'None':
+    def on_message_cb(self, msg:'MessageFromServer') -> 'None':
         self.config['parent'].on_message_cb(msg)
 
     def on_close_cb(self, code:'int', reason:'strnone'=None) -> 'None':
         self.config['parent'].on_close_cb(code, reason)
 
     def delete(self, reason:'str'='') -> 'None':
-        self.impl.close(reason)
+        self.impl.close(reason=reason)
 
-    def is_impl_connected(self) -> 'None':
-        return self.impl._zato_client.is_connected
+    def is_impl_connected(self) -> 'bool':
+        if isinstance(self.impl, ZatoWSXClient):
+            return self.impl._zato_client.is_connected
+        else:
+            return not self.impl.terminated
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -275,7 +287,7 @@ class OutconnWSXWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def on_connected_cb(self, conn):
+    def on_connected_cb(self, conn:'OutconnWSXWrapper'):
 
         if self.config.get('on_connect_service_name'):
             try:
@@ -287,7 +299,7 @@ class OutconnWSXWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def on_message_cb(self, msg):
+    def on_message_cb(self, msg:'MessageFromServer'):
         if self.config.get('on_message_service_name'):
             self.server.invoke(self.config['on_message_service_name'], {
                 'ctx': OnMessage(msg, self.config, self)

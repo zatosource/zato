@@ -199,16 +199,27 @@ class ResponseToServer(ClientToServerMessage):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ResponseFromServer:
-    """ A response from Zato to a previous request by this client.
+class MessageFromServer:
+    """ A message from server, either a server-initiated request or a response to our own previous request.
     """
     id: 'str'
     timestamp: 'str'
+    data: 'any_'
+    msg_impl: 'any_'
+
+    @staticmethod
+    def from_json(msg:'anydict') -> 'MessageFromServer':
+        raise NotImplementedError('Must be implemented in subclasses')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ResponseFromServer(MessageFromServer):
+    """ A response from Zato to a previous request by this client.
+    """
     in_reply_to: 'strnone'
     status: 'str'
     is_ok: 'bool'
-    data: 'any_'
-    msg_impl: 'any_'
 
     @staticmethod
     def from_json(msg:'anydict') -> 'ResponseFromServer':
@@ -227,14 +238,9 @@ class ResponseFromServer:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RequestFromServer:
+class RequestFromServer(MessageFromServer):
     """ A request from Zato to this client.
     """
-    id: 'str'
-    timestamp: 'str'
-    data: 'any_'
-    msg_impl: 'any_'
-
     @staticmethod
     def from_json(msg:'anydict') -> 'RequestFromServer':
         request = RequestFromServer()
