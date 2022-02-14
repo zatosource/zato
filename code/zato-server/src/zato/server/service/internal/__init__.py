@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,6 +9,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from contextlib import closing
+from copy import deepcopy
+from json import loads
 from traceback import format_exc
 
 # Python 2/3 compatibility
@@ -92,15 +94,25 @@ class AdminService(Service):
             return
 
         if self.server.is_admin_enabled_for_info:
-            request = dict(self.request.input)
-            for k, v in request.items():
 
+            # Prefer that first because it may be a generic connection
+            # in which case we want to access its opaque attributes
+            # that are not available through self.request.input.
+            try:
+                data = self.request.raw_request
+                if not isinstance(data, dict):
+                    data = loads(data)
+            except Exception:
+                data = self.request.input
+            finally:
+                data = deepcopy(data)
+
+            for k, v in data.items():
                 v = replace_private_key(v)
-
                 if 'password' in k:
-                    request[k] = SECRET_SHADOW
+                    data[k] = SECRET_SHADOW
 
-            logger.info('Request; service:`%s`, data:`%s` cid:`%s`, ', self.name, request, self.cid)
+            logger.info('Request; service:`%s`, data:`%s` cid:`%s`, ', self.name, data, self.cid)
 
 # ################################################################################################################################
 
