@@ -7,12 +7,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import logging
 import random
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http.client import OK
+from logging import getLogger
 from traceback import format_exc
+from types import GeneratorType
 
 # gevent
 from gevent import sleep, spawn
@@ -25,6 +26,7 @@ from ujson import dumps as json_dumps
 
 # ws4py
 from ws4py.client.geventclient import WebSocketClient
+from ws4py.messaging import Message as ws4py_Message
 
 # Zato
 from zato.common.marshal_.api import MarshalAPI, Model
@@ -35,6 +37,11 @@ from zato.common.marshal_.api import MarshalAPI, Model
 if 0:
     from ws4py.messaging import TextMessage
     from zato.common.typing_ import any_, anydict, callable_, callnone, strnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -259,18 +266,18 @@ class _WebSocketClientImpl(WebSocketClient):
     """
     def __init__(
         self,
+        config:'Config',
         on_connected_callback:'callable_',
         on_message_callback:'callable_',
         on_error_callback:'callable_',
-        on_closed_callback:'callable_',
-        *args:'any_',
-        **kwargs:'any_'
+        on_closed_callback:'callable_'
     ) -> 'None':
+        self.config = config
         self.on_connected_callback = on_connected_callback
         self.on_message_callback = on_message_callback
         self.on_error_callback = on_error_callback
         self.on_closed_callback = on_closed_callback
-        super(_WebSocketClientImpl, self).__init__(*args, **kwargs)
+        super(_WebSocketClientImpl, self).__init__(url=self.config.address)
 
     def opened(self) -> 'None':
         _ = spawn(self.on_connected_callback)
@@ -285,6 +292,45 @@ class _WebSocketClientImpl(WebSocketClient):
         super(_WebSocketClientImpl, self).closed(code, reason)
         self.on_closed_callback(code, reason)
 
+    def send(self, payload:'any_', binary:'bool'=False) -> 'None':
+        """ Overloaded from the parent class.
+        """
+        if not self.stream:
+            logger.info('Could not send message without self.stream (%s)', self.config)
+            return
+
+        message_sender = self.stream.binary_message if binary else self.stream.text_message
+
+        if isinstance(payload, str) or isinstance(payload, bytearray):
+            m = message_sender(payload).single(mask=self.stream.always_mask)
+            self._write(m)
+
+        elif isinstance(payload, ws4py_Message):
+            data = payload.single(mask=self.stream.always_mask)
+            self._write(data)
+
+        elif type(payload) == GeneratorType:
+            bytes = next(payload)
+            first = True
+            for chunk in payload:
+                self._write(message_sender(bytes).fragment(first=first, mask=self.stream.always_mask))
+                bytes = chunk
+                first = False
+
+            self._write(message_sender(bytes).fragment(last=True, mask=self.stream.always_mask))
+
+        else:
+            raise ValueError('Unsupported type `%s` passed to send()' % type(payload))
+
+    def _write(self, data:'bytes') -> 'None':
+        """ Overloaded from the parent class.
+        """
+        if self.terminated or self.sock is None:
+            logger.info('Could not send message on a terminated socket; `%s` -> %s (%s)',
+                self.config.client_name, self.config.address, self.config.client_id)
+        else:
+            self.sock.sendall(data)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -293,7 +339,13 @@ class Client:
     """
     def __init__(self, config:'Config') -> 'None':
         self.config = config
-        self.conn = _WebSocketClientImpl(self.on_connected, self.on_message, self.on_error, self.on_closed, self.config.address)
+        self.conn = _WebSocketClientImpl(
+            self.config,
+            self.on_connected,
+            self.on_message,
+            self.on_error,
+            self.on_closed,
+        )
         self.keep_running = True
         self.is_authenticated = False
         self.is_connected = False
@@ -304,7 +356,7 @@ class Client:
         self.needs_auth = bool(self.config.username)
         self._json_parser = SIMDJSONParser()
         self._marshall_api = MarshalAPI()
-        self.logger = logging.getLogger(__name__)
+        self.logger = getLogger(__name__)
 
         # Keyed by IDs of requests sent from this client to Zato
         self.requests_sent = {}
@@ -522,6 +574,9 @@ if __name__ == '__main__':
     # First thing in the process
     from gevent import monkey
     monkey.patch_all()
+
+    # stdlib
+    import logging
 
     log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=log_format)
