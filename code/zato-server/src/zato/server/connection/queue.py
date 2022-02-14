@@ -277,7 +277,8 @@ class Wrapper:
 # ################################################################################################################################
 
     def delete_queue_connections(self, reason:'strnone'=None) -> 'None':
-        for item in self.client.queue.queue:
+        items = self.client.queue.queue
+        for item in items:
             try:
                 logger.info('Deleting connection from queue for `%s`', self.config['name'])
 
@@ -299,7 +300,7 @@ class Wrapper:
 # ################################################################################################################################
 
     def delete(self) -> 'None':
-        """ Deletes all connections from queue and sets flag that disallow for this client to connect again.
+        """ Deletes all connections from queue and sets a flag that disallows this client to connect again.
         """
         with self.update_lock:
 
