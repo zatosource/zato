@@ -234,7 +234,7 @@ class ConnectionQueue:
 class Wrapper:
     """ Base class for queue-based connections wrappers.
     """
-    def __init__(self, config:'stranydict', conn_type:'str', server:'optional[ParallelServer]'=None) -> 'None':
+    def __init__(self, config:'stranydict', conn_type:'str', server:'ParallelServer') -> 'None':
         self.conn_type = conn_type
         self.config = config
         self.config['username_pretty'] = self.config['username'] or '(None)'
