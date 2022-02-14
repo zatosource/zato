@@ -1359,7 +1359,7 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def opened(self):
-        logger.info('New connection from %s (%s) to %s (%s %s) (%s %s) (%s)', self._peer_address, self._peer_fqdn,
+        logger.info('Handling new WSX conn from %s (%s) to %s (%s %s) (%s %s) (%s)', self._peer_address, self._peer_fqdn,
             self._local_address, self.config.name, self.python_id, self.forwarded_for, self.forwarded_for_fqdn,
             self.pub_client_id)
 
@@ -1471,7 +1471,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
 
             # Log basic details about the incoming connection
             new_conn_info = new_conn_pattern.format(**new_conn_map)
-            logger.info('New WSX conn: %s', new_conn_info)
+            logger.info('About to handle WSX conn: %s', new_conn_info)
 
             # Make sure this is a WebSockets request
             if 'HTTP_UPGRADE' not in wsgi_environ:
