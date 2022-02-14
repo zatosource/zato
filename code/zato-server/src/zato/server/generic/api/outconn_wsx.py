@@ -295,7 +295,8 @@ class OutconnWSXWrapper(Wrapper):
                     'ctx': Connected(self.config, conn)
                 })
             except Exception:
-                logger.warning('Could not invoke CONNECT service `%s`, e:`%s`', self.config['on_close_service_name'], format_exc())
+                logger.warning('Could not invoke CONNECT service `%s`, e:`%s`',
+                    self.config['on_close_service_name'], format_exc())
 
 # ################################################################################################################################
 

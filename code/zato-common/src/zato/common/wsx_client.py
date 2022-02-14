@@ -336,7 +336,7 @@ class Client:
         # So that it can be correlated with a future response
         self.requests_sent[msg_id] = msg
 
-        # Actually send the messageas string now
+        # Actually send the message as string now
         self.conn.send(serialized)
 
 # ################################################################################################################################
