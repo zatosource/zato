@@ -557,9 +557,11 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def get_peer_info_pretty(self):
+
+        sock = getattr(self, 'sock', None)
         return 'name:`{}` id:`{}` fwd_for:`{}` conn:`{}` pub:`{}`, py:`{}`, sock:`{}`, swc:`{}`'.format(
             self.ext_client_name, self.ext_client_id, self.forwarded_for_fqdn, self._peer_fqdn,
-            self.pub_client_id, self.python_id, getattr(self, 'sock', ''), self.sql_ws_client_id)
+            self.pub_client_id, self.python_id, sock, self.sql_ws_client_id)
 
 # ################################################################################################################################
 
@@ -1001,7 +1003,7 @@ class WebSocket(_WebSocket):
 
             # This goes to WSX logs, without a full traceback
             logger.warning('Service `%s` could not be invoked, id:`%s` cid:`%s`, conn:`%s`, e:`%s`',
-                self.config.service_name, msg.id, cid, self.peer_conn_info_pretty, format_exc())
+                self.config.service_name, msg.id, cid, self.peer_conn_info_pretty, e)
 
             # This goes to server.log and has a full traceback
             logger_zato.warning('Service `%s` could not be invoked, id:`%s` cid:`%s`, conn:`%s`, e:`%s`',
