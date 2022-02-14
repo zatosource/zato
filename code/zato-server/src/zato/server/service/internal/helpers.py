@@ -311,7 +311,11 @@ class WebSocketsGateway(Service):
             topic_name = input.request['topic_name']
             unsub_on_wsx_close = input.request.get('unsub_on_wsx_close', True)
             sub_key = self.pubsub.subscribe(
-                topic_name, use_current_wsx=True, unsub_on_wsx_close=unsub_on_wsx_close, service=self)
+                topic_name,
+                use_current_wsx=True,
+                unsub_on_wsx_close=unsub_on_wsx_close,
+                service=self
+            )
             self.response.payload.sub_key = sub_key
 
         else:

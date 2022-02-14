@@ -10,6 +10,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 from traceback import format_exc
 
+# gevent
+from gevent import sleep
+
 # ws4py
 from ws4py.client.threadedclient import WebSocketClient
 
@@ -186,8 +189,17 @@ class ZatoWSXClient(_BaseWSXClient):
 
 # ################################################################################################################################
 
-    def run_forever(self) -> 'None':
-        self._zato_client.run()
+    def invoke_subscribe_service(self, topic_name:'str') -> 'None':
+        return self.invoke({
+            'service':'zato.pubsub.pubapi.subscribe-wsx',
+            'request': {
+                'topic_name': topic_name
+            }
+        })
+
+# ################################################################################################################################
+
+    def subscribe_to_topics(self) -> 'None':
 
         subscription_list = (self.config['subscription_list'] or '').splitlines()
 
@@ -196,14 +208,27 @@ class ZatoWSXClient(_BaseWSXClient):
 
             for topic_name in subscription_list:
                 try:
-                    self.invoke({
-                        'service':'zato.pubsub.pubapi.subscribe-wsx',
-                        'request': {
-                            'topic_name': topic_name
-                        }
-                    })
+                    self.invoke_subscribe_service(topic_name)
                 except Exception:
                     logger.warning('Could not subscribe WSX outconn to `%s`, e:`%s`', self.config['name'], format_exc())
+
+# ################################################################################################################################
+
+    def run_forever(self) -> 'None':
+
+        # This will establish an outgoing connection to the remote WSX server.
+        # However, this will be still a connection on the level TCP / WSX,
+        # which means that we still need to wait before we can invoke
+        # the server with our list of subscriptions below.
+        self._zato_client.run()
+
+        # Wait until the client is fully ready
+        while not self._zato_client.is_authenticated:
+            sleep(0.1)
+
+        # Now we know that we can try to subscribe to pub/sub topics
+        # and we will not be rejected based on the fact that we are not logged in.
+        self.subscribe_to_topics()
 
 # ################################################################################################################################
 # ################################################################################################################################
