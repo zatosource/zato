@@ -25,7 +25,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from logging import Logger
-    from zato.common.typing_ import any_, callable_, intnone, optional, stranydict, strnone
+    from zato.common.typing_ import any_, callable_, intnone, stranydict, strnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
