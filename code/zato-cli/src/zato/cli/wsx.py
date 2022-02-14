@@ -168,6 +168,7 @@ class CreateOutconn(ServerAwareCommand):
         # This is fixed
         is_zato = getattr(args, 'is_zato', True)
         is_active = getattr(args, 'is_active', True)
+        has_auto_reconnect = getattr(args, 'has_auto_reconnect', True)
 
         # Generate a name if one is not given
         name = name or 'auto.wsx.outconn.' + fs_safe_now()
@@ -191,6 +192,7 @@ class CreateOutconn(ServerAwareCommand):
             'address': address,
             'is_zato': is_zato,
             'is_active': is_active,
+            'has_auto_reconnect': has_auto_reconnect,
             'on_connect_service_name': on_connect_service_name,
             'on_message_service_name': on_message_service_name,
             'on_close_service_name': on_close_service_name,
