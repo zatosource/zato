@@ -78,7 +78,7 @@ from zato.server.pubsub.task import PubSubTool
 if 0:
     from zato.common.audit_log import DataEvent
     from zato.common.model.wsx import WSXConnectorConfig
-    from zato.common.typing_ import callable_
+    from zato.common.typing_ import anylist, callable_, stranydict
     from zato.server.base.parallel import ParallelServer
 
     DataEvent = DataEvent
@@ -115,6 +115,23 @@ _wsgi_drop_keys = ('ws4py.socket', 'wsgi.errors', 'wsgi.input')
 
 code_invalid_utf8 = 4001
 code_pings_missed = 4002
+
+# ################################################################################################################################
+
+# Maps WSGI keys to our own
+new_conn_map_config = {
+    'REMOTE_ADDR': 'remote_addr',
+    'HTTP_X_FORWARDED_FOR': 'forwarded_for',
+    'PATH_INFO': 'path_info',
+    'REMOTE_PORT': 'remote_port',
+    'HTTP_USER_AGENT': 'user_agent',
+    'SERVER_NAME': 'server_name',
+    'SERVER_PORT': 'server_port',
+    'REQUEST_METHOD': 'http_method',
+}
+
+new_conn_pattern = ('{remote_addr}:{remote_port} -> {channel_name} -> fwd:{forwarded_for} -> ' \
+    '{server_name}:{server_port}{path_info} -> ({user_agent} - {http_method})')
 
 # ################################################################################################################################
 
@@ -1439,9 +1456,22 @@ class WebSocketContainer(WebSocketWSGIApplication):
         except Exception:
             logger.warning(format_exc())
 
-    def __call__(self, wsgi_environ, start_response):
+    def __call__(self, wsgi_environ:'stranydict', start_response:'callable_') -> 'anylist':
 
         try:
+
+            # Populate basic information about the connection
+            new_conn_map = {
+                'channel_name': self.config.name,
+            }
+
+            for wsgi_key, map_key in new_conn_map_config.items():
+                value = wsgi_environ.get(wsgi_key)
+                new_conn_map[map_key] = value
+
+            # Log basic details about the incoming connection
+            new_conn_info = new_conn_pattern.format(**new_conn_map)
+            logger.info('New WSX conn: %s', new_conn_info)
 
             # Make sure this is a WebSockets request
             if 'HTTP_UPGRADE' not in wsgi_environ:
