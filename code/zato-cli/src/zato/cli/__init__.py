@@ -181,6 +181,9 @@ command_imports = (
     ('stop', 'zato.cli.stop.Stop'),
     ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
     ('wait', 'zato.cli.wait.Wait'),
+    ('wsx_create_channel', 'zato.cli.wsx.CreateChannel'),
+    ('wsx_create_outconn', 'zato.cli.wsx.CreateOutconn'),
+    ('wsx_delete_channel', 'zato.cli.wsx.DeleteChannel'),
 )
 
 # ################################################################################################################################

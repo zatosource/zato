@@ -35,6 +35,7 @@ from past.builtins import unicode as past_unicode
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import any_
     from zato.simpleio import CySimpleIO
     CySimpleIO = CySimpleIO
     past_unicode = past_unicode
@@ -167,7 +168,7 @@ class Response:
                             # serialisation but we do not know how to do it.
                             raise Exception('Cannot serialise value without SimpleIO ouput declaration ({})'.format(value))
 
-    payload = property(_get_payload, _set_payload) # type: object
+    payload = property(_get_payload, _set_payload) # type: any_
 
 # ################################################################################################################################
 # ################################################################################################################################
