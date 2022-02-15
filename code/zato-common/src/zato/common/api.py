@@ -365,7 +365,6 @@ class DATA_FORMAT(Attrs):
         # they may at most only used so that services can invoke each other directly
         return iter((self.XML, self.JSON, self.CSV, self.POST, self.HL7))
 
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1162,6 +1161,7 @@ class IPC:
 class WEB_SOCKET:
 
     AUDIT_KEY = 'wsx-connection'
+    GatewayResponseElem = 'zato_gateway_response'
 
     class DEFAULT:
         NEW_TOKEN_TIMEOUT = 5

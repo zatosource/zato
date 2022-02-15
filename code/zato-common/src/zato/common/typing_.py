@@ -122,8 +122,7 @@ union_       = union_
 # ################################################################################################################################
 # ################################################################################################################################
 
-def instance_from_dict(class_, data):
-    # type: (object, dict) -> object
+def instance_from_dict(class_:'any_', data:'dict') -> 'any_':
     instance = class_()
     for key, value in data.items():
         setattr(instance, key, value)
