@@ -621,10 +621,9 @@ class CreateWSXSubscription(AdminService):
         # Make sure the WSX channel actually points to an endpoint. If it does not,
         # we cannot proceed, i.e. there is no such API client.
 
-        try:
-            self.pubsub.get_endpoint_id_by_ws_channel_id(ws_channel_id)
-        except KeyError:
-            self.logger.warning('There is no endpoint for WSX channel ID `%s`', ws_channel_id)
+        endpoint_id = self.pubsub.get_endpoint_id_by_ws_channel_id(ws_channel_id)
+        if not endpoint_id:
+            self.logger.warning('There is no pub/sub endpoint for WSX channel ID `%s`', ws_channel_id)
             raise Forbidden(self.cid)
 
         # Either an exact topic name or a list thereof is needed ..

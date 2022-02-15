@@ -175,6 +175,7 @@ def update_attrs(cls, name, attrs):
     attrs.create_edit_input_required_extra = getattr(mod, 'create_edit_input_required_extra', [])
     attrs.create_edit_input_optional_extra = getattr(mod, 'create_edit_input_optional_extra', [])
     attrs.create_edit_rewrite = getattr(mod, 'create_edit_rewrite', [])
+    attrs.create_edit_force_rewrite = getattr(mod, 'create_edit_force_rewrite', set())
     attrs.check_existing_one = getattr(mod, 'check_existing_one', True)
     attrs.request_as_is = getattr(mod, 'request_as_is', [])
     attrs.sio_default_value = getattr(mod, 'sio_default_value', None)
@@ -218,13 +219,16 @@ def update_attrs(cls, name, attrs):
 class AdminServiceMeta(type):
 
     @staticmethod
-    def get_sio(attrs, name, input_required=None, output_required=None, is_list=True, class_=None):
+    def get_sio(*, attrs, name, input_required=None, input_optional=None, output_required=None, is_list=True, class_=None):
 
         _BaseClass = GetListAdminSIO if is_list else AdminSIO
 
+        if not input_optional:
+            input_optional = list(_BaseClass.input_optional) if hasattr(_BaseClass, 'input_optional') else []
+
         sio = {
             'input_required': input_required or ['cluster_id'],
-            'input_optional': list(_BaseClass.input_optional) if hasattr(_BaseClass, 'input_optional') else [],
+            'input_optional': input_optional,
             'output_required': output_required if output_required is not None else ['id', 'name'],
         }
 
@@ -286,7 +290,7 @@ class GetListMeta(AdminServiceMeta):
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
         cls.__doc__ = 'Returns a list of {}.'.format(attrs.get_list_docs)
-        cls.SimpleIO = GetListMeta.get_sio(attrs, name, is_list=True)
+        cls.SimpleIO = GetListMeta.get_sio(attrs=attrs, name=name, is_list=True)
         cls.handle = GetListMeta.handle(attrs)
         cls.get_data = GetListMeta.get_data(attrs.get_data_func)
         return super(GetListMeta, cls).__init__(cls)
@@ -323,7 +327,7 @@ class CreateEditMeta(AdminServiceMeta):
         attrs = update_attrs(cls, name, attrs)
         verb = 'Creates' if attrs.is_create else 'Updates'
         cls.__doc__ = '{} {}.'.format(verb, attrs.label)
-        cls.SimpleIO = CreateEditMeta.get_sio(attrs, name, is_list=False, class_=cls)
+        cls.SimpleIO = CreateEditMeta.get_sio(attrs=attrs, name=name, is_list=False, class_=cls)
         cls.handle = CreateEditMeta.handle(attrs)
         return super(CreateEditMeta, cls).__init__(cls)
 
@@ -430,9 +434,15 @@ class CreateEditMeta(AdminServiceMeta):
                     if not has_integrity_error:
                         self.broker_client.publish(input)
 
-                    for name in chain(attrs.create_edit_rewrite, self.SimpleIO.output_required):
+                    to_rewrite = chain(
+                        attrs.create_edit_rewrite,
+                        attrs.create_edit_force_rewrite,
+                        self.SimpleIO.output_required
+                    )
+
+                    for name in to_rewrite:
                         value = getattr(instance, name, singleton)
-                        if value is singleton:
+                        if value is singleton or name in attrs.create_edit_force_rewrite:
                             value = input[name]
 
                         setattr(self.response.payload, name, value)
@@ -449,7 +459,13 @@ class DeleteMeta(AdminServiceMeta):
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
         cls.__doc__ = 'Deletes {}.'.format(attrs.label)
-        cls.SimpleIO = DeleteMeta.get_sio(attrs, name, ['id'], [])
+        cls.SimpleIO = DeleteMeta.get_sio(
+            attrs=attrs,
+            name=name,
+            input_required=[],
+            input_optional=['id', 'name'],
+            output_required=[]
+        )
         cls.handle = DeleteMeta.handle(attrs)
         return super(DeleteMeta, cls).__init__(cls)
 
@@ -459,12 +475,27 @@ class DeleteMeta(AdminServiceMeta):
             # type: (Service)
 
             input = self.request.input
+
+            input_id = input.get('id')
+            input_name = input.get('name')
+
+            if not (input_id or input_name):
+                raise BadRequest(self.cid, 'Either id or name is required on input')
+
             with closing(self.odb.session()) as session:
                 attrs._meta_session = session
                 try:
-                    instance = session.query(attrs.model).\
-                        filter(attrs.model.id==input.id).\
-                        first()
+                    query = session.query(attrs.model)
+
+                    if input_id:
+                        query = query.\
+                            filter(attrs.model.id==input_id)
+
+                    else:
+                        query = query.\
+                            filter(attrs.model.name==input_name)
+
+                    instance = query.first()
 
                     # We do not always require for input ID to actually exist - this is useful
                     # with enmasse which may attempt to delete objects that no longer exist.
@@ -475,7 +506,14 @@ class DeleteMeta(AdminServiceMeta):
                     # but enmasse does not know, hence delete_require_instance is True in pubsub_endpoint's endpoint.py.
                     if not instance:
                         if attrs.delete_require_instance:
-                            raise BadRequest(self.cid, 'Could not find {} instance with ID `{}`'.format(attrs.label, input.id))
+                            if input_id:
+                                attr_name = 'id'
+                                attr_value = input_id
+                            else:
+                                attr_name = 'name'
+                                attr_value = input_name
+                            raise BadRequest(self.cid, 'Could not find {} instance with {} `{}`'.format(
+                                attrs.label, attr_name, attr_value))
                         else:
                             return
 
@@ -513,7 +551,7 @@ class DeleteMeta(AdminServiceMeta):
 class PingMeta(AdminServiceMeta):
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
-        cls.SimpleIO = PingMeta.get_sio(attrs, name, ['id'], ['info', 'id'])
+        cls.SimpleIO = PingMeta.get_sio(attrs=attrs, name=name, input_required=['id'], output_optional=['info', 'id'])
         cls.handle = PingMeta.handle(attrs)
         return super(PingMeta, cls).__init__(cls)
 
