@@ -78,7 +78,7 @@ from zato.server.pubsub.task import PubSubTool
 if 0:
     from zato.common.audit_log import DataEvent
     from zato.common.model.wsx import WSXConnectorConfig
-    from zato.common.typing_ import callable_
+    from zato.common.typing_ import anylist, callable_, stranydict
     from zato.server.base.parallel import ParallelServer
 
     DataEvent = DataEvent
@@ -115,6 +115,23 @@ _wsgi_drop_keys = ('ws4py.socket', 'wsgi.errors', 'wsgi.input')
 
 code_invalid_utf8 = 4001
 code_pings_missed = 4002
+
+# ################################################################################################################################
+
+# Maps WSGI keys to our own
+new_conn_map_config = {
+    'REMOTE_ADDR': 'remote_addr',
+    'HTTP_X_FORWARDED_FOR': 'forwarded_for',
+    'PATH_INFO': 'path_info',
+    'REMOTE_PORT': 'remote_port',
+    'HTTP_USER_AGENT': 'user_agent',
+    'SERVER_NAME': 'server_name',
+    'SERVER_PORT': 'server_port',
+    'REQUEST_METHOD': 'http_method',
+}
+
+new_conn_pattern = ('{remote_addr}:{remote_port} -> {channel_name} -> fwd:{forwarded_for} -> ' \
+    '{server_name}:{server_port}{path_info} -> ({user_agent} - {http_method})')
 
 # ################################################################################################################################
 
@@ -540,9 +557,11 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def get_peer_info_pretty(self):
+
+        sock = getattr(self, 'sock', None)
         return 'name:`{}` id:`{}` fwd_for:`{}` conn:`{}` pub:`{}`, py:`{}`, sock:`{}`, swc:`{}`'.format(
             self.ext_client_name, self.ext_client_id, self.forwarded_for_fqdn, self._peer_fqdn,
-            self.pub_client_id, self.python_id, getattr(self, 'sock', ''), self.sql_ws_client_id)
+            self.pub_client_id, self.python_id, sock, self.sql_ws_client_id)
 
 # ################################################################################################################################
 
@@ -680,7 +699,7 @@ class WebSocket(_WebSocket):
                 else:
                     self_token = new_cid()
 
-                self.token = 'ws.token.{}'.format(self_token)
+                self.token = 'zwsxt.{}'.format(self_token)
 
                 self.has_session_opened = True
                 self.ext_client_id = request.ext_client_id
@@ -931,31 +950,43 @@ class WebSocket(_WebSocket):
         while not self._initialized:
             sleep(0.1)
 
-        return self.config.on_message_callback({
+        environ = {
+            'web_socket': self,
+            'sql_ws_client_id': self.sql_ws_client_id,
+            'ws_channel_config': self.config,
+            'ws_token': self.token,
+            'ext_token': self.ext_token,
+            'pub_client_id': self.pub_client_id,
+            'ext_client_id': self.ext_client_id,
+            'ext_client_name': self.ext_client_name,
+            'peer_conn_info_pretty': self.peer_conn_info_pretty,
+            'connection_time': self.connection_time,
+            'pings_missed': self.pings_missed,
+            'pings_missed_threshold': self.pings_missed_threshold,
+            'peer_host': self._peer_host,
+            'peer_fqdn': self._peer_fqdn,
+            'forwarded_for': self.forwarded_for,
+            'forwarded_for_fqdn': self.forwarded_for_fqdn,
+            'initial_http_wsgi_environ': self.initial_http_wsgi_environ,
+        }
+
+        request = {
             'cid': cid or new_cid(),
             'data_format': _data_format,
             'service': service_name,
             'payload': data,
-            'environ': {
-                'web_socket': self,
-                'sql_ws_client_id': self.sql_ws_client_id,
-                'ws_channel_config': self.config,
-                'ws_token': self.token,
-                'ext_token': self.ext_token,
-                'pub_client_id': self.pub_client_id,
-                'ext_client_id': self.ext_client_id,
-                'ext_client_name': self.ext_client_name,
-                'peer_conn_info_pretty': self.peer_conn_info_pretty,
-                'connection_time': self.connection_time,
-                'pings_missed': self.pings_missed,
-                'pings_missed_threshold': self.pings_missed_threshold,
-                'peer_host': self._peer_host,
-                'peer_fqdn': self._peer_fqdn,
-                'forwarded_for': self.forwarded_for,
-                'forwarded_for_fqdn': self.forwarded_for_fqdn,
-                'initial_http_wsgi_environ': self.initial_http_wsgi_environ,
-            },
-        }, CHANNEL.WEB_SOCKET, None, needs_response=needs_response, serialize=serialize)
+            'environ': environ,
+        }
+
+        response = self.config.on_message_callback(
+            request,
+            CHANNEL.WEB_SOCKET,
+            None,
+            needs_response=needs_response,
+            serialize=serialize
+        )
+
+        return response
 
 # ################################################################################################################################
 
@@ -972,7 +1003,7 @@ class WebSocket(_WebSocket):
 
             # This goes to WSX logs, without a full traceback
             logger.warning('Service `%s` could not be invoked, id:`%s` cid:`%s`, conn:`%s`, e:`%s`',
-                self.config.service_name, msg.id, cid, self.peer_conn_info_pretty, format_exc())
+                self.config.service_name, msg.id, cid, self.peer_conn_info_pretty, e)
 
             # This goes to server.log and has a full traceback
             logger_zato.warning('Service `%s` could not be invoked, id:`%s` cid:`%s`, conn:`%s`, e:`%s`',
@@ -1330,7 +1361,7 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def opened(self):
-        logger.info('New connection from %s (%s) to %s (%s %s) (%s %s) (%s)', self._peer_address, self._peer_fqdn,
+        logger.info('Handling new WSX conn from %s (%s) to %s (%s %s) (%s %s) (%s)', self._peer_address, self._peer_fqdn,
             self._local_address, self.config.name, self.python_id, self.forwarded_for, self.forwarded_for_fqdn,
             self.pub_client_id)
 
@@ -1427,9 +1458,22 @@ class WebSocketContainer(WebSocketWSGIApplication):
         except Exception:
             logger.warning(format_exc())
 
-    def __call__(self, wsgi_environ, start_response):
+    def __call__(self, wsgi_environ:'stranydict', start_response:'callable_') -> 'anylist':
 
         try:
+
+            # Populate basic information about the connection
+            new_conn_map = {
+                'channel_name': self.config.name,
+            }
+
+            for wsgi_key, map_key in new_conn_map_config.items():
+                value = wsgi_environ.get(wsgi_key)
+                new_conn_map[map_key] = value
+
+            # Log basic details about the incoming connection
+            new_conn_info = new_conn_pattern.format(**new_conn_map)
+            logger.info('About to handle WSX conn: %s', new_conn_info)
 
             # Make sure this is a WebSockets request
             if 'HTTP_UPGRADE' not in wsgi_environ:

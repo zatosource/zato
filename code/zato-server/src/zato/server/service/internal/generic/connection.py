@@ -73,8 +73,8 @@ extra_secret_keys = (
 
 class _CreateEditSIO(AdminSIO):
     input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'),
-        Bool('sec_use_rbac'), 'cluster_id')
-    input_optional = ('id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
+        Bool('sec_use_rbac'))
+    input_optional = ('cluster_id', 'id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
         'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id') + \
         extra_secret_keys + generic_attrs
     force_empty_keys = True
@@ -188,12 +188,16 @@ class GetList(AdminService):
 # ################################################################################################################################
 
     def get_data(self, session):
-        return self._search(connection_list, session, self.request.input.cluster_id, self.request.input.type_, False)
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
+        return self._search(connection_list, session, cluster_id, self.request.input.type_, False)
 
 # ################################################################################################################################
 
     def _enrich_conn_dict(self, conn_dict):
         # type: (dict)
+
+        # Local aliases
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
 
         # New items that will be potentially added to conn_dict
         to_add = {}
@@ -207,7 +211,7 @@ class GetList(AdminService):
                     service_attr = prefix + '_service_name'
                     try:
                         service_name = self.invoke('zato.service.get-by-id', {
-                            'cluster_id': self.request.input.cluster_id,
+                            'cluster_id': cluster_id,
                             'id': value,
                         })['zato_service_get_by_name_response']['name']
                     except Exception:

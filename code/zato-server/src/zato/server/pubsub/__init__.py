@@ -499,9 +499,10 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def get_endpoint_id_by_ws_channel_id(self, ws_channel_id:'int') -> 'int':
+    def get_endpoint_id_by_ws_channel_id(self, ws_channel_id:'int') -> 'intnone':
         with self.lock:
-            return self.ws_channel_id_to_endpoint_id[ws_channel_id]
+            endpoint_id = self.ws_channel_id_to_endpoint_id.get(ws_channel_id)
+            return endpoint_id
 
 # ################################################################################################################################
 

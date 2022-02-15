@@ -23,18 +23,18 @@ class GenericConnection:
 
     def __init__(self):
         self.id = None
-        self.name = None
-        self.type_ = None
-        self.is_active = None
-        self.is_internal = None
+        self.name = ''
+        self.type_ = ''
+        self.is_active = False
+        self.is_internal = False
         self.cache_expiry = None
         self.address = None
         self.port = None
         self.timeout = None
         self.data_format = None
         self.opaque = {}
-        self.is_channel = None
-        self.is_outconn = None
+        self.is_channel = False
+        self.is_outconn = False
 
         self.version = None
         self.extra = None
@@ -45,7 +45,7 @@ class GenericConnection:
         self.secret = None
         self.secret_type = None
 
-        self.sec_use_rbac = None
+        self.sec_use_rbac = False
 
         self.conn_def_id = None
         self.cache_id = None
