@@ -17,16 +17,19 @@ from zato.common.test.config import TestConfig
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Reusable test configuration
+scheduler_config = {
+    'scheduler_host': TestConfig.scheduler_host,
+    'scheduler_port': TestConfig.scheduler_port,
+    'scheduler_use_tls': False,
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class InvokeSchedulerClientTestCase(TestCase):
 
     def test_client_invoke_server_to_scheduler_message_valid(self):
-
-        # Build our test configuration
-        scheduler_config = {
-            'scheduler_host': TestConfig.scheduler_host,
-            'scheduler_port': TestConfig.scheduler_port,
-            'scheduler_use_tls': False,
-        }
 
         # Client that invokes the scheduler from servers
         client = BrokerClient(scheduler_config=scheduler_config)
@@ -47,10 +50,19 @@ class InvokeSchedulerClientTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_client_invoke_server_to_scheduler_invalid_request(self):
+    def test_client_invoke_server_to_scheduler_invalid_request(self):
+
+        # Client that invokes the scheduler from servers
+        client = BrokerClient(scheduler_config=scheduler_config)
+
+        # Build an invalid test message
+        msg = {
+            'action': SCHEDULER.EXECUTE.value,
+            'invalid-key':'invalid-value'
+        }
 
         # This will check whether the scheduler replies with the expected metadata
-        response = self.post('/', {'invalid-key':'invalid-value'}, expect_ok=False)
+        response = client.invoke_sync(msg)
 
         cid = response['cid'] # type: str
 

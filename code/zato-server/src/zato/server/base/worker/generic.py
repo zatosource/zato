@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Bunch
 from bunch import Bunch
@@ -21,6 +19,13 @@ from zato.server.generic.connection import GenericConnection
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from logging import Logger
+    from zato.common.typing_ import any_, callable_, stranydict, strnone, tuple_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
 
 # ################################################################################################################################
@@ -29,12 +34,17 @@ _channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
 class Generic(WorkerImpl):
     """ Handles broker messages destined for generic objects, such as connections.
     """
-    def __init__(self):
-        super(Generic, self).__init__()
+    logger: 'Logger'
+    generic_conn_api: 'stranydict'
+    _generic_conn_handler: 'stranydict'
+    _get_generic_impl_func: 'callable_'
+    _delete_file_transfer_channel: 'callable_'
+    _edit_file_transfer_channel: 'callable_'
+    _create_file_transfer_channel: 'callable_'
 
 # ################################################################################################################################
 
-    def _find_conn_info(self, item_id):
+    def _find_conn_info(self, item_id:'int') -> 'tuple_':
 
         found_conn_dict = None
         found_name = None
@@ -48,9 +58,9 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _delete_generic_connection(self, msg):
+    def _delete_generic_connection(self, msg:'stranydict') -> 'None':
 
-        conn_dict, conn_value = self._find_conn_info(msg.id)
+        conn_dict, conn_value = self._find_conn_info(msg['id'])
         if not conn_dict:
             raise Exception('Could not find configuration matching input message `{}`'.format(msg))
         else:
@@ -69,7 +79,14 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _create_generic_connection(self, msg, needs_roundtrip=False, skip=None, raise_exc=True, is_starting=False):
+    def _create_generic_connection(
+        self,
+        msg:'stranydict',
+        needs_roundtrip:'bool'=False,
+        skip:'any_'=None,
+        raise_exc:'bool'=True,
+        is_starting:'bool'=False
+    ) -> 'None':
 
         # This roundtrip is needed to re-format msg in the format the underlying .from_bunch expects
         # in case this is a broker message rather than a startup one.
@@ -78,15 +95,15 @@ class Generic(WorkerImpl):
             msg = conn.to_sql_dict(True)
 
         item = GenericConnection.from_bunch(msg)
-        item_dict = item.to_dict(True)
+        item_dict = item.to_dict(True) # type: stranydict
 
         for key in msg:
             if key not in item_dict:
                 if key != 'action':
                     item_dict[key] = msg[key]
 
-        item_dict.queue_build_cap = self.server.fs_server_config.misc.queue_build_cap
-        item_dict.auth_url = msg.get('address')
+        item_dict['queue_build_cap'] = self.server.fs_server_config.misc.queue_build_cap
+        item_dict['auth_url'] = msg.get('address')
 
         # Normalize the contents of the configuration message
         self.generic_normalize_config(item_dict)
@@ -94,9 +111,11 @@ class Generic(WorkerImpl):
         config_attr = self.generic_conn_api[item.type_]
         wrapper = self._generic_conn_handler[item.type_]
 
-        config_attr[msg.name] = item_dict
-        config_attr[msg.name].conn = wrapper(item_dict, self.server)
-        config_attr[msg.name].conn.build_wrapper()
+        msg_name = msg['name'] # type: str
+
+        config_attr[msg_name] = item_dict
+        config_attr[msg_name].conn = wrapper(item_dict, self.server)
+        config_attr[msg_name].conn.build_wrapper()
 
         if not is_starting:
 
@@ -106,7 +125,7 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _edit_generic_connection(self, msg, skip=None, secret=None):
+    def _edit_generic_connection(self, msg:'stranydict', skip:'any_'=None, secret:'strnone'=None) -> 'None':
 
         # Special-case file transfer channels
         if msg['type_'] == _channel_file_transfer:
@@ -116,7 +135,7 @@ class Generic(WorkerImpl):
         # Find and store connection password/secret for later use
         # if we do not have it already and we will if we are called from ChangePassword.
         if not secret:
-            conn_dict, _ = self._find_conn_info(msg.id)
+            conn_dict, _ = self._find_conn_info(msg['id'])
             secret = conn_dict['secret']
 
         # Delete the connection
@@ -128,7 +147,7 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def ping_generic_connection(self, conn_id):
+    def ping_generic_connection(self, conn_id:'int') -> 'None':
         conn_dict, _ = self._find_conn_info(conn_id)
 
         self.logger.info('About to ping generic connection `%s` (%s)', conn_dict.name, conn_dict.type_)
@@ -137,7 +156,7 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _change_password_generic_connection(self, msg):
+    def _change_password_generic_connection(self, msg:'stranydict') -> 'None':
         conn_dict, _ = self._find_conn_info(msg['id'])
 
         # Create a new message without live Python objects
@@ -148,12 +167,12 @@ class Generic(WorkerImpl):
             edit_msg[key] = value
 
         # Now, edit the connection which will actually delete it and create again
-        self._edit_generic_connection(edit_msg, secret=msg.password)
+        self._edit_generic_connection(edit_msg, secret=msg['password'])
 
 # ################################################################################################################################
 
-    def reconnect_generic(self, conn_id):
-        found_conn_dict, found_name = self._find_conn_info(conn_id)
+    def reconnect_generic(self, conn_id:'int') -> 'None':
+        found_conn_dict, _ = self._find_conn_info(conn_id)
 
         edit_msg = Bunch()
         edit_msg['action'] = GENERIC_BROKER_MSG.CONNECTION_EDIT.value
@@ -168,7 +187,12 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_GENERIC_CONNECTION_CREATE(self, msg, *args, **kwargs):
+    def on_broker_msg_GENERIC_CONNECTION_CREATE(
+        self,
+        msg:'stranydict',
+        *args: 'any_',
+        **kwargs: 'any_'
+    ) -> 'None':
 
         func = self._get_generic_impl_func(msg)
         func(msg)
@@ -179,33 +203,33 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _generic_normalize_config_outconn_ldap(self, config):
+    def _generic_normalize_config_outconn_ldap(self, config:'stranydict') -> 'None':
 
-        config.pool_max_cycles = int(config.pool_max_cycles)
-        config.pool_keep_alive = int(config.pool_keep_alive)
-        config.use_auto_range = as_bool(config.use_auto_range)
-        config.use_tls = as_bool(config.use_tls)
+        config['pool_max_cycles'] = int(config['pool_max_cycles'])
+        config['pool_keep_alive'] = int(config['pool_keep_alive'])
+        config['use_auto_range'] = as_bool(config['use_auto_range'])
+        config['use_tls'] = as_bool(config['use_tls'])
 
         # If GSS-API SASL method is used, the username may be a set of credentials actually
-        if config.sasl_mechanism == LDAP.SASL_MECHANISM.GSSAPI.id:
+        if config['sasl_mechanism'] == LDAP.SASL_MECHANISM.GSSAPI.id:
             sasl_credentials = []
-            if config.username:
-                for elem in config.username.split():
+            if config['username']:
+                for elem in config['username'].split():
                     elem = elem.strip()
                     elem = parse_simple_type(elem)
                     sasl_credentials.append(elem)
-            config.sasl_credentials = sasl_credentials
+            config['sasl_credentials'] = sasl_credentials
         else:
-            config.sasl_credentials = None
+            config['sasl_credentials'] = None
 
         # Initially, this will be a string but during ChangePassword we are reusing
         # the same configuration object in which case it will be already a list.
-        if not isinstance(config.server_list, list):
-            config.server_list = [server.strip() for server in config.server_list.splitlines()]
+        if not isinstance(config['server_list'], list):
+            config['server_list'] = [server.strip() for server in config['server_list'].splitlines()]
 
 # ################################################################################################################################
 
-    def generic_normalize_config(self, config):
+    def generic_normalize_config(self, config:'stranydict') -> 'None':
 
         # Normalize type name to one that can potentially point to a method of ours
         type_ = config['type_'] # type: str
