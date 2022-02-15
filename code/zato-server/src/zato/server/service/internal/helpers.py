@@ -19,6 +19,7 @@ from traceback import format_exc
 from unittest import TestCase
 
 # Zato
+from zato.common.api import WEB_SOCKET
 from zato.common.exception import Forbidden
 from zato.common.pubsub import PUBSUB
 from zato.common.test import rand_csv, rand_string
@@ -48,7 +49,12 @@ default_services_allowed = (
     'zato.pubsub.pubapi.subscribe-wsx',
     'zato.pubsub.pubapi.unsubscribe',
     'zato.pubsub.resume-wsx-subscription',
+    'zato.ping'
 )
+
+# This is an indication to the WSX serialization layer
+# that a response was produced by our gateway service.
+wsx_gateway_response_elem = WEB_SOCKET.GatewayResponseElem
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -284,7 +290,7 @@ class WebSocketsGateway(Service):
     class SimpleIO:
         input_required = 'service',
         input_optional = AsIs('request'),
-        output_optional = 'sub_key',
+        output_optional = 'sub_key', AsIs(wsx_gateway_response_elem)
         skip_empty_keys = True
 
     def handle(self, _default_allowed:'anytuple'=default_services_allowed) -> 'None':
@@ -305,13 +311,25 @@ class WebSocketsGateway(Service):
             topic_name = input.request['topic_name']
             unsub_on_wsx_close = input.request.get('unsub_on_wsx_close', True)
             sub_key = self.pubsub.subscribe(
-                topic_name, use_current_wsx=True, unsub_on_wsx_close=unsub_on_wsx_close, service=self)
+                topic_name,
+                use_current_wsx=True,
+                unsub_on_wsx_close=unsub_on_wsx_close,
+                service=self
+            )
             self.response.payload.sub_key = sub_key
 
         else:
+
+            # The service that we are invoking may be interested in what the original, i.e. ours, channel was.
             self.wsgi_environ['zato.orig_channel'] = self.channel
-            response = self.invoke(service, self.request.input.request, wsgi_environ=self.wsgi_environ)
-            self.response.payload = response
+
+            # Invoke the underlying service and get its response
+            response = self.invoke(
+                service, self.request.input.request, wsgi_environ=self.wsgi_environ, skip_response_elem=True
+            )
+
+            # Use setattr to attach the response because we keep the response element's name in a variable
+            setattr(self.response.payload, wsx_gateway_response_elem, response)
 
 # ################################################################################################################################
 # ################################################################################################################################

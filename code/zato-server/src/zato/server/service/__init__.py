@@ -192,6 +192,8 @@ def call_hook_with_service(hook, service):
     except Exception:
         logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc())
 
+internal_invoke_keys = {'target', 'set_response_func', 'cid'}
+
 # ################################################################################################################################
 
 @dataclass(init=False)
@@ -952,6 +954,22 @@ class Service:
         service, is_active = self.server.service_store.new_instance(impl_name)
         if not is_active:
             raise Inactive(service.get_name())
+
+        # If there is no payload but there are keyword arguments other than what we expect internally,
+        # we can turn them into a payload ourselves.
+        if not payload:
+            kwargs_keys = set(kwargs)
+
+            # Substracting keys that are known from the keys that are given on input
+            # gives us a set of keys that we do not know, i.e. the keys that are extra
+            # and that can be turned into a payload.
+            extra_keys = kwargs_keys - internal_invoke_keys
+
+            # Now, if the substraction did result in any keys, we can for sure build a dictionary with payload data.
+            if extra_keys:
+                payload = {}
+                for name in extra_keys:
+                    payload[name] = kwargs[name]
 
         set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
