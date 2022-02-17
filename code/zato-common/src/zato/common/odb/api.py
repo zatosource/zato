@@ -15,7 +15,6 @@ from io import StringIO
 from logging import DEBUG, getLogger
 from threading import RLock
 from time import time
-from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
@@ -154,7 +153,7 @@ class SessionWrapper:
         self.fs_sql_config = config['fs_sql_config']
         self.pool = pool
 
-       is_ms_sql_direct = config['engine'] == MS_SQL.ZATO_DIRECT
+        is_ms_sql_direct = config['engine'] == MS_SQL.ZATO_DIRECT
 
         if is_ms_sql_direct:
             self._Session = SimpleSession(self.pool.engine)
