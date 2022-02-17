@@ -56,7 +56,7 @@ from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub import MSG_PREFIX as PUBSUB_MSG_PREFIX
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      import_module_from_path, new_cid, parse_extra_into_dict, parse_tls_channel_security_definition, \
-     start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source
+     start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source, wait_for_dict_key
 from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.server.base.parallel.subprocess_.api import StartConfig as SubprocessStartConfig
 from zato.server.base.worker.common import WorkerImpl
@@ -173,9 +173,7 @@ _WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 class WorkerStore(_WorkerStoreBase):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
-    def __init__(self, worker_config=None, server=None):
-        # type: (ConfigStore, ParallelServer)
-
+    def __init__(self, worker_config:'ConfigStore'=None, server:'ParallelServer'=None) -> 'None':
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_ready = False
         self.worker_config = worker_config
@@ -1737,7 +1735,20 @@ class WorkerStore(_WorkerStoreBase):
         """ Deletes an outgoing SQL connection pool and recreates it using the
         new password.
         """
-        self.sql_pool_store.change_password(msg['name'], msg['password'])
+        # First, make sure that we already have such an SQL connection
+        if wait_for_dict_key(self.sql_pool_store.wrappers, msg['name']):
+
+            # Ensure we use a clear-text form of the password
+            password = msg['password']
+            password = self.server.decrypt(password)
+
+            logger.info('Setting SQL password for `%s`', msg['name'])
+
+            # If we are here, it means that the connection must be available,
+            self.sql_pool_store.change_password(msg['name'], password)
+
+        else:
+            self.logger.warn('SQL connection not found -> `%s` (change-password)', msg['name'])
 
     def on_broker_msg_OUTGOING_SQL_DELETE(self, msg, *args):
         """ Deletes an outgoing SQL connection pool.
@@ -1890,6 +1901,11 @@ class WorkerStore(_WorkerStoreBase):
 
         # Where to delete it from in the second step
         deployment_info = self.server.service_store.get_deployment_info(msg.impl_name)
+
+        # If the service is not deployed, there is nothing for us to do here
+        if not deployment_info:
+            return
+
         fs_location = deployment_info['fs_location']
 
         # Delete it from the service store
