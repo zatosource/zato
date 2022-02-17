@@ -359,7 +359,7 @@ class Session(SessionRedirectMixin):
         'max_redirects',
     ]
 
-    def __init__(self, pool_connections=300, pool_maxsize=500):
+    def __init__(self, pool_connections=300):
 
         #: A case-insensitive dictionary of headers to be sent on each
         #: :class:`Request <Request>` sent from this
@@ -418,8 +418,8 @@ class Session(SessionRedirectMixin):
 
         # Default connection adapters.
         self.adapters = OrderedDict()
-        self.mount('https://', HTTPAdapter(pool_connections=pool_connections, pool_maxsize=pool_maxsize))
-        self.mount('http://', HTTPAdapter(pool_connections=pool_connections, pool_maxsize=pool_maxsize))
+        self.mount('https://', HTTPAdapter(pool_connections=pool_connections, pool_maxsize=500))
+        self.mount('http://', HTTPAdapter(pool_connections=pool_connections, pool_maxsize=500))
 
     def __enter__(self):
         return self

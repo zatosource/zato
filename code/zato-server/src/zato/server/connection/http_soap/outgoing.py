@@ -71,7 +71,7 @@ class BaseHTTPSOAPWrapper:
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
         self.requests_session = requests_session or _requests_session
-        self.session = requests_session(pool_maxsize=self.config['pool_size'])
+        self.session = requests_session()
         self.https_adapter = HTTPSAdapter()
         self.session.mount('https://', self.https_adapter)
         self._component_name = get_component_name()

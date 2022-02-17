@@ -682,7 +682,7 @@ class ServiceStore:
 
                 if not os.environ.get('ZATO_SERVER_BASE_DIR'):
                     f = open(cache_file_path, 'wb')
-                    f.write(dill_dumps(internal_cache))
+                    # f.write(dill_dumps(internal_cache))
                     f.close()
 
                 logger.info('{} %d internal services (%s) (%s)'.format(self.action_internal_done),
