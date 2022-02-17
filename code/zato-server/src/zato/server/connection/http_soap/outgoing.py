@@ -32,7 +32,7 @@ from requests.sessions import Session as requests_session
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common.api import CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE
+from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE
 from zato.common.exception import Inactive, TimeoutException
 from zato.common.json_internal import dumps, loads
 from zato.common.marshal_.api import Model
@@ -92,6 +92,8 @@ class BaseHTTPSOAPWrapper:
 
     def invoke_http(self, cid, method, address, data, headers, hooks, *args, **kwargs):
 
+        json = kwargs.pop('json', None)
+
         cert = self.config['tls_key_cert_full_path'] if self.config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT else None
         tls_verify = self.config.get('tls_verify', True)
         tls_verify = tls_verify if isinstance(tls_verify, bool) else tls_verify.encode('utf-8')
@@ -102,7 +104,7 @@ class BaseHTTPSOAPWrapper:
             auth = getattr(self, 'requests_auth', None)
 
             return self.session.request(
-                method, address, data=data, auth=auth, headers=headers, hooks=hooks,
+                method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
                 cert=cert, verify=tls_verify, timeout=self.config['timeout'], *args, **kwargs)
         except RequestsTimeout:
             raise TimeoutException(cid, format_exc())
@@ -353,18 +355,24 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         # Pop it here for later use because we cannot pass it to the requests module
         model = kwargs.pop('model', None)
 
-        # We never touch strings/unicode because apparently the user already serialized outgoing data
-        needs_request_serialize = not isinstance(data, basestring)
+        # We do not serialize ourselves data based on this content type,
+        # leaving it up to the underlying HTTP library to do it.
+        needs_serialize_based_on_content_type = self.config.get('content_type') != ContentType.FormURLEncoded
 
-        if needs_request_serialize:
+        if needs_serialize_based_on_content_type:
 
-            if self.config['data_format'] == DATA_FORMAT.JSON:
-                if isinstance(data, Model):
-                    data = data.to_dict()
-                data = dumps(data)
+            # We never touch strings/unicode because apparently the user already serialized outgoing data
+            needs_request_serialize = not isinstance(data, basestring)
 
-            elif data and self.config['data_format'] == DATA_FORMAT.XML:
-                data = tostring(data)
+            if needs_request_serialize:
+
+                if self.config['data_format'] == DATA_FORMAT.JSON:
+                    if isinstance(data, Model):
+                        data = data.to_dict()
+                    data = dumps(data)
+
+                elif data and self.config['data_format'] == DATA_FORMAT.XML:
+                    data = tostring(data)
 
         headers = self._create_headers(cid, kwargs.pop('headers', {}))
         if self.config['transport'] == 'soap':
@@ -377,8 +385,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         else:
             address, qs_params = self.address, dict(params)
 
-        if isinstance(data, unicode):
-            data = data.encode('utf-8')
+        if needs_serialize_based_on_content_type:
+            if isinstance(data, unicode):
+                data = data.encode('utf-8')
+
+        logger.info('Sending -> %s', data)
 
         logger.info(
             'CID:`%s`, address:`%s`, qs:`%s`, auth_user:`%s`, kwargs:`%s`', cid, address, qs_params, self.username, kwargs)

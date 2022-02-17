@@ -15,7 +15,6 @@ from io import StringIO
 from logging import DEBUG, getLogger
 from threading import RLock
 from time import time
-from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
@@ -154,27 +153,19 @@ class SessionWrapper:
         self.fs_sql_config = config['fs_sql_config']
         self.pool = pool
 
-        try:
-            self.pool.ping(self.fs_sql_config)
-        except Exception as e:
-            msg = 'Could not ping:`%s`, session will be left uninitialised, e:`%s`'
-            if self.config['is_active']:
-                err_details = format_exc()
-            else:
-                err_details = e.args[0]
-            self.logger.warning(msg, name, err_details)
-        else:
-            if config['engine'] == MS_SQL.ZATO_DIRECT:
-                self._Session = SimpleSession(self.pool.engine)
-            else:
-                if use_scoped_session:
-                    self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
-                else:
-                    self._Session = sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery)
-                self._session = self._Session()
+        is_ms_sql_direct = config['engine'] == MS_SQL.ZATO_DIRECT
 
-            self.session_initialized = True
-            self.is_sqlite = self.pool.engine and self.pool.engine.name == 'sqlite'
+        if is_ms_sql_direct:
+            self._Session = SimpleSession(self.pool.engine)
+        else:
+            if use_scoped_session:
+                self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
+            else:
+                self._Session = sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery)
+            self._session = self._Session()
+
+        self.session_initialized = True
+        self.is_sqlite = self.pool.engine and self.pool.engine.name == 'sqlite'
 
     def session(self) -> anysession:
         return self._Session()
