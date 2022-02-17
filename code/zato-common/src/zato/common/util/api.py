@@ -123,7 +123,7 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 if 0:
     from typing import Iterable as iterable
     from simdjson import Parser as SIMDJSONParser
-    from zato.common.typing_ import any_, callable_, dictlist, listnone
+    from zato.common.typing_ import any_, anydict, callable_, dictlist, listnone
 
     iterable = iterable
     SIMDJSONParser = SIMDJSONParser
@@ -1851,17 +1851,29 @@ def slugify(value, allow_unicode=False):
 
 # ################################################################################################################################
 
-def wait_for_predicate(predicate_func, timeout, interval, *args, **kwargs):
+def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, *args, **kwargs):
     # type: (object, int, float, *object, **object) -> bool
 
+    # Try out first, perhaps it already fulfilled
     is_fulfilled = predicate_func(*args, **kwargs)
 
+    # Use an explicit loop index for reporting
+    loop_idx = 0
+
+    logger.info('Entering wait-for-predicate -> %s -> %s', log_msg_details, is_fulfilled)
+
     if not is_fulfilled:
+        loop_idx += 1
         start = datetime.utcnow()
         wait_until = start + timedelta(seconds=timeout)
 
+        if log_msg_details:
+            logger.info('Waiting for %s (#%s)', log_msg_details, loop_idx)
+
         while not is_fulfilled:
             gevent_sleep(interval)
+            if log_msg_details:
+                logger.info('Waiting for %s (#%s)', log_msg_details, loop_idx)
             is_fulfilled = predicate_func(*args, **kwargs)
             if datetime.utcnow() > wait_until:
                 break
@@ -1870,13 +1882,12 @@ def wait_for_predicate(predicate_func, timeout, interval, *args, **kwargs):
 
 # ################################################################################################################################
 
-def wait_for_dict_key(_dict, key, timeout=30, interval=0.01):
-    # type: (dict, object, int, float) -> bool
+def wait_for_dict_key(_dict:'anydict', key:'any_', timeout:'int'=30, interval:'float'=0.01) -> 'any_':
 
     def _predicate_dict_key(*_ignored_args, **_ignored_kwargs):
-        return key in _dict
+        return _dict.get(key)
 
-    return wait_for_predicate(_predicate_dict_key, timeout, interval)
+    return wait_for_predicate(_predicate_dict_key, timeout, interval, log_msg_details=f'dict key -> `{key}`')
 
 # ################################################################################################################################
 
