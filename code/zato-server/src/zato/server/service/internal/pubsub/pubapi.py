@@ -16,7 +16,7 @@ from rapidjson import dumps
 from future.utils import itervalues
 
 # Zato
-from zato.common.api import CHANNEL, CONTENT_TYPE, PUBSUB, ZATO_NONE
+from zato.common.api import CHANNEL, ContentType, CONTENT_TYPE, PUBSUB, ZATO_NONE
 from zato.common.exception import BadRequest, Forbidden, PubSubSubscriptionExists
 from zato.common.util.auth import parse_basic_auth
 from zato.server.service import AsIs, Int, Service
@@ -115,7 +115,7 @@ class TopicService(_PubSubService):
 
         # Ignore the header set by curl and similar tools
         mime_type = self.wsgi_environ.get('CONTENT_TYPE')
-        mime_type = mime_type if mime_type != 'application/x-www-form-urlencoded' else CONTENT_TYPE.JSON
+        mime_type = mime_type if mime_type != ContentType.FormURLEncoded else CONTENT_TYPE.JSON
 
         input = self.request.input
 
