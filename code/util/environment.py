@@ -276,10 +276,7 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def pip_install_requirements(self):
-
-        # Always use full paths to resolve any doubts
-        reqs_path = os.path.join(self.base_dir, 'requirements.txt')
+    def pip_install_requirements_by_path(self, reqs_path:'str') -> 'None':
 
         # Set up the command ..
         command = """
@@ -295,6 +292,16 @@ class EnvironmentManager:
 
         # .. and run it.
         self.run_command(command, exit_on_error=False)
+
+# ################################################################################################################################
+
+    def pip_install_zato_requirements(self):
+
+        # Always use full paths to resolve any doubts
+        reqs_path = os.path.join(self.base_dir, 'requirements.txt')
+
+        # Install the requirements
+        self.pip_install_requirements_by_path(reqs_path)
 
 # ################################################################################################################################
 
@@ -355,7 +362,7 @@ class EnvironmentManager:
 
     def pip_install(self):
         self.pip_install_core_pip()
-        self.pip_install_requirements()
+        self.pip_install_zato_requirements()
         self.pip_install_zato_packages()
         self.pip_uninstall()
 
