@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -674,6 +674,15 @@ class FileTransferAPI:
         """ Returns True if inotify is the preferred notification method for input configuration and current OS.
         """
         # type: (Bunch) -> None
+
+        # This will be set, for instance, if we run under Vagrant or a similar tool,
+        # and we need to share our pickup directories with the host. In such a case,
+        # we cannot rely on inotify at all.
+        env_key = 'ZATO_HOT_DEPLOY_PREFER_LOCAL'
+
+        # Our preference is not to use inotify
+        if env_key in os.environ:
+            return False
 
         # We do not prefer inotify only if we need recursive scans or if we are not under Linux ..
         if channel_config.is_recursive or is_non_linux:
