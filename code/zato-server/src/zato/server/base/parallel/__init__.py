@@ -563,6 +563,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if key.startswith(HotDeploy.UserPrefix):
                 pickup_from = value.get('pickup_from')
                 if pickup_from:
+                    logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix)', pickup_from)
                     pickup_from = _normalise_service_source_path(pickup_from)
                     self.service_sources.append(pickup_from)
 
