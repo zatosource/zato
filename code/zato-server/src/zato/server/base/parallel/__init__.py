@@ -83,6 +83,7 @@ if 0:
     from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
+    from zato.server.ext.zunicorn.arbiter import Arbiter
     from zato.server.service.store import ServiceStore
     from zato.simpleio import SIOServerConfig
     from zato.server.startup_callable import StartupCallableTool
@@ -93,7 +94,7 @@ if 0:
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
     SIOServerConfig = SIOServerConfig
-    SSOAPI = SSOAPI
+    SSOAPI = SSOAPI # type: ignore
     StartupCallableTool = StartupCallableTool
     SubprocessIPC = SubprocessIPC
 
@@ -436,7 +437,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if items:
 
             # .. log what we are about to do ..
-            logger.info('Adding hot-deployment configuration from `%s` (Env -> ZATO_HOT_DEPLOY_DIR)', items)
+            logger.info('Adding hot-deployment configuration from `%s` (env. variable found -> ZATO_HOT_DEPLOY_DIR)', items)
 
             # .. support multiple entries ..
             items = items.split(':')
@@ -467,10 +468,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Look up user-defined configuration directories
         items = os.environ.get('ZATO_USER_CONF_DIR', '')
 
-        # We have hot-deployment configuration to process ..
+        # We have user-config details to process ..
         if items:
 
-            logger.info('Adding user-config from `%s` (Env -> ZATO_USER_CONF_DIR)', items)
+            logger.info('Adding user-config from `%s` (env. variable found -> ZATO_USER_CONF_DIR)', items)
 
             # .. support multiple entries ..
             items = items.split(':')
@@ -613,16 +614,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def load_enmasse(self):
-        pass
-
-# ################################################################################################################################
-
     @staticmethod
-    def start_server(parallel_server, zato_deployment_key=None):
+    def start_server(parallel_server:'ParallelServer', zato_deployment_key:'str'=''):
 
         # Easier to type
-        self = parallel_server # type: ParallelServer
+        self = parallel_server
 
         # This cannot be done in __init__ because each sub-process obviously has its own PID
         self.pid = os.getpid()
@@ -887,9 +883,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             # Statistics
             self._run_stats_client(events_tcp_port)
-
-        # Looks up an enmasse file and loads it
-        self.load_enmasse()
 
         # Invoke startup callables
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
@@ -1265,20 +1258,23 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     @staticmethod
-    def post_fork(arbiter, worker):
+    def post_fork(arbiter:'Arbiter', worker:'any_') -> 'None':
         """ A Gunicorn hook which initializes the worker.
         """
 
         # Each subprocess needs to have the random number generator re-seeded.
         random_seed()
 
-        worker.app.zato_wsgi_app.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
+        # This is our parallel server
+        server = worker.app.zato_wsgi_app # type: ParallelServer
+
+        server.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
             'arbiter': arbiter,
             'worker': worker,
         })
 
         worker.app.zato_wsgi_app.worker_pid = worker.pid
-        ParallelServer.start_server(worker.app.zato_wsgi_app, arbiter.zato_deployment_key)
+        ParallelServer.start_server(server, arbiter.zato_deployment_key)
 
 # ################################################################################################################################
 
