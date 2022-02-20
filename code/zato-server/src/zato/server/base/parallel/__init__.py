@@ -201,6 +201,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.events_dir = 'ParallelServer-events_dir'
         self.kvdb_dir = 'ParallelServer-kvdb_dir'
         self.marshal_api = MarshalAPI()
+        self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
 
         # SQL-based key/value data
         self.kv_data_api = None # type: KVDataAPI

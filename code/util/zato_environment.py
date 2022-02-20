@@ -152,12 +152,15 @@ class EnvironmentManager:
             py_lib_dir = ''
 
         py_lib_dir = os.path.join(self.base_dir, 'lib', py_lib_dir)
+        py_lib_dir = os.path.abspath(py_lib_dir)
         logger.info('Python lib dir -> %s', py_lib_dir)
 
         self.site_packages_dir = os.path.join(py_lib_dir, 'site-packages')
+        self.site_packages_dir = os.path.abspath(self.site_packages_dir)
         logger.info('Python site-packages dir -> %s', self.site_packages_dir)
 
         self.eggs_dir = os.path.join(self.base_dir, 'eggs')
+        self.eggs_dir = os.path.abspath(self.eggs_dir)
         logger.info('Python eggs dir -> %s', self.eggs_dir)
 
 # ################################################################################################################################
@@ -541,6 +544,38 @@ class EnvironmentManager:
         self.update_git_revision()
         self.pip_install()
         self.copy_patches()
+
+# ################################################################################################################################
+
+    def runtime_setup_with_env_variables(self) -> 'None':
+
+        # In this step, we need to look up any possible custom pip requirements
+        # that we already know that are defined through environment variables.
+        python_reqs = os.environ.get('ZATO_PYTHON_REQS', '')
+
+        # OK, we have some requirements files to install packages from ..
+        if python_reqs:
+
+            # .. support multiple files on input ..
+            python_reqs = python_reqs.split(':')
+
+            # .. and install them now.
+            for path in python_reqs:
+                self.pip_install_requirements_by_path(path)
+
+        # This step is similar but instead of installing dependencies from pip requirements,
+        # we add to sys.path entire directories where runtime user code can be found.
+        extlib_dir = os.environ.get('ZATO_EXTLIB_DIR', '')
+
+        # OK, we have some requirements files to install packages from ..
+        if extlib_dir:
+
+            # .. support multiple files on input ..
+            extlib_dir = extlib_dir.split(':')
+
+            # .. and install them now.
+            for path in extlib_dir:
+                self.add_extlib_to_sys_path(Path(path))
 
 # ################################################################################################################################
 # ################################################################################################################################
