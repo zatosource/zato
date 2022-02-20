@@ -45,6 +45,6 @@ echo Activating virtualenv in $CURDIR
 source $CURDIR/bin/activate
 
 echo Setting up environment in $CURDIR
-$CURDIR/bin/python $CURDIR/util/environment.py install
+$CURDIR/bin/python $CURDIR/util/zato_environment.py install
 
 echo ⭐ Successfully installed `zato --version`

@@ -69,6 +69,13 @@ from zato.sso.api import SSOAPI
 from zato.sso.util import new_user_id, normalize_sso_config
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, repo_location, config_main, crypto_config, *args, **kwargs):
@@ -139,6 +146,38 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 
     # Capture warnings to log files
     logging.captureWarnings(True)
+
+    #
+    # Look up the standalone zato_environment.py module to import its manager object.
+    # The module needs to be standalone because it runs when install.sh does,
+    # that is, before the entire codebase is compiled, which is why we, in runtime,
+    # need to add its path here explicitly.
+    #
+
+    # This is where the 'py' command is ..
+    bin_dir = os.path.dirname(sys.executable)
+
+    # .. this is the directory with our code, not the directory where the server is ..
+    py_base_dir = os.path.join(bin_dir, '..')
+
+    # .. the relative path from the base bin directory to the one with zato_environment.py
+    env_mod_relative_path = [py_base_dir, 'util']
+
+    # .. build the absolute path to it ..
+    env_mod_dir_path = os.path.join(bin_dir, *env_mod_relative_path)
+    env_mod_dir_path = os.path.abspath(env_mod_dir_path)
+
+    # .. make it importable ..
+    sys.path.insert(0, env_mod_dir_path)
+
+    # .. now, we can import the environment manager class ..
+    from zato_environment import EnvironmentManager # type: ignore
+
+    # .. build the object that we now have access to ..
+    env_manager = EnvironmentManager(py_base_dir, bin_dir) # type: any_
+
+    # .. and run the initial runtime setup, based on environment variables.
+    env_manager.runtime_setup_with_env_variables()
 
     # Start initializing the server now
     os.chdir(base_dir)
@@ -294,6 +333,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.user_config.update(server_config.user_config_items)
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
+    server.env_manager = env_manager
     server.jwt_secret = server.fs_server_config.misc.jwt_secret.encode('utf8')
     server.startup_callable_tool = startup_callable_tool
     server.is_sso_enabled = server.fs_server_config.component_enabled.sso

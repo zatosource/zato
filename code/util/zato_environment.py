@@ -18,6 +18,12 @@ from subprocess import check_output, PIPE, Popen
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, cast_, strlist, strnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
 logging.basicConfig(level=logging.DEBUG, format=log_format)
 
@@ -65,8 +71,7 @@ if __name__ == '__main__':
 
 class EnvironmentManager:
 
-    def __init__(self, base_dir, bin_dir):
-        # type: (str) -> None
+    def __init__(self, base_dir:'str', bin_dir:'str') -> 'None':
         self.base_dir = base_dir
         self.bin_dir = bin_dir
         self.pip_command = os.path.join(self.bin_dir, 'pip')
@@ -81,7 +86,7 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def _get_linux_distro_name(self):
+    def _get_linux_distro_name(self) -> 'str':
 
         # Short-cut for non-Linux systems
         if not is_linux:
@@ -93,7 +98,7 @@ class EnvironmentManager:
         # By default, we do not have it
         distro_name = ''
 
-        data = open('/etc/os-release').read() # type: str
+        data = open('/etc/os-release').read()
         data = data.splitlines()
 
         for line in data:
@@ -112,7 +117,7 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def _set_up_pip_flags(self):
+    def _set_up_pip_flags(self) -> 'None':
 
         #
         # Under RHEL, pip install may not have the '--no-warn-script-location' flag.
@@ -130,7 +135,9 @@ class EnvironmentManager:
         else:
             self.pip_options = '--no-warn-script-location'
 
-    def _set_up_dir_names(self):
+# ################################################################################################################################
+
+    def _set_up_dir_names(self) -> 'None':
 
         # This needs to be checked in runtime because we do not know
         # under what Python version we are are going to run.
@@ -145,17 +152,20 @@ class EnvironmentManager:
             py_lib_dir = ''
 
         py_lib_dir = os.path.join(self.base_dir, 'lib', py_lib_dir)
+        py_lib_dir = os.path.abspath(py_lib_dir)
         logger.info('Python lib dir -> %s', py_lib_dir)
 
         self.site_packages_dir = os.path.join(py_lib_dir, 'site-packages')
+        self.site_packages_dir = os.path.abspath(self.site_packages_dir)
         logger.info('Python site-packages dir -> %s', self.site_packages_dir)
 
         self.eggs_dir = os.path.join(self.base_dir, 'eggs')
+        self.eggs_dir = os.path.abspath(self.eggs_dir)
         logger.info('Python eggs dir -> %s', self.eggs_dir)
 
 # ################################################################################################################################
 
-    def _create_symlink(self, from_, to):
+    def _create_symlink(self, from_, to) -> 'None':
         # type: (str, str) -> None
 
         try:
@@ -168,8 +178,7 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def _create_executable(self, path, data):
-        # type: (str) -> None
+    def _create_executable(self, path:'str', data:'str') -> 'None':
 
         f = open(path, 'w')
         f.write(data)
@@ -184,22 +193,35 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def run_command(self, command, exit_on_error=True, needs_stdout=False, needs_stderr=False, log_stderr=True,
-        use_check_output=False):
-        # type: (str) -> str
+    def run_command(
+        self,
+        command:'str',
+        exit_on_error:'bool'=True,
+        needs_stdout:'bool'=False,
+        needs_stderr:'bool'=False,
+        log_stderr:'bool'=True,
+        use_check_output:'bool'=False
+    ) -> 'str | None':
 
         logger.info('Running `%s`', command)
 
         # Turn what is possibly a multi-line command into a list of arguments ..
         command = command.strip()
-        command = command.split()
+        command_split = command.split()
 
         func = self._run_check_output if use_check_output else self._run_popen
-        return func(command, exit_on_error, needs_stdout, needs_stderr, log_stderr)
+        return func(command_split, exit_on_error, needs_stdout, needs_stderr, log_stderr)
 
 # ################################################################################################################################
 
-    def _run_check_output(self, command, exit_on_error=True, needs_stdout=False, needs_stderr=False, log_stderr=True):
+    def _run_check_output(
+        self,
+        command:'strlist',
+        exit_on_error:'bool'=True,
+        needs_stdout:'bool'=False,
+        needs_stderr:'bool'=False,
+        log_stderr:'bool'=True
+    ) -> 'any_':
 
         # This will be potentially returned to our caller
         stdout = b''
@@ -222,7 +244,14 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def _run_popen(self, command, exit_on_error=True, needs_stdout=False, needs_stderr=False, log_stderr=True):
+    def _run_popen(
+        self,
+        command:'str | strlist',
+        exit_on_error:'bool'=True,
+        needs_stdout:'bool'=False,
+        needs_stderr:'bool'=False,
+        log_stderr:'bool'=True
+    ) -> 'strnone':
 
         # This will be potentially returned to our caller
         stdout = None
@@ -233,10 +262,10 @@ class EnvironmentManager:
         # .. and wait until it completes.
         while True:
 
-            stderr = process.stderr.readline()
+            stderr = process.stderr.readline() # type: ignore
 
             if needs_stdout:
-                stdout = process.stdout.readline()
+                stdout = process.stdout.readline() # type: ignore
                 stdout = stdout.strip()
                 stdout = stdout.decode('utf8')
 
@@ -262,7 +291,7 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def pip_install_core_pip(self):
+    def pip_install_core_pip(self) -> 'None':
 
         # Set up the command ..
         command = '{pip_command} install {pip_options} -U {pip_deps}'.format(**{
@@ -276,10 +305,7 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def pip_install_requirements(self):
-
-        # Always use full paths to resolve any doubts
-        reqs_path = os.path.join(self.base_dir, 'requirements.txt')
+    def pip_install_requirements_by_path(self, reqs_path:'str') -> 'None':
 
         # Set up the command ..
         command = """
@@ -298,7 +324,17 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def pip_install_zato_packages(self):
+    def pip_install_zato_requirements(self) -> 'None':
+
+        # Always use full paths to resolve any doubts
+        reqs_path = os.path.join(self.base_dir, 'requirements.txt')
+
+        # Install the requirements
+        self.pip_install_requirements_by_path(reqs_path)
+
+# ################################################################################################################################
+
+    def pip_install_zato_packages(self) -> 'None':
 
         # Note that zato-common must come first.
         packages = [
@@ -336,7 +372,7 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def pip_uninstall(self):
+    def pip_uninstall(self) -> 'None':
 
         # Packages that will be uninstalled, e.g. no longer needed
         packages = [
@@ -353,15 +389,15 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def pip_install(self):
+    def pip_install(self) -> 'None':
         self.pip_install_core_pip()
-        self.pip_install_requirements()
+        self.pip_install_zato_requirements()
         self.pip_install_zato_packages()
         self.pip_uninstall()
 
 # ################################################################################################################################
 
-    def update_git_revision(self):
+    def update_git_revision(self) -> 'None':
 
         # This is where we will store our last git commit ID
         revision_file_path = os.path.join(self.base_dir, 'release-info', 'revision.txt')
@@ -373,7 +409,7 @@ class EnvironmentManager:
         command = 'git log -n 1 --pretty=format:%H --no-color'
 
         # .. run the command to get our latest commit ID ..
-        commit_id = self.run_command(command, needs_stdout=True, use_check_output=True)
+        commit_id = cast_('str', self.run_command(command, needs_stdout=True, use_check_output=True))
 
         # .. and store it in an external file for 'zato --version' and other tools to use.
         f = open(revision_file_path, 'w')
@@ -384,14 +420,27 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def add_eggs_symlink(self):
+    def add_eggs_symlink(self) -> 'None':
 
         if not is_windows:
             self._create_symlink(self.site_packages_dir, self.eggs_dir)
 
 # ################################################################################################################################
 
-    def add_extlib(self):
+    def add_extlib_to_sys_path(self, extlib_dir:'Path') -> 'None':
+
+        # This file contains entries that, in runtime, will be found in sys.path
+        easy_install_path = os.path.join(self.site_packages_dir, 'easy-install.pth')
+
+        # .. add the path to easy_install ..
+        f = open(easy_install_path, 'a')
+        f.write(extlib_dir.as_posix())
+        f.write(os.linesep)
+        f.close()
+
+# ################################################################################################################################
+
+    def add_extlib(self) -> 'None':
 
         # This is where external depdendencies can be kept
         extlib_dir_path = os.path.join(self.base_dir, 'extlib')
@@ -399,27 +448,21 @@ class EnvironmentManager:
         # For backward compatibility, this will point to extlib
         extra_paths_dir = os.path.join(self.base_dir, 'zato_extra_paths')
 
-        # This is what the extlib will be found through in runtime
-        easy_install_path = os.path.join(self.site_packages_dir, 'easy-install.pth')
-
         # Build a Path object ..
         extlib_dir = Path(extlib_dir_path)
 
         # .. create the underlying directory ..
         extlib_dir.mkdir(exist_ok=True)
 
-        # .. symlink it for backward compatibility ..
-        self._create_symlink(extlib_dir_path, extra_paths_dir)
+        # .. add the path to easy_install ..
+        self.add_extlib_to_sys_path(extlib_dir)
 
-        # .. and add the path to easy_install.
-        f = open(easy_install_path, 'a')
-        f.write(extlib_dir_path)
-        f.write(os.linesep)
-        f.close()
+        # .. and symlink it for backward compatibility.
+        self._create_symlink(extlib_dir_path, extra_paths_dir)
 
 # ################################################################################################################################
 
-    def add_py_command(self):
+    def add_py_command(self) -> 'None':
 
         # This is where will will save it
         py_command_path = os.path.join(self.bin_dir, 'py')
@@ -448,7 +491,7 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def add_zato_command(self):
+    def add_zato_command(self) -> 'None':
 
         # Differentiate between Windows and other systems as the extension is needed under the former
         command_name = 'zato.py' if is_windows else 'zato'
@@ -467,7 +510,7 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def copy_patches(self):
+    def copy_patches(self) -> 'None':
 
         # Where our patches can be found
         patches_dir = os.path.join(self.base_dir, 'patches')
@@ -484,7 +527,7 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def install(self):
+    def install(self) -> 'None':
 
         self.update_git_revision()
         self.pip_install()
@@ -496,11 +539,43 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def update(self):
+    def update(self) -> 'None':
 
         self.update_git_revision()
         self.pip_install()
         self.copy_patches()
+
+# ################################################################################################################################
+
+    def runtime_setup_with_env_variables(self) -> 'None':
+
+        # In this step, we need to look up any possible custom pip requirements
+        # that we already know that are defined through environment variables.
+        python_reqs = os.environ.get('ZATO_PYTHON_REQS', '')
+
+        # OK, we have some requirements files to install packages from ..
+        if python_reqs:
+
+            # .. support multiple files on input ..
+            python_reqs = python_reqs.split(':')
+
+            # .. and install them now.
+            for path in python_reqs:
+                self.pip_install_requirements_by_path(path)
+
+        # This step is similar but instead of installing dependencies from pip requirements,
+        # we add to sys.path entire directories where runtime user code can be found.
+        extlib_dir = os.environ.get('ZATO_EXTLIB_DIR', '')
+
+        # OK, we have some requirements files to install packages from ..
+        if extlib_dir:
+
+            # .. support multiple files on input ..
+            extlib_dir = extlib_dir.split(':')
+
+            # .. and install them now.
+            for path in extlib_dir:
+                self.add_extlib_to_sys_path(Path(path))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -514,8 +589,8 @@ if __name__ == '__main__':
 
     command = sys.argv[1]
 
-    util = EnvironmentManager(base_dir, bin_dir)
-    func = getattr(util, command)
+    env_manager = EnvironmentManager(base_dir, bin_dir)
+    func = getattr(env_manager, command)
     func()
 
 # ################################################################################################################################
