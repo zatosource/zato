@@ -678,10 +678,10 @@ class FileTransferAPI:
         # This will be set, for instance, if we run under Vagrant or a similar tool,
         # and we need to share our pickup directories with the host. In such a case,
         # we cannot rely on inotify at all.
-        env_key = 'ZATO_HOT_DEPLOY_PREFER_LOCAL'
+        env_key = 'ZATO_HOT_DEPLOY_PREFER_SNAPSHOTS'
 
         # Our preference is not to use inotify
-        if env_key in os.environ:
+        if os.environ.get(env_key):
             return False
 
         # We do not prefer inotify only if we need recursive scans or if we are not under Linux ..
