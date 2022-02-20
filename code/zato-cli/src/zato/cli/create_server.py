@@ -324,7 +324,7 @@ topics=
 
 [user_conf]
 pickup_from=./pickup/incoming/user-conf
-patterns=*.conf
+patterns=*.ini, *.conf
 parse_on_pickup=False
 delete_after_pickup=False
 services=zato.pickup.update-user-conf
