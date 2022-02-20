@@ -44,9 +44,9 @@ from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
-from zato.common.util.api import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
-     invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
-     register_diag_handlers
+from zato.common.util.api import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, fs_safe_name, \
+    hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
+    register_diag_handlers
 from zato.common.util.platform_ import is_posix
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
@@ -83,6 +83,7 @@ if 0:
     from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
+    from zato.server.ext.zunicorn.arbiter import Arbiter
     from zato.server.service.store import ServiceStore
     from zato.simpleio import SIOServerConfig
     from zato.server.startup_callable import StartupCallableTool
@@ -93,7 +94,7 @@ if 0:
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
     SIOServerConfig = SIOServerConfig
-    SSOAPI = SSOAPI
+    SSOAPI = SSOAPI # type: ignore
     StartupCallableTool = StartupCallableTool
     SubprocessIPC = SubprocessIPC
 
@@ -201,6 +202,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.events_dir = 'ParallelServer-events_dir'
         self.kvdb_dir = 'ParallelServer-kvdb_dir'
         self.marshal_api = MarshalAPI()
+        self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
 
         # SQL-based key/value data
         self.kv_data_api = None # type: KVDataAPI
@@ -423,6 +425,89 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def add_pickup_conf_from_env_hot_deploy(self):
+
+        # Bunch
+        from bunch import bunchify
+
+        # Look up Python hot-deployment directories
+        items = os.environ.get('ZATO_HOT_DEPLOY_DIR', '')
+
+        # We have hot-deployment configuration to process ..
+        if items:
+
+            # .. log what we are about to do ..
+            logger.info('Adding hot-deployment configuration from `%s` (env. variable found -> ZATO_HOT_DEPLOY_DIR)', items)
+
+            # .. support multiple entries ..
+            items = items.split(':')
+            items = [elem.strip() for elem in items]
+
+            # .. add  the actual configuration ..
+            for name in items:
+
+                # .. stay on the safe side because, here, we do not know where it will be used ..
+                _fs_safe_name = fs_safe_name(name)
+
+                # .. use this prefix to indicate that it is a directory to hot-deploy from ..
+                key_name = '{}.{}'.format(HotDeploy.UserPrefix, _fs_safe_name)
+
+                # .. and store the configuration for later use now.
+                pickup_from = {
+                    'pickup_from': name
+                }
+                self.pickup_config[key_name] = bunchify(pickup_from)
+
+# ################################################################################################################################
+
+    def add_pickup_conf_from_env_user_conf(self):
+
+        # Bunch
+        from bunch import bunchify
+
+        # Look up user-defined configuration directories
+        items = os.environ.get('ZATO_USER_CONF_DIR', '')
+
+        # We have user-config details to process ..
+        if items:
+
+            logger.info('Adding user-config from `%s` (env. variable found -> ZATO_USER_CONF_DIR)', items)
+
+            # .. support multiple entries ..
+            items = items.split(':')
+            items = [elem.strip() for elem in items]
+
+            # .. add  the actual configuration ..
+            for name in items:
+
+                # .. stay on the safe side because, here, we do not know where it will be used ..
+                _fs_safe_name = fs_safe_name(name)
+
+                # .. use this prefix to indicate that it is a directory to deploy user configuration from  ..
+                key_name = '{}.{}'.format(HotDeploy.UserConfPrefix, _fs_safe_name)
+
+                # .. and store the configuration for later use now.
+                pickup_from = {
+                    'pickup_from': name,
+                    'patterns': '*.ini, *.conf',
+                    'parse_on_pickup': False,
+                    'delete_after_pickup': False,
+                    'services': 'zato.pickup.update-user-conf',
+                }
+                self.pickup_config[key_name] = bunchify(pickup_from)
+
+# ################################################################################################################################
+
+    def add_pickup_conf_from_env_variables(self):
+
+        # Code hot-deployment
+        self.add_pickup_conf_from_env_hot_deploy()
+
+        # User configuration
+        self.add_pickup_conf_from_env_user_conf()
+
+# ################################################################################################################################
+
     def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
         """
@@ -468,6 +553,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if name and not name.startswith('#'):
                 name = _normalise_service_source_path(name)
                 self.service_sources.append(name)
+
+        # Look up pickup configuration among environment variables
+        # and add anything found to self.pickup_config.
+        self.add_pickup_conf_from_env_variables()
 
         # Service sources from user-defined hot-deployment configuration
         for key, value in self.pickup_config.items():
@@ -526,10 +615,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     @staticmethod
-    def start_server(parallel_server, zato_deployment_key=None):
+    def start_server(parallel_server:'ParallelServer', zato_deployment_key:'str'=''):
 
         # Easier to type
-        self = parallel_server # type: ParallelServer
+        self = parallel_server
 
         # This cannot be done in __init__ because each sub-process obviously has its own PID
         self.pid = os.getpid()
@@ -706,6 +795,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         salt_size = self.sso_config.hash_secret.salt_size
         self.crypto_manager.add_hash_scheme('zato.default', self.sso_config.hash_secret.rounds, salt_size)
 
+        # Support pre-3.x hot-deployment directories
         for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pickup'):
 
             # New in 2.0
@@ -1168,20 +1258,23 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     @staticmethod
-    def post_fork(arbiter, worker):
+    def post_fork(arbiter:'Arbiter', worker:'any_') -> 'None':
         """ A Gunicorn hook which initializes the worker.
         """
 
         # Each subprocess needs to have the random number generator re-seeded.
         random_seed()
 
-        worker.app.zato_wsgi_app.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
+        # This is our parallel server
+        server = worker.app.zato_wsgi_app # type: ParallelServer
+
+        server.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
             'arbiter': arbiter,
             'worker': worker,
         })
 
         worker.app.zato_wsgi_app.worker_pid = worker.pid
-        ParallelServer.start_server(worker.app.zato_wsgi_app, arbiter.zato_deployment_key)
+        ParallelServer.start_server(server, arbiter.zato_deployment_key)
 
 # ################################################################################################################################
 
