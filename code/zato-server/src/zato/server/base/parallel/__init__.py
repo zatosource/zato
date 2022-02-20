@@ -435,6 +435,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # We have hot-deployment configuration to process ..
         if items:
 
+            # .. log what we are about to do ..
+            logger.info('Adding hot-deployment configuration from `%s` (Env -> ZATO_HOT_DEPLOY_DIR)', items)
+
             # .. support multiple entries ..
             items = items.split(':')
             items = [elem.strip() for elem in items]
@@ -466,6 +469,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # We have hot-deployment configuration to process ..
         if items:
+
+            logger.info('Adding user-config from `%s` (Env -> ZATO_USER_CONF_DIR)', items)
 
             # .. support multiple entries ..
             items = items.split(':')
@@ -605,6 +610,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # type: (int) -> None
         self.stats_client.init('127.0.0.1', events_tcp_port)
         self.stats_client.run()
+
+# ################################################################################################################################
+
+    def load_enmasse(self):
+        pass
 
 # ################################################################################################################################
 
@@ -877,6 +887,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             # Statistics
             self._run_stats_client(events_tcp_port)
+
+        # Looks up an enmasse file and loads it
+        self.load_enmasse()
 
         # Invoke startup callables
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
