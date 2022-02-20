@@ -554,8 +554,8 @@ if __name__ == '__main__':
 
     command = sys.argv[1]
 
-    util = EnvironmentManager(base_dir, bin_dir)
-    func = getattr(util, command)
+    env_manager = EnvironmentManager(base_dir, bin_dir)
+    func = getattr(env_manager, command)
     func()
 
 # ################################################################################################################################
