@@ -391,6 +391,19 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
+    def add_extlib_to_sys_path(self, extlib_dir:'Path') -> 'None':
+
+        # This file contains entries that, in runtime, will be found in sys.path
+        easy_install_path = os.path.join(self.site_packages_dir, 'easy-install.pth')
+
+        # .. add the path to easy_install ..
+        f = open(easy_install_path, 'a')
+        f.write(extlib_dir.as_posix())
+        f.write(os.linesep)
+        f.close()
+
+# ################################################################################################################################
+
     def add_extlib(self):
 
         # This is where external depdendencies can be kept
@@ -399,23 +412,17 @@ class EnvironmentManager:
         # For backward compatibility, this will point to extlib
         extra_paths_dir = os.path.join(self.base_dir, 'zato_extra_paths')
 
-        # This is what the extlib will be found through in runtime
-        easy_install_path = os.path.join(self.site_packages_dir, 'easy-install.pth')
-
         # Build a Path object ..
         extlib_dir = Path(extlib_dir_path)
 
         # .. create the underlying directory ..
         extlib_dir.mkdir(exist_ok=True)
 
-        # .. symlink it for backward compatibility ..
-        self._create_symlink(extlib_dir_path, extra_paths_dir)
+        # .. add the path to easy_install ..
+        self.add_extlib_to_sys_path(extlib_dir)
 
-        # .. and add the path to easy_install.
-        f = open(easy_install_path, 'a')
-        f.write(extlib_dir_path)
-        f.write(os.linesep)
-        f.close()
+        # .. and symlink it for backward compatibility.
+        self._create_symlink(extlib_dir_path, extra_paths_dir)
 
 # ################################################################################################################################
 
