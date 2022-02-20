@@ -307,6 +307,10 @@ class EnvironmentManager:
 
     def pip_install_requirements_by_path(self, reqs_path:'str') -> 'None':
 
+        if not os.path.exists(reqs_path):
+            logger.info('Skipped user-defined requirements.txt. No such path `%s`.')
+            return
+
         # Set up the command ..
         command = """
             {pip_command}
