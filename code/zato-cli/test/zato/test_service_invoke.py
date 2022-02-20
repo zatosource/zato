@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-from zato.common.test import CommandLineServiceInvoker
+from zato.common.util.cli import CommandLineServiceInvoker
 
 # ################################################################################################################################
 # ################################################################################################################################

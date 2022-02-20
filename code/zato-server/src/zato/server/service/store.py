@@ -22,7 +22,7 @@ from traceback import format_exc
 from typing import Any, List
 
 # dill
-from dill import dumps as dill_dumps, load as dill_load
+from dill import load as dill_load
 
 # gevent
 from gevent.lock import RLock
@@ -656,6 +656,9 @@ class ServiceStore:
             internal_cache = {
                 'service_info': service_info
             }
+
+            # This is currently unused
+            internal_cache = internal_cache
 
             logger.info('{} internal services (%s)'.format(self.action_internal_doing), self.server.name)
             info = self.import_services_from_anywhere(items, base_dir)
