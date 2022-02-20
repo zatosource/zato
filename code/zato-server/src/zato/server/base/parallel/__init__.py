@@ -44,9 +44,9 @@ from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
-from zato.common.util.api import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
-     invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
-     register_diag_handlers
+from zato.common.util.api import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, fs_safe_name, \
+    hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
+    register_diag_handlers
 from zato.common.util.platform_ import is_posix
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
@@ -424,6 +424,84 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def add_pickup_conf_from_env_hot_deploy(self):
+
+        # Bunch
+        from bunch import bunchify
+
+        # Look up Python hot-deployment directories
+        items = os.environ.get('ZATO_HOT_DEPLOY_DIR', '')
+
+        # We have hot-deployment configuration to process ..
+        if items:
+
+            # .. support multiple entries ..
+            items = items.split(':')
+            items = [elem.strip() for elem in items]
+
+            # .. add  the actual configuration ..
+            for name in items:
+
+                # .. stay on the safe side because, here, we do not know where it will be used ..
+                _fs_safe_name = fs_safe_name(name)
+
+                # .. use this prefix to indicate that it is a directory to hot-deploy from ..
+                key_name = '{}.{}'.format(HotDeploy.UserPrefix, _fs_safe_name)
+
+                # .. and store the configuration for later use now.
+                pickup_from = {
+                    'pickup_from': name
+                }
+                self.pickup_config[key_name] = bunchify(pickup_from)
+
+# ################################################################################################################################
+
+    def add_pickup_conf_from_env_user_conf(self):
+
+        # Bunch
+        from bunch import bunchify
+
+        # Look up user-defined configuration directories
+        items = os.environ.get('ZATO_USER_CONF_DIR', '')
+
+        # We have hot-deployment configuration to process ..
+        if items:
+
+            # .. support multiple entries ..
+            items = items.split(':')
+            items = [elem.strip() for elem in items]
+
+            # .. add  the actual configuration ..
+            for name in items:
+
+                # .. stay on the safe side because, here, we do not know where it will be used ..
+                _fs_safe_name = fs_safe_name(name)
+
+                # .. use this prefix to indicate that it is a directory to deploy user configuration from  ..
+                key_name = '{}.{}'.format(HotDeploy.UserConfPrefix, _fs_safe_name)
+
+                # .. and store the configuration for later use now.
+                pickup_from = {
+                    'pickup_from': name,
+                    'patterns': '*.ini, *.conf',
+                    'parse_on_pickup': False,
+                    'delete_after_pickup': False,
+                    'services': 'zato.pickup.update-user-conf',
+                }
+                self.pickup_config[key_name] = bunchify(pickup_from)
+
+# ################################################################################################################################
+
+    def add_pickup_conf_from_env_variables(self):
+
+        # Code hot-deployment
+        self.add_pickup_conf_from_env_hot_deploy()
+
+        # User configuration
+        self.add_pickup_conf_from_env_user_conf()
+
+# ################################################################################################################################
+
     def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
         """
@@ -469,6 +547,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if name and not name.startswith('#'):
                 name = _normalise_service_source_path(name)
                 self.service_sources.append(name)
+
+        # Look up pickup configuration among environment variables
+        # and add anything found to self.pickup_config.
+        self.add_pickup_conf_from_env_variables()
 
         # Service sources from user-defined hot-deployment configuration
         for key, value in self.pickup_config.items():
@@ -707,6 +789,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         salt_size = self.sso_config.hash_secret.salt_size
         self.crypto_manager.add_hash_scheme('zato.default', self.sso_config.hash_secret.rounds, salt_size)
 
+        # Support pre-3.x hot-deployment directories
         for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pickup'):
 
             # New in 2.0
