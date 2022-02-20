@@ -337,16 +337,6 @@ parse_on_pickup=False
 delete_after_pickup=False
 services=zato.pickup.update-static
 topics=
-
-[_user_conf_backward_compatibility]
-# This is needed only for compatibility with pre-3.2 environments.
-# Do not use it in new environments. Instead, use the [user_conf] entry.
-pickup_from=./config/repo/user-conf
-patterns=*.conf
-parse_on_pickup=False
-delete_after_pickup=False
-services=zato.pickup.update-user-conf
-topics=
 """
 
 # ################################################################################################################################
@@ -593,30 +583,6 @@ default_odb_pool_size = 15
 directories = (
     'config',
     'config/repo',
-    'config/repo/user-conf',
-    'logs',
-    'pickup',
-    'pickup/incoming',
-    'pickup/processed',
-    'pickup/incoming/services',
-    'pickup/incoming/static',
-    'pickup/incoming/json',
-    'pickup/incoming/xml',
-    'pickup/incoming/csv',
-    'pickup/incoming/user-conf',
-    'pickup/processed/static',
-    'pickup/processed/json',
-    'pickup/processed/xml',
-    'pickup/processed/csv',
-    'profiler',
-    'work',
-    'work/events',
-    'work/events/v1',
-    'work/events/v2',
-    'work/hot-deploy',
-    'work/hot-deploy/current',
-    'work/hot-deploy/backup',
-    'work/hot-deploy/backup/last',
     'config/repo/lua',
     'config/repo/lua/internal',
     'config/repo/lua/user',
@@ -632,6 +598,30 @@ directories = (
     'config/repo/tls',
     'config/repo/tls/keys-certs',
     'config/repo/tls/ca-certs',
+    'logs',
+    'pickup',
+    'pickup/incoming',
+    'pickup/processed',
+    'pickup/incoming/services',
+    'pickup/incoming/static',
+    'pickup/incoming/user-conf',
+    'pickup/incoming/json',
+    'pickup/incoming/xml',
+    'pickup/incoming/csv',
+    'pickup/processed/static',
+    'pickup/processed/user-conf',
+    'pickup/processed/json',
+    'pickup/processed/xml',
+    'pickup/processed/csv',
+    'profiler',
+    'work',
+    'work/events',
+    'work/events/v1',
+    'work/events/v2',
+    'work/hot-deploy',
+    'work/hot-deploy/current',
+    'work/hot-deploy/backup',
+    'work/hot-deploy/backup/last',
 )
 
 # ################################################################################################################################
@@ -702,6 +692,7 @@ class Create(ZatoCommand):
 
         # stdlib
         import os
+        import platform
         from datetime import datetime
         from traceback import format_exc
 
@@ -841,6 +832,18 @@ class Create(ZatoCommand):
             sso_conf = open_w(sso_conf_loc)
             sso_conf.write(sso_conf_contents)
             sso_conf.close()
+
+            # On systems other than Windows, where symlinks are not fully supported,
+            # for convenience and backward compatibility,
+            # create a shortcut symlink from incoming/user-conf to config/repo/user-conf.
+
+            system = platform.system()
+            is_windows = 'windows' in system.lower()
+
+            if not is_windows:
+                user_conf_src = os.path.join(self.target_dir, 'pickup', 'incoming', 'user-conf')
+                user_conf_dest = os.path.join(self.target_dir, 'config', 'repo', 'user-conf')
+                os.symlink(user_conf_src, user_conf_dest)
 
             # There will be multiple keys in future releases to allow for key rotation
             key1 = args.secret_key or Fernet.generate_key()
