@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
 from zato.cli import ZatoCommand
@@ -14,9 +12,8 @@ from zato.cli import ZatoCommand
 # ################################################################################################################################
 
 if 0:
-    # stdlib
     from argparse import Namespace
-
+    from zato.common.typing_ import intnone
     Namespace = Namespace
 
 # ################################################################################################################################
@@ -32,8 +29,7 @@ class Wait(ZatoCommand):
         {'name':'--interval', 'help':'How often to check if the server is up, in seconds', 'default':'0.1'},
     ]
 
-    def execute(self, args, needs_sys_exit=True):
-        # type: (Namespace, bool)
+    def execute(self, args:'Namespace', needs_sys_exit:'bool'=True) -> 'intnone':
 
         # stdlib
         import sys
@@ -70,7 +66,29 @@ class Wait(ZatoCommand):
             else:
                 raise Exception('No response from `{}{}` after {}s'.format(address, args.url_path, args.timeout))
         else:
-            return True
+            return 0
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+
+    # stdlib
+    from argparse import Namespace
+    from os import environ
+
+    args = Namespace()
+    args.verbose      = True
+    args.store_log    = False
+    args.store_config = False
+    args.path = environ['ZATO_SERVER_BASE_DIR']
+    args.address = ''
+    args.url_path = ''
+    args.timeout = 60
+    args.interval = 0.1
+
+    command = Wait(args)
+    command.run(args)
 
 # ################################################################################################################################
 # ################################################################################################################################
