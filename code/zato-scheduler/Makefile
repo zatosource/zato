@@ -10,10 +10,10 @@ run-tests:
 
 pylint:
 	echo Running pylint in zato-scheduler
-	$(CURDIR)/../bin/pylint --verbose \
+	$(PY_DIR)/pylint --verbose \
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-scheduler/src/zato/scheduler
 
 static-check:
 	echo "Running static checks in zato-scheduler"
-	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
