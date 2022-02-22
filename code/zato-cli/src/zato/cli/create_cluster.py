@@ -828,19 +828,6 @@ class Create(ZatoCommand):
         sub_demo.delivery_err_should_block = False
         sub_demo.out_http_soap = outconn_demo
 
-        sub_unique = PubSubSubscription()
-        sub_unique.creation_time = utcnow_as_ms()
-        sub_unique.topic = topic_unique
-        sub_unique.endpoint = endpoint_demo
-        sub_unique.sub_key = new_sub_key(endpoint_demo.endpoint_type)
-        sub_unique.has_gd = False
-        sub_unique.sub_pattern_matched = 'sub=/zato/demo/*'
-        sub_unique.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
-        sub_unique.cluster = cluster
-        sub_unique.wrap_one_msg_in_list = False
-        sub_unique.delivery_err_should_block = False
-        sub_unique.out_http_soap = outconn_demo
-
         sub_test = PubSubSubscription()
         sub_test.creation_time = utcnow_as_ms()
         sub_test.topic = topic_test
@@ -859,7 +846,6 @@ class Create(ZatoCommand):
         session.add(topic_demo)
         session.add(topic_test)
         session.add(sub_demo)
-        session.add(sub_unique)
         session.add(sub_test)
 
         session.add(service_topic)
