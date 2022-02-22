@@ -20,7 +20,7 @@ run-tests:
 
 pylint:
 	echo Running pylint in zato-server
-	$(CURDIR)/../bin/pylint --verbose \
+	$(PY_DIR)/pylint --verbose \
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-server/src/zato/server
 
