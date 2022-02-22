@@ -13,13 +13,13 @@ run-tests:
 
 pylint:
 	echo Running pylint in zato-common
-	$(CURDIR)/../bin/pylint --verbose \
+	$(PY_DIR)/pylint --verbose \
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-common/src/zato/common/
 
 static-check:
 	echo "Running static checks in zato-common"
-	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
 
 pyright:
 	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/common/pubsub.py

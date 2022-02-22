@@ -35,10 +35,10 @@ run-tests:
 
 pylint:
 	echo Running pylint in zato-cy
-	$(CURDIR)/../bin/pylint --verbose \
+	$(PY_DIR)/pylint --verbose \
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-cy/src/zato/cy
 
 static-check:
 	echo "Running static checks in zato-cy"
-	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
