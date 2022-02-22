@@ -34,13 +34,13 @@ class TestConfig:
     random_prefix = 'rand.{}+{}'
 
     server_address  = 'http://localhost:17010{}'
-    server_location = os.path.expanduser('~/env/sso.test/server1')
+    server_location = os.path.expanduser('~/env/qs-1/server1')
 
     scheduler_host = 'localhost'
     scheduler_port = 31530
 
     scheduler_address  = 'http://{}:{}{{}}'.format(scheduler_host, scheduler_port)
-    scheduler_location = os.path.expanduser('~/env/sso.test/scheduler')
+    scheduler_location = os.path.expanduser('~/env/qs-1/scheduler')
 
     invalid_base_address = '<invalid-base-address>'
 
