@@ -1,6 +1,8 @@
 
 .PHONY: static-check
 
+PY_DIR=$(CURDIR)/../bin
+
 run-tests:
 	py $(CURDIR)/test/zato/test_enmasse.py
 	py $(CURDIR)/test/zato/test_openapi.py
@@ -8,10 +10,10 @@ run-tests:
 
 pylint:
 	echo Running pylint in zato-cli
-	$(CURDIR)/../bin/pylint --verbose \
+	$(PY_DIR)/pylint --verbose \
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-cli/src/zato/cli
 
 static-check:
 	echo "Running static checks in zato-cli"
-	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
