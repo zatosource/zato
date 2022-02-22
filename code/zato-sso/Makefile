@@ -1,6 +1,8 @@
 
 .PHONY: build
 
+PY_DIR=$(CURDIR)/../bin
+
 run-tests:
 	py $(CURDIR)/test/zato/test_command_line.py && \
 	py $(CURDIR)/test/zato/test_user.py && \
@@ -24,10 +26,10 @@ run-tests:
 
 pylint:
 	echo Running pylint in zato-sso
-	$(CURDIR)/../bin/pylint --verbose \
+	$(PY_DIR)/pylint --verbose \
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-sso/src/zato/sso
 
 static-check:
 	echo "Running static checks in zato-sso"
-	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/

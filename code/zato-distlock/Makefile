@@ -9,10 +9,10 @@ run-tests:
 
 pylint:
 	echo Running pylint in zato-distlock
-	$(CURDIR)/../bin/pylint --verbose \
+	$(PY_DIR)/pylint --verbose \
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-distlock/src/zato/distlock
 
 static-check:
 	echo "Running static checks in zato-distlock"
-	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/

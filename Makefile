@@ -3,6 +3,7 @@
 MAKEFLAGS += --silent
 
 default: run-tests
+PY_DIR=$(CURDIR)/../bin
 
 common-tests:
 	cd $(CURDIR)/code/zato-common && make run-tests
@@ -68,7 +69,7 @@ scheduler-tests:
 
 install-qa-reqs:
 	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
-	npx --yes playwright install
+	npx playwright install
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 
 run-tests:
