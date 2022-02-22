@@ -19,7 +19,7 @@ from subprocess import check_output, PIPE, Popen
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, cast_, strlist, strnone
+    from zato.common.typing_ import any_, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -413,11 +413,11 @@ class EnvironmentManager:
         command = 'git log -n 1 --pretty=format:%H --no-color'
 
         # .. run the command to get our latest commit ID ..
-        commit_id = cast_('str', self.run_command(command, needs_stdout=True, use_check_output=True))
+        commit_id = self.run_command(command, needs_stdout=True, use_check_output=True)
 
         # .. and store it in an external file for 'zato --version' and other tools to use.
         f = open(revision_file_path, 'w')
-        f.write(commit_id)
+        f.write(commit_id) # type: ignore
         f.close()
 
         logger.info('Git commit ID -> `%s`', commit_id)
