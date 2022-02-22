@@ -306,6 +306,7 @@ class DeliveryTask:
 
             # Deliver up to that many messages in one batch
             delivery_batch_size = self.sub_config['delivery_batch_size'] # type: int
+            logger.info('Looking for current batch in delivery_list=%s (%s)', hex(id(self.delivery_list)), self.sub_key)
             current_batch = self.delivery_list[:delivery_batch_size] # type: ignore
             current_batch = cast_('msglist', current_batch)
 
@@ -1071,7 +1072,9 @@ class PubSubTool:
                 # Get messages for all sub_keys on input and break them out by each sub_key separately,
                 # provided that we have a flag indicating that there should be some GD messages around in the database.
                 if ctx.has_gd:
-                    for msg in self._fetch_gd_messages_by_sk_list(ctx.sub_key_list, ctx.pub_time_max, session):
+                    gd_messages_by_sk_list = self._fetch_gd_messages_by_sk_list(ctx.sub_key_list, ctx.pub_time_max, session)
+                    gd_messages_by_sk_list = list(gd_messages_by_sk_list)
+                    for msg in gd_messages_by_sk_list:
                         _sk_msg_list = gd_msg_list.setdefault(msg.sub_key, [])
                         _sk_msg_list.append(msg)
 
@@ -1178,6 +1181,8 @@ class PubSubTool:
             gd_msg = GDMessage(sub_key, topic_name, msg.get_value())
             delivery_list = self.delivery_lists[sub_key]
             delivery_list.add(gd_msg) # type: ignore
+            logger.info('Adding a GD message `%s` to delivery_list=%s (%s)',
+                gd_msg.pub_msg_id, hex(id(delivery_list)), sub_key)
             count += 1
 
         logger.info('Pushing %d GD message{}to task:%s; msg_ids:%s'.format(
@@ -1226,7 +1231,7 @@ class PubSubTool:
                     groups = list(grouper(_group_size, msg_ids)) # type: strlist
                     len_groups = len(groups)
 
-                    # This we log using both loggers because we run during server startup so we should
+                    # This, we log using both loggers because we also run during server startup so we should
                     # let users know that their server has to do something extra
                     for _logger in logger, logger_zato:
                         _logger.info('Found %d initial message%sto enqueue for sub_key:`%s` (%s -> %s), g:%d, gs:%d',
