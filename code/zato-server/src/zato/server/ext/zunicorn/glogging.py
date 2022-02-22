@@ -409,7 +409,16 @@ class Logger:
                     handler.acquire()
                     try:
                         if handler.stream:
-                            handler.close()
+                            try:
+                                handler.close()
+                            except AttributeError:
+                                # Ignore errors from cloghandler.py
+                                """
+                                cloghandler.py", line 230, in close
+                                    if not self.stream_lock.closed:
+                                AttributeError: 'NoneType' object has no attribute 'closed'
+                                """
+                                pass
                             handler.stream = handler._open()
                     finally:
                         handler.release()
