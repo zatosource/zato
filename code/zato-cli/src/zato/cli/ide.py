@@ -72,7 +72,7 @@ class SetIDEPassword(ManageCommand):
             security_id = security.id
 
         # .. and invoke the service that changes the password ..
-        invoker = CommandLineServiceInvoker(check_stdout=False)
+        invoker = CommandLineServiceInvoker(check_stdout=False, server_location=path)
         invoker.invoke('zato.security.basic-auth.change-password', {
             'id': security_id,
             'password1': password,
