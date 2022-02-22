@@ -644,8 +644,8 @@ class ServiceStore:
         # sync_internal may be False but if the cache does not exist (which is the case if a server starts up the first time),
         # we need to create it anyway and sync_internal becomes True then. However, the should be created only by the very first
         # worker in a group of workers - the rest can simply assume that the cache is ready to read.
-        if is_first and not os.path.exists(cache_file_path):
-            sync_internal = True
+        # if is_first and not os.path.exists(cache_file_path):
+        sync_internal = True
 
         if sync_internal:
 
