@@ -15,12 +15,12 @@ from traceback import format_exc
 from unittest import main, TestCase
 
 # sh
-import sh
 from sh import ErrorReturnCode
 
 # Zato
 from zato.common.test.config import TestConfig
 from zato.common.test import rand_string, rand_unicode
+from zato.common.util.cli import get_zato_sh_command
 from zato.common.util.open_ import open_w
 
 # ################################################################################################################################
@@ -120,7 +120,7 @@ class EnmasseTestCase(TestCase):
     def _invoke_command(self, config_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
 
         # A shortcut
-        command = sh.zato # type: ignore
+        command = get_zato_sh_command()
 
         # Invoke enmasse ..
         out = command('enmasse', TestConfig.server_location,
