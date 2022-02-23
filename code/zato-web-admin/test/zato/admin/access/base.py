@@ -19,11 +19,12 @@ from bunch import bunchify
 import django
 
 # Selenium-Wire
-from seleniumwire import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.support import expected_conditions as conditions
-from selenium.webdriver.support.ui import WebDriverWait
+if os.environ.get('ZATO_TEST_DASHBOARD'):
+    from seleniumwire import webdriver
+    from selenium.webdriver.common.keys import Keys
+    from selenium.webdriver.firefox.options import Options
+    from selenium.webdriver.support import expected_conditions as conditions
+    from selenium.webdriver.support.ui import WebDriverWait
 
 # Zato
 from zato.admin.zato_settings import update_globals
@@ -121,6 +122,9 @@ class BaseTestCase(TestCase):
 
     def setUp(self):
 
+        if not os.environ.get('ZATO_TEST_DASHBOARD'):
+            return
+
         # Set up everything on Django end ..
         self._set_up_django()
         self._set_up_django_auth()
@@ -201,6 +205,9 @@ class BaseTestCase(TestCase):
 # ################################################################################################################################
 
     def tearDown(self):
+        if not os.environ.get('ZATO_TEST_DASHBOARD'):
+            return
+
         if self.run_in_background:
             if hasattr(self, 'client'):
                 self.client.quit()
