@@ -19,6 +19,13 @@ from zato.common.test import CommandLineServiceInvoker
 class CommandLineTestCase(BaseTest):
 
     def test_command_line(self) -> 'None':
+
+        # stdlib
+        import os
+
+        if not os.environ.get('ZATO_TEST_SSO'):
+            return
+
         service = 'zato.sso.sso-test-service'
         invoker = CommandLineServiceInvoker()
         invoker.invoke_and_test(service)

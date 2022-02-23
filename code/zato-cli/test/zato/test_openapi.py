@@ -102,6 +102,9 @@ class APISpecTestCase(TestCase):
 
     def test_openapi(self) -> 'None':
 
+        if not os.environ.get('ZATO_TEST_OPENAPI'):
+            return
+
         tmp_dir = gettempdir()
         test_suffix = rand_unicode() + '.' + rand_string()
 

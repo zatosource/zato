@@ -4,7 +4,7 @@
 PY_DIR=$(CURDIR)/../bin
 
 run-tests:
-	echo "Running unit-tests in zato-distlock"
+	echo "Running tests in zato-distlock"
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/distlock/test_*.py -s
 
 pylint:
