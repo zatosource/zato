@@ -39,13 +39,13 @@ mypy-pubsub:
 		$(CURDIR)/src/zato/server/pubsub/
 
 pyright-apispec:
-	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/apispec/
+	$(PY_DIR)/pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/apispec/
 
 pyright-pubsub:
-	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/__init__.py
-	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/model.py
-	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/task.py
-	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/sync.py
+	$(PY_DIR)/pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/__init__.py
+	$(PY_DIR)/pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/model.py
+	$(PY_DIR)/pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/task.py
+	$(PY_DIR)/pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/sync.py
 
 mypy:
 	$(MAKE) mypy-apispec

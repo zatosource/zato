@@ -22,7 +22,7 @@ static-check:
 	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
 
 pyright:
-	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/common/pubsub.py
+	$(PY_DIR)/pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/common/pubsub.py
 
 mypy:
 	$(PY_DIR)/mypy --show-error-codes --ignore-missing-imports $(CURDIR)/src/zato/common/pubsub.py
