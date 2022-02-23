@@ -25,6 +25,7 @@ from zato.common.crypto.totp_ import TOTPManager
 from zato.common.test.config import TestConfig
 from zato.common.test.rest_client import RESTClientTestCase
 from zato.common.test import rand_string
+from zato.common.util.cli import get_zato_sh_command
 from zato.sso import const, status_code
 from zato.sso.odb.query import get_user_by_name
 
@@ -74,14 +75,16 @@ class BaseTest(RESTClientTestCase):
 
             if not get_user_by_name(odb_session, TestConfig.super_user_name, False):
 
+                command = get_zato_sh_command()
+
                 # .. create the user ..
-                sh.zato('sso', 'create-super-user', TestConfig.server_location, TestConfig.super_user_name,
+                command('sso', 'create-super-user', TestConfig.server_location, TestConfig.super_user_name,
                     '--password', TestConfig.super_user_password,
                     '--email', 'test@example.com',
                     '--verbose')
 
                 # .. and set the TOTP ..
-                sh.zato('sso', 'reset-totp-key', TestConfig.server_location, TestConfig.super_user_name,
+                command('sso', 'reset-totp-key', TestConfig.server_location, TestConfig.super_user_name,
                     '--key', TestConfig.super_user_totp_key,
                     '--verbose')
 
