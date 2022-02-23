@@ -374,7 +374,7 @@ class Get(AdminService):
 
         with closing(self.odb.session()) as session: # type: ignore
             topic = pubsub_topic(session, cluster_id, topic_id, topic_name)
-            topic['current_depth_gd'] = get_gd_depth_topic(session, cluster_id, topic_id)
+            topic['current_depth_gd'] = get_gd_depth_topic(session, cluster_id, topic.id)
 
         # Now, we know that we have this object so we can just make use of its ID
         topic_id = topic.id
