@@ -16,4 +16,4 @@ static-check:
 
 type-check:
 	echo "Running type checks in zato-agent"
-	pyright -p $(CURDIR)/../pyproject.toml .
+	$(PY_DIR)/pyright -p $(CURDIR)/../pyproject.toml .
