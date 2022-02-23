@@ -6,7 +6,7 @@ default: build
 PY_DIR=$(CURDIR)/../bin
 
 build:
-	py $(CURDIR)/setup.py develop
+	$(PY_DIR)/py $(CURDIR)/setup.py develop
 
 clean:
 	rm -rf $(CURDIR)/build
