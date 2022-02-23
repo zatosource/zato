@@ -30,6 +30,12 @@ class LoginLogoutTestCase(BaseTestCase):
 
     def test_login_logout(self):
 
+        # stdlib
+        import os
+
+        if not os.environ.get('ZATO_TEST_DASHBOARD'):
+            return
+
         # Default address to visit
         address = self.config.web_admin_address + '/zato/'
 

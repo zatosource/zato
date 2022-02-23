@@ -13,6 +13,7 @@ import sys
 
 # sh
 import sh
+from sh import CommandNotFound
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -20,6 +21,18 @@ import sh
 if 0:
     from sh import RunningCommand
     from zato.common.typing_ import any_, anydict, anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CommandName:
+
+    # This is the default name if $PATH is populated
+    Default = 'zato'
+
+    # This is the default path based on .deb / .rpm installers,
+    # in case $PATH is not populated.
+    PackageFullPath = '/opt/zato/current/bin/zato'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -78,8 +91,20 @@ class CommandLineInvoker:
 
 # ################################################################################################################################
 
-    def invoke_cli(self, cli_params:'anylist', command_name:'str'='zato') -> 'RunningCommand':
-        command = getattr(sh, command_name) # type: ignore
+    def invoke_cli(self, cli_params:'anylist', command_name:'str'=CommandName.Default) -> 'RunningCommand':
+
+        try:
+            command = getattr(sh, command_name) # type: ignore
+        except CommandNotFound:
+
+            # In case we were using the default name, let's try again with a fallback one ..
+            if command_name == CommandName.Default:
+                command = getattr(sh, CommandName.PackageFullPath)
+
+            # .. otherwise, re-raise the exception as we are not sure what to do otherwise.
+            else:
+                raise
+
         out = command(*cli_params)
         return out
 

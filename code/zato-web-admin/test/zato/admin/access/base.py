@@ -38,7 +38,7 @@ class Config:
     user_password = 'sJNlk8XOQs74E'
     user_email = 'test@example.com'
 
-    web_admin_location = os.path.expanduser('~/env/web-admin.test/web-admin')
+    web_admin_location = os.path.expanduser('~/env/qs-1/web-admin')
     web_admin_address  = 'http://localhost:8183'
 
     status_ok = {FOUND, MOVED_PERMANENTLY, NOT_MODIFIED, OK}
@@ -141,6 +141,12 @@ class BaseTestCase(TestCase):
 # ################################################################################################################################
 
     def login(self):
+
+        # stdlib
+        import os
+
+        if not os.environ.get('ZATO_TEST_DASHBOARD'):
+            return
 
         run_in_background = getattr(self, 'run_in_background', None)
         run_in_background = True if run_in_background is None else run_in_background

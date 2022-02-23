@@ -52,6 +52,12 @@ class IndexTestCase(BaseTestCase):
 
     def test_index(self):
 
+        # stdlib
+        import os
+
+        if not os.environ.get('ZATO_TEST_DASHBOARD'):
+            return
+
         # Zato
         from zato.admin.urls import urlpatterns
 
