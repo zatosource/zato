@@ -5,7 +5,7 @@ MAKEFLAGS += --silent
 PY_DIR=$(CURDIR)/../bin
 
 run-tests:
-	echo "Running unit-tests in zato-scheduler"
+	echo "Running tests in zato-scheduler"
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/test_*.py -s
 
 pylint:
