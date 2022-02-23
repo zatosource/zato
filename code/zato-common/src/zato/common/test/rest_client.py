@@ -18,12 +18,10 @@ from bunch import Bunch, bunchify
 # Requests
 import requests
 
-# sh
-import sh
-
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.config import TestConfig
+from zato.common.util.cli import get_zato_sh_command
 from zato.sso import status_code
 
 # ################################################################################################################################
@@ -111,7 +109,7 @@ class RESTClient:
         self._api_invoke_username = username
 
         # A shortcut
-        command = sh.zato # type: ignore
+        command = get_zato_sh_command()
 
         # Generate a new password ..
         self._api_invoke_password = CryptoManager.generate_password().decode('utf8')
