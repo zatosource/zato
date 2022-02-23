@@ -4,25 +4,25 @@
 PY_DIR=$(CURDIR)/../bin
 
 run-tests:
-	py $(CURDIR)/test/zato/test_command_line.py && \
-	py $(CURDIR)/test/zato/test_user.py && \
-	py $(CURDIR)/test/zato/test_session.py && \
-	py $(CURDIR)/test/zato/test_user_attr_create.py && \
-	py $(CURDIR)/test/zato/test_user_attr_update.py && \
-	py $(CURDIR)/test/zato/test_user_attr_delete.py && \
-	py $(CURDIR)/test/zato/test_user_attr_get.py && \
-	py $(CURDIR)/test/zato/test_user_attr_exists.py && \
-	py $(CURDIR)/test/zato/test_user_attr_names.py && \
-	py $(CURDIR)/test/zato/test_session_attr_create.py && \
-	py $(CURDIR)/test/zato/test_session_attr_update.py && \
-	py $(CURDIR)/test/zato/test_session_attr_delete.py && \
-	py $(CURDIR)/test/zato/test_session_attr_get.py && \
-	py $(CURDIR)/test/zato/test_session_attr_exists.py && \
-	py $(CURDIR)/test/zato/test_session_attr_names.py && \
-	py $(CURDIR)/test/zato/test_session_list.py &&  \
-	py $(CURDIR)/test/zato/test_linked_auth.py && \
-	py $(CURDIR)/test/zato/test_login_totp.py && \
-	py $(CURDIR)/test/zato/test_password_reset.py
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_command_line.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_user.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_session.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_user_attr_create.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_user_attr_update.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_user_attr_delete.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_user_attr_get.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_user_attr_exists.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_user_attr_names.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_session_attr_create.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_session_attr_update.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_session_attr_delete.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_session_attr_get.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_session_attr_exists.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_session_attr_names.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_session_list.py &&  \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_linked_auth.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_login_totp.py && \
+	$(PY_DIR)/py $(CURDIR)/test/zato/test_password_reset.py
 
 pylint:
 	echo Running pylint in zato-sso

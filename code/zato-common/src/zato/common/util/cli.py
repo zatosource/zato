@@ -41,19 +41,17 @@ def get_zato_sh_command(command_name:'str'=CommandName.Default) -> 'RunningComma
 
     try:
         command = getattr(sh, command_name) # type: ignore
+        return command
     except CommandNotFound:
 
         # In case we were using the default name, let's try again with a fallback one ..
         if command_name == CommandName.Default:
             command = getattr(sh, CommandName.PackageFullPath)
+            return command
 
         # .. otherwise, re-raise the exception as we are not sure what to do otherwise.
         else:
             raise
-
-    # In one way or another, we have found a command to execute
-    else:
-        return command
 
 # ################################################################################################################################
 # ################################################################################################################################
