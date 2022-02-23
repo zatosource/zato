@@ -22,13 +22,13 @@ from openapi_spec_validator.readers import read_from_filename
 import requests_openapi
 
 # sh
-import sh
 from sh import ErrorReturnCode
 
 # Zato
 from zato.common.test.apispec_ import run_common_apispec_assertions
 from zato.common.test.config import TestConfig
 from zato.common.test import rand_string, rand_unicode
+from zato.common.util.cli import get_zato_sh_command
 from zato.common.util.open_ import open_r
 
 # ################################################################################################################################
@@ -84,7 +84,7 @@ class APISpecTestCase(TestCase):
     def _invoke_command(self, file_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
 
         # A shortcut
-        command = sh.zato # type: ignore
+        command = get_zato_sh_command() # type: ignore
 
         # Invoke enmasse ..
         out = command('openapi', TestConfig.server_location,
