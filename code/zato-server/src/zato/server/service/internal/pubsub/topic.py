@@ -361,9 +361,9 @@ class Get(AdminService):
     """
     class SimpleIO:
         input_optional = 'cluster_id', AsIs('id'), 'name'
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd', \
-            'current_depth_gd', Int('limit_retention'), Int('limit_message_expiry'), Int('limit_sub_inactivity')
-        output_optional = 'last_pub_time', 'on_no_subs_pub'
+        output_optional = 'id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd', \
+            'current_depth_gd', Int('limit_retention'), Int('limit_message_expiry'), Int('limit_sub_inactivity'), \
+                'last_pub_time', 'on_no_subs_pub'
 
     def handle(self):
 
@@ -374,7 +374,7 @@ class Get(AdminService):
 
         with closing(self.odb.session()) as session: # type: ignore
             topic = pubsub_topic(session, cluster_id, topic_id, topic_name)
-            topic['current_depth_gd'] = get_gd_depth_topic(session, cluster_id, topic_id)
+            topic['current_depth_gd'] = get_gd_depth_topic(session, cluster_id, topic.id)
 
         # Now, we know that we have this object so we can just make use of its ID
         topic_id = topic.id
