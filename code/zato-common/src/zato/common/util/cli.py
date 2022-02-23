@@ -46,6 +46,7 @@ def get_zato_sh_command(command_name:'str'=CommandName.Default) -> 'RunningComma
         # In case we were using the default name, let's try again with a fallback one ..
         if command_name == CommandName.Default:
             command = getattr(sh, CommandName.PackageFullPath)
+            return command
 
         # .. otherwise, re-raise the exception as we are not sure what to do otherwise.
         else:
