@@ -37,6 +37,27 @@ class CommandName:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_zato_sh_command(command_name:'str'=CommandName.Default) -> 'RunningCommand':
+
+    try:
+        command = getattr(sh, command_name) # type: ignore
+    except CommandNotFound:
+
+        # In case we were using the default name, let's try again with a fallback one ..
+        if command_name == CommandName.Default:
+            command = getattr(sh, CommandName.PackageFullPath)
+
+        # .. otherwise, re-raise the exception as we are not sure what to do otherwise.
+        else:
+            raise
+
+    # In one way or another, we have found a command to execute
+    else:
+        return command
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def read_stdin_data(strip=True):
     """ Reads data from sys.stdin without blocking the caller - in its current form (using select),
     it will work only on Linux and OS X.
@@ -93,18 +114,7 @@ class CommandLineInvoker:
 
     def invoke_cli(self, cli_params:'anylist', command_name:'str'=CommandName.Default) -> 'RunningCommand':
 
-        try:
-            command = getattr(sh, command_name) # type: ignore
-        except CommandNotFound:
-
-            # In case we were using the default name, let's try again with a fallback one ..
-            if command_name == CommandName.Default:
-                command = getattr(sh, CommandName.PackageFullPath)
-
-            # .. otherwise, re-raise the exception as we are not sure what to do otherwise.
-            else:
-                raise
-
+        command = get_zato_sh_command(command_name)
         out = command(*cli_params)
         return out
 
