@@ -52,6 +52,9 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
     def setUp(self) -> 'None':
 
+        if not os.environ.get('ZATO_TEST_SCHEDULER'):
+            return
+
         # Set up a test client before each test ..
         self.rest_client.init(username=username, sec_name=sec_name)
         self.api_impl = PubSubAPIRestImpl(self, self.rest_client)
@@ -272,6 +275,9 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
     def test_cleanup_old_subscriptions_no_sub_keys(self) -> 'None':
 
+        if not os.environ.get('ZATO_TEST_SCHEDULER'):
+            return
+
         # Indicate after a passage of how many seconds we will consider a subscribers as gone,
         # that is, after how many seconds since its last interaction time it will be deleted.
         env_delta = 1
@@ -333,6 +339,9 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
     def test_cleanup_old_subscriptions_one_sub_key_with_env_delta_default_topic(self):
 
+        if not os.environ.get('ZATO_TEST_SCHEDULER'):
+            return
+
         # In this test, we explicitly specify a seconds delta to clean up messages by.
         env_delta = 1
 
@@ -356,6 +365,9 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 # ################################################################################################################################
 
     def test_cleanup_old_subscriptions_one_sub_key_with_env_delta_new_topic(self):
+
+        if not os.environ.get('ZATO_TEST_SCHEDULER'):
+            return
 
         # In this test, we explicitly specify a seconds delta to clean up messages by.
         # I.e. even if we use a new test topic below, the delta is given on input too.
@@ -382,6 +394,9 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
     def test_cleanup_old_subscriptions_one_sub_key_no_env_delta(self):
 
+        if not os.environ.get('ZATO_TEST_SCHEDULER'):
+            return
+
         # We explcitly request that inactive subscriptions should be deleted after that many seconds
         limit_sub_inactivity = 1
 
@@ -405,6 +420,9 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 # ################################################################################################################################
 
     def test_cleanup_old_subscriptions_one_sub_key_env_delta_overrides_topic_delta(self):
+
+        if not os.environ.get('ZATO_TEST_SCHEDULER'):
+            return
 
         # In this test, we specify a short delta in the environment and we expect
         # that it will override the explicit inactivity limit configured for a new topic.
@@ -435,6 +453,9 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 
     def test_cleanup_max_topic_retention_exceeded(self) -> 'None':
 
+        if not os.environ.get('ZATO_TEST_SCHEDULER'):
+            return
+
         # Messages without subscribers will be eligible for deletion from topics after that many seconds
         limit_retention = 1
 
@@ -461,6 +482,9 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 # ################################################################################################################################
 
     def test_cleanup_messages_already_expired(self) -> 'None':
+
+        if not os.environ.get('ZATO_TEST_SCHEDULER'):
+            return
 
         # Messages will be considered expired after that many seconds
         limit_message_expiry = 1
