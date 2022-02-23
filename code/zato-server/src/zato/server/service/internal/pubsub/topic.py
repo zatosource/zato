@@ -361,9 +361,9 @@ class Get(AdminService):
     """
     class SimpleIO:
         input_optional = 'cluster_id', AsIs('id'), 'name'
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd', \
-            'current_depth_gd', Int('limit_retention'), Int('limit_message_expiry'), Int('limit_sub_inactivity')
-        output_optional = 'last_pub_time', 'on_no_subs_pub'
+        output_optional = 'id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd', \
+            'current_depth_gd', Int('limit_retention'), Int('limit_message_expiry'), Int('limit_sub_inactivity'), \
+                'last_pub_time', 'on_no_subs_pub'
 
     def handle(self):
 
