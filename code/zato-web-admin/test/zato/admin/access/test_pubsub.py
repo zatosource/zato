@@ -22,6 +22,13 @@ class PubSubTestCase(BaseTestCase):
 # ################################################################################################################################
 
     def test_publish_gd(self):
+
+        # stdlib
+        import os
+
+        if not os.environ.get('ZATO_TEST_DASHBOARD'):
+            return
+
         self.client.get(self.config.web_admin_address + '/zato/pubsub/topic')
 
 # ################################################################################################################################

@@ -5,7 +5,7 @@ MAKEFLAGS += --silent
 PY_DIR=$(CURDIR)/../bin
 
 run-tests:
-	echo "Running unit-tests in zato-server"
+	echo "Running tests in zato-server"
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/file_transfer/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/apispec/test_*.py -s
 	$(PY_DIR)/py        $(CURDIR)/test/zato/commands_/test_*.py
