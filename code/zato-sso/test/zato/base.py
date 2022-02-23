@@ -59,6 +59,14 @@ class BaseTest(RESTClientTestCase):
 # ################################################################################################################################
 
     def setUp(self):
+
+        # stdlib
+        import os
+
+        if not os.environ.get('ZATO_TEST_SSO'):
+            self.ctx = None
+            return
+
         try:
 
             # Create the test user if the account does not already exist ..
@@ -94,7 +102,8 @@ class BaseTest(RESTClientTestCase):
 # ################################################################################################################################
 
     def tearDown(self):
-        self.ctx.reset()
+        if self.ctx:
+            self.ctx.reset()
 
 # ################################################################################################################################
 

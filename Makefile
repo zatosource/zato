@@ -80,7 +80,6 @@ run-tests:
 	$(MAKE) server-tests
 	$(MAKE) cli-tests
 	$(MAKE) scheduler-tests
-	$(MAKE) sso-tests
 	$(MAKE) web-admin-tests
 	$(MAKE) cy-tests
 	@if [ "$(ZATO_TEST_SSO)" = "true" ]; then $(MAKE) sso-tests; fi
