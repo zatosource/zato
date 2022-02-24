@@ -27,6 +27,7 @@ class Wait(ZatoCommand):
         {'name':'--url-path', 'help':'URL path of an endpoint to invoke', 'default':'/zato/ping'},
         {'name':'--timeout', 'help':'How many seconds to wait for the server', 'default':'60'},
         {'name':'--interval', 'help':'How often to check if the server is up, in seconds', 'default':'0.1'},
+        {'name':'--silent', 'help':'Whether to log details of connection attempts', 'default':False},
     ]
 
     def execute(self, args:'Namespace', needs_sys_exit:'bool'=True) -> 'intnone':
@@ -57,8 +58,15 @@ class Wait(ZatoCommand):
         else:
             address = args.address # type: str
 
+        # Check whether we should log progress
+        silent = getattr(args, 'silent', False)
+        if silent:
+            needs_log = False
+        else:
+            needs_log = True
+
         # We can now wait for the server to respond
-        is_success = wait_for_zato(address, args.url_path, int(args.timeout), float(args.interval))
+        is_success = wait_for_zato(address, args.url_path, int(args.timeout), float(args.interval), needs_log=needs_log)
 
         if not is_success:
             if needs_sys_exit:
