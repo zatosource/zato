@@ -10,17 +10,20 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from json import dumps
 import select
 import sys
+import platform
 
+isLinux = "linux" in platform.system().lower()
 # sh
-import sh
-from sh import CommandNotFound
+if isLinux:
+    import sh
+    from sh import CommandNotFound
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-if 0:
-    from sh import RunningCommand
-    from zato.common.typing_ import any_, anydict, anylist
+if isLinux:
+    if 0:
+        from sh import RunningCommand
+from zato.common.typing_ import any_, anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
