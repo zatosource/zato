@@ -1851,7 +1851,7 @@ def slugify(value, allow_unicode=False):
 
 # ################################################################################################################################
 
-def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, *args, **kwargs):
+def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, needs_log=True, *args, **kwargs):
     # type: (object, int, float, *object, **object) -> bool
 
     # Try out first, perhaps it already fulfilled
@@ -1867,12 +1867,12 @@ def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, 
         start = datetime.utcnow()
         wait_until = start + timedelta(seconds=timeout)
 
-        if log_msg_details:
+        if needs_log and log_msg_details:
             logger.info('Waiting for %s (#%s)', log_msg_details, loop_idx)
 
         while not is_fulfilled:
             gevent_sleep(interval)
-            if log_msg_details:
+            if needs_log and log_msg_details:
                 logger.info('Waiting for %s (#%s)', log_msg_details, loop_idx)
             is_fulfilled = predicate_func(*args, **kwargs)
             if datetime.utcnow() > wait_until:
