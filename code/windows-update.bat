@@ -17,7 +17,7 @@ python %curdir%\util\post_install.py update_paths
 %curdir%\Scripts\python -m pip install -U --upgrade pip
 
 echo Updating environment in %curdir%
-%curdir%\Scripts\python %curdir%\util\environment.py update
+%curdir%\Scripts\python %curdir%\util\zato_environment.py update
 
 echo Installation updated
 %curdir%\windows-bin\zato --version
