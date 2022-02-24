@@ -27,7 +27,7 @@ class Wait(ZatoCommand):
         {'name':'--url-path', 'help':'URL path of an endpoint to invoke', 'default':'/zato/ping'},
         {'name':'--timeout', 'help':'How many seconds to wait for the server', 'default':'60'},
         {'name':'--interval', 'help':'How often to check if the server is up, in seconds', 'default':'0.1'},
-        {'name':'--silent', 'help':'Whether to log details of connection attempts', 'default':False},
+        {'name':'--silent', 'help':'Whether to log details of connection attempts', 'action':'store_true'},
     ]
 
     def execute(self, args:'Namespace', needs_sys_exit:'bool'=True) -> 'intnone':
