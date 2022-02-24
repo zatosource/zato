@@ -123,7 +123,8 @@ def wait_for_zato(address, url_path, timeout=60, interval=0.1, needs_log=True):
         try:
             requests_get(url, timeout=interval)
         except Exception as e:
-            logger.warning('Waiting for `%s` (%s)', url, e)
+            if needs_log:
+                logger.warning('Waiting for `%s` (%s)', url, e)
         else:
             return True
 
