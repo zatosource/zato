@@ -106,7 +106,7 @@ def _wait_for_port(port, timeout, interval, needs_taken):
 
 # ################################################################################################################################
 
-def wait_for_zato(address, url_path, timeout=60, interval=0.1):
+def wait_for_zato(address, url_path, timeout=60, interval=0.1, needs_log=True):
     """ Waits until a Zato server responds.
     """
 
@@ -127,14 +127,14 @@ def wait_for_zato(address, url_path, timeout=60, interval=0.1):
         else:
             return True
 
-    return wait_for_predicate(_predicate_zato_ping, timeout, interval, address)
+    return wait_for_predicate(_predicate_zato_ping, timeout, interval, address, needs_log=needs_log)
 
 # ################################################################################################################################
 
-def wait_for_zato_ping(address, timeout=60, interval=0.1):
+def wait_for_zato_ping(address, timeout=60, interval=0.1, needs_log=True):
     """ Waits for timeout seconds until address replies to a request sent to /zato/ping.
     """
-    wait_for_zato(address, '/zato/ping', timeout, interval)
+    wait_for_zato(address, '/zato/ping', timeout, interval, needs_log)
 
 # ################################################################################################################################
 
