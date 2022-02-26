@@ -1001,11 +1001,11 @@ class WebSocket(_WebSocket):
             service_response = self.invoke_service(self.config.service_name, msg.data, cid=cid)
         except Exception as e:
 
-            # This goes to WSX logs, without a full traceback
+            # This goes to WSX logs, with a full traceback
             logger.warning('Service `%s` could not be invoked, id:`%s` cid:`%s`, conn:`%s`, e:`%s`',
-                self.config.service_name, msg.id, cid, self.peer_conn_info_pretty, e)
+                self.config.service_name, msg.id, cid, self.peer_conn_info_pretty, format_exc())
 
-            # This goes to server.log and has a full traceback
+            # This goes to server.log and has only an error message
             logger_zato.warning('Service `%s` could not be invoked, id:`%s` cid:`%s`, conn:`%s`, e:`%s`',
                 self.config.service_name, msg.id, cid, self.peer_conn_info_pretty, e)
 
