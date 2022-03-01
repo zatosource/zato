@@ -93,13 +93,16 @@ class _Client(Client):
         return _from_vault('auth_token', response, 'data', 'id', False)
 
     def _auth_username_password(self, username, password, mount_point='userpass', _from_vault=VaultResponse.from_vault):
-        return _from_vault('auth_userpass', self.auth_userpass(username, password, mount_point, use_token=False))
+        login_response = self.auth_userpass(username, password, mount_point, use_token=False)
+        return _from_vault('auth_userpass', login_response)
 
     def _auth_github(self, gh_token, _from_vault=VaultResponse.from_vault):
-        return _from_vault('auth_github', self.auth_github(gh_token, use_token=False))
+        login_response = self.auth_github(gh_token, use_token=False)
+        return _from_vault('auth_github', login_response)
 
     def renew(self, client_token, _from_vault=VaultResponse.from_vault):
-        return _from_vault('renew', self.renew_token(client_token))
+        login_response = self.renew_token(client_token)
+        return _from_vault('renew', login_response)
 
     def authenticate(self, auth_method, *credentials):
         return self._auth_func[auth_method](*credentials)
