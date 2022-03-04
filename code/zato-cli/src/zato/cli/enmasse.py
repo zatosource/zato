@@ -1563,7 +1563,7 @@ class Enmasse(ManageCommand):
             sys.exit(self.SYS_ERROR.CONFLICTING_OPTIONS)
 
         if args.export_local or has_import:
-            self.load_input()
+            self.load_input(input_path)
 
         # 3)
         if args.export_local and args.export_odb:
