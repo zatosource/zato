@@ -1501,11 +1501,14 @@ class Enmasse(ManageCommand):
         self.args = args
         self.curdir = os.path.abspath(self.original_dir)
         self.json = {}
+        has_import = getattr(args, 'import')
 
-        input_path = os.path.join(self.curdir, self.args.input)
-        if not os.path.exists(input_path):
-            if self.args.exit_on_missing_file:
-                sys.exit()
+        if args.export_local or has_import:
+            args_input = self.args.input or ''
+            input_path = os.path.join(self.curdir, args_input)
+            if not os.path.exists(input_path):
+                if self.args.exit_on_missing_file:
+                    sys.exit()
 
         #: The output serialization format. Not used for input.
         self.codec = self.CODEC_BY_EXTENSION[args.dump_format]()
@@ -1538,7 +1541,6 @@ class Enmasse(ManageCommand):
         self.client.invoke('zato.ping')
         populate_services_from_apispec(self.client, self.logger)
 
-        has_import = getattr(args, 'import')
         if True not in (args.export_local, args.export_odb, args.clean_odb, has_import):
             self.logger.error('At least one of --clean, --export-local, --export-odb or --import is required, stopping now')
             sys.exit(self.SYS_ERROR.NO_OPTIONS)
