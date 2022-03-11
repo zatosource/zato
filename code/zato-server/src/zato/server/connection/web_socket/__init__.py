@@ -34,6 +34,7 @@ streaming.Utf8Validator = _UTF8Validator
 # stdlib
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses, UNPROCESSABLE_ENTITY
+from json import loads as stdlib_loads
 from logging import DEBUG, getLogger
 from threading import current_thread
 from traceback import format_exc
@@ -1297,7 +1298,7 @@ class WebSocket(_WebSocket):
         # of an error or if it is not a string.
         if isinstance(request, basestring):
             try:
-                request = self._json_parser.parse(request)
+                request = stdlib_loads(request)
             except ValueError:
                 pass
 
