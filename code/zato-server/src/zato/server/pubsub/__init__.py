@@ -2223,7 +2223,7 @@ class PubSub:
         # Actual resume subscription
         _ = self.invoke_service('zato.pubsub.resume-wsx-subscription', {
             'sql_ws_client_id': wsx_environ['sql_ws_client_id'],
-            'channel_name': wsx_environ['ws_channel_config']['name'],
+            'channel_name': wsx_environ['ws_channel_config'].name,
             'pub_client_id': wsx_environ['pub_client_id'],
             'web_socket': wsx,
             'sub_key': sub_key
