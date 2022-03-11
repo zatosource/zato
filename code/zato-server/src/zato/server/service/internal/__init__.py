@@ -95,6 +95,9 @@ class AdminService(Service):
 
         if self.server.is_admin_enabled_for_info:
 
+            # gevent
+            from gevent.thread import LockType
+
             # Prefer that first because it may be a generic connection
             # in which case we want to access its opaque attributes
             # that are not available through self.request.input.
@@ -105,7 +108,11 @@ class AdminService(Service):
             except Exception:
                 data = self.request.input
             finally:
-                data = deepcopy(data)
+                to_copy = {}
+                for k, v in data.items():
+                    if not isinstance(v, LockType):
+                        to_copy[k] = v
+                data = deepcopy(to_copy)
 
             for k, v in data.items():
                 v = replace_private_key(v)
