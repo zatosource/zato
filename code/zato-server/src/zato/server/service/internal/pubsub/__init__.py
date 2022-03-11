@@ -293,7 +293,7 @@ class ResumeWSXSubscription(AdminService):
 
                         # .. add relevant SQL objects ..
                         self.pubsub.add_wsx_client_pubsub_keys(session, environ['sql_ws_client_id'], sub_key,
-                            environ['ws_channel_config']['name'], environ['pub_client_id'],
+                            environ['ws_channel_config'].name, environ['pub_client_id'],
                                 environ['web_socket'].get_peer_info_dict())
 
                         # .. update state of that WebSocket's pubsub tool that keeps track of message delivery
@@ -325,6 +325,7 @@ class ResumeWSXSubscription(AdminService):
         out = dict.fromkeys(sub_key_list, [])
 
         for messages in messages_list: # type: dict
+            messages = messages['response']
             for sub_key, sub_key_data in messages.items():
                 for msg in sub_key_data.values():
                     out[sub_key].append(msg)
