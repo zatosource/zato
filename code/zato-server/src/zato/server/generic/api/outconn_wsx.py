@@ -217,7 +217,7 @@ class ZatoWSXClient(_BaseWSXClient):
     def run_forever(self) -> 'None':
 
         # This will establish an outgoing connection to the remote WSX server.
-        # However, this will be still a connection on the level TCP / WSX,
+        # However, this will be still a connection on the level of TCP / WSX,
         # which means that we still need to wait before we can invoke
         # the server with our list of subscriptions below.
         self._zato_client.run()
