@@ -1446,6 +1446,7 @@ class Enmasse(ManageCommand):
         {'name':'--clean-odb', 'help':'Delete all ODB definitions before proceeding', 'action':'store_true'},
         {'name':'--dump-format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
         {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to file', 'action':'store_true'},
+        {'name':'--exit-on-missing-file', 'help':'If input file exists, exit with status code 0', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Force replacing objects already existing in ODB during import', 'action':'store_true'},
         {'name':'--input', 'help':'Path to input file with objects to import'},
         {'name':'--rbac-sleep', 'help':'How many seconds to sleep for after creating an RBAC object', 'default':'1'},
@@ -1460,10 +1461,10 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def load_input(self):
+    def load_input(self, input_path):
 
         # stdlib
-        import os, sys
+        import sys
 
         _, _, ext = self.args.input.rpartition('.')
         codec_class = self.CODEC_BY_EXTENSION.get(ext.lower())
@@ -1472,8 +1473,7 @@ class Enmasse(ManageCommand):
             self.logger.error('Unrecognized file extension "{}": must be one of {}'.format(ext.lower(), exts))
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
 
-        path = os.path.join(self.curdir, self.args.input)
-        parser = InputParser(path, self.logger, codec_class())
+        parser = InputParser(input_path, self.logger, codec_class())
         results = parser.parse()
         if not results.ok:
             self.logger.error('JSON parsing failed')
@@ -1501,6 +1501,14 @@ class Enmasse(ManageCommand):
         self.args = args
         self.curdir = os.path.abspath(self.original_dir)
         self.json = {}
+        has_import = getattr(args, 'import')
+
+        if args.export_local or has_import:
+            args_input = self.args.input or ''
+            input_path = os.path.join(self.curdir, args_input)
+            if not os.path.exists(input_path):
+                if self.args.exit_on_missing_file:
+                    sys.exit()
 
         #: The output serialization format. Not used for input.
         self.codec = self.CODEC_BY_EXTENSION[args.dump_format]()
@@ -1533,7 +1541,6 @@ class Enmasse(ManageCommand):
         self.client.invoke('zato.ping')
         populate_services_from_apispec(self.client, self.logger)
 
-        has_import = getattr(args, 'import')
         if True not in (args.export_local, args.export_odb, args.clean_odb, has_import):
             self.logger.error('At least one of --clean, --export-local, --export-odb or --import is required, stopping now')
             sys.exit(self.SYS_ERROR.NO_OPTIONS)
@@ -1558,7 +1565,7 @@ class Enmasse(ManageCommand):
             sys.exit(self.SYS_ERROR.CONFLICTING_OPTIONS)
 
         if args.export_local or has_import:
-            self.load_input()
+            self.load_input(input_path)
 
         # 3)
         if args.export_local and args.export_odb:
