@@ -216,19 +216,22 @@ class ZatoWSXClient(_BaseWSXClient):
 
     def run_forever(self) -> 'None':
 
-        # This will establish an outgoing connection to the remote WSX server.
-        # However, this will be still a connection on the level of TCP / WSX,
-        # which means that we still need to wait before we can invoke
-        # the server with our list of subscriptions below.
-        self._zato_client.run()
+        try:
+            # This will establish an outgoing connection to the remote WSX server.
+            # However, this will be still a connection on the level of TCP / WSX,
+            # which means that we still need to wait before we can invoke
+            # the server with our list of subscriptions below.
+            self._zato_client.run()
 
-        # Wait until the client is fully ready
-        while not self._zato_client.is_authenticated:
-            sleep(0.1)
+            # Wait until the client is fully ready
+            while not self._zato_client.is_authenticated:
+                sleep(0.1)
 
-        # Now we know that we can try to subscribe to pub/sub topics
-        # and we will not be rejected based on the fact that we are not logged in.
-        self.subscribe_to_topics()
+            # Now we know that we can try to subscribe to pub/sub topics
+            # and we will not be rejected based on the fact that we are not logged in.
+            self.subscribe_to_topics()
+        except Exception:
+            logger.warn('Exception in run_forever -> %s', format_exc())
 
 # ################################################################################################################################
 # ################################################################################################################################
