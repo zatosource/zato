@@ -67,7 +67,10 @@ class CreateChannel(ServerAwareCommand):
         ping_missed_threshold = getattr(args, 'ping_missed_threshold', None) or Config.PingMissedThreshold
         token_ttl = getattr(args, 'token_ttl', None) or Config.TokenTTL
         new_token_wait_time = getattr(args, 'new_token_wait_time', None) or Config.NewTokenWaitTime
+
         is_active = getattr(args, 'is_active', True)
+        if is_active is None:
+            is_active = True
 
         # Assign default values if required
         ping_interval = ping_interval or Config.PingInterval
@@ -100,6 +103,10 @@ class CreateChannel(ServerAwareCommand):
             'ping_interval': ping_interval,
             'ping_missed_threshold': ping_missed_threshold,
         }
+
+        f = open('/tmp/zxc.txt', 'w')
+        f.write(str(request))
+        f.close()
 
         self._invoke_service_and_log_response(service, request)
 
@@ -224,7 +231,7 @@ if __name__ == '__main__':
     args.sub_list = 'zato.ping, zato.ping2'
     args.path = environ['ZATO_SERVER_BASE_DIR']
 
-    command = CreateOutconn(args)
+    command = CreateChannel(args)
     command.run(args)
 
 # ################################################################################################################################
