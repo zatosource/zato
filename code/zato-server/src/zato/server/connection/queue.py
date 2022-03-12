@@ -89,6 +89,7 @@ class ConnectionQueue:
     conn_type: 'str'
     address: 'str'
     add_client_func: 'callable_'
+    needs_spawn: 'bool'
     keep_connecting: 'bool' = True
     is_building_conn_queue: 'bool' = False
     queue_building_stopped: 'bool' = False
@@ -105,7 +106,8 @@ class ConnectionQueue:
         conn_name:'str',
         conn_type:'str',
         address:'str',
-        add_client_func:'callable_'
+        add_client_func:'callable_',
+        needs_spawn:'bool'=True
     ) -> 'None':
 
         self.queue = Queue(pool_size)
@@ -115,6 +117,7 @@ class ConnectionQueue:
         self.conn_type = conn_type
         self.address = address
         self.add_client_func = add_client_func
+        self.needs_spawn = needs_spawn
         self.lock = RLock()
 
         # We are ready now
@@ -197,7 +200,10 @@ class ConnectionQueue:
 
     def _spawn_add_client_func_no_lock(self, count:'int') -> 'None':
         for _x in range(count):
-            _ = gevent.spawn(self.add_client_func)
+            if self.needs_spawn:
+                _ = gevent.spawn(self.add_client_func)
+            else:
+                self.add_client_func()
             self.in_progress_count += 1
 
 # ################################################################################################################################
@@ -246,7 +252,8 @@ class Wrapper:
             self.config['name'],
             self.conn_type,
             self.config['auth_url'],
-            self.add_client
+            self.add_client,
+            self.config.get('needs_spawn', True)
         )
 
         self.delete_requested = False
