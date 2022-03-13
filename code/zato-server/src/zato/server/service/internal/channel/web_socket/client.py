@@ -84,8 +84,9 @@ class DeleteByPubId(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             client = web_socket_client_by_pub_id(session, self.request.input.pub_client_id)
-            session.execute(_wsx_client_table.delete().where(_wsx_client_table.c.id==client.id))
-            session.commit()
+            if client:
+                session.execute(_wsx_client_table.delete().where(_wsx_client_table.c.id==client.id))
+                session.commit()
 
 # ################################################################################################################################
 
