@@ -45,7 +45,7 @@ class CreateChannel(ServerAwareCommand):
         {'name':'--is-active', 'help':'Should the channel be active upon creation', 'required':False},
         {'name':'--service', 'help':'Service reacting to requests sent to the channel', 'required':False,
             'default':Config.ServiceName},
-        {'name':'--security', 'help':'Service reacting to requests sent to the channel', 'required':False},
+        {'name':'--security', 'help':'Name of the security definition assigned to the channel', 'required':False},
         {'name':'--new-token-wait-time', 'help':'How many seconds to wait for new tokens from clients', 'required':False,
             'default':Config.NewTokenWaitTime},
         {'name':'--token-ttl', 'help':'For how many seconds a token is considered valid', 'required':False,
@@ -103,10 +103,6 @@ class CreateChannel(ServerAwareCommand):
             'ping_interval': ping_interval,
             'ping_missed_threshold': ping_missed_threshold,
         }
-
-        f = open('/tmp/zxc.txt', 'w')
-        f.write(str(request))
-        f.close()
 
         self._invoke_service_and_log_response(service, request)
 
