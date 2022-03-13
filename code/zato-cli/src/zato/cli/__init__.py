@@ -1019,7 +1019,7 @@ class ServerAwareCommand(ZatoCommand):
 
         # We enter here if there was an invocation error
         else:
-            data = response.details
+            data = response.details or '{}'
             data = loads(data)
 
         # .. at this point, we are ready to serialize the data to JSON
