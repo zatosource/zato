@@ -296,19 +296,19 @@ class OutconnWSXWrapper(Wrapper):
     def _resolve_config_ids(self, config:'stranydict', server:'ParallelServer') -> 'None':
 
         if config.get('on_connect_service_id'):
-            config['on_connect_service_name'] = server.service_store.get_service_name_by_id(config['on_connect_service_id'])
+            config['on_connect_service_name'] = server.api_service_store_get_service_name_by_id(config['on_connect_service_id'])
 
         if config.get('on_message_service_id'):
-            config['on_message_service_name'] = server.service_store.get_service_name_by_id(config['on_message_service_id'])
+            config['on_message_service_name'] = server.api_service_store_get_service_name_by_id(config['on_message_service_id'])
 
         if config.get('on_close_service_id'):
-            config['on_close_service_name'] = server.service_store.get_service_name_by_id(config['on_close_service_id'])
+            config['on_close_service_name'] = server.api_service_store_get_service_name_by_id(config['on_close_service_id'])
 
         if config.get('security_def'):
             if config['security_def'] != ZATO_NONE:
                 _ignored_sec_type, sec_def_id = config['security_def'].split('/')
                 sec_def_id = int(sec_def_id)
-                sec_def_config = server.worker_store.basic_auth_get_by_id(sec_def_id)
+                sec_def_config = server.api_worker_store_basic_auth_get_by_id(sec_def_id)
 
                 config['username'] = sec_def_config['username']
                 config['secret'] = sec_def_config['password']
@@ -368,7 +368,7 @@ class OutconnWSXWrapper(Wrapper):
                 logger.info('WebSocket `%s` will reconnect to `%s` (hac:%d)',
                     self.config['name'], self.config['address'], self.config['has_auto_reconnect'])
                 try:
-                    self.server.worker_store.reconnect_generic(self.config['id'])
+                    self.server.api_worker_store_reconnect_generic(self.config['id'])
                 except Exception:
                     logger.warning('Could not reconnect WebSocket `%s` to `%s`, e:`%s`',
                         self.config['name'], self.config['address'], format_exc())
