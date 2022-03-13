@@ -19,10 +19,19 @@ if 0:
 class WSXChannelManager:
 
     test_case: 'CommandLineTestCase'
+    username: 'str'
+    password: 'str'
     channel_id: 'str'
 
-    def __init__(self, test_case:'CommandLineTestCase') -> 'None':
+    def __init__(
+        self,
+        test_case:'CommandLineTestCase',
+        username:'str' = '',
+        password:'str' = ''
+    ) -> 'None':
         self.test_case = test_case
+        self.username = username
+        self.password = password
         self.channel_id = ''
 
     def __enter__(self):

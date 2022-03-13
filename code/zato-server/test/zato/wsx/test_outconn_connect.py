@@ -22,6 +22,7 @@ from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import stranydict
     from zato.server.generic.api.outconn_wsx import _ZatoWSXClientImpl
 
 # ################################################################################################################################
@@ -31,23 +32,36 @@ class WSXOutconnConnectTestCase(CommandLineTestCase):
 
 # ################################################################################################################################
 
-    def test_connect_ok_no_credentials(self) -> 'None':
+    def _get_config(
+        self,
+        wsx_channel_address:'str',
+        username:'str' = '',
+        secret:'str' = '',
+    ) -> 'stranydict':
+
+        config = {}
+        config['name'] = 'test_connect_ok'
+        config['username'] = username
+        config['secret'] = secret
+        config['pool_size'] = 1
+        config['is_zato'] = True
+        config['is_active'] = True
+        config['needs_spawn'] = False
+        config['queue_build_cap'] = 30
+        config['subscription_list'] = ''
+        config['has_auto_reconnect'] = False
+
+        config['auth_url'] = config['address'] = wsx_channel_address
+
+        return config
+
+# ################################################################################################################################
+
+    def xtest_connect_ok_no_credentials_needed(self) -> 'None':
 
         with WSXChannelManager(self) as wsx_channel_address:
 
-            # A configuration dict for the outconn wrapper
-            config = {}
-            config['name'] = 'test_connect_ok'
-            config['username'] = ''
-            config['secret'] = ''
-            config['auth_url'] = config['address'] = wsx_channel_address
-            config['pool_size'] = 1
-            config['is_zato'] = True
-            config['is_active'] = True
-            config['needs_spawn'] = False
-            config['queue_build_cap'] = 30
-            config['subscription_list'] = ''
-            config['has_auto_reconnect'] = False
+            config = self._get_config(wsx_channel_address)
 
             wrapper = OutconnWSXWrapper(config, None)
             wrapper.build_queue()
@@ -67,6 +81,20 @@ class WSXOutconnConnectTestCase(CommandLineTestCase):
 
             self.assertFalse(zato_client.needs_auth)
             self.assertFalse(zato_client.is_auth_needed)
+
+# ################################################################################################################################
+
+    def test_connect_ok_credentials_needed(self) -> 'None':
+
+        # username = 'my.username'
+        # password = 'my.password'
+
+        with WSXChannelManager(self) as wsx_channel_address:
+
+            config = self._get_config(wsx_channel_address)
+
+            wrapper = OutconnWSXWrapper(config, None)
+            wrapper.build_queue()
 
 # ################################################################################################################################
 # ################################################################################################################################

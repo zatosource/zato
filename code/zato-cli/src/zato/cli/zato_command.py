@@ -95,6 +95,7 @@ class CommandStore:
         # Zato
         from zato.cli import \
              apispec             as apispec_mod,             \
+             basic_auth          as basic_auth_mod,          \
              ca_create_ca        as ca_create_ca_mod,        \
              ca_create_lb_agent  as ca_create_lb_agent_mod,  \
              ca_create_scheduler as ca_create_scheduler_mod, \
@@ -228,6 +229,11 @@ class CommandStore:
         create = subs.add_parser('create', description='Creates new Zato components')
         create_subs = create.add_subparsers()
 
+        create_basic_auth = create_subs.add_parser(
+            'basic-auth', description=basic_auth_mod.CreateDefinition.__doc__, parents=[base_parser])
+        create_basic_auth.set_defaults(command='create_basic_auth')
+        self.add_opts(create_basic_auth, basic_auth_mod.CreateDefinition.opts)
+
         create_cluster = create_subs.add_parser(
             'cluster', description=create_cluster_mod.Create.__doc__, parents=[base_parser])
         create_cluster.set_defaults(command='create_cluster')
@@ -291,8 +297,15 @@ class CommandStore:
         #
         delete = subs.add_parser('delete', description=delete_odb_mod.Delete.__doc__)
         delete_subs = delete.add_subparsers()
+
+        delete_basic_auth = delete_subs.add_parser('basic-auth', description='Deletes a Basic Auth definition',
+            parents=[base_parser])
+        delete_basic_auth.set_defaults(command='delete_basic_auth')
+        self.add_opts(delete_basic_auth, basic_auth_mod.DeleteDefinition.opts)
+
         delete_odb = delete_subs.add_parser('odb', description='Deletes a Zato ODB', parents=[base_parser])
         delete_odb.set_defaults(command='delete_odb')
+
         self.add_opts(delete_odb, delete_odb_mod.Delete.opts)
 
         #
