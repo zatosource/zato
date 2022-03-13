@@ -41,9 +41,12 @@ class WSXOutconnConnectTestCase(CommandLineTestCase):
             config['needs_spawn'] = False
             config['queue_build_cap'] = 30
             config['subscription_list'] = ''
+            config['has_auto_reconnect'] = False
 
             wrapper = OutconnWSXWrapper(config, None)
             wrapper.build_queue()
+
+            pass
 
 # ################################################################################################################################
 # ################################################################################################################################
