@@ -350,7 +350,7 @@ class Client:
         self.is_authenticated = False
         self.is_connected = False
         self.is_auth_needed = bool(self.config.username)
-        self.auth_token = None
+        self.auth_token = ''
         self.on_request_callback = self.config.on_request_callback
         self.on_closed_callback = self.config.on_closed_callback
         self.needs_auth = bool(self.config.username)
