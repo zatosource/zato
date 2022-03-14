@@ -998,7 +998,13 @@ class ServerAwareCommand(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _invoke_service_and_log_response(self, service:'str', request:'anydict', hook_func:'callnone'=None) -> 'None':
+    def _invoke_service_and_log_response(
+        self,
+        service:'str',
+        request:'anydict',
+        hook_func:'callnone'=None,
+        needs_stdout:'bool'=True
+    ) -> 'None':
 
         # stdlib
         import sys
@@ -1027,8 +1033,9 @@ class ServerAwareCommand(ZatoCommand):
         # .. at this point, we are ready to serialize the data to JSON
         data = dumps(data, indent=2)
 
-        # No matter what data we have, we can log it now
-        sys.stdout.write(data + '\n')
+        # No matter what data we have, we can log it now if we are told to do so.
+        if needs_stdout:
+            sys.stdout.write(data + '\n')
 
 # ################################################################################################################################
 # ################################################################################################################################

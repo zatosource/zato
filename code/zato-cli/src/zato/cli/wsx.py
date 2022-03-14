@@ -135,6 +135,7 @@ class DeleteChannel(ServerAwareCommand):
         request = {
             'id': id,
             'name': name,
+            'should_raise_if_missing': False
         }
 
         self._invoke_service_and_log_response(service, request)
