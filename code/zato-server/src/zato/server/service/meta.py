@@ -463,7 +463,7 @@ class DeleteMeta(AdminServiceMeta):
             attrs=attrs,
             name=name,
             input_required=[],
-            input_optional=['id', 'name'],
+            input_optional=['id', 'name', 'should_raise_if_missing'],
             output_required=[]
         )
         cls.handle = DeleteMeta.handle(attrs)
@@ -503,7 +503,7 @@ class DeleteMeta(AdminServiceMeta):
                     # That other one will be always deleted but enmasse will not know it
                     # so it will try to delete it too, which will fail. This happens, for instance,
                     # when a WebSocket channel is deleted - it may cascade to a pub/sub endpoint
-                    # but enmasse does not know, hence delete_require_instance is True in pubsub_endpoint's endpoint.py.
+                    # but enmasse does not know about, hence delete_require_instance is True in pubsub_endpoint's endpoint.py.
                     if not instance:
                         if attrs.delete_require_instance:
                             if input_id:
@@ -512,8 +512,15 @@ class DeleteMeta(AdminServiceMeta):
                             else:
                                 attr_name = 'name'
                                 attr_value = input_name
-                            raise BadRequest(self.cid, 'Could not find {} instance with {} `{}`'.format(
-                                attrs.label, attr_name, attr_value))
+
+                            # We may have a test case that deletes a Basic Auth definition before it tries
+                            # to delete a WebSocket channel related to it. In such circumstances, this flag
+                            # will be set to False to ensure that no unneeded exception will be raised.
+                            if input.get('should_raise_if_missing', True):
+                                raise BadRequest(self.cid, 'Could not find {} instance with {} `{}`'.format(
+                                    attrs.label, attr_name, attr_value))
+                            else:
+                                return
                         else:
                             return
 
