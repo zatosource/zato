@@ -189,6 +189,11 @@ class ZatoWSXClient(_BaseWSXClient):
 
 # ################################################################################################################################
 
+    def should_keep_running(self):
+        return self._zato_client.keep_running
+
+# ################################################################################################################################
+
     def invoke_subscribe_service(self, topic_name:'str') -> 'None':
         return self.invoke({
             'service':'zato.pubsub.pubapi.subscribe-wsx',
@@ -225,11 +230,19 @@ class ZatoWSXClient(_BaseWSXClient):
 
             # Wait until the client is fully ready
             while not self._zato_client.is_authenticated:
+
+                # Sleep for a moment ..
                 sleep(0.1)
 
-            # Now we know that we can try to subscribe to pub/sub topics
+                # .. and do not loop anymore if we are not to keep running.
+                if not self.should_keep_running():
+                    return
+
+            # If we are here, it means that we are both connected and authenticated,
+            # so  we know that we can try to subscribe to pub/sub topics
             # and we will not be rejected based on the fact that we are not logged in.
             self.subscribe_to_topics()
+
         except Exception:
             logger.warn('Exception in run_forever -> %s', format_exc())
 
