@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -14,6 +12,7 @@ from base64 import b64encode
 from operator import itemgetter
 from threading import RLock
 from traceback import format_exc
+from uuid import uuid4
 
 # Python 2/3 compatibility
 from future.utils import iteritems, iterkeys, itervalues
@@ -204,8 +203,8 @@ class URLData(CyURLData, OAuthDataStore):
             auth_func = self._handle_security_basic_auth
             get_func = self.basic_auth_get
 
-            username = auth['username']
-            secret = auth['secret']
+            username = auth['username'] or 'url_data.wsx.invalid.username'
+            secret = auth['secret'] or 'url_data.wsx.invalid.password.{}'.format(uuid4().hex)
 
             username = username if isinstance(username, unicode) else username.decode('utf8')
             secret = secret if isinstance(secret, unicode) else secret.decode('utf8')

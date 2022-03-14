@@ -55,11 +55,11 @@ class CreateDefinition(ServerAwareCommand):
         if is_active is None:
             is_active = True
 
-        # API service to invoke
-        service = 'zato.security.basic-auth.create'
+        # API service to invoke to create a new definition
+        create_service = 'zato.security.basic-auth.create'
 
-        # API request to send
-        request = {
+        # API request to send to create a new definition
+        create_request = {
             'name': name,
             'realm': realm,
             'username': username,
@@ -67,7 +67,21 @@ class CreateDefinition(ServerAwareCommand):
             'is_active': is_active,
         }
 
-        self._invoke_service_and_log_response(service, request)
+        # This will create a new definition and, in the next step, we will change its password.
+        self._invoke_service_and_log_response(create_service, create_request)
+
+        # API service to invoke to create a new definition
+        change_password_service = 'zato.security.basic-auth.change-password'
+
+        # API request to send to create a new definition
+        change_password_request = {
+            'name': name,
+            'password1': password,
+            'password2': password,
+        }
+
+        # Change the newly created definition's password
+        self._invoke_service_and_log_response(change_password_service, change_password_request, needs_stdout=False)
 
 # ################################################################################################################################
 # ################################################################################################################################

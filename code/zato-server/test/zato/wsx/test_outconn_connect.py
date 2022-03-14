@@ -12,10 +12,12 @@ patch_all()
 
 # stdlib
 from unittest import main
+from uuid import uuid4
 
 # Zato
 from zato.common.test import CommandLineTestCase
 from zato.common.test.wsx_ import WSXChannelManager
+from zato.common.util.api import fs_safe_now
 from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 
 # ################################################################################################################################
@@ -86,15 +88,25 @@ class WSXOutconnConnectTestCase(CommandLineTestCase):
 
     def test_connect_ok_credentials_needed(self) -> 'None':
 
-        # username = 'my.username'
-        # password = 'my.password'
+        now = fs_safe_now()
 
-        with WSXChannelManager(self) as wsx_channel_address:
+        username = 'test.wsx.username.{}'.format(now)
+        password = 'test.wsx.password.{}.{}'.format(now, uuid4().hex)
 
-            config = self._get_config(wsx_channel_address)
+        with WSXChannelManager(self, username, password, needs_credentials=True) as ctx:
+
+            config = self._get_config(ctx.wsx_channel_address, username, password)
 
             wrapper = OutconnWSXWrapper(config, None)
             wrapper.build_queue()
+
+            outconn_wsx_queue = wrapper.client.queue.queue
+            self.assertEqual(len(outconn_wsx_queue), 1)
+
+            impl = outconn_wsx_queue[0].impl
+            zato_client = impl._zato_client # type: _ZatoWSXClientImpl
+
+            zato_client
 
 # ################################################################################################################################
 # ################################################################################################################################
