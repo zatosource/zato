@@ -437,7 +437,9 @@ class Client:
         response = self._wait_for_response(request_id)
 
         if not response:
-            self.logger.warning('No response to authentication request `%s`', request_id)
+            self.logger.warning('No response to authentication request `%s`; disconnecting client %s (%s %s)',
+                request_id, self.config.username, self.config.client_name, self.config.client_id)
+            self.keep_running = False
         else:
             self.auth_token = response.data['token']
             self.is_authenticated = True
@@ -542,6 +544,7 @@ class Client:
         # .. otherwise, if we are here, it means that we are connected,
         # .. although we may be still not authenticated as this step
         # .. is carried out by the on_connected_callback method.
+        pass
 
 # ################################################################################################################################
 
