@@ -59,30 +59,46 @@ class WSXOutconnConnectTestCase(CommandLineTestCase):
 
 # ################################################################################################################################
 
-    def xtest_connect_ok_no_credentials_needed(self) -> 'None':
+    def _assert_connected(
+        self,
+        wrapper:'OutconnWSXWrapper',
+        wsx_channel_address:'str',
+        needs_credentials:'bool'
+    ) -> 'None':
 
-        with WSXChannelManager(self) as wsx_channel_address:
+        outconn_wsx_queue = wrapper.client.queue.queue
+        self.assertEqual(len(outconn_wsx_queue), 1)
 
-            config = self._get_config(wsx_channel_address)
+        impl = outconn_wsx_queue[0].impl
+        zato_client = impl._zato_client # type: _ZatoWSXClientImpl
+
+        self.assertTrue(zato_client.auth_token.startswith('zwsxt'))
+        self.assertEqual(zato_client.config.address, wsx_channel_address)
+
+        self.assertTrue(zato_client.is_connected)
+        self.assertTrue(zato_client.is_authenticated)
+        self.assertTrue(zato_client.keep_running)
+
+        if needs_credentials:
+            self.assertTrue(zato_client.needs_auth)
+            self.assertTrue(zato_client.is_auth_needed)
+        else:
+            self.assertFalse(zato_client.needs_auth)
+            self.assertFalse(zato_client.is_auth_needed)
+
+# ################################################################################################################################
+
+    def test_connect_ok_no_credentials_needed(self) -> 'None':
+
+        with WSXChannelManager(self) as ctx:
+
+            config = self._get_config(ctx.wsx_channel_address)
 
             wrapper = OutconnWSXWrapper(config, None)
             wrapper.build_queue()
 
-            outconn_wsx_queue = wrapper.client.queue.queue
-            self.assertEqual(len(outconn_wsx_queue), 1)
-
-            impl = outconn_wsx_queue[0].impl
-            zato_client = impl._zato_client # type: _ZatoWSXClientImpl
-
-            self.assertTrue(zato_client.auth_token.startswith('zwsxt'))
-            self.assertEqual(zato_client.config.address, wsx_channel_address)
-
-            self.assertTrue(zato_client.is_connected)
-            self.assertTrue(zato_client.is_authenticated)
-            self.assertTrue(zato_client.keep_running)
-
-            self.assertFalse(zato_client.needs_auth)
-            self.assertFalse(zato_client.is_auth_needed)
+            # Confirm that the client is connected
+            self._assert_connected(wrapper, ctx.wsx_channel_address, False)
 
 # ################################################################################################################################
 
@@ -100,13 +116,8 @@ class WSXOutconnConnectTestCase(CommandLineTestCase):
             wrapper = OutconnWSXWrapper(config, None)
             wrapper.build_queue()
 
-            outconn_wsx_queue = wrapper.client.queue.queue
-            self.assertEqual(len(outconn_wsx_queue), 1)
-
-            impl = outconn_wsx_queue[0].impl
-            zato_client = impl._zato_client # type: _ZatoWSXClientImpl
-
-            zato_client
+            # Confirm that the client is connected
+            self._assert_connected(wrapper, ctx.wsx_channel_address, True)
 
 # ################################################################################################################################
 # ################################################################################################################################
