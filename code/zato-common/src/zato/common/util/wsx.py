@@ -8,13 +8,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from json import dumps
 from logging import getLogger
 from tempfile import gettempdir
 
 # Zato
 from zato.common.api import WEB_SOCKET
 from zato.common.util.file_system import fs_safe_name
-from zato.common.util.open_ import open_rw
+from zato.common.util.open_ import open_r, open_rw
 
 # ################################################################################################################################
 
@@ -28,6 +29,11 @@ msg_cleanup_error = 'WSX cleanup error, wcr:`%d`, si:`%s`, pci:`%s`, sk_list:`%s
 # ################################################################################################################################
 
 _on_disconnected = WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED
+
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, textio_
 
 # ################################################################################################################################
 
@@ -79,26 +85,44 @@ def cleanup_wsx_client(wsx_cleanup_required, service_invoker, pub_client_id, sub
 
 # ################################################################################################################################
 
-def get_ctx_file_path(ctx_container_name:'str'):
+class ContextHandler:
 
-    # Store context in a temporary directory ..
-    tmp_dir = gettempdir()
+    _file: 'textio_'
 
-    # .. under the same file as our channel's name ..
-    name_safe = fs_safe_name(ctx_container_name)
-    ctx_file_path = os.path.join(tmp_dir, 'zato-' + name_safe)
+    def __init__(self, *, ctx_container_name:'str', is_read_only:'bool') -> 'None':
 
-    return ctx_file_path
+        # Prepare metadata
+        self.ctx_container_name = ctx_container_name
+        self.is_read_only = is_read_only
+        self.open_func = open_r if self.is_read_only else open_rw
+        self.ctx_file_path = '<not-set-yet-ContextHandler-ctx_file_path>'
+
+        # And open the context file now either for reading or r/w
+        self.init()
 
 # ################################################################################################################################
 
-def get_ctx_file(ctx_container_name:'str'):
+    def init(self):
 
-    # Get the full path to the context file
-    ctx_file_path = get_ctx_file_path(ctx_container_name)
+        # Store context in a temporary directory ..
+        tmp_dir = gettempdir()
 
-    # .. create and return the file now.
-    return open_rw(ctx_file_path)
+        # .. under the same file as our channel's name ..
+        name_safe = fs_safe_name(self.ctx_container_name)
+        self.ctx_file_path = os.path.join(tmp_dir, 'zato-' + name_safe + '.txt')
+
+        # .. create and return the file now.
+        self._file = self.open_func(self.ctx_file_path)
+
+# ################################################################################################################################
+
+    def store(self, data:'any_') -> 'None':
+        if not isinstance(data, dict):
+            data = {'data':str(data)}
+        data = dumps(data)
+
+        self._file.write(f'{data}\n')
+        self._file.flush()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -66,7 +66,7 @@ from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.typing_ import cast_, dataclass
 from zato.common.util.api import new_cid
 from zato.common.util.hook import HookTool
-from zato.common.util.wsx import cleanup_wsx_client, get_ctx_file
+from zato.common.util.wsx import cleanup_wsx_client, ContextHandler
 from zato.common.vault_ import VAULT
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, InvokeClientRequest, ClientMessage, copy_forbidden, \
@@ -205,7 +205,7 @@ class WebSocket(_WebSocket):
     """ Encapsulates information about an individual connection from a WebSocket client.
     """
     store_ctx: 'bool'
-    ctx_file: 'any_'
+    ctx_file: 'ContextHandler'
 
     def __init__(
         self,
@@ -245,14 +245,13 @@ class WebSocket(_WebSocket):
             # Check if we should store runtime context for later use
             self.store_ctx = bool(self.extra_properties.get(ExtraProperties.StoreCtx))
 
-            # If yes, we can obtain a file object to write the context information with
-            if self.store_ctx:
-                self.ctx_file = get_ctx_file(self.config.name)
-
         else:
             self.extra_properties = {}
             self.store_ctx = False
-            self.ctx_file = None
+
+        # If yes, we can obtain a file object to write the context information with
+        if self.store_ctx:
+            self.ctx_handler = ContextHandler(ctx_container_name=self.config.name, is_read_only=False)
 
         super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
 
@@ -444,9 +443,9 @@ class WebSocket(_WebSocket):
         # We always expect for input data to be JSON
         self._parse_func = self.parse_json
 
-        # Set up details of runtime context storing
+        # Store context details
         if self.store_ctx:
-            pass
+            self.ctx_handler.store(self)
 
         # All set, we can process connections now
         self._initialized = True
