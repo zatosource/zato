@@ -32,6 +32,7 @@ streaming.Utf8Validator = _UTF8Validator
 # ################################################################################################################################
 
 # stdlib
+import os
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses, UNPROCESSABLE_ENTITY
 from json import loads as stdlib_loads
@@ -239,9 +240,6 @@ class WebSocket(_WebSocket):
         # A reusable JSON parser
         self._json_parser = SIMDJSONParser()
 
-        # For type hints - because we know that our socket will not be None
-        self.sock = cast_('SocketMixin', self.sock) # type: ignore
-
         if config.extra_properties:
             self.extra_properties = stdlib_loads(config.extra_properties) # type: stranydict
 
@@ -413,10 +411,10 @@ class WebSocket(_WebSocket):
         # Responses to previously sent requests - keyed by request IDs
         self.responses_received = {}
 
-        _local_address = self.sock.getsockname()
+        _local_address = self.sock.getsockname() # type: ignore
         self._local_address = '{}:{}'.format(_local_address[0], _local_address[1])
 
-        _peer_address = self.sock.getpeername()
+        _peer_address = self.sock.getpeername() # type: ignore
         self._peer_address = '{}:{}'.format(_peer_address[0], _peer_address[1])
 
         self.forwarded_for = self.initial_http_wsgi_environ.get('HTTP_X_FORWARDED_FOR')
@@ -1836,7 +1834,6 @@ if __name__ == '__main__':
     # noqa
 
     # stdlib
-    import os
     from logging import basicConfig, INFO, WARN
 
     basicConfig(level=WARN, format='%(asctime)s - %(message)s')
