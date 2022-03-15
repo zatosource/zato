@@ -113,6 +113,7 @@ strsetdict   = dict_[str, anyset]
 strstrdict   = dict_[str, str]
 strtuple     = tuple_[str, ...]
 textio_      = textio_
+textionone   = textio_
 tuple_       = tuple_
 type_        = type_
 typealias_   = typealias_

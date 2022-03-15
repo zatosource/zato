@@ -17,22 +17,31 @@ from zato.common.model.connector import ConnectorConfig
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.server.base.parallel import ParallelServer
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass
 class WSXConnectorConfig(ConnectorConfig):
+    host: 'str'
+    port: 'int'
+    needs_tls: 'bool'
     path: optional[str]
     needs_auth: optional[bool]
     sec_name: optional[str]
     sec_type: optional[str]
-    data_format: optional[str]
-    token_ttl: optional[int]
+    data_format: str
+    token_ttl: int
     new_token_wait_time: int
     max_len_messages_sent: optional[int]
     max_len_messages_received: optional[int]
     hook_service: optional[callable_]
-    auth_func: optional[callable_]
+    auth_func: callable_
     vault_conn_default_auth_method: optional[str]
-    on_message_callback: optional[callable_]
-    parallel_server: optional[object] = None
+    on_message_callback: callable_
+    parallel_server: 'ParallelServer'
     pings_missed_threshold: optional[int] = WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD
     ping_interval: optional[int] = WEB_SOCKET.DEFAULT.PING_INTERVAL
     is_audit_log_sent_active: optional[bool] = False
