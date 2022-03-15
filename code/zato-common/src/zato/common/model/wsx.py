@@ -37,6 +37,7 @@ class WSXConnectorConfig(ConnectorConfig):
     ping_interval: optional[int] = WEB_SOCKET.DEFAULT.PING_INTERVAL
     is_audit_log_sent_active: optional[bool] = False
     is_audit_log_received_active: optional[bool] = False
+    extra_properties: optional[str] = ''
 
     @staticmethod
     def from_dict(config_dict):

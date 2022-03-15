@@ -54,6 +54,7 @@ class CreateChannel(ServerAwareCommand):
             'default':Config.PingInterval},
         {'name':'--ping-missed-threshold', 'help':'After how many missed ping messages to consider a WebSocket disconnected',
             'required':False, 'default':Config.PingMissedThreshold},
+        {'name':'--extra-properties', 'help':'Extra properties as JSON', 'required':False},
         {'name':'--path', 'help':'Path to a Zato server', 'required':True},
     ]
 
@@ -67,6 +68,8 @@ class CreateChannel(ServerAwareCommand):
         ping_missed_threshold = getattr(args, 'ping_missed_threshold', None) or Config.PingMissedThreshold
         token_ttl = getattr(args, 'token_ttl', None) or Config.TokenTTL
         new_token_wait_time = getattr(args, 'new_token_wait_time', None) or Config.NewTokenWaitTime
+
+        extra_properties = getattr(args, 'extra_properties', None)
 
         is_active = getattr(args, 'is_active', True)
         if is_active is None:
@@ -102,9 +105,11 @@ class CreateChannel(ServerAwareCommand):
             'new_token_wait_time': new_token_wait_time,
             'ping_interval': ping_interval,
             'ping_missed_threshold': ping_missed_threshold,
+            'extra_properties': extra_properties
         }
 
         self._invoke_service_and_log_response(service, request)
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
