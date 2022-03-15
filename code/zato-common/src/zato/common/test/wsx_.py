@@ -6,12 +6,23 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from json import dumps
+
+# Zato
+from zato.common.api import WEB_SOCKET
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.test import CommandLineTestCase
     from zato.common.typing_ import any_, anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+ExtraProperties = WEB_SOCKET.ExtraProperties
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,7 +61,10 @@ class WSXChannelManager:
         # Command to invoke ..
         cli_params = ['create', 'basic-auth', '--username', self.username, '--password', self.password]
 
-        # .. get its response as a dict ..
+        # .. always run in verbose mode ..
+        cli_params.append('--verbose')
+
+        # .. get the command's response as a dict ..
         out = self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
 
         # .. and store the security definition's details for later use.
@@ -73,6 +87,17 @@ class WSXChannelManager:
             # .. now, we can make use of that definition ..
             cli_params.append('--security')
             cli_params.append(self.security_name)
+
+        # .. we want for the channel to store the runtime context for later use ..
+        extra_properties = dumps({
+            ExtraProperties.StoreCtx: True
+        })
+
+        cli_params.append('--extra-properties')
+        cli_params.append(extra_properties)
+
+        # .. always run in verbose mode ..
+        cli_params.append('--verbose')
 
         # .. get the command's response as a dict ..
         out = self.test_case.run_zato_cli_json_command(cli_params) # type: anydict

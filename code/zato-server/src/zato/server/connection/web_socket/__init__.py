@@ -19,10 +19,10 @@ class _UTF8Validator:
     """ A pass-through UTF-8 validator for ws4py - we do not need for this layer
     to validate UTF-8 bytes because we do it anyway during JSON parsing.
     """
-    def validate(*ignored_args, **ignored_kwargs):
+    def validate(*ignored_args:'any_', **ignored_kwargs:'any_') -> 'any_':
         return True, True, None, None
 
-    def reset(*ignored_args, **ignored_kwargs):
+    def reset(*ignored_args:'any_', **ignored_kwargs:'any_') -> 'any_':
         pass
 
 from ws4py import streaming
@@ -36,8 +36,10 @@ from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses, UNPROCESSABLE_ENTITY
 from json import loads as stdlib_loads
 from logging import DEBUG, getLogger
+from tempfile import gettempdir
 from threading import current_thread
 from traceback import format_exc
+from urllib.parse import urlparse
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -55,10 +57,6 @@ from ws4py.websocket import WebSocket as _WebSocket
 from ws4py.server.geventserver import WSGIServer, WebSocketWSGIHandler
 from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
-# Python 2/3 compatibility
-from future.moves.urllib.parse import urlparse
-from past.builtins import basestring
-
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.audit_log import DataReceived, DataSent
@@ -67,6 +65,7 @@ from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.typing_ import dataclass
 from zato.common.util.api import new_cid
 from zato.common.util.hook import HookTool
+from zato.common.util.open_ import open_w
 from zato.common.util.wsx import cleanup_wsx_client
 from zato.common.vault_ import VAULT
 from zato.server.connection.connector import Connector
@@ -79,7 +78,7 @@ from zato.server.pubsub.task import PubSubTool
 if 0:
     from zato.common.audit_log import DataEvent
     from zato.common.model.wsx import WSXConnectorConfig
-    from zato.common.typing_ import anylist, callable_, stranydict
+    from zato.common.typing_ import any_, anylist, callable_, stranydict
     from zato.server.base.parallel import ParallelServer
 
     DataEvent = DataEvent
@@ -166,6 +165,10 @@ _interact_update_interval = WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL
 
 # ################################################################################################################################
 
+ExtraProperties = WEB_SOCKET.ExtraProperties
+
+# ################################################################################################################################
+
 class HookCtx:
     __slots__ = (
         'hook_type', 'config', 'pub_client_id', 'ext_client_id', 'ext_client_name', 'connection_time', 'user_data',
@@ -196,6 +199,10 @@ class TokenInfo:
 class WebSocket(_WebSocket):
     """ Encapsulates information about an individual connection from a WebSocket client.
     """
+    extra_properties: 'dict'
+    store_ctx: 'bool'
+    ctx_file: file
+
     def __init__(self, container, config, _unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs):
         # type: (object, WSXConnectorConfig, object, object, object, dict, object)
 
@@ -219,6 +226,12 @@ class WebSocket(_WebSocket):
 
         # A reusable JSON parser
         self._json_parser = SIMDJSONParser()
+
+        if config.extra_properties:
+            self.extra_properties = stdlib_loads(config.extra_properties) # type: stranydict
+
+            # Check if we should store runtime context for later use
+            self.store_ctx = bool(self.extra_properties.get(ExtraProperties.StoreCtx))
 
         super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
 
@@ -400,6 +413,18 @@ class WebSocket(_WebSocket):
             DATA_FORMAT.JSON: self.parse_json,
             DATA_FORMAT.XML: self.parse_xml,
         }[self.config.data_format]
+
+        # Set up details of runtime context storing
+        if self.store_ctx:
+
+            # Store context in a temporary directory ..
+            tmp_dir = gettempdir()
+
+            # .. under the same file as our channel's name ..
+            ctx_file_path = os.path.join(tmp_dir, self.config.name)
+
+            # .. create the file now.
+            self.ctx_file = open_w(ctx_file_path)
 
         # All set, we can process connections now
         self._initialized = True
@@ -1216,7 +1241,7 @@ class WebSocket(_WebSocket):
         data_event = event_class()
         data_event.type_ = _audit_msg_type
         data_event.object_id = self.pub_client_id
-        data_event.data = data if isinstance(data, basestring) else str(data)
+        data_event.data = data if isinstance(data, str) else str(data)
         data_event.timestamp = _utcnow()
         data_event.msg_id = cid
         data_event.in_reply_to = in_reply_to
@@ -1296,7 +1321,7 @@ class WebSocket(_WebSocket):
         """
         # If input request is a string, try to decode it from JSON, but leave as-is in case
         # of an error or if it is not a string.
-        if isinstance(request, basestring):
+        if isinstance(request, str):
             try:
                 request = stdlib_loads(request)
             except ValueError:
