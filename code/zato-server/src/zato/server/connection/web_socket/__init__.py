@@ -37,7 +37,7 @@ from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses, UNPROCESSABLE_ENTITY
 from json import loads as stdlib_loads
 from logging import DEBUG, getLogger
-from tempfile import gettempdir
+
 from threading import current_thread
 from traceback import format_exc
 from urllib.parse import urlparse
@@ -66,8 +66,7 @@ from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.typing_ import cast_, dataclass
 from zato.common.util.api import new_cid
 from zato.common.util.hook import HookTool
-from zato.common.util.open_ import open_w
-from zato.common.util.wsx import cleanup_wsx_client
+from zato.common.util.wsx import cleanup_wsx_client, get_ctx_file
 from zato.common.vault_ import VAULT
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, InvokeClientRequest, ClientMessage, copy_forbidden, \
@@ -245,6 +244,10 @@ class WebSocket(_WebSocket):
 
             # Check if we should store runtime context for later use
             self.store_ctx = bool(self.extra_properties.get(ExtraProperties.StoreCtx))
+
+            # If yes, we can obtain a file object to write the context information with
+            if self.store_ctx:
+                self.ctx_file = get_ctx_file(self.config.name)
 
         else:
             self.extra_properties = {}
@@ -443,15 +446,7 @@ class WebSocket(_WebSocket):
 
         # Set up details of runtime context storing
         if self.store_ctx:
-
-            # Store context in a temporary directory ..
-            tmp_dir = gettempdir()
-
-            # .. under the same file as our channel's name ..
-            ctx_file_path = os.path.join(tmp_dir, self.config.name)
-
-            # .. create the file now.
-            self.ctx_file = open_w(ctx_file_path)
+            pass
 
         # All set, we can process connections now
         self._initialized = True
