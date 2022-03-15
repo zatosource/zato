@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
+import os
 from logging import getLogger
+from tempfile import gettempdir
 
 # Zato
 from zato.common.api import WEB_SOCKET
+from zato.common.util.file_system import fs_safe_name
+from zato.common.util.open_ import open_rw
 
 # ################################################################################################################################
 
@@ -75,4 +77,28 @@ def cleanup_wsx_client(wsx_cleanup_required, service_invoker, pub_client_id, sub
             logger.info(msg_cleanup_error, wsx_cleanup_required, service_invoker, pub_client_id, sub_keys, hook,
                 hook_service, hook_request, opaque_func_list, e)
 
+# ################################################################################################################################
+
+def get_ctx_file_path(ctx_container_name:'str'):
+
+    # Store context in a temporary directory ..
+    tmp_dir = gettempdir()
+
+    # .. under the same file as our channel's name ..
+    name_safe = fs_safe_name(ctx_container_name)
+    ctx_file_path = os.path.join(tmp_dir, 'zato-' + name_safe)
+
+    return ctx_file_path
+
+# ################################################################################################################################
+
+def get_ctx_file(ctx_container_name:'str'):
+
+    # Get the full path to the context file
+    ctx_file_path = get_ctx_file_path(ctx_container_name)
+
+    # .. create and return the file now.
+    return open_rw(ctx_file_path)
+
+# ################################################################################################################################
 # ################################################################################################################################
