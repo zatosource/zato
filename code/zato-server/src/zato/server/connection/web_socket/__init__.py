@@ -231,7 +231,7 @@ class WebSocket(_WebSocket):
         self.pub_client_id = 'ws.{}'.format(new_cid())
 
         # Zato parallel server this WebSocket runs on
-        self.parallel_server = self.config.parallel_server
+        self.parallel_server = cast_('ParallelServer', self.config.parallel_server)
 
         # JSON dumps function can be overridden by users
         self._json_dump_func = self._set_json_dump_func()
@@ -396,7 +396,7 @@ class WebSocket(_WebSocket):
             self.on_vault_mount_point_needed = None
 
         # For publish/subscribe over WSX
-        self.pubsub_tool = PubSubTool(self.config.parallel_server.worker_store.pubsub, self,
+        self.pubsub_tool = PubSubTool(self.parallel_server.worker_store.pubsub, self,
             PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id, deliver_pubsub_msg=self.deliver_pubsub_msg)
 
         # Active WebSocket client ID (WebSocketClient model, web_socket_client.id in SQL)
@@ -743,7 +743,8 @@ class WebSocket(_WebSocket):
 
             headers['HTTP_X_ZATO_VAULT_MOUNT_POINT'] = self.vault_mount_point
 
-            can_create_session = self.config.auth_func(
+            auth_func = cast_('callable_', self.config.auth_func)
+            can_create_session = auth_func(
                 request.cid, self.sec_type, {'username':request.username, 'secret':request.secret}, self.config.sec_name,
                 self.config.vault_conn_default_auth_method, self.initial_http_wsgi_environ, headers)
 
@@ -1053,7 +1054,8 @@ class WebSocket(_WebSocket):
             'environ': environ,
         }
 
-        response = self.config.on_message_callback(
+        on_message_callback = cast_('callable_', self.config.on_message_callback)
+        response = on_message_callback(
             request,
             CHANNEL.WEB_SOCKET,
             None,

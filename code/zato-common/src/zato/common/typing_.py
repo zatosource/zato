@@ -69,6 +69,7 @@ anydict      = dict_[any_, any_]
 anydictnone  = optional[anydict]
 anylist      = list_[any_]
 anylistnone  = optional[anylist]
+anynone      = optional[any_]
 anyset       = set_[any_]
 anytuple     = tuple_[any_, ...]
 binaryio_    = binaryio_
