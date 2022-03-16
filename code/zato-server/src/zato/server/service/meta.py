@@ -219,15 +219,31 @@ def update_attrs(cls, name, attrs):
 class AdminServiceMeta(type):
 
     @staticmethod
-    def get_sio(*, attrs, name, input_required=None, input_optional=None, output_required=None, is_list=True, class_=None):
+    def get_sio(
+        *,
+        attrs,
+        name,
+        input_required=None,
+        input_optional=None,
+        output_required=None,
+        is_list=True,
+        class_=None,
+        skip_input_required=False
+    ):
 
         _BaseClass = GetListAdminSIO if is_list else AdminSIO
 
         if not input_optional:
             input_optional = list(_BaseClass.input_optional) if hasattr(_BaseClass, 'input_optional') else []
 
+        if not input_required:
+            if skip_input_required:
+                input_required = []
+            else:
+                input_required = ['cluster_id']
+
         sio = {
-            'input_required': input_required or ['cluster_id'],
+            'input_required': input_required,
             'input_optional': input_optional,
             'output_required': output_required if output_required is not None else ['id', 'name'],
         }
@@ -464,7 +480,8 @@ class DeleteMeta(AdminServiceMeta):
             name=name,
             input_required=[],
             input_optional=['id', 'name', 'should_raise_if_missing'],
-            output_required=[]
+            output_required=[],
+            skip_input_required=True,
         )
         cls.handle = DeleteMeta.handle(attrs)
         return super(DeleteMeta, cls).__init__(cls)

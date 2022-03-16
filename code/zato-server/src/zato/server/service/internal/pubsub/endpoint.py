@@ -138,8 +138,8 @@ class Create(AdminService):
     """ Creates a new pub/sub endpoint.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'name', 'role', 'is_active', 'is_internal', 'endpoint_type')
-        input_optional = ('topic_patterns', 'security_id', 'service_id', 'ws_channel_id')
+        input_required = ('name', 'role', 'is_active', 'is_internal', 'endpoint_type')
+        input_optional = ('cluster_id', 'topic_patterns', 'security_id', 'service_id', 'ws_channel_id')
         output_required = (AsIs('id'), 'name')
         request_elem = 'zato_pubsub_endpoint_create_request'
         response_elem = 'zato_pubsub_endpoint_create_response'
@@ -147,11 +147,12 @@ class Create(AdminService):
 
     def handle(self):
         input = self.request.input
+        cluster_id = input.get('cluster_id') or self.server.cluster_id
 
         with closing(self.odb.session()) as session:
 
             existing_one = session.query(PubSubEndpoint.id).\
-                filter(PubSubEndpoint.cluster_id==input.cluster_id).\
+                filter(PubSubEndpoint.cluster_id==cluster_id).\
                 filter(PubSubEndpoint.name==input.name).\
                 first()
 
@@ -159,7 +160,7 @@ class Create(AdminService):
                 raise Conflict(self.cid, 'Endpoint `{}` already exists'.format(input.name))
 
             endpoint = PubSubEndpoint()
-            endpoint.cluster_id = input.cluster_id
+            endpoint.cluster_id = cluster_id # type: ignore
             endpoint.name = input.name
             endpoint.is_active = input.is_active
             endpoint.is_internal = input.is_internal

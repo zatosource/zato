@@ -167,7 +167,7 @@ class ZatoWSXClient(_BaseWSXClient):
         self._zato_client_config.address = self.config['address']
         self._zato_client_config.on_request_callback = self.on_message_cb
         self._zato_client_config.on_closed_callback = self.on_close_cb
-        self._zato_client_config.max_connect_attempts = self.config['max_connect_attempts']
+        self._zato_client_config.max_connect_attempts = self.config.get('max_connect_attempts', 1234567890)
 
         if self.config.get('username'):
             self._zato_client_config.username = self.config['username']
