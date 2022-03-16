@@ -103,7 +103,7 @@ class WSXOutconnConnectTestCase(CommandLineTestCase):
 
             config = self._get_config(ctx.wsx_channel_address)
 
-            wrapper = OutconnWSXWrapper(config, None)
+            wrapper = OutconnWSXWrapper(config, None) # type: ignore
             wrapper.build_queue()
 
             # Confirm that the client is connected
@@ -112,7 +112,7 @@ class WSXOutconnConnectTestCase(CommandLineTestCase):
 
 # ################################################################################################################################
 
-    def xtest_connect_credentials_needed_and_provided(self) -> 'None':
+    def test_connect_credentials_needed_and_provided(self) -> 'None':
 
         now = fs_safe_now()
 
@@ -123,7 +123,7 @@ class WSXOutconnConnectTestCase(CommandLineTestCase):
 
             config = self._get_config(ctx.wsx_channel_address, username, password)
 
-            wrapper = OutconnWSXWrapper(config, None)
+            wrapper = OutconnWSXWrapper(config, None) # type: ignore
             wrapper.build_queue()
 
             # Confirm that the client is connected
@@ -132,7 +132,7 @@ class WSXOutconnConnectTestCase(CommandLineTestCase):
 
 # ################################################################################################################################
 
-    def xtest_connect_credentials_needed_and_not_provided(self) -> 'None':
+    def test_connect_credentials_needed_and_not_provided(self) -> 'None':
 
         now = fs_safe_now()
 
@@ -146,7 +146,7 @@ class WSXOutconnConnectTestCase(CommandLineTestCase):
             # to a channel with a security definition attached and that should fail
             config = self._get_config(ctx.wsx_channel_address, queue_build_cap=1)
 
-            wrapper = OutconnWSXWrapper(config, None)
+            wrapper = OutconnWSXWrapper(config, None) # type: ignore
             wrapper.build_queue()
             wrapper.delete_queue_connections()
 
