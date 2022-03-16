@@ -129,6 +129,7 @@ class CommandStore:
         # Zato - Pub/sub
         from zato.cli.pubsub import \
             cleanup              as pubsub_cleanup_mod,      \
+            endpoint             as pubsub_endpoint_mod,     \
             topic                as pubsub_topic_mod # noqa: E272
 
         parser, base_parser, subs, formatter_class = self.build_core_parser()
@@ -396,6 +397,15 @@ class CommandStore:
         self.add_opts(pubsub_cleanup, pubsub_cleanup_mod.Cleanup.opts)
 
         #
+        # pubsub create-endpoint
+        #
+
+        pubsub_create_endpoint = pubsub_subs.add_parser('create-endpoint',
+            description=pubsub_endpoint_mod.CreateEndpoint.__doc__, parents=[base_parser])
+        pubsub_create_endpoint.set_defaults(command='pubsub_create_endpoint')
+        self.add_opts(pubsub_create_endpoint, pubsub_endpoint_mod.CreateEndpoint.opts)
+
+        #
         # pubsub create-topic
         #
 
@@ -405,7 +415,16 @@ class CommandStore:
         self.add_opts(pubsub_create_topic, pubsub_topic_mod.CreateTopic.opts)
 
         #
-        # pubsub delete-topic (alias to delete-topics)
+        # pubsub delete-endpoint
+        #
+
+        pubsub_delete_endpoint = pubsub_subs.add_parser('delete-endpoint',
+            description=pubsub_endpoint_mod.DeleteEndpoint.__doc__, parents=[base_parser])
+        pubsub_delete_endpoint.set_defaults(command='pubsub_delete_endpoint')
+        self.add_opts(pubsub_delete_endpoint, pubsub_endpoint_mod.DeleteEndpoint.opts)
+
+        #
+        # pubsub delete-topic (an alias for delete-topics)
         #
 
         pubsub_delete_topic = pubsub_subs.add_parser('delete-topic',

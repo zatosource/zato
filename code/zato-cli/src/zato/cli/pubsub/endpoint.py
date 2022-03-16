@@ -25,8 +25,8 @@ class CreateEndpoint(ServerAwareCommand):
     """ Creates a new pub/sub endpoint.
     """
     opts = [
-        {'name':'--name', 'help':'Name of the endpoint to create', 'required':True,},
-        {'name':'--role', 'help':'Role the endpoint should have', 'required':True},
+        {'name':'--name', 'help':'Name of the endpoint to create', 'required':False,},
+        {'name':'--role', 'help':'Role the endpoint should have', 'required':False},
         {'name':'--is-active', 'help':'Should the endpoint be active upon creation', 'required':False},
         {'name':'--topic-patterns', 'help':'A comma-separated list of topic patterns allowed', 'required':False},
         {'name':'--wsx-id', 'help':'An ID of a WebSocket channel if the endpoint is associated with one', 'required':False},
@@ -44,12 +44,20 @@ class CreateEndpoint(ServerAwareCommand):
             is_active = True
 
         topic_patterns = getattr(args, 'topic_patterns', '')
+
+        # If we do not have any patterns, it means that we want to assign the endpoint to all the topics possible.
+        if not topic_patterns:
+            topic_patterns = 'pub=/*,sub=/*'
+
         topic_patterns = topic_patterns.split(',')
         topic_patterns = [elem.strip() for elem in topic_patterns]
         topic_patterns = '\n'.join(topic_patterns)
 
         # Generate a name if one is not given
         name = name or 'auto.pubsub.endpoint.' + fs_safe_now()
+
+        # By default, endpoints can both publish and subscribe
+        role = role or PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
 
         # API service to invoke
         service = 'zato.pubsub.endpoint.create'
@@ -108,8 +116,6 @@ if __name__ == '__main__':
     create_args.store_log    = False
     create_args.store_config = False
     create_args.wsx_id = 194
-    create_args.role = PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
-    create_args.topic_patterns = 'pub=/*,sub=/*'
     create_args.path = environ['ZATO_SERVER_BASE_DIR']
 
     create_command = CreateEndpoint(create_args)
