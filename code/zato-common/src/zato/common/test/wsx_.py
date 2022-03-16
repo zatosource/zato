@@ -17,9 +17,8 @@ from zato.common.test import CommandLineTestCase
 # ################################################################################################################################
 
 if 0:
-    from zato.common.test import CommandLineTestCase
     from zato.common.typing_ import any_, anydict, stranydict
-    from zato.server.generic.api.outconn_wsx import _ZatoWSXClientImpl
+    from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper, _ZatoWSXClientImpl
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,7 +36,7 @@ class WSXOutconnBaseCase(CommandLineTestCase):
         wsx_channel_address:'str',
         username:'str' = '',
         secret:'str' = '',
-        queue_build_cap:'int' = 30
+        queue_build_cap:'float' = 30.0
     ) -> 'stranydict':
 
         config = {}
@@ -106,18 +105,22 @@ class WSXChannelManager:
     security_name: 'str'
     needs_credentials: 'bool'
     wsx_channel_address: 'str'
+    run_cli: 'bool'
 
     def __init__(
         self,
         test_case:'CommandLineTestCase',
         username:'str' = '',
         password:'str' = '',
-        needs_credentials:'bool' = False
+        needs_credentials:'bool' = False,
+        run_cli:'bool' = True
     ) -> 'None':
         self.test_case = test_case
         self.username = username
         self.password = password
         self.needs_credentials = needs_credentials
+        self.run_cli = run_cli
+
         self.channel_id = ''
         self.security_id = ''
         self.security_name = ''
@@ -134,11 +137,13 @@ class WSXChannelManager:
         cli_params.append('--verbose')
 
         # .. get the command's response as a dict ..
-        out = self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
+        if self.run_cli:
 
-        # .. and store the security definition's details for later use.
-        self.security_id = out['id']
-        self.security_name = out['name']
+            out = self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
+
+            # .. and store the security definition's details for later use.
+            self.security_id = out['id']
+            self.security_name = out['name']
 
 # ################################################################################################################################
 
@@ -169,11 +174,13 @@ class WSXChannelManager:
         cli_params.append('--verbose')
 
         # .. get the command's response as a dict ..
-        out = self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
+        if self.run_cli:
 
-        # .. store for later use ..
-        self.channel_id = out['id']
-        self.wsx_channel_address = out['address']
+            out = self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
+
+            # .. store for later use ..
+            self.channel_id = out['id']
+            self.wsx_channel_address = out['address']
 
         # .. and return control to the caller.
         return self
@@ -186,7 +193,8 @@ class WSXChannelManager:
         cli_params = ['delete', 'basic-auth', '--id', self.security_id]
 
         # .. now, invoke the command, ignoring the result.
-        _ = self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
+        if self.run_cli:
+            _ = self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
 
 # ################################################################################################################################
 
@@ -199,7 +207,8 @@ class WSXChannelManager:
         cli_params = ['wsx', 'delete-channel', '--id', self.channel_id, '--verbose']
 
         # .. get its response as a dict ..
-        self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
+        if self.run_cli:
+            self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
