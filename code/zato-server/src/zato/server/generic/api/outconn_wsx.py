@@ -26,7 +26,7 @@ from zato.server.connection.queue import Wrapper
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, callable_, stranydict, strnone
+    from zato.common.typing_ import any_, callable_, stranydict, strlist, strnone
     from zato.common.wsx_client import MessageFromServer
     from zato.server.base.parallel import ParallelServer
 
@@ -205,9 +205,27 @@ class ZatoWSXClient(_BaseWSXClient):
 
 # ################################################################################################################################
 
+    def get_subscription_list(self) -> 'strlist':
+
+        # This is an initial, static list of topics to subscribe to ..
+        subscription_list = (self.config['subscription_list'] or '').splitlines()
+
+        # .. while the rest can be dynamically populated by services.
+        on_subscribe_service_name = self.config.get('on_subscribe_service_name')
+
+        if on_subscribe_service_name:
+            topic_list = self.config['parent'].on_subscribe_cb(on_subscribe_service_name)
+
+            if topic_list:
+                subscription_list.extend(topic_list)
+
+        return subscription_list
+
+# ################################################################################################################################
+
     def subscribe_to_topics(self) -> 'None':
 
-        subscription_list = (self.config['subscription_list'] or '').splitlines()
+        subscription_list = self.get_subscription_list()
 
         if subscription_list:
             logger.info('Subscribing WSX outconn `%s` to `%s`', self.config['name'], subscription_list)
@@ -334,6 +352,23 @@ class OutconnWSXWrapper(Wrapper):
 
                 config['username'] = sec_def_config['username']
                 config['secret'] = sec_def_config['password']
+
+# ################################################################################################################################
+
+    def on_subscribe_cb(self, service_name:'str') -> 'strlist':
+
+        # Our response to produce
+        out = []
+
+        # Invoke the service that will produce a list of topics to subscribe to
+        response = self.server.invoke(service_name)
+
+        # If there was any response, make sure our caller receives it
+        if response:
+            out.extend(response)
+
+        # Finally, return the result to the caller
+        return out
 
 # ################################################################################################################################
 
