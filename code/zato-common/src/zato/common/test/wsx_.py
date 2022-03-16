@@ -103,6 +103,7 @@ class WSXChannelManager:
     channel_id: 'str'
     security_id: 'str'
     security_name: 'str'
+    pubsub_endpoint_id: 'str'
     needs_credentials: 'bool'
     wsx_channel_address: 'str'
     run_cli: 'bool'
@@ -113,11 +114,13 @@ class WSXChannelManager:
         username:'str' = '',
         password:'str' = '',
         needs_credentials:'bool' = False,
+        needs_pubsub:'bool' = False,
         run_cli:'bool' = True
     ) -> 'None':
         self.test_case = test_case
         self.username = username
         self.password = password
+        self.needs_pubsub = needs_pubsub
         self.needs_credentials = needs_credentials
         self.run_cli = run_cli
 
@@ -144,6 +147,24 @@ class WSXChannelManager:
             # .. and store the security definition's details for later use.
             self.security_id = out['id']
             self.security_name = out['name']
+
+# ################################################################################################################################
+
+    def create_pubsub_endpoint(self, wsx_id:'str') -> 'None':
+
+        # Command to invoke ..
+        cli_params = ['pubsub', 'create-endpoint', '--wsx-id', wsx_id]
+
+        # .. always run in verbose mode ..
+        cli_params.append('--verbose')
+
+        # .. get the command's response as a dict ..
+        if self.run_cli:
+
+            out = self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
+
+            # .. and store the endpoint's details for later use.
+            self.pubsub_endpoint_id = out['id']
 
 # ################################################################################################################################
 
@@ -182,6 +203,10 @@ class WSXChannelManager:
             self.channel_id = out['id']
             self.wsx_channel_address = out['address']
 
+            # .. pub/sub is optional ..
+            if self.needs_pubsub:
+                self.create_pubsub_endpoint(self.channel_id)
+
         # .. and return control to the caller.
         return self
 
@@ -202,6 +227,10 @@ class WSXChannelManager:
 
         if self.needs_credentials:
             self.delete_basic_auth()
+
+        # Note that deleting the channel below will also cascade to delete its endpoint
+        # which means that, if we did create an endpoint earlier on, we do not need
+        # to delete it explicitly.
 
         # Command to invoke ..
         cli_params = ['wsx', 'delete-channel', '--id', self.channel_id, '--verbose']

@@ -29,7 +29,7 @@ if 0:
 class Config:
     OnSubscribeServiceID   = 123
     OnSubscribeServiceName = 'zato.test.on-subscribe'
-    SubscribeToTopics = ['/zato/test/pubsub1', '/zato/test/pubsub2']
+    SubscribeToTopics = ['/test1', '/test2']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,9 +64,7 @@ class WSXOutconnPubSubTestCase(WSXOutconnBaseCase):
         run_cli = True
         server = TestServer()
 
-        with WSXChannelManager(self, run_cli=run_cli) as ctx:
-
-            ctx = ctx
+        with WSXChannelManager(self, needs_pubsub=True, run_cli=run_cli) as ctx:
 
             config = self._get_config(
                 'test_pubsub_get_topics_service',
