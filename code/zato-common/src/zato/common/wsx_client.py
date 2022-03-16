@@ -279,6 +279,21 @@ class _WebSocketClientImpl(WebSocketClient):
         self.on_closed_callback = on_closed_callback
         super(_WebSocketClientImpl, self).__init__(url=self.config.address)
 
+    def close_connection(self):
+        """ Overridden from ws4py.websocket.WebSocket.
+        """
+        if self.sock:
+            try:
+                self.sock.shutdown(socket.SHUT_RDWR)
+            except Exception:
+                pass
+            try:
+                self.sock.close()
+            except Exception:
+                pass
+            finally:
+                self.sock = None
+
     def opened(self) -> 'None':
         _ = spawn(self.on_connected_callback)
 
@@ -437,7 +452,7 @@ class Client:
         response = self._wait_for_response(request_id)
 
         if not response:
-            self.logger.warning('No response to authentication request `%s`; disconnecting client %s (%s %s)',
+            self.logger.warning('No response to authentication request `%s`; (%s %s -> %s)',
                 request_id, self.config.username, self.config.client_name, self.config.client_id)
             self.keep_running = False
         else:
