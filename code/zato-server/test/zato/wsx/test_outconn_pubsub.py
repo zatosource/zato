@@ -63,7 +63,6 @@ class WSXOutconnPubSubTestCase(WSXOutconnBaseCase):
 
         run_cli = True
         server = TestServer()
-        queue_build_cap = 0.1
 
         with WSXChannelManager(self, run_cli=run_cli) as ctx:
 
@@ -72,10 +71,9 @@ class WSXOutconnPubSubTestCase(WSXOutconnBaseCase):
             config = self._get_config(
                 'test_pubsub_get_topics_service',
                 ctx.wsx_channel_address,
-                queue_build_cap=queue_build_cap,
             )
 
-            config['max_connect_attempts'] = 1
+            # config['max_connect_attempts'] = 1
             config['on_subscribe_service_id'] = Config.OnSubscribeServiceID
 
             wrapper = OutconnWSXWrapper(config, server) # type: ignore
