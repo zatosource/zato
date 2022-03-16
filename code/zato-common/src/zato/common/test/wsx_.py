@@ -11,18 +11,87 @@ from json import dumps
 
 # Zato
 from zato.common.api import WEB_SOCKET
+from zato.common.test import CommandLineTestCase
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.test import CommandLineTestCase
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, stranydict
+    from zato.server.generic.api.outconn_wsx import _ZatoWSXClientImpl
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 ExtraProperties = WEB_SOCKET.ExtraProperties
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WSXOutconnBaseCase(CommandLineTestCase):
+
+    def _get_config(
+        self,
+        name:'str',
+        wsx_channel_address:'str',
+        username:'str' = '',
+        secret:'str' = '',
+        queue_build_cap:'int' = 30
+    ) -> 'stranydict':
+
+        config = {}
+        config['name'] = name
+        config['username'] = username
+        config['secret'] = secret
+        config['pool_size'] = 1
+        config['is_zato'] = True
+        config['is_active'] = True
+        config['needs_spawn'] = False
+        config['queue_build_cap'] = queue_build_cap
+        config['subscription_list'] = ''
+        config['has_auto_reconnect'] = False
+
+        config['auth_url'] = config['address'] = wsx_channel_address
+
+        return config
+
+# ################################################################################################################################
+
+    def _check_connection_result(
+        self,
+        wrapper:'OutconnWSXWrapper',
+        wsx_channel_address:'str',
+        *,
+        needs_credentials:'bool',
+        should_be_authenticated:'bool',
+    ) -> 'None':
+
+        outconn_wsx_queue = wrapper.client.queue.queue
+        self.assertEqual(len(outconn_wsx_queue), 1)
+
+        impl = outconn_wsx_queue[0].impl
+        zato_client = impl._zato_client # type: _ZatoWSXClientImpl
+
+        self.assertEqual(zato_client.config.address, wsx_channel_address)
+
+        if should_be_authenticated:
+            self.assertTrue(zato_client.auth_token.startswith('zwsxt'))
+            self.assertTrue(zato_client.is_connected)
+            self.assertTrue(zato_client.is_authenticated)
+            self.assertTrue(zato_client.keep_running)
+        else:
+            self.assertEqual(zato_client.auth_token, '')
+            self.assertFalse(zato_client.is_connected)
+            self.assertFalse(zato_client.is_authenticated)
+            self.assertFalse(zato_client.keep_running)
+
+        if needs_credentials:
+            self.assertTrue(zato_client.needs_auth)
+            self.assertTrue(zato_client.is_auth_needed)
+        else:
+            self.assertFalse(zato_client.needs_auth)
+            self.assertFalse(zato_client.is_auth_needed)
 
 # ################################################################################################################################
 # ################################################################################################################################

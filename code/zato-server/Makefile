@@ -6,6 +6,7 @@ PY_DIR=$(CURDIR)/../bin
 
 run-tests:
 	echo "Running tests in zato-server"
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/file_transfer/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/apispec/test_*.py -s
 	$(PY_DIR)/py        $(CURDIR)/test/zato/commands_/test_*.py
@@ -16,7 +17,7 @@ run-tests:
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/rest/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/server_rpc/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/stats/test_*.py -s
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/test_*.py -s
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/wsx/test_*.py -s
 
 pylint:
 	echo Running pylint in zato-server
