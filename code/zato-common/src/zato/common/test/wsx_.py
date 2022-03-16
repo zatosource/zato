@@ -17,7 +17,7 @@ from zato.common.test import CommandLineTestCase
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, stranydict
+    from zato.common.typing_ import any_, anydict, stranydict, strlist, strlistnone
     from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper, _ZatoWSXClientImpl
 
 # ################################################################################################################################
@@ -107,6 +107,7 @@ class WSXChannelManager:
     needs_credentials: 'bool'
     wsx_channel_address: 'str'
     run_cli: 'bool'
+    topics: 'strlistnone'
 
     def __init__(
         self,
@@ -115,7 +116,8 @@ class WSXChannelManager:
         password:'str' = '',
         needs_credentials:'bool' = False,
         needs_pubsub:'bool' = False,
-        run_cli:'bool' = True
+        run_cli:'bool' = True,
+        topics: 'strlistnone' = None
     ) -> 'None':
         self.test_case = test_case
         self.username = username
@@ -123,6 +125,7 @@ class WSXChannelManager:
         self.needs_pubsub = needs_pubsub
         self.needs_credentials = needs_credentials
         self.run_cli = run_cli
+        self.topics = topics
 
         self.channel_id = ''
         self.security_id = ''
@@ -147,6 +150,36 @@ class WSXChannelManager:
             # .. and store the security definition's details for later use.
             self.security_id = out['id']
             self.security_name = out['name']
+
+# ################################################################################################################################
+
+    def create_topics(self, topics:'strlist') -> 'None':
+
+        for topic_name in topics:
+
+            # Command to invoke ..
+            cli_params = ['pubsub', 'create-topic', '--name', topic_name]
+
+            # .. always run in verbose mode ..
+            cli_params.append('--verbose')
+
+            if self.run_cli:
+                _ = self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
+
+# ################################################################################################################################
+
+    def delete_topics(self, topics:'strlist') -> 'None':
+
+        for topic_name in topics:
+
+            # Command to invoke ..
+            cli_params = ['pubsub', 'delete-topic', '--name', topic_name]
+
+            # .. always run in verbose mode ..
+            cli_params.append('--verbose')
+
+            if self.run_cli:
+                _ = self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
 
 # ################################################################################################################################
 
@@ -205,6 +238,8 @@ class WSXChannelManager:
 
             # .. pub/sub is optional ..
             if self.needs_pubsub:
+                if self.topics:
+                    self.create_topics(self.topics)
                 self.create_pubsub_endpoint(self.channel_id)
 
         # .. and return control to the caller.
@@ -238,6 +273,9 @@ class WSXChannelManager:
         # .. get its response as a dict ..
         if self.run_cli:
             self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
+
+            # If we created any topics, they need to be deleted now
+            self.delete_topics(self.topics)
 
 # ################################################################################################################################
 # ################################################################################################################################

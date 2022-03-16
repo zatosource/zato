@@ -15,6 +15,7 @@ from unittest import main
 
 # Zato
 from zato.common.test.wsx_ import WSXChannelManager, WSXOutconnBaseCase
+from zato.common.util.api import fs_safe_now
 from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 
 # ################################################################################################################################
@@ -35,7 +36,8 @@ class Config:
 # ################################################################################################################################
 
 class TestServer:
-    def __init__(self) -> 'None':
+    def __init__(self, topics:'strlist') -> 'None':
+        self.topics = topics
         self.ctx = []
 
 # ################################################################################################################################
@@ -52,22 +54,29 @@ class TestServer:
         self.ctx.append({
             'invoke': service_name
         })
-        return Config.SubscribeToTopics
+        return self.topics
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class WSXOutconnPubSubTestCase(WSXOutconnBaseCase):
 
-    def test_pubsub_get_topics_service_was_called(self) -> 'None':
+    def test_pubsub_on_subscribe_service(self) -> 'None':
+
+        now = fs_safe_now()
+
+        topic1 = f'/wsx.pubsub.test.{now}.1'
+        topic2 = f'/wsx.pubsub.test.{now}.2'
+
+        topics = [topic1, topic2]
 
         run_cli = True
-        server = TestServer()
+        server = TestServer(topics)
 
-        with WSXChannelManager(self, needs_pubsub=True, run_cli=run_cli) as ctx:
+        with WSXChannelManager(self, needs_pubsub=True, run_cli=run_cli, topics=topics) as ctx:
 
             config = self._get_config(
-                'test_pubsub_get_topics_service',
+                'test_pubsub_on_subscribe_service',
                 ctx.wsx_channel_address,
             )
 
