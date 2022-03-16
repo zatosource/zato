@@ -22,21 +22,30 @@ from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 
 class WSXOutconnPubSubTestCase(WSXOutconnBaseCase):
 
-    def test_pubsub_get_topics_service(self) -> 'None':
+    def test_pubsub_get_topics_service_was_called(self) -> 'None':
 
-        with WSXChannelManager(self) as ctx:
+        run_cli = False
+        queue_build_cap = 0.1
+        wsx_channel_address = 'ws://zato-invalid-test:1234'
+
+        with WSXChannelManager(self, run_cli=run_cli) as ctx:
+
+            ctx = ctx
 
             config = self._get_config(
                 'test_pubsub_get_topics_service',
-                ctx.wsx_channel_address
+                wsx_channel_address,
+                queue_build_cap=queue_build_cap,
             )
+
+            config['max_connect_attempts'] = 1
 
             wrapper = OutconnWSXWrapper(config, None) # type: ignore
             wrapper.build_queue()
 
             # Confirm that the client is connected
-            self._check_connection_result(
-                wrapper, ctx.wsx_channel_address, needs_credentials=False, should_be_authenticated=True)
+            # self._check_connection_result(
+            #    wrapper, ctx.wsx_channel_address, needs_credentials=False, should_be_authenticated=True)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -167,6 +167,7 @@ class ZatoWSXClient(_BaseWSXClient):
         self._zato_client_config.address = self.config['address']
         self._zato_client_config.on_request_callback = self.on_message_cb
         self._zato_client_config.on_closed_callback = self.on_close_cb
+        self._zato_client_config.max_connect_attempts = self.config['max_connect_attempts']
 
         if self.config.get('username'):
             self._zato_client_config.username = self.config['username']
@@ -308,14 +309,22 @@ class OutconnWSXWrapper(Wrapper):
 
     def _resolve_config_ids(self, config:'stranydict', server:'ParallelServer') -> 'None':
 
-        if config.get('on_connect_service_id'):
-            config['on_connect_service_name'] = server.api_service_store_get_service_name_by_id(config['on_connect_service_id'])
+        on_connect_service_id   = config.get('on_connect_service_id')   # type: int
+        on_message_service_id   = config.get('on_message_service_id')   # type: int
+        on_close_service_id     = config.get('on_close_service_id')     # type: int
+        on_subscribe_service_id = config.get('on_subscribe_service_id') # type: int
 
-        if config.get('on_message_service_id'):
-            config['on_message_service_name'] = server.api_service_store_get_service_name_by_id(config['on_message_service_id'])
+        if on_connect_service_id:
+            config['on_connect_service_name'] = server.api_service_store_get_service_name_by_id(on_connect_service_id)
 
-        if config.get('on_close_service_id'):
-            config['on_close_service_name'] = server.api_service_store_get_service_name_by_id(config['on_close_service_id'])
+        if on_message_service_id:
+            config['on_message_service_name'] = server.api_service_store_get_service_name_by_id(on_message_service_id)
+
+        if on_close_service_id:
+            config['on_close_service_name'] = server.api_service_store_get_service_name_by_id(on_close_service_id)
+
+        if on_subscribe_service_id:
+            config['on_subscribe_service_name'] = server.api_service_store_get_service_name_by_id(on_subscribe_service_id)
 
         if config.get('security_def'):
             if config['security_def'] != ZATO_NONE:
