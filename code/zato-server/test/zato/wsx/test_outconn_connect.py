@@ -15,93 +15,23 @@ from unittest import main
 from uuid import uuid4
 
 # Zato
-from zato.common.test import CommandLineTestCase
-from zato.common.test.wsx_ import WSXChannelManager
+from zato.common.test.wsx_ import WSXChannelManager, WSXOutconnBaseCase
 from zato.common.util.api import fs_safe_now
 from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from zato.common.typing_ import stranydict
-    from zato.server.generic.api.outconn_wsx import _ZatoWSXClientImpl
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class WSXOutconnConnectTestCase(CommandLineTestCase):
-
-# ################################################################################################################################
-
-    def _get_config(
-        self,
-        wsx_channel_address:'str',
-        username:'str' = '',
-        secret:'str' = '',
-        queue_build_cap:'int' = 30
-    ) -> 'stranydict':
-
-        config = {}
-        config['name'] = 'test_connect_ok'
-        config['username'] = username
-        config['secret'] = secret
-        config['pool_size'] = 1
-        config['is_zato'] = True
-        config['is_active'] = True
-        config['needs_spawn'] = False
-        config['queue_build_cap'] = queue_build_cap
-        config['subscription_list'] = ''
-        config['has_auto_reconnect'] = False
-
-        config['auth_url'] = config['address'] = wsx_channel_address
-
-        return config
-
-# ################################################################################################################################
-
-    def _check_connection_result(
-        self,
-        wrapper:'OutconnWSXWrapper',
-        wsx_channel_address:'str',
-        *,
-        needs_credentials:'bool',
-        should_be_authenticated:'bool',
-    ) -> 'None':
-
-        outconn_wsx_queue = wrapper.client.queue.queue
-        self.assertEqual(len(outconn_wsx_queue), 1)
-
-        impl = outconn_wsx_queue[0].impl
-        zato_client = impl._zato_client # type: _ZatoWSXClientImpl
-
-        self.assertEqual(zato_client.config.address, wsx_channel_address)
-
-        if should_be_authenticated:
-            self.assertTrue(zato_client.auth_token.startswith('zwsxt'))
-            self.assertTrue(zato_client.is_connected)
-            self.assertTrue(zato_client.is_authenticated)
-            self.assertTrue(zato_client.keep_running)
-        else:
-            self.assertEqual(zato_client.auth_token, '')
-            self.assertFalse(zato_client.is_connected)
-            self.assertFalse(zato_client.is_authenticated)
-            self.assertFalse(zato_client.keep_running)
-
-        if needs_credentials:
-            self.assertTrue(zato_client.needs_auth)
-            self.assertTrue(zato_client.is_auth_needed)
-        else:
-            self.assertFalse(zato_client.needs_auth)
-            self.assertFalse(zato_client.is_auth_needed)
-
-# ################################################################################################################################
+class WSXOutconnConnectTestCase(WSXOutconnBaseCase):
 
     def test_connect_credentials_needed_not_needed(self) -> 'None':
 
         with WSXChannelManager(self) as ctx:
 
-            config = self._get_config(ctx.wsx_channel_address)
+            config = self._get_config(
+                'test_connect_credentials_needed_not_needed',
+                ctx.wsx_channel_address
+            )
 
             wrapper = OutconnWSXWrapper(config, None) # type: ignore
             wrapper.build_queue()
@@ -121,7 +51,12 @@ class WSXOutconnConnectTestCase(CommandLineTestCase):
 
         with WSXChannelManager(self, username, password, needs_credentials=True) as ctx:
 
-            config = self._get_config(ctx.wsx_channel_address, username, password)
+            config = self._get_config(
+                'test_connect_credentials_needed_and_provided',
+                ctx.wsx_channel_address,
+                username,
+                password
+            )
 
             wrapper = OutconnWSXWrapper(config, None) # type: ignore
             wrapper.build_queue()
@@ -144,7 +79,11 @@ class WSXOutconnConnectTestCase(CommandLineTestCase):
             # Note that we are not providing our credentials here,
             # which means that will be attempting to connect without credentials
             # to a channel with a security definition attached and that should fail
-            config = self._get_config(ctx.wsx_channel_address, queue_build_cap=1)
+            config = self._get_config(
+                'test_connect_credentials_needed_and_not_provided',
+                ctx.wsx_channel_address,
+                queue_build_cap=1
+            )
 
             wrapper = OutconnWSXWrapper(config, None) # type: ignore
             wrapper.build_queue()
