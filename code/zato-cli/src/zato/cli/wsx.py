@@ -109,7 +109,6 @@ class CreateChannel(ServerAwareCommand):
         }
 
         self._invoke_service_and_log_response(service, request)
-        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -118,8 +117,8 @@ class DeleteChannel(ServerAwareCommand):
     """ Deletes a WebSocket channel.
     """
     opts = [
-        {'name':'--id', 'help':'ID of the channel to create', 'required':False,},
-        {'name':'--name', 'help':'Name of the channel to create', 'required':False,},
+        {'name':'--id', 'help':'ID of the channel to delete', 'required':False,},
+        {'name':'--name', 'help':'Name of the channel to delete', 'required':False,},
         {'name':'--path', 'help':'Path to a Zato server', 'required':True},
     ]
 
