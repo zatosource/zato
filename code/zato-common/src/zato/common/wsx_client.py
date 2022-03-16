@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import random
+import socket
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http.client import OK
