@@ -195,16 +195,6 @@ class ZatoWSXClient(_BaseWSXClient):
 
 # ################################################################################################################################
 
-    def invoke_subscribe_service(self, topic_name:'str') -> 'None':
-        return self.invoke({
-            'service':'zato.pubsub.pubapi.subscribe-wsx',
-            'request': {
-                'topic_name': topic_name
-            }
-        })
-
-# ################################################################################################################################
-
     def get_subscription_list(self) -> 'strlist':
 
         # This is an initial, static list of topics to subscribe to ..
