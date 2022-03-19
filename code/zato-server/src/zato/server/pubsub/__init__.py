@@ -1844,11 +1844,21 @@ class PubSub:
                             # .. also, continue only if there are still messages for the ones that are up ..
                             if topic.sync_has_gd_msg or topic.sync_has_non_gd_msg:
 
+                                # Note that we may have both GD and non-GD messages on input
+                                # and we need to have a max that takes both into account.
+                                max_gd = 0
+                                max_non_gd = 0
+
+                                # If there are any non-GD messages, get their max. pub time
                                 if non_gd_msg_list:
                                     non_gd_msg_list = sorted(non_gd_msg_list, key=_cmp_non_gd_msg)
-                                    pub_time_max = non_gd_msg_list[-1]['pub_time']
-                                else:
-                                    pub_time_max = topic.gd_pub_time_max
+                                    max_non_gd = non_gd_msg_list[-1]['pub_time']
+
+                                # This will be always available, even if with a value of 0.0
+                                max_gd = topic.gd_pub_time_max
+
+                                # Now, we can build a max. pub time that takes GD and non-GD into account.
+                                pub_time_max = max(max_gd, max_non_gd)
 
                                 non_gd_msg_list_msg_id_list = [elem['pub_msg_id'] for elem in non_gd_msg_list]
 
