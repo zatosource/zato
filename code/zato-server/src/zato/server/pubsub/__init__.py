@@ -247,17 +247,17 @@ class PubSub:
         self.endpoint_msg_counter = {} # type: intdict
 
         # How often to update metadata about topics and endpoints, if at all
-        self.has_meta_topic = server.fs_server_config.pubsub_meta_topic.enabled # type: bool
-        self.topic_meta_store_frequency = server.fs_server_config.pubsub_meta_topic.store_frequency # type: int
+        self.has_meta_topic = self.server.fs_server_config.pubsub_meta_topic.enabled # type: bool
+        self.topic_meta_store_frequency = self.server.fs_server_config.pubsub_meta_topic.store_frequency # type: int
 
-        self.has_meta_endpoint = server.fs_server_config.pubsub_meta_endpoint_pub.enabled # type: bool
-        self.endpoint_meta_store_frequency = server.fs_server_config.pubsub_meta_endpoint_pub.store_frequency # type: int
-        self.endpoint_meta_data_len = server.fs_server_config.pubsub_meta_endpoint_pub.data_len # type:int
-        self.endpoint_meta_max_history = server.fs_server_config.pubsub_meta_endpoint_pub.max_history # type:int
+        self.has_meta_endpoint = self.server.fs_server_config.pubsub_meta_endpoint_pub.enabled # type: bool
+        self.endpoint_meta_store_frequency = self.server.fs_server_config.pubsub_meta_endpoint_pub.store_frequency # type: int
+        self.endpoint_meta_data_len = self.server.fs_server_config.pubsub_meta_endpoint_pub.data_len # type:int
+        self.endpoint_meta_max_history = self.server.fs_server_config.pubsub_meta_endpoint_pub.max_history # type:int
 
         # How many bytes to use for look up purposes when conducting message searches
-        self.data_prefix_len = server.fs_server_config.pubsub.data_prefix_len # type: int
-        self.data_prefix_short_len = server.fs_server_config.pubsub.data_prefix_short_len # type: int
+        self.data_prefix_len = self.server.fs_server_config.pubsub.data_prefix_len # type: int
+        self.data_prefix_short_len = self.server.fs_server_config.pubsub.data_prefix_short_len # type: int
 
         # Manages access to service hooks
         self.hook_tool = HookTool(self.server, HookCtx, hook_type_to_method, self.invoke_service)
