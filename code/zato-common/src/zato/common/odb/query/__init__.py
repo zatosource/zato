@@ -1609,7 +1609,7 @@ def web_socket_client_by_pub_id(session, pub_client_id):
         ).\
         filter(WebSocketClient.pub_client_id==pub_client_id).\
         outerjoin(ChannelWebSocket, ChannelWebSocket.id==WebSocketClient.channel_id).\
-        one()
+        first()
 
 # ################################################################################################################################
 

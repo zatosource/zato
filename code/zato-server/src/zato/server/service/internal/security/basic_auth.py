@@ -48,8 +48,9 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_basic_auth_create_request'
         response_elem = 'zato_security_basic_auth_create_response'
-        input_required = 'cluster_id', 'name', 'is_active', 'username', 'realm'
-        input_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+        input_required = 'name', 'is_active', 'username', 'realm'
+        input_optional = 'cluster_id', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
+            Boolean('rate_limit_check_parent_def')
         output_required = 'id', 'name'
 
     def handle(self):
@@ -60,14 +61,16 @@ class Create(AdminService):
         input = self.request.input
         input.password = uuid4().hex
 
+        cluster_id = input.get('cluster_id') or self.server.cluster_id
+
         with closing(self.odb.session()) as session:
             try:
-                cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
+                cluster = session.query(Cluster).filter_by(id=cluster_id).first()
 
                 # Let's see if we already have a definition of that name before committing
                 # any stuff into the database.
                 existing_one = session.query(HTTPBasicAuth).\
-                    filter(Cluster.id==input.cluster_id).\
+                    filter(Cluster.id==cluster_id).\
                     filter(HTTPBasicAuth.name==input.name).first()
 
                 if existing_one:

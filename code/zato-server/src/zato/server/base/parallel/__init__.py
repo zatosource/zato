@@ -1372,3 +1372,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# Shortcut API methods
+
+    def api_service_store_get_service_name_by_id(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self.service_store.get_service_name_by_id(*args, **kwargs)
+
+    def api_worker_store_basic_auth_get_by_id(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self.worker_store.basic_auth_get_by_id(*args, **kwargs)
+
+    def api_worker_store_reconnect_generic(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self.worker_store.reconnect_generic(*args, **kwargs)
+
+# ################################################################################################################################
+# ################################################################################################################################

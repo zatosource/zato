@@ -100,10 +100,13 @@ class ClientMessage:
         self.data = Bunch()
         self.has_credentials = None
         self.token = None
-        self.ext_client_name = None
+        self.ext_client_name = ''
         self.ext_client_id = None
         self.reply_to_sk = None
         self.deliver_to_sk = None
+
+        self.is_auth = False
+        self.secret = ''
 
     def __repr__(self):
         return make_repr(self)

@@ -792,7 +792,7 @@ class WorkerStore(_WorkerStoreBase):
             data.config['ping_interval'] = int(
                 data.config.get('ping_interval') or WEB_SOCKET.DEFAULT.PING_INTERVAL)
 
-            # Create a new AMQP connector definition ..
+            # Create a new WebSocket connector definition ..
             config = WSXConnectorConfig.from_dict(data.config)
 
             # .. append common hook service to the configuration.
