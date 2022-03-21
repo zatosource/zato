@@ -34,7 +34,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
     get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.typing_ import cast_, dict_, optional
+from zato.common.typing_ import cast_, dict_, intnone, optional
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -175,14 +175,18 @@ class PubSub:
 
     def __init__(
         self,
-        cluster_id,        # type: int
-        server,            # type: ParallelServer
-        broker_client=None # type: any_
+        cluster_id,         # type: int
+        server,             # type: ParallelServer
+        broker_client=None, # type: any_
+        *,
+        sync_max_iters=None,       # type: intnone
+        spawn_trigger_notify=True # type: bool
         ) -> 'None':
 
         self.cluster_id = cluster_id
         self.server = server
         self.broker_client = broker_client # type: ignore
+        self.sync_max_iters = sync_max_iters
         self.lock = RLock()
         self.keep_running = True
         self.sk_server_table_columns = self.server.fs_server_config.pubsub.get('sk_server_table_columns') or \
@@ -262,7 +266,8 @@ class PubSub:
         # Manages access to service hooks
         self.hook_tool = HookTool(self.server, HookCtx, hook_type_to_method, self.invoke_service)
 
-        _ = spawn_greenlet(self.trigger_notify_pubsub_tasks)
+        if spawn_trigger_notify:
+            _ = spawn_greenlet(self.trigger_notify_pubsub_tasks)
 
 # ################################################################################################################################
 
@@ -1733,6 +1738,7 @@ class PubSub:
 # ################################################################################################################################
 
     def set_sync_has_msg(self,
+        *,
         topic_id,       # type: int
         is_gd,          # type: bool
         value,          # type: bool
@@ -1751,12 +1757,12 @@ class PubSub:
 
         # Local aliases
 
+        _current_iter = 0
         _new_cid      = new_cid
         _spawn        = spawn # type: ignore
         _sleep        = sleep # type: ignore
         _self_lock    = self.lock
         _self_topics  = self.topics
-        _keep_running = self.keep_running
 
         _logger_info      = logger.info
         _logger_warn      = logger.warning
@@ -1778,7 +1784,16 @@ class PubSub:
 # ################################################################################################################################
 
         # Loop forever or until stopped
-        while _keep_running:
+        while self.keep_running:
+
+            # Optionally, we may have a limit on how many iterations this loop should last
+            # and we need to check if we have reached it.
+            if self.sync_max_iters:
+                if _current_iter >= self.sync_max_iters:
+                    self.keep_running = False
+
+            # This may be handy for logging purposes, even if there is no max. for the loop iters
+            _current_iter += 1
 
             # Sleep for a while before continuing - the call to sleep is here because this while loop is quite long
             # so it would be inconvenient to have it down below.
