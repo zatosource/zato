@@ -26,7 +26,7 @@ from zato.server.connection.queue import Wrapper
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, callable_, stranydict, strnone
+    from zato.common.typing_ import any_, callable_, stranydict, strlist, strnone
     from zato.common.wsx_client import MessageFromServer
     from zato.server.base.parallel import ParallelServer
 
@@ -167,6 +167,7 @@ class ZatoWSXClient(_BaseWSXClient):
         self._zato_client_config.address = self.config['address']
         self._zato_client_config.on_request_callback = self.on_message_cb
         self._zato_client_config.on_closed_callback = self.on_close_cb
+        self._zato_client_config.max_connect_attempts = self.config.get('max_connect_attempts', 1234567890)
 
         if self.config.get('username'):
             self._zato_client_config.username = self.config['username']
@@ -189,19 +190,32 @@ class ZatoWSXClient(_BaseWSXClient):
 
 # ################################################################################################################################
 
-    def invoke_subscribe_service(self, topic_name:'str') -> 'None':
-        return self.invoke({
-            'service':'zato.pubsub.pubapi.subscribe-wsx',
-            'request': {
-                'topic_name': topic_name
-            }
-        })
+    def should_keep_running(self):
+        return self._zato_client.keep_running
+
+# ################################################################################################################################
+
+    def get_subscription_list(self) -> 'strlist':
+
+        # This is an initial, static list of topics to subscribe to ..
+        subscription_list = (self.config['subscription_list'] or '').splitlines()
+
+        # .. while the rest can be dynamically populated by services.
+        on_subscribe_service_name = self.config.get('on_subscribe_service_name')
+
+        if on_subscribe_service_name:
+            topic_list = self.config['parent'].on_subscribe_cb(on_subscribe_service_name)
+
+            if topic_list:
+                subscription_list.extend(topic_list)
+
+        return subscription_list
 
 # ################################################################################################################################
 
     def subscribe_to_topics(self) -> 'None':
 
-        subscription_list = (self.config['subscription_list'] or '').splitlines()
+        subscription_list = self.get_subscription_list()
 
         if subscription_list:
             logger.info('Subscribing WSX outconn `%s` to `%s`', self.config['name'], subscription_list)
@@ -216,19 +230,30 @@ class ZatoWSXClient(_BaseWSXClient):
 
     def run_forever(self) -> 'None':
 
-        # This will establish an outgoing connection to the remote WSX server.
-        # However, this will be still a connection on the level TCP / WSX,
-        # which means that we still need to wait before we can invoke
-        # the server with our list of subscriptions below.
-        self._zato_client.run()
+        try:
+            # This will establish an outgoing connection to the remote WSX server.
+            # However, this will be still a connection on the level of TCP / WSX,
+            # which means that we still need to wait before we can invoke
+            # the server with our list of subscriptions below.
+            self._zato_client.run()
 
-        # Wait until the client is fully ready
-        while not self._zato_client.is_authenticated:
-            sleep(0.1)
+            # Wait until the client is fully ready
+            while not self._zato_client.is_authenticated:
 
-        # Now we know that we can try to subscribe to pub/sub topics
-        # and we will not be rejected based on the fact that we are not logged in.
-        self.subscribe_to_topics()
+                # Sleep for a moment ..
+                sleep(0.1)
+
+                # .. and do not loop anymore if we are not to keep running.
+                if not self.should_keep_running():
+                    return
+
+            # If we are here, it means that we are both connected and authenticated,
+            # so  we know that we can try to subscribe to pub/sub topics
+            # and we will not be rejected based on the fact that we are not logged in.
+            self.subscribe_to_topics()
+
+        except Exception:
+            logger.warn('Exception in run_forever -> %s', format_exc())
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -292,23 +317,48 @@ class OutconnWSXWrapper(Wrapper):
 
     def _resolve_config_ids(self, config:'stranydict', server:'ParallelServer') -> 'None':
 
-        if config.get('on_connect_service_id'):
-            config['on_connect_service_name'] = server.service_store.get_service_name_by_id(config['on_connect_service_id'])
+        on_connect_service_id   = config.get('on_connect_service_id')   # type: int
+        on_message_service_id   = config.get('on_message_service_id')   # type: int
+        on_close_service_id     = config.get('on_close_service_id')     # type: int
+        on_subscribe_service_id = config.get('on_subscribe_service_id') # type: int
 
-        if config.get('on_message_service_id'):
-            config['on_message_service_name'] = server.service_store.get_service_name_by_id(config['on_message_service_id'])
+        if on_connect_service_id:
+            config['on_connect_service_name'] = server.api_service_store_get_service_name_by_id(on_connect_service_id)
 
-        if config.get('on_close_service_id'):
-            config['on_close_service_name'] = server.service_store.get_service_name_by_id(config['on_close_service_id'])
+        if on_message_service_id:
+            config['on_message_service_name'] = server.api_service_store_get_service_name_by_id(on_message_service_id)
+
+        if on_close_service_id:
+            config['on_close_service_name'] = server.api_service_store_get_service_name_by_id(on_close_service_id)
+
+        if on_subscribe_service_id:
+            config['on_subscribe_service_name'] = server.api_service_store_get_service_name_by_id(on_subscribe_service_id)
 
         if config.get('security_def'):
             if config['security_def'] != ZATO_NONE:
                 _ignored_sec_type, sec_def_id = config['security_def'].split('/')
                 sec_def_id = int(sec_def_id)
-                sec_def_config = server.worker_store.basic_auth_get_by_id(sec_def_id)
+                sec_def_config = server.api_worker_store_basic_auth_get_by_id(sec_def_id)
 
                 config['username'] = sec_def_config['username']
                 config['secret'] = sec_def_config['password']
+
+# ################################################################################################################################
+
+    def on_subscribe_cb(self, service_name:'str') -> 'strlist':
+
+        # Our response to produce
+        out = []
+
+        # Invoke the service that will produce a list of topics to subscribe to
+        response = self.server.invoke(service_name)
+
+        # If there was any response, make sure our caller receives it
+        if response:
+            out.extend(response)
+
+        # Finally, return the result to the caller
+        return out
 
 # ################################################################################################################################
 
@@ -365,7 +415,7 @@ class OutconnWSXWrapper(Wrapper):
                 logger.info('WebSocket `%s` will reconnect to `%s` (hac:%d)',
                     self.config['name'], self.config['address'], self.config['has_auto_reconnect'])
                 try:
-                    self.server.worker_store.reconnect_generic(self.config['id'])
+                    self.server.api_worker_store_reconnect_generic(self.config['id'])
                 except Exception:
                     logger.warning('Could not reconnect WebSocket `%s` to `%s`, e:`%s`',
                         self.config['name'], self.config['address'], format_exc())

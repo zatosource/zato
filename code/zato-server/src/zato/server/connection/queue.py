@@ -89,6 +89,8 @@ class ConnectionQueue:
     conn_type: 'str'
     address: 'str'
     add_client_func: 'callable_'
+    needs_spawn: 'bool'
+    max_attempts: 'int'
     keep_connecting: 'bool' = True
     is_building_conn_queue: 'bool' = False
     queue_building_stopped: 'bool' = False
@@ -105,7 +107,9 @@ class ConnectionQueue:
         conn_name:'str',
         conn_type:'str',
         address:'str',
-        add_client_func:'callable_'
+        add_client_func:'callable_',
+        needs_spawn:'bool'=True,
+        max_attempts:'int' = 1234567890
     ) -> 'None':
 
         self.queue = Queue(pool_size)
@@ -115,6 +119,8 @@ class ConnectionQueue:
         self.conn_type = conn_type
         self.address = address
         self.add_client_func = add_client_func
+        self.needs_spawn = needs_spawn
+        self.max_attempts = max_attempts
         self.lock = RLock()
 
         # We are ready now
@@ -151,8 +157,28 @@ class ConnectionQueue:
         suffix = 's ' if self.queue_max_size > 1 else ' '
 
         try:
+
+            # We are just starting out
+            num_attempts = 0
             self.is_building_conn_queue = True
+
             while self.keep_connecting and not self.queue.full():
+
+                # If we have reached the limits of attempts ..
+                if num_attempts >= self.max_attempts:
+
+                    # .. store a log message ..
+                    self.logger.info('Max. attempts reached (%s/%s); quitting -> %s %s -> %s ',
+                        num_attempts,
+                        self.max_attempts,
+                        self.conn_type,
+                        self.address,
+                        self.conn_name
+                    )
+
+                    # .. and exit the loop.
+                    return
+
                 gevent.sleep(5)
                 now = datetime.utcnow()
 
@@ -197,7 +223,10 @@ class ConnectionQueue:
 
     def _spawn_add_client_func_no_lock(self, count:'int') -> 'None':
         for _x in range(count):
-            _ = gevent.spawn(self.add_client_func)
+            if self.needs_spawn:
+                _ = gevent.spawn(self.add_client_func)
+            else:
+                self.add_client_func()
             self.in_progress_count += 1
 
 # ################################################################################################################################
@@ -246,7 +275,9 @@ class Wrapper:
             self.config['name'],
             self.conn_type,
             self.config['auth_url'],
-            self.add_client
+            self.add_client,
+            self.config.get('needs_spawn', True),
+            self.config.get('max_connect_attempts', 1234567890)
         )
 
         self.delete_requested = False

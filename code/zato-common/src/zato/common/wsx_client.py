@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import random
+import socket
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http.client import OK
@@ -72,6 +73,7 @@ utcnow = datetime.utcnow
 
 class Default:
     ResponseWaitTime = 5 # How many seconds to wait for responses
+    MaxConnectAttempts = 1234567890
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,6 +90,7 @@ class Config:
     secret: 'strnone' = None
     on_closed_callback: 'callnone' = None
     wait_time: 'int' = Default.ResponseWaitTime
+    max_connect_attempts: 'int' = Default.MaxConnectAttempts
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -279,6 +282,21 @@ class _WebSocketClientImpl(WebSocketClient):
         self.on_closed_callback = on_closed_callback
         super(_WebSocketClientImpl, self).__init__(url=self.config.address)
 
+    def close_connection(self):
+        """ Overridden from ws4py.websocket.WebSocket.
+        """
+        if self.sock:
+            try:
+                self.sock.shutdown(socket.SHUT_RDWR)
+            except Exception:
+                pass
+            try:
+                self.sock.close()
+            except Exception:
+                pass
+            finally:
+                self.sock = None
+
     def opened(self) -> 'None':
         _ = spawn(self.on_connected_callback)
 
@@ -337,6 +355,8 @@ class _WebSocketClientImpl(WebSocketClient):
 class Client:
     """ A WebSocket client that knows how to invoke Zato services.
     """
+    max_connect_attempts: 'int'
+
     def __init__(self, config:'Config') -> 'None':
         self.config = config
         self.conn = _WebSocketClientImpl(
@@ -350,10 +370,11 @@ class Client:
         self.is_authenticated = False
         self.is_connected = False
         self.is_auth_needed = bool(self.config.username)
-        self.auth_token = None
+        self.auth_token = ''
         self.on_request_callback = self.config.on_request_callback
         self.on_closed_callback = self.config.on_closed_callback
         self.needs_auth = bool(self.config.username)
+        self.max_connect_attempts = self.config.max_connect_attempts
         self._json_parser = SIMDJSONParser()
         self._marshall_api = MarshalAPI()
         self.logger = getLogger(__name__)
@@ -437,7 +458,9 @@ class Client:
         response = self._wait_for_response(request_id)
 
         if not response:
-            self.logger.warning('No response to authentication request `%s`', request_id)
+            self.logger.warning('No response to authentication request `%s`; (%s %s -> %s)',
+                request_id, self.config.username, self.config.client_name, self.config.client_id)
+            self.keep_running = False
         else:
             self.auth_token = response.data['token']
             self.is_authenticated = True
@@ -486,6 +509,9 @@ class Client:
     def _run(self, max_wait:'int'=10, _sleep_time:'int'=2) -> 'None':
         """ Attempts to connects to a remote WSX server or raises an exception if max_wait time is exceeded.
         """
+
+        # We are just starting out
+        num_connect_attempts = 0
         needs_connect = True
         start = now = datetime.utcnow()
 
@@ -498,6 +524,22 @@ class Client:
         until = now + timedelta(seconds=max_wait)
 
         while self.keep_running and needs_connect and now < until:
+
+            # Check if we have already run out of attempts.
+            if num_connect_attempts >= self.max_connect_attempts:
+                self.logger.warning('Max. connect attempts reached, quitting; %s/%s -> %s (%s)',
+                    num_connect_attempts,
+                    self.max_connect_attempts,
+                    self.config.address,
+                    now - start)
+
+                # .. and quit if we have reached the limit.
+                break
+
+            # If we are here, it means that we have not reached the limit yet
+            # so we can increase the counter as the first thing ..
+            num_connect_attempts += 1
+
             try:
                 if self.conn.sock:
                     self.conn.connect()
@@ -514,7 +556,13 @@ class Client:
                     else:
                         log_func = self.logger.debug
 
-                log_func('Exception caught `%s` while connecting to WSX `%s (%s)`', e, self.config.address, format_exc())
+                log_func('Exception caught in iter %s/%s `%s` while connecting to WSX `%s (%s)`',
+                    num_connect_attempts,
+                    self.max_connect_attempts,
+                    e,
+                    self.config.address,
+                    format_exc()
+                )
                 sleep(_sleep_time)
                 now = utcnow()
             else:
@@ -542,6 +590,7 @@ class Client:
         # .. otherwise, if we are here, it means that we are connected,
         # .. although we may be still not authenticated as this step
         # .. is carried out by the on_connected_callback method.
+        pass
 
 # ################################################################################################################################
 
@@ -566,7 +615,17 @@ class Client:
         else:
             return response
 
-################################################################################################################################
+# ################################################################################################################################
+
+    def subscribe(self, topic_name:'str') -> 'None':
+        return self.invoke({
+            'service':'zato.pubsub.pubapi.subscribe-wsx',
+            'request': {
+                'topic_name': topic_name
+            }
+        })
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
@@ -610,6 +669,8 @@ if __name__ == '__main__':
     sleep(0.5)
     client.invoke({'service':'zato.ping'})
 
+    client.subscribe('/test1')
+
     _cli_logger.info('Press Ctrl-C to quit')
 
     try:
@@ -619,5 +680,6 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         client.stop()
 
+
 # ################################################################################################################################
-################################################################################################################################
+# ################################################################################################################################
