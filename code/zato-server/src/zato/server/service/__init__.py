@@ -515,7 +515,7 @@ class Service:
         self.server = None        # type: ParallelServer
         self.broker_client = None # type: BrokerClient
         self.channel = None # type: ChannelInfo
-        self.chan = self.channel
+        self.chan = self.channel # type: ChannelInfo
         self.cid = None          # type: str
         self.in_reply_to = None  # type: str
         self.data_format = None  # type: str

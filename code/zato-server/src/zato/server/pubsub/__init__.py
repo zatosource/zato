@@ -175,14 +175,18 @@ class PubSub:
 
     def __init__(
         self,
-        cluster_id,        # type: int
-        server,            # type: ParallelServer
-        broker_client=None # type: any_
+        cluster_id,         # type: int
+        server,             # type: ParallelServer
+        broker_client=None, # type: any_
+        *,
+        sync_max_iters=None,       # type: intnone
+        spawn_trigger_notify=True # type: bool
         ) -> 'None':
 
         self.cluster_id = cluster_id
         self.server = server
         self.broker_client = broker_client # type: ignore
+        self.sync_max_iters = sync_max_iters
         self.lock = RLock()
         self.keep_running = True
         self.sk_server_table_columns = self.server.fs_server_config.pubsub.get('sk_server_table_columns') or \
@@ -247,22 +251,23 @@ class PubSub:
         self.endpoint_msg_counter = {} # type: intdict
 
         # How often to update metadata about topics and endpoints, if at all
-        self.has_meta_topic = server.fs_server_config.pubsub_meta_topic.enabled # type: bool
-        self.topic_meta_store_frequency = server.fs_server_config.pubsub_meta_topic.store_frequency # type: int
+        self.has_meta_topic = self.server.fs_server_config.pubsub_meta_topic.enabled # type: bool
+        self.topic_meta_store_frequency = self.server.fs_server_config.pubsub_meta_topic.store_frequency # type: int
 
-        self.has_meta_endpoint = server.fs_server_config.pubsub_meta_endpoint_pub.enabled # type: bool
-        self.endpoint_meta_store_frequency = server.fs_server_config.pubsub_meta_endpoint_pub.store_frequency # type: int
-        self.endpoint_meta_data_len = server.fs_server_config.pubsub_meta_endpoint_pub.data_len # type:int
-        self.endpoint_meta_max_history = server.fs_server_config.pubsub_meta_endpoint_pub.max_history # type:int
+        self.has_meta_endpoint = self.server.fs_server_config.pubsub_meta_endpoint_pub.enabled # type: bool
+        self.endpoint_meta_store_frequency = self.server.fs_server_config.pubsub_meta_endpoint_pub.store_frequency # type: int
+        self.endpoint_meta_data_len = self.server.fs_server_config.pubsub_meta_endpoint_pub.data_len # type:int
+        self.endpoint_meta_max_history = self.server.fs_server_config.pubsub_meta_endpoint_pub.max_history # type:int
 
         # How many bytes to use for look up purposes when conducting message searches
-        self.data_prefix_len = server.fs_server_config.pubsub.data_prefix_len # type: int
-        self.data_prefix_short_len = server.fs_server_config.pubsub.data_prefix_short_len # type: int
+        self.data_prefix_len = self.server.fs_server_config.pubsub.data_prefix_len # type: int
+        self.data_prefix_short_len = self.server.fs_server_config.pubsub.data_prefix_short_len # type: int
 
         # Manages access to service hooks
         self.hook_tool = HookTool(self.server, HookCtx, hook_type_to_method, self.invoke_service)
 
-        _ = spawn_greenlet(self.trigger_notify_pubsub_tasks)
+        if spawn_trigger_notify:
+            _ = spawn_greenlet(self.trigger_notify_pubsub_tasks)
 
 # ################################################################################################################################
 
@@ -797,10 +802,13 @@ class PubSub:
 # ################################################################################################################################
 
     def _set_topic_config_hook_data(self, config:'stranydict') -> 'None':
-        if config['hook_service_id']:
+
+        hook_service_id = config.get('hook_service_id')
+
+        if hook_service_id:
 
             if not config['hook_service_name']:
-                config['hook_service_name'] = self.server.service_store.get_service_name_by_id(config['hook_service_id'])
+                config['hook_service_name'] = self.server.service_store.get_service_name_by_id(hook_service_id)
 
             # Invoked when a new subscription to topic is created
             config['on_subscribed_service_invoker'] = self.hook_tool.get_hook_service_invoker(
@@ -1733,6 +1741,7 @@ class PubSub:
 # ################################################################################################################################
 
     def set_sync_has_msg(self,
+        *,
         topic_id,       # type: int
         is_gd,          # type: bool
         value,          # type: bool
@@ -1751,12 +1760,12 @@ class PubSub:
 
         # Local aliases
 
+        _current_iter = 0
         _new_cid      = new_cid
         _spawn        = spawn # type: ignore
         _sleep        = sleep # type: ignore
         _self_lock    = self.lock
         _self_topics  = self.topics
-        _keep_running = self.keep_running
 
         _logger_info      = logger.info
         _logger_warn      = logger.warning
@@ -1778,7 +1787,16 @@ class PubSub:
 # ################################################################################################################################
 
         # Loop forever or until stopped
-        while _keep_running:
+        while self.keep_running:
+
+            # Optionally, we may have a limit on how many iterations this loop should last
+            # and we need to check if we have reached it.
+            if self.sync_max_iters:
+                if _current_iter >= self.sync_max_iters:
+                    self.keep_running = False
+
+            # This may be handy for logging purposes, even if there is no max. for the loop iters
+            _current_iter += 1
 
             # Sleep for a while before continuing - the call to sleep is here because this while loop is quite long
             # so it would be inconvenient to have it down below.
