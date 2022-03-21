@@ -1196,6 +1196,9 @@ class WEB_SOCKET:
         ON_PUBSUB_RESPONSE = 'wsx_on_pubsub_response'
         ON_VAULT_MOUNT_POINT_NEEDED = 'wsx_on_vault_mount_point_needed'
 
+    class ExtraProperties:
+        StoreCtx = 'StoreCtx'
+
 # ################################################################################################################################
 # ################################################################################################################################
 

@@ -19,7 +19,8 @@ from six import add_metaclass
 # Zato
 from zato.common.api import DATA_FORMAT
 from zato.common.broker_message import CHANNEL
-from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, PubSubTopic, Service as ServiceModel, WebSocketClient
+from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, PubSubTopic, SecurityBase, Service as ServiceModel, \
+     WebSocketClient
 from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service, web_socket_client, \
      web_socket_client_by_pub_id, web_socket_client_list, web_socket_sub_key_data_list
 from zato.common.util.api import is_port_taken
@@ -55,7 +56,8 @@ broker_message_prefix = 'WEB_SOCKET_'
 list_func = channel_web_socket_list
 skip_input_params = ['cluster_id', 'service_id', 'is_out']
 create_edit_input_required_extra = ['service_name']
-create_edit_input_optional_extra = generic_attrs
+create_edit_input_optional_extra = generic_attrs + ['extra_properties']
+input_optional_extra = ['security']
 output_optional_extra = ['sec_type', 'service_name', 'address'] + generic_attrs
 create_edit_force_rewrite = {'service_name', 'address'}
 
@@ -99,6 +101,7 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 def instance_hook(self, input, instance, attrs):
 
     if attrs.is_create_edit:
+
         instance.hook_service = _get_hook_service(self)
         instance.is_out = False
 
@@ -111,6 +114,15 @@ def instance_hook(self, input, instance, attrs):
             raise ValueError('Service not found `{}`'.format(input.service_name))
         else:
             instance.service = service
+
+        # Optionally, assign to the channel a security ID based on its name
+        if input.get('security'):
+            sec = attrs._meta_session.query(SecurityBase).\
+                filter(SecurityBase.name==input.security).\
+                filter(SecurityBase.cluster_id==input.cluster_id).\
+                first()
+            if sec:
+                instance.security_id = sec.id
 
 # ################################################################################################################################
 
@@ -152,7 +164,8 @@ class Start(Service):
     class SimpleIO:
         input_required = 'id', 'config_cid'
         input_optional = Int('bind_port'), 'name', 'service_name', 'sec_name', 'sec_type', 'vault_conn_default_auth_method', \
-            'is_active', 'address', 'hook_service', 'data_format', Int('new_token_wait_time'), Int('token_ttl')
+            'is_active', 'address', 'hook_service', 'data_format', Int('new_token_wait_time'), Int('token_ttl'), \
+            'extra_properties'
         request_elem = 'zato_channel_web_socket_start_request'
         response_elem = 'zato_channel_web_socket_start_response'
 

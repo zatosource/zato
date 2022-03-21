@@ -137,6 +137,7 @@ command_imports = (
     ('cache_set', 'zato.cli.cache.CacheSet'),
     ('check_config', 'zato.cli.check_config.CheckConfig'),
     ('component_version', 'zato.cli.component_version.ComponentVersion'),
+    ('create_basic_auth', 'zato.cli.basic_auth.CreateDefinition'),
     ('create_cluster', 'zato.cli.create_cluster.Create'),
     ('create_lb', 'zato.cli.create_lb.Create'),
     ('create_odb', 'zato.cli.create_odb.Create'),
@@ -147,6 +148,7 @@ command_imports = (
     ('create_web_admin', 'zato.cli.create_web_admin.Create'),
     ('crypto_create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
     ('delete_odb', 'zato.cli.delete_odb.Delete'),
+    ('delete_basic_auth', 'zato.cli.basic_auth.DeleteDefinition'),
     ('decrypt', 'zato.cli.crypto.Decrypt'),
     ('encrypt', 'zato.cli.crypto.Encrypt'),
     ('enmasse', 'zato.cli.enmasse.Enmasse'),
@@ -156,8 +158,10 @@ command_imports = (
     ('info', 'zato.cli.info.Info'),
     ('openapi', 'zato.cli.openapi_.OpenAPI'),
     ('pubsub_cleanup', 'zato.cli.pubsub.cleanup.Cleanup'),
+    ('pubsub_create_endpoint', 'zato.cli.pubsub.endpoint.CreateEndpoint'),
     ('pubsub_create_topic', 'zato.cli.pubsub.topic.CreateTopic'),
-    ('pubsub_delete_topic', 'zato.cli.pubsub.topic.DeleteTopic'),
+    ('pubsub_delete_endpoint', 'zato.cli.pubsub.endpoint.DeleteEndpoint'),
+    ('pubsub_delete_topic', 'zato.cli.pubsub.topic.DeleteTopics'),
     ('pubsub_delete_topics', 'zato.cli.pubsub.topic.DeleteTopics'),
     ('pubsub_get_topic', 'zato.cli.pubsub.topic.GetTopics'),
     ('pubsub_get_topics', 'zato.cli.pubsub.topic.GetTopics'),
@@ -996,7 +1000,13 @@ class ServerAwareCommand(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _invoke_service_and_log_response(self, service:'str', request:'anydict', hook_func:'callnone'=None) -> 'None':
+    def _invoke_service_and_log_response(
+        self,
+        service:'str',
+        request:'anydict',
+        hook_func:'callnone'=None,
+        needs_stdout:'bool'=True
+    ) -> 'None':
 
         # stdlib
         import sys
@@ -1019,14 +1029,15 @@ class ServerAwareCommand(ZatoCommand):
 
         # We enter here if there was an invocation error
         else:
-            data = response.details
+            data = response.details or '{}'
             data = loads(data)
 
         # .. at this point, we are ready to serialize the data to JSON
         data = dumps(data, indent=2)
 
-        # No matter what data we have, we can log it now
-        sys.stdout.write(data + '\n')
+        # No matter what data we have, we can log it now if we are told to do so.
+        if needs_stdout:
+            sys.stdout.write(data + '\n')
 
 # ################################################################################################################################
 # ################################################################################################################################
