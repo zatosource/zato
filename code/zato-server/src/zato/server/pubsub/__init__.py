@@ -34,7 +34,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
     get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.typing_ import cast_, dict_, intnone, optional
+from zato.common.typing_ import cast_, dict_, optional
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -802,10 +802,13 @@ class PubSub:
 # ################################################################################################################################
 
     def _set_topic_config_hook_data(self, config:'stranydict') -> 'None':
-        if config['hook_service_id']:
+
+        hook_service_id = config.get('hook_service_id')
+
+        if hook_service_id:
 
             if not config['hook_service_name']:
-                config['hook_service_name'] = self.server.service_store.get_service_name_by_id(config['hook_service_id'])
+                config['hook_service_name'] = self.server.service_store.get_service_name_by_id(hook_service_id)
 
             # Invoked when a new subscription to topic is created
             config['on_subscribed_service_invoker'] = self.hook_tool.get_hook_service_invoker(
@@ -1868,6 +1871,7 @@ class PubSub:
                                 if non_gd_msg_list:
                                     non_gd_msg_list = sorted(non_gd_msg_list, key=_cmp_non_gd_msg)
                                     max_non_gd = non_gd_msg_list[-1]['pub_time']
+                                    a
 
                                 # This will be always available, even if with a value of 0.0
                                 max_gd = topic.gd_pub_time_max
