@@ -125,7 +125,7 @@ class WSXChannelManager:
         self.needs_pubsub = needs_pubsub
         self.needs_credentials = needs_credentials
         self.run_cli = run_cli
-        self.topics = topics
+        self.topics = topics or []
 
         self.channel_id = ''
         self.security_id = ''
