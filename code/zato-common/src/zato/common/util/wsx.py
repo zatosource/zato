@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
+import os
+from json import dumps
 from logging import getLogger
+from tempfile import gettempdir
 
 # Zato
 from zato.common.api import WEB_SOCKET
+from zato.common.util.file_system import fs_safe_name
+from zato.common.util.open_ import open_r, open_rw
 
 # ################################################################################################################################
 
@@ -26,6 +29,11 @@ msg_cleanup_error = 'WSX cleanup error, wcr:`%d`, si:`%s`, pci:`%s`, sk_list:`%s
 # ################################################################################################################################
 
 _on_disconnected = WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED
+
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, textio_
 
 # ################################################################################################################################
 
@@ -75,4 +83,46 @@ def cleanup_wsx_client(wsx_cleanup_required, service_invoker, pub_client_id, sub
             logger.info(msg_cleanup_error, wsx_cleanup_required, service_invoker, pub_client_id, sub_keys, hook,
                 hook_service, hook_request, opaque_func_list, e)
 
+# ################################################################################################################################
+
+class ContextHandler:
+
+    _file: 'textio_'
+
+    def __init__(self, *, ctx_container_name:'str', is_read_only:'bool') -> 'None':
+
+        # Prepare metadata
+        self.ctx_container_name = ctx_container_name
+        self.is_read_only = is_read_only
+        self.open_func = open_r if self.is_read_only else open_rw
+        self.ctx_file_path = '<not-set-yet-ContextHandler-ctx_file_path>'
+
+        # And open the context file now either for reading or r/w
+        self.init()
+
+# ################################################################################################################################
+
+    def init(self):
+
+        # Store context in a temporary directory ..
+        tmp_dir = gettempdir()
+
+        # .. under the same file as our channel's name ..
+        name_safe = fs_safe_name(self.ctx_container_name)
+        self.ctx_file_path = os.path.join(tmp_dir, 'zato-' + name_safe + '.txt')
+
+        # .. create and return the file now.
+        self._file = self.open_func(self.ctx_file_path)
+
+# ################################################################################################################################
+
+    def store(self, data:'any_') -> 'None':
+        if not isinstance(data, dict):
+            data = {'data':str(data)}
+        data = dumps(data)
+
+        self._file.write(f'{data}\n')
+        self._file.flush()
+
+# ################################################################################################################################
 # ################################################################################################################################

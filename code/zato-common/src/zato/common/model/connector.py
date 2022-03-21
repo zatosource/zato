@@ -20,13 +20,13 @@ class ConnectorConfig:
     id: int
     name: str
     port: optional[int]
-    address: optional[str]
+    address: str
     is_active: optional[bool]
     pool_size: optional[int]
     def_name: optional[str]
     old_name: optional[str]
     password: optional[str]
-    service_name: optional[str]
+    service_name: str
 
 # ################################################################################################################################
 # ################################################################################################################################
