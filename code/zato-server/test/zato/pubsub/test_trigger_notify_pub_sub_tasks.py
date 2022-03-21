@@ -18,15 +18,13 @@ from bunch import Bunch
 
 # Zato
 from zato.common.api import PUBSUB
-from zato.common.util.time_ import utcnow_as_ms
 from zato.server.pubsub import PubSub
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict
-    anydict = anydict
+    from zato.common.typing_ import any_, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,22 +53,26 @@ class TestServer:
         self.fs_server_config.pubsub_meta_endpoint_pub.data_len = 1234
         self.fs_server_config.pubsub_meta_endpoint_pub.max_history = 111
 
-        self.ctx = []
+        self.ctx = {}
 
 # ################################################################################################################################
 
     def invoke(self, service:'any_', request:'any_') -> 'None':
-        self.ctx.append({
-            'service': service,
-            'request': request,
-        })
+        self.ctx['service'] = service
+        self.ctx['request'] = request
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TriggerNotifyPubSubTasksTestCase(TestCase):
 
-    def test_max_pub_time_both_gd_and_non_gd(self):
+    def _run_sync(
+        self,
+        needs_gd:'bool',
+        needs_non_gd:'bool',
+        gd_pub_time_max:'float',
+        non_gd_pub_time:'float',
+    ) -> 'stranydict':
 
         cid = '987'
         cluster_id = 123
@@ -84,6 +86,10 @@ class TriggerNotifyPubSubTasksTestCase(TestCase):
         ws_channel_id = 2
         cluster_id = 12345
         endpoint_type = PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+
+        # This is used by the one-element non-GD messages
+        non_gd_pub_msg_id = 'aaa.bbb.111'
+        non_gd_expiration_time = 123456789123456789
 
         topic_config = {
             'id': topic_id,
@@ -136,7 +142,6 @@ class TriggerNotifyPubSubTasksTestCase(TestCase):
 
         sync_max_iters = 1
         spawn_trigger_notify = False
-        now = utcnow_as_ms()
 
         ps = PubSub(
             cluster_id,
@@ -150,23 +155,105 @@ class TriggerNotifyPubSubTasksTestCase(TestCase):
         ps.add_subscription(sub_config)
         ps.set_sub_key_server(sk_server_config)
 
-        # Set a flag to signal that a GD message is available
-        ps.set_sync_has_msg(
-            topic_id = topic_id,
-            is_gd = True,
-            value = True,
-            source = 'test_max_pub_time_both_gd_and_non_gd',
-            gd_pub_time_max = now
-        )
+        # Optionally, set a flag to signal that a GD message is available
+        if needs_gd:
+            ps.set_sync_has_msg(
+                topic_id = topic_id,
+                is_gd = True,
+                value = True,
+                source = 'test_max_pub_time_both_gd_and_non_gd',
+                gd_pub_time_max = gd_pub_time_max
+            )
 
-        # Store a minimal list of non-GD messages
-        sub_keys = [sub_key]
-        non_gd_msg_list = [333]
-        ps.store_in_ram(cid, topic_id, topic_name, sub_keys, non_gd_msg_list)
+        # Optionally, store a minimal list of non-GD messages
+        if needs_non_gd:
+            sub_keys = [sub_key]
+            non_gd_msg_list = [{
+                'pub_msg_id': non_gd_pub_msg_id,
+                'pub_time': non_gd_pub_time,
+                'expiration_time': non_gd_expiration_time
+            }]
+            ps.store_in_ram(cid, topic_id, topic_name, sub_keys, non_gd_msg_list)
 
+        # Trigger a sync call ..
         ps.trigger_notify_pubsub_tasks()
 
-        print(111, server.ctx)
+        # .. and return the dictionary with context data to our caller.
+        return server.ctx
+
+# ################################################################################################################################
+
+    def test_pub_max_time_gd_only(self):
+
+        # Only GD max. pub time is given on input and we do not have
+        # any non-GD messages so we expect for the GD max. pub time
+        # to be returned in the ctx information.
+
+        needs_gd     = True
+        needs_non_gd = False
+
+        gd_pub_time_max = 2.0
+        non_gd_pub_time = 1.0
+
+        ctx = self._run_sync(needs_gd, needs_non_gd, gd_pub_time_max, non_gd_pub_time)
+
+        pub_time_max = ctx['request']['pub_time_max']
+        self.assertEqual(pub_time_max, gd_pub_time_max)
+
+# ################################################################################################################################
+
+    def test_pub_max_time_non_gd_only(self):
+
+        # Only non-GD pub time is given on input and we do not have
+        # any GD messages so we expect for the non-GD pub time
+        # to be returned in the ctx information.
+
+        needs_gd     = False
+        needs_non_gd = True
+
+        gd_pub_time_max = 2.0
+        non_gd_pub_time = 1.0
+
+        ctx = self._run_sync(needs_gd, needs_non_gd, gd_pub_time_max, non_gd_pub_time)
+
+        pub_time_max = ctx['request']['pub_time_max']
+        self.assertEqual(pub_time_max, non_gd_pub_time)
+
+# ################################################################################################################################
+
+    def test_pub_max_time_gd_is_greater(self):
+
+        # Both GD and non-GD are provided and the former is greater
+        # which is why we expect for it to form pub_time_max.
+
+        needs_gd     = True
+        needs_non_gd = True
+
+        gd_pub_time_max = 2.0
+        non_gd_pub_time = 1.0
+
+        ctx = self._run_sync(needs_gd, needs_non_gd, gd_pub_time_max, non_gd_pub_time)
+
+        pub_time_max = ctx['request']['pub_time_max']
+        self.assertEqual(pub_time_max, gd_pub_time_max)
+
+# ################################################################################################################################
+
+    def test_pub_max_time_non_gd_is_greater(self):
+
+        # Both GD and non-GD are provided and the latter is greater
+        # which is why we expect for it to form pub_time_max.
+
+        needs_gd     = True
+        needs_non_gd = True
+
+        gd_pub_time_max = 2.0
+        non_gd_pub_time = 3.0
+
+        ctx = self._run_sync(needs_gd, needs_non_gd, gd_pub_time_max, non_gd_pub_time)
+
+        pub_time_max = ctx['request']['pub_time_max']
+        self.assertEqual(pub_time_max, non_gd_pub_time)
 
 # ################################################################################################################################
 # ################################################################################################################################
