@@ -27,6 +27,12 @@ from zato.server.service.internal.pubsub.subscription import CreateWSXSubscripti
 
 if 0:
     from zato.common.typing_ import anylist
+    from zato.server.connection.web_socket import WebSocket
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+delete_channels_allowed = {CHANNEL.WEB_SOCKET, CHANNEL.SERVICE, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,7 +48,7 @@ class BaseSIO:
 class TopicSIO(BaseSIO):
     input_optional = ('data', AsIs('msg_id'), 'has_gd', Int('priority'),
         Int('expiration'), 'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time',
-        'sub_key')
+        'sub_key', AsIs('wsx'))
     output_optional = AsIs('msg_id')
 
 # ################################################################################################################################
@@ -243,23 +249,39 @@ class SubscribeService(_PubSubService):
         # Local aliases
         topic_name = self.request.input.topic_name
 
+        # This is invalid by default and will be set accordingly
+        endpoint_id = -1
+
+        # This call may be made by a live WebSocket object
+        wsx = self.request.input.get('wsx') # type: WebSocket
+
         # This may be provided by WebSockets
         sub_key = self.request.input.get('sub_key')
 
         # Not every channel may present a sub_key on input
-        if sub_key and self.chan.type not in (CHANNEL.WEB_SOCKET, CHANNEL.SERVICE): # type: ignore
+        if sub_key and self.chan.type not in delete_channels_allowed: # type: ignore
             self.logger.warning('Channel type `%s` may not use sub_key on input (%s)', self.chan.type, sub_key)
             raise Forbidden(self.cid)
 
-        # Checks credentials and returns endpoint_id if valid
-        endpoint_id = self._pubsub_check_credentials()
+        # If this is a WebSocket object, we need to confirm that its underlying pubsub tool
+        # actually has access to the input sub_key.
+        if wsx:
+            if not wsx.pubsub_tool.has_sub_key(sub_key):
+                self.logger.warning('WSX `%s` does not have sub_key `%s`', wsx.get_peer_info_dict(), sub_key)
+                raise Forbidden(self.cid)
 
-        if not endpoint_id:
-            self.logger.warning('Could not find endpoint for input credentials')
-            return
+        # Otherwise, we need to get an endpoint associated with the input data and check its permissions.
+        else:
 
-        # To unsubscribe, we also need to have the right subscription permissions first (patterns) ..
-        self._check_sub_access(endpoint_id)
+            # Checks credentials and returns endpoint_id if valid
+            endpoint_id = self._pubsub_check_credentials()
+
+            if not endpoint_id:
+                self.logger.warning('Could not find endpoint for input credentials')
+                return
+
+            # To unsubscribe, we also need to have the right subscription permissions first (patterns) ..
+            self._check_sub_access(endpoint_id)
 
         # .. also check that sub_key exists and that we are not using another endpoint's sub_key.
         try:
@@ -277,9 +299,10 @@ class SubscribeService(_PubSubService):
                     sub_key, endpoint_id, topic_name)
                 return
 
-            # Raise an exception if current endpoint is not the one that created the subscription originally,
-            # but only if current endpoint is not the default internal one; in such a case we want to let
-            # the call succeed - this lets other services use self.invoke in order to unsubscribe.
+            # If this is not a WebSocket, raise an exception if current endpoint is not the one that created
+            # the subscription originally, but only if current endpoint is not the default internal one;
+            # in such a case we want to let the call succeed - this lets other services use self.invoke in
+            # order to unsubscribe.
             if sub.endpoint_id != endpoint_id:
                 if endpoint_id != self.server.default_internal_pubsub_endpoint_id:
                     sub_endpoint = self.pubsub.get_endpoint_by_id(sub.endpoint_id)
@@ -302,12 +325,6 @@ class SubscribeService(_PubSubService):
 
             # Assign the response ..
             self.response.payload = response
-
-            # .. and clean up WSX state if the caller was a WebSocket.
-            if sub.is_wsx:
-                self.invoke('zato.channel.web-socket.client.unregister-ws-sub-key', {
-                    'sub_key_list': [sub.sub_key],
-                })
 
 # ################################################################################################################################
 

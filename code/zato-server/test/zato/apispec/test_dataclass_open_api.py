@@ -68,13 +68,6 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         open_api_generator = OpenAPIGenerator(initial_info, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
 
         result = open_api_generator.generate()
-
-        from zato.common.util.open_ import open_w
-
-        f = open_w('/tmp/aaa.yaml')
-        f.write(result)
-        f.close()
-
         run_common_apispec_assertions(self, result)
 
 # ################################################################################################################################
