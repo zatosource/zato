@@ -1871,7 +1871,6 @@ class PubSub:
                                 if non_gd_msg_list:
                                     non_gd_msg_list = sorted(non_gd_msg_list, key=_cmp_non_gd_msg)
                                     max_non_gd = non_gd_msg_list[-1]['pub_time']
-                                    a
 
                                 # This will be always available, even if with a value of 0.0
                                 max_gd = topic.gd_pub_time_max
