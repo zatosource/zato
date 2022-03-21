@@ -496,7 +496,13 @@ class Publish(AdminService):
                 session.commit()
 
             # .. and set a flag to signal that there are some GD messages available
-            ctx.pubsub.set_sync_has_msg(ctx.topic.id, True, True, 'Publish.publish', ctx.now)
+            ctx.pubsub.set_sync_has_msg(
+                topic_id = ctx.topic.id,
+                is_gd = True,
+                value = True,
+                source = 'Publish.publish',
+                gd_pub_time_max = ctx.now
+            )
 
         # Either commit succeeded or there were no GD messages on input but in both cases we can now,
         # optionally, store data in pub/sub audit log.
