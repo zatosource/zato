@@ -17,6 +17,7 @@ from unittest import TestCase
 from bunch import Bunch
 
 # Zato
+from zato.common.util.time_ import utcnow_as_ms
 from zato.server.pubsub import PubSub
 
 # ################################################################################################################################
@@ -60,8 +61,31 @@ class TriggerNotifyPubSubTasksTestCase(TestCase):
         server = TestServer()
         broker_client = None
 
-        ps = PubSub(cluster_id, server, broker_client) # type: ignore
+        sync_max_iters = 1
+        spawn_trigger_notify = False
+
+        topic_id = 222
+        now = utcnow_as_ms()
+
+        ps = PubSub(
+            cluster_id,
+            server, # type: ignore
+            broker_client,
+            sync_max_iters=sync_max_iters,
+            spawn_trigger_notify=spawn_trigger_notify)
+
+        # Set a flag to signal that a GD message is available
+        ps.set_sync_has_msg(
+            topic_id = topic_id,
+            is_gd = True,
+            value = True,
+            source = 'test_max_pub_time_both_gd_and_non_gd',
+            gd_pub_time_max = now
+        )
+
         ps.trigger_notify_pubsub_tasks()
+
+        ps
 
 # ################################################################################################################################
 # ################################################################################################################################
