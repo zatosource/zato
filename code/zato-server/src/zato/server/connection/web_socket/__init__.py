@@ -1644,22 +1644,40 @@ class WebSocketContainer(WebSocketWSGIApplication):
 # ################################################################################################################################
 
     def disconnect_client(self, cid:'str', pub_client_id:'str') -> 'any_':
-        return self.clients[pub_client_id].disconnect_client(cid)
+
+        client = self.clients.get(pub_client_id)
+        if client:
+            return client.disconnect_client(cid)
+        else:
+            logger.info('No such WSX client `%s` (%s)', pub_client_id, cid)
 
 # ################################################################################################################################
 
     def notify_pubsub_message(self, cid:'str', pub_client_id:'str', request:'any_') -> 'any_':
-        return self.clients[pub_client_id].notify_pubsub_message(cid, request)
+
+        client = self.clients.get(pub_client_id)
+        if client:
+            return client.notify_pubsub_message(cid, request)
+        else:
+            logger.info('No such WSX client `%s` (%s)', pub_client_id, cid)
 
 # ################################################################################################################################
 
     def subscribe_to_topic(self, cid:'str', pub_client_id:'str', request:'any_') -> 'any_':
-        return self.clients[pub_client_id].subscribe_to_topic(cid, request)
+        client = self.clients.get(pub_client_id)
+        if client:
+            return client.subscribe_to_topic(cid, request)
+        else:
+            logger.info('No such WSX client `%s` (%s)', pub_client_id, cid)
 
 # ################################################################################################################################
 
     def get_client_by_pub_id(self, pub_client_id:'str') -> 'any_':
-        return self.clients[pub_client_id]
+        client = self.clients.get(pub_client_id)
+        if client:
+            return client
+        else:
+            logger.info('No such WSX client `%s`', pub_client_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
