@@ -142,6 +142,8 @@ class close_code:
     runtime_invoke_client = 3701
     runtime_background_ping = 3702
     unhandled_error = 3703
+    runtime_error = 4003
+    connection_error = 4003
 
 # ################################################################################################################################
 
@@ -821,8 +823,10 @@ class WebSocket(_WebSocket):
         logger.info('Starting WSX background pings (%s:%s) for `%s`',
             ping_interval, self.pings_missed_threshold, self.peer_conn_info_pretty)
 
+        keep_sending = True
+
         try:
-            while self.stream and (not self.server_terminated):
+            while keep_sending and self.stream and (not self.server_terminated):
 
                 # Sleep for N seconds before sending a ping but check if we are connected upfront because
                 # we could have disconnected in between while and sleep calls.
@@ -844,12 +848,18 @@ class WebSocket(_WebSocket):
                                 _ts_before_invoke > self.token.expires_at)
 
                         response = self.invoke_client(new_cid(), None, use_send=False)
+
                     except ConnectionError as e:
-                        logger.warning('ConnectionError; closing connection -> `%s`', e.args)
+
+                        keep_sending = False
+                        logger.warning('ConnectionError; set keep_sending to False; closing connection -> `%s`', e.args)
                         self.on_socket_terminated(close_code.runtime_background_ping, 'Background ping connection error')
+                        self.disconnect_client(code=close_code.connection_error, reason='ConnectionError')
                     except RuntimeError:
-                        logger.warning('RuntimeError; closing connection -> `%s`', format_exc())
+                        keep_sending = False
+                        logger.warning('RuntimeError; set keep_sending to False; closing connection -> `%s`', format_exc())
                         self.on_socket_terminated(close_code.runtime_background_ping, 'Background ping runtime error')
+                        self.disconnect_client(code=close_code.runtime_error, reason='RuntimeError')
 
                     with self.update_lock:
                         if response:
@@ -1460,7 +1470,8 @@ class WebSocket(_WebSocket):
         """
         self._disconnect_requested = True
         self._close_connection('cid:{}; c:{}; r:{}; Disconnecting client from'.format(cid, code, reason))
-        self.close(code, reason)
+        if self.stream:
+            self.close(code, reason)
 
 # ################################################################################################################################
 
