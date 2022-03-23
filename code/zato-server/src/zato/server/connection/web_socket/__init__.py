@@ -144,6 +144,8 @@ class close_code:
     unhandled_error = 3703
     runtime_error = 4003
     connection_error = 4003
+    default_closed = 4004
+    default_diconnect = 4005
 
 # ################################################################################################################################
 
@@ -1458,7 +1460,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def disconnect_client(self, cid:'str'='', code:'int'=-1, reason:'str'='') -> 'None':
+    def disconnect_client(self, cid:'str'='', code:'int'=close_code.default_diconnect, reason:'str'='') -> 'None':
         """ Disconnects the remote client, cleaning up internal resources along the way.
         """
         self._disconnect_requested = True
@@ -1477,7 +1479,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def closed(self, code:'int'=-1, reason:'str'='') -> 'None':
+    def closed(self, code:'int'=close_code.default_closed, reason:'str'='') -> 'None':
 
         # Our self.disconnect_client must have cleaned up everything already
         if not self._disconnect_requested:
