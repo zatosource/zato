@@ -52,7 +52,7 @@ if 0:
     from zato.distlock import Lock
     from zato.server.connection.web_socket import WebSocket
     from zato.server.base.parallel import ParallelServer
-    from zato.server.pubsub.model import topiclist, subnone
+    from zato.server.pubsub.model import subnone, topiclist
     from zato.server.pubsub.task import msgiter, PubSubTool
     from zato.server.service import Service
 
@@ -720,7 +720,7 @@ class PubSub:
         sub_key,          # type: str
         ignore_missing,   # type: bool
         _invalid=object() # type: any_
-        ) -> 'Subscription':
+        ) -> 'subnone':
         """ Deletes a subscription from the list of subscription. By default, it is not an error to call
         the method with an invalid sub_key. Must be invoked with self.lock held.
         """
@@ -1637,7 +1637,7 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def invoke_on_unsubscribed_hook(self, hook:'callable_', topic_id:'int', sub:'Subscription') -> 'any_':
+    def invoke_on_unsubscribed_hook(self, hook:'callable_', topic_id:'int', sub:'subnone') -> 'any_':
         return self._invoke_on_sub_unsub_hook(hook, topic_id, sub_key='', sub=sub)
 
 # ################################################################################################################################
@@ -1955,6 +1955,8 @@ class PubSub:
             # .. it may be a Python class representing the service ..
             if isclass(name) and issubclass(name, Service):
                 name = name.get_name()
+            else:
+                name = cast_('str', name)
 
             # .. but if there is no such service at all, we give up.
             if not self.server.service_store.has_service(name):
