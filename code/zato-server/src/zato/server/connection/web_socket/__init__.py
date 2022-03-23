@@ -1238,7 +1238,7 @@ class WebSocket(_WebSocket):
                     return
 
                 if request.token != self.token.value:
-                    self.on_forbidden('sent an invalid token (`{!r}` instead `{!r}`)'.format(request.token, self.token.value))
+                    self.on_forbidden('sent an invalid token (`{!r}` instead of `{!r}`)'.format(request.token, self.token.value))
                     return
 
                 # Reject request if token is provided but it already expired
@@ -1362,11 +1362,11 @@ class WebSocket(_WebSocket):
                 return
 
             # We get here if self.has_session_opened has not been set to True by self.create_session_by
-            self.on_forbidden('did not create session within {}s (#1)'.format(self.config.new_token_wait_time))
+            self.on_forbidden('did not create a session within {}s (#1)'.format(self.config.new_token_wait_time))
 
         except Exception as e:
             if e.args[0] == "'NoneType' object has no attribute 'text_message'":
-                self.on_forbidden('did not create session within {}s (#2)'.format(self.config.new_token_wait_time))
+                self.on_forbidden('did not create a session within {}s (#2)'.format(self.config.new_token_wait_time))
             else:
                 logger.warning('Exception in WSX _ensure_session_created `%s`', format_exc())
 
