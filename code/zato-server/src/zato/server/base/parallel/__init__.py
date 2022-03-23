@@ -884,7 +884,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             events_tcp_port = events_config['port']
 
             # Statistics
-            self._run_stats_client(events_tcp_port)
+            # self._run_stats_client(events_tcp_port)
 
         # Invoke startup callables
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
