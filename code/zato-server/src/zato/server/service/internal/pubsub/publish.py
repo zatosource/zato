@@ -19,7 +19,7 @@ from ciso8601 import parse_datetime_as_naive
 from gevent import spawn
 
 # Zato
-from zato.common.api import DATA_FORMAT, PUBSUB, ZATO_NONE
+from zato.common.api import PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
 from zato.common.json_ import dumps as json_dumps
 from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_enq_marked_deleted, delete_msg_delivered, \
@@ -27,6 +27,7 @@ from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_en
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import ensure_subs_exist, new_msg_id, PubSubMessage
+from zato.common.typing_ import cast_, dictlist
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_ms
 from zato.server.pubsub import get_expiration, get_priority, PubSub, Topic
@@ -59,12 +60,12 @@ Topic = Topic
 
 # ################################################################################################################################
 
-_JSON = DATA_FORMAT.JSON
 _initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
 
 _meta_topic_key = PUBSUB.REDIS.META_TOPIC_LAST_KEY
 _meta_endpoint_key = PUBSUB.REDIS.META_ENDPOINT_PUB_KEY
 _meta_topic_optional = ('pub_correl_id', 'ext_client_id', 'in_reply_to')
+_meta_sort_key = itemgetter('pub_time', 'ext_pub_time')
 
 _log_turning_gd_msg = 'Turning message `%s` into a GD one ({})'
 _inserting_gd_msg = 'Inserting GD messages for topic `%s` `%s` published by `%s` (ext:%s) (cid:%s)'
@@ -584,7 +585,7 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def reject_publication(self, topic_name, is_gd):
+    def reject_publication(self, topic_name:'str', is_gd:'bool') -> 'None':
         """ Raises an exception to indicate that a publication was rejected.
         """
         raise ServiceUnavailable(self.cid,
@@ -592,9 +593,14 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _update_pub_metadata(self, ctx:'PubCtx', has_topic, has_endpoint, endpoint_data_len, endpoint_max_history,
-        _topic_optional=_meta_topic_optional, _topic_key=_meta_topic_key, _endpoint_key=_meta_endpoint_key,
-        _sort_key=itemgetter('pub_time', 'ext_pub_time')):
+    def _update_pub_metadata(
+        self,
+        ctx:'PubCtx',
+        has_topic:'bool',
+        has_endpoint:'bool',
+        endpoint_data_len:'int',
+        endpoint_max_history:'int'
+    ) -> 'None':
         """ Updates in background metadata about a topic and/or publisher.
         """
         try:
@@ -611,7 +617,7 @@ class Publish(AdminService):
 
             # Prepare a document to update the topic's metadata with
             if has_topic:
-                topic_key = _topic_key % (ctx.cluster_id, ctx.topic.id)
+                topic_key = _meta_topic_key % (ctx.cluster_id, ctx.topic.id)
                 topic_data = {
                     'pub_time': dt_now,
                     'topic_id': ctx.topic.id,
@@ -624,7 +630,7 @@ class Publish(AdminService):
                     'server_pid': self.server.pid,
                 }
 
-                for name in _topic_optional:
+                for name in _meta_topic_optional:
                     value = ctx.last_msg.get(name)
                     if value:
                         topic_data[name] = value
@@ -634,10 +640,11 @@ class Publish(AdminService):
 
             # Prepare a request to udpate the endpoint's metadata with
             if has_endpoint:
-                endpoint_key = _endpoint_key % (ctx.cluster_id, ctx.endpoint_id)
+                endpoint_key = _meta_endpoint_key % (ctx.cluster_id, ctx.endpoint_id)
 
                 idx_found = None
                 endpoint_topic_list = self.server.pub_sub_metadata.get(endpoint_key) or []
+                endpoint_topic_list = cast_(dictlist, endpoint_topic_list)
 
                 # If we already have something stored in RAM, find information about this topic and remove it
                 # to make room for the newest entry.
@@ -669,7 +676,7 @@ class Publish(AdminService):
 
                 # Append the newest entry and sort all results by publication time
                 endpoint_topic_list.append(endpoint_data)
-                endpoint_topic_list.sort(key=_sort_key, reverse=True)
+                endpoint_topic_list.sort(key=_meta_sort_key, reverse=True)
 
                 # Store only as many entries as configured to
                 endpoint_topic_list = endpoint_topic_list[:endpoint_max_history]
