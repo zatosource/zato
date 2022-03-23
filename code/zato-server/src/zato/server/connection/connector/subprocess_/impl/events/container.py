@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
@@ -32,6 +33,9 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+logging.basicConfig(level=logging.DEBUG, format=log_format)
 
 logger = getLogger('zato_events')
 
