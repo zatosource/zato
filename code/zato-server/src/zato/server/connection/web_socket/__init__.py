@@ -1238,7 +1238,7 @@ class WebSocket(_WebSocket):
                     return
 
                 if request.token != self.token.value:
-                    self.on_forbidden('sent an invalid token (`{!r}` instead `{!r}`)'.format(request.token, self.token.value))
+                    self.on_forbidden('sent an invalid token (`{!r}` instead of `{!r}`)'.format(request.token, self.token.value))
                     return
 
                 # Reject request if token is provided but it already expired
