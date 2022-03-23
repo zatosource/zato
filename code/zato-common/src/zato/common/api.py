@@ -906,6 +906,7 @@ class PUBSUB:
             Error_IO = 1
             Error_Other = 2
             No_Msg = 3
+            Error_Runtime_Invoke = 4
 
     class ENDPOINT_TYPE:
         AMQP = NameId('AMQP', 'amqp')
