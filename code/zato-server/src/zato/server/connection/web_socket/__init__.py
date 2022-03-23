@@ -823,14 +823,12 @@ class WebSocket(_WebSocket):
         logger.info('Starting WSX background pings (%s:%s) for `%s`',
             ping_interval, self.pings_missed_threshold, self.peer_conn_info_pretty)
 
-        keep_sending = True
-
         try:
-            while keep_sending and self.stream and (not self.server_terminated):
+            while self.stream and (not self.server_terminated):
 
                 # Sleep for N seconds before sending a ping but check if we are connected upfront because
                 # we could have disconnected in between while and sleep calls.
-                sleep(ping_interval)
+                sleep(10)#ping_interval)
 
                 # Ok, still connected
                 if self.stream and (not self.server_terminated):
@@ -850,16 +848,11 @@ class WebSocket(_WebSocket):
                         response = self.invoke_client(new_cid(), None, use_send=False)
 
                     except ConnectionError as e:
-
-                        keep_sending = False
                         logger.warning('ConnectionError; set keep_sending to False; closing connection -> `%s`', e.args)
-                        self.on_socket_terminated(close_code.runtime_background_ping, 'Background ping connection error')
-                        self.disconnect_client(code=close_code.connection_error, reason='ConnectionError')
+                        self.disconnect_client(code=close_code.connection_error, reason='Background pingConnectionError')
                     except RuntimeError:
-                        keep_sending = False
                         logger.warning('RuntimeError; set keep_sending to False; closing connection -> `%s`', format_exc())
-                        self.on_socket_terminated(close_code.runtime_background_ping, 'Background ping runtime error')
-                        self.disconnect_client(code=close_code.runtime_error, reason='RuntimeError')
+                        self.disconnect_client(code=close_code.runtime_error, reason='Background ping RuntimeError')
 
                     with self.update_lock:
                         if response:
