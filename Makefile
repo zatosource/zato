@@ -38,6 +38,7 @@ sso-tests:
 	cd $(CURDIR)/code/zato-sso && make run-tests
 
 static-check:
+	$(MAKE) type-check
 	cd $(CURDIR)/code/zato-agent     && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-broker    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-cli       && $(MAKE) static-check
