@@ -948,7 +948,7 @@ class PubSub:
         endpoint_id=0, # type: int
         _pub_role=_pub_role, # type: anytuple
         _sub_role=_sub_role  # type: anytuple
-        ) -> 'bool':
+        ) -> 'str | bool':
         """ An internal function that decides whether an endpoint, a security definition,
         or a WSX channel are allowed to publish or subscribe to topics.
         """
@@ -987,12 +987,12 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def is_allowed_pub_topic(self, name:'str', security_id:'int'=0, ws_channel_id:'int'=0) -> 'bool':
+    def is_allowed_pub_topic(self, name:'str', security_id:'int'=0, ws_channel_id:'int'=0) -> 'str | bool':
         return self._is_allowed('pub_topic_patterns', name, True, security_id, ws_channel_id)
 
 # ################################################################################################################################
 
-    def is_allowed_pub_topic_by_endpoint_id(self, name:'str', endpoint_id:'int') -> 'bool':
+    def is_allowed_pub_topic_by_endpoint_id(self, name:'str', endpoint_id:'int') -> 'str | bool':
         return self._is_allowed(
             target='pub_topic_patterns',
             name=name,
@@ -1004,7 +1004,7 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def is_allowed_sub_topic(self, name:'str', security_id:'int'=0, ws_channel_id:'int'=0) -> 'bool':
+    def is_allowed_sub_topic(self, name:'str', security_id:'int'=0, ws_channel_id:'int'=0) -> 'str | bool':
         return self._is_allowed(
             target='sub_topic_patterns',
             name=name,
@@ -1015,7 +1015,7 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def is_allowed_sub_topic_by_endpoint_id(self, name:'str', endpoint_id:'int') -> 'bool':
+    def is_allowed_sub_topic_by_endpoint_id(self, name:'str', endpoint_id:'int') -> 'str | bool':
         return self._is_allowed(
             target='sub_topic_patterns',
             name=name,

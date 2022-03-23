@@ -23,7 +23,7 @@ from zato.common.util.time_ import utcnow_as_ms
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, callable_, commondict, floatnone, optional, stranydict, \
+    from zato.common.typing_ import any_, anylist, callable_, commondict, floatnone, optional, stranydict, \
         strlist, strtuple
     from zato.server.connection.http_soap.outgoing import SudsSOAPWrapper
     from zato.server.pubsub.model import Topic
@@ -151,7 +151,7 @@ class PubSubMessage:
     has_gd:            'bool'
     delivery_status:   'str'
 
-    pub_pattern_matched: 'stranydict'
+    pub_pattern_matched: 'str'
     sub_pattern_matched: 'stranydict'
 
     size:             'int'
@@ -168,7 +168,7 @@ class PubSubMessage:
     reply_to_sk:   'strlist'
     deliver_to_sk: 'strlist'
     user_ctx:      'any_'
-    zato_ctx:      'anydict'
+    zato_ctx:      'any_'
     serialized:    'any_'
     opaque1:       'any_'
 
@@ -196,7 +196,7 @@ class PubSubMessage:
         self.expiration_time = 0.0
         self.has_gd = False
         self.delivery_status = ''
-        self.pub_pattern_matched = {}
+        self.pub_pattern_matched = ''
         self.sub_pattern_matched = {}
         self.size = -1
         self.published_by_id = 0
