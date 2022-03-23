@@ -828,7 +828,7 @@ class WebSocket(_WebSocket):
 
                 # Sleep for N seconds before sending a ping but check if we are connected upfront because
                 # we could have disconnected in between while and sleep calls.
-                sleep(10)#ping_interval)
+                sleep(ping_interval)
 
                 # Ok, still connected
                 if self.stream and (not self.server_terminated):
