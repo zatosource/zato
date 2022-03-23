@@ -41,8 +41,6 @@ class ZatoEventsIPC(SubprocessIPC):
 
     def _ping_connector(self, ignored_address, ignored_auth, should_warn):
 
-        return
-
         # stdlib
         import socket
 
