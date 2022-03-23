@@ -33,7 +33,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger('zato_events')
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -160,7 +160,11 @@ class EventsConnectionContainer(BaseConnectionContainer):
 
                 # .. otherwise, handle the action ..
                 data = line[2:]
-                response = func(data, address_str) # type: str
+
+                try:
+                    response = func(data, address_str) # type: str
+                except Exception as e:
+                    logger.warning('Exception when calling func `%s` -> %s -> %s -> %s', func, address_str, data, e.args)
 
                 # .. not all actions will result in a response ..
                 if response:
