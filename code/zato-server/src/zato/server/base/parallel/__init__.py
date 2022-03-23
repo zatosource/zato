@@ -242,7 +242,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.connector_ftp    = FTPIPC(self)
         self.connector_ibm_mq = IBMMQIPC(self)
         self.connector_sftp   = SFTPIPC(self)
-        # self.connector_events = ZatoEventsIPC(self)
+        self.connector_events = ZatoEventsIPC(self)
 
         # HTTP methods allowed as a Python list
         self.http_methods_allowed = []
