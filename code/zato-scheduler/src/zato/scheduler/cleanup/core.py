@@ -736,22 +736,26 @@ class CleanupManager:
         # First, clean up all the old messages from subscription queues
         # as well as subscribers that have not used the system in the last delta seconds.
         if cleanup_ctx.clean_up_subscriptions:
+            self.logger.info('Entering _cleanup_subscriptions')
             self._cleanup_subscriptions(task_id, cleanup_ctx)
 
         # Clean up topics that contain messages without subscribers
         if cleanup_ctx.clean_up_topics_without_subscribers:
+            self.logger.info('Entering _cleanup_topic_messages_without_subscribers')
             topics_cleaned_up = self._cleanup_topic_messages_without_subscribers(task_id, cleanup_ctx)
             cleanup_ctx.topics_cleaned_up.extend(topics_cleaned_up)
             cleanup_ctx.topics_without_subscribers.extend(topics_cleaned_up)
 
         # Clean up topics that contain messages whose max. retention time has been reached
         if cleanup_ctx.clean_up_topics_with_max_retention_reached:
+            self.logger.info('Entering _cleanup_topic_messages_with_max_retention_reached')
             topics_cleaned_up = self._cleanup_topic_messages_with_max_retention_reached(task_id, cleanup_ctx)
             cleanup_ctx.topics_cleaned_up.extend(topics_cleaned_up)
             cleanup_ctx.topics_with_max_retention_reached.extend(topics_cleaned_up)
 
         # Clean up queues that contain messages which were already expired
         if cleanup_ctx.clean_up_queues_with_expired_messages:
+            self.logger.info('Entering _clean_up_queues_with_expired_messages')
             topics_cleaned_up = self._clean_up_queues_with_expired_messages(task_id, cleanup_ctx)
             cleanup_ctx.topics_cleaned_up.extend(topics_cleaned_up)
             cleanup_ctx.topics_with_expired_messages.extend(topics_cleaned_up)

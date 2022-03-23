@@ -61,7 +61,7 @@ from ws4py.server.wsgiutils import WebSocketWSGIApplication
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.audit_log import DataReceived, DataSent
-from zato.common.exception import ParsingException, Reportable
+from zato.common.exception import ParsingException, Reportable, RuntimeInvocationError
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.typing_ import cast_, dataclass
 from zato.common.util.api import new_cid
@@ -142,6 +142,10 @@ class close_code:
     runtime_invoke_client = 3701
     runtime_background_ping = 3702
     unhandled_error = 3703
+    runtime_error = 4003
+    connection_error = 4003
+    default_closed = 4004
+    default_diconnect = 4005
 
 # ################################################################################################################################
 
@@ -844,12 +848,13 @@ class WebSocket(_WebSocket):
                                 _ts_before_invoke > self.token.expires_at)
 
                         response = self.invoke_client(new_cid(), None, use_send=False)
+
                     except ConnectionError as e:
-                        logger.warning('ConnectionError; closing connection -> `%s`', e.args)
-                        self.on_socket_terminated(close_code.runtime_background_ping, 'Background ping connection error')
+                        logger.warning('ConnectionError; set keep_sending to False; closing connection -> `%s`', e.args)
+                        self.disconnect_client(code=close_code.connection_error, reason='Background pingConnectionError')
                     except RuntimeError:
-                        logger.warning('RuntimeError; closing connection -> `%s`', format_exc())
-                        self.on_socket_terminated(close_code.runtime_background_ping, 'Background ping runtime error')
+                        logger.warning('RuntimeError; set keep_sending to False; closing connection -> `%s`', format_exc())
+                        self.disconnect_client(code=close_code.runtime_error, reason='Background ping RuntimeError')
 
                     with self.update_lock:
                         if response:
@@ -1233,7 +1238,7 @@ class WebSocket(_WebSocket):
                     return
 
                 if request.token != self.token.value:
-                    self.on_forbidden('sent an invalid token (`{!r}` instead `{!r}`)'.format(request.token, self.token.value))
+                    self.on_forbidden('sent an invalid token (`{!r}` instead of `{!r}`)'.format(request.token, self.token.value))
                     return
 
                 # Reject request if token is provided but it already expired
@@ -1357,11 +1362,11 @@ class WebSocket(_WebSocket):
                 return
 
             # We get here if self.has_session_opened has not been set to True by self.create_session_by
-            self.on_forbidden('did not create session within {}s (#1)'.format(self.config.new_token_wait_time))
+            self.on_forbidden('did not create a session within {}s (#1)'.format(self.config.new_token_wait_time))
 
         except Exception as e:
             if e.args[0] == "'NoneType' object has no attribute 'text_message'":
-                self.on_forbidden('did not create session within {}s (#2)'.format(self.config.new_token_wait_time))
+                self.on_forbidden('did not create a session within {}s (#2)'.format(self.config.new_token_wait_time))
             else:
                 logger.warning('Exception in WSX _ensure_session_created `%s`', format_exc())
 
@@ -1419,16 +1424,16 @@ class WebSocket(_WebSocket):
                 self.send(serialized, cid, msg.in_reply_to)
             else:
                 self.ping(serialized)
+
         except RuntimeError as e:
             if str(e) == _cannot_send:
-                msg = 'Cannot send message (socket terminated #2), disconnecting client, cid:`%s`, msg:`%s` conn:`%s`'
+                msg = 'Cannot send message (socket terminated #2), cid:`%s`, msg:`%s` conn:`%s`'
                 data_msg = self._shorten_data(msg)
                 logger.info(data_msg, cid, serialized, self.peer_conn_info_pretty)
                 logger_zato.info(data_msg, cid, serialized, self.peer_conn_info_pretty)
-                self.disconnect_client(cid, close_code.runtime_invoke_client, 'Client invocation runtime error')
-                raise Exception('WSX client disconnected cid:`{}, peer:`{}`'.format(cid, self.peer_conn_info_pretty))
-            else:
-                raise
+
+            self.disconnect_client(cid, close_code.runtime_invoke_client, 'Client invocation runtime error')
+            raise RuntimeInvocationError(cid, 'WSX client disconnected cid:`{}, peer:`{}`'.format(cid, self.peer_conn_info_pretty))
 
         # Wait for response but only if it is not a pub/sub message,
         # these are always asynchronous and that channel's WSX hook
@@ -1455,12 +1460,13 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def disconnect_client(self, cid:'str'='', code:'int'=-1, reason:'str'='') -> 'None':
+    def disconnect_client(self, cid:'str'='', code:'int'=close_code.default_diconnect, reason:'str'='') -> 'None':
         """ Disconnects the remote client, cleaning up internal resources along the way.
         """
         self._disconnect_requested = True
         self._close_connection('cid:{}; c:{}; r:{}; Disconnecting client from'.format(cid, code, reason))
-        self.close(code, reason)
+        if self.stream:
+            self.close(code, reason)
 
 # ################################################################################################################################
 
@@ -1473,7 +1479,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def closed(self, code:'int'=-1, reason:'str'='') -> 'None':
+    def closed(self, code:'int'=close_code.default_closed, reason:'str'='') -> 'None':
 
         # Our self.disconnect_client must have cleaned up everything already
         if not self._disconnect_requested:
@@ -1644,22 +1650,40 @@ class WebSocketContainer(WebSocketWSGIApplication):
 # ################################################################################################################################
 
     def disconnect_client(self, cid:'str', pub_client_id:'str') -> 'any_':
-        return self.clients[pub_client_id].disconnect_client(cid)
+
+        client = self.clients.get(pub_client_id)
+        if client:
+            return client.disconnect_client(cid)
+        else:
+            logger.info('No such WSX client `%s` (%s)', pub_client_id, cid)
 
 # ################################################################################################################################
 
     def notify_pubsub_message(self, cid:'str', pub_client_id:'str', request:'any_') -> 'any_':
-        return self.clients[pub_client_id].notify_pubsub_message(cid, request)
+
+        client = self.clients.get(pub_client_id)
+        if client:
+            return client.notify_pubsub_message(cid, request)
+        else:
+            logger.info('No such WSX client `%s` (%s)', pub_client_id, cid)
 
 # ################################################################################################################################
 
     def subscribe_to_topic(self, cid:'str', pub_client_id:'str', request:'any_') -> 'any_':
-        return self.clients[pub_client_id].subscribe_to_topic(cid, request)
+        client = self.clients.get(pub_client_id)
+        if client:
+            return client.subscribe_to_topic(cid, request)
+        else:
+            logger.info('No such WSX client `%s` (%s)', pub_client_id, cid)
 
 # ################################################################################################################################
 
     def get_client_by_pub_id(self, pub_client_id:'str') -> 'any_':
-        return self.clients[pub_client_id]
+        client = self.clients.get(pub_client_id)
+        if client:
+            return client
+        else:
+            logger.info('No such WSX client `%s`', pub_client_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
