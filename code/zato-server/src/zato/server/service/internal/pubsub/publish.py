@@ -19,14 +19,13 @@ from ciso8601 import parse_datetime_as_naive
 from gevent import spawn
 
 # Zato
-from zato.common.api import DATA_FORMAT, PUBSUB, ZATO_NONE
+from zato.common.api import PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
 from zato.common.json_ import dumps as json_dumps
-from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_enq_marked_deleted, delete_msg_delivered, \
-     delete_msg_expired
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import ensure_subs_exist, new_msg_id, PubSubMessage
+from zato.common.typing_ import cast_, dictlist, optional
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_ms
 from zato.server.pubsub import get_expiration, get_priority, PubSub, Topic
@@ -37,9 +36,8 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict, anylist, strnone, tuple_
     from zato.server.pubsub.model import sublist
-
     any_    = any_
     sublist = sublist
 
@@ -59,29 +57,49 @@ Topic = Topic
 
 # ################################################################################################################################
 
-_JSON = DATA_FORMAT.JSON
-_initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
+_initialized = str(PUBSUB.DELIVERY_STATUS.INITIALIZED)
 
 _meta_topic_key = PUBSUB.REDIS.META_TOPIC_LAST_KEY
 _meta_endpoint_key = PUBSUB.REDIS.META_ENDPOINT_PUB_KEY
 _meta_topic_optional = ('pub_correl_id', 'ext_client_id', 'in_reply_to')
+_meta_sort_key = itemgetter('pub_time', 'ext_pub_time')
 
 _log_turning_gd_msg = 'Turning message `%s` into a GD one ({})'
 _inserting_gd_msg = 'Inserting GD messages for topic `%s` `%s` published by `%s` (ext:%s) (cid:%s)'
+
+class _GetMessage:
+    _skip = PUBSUB.HOOK_ACTION.SKIP
+    _default_pri = PUBSUB.PRIORITY.DEFAULT
+    _opaque_only = PUBSUB.DEFAULT.SK_OPAQUE
+    _float_str = PUBSUB.FLOAT_STRING_CONVERT
+    _zato_mime_type = PUBSUB.MIMEType.Zato
 
 # ################################################################################################################################
 
 class PubCtx:
     """ A container for information describing a single publication.
     """
-    __slots__ = ('cluster_id', 'pubsub', 'topic', 'endpoint_id', 'endpoint_name', 'subscriptions_by_topic', 'msg_id_list',
-        'gd_msg_list', 'non_gd_msg_list', 'pub_pattern_matched', 'ext_client_id', 'is_re_run', 'now', 'current_depth',
-        'last_msg', 'is_wsx')
+    def __init__(
+        self,
+        *,
+        cluster_id: 'int',
+        pubsub: 'PubSub',
+        topic: 'Topic',
+        endpoint_id: 'int',
+        endpoint_name: 'str',
+        subscriptions_by_topic: 'sublist',
+        msg_id_list: 'anylist',
+        gd_msg_list: 'anylist',
+        non_gd_msg_list: 'anylist',
+        pub_pattern_matched: 'str',
+        ext_client_id: 'str',
+        is_re_run: 'bool',
+        now: 'float',
+        is_wsx: 'bool',
+    ) -> 'None':
 
-    def __init__(self, cluster_id, pubsub, topic, endpoint_id, endpoint_name, subscriptions_by_topic, msg_id_list, gd_msg_list,
-            non_gd_msg_list, pub_pattern_matched, ext_client_id, is_re_run, now, is_wsx):
         self.cluster_id = cluster_id
-        self.pubsub = pubsub # type: PubSub
+        self.pubsub = pubsub
         self.topic = topic
         self.endpoint_id = endpoint_id
         self.endpoint_name = endpoint_name
@@ -94,7 +112,7 @@ class PubCtx:
         self.is_re_run = is_re_run
         self.now = now
         self.is_wsx = is_wsx
-        self.current_depth = None
+        self.current_depth = 0
         self.last_msg = self.gd_msg_list[-1] if self.gd_msg_list else self.non_gd_msg_list[-1]
 
 # ################################################################################################################################
@@ -115,7 +133,7 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_data_prefixes(self, data):
+    def _get_data_prefixes(self, data:'str') -> 'tuple_[str, str]':
         data_prefix = data[:self.pubsub.data_prefix_len]
         data_prefix_short = data[:self.pubsub.data_prefix_short_len]
 
@@ -123,14 +141,21 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic, has_no_sk_server,
-        _initialized=_initialized, _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT,
-        _opaque_only=PUBSUB.DEFAULT.SK_OPAQUE, _float_str=PUBSUB.FLOAT_STRING_CONVERT, _zato_mime_type=PUBSUB.MIMEType.Zato):
+    def _get_message(
+        self,
+        topic:'Topic',
+        input:'dict',
+        now:'float',
+        pub_pattern_matched:'str',
+        endpoint_id:'int',
+        subscriptions_by_topic:'sublist',
+        has_no_sk_server:'bool'
+    ) -> 'optional[PubSubMessage]':
 
         priority = get_priority(self.cid, input)
 
         # So as not to send it to SQL if it is a default value anyway = less overhead = better performance
-        if priority == _default_pri:
+        if priority == _GetMessage._default_pri:
             priority = None
 
         expiration = get_expiration(self.cid, input, topic.limit_message_expiry)
@@ -146,8 +171,8 @@ class Publish(AdminService):
 
         # .. otherwise, use input GD value or the default per topic.
         else:
-            has_gd = input.get('has_gd', _zato_none)
-            if has_gd not in (None, _zato_none):
+            has_gd = input.get('has_gd', ZATO_NONE)
+            if has_gd not in (None, ZATO_NONE):
                 if not isinstance(has_gd, bool):
                     raise ValueError('Input has_gd is not a bool (found:`{}`)'.format(repr(has_gd)))
             else:
@@ -163,10 +188,10 @@ class Publish(AdminService):
             ext_pub_time = parse_datetime_as_naive(ext_pub_time)
             ext_pub_time = datetime_to_ms(ext_pub_time) / 1000.0
 
-        pub_correl_id = pub_correl_id if pub_correl_id else None
-        in_reply_to = in_reply_to if in_reply_to else None
-        ext_client_id = ext_client_id if ext_client_id else None
-        mime_type = mime_type if mime_type else None
+        pub_correl_id = pub_correl_id if pub_correl_id else ''
+        in_reply_to = in_reply_to if in_reply_to else ''
+        ext_client_id = ext_client_id if ext_client_id else ''
+        mime_type = mime_type if mime_type else PUBSUB.DEFAULT.MIME_TYPE
         reply_to_sk = input.get('reply_to_sk') or []
         deliver_to_sk = input.get('deliver_to_sk') or []
 
@@ -179,9 +204,10 @@ class Publish(AdminService):
         ps_msg.pub_correl_id = pub_correl_id
         ps_msg.in_reply_to = in_reply_to
 
-        # Convert to string to prevent pg8000 from rounding up float values
-        ps_msg.pub_time = _float_str.format(now)
-        ps_msg.ext_pub_time = _float_str.format(ext_pub_time) if ext_pub_time else ext_pub_time
+        # Convert to string to prevent pg8000 from rounding up float values.
+        # Note that the model says these fields are floats and this is why we ignore the type warnings in this case.
+        ps_msg.pub_time = _GetMessage._float_str.format(now) # type: ignore
+        ps_msg.ext_pub_time = _GetMessage._float_str.format(ext_pub_time) if ext_pub_time else ext_pub_time # type: ignore
 
         # If the data published is not a string or object, we need to serialise it to JSON
         # so as to be able to save it in the database - a delivery task will later
@@ -189,7 +215,7 @@ class Publish(AdminService):
         data = input['data']
         if not isinstance(data, (str, bytes)):
             data = json_dumps(data)
-            zato_ctx['zato_mime_type'] = _zato_mime_type
+            zato_ctx['zato_mime_type'] = _GetMessage._zato_mime_type
 
         zato_ctx = json_dumps(zato_ctx)
 
@@ -197,7 +223,7 @@ class Publish(AdminService):
         ps_msg.pub_pattern_matched = pub_pattern_matched
         ps_msg.data = data
         ps_msg.mime_type = mime_type
-        ps_msg.priority = priority
+        ps_msg.priority = priority # type: ignore
         ps_msg.expiration = expiration
         ps_msg.expiration_time = expiration_time
         ps_msg.published_by_id = endpoint_id
@@ -206,8 +232,8 @@ class Publish(AdminService):
         ps_msg.cluster_id = self.server.cluster_id
         ps_msg.has_gd = has_gd
         ps_msg.ext_client_id = ext_client_id
-        ps_msg.group_id = input.get('group_id') or None
-        ps_msg.position_in_group = input.get('position_in_group') or None
+        ps_msg.group_id = input.get('group_id') or ''
+        ps_msg.position_in_group = input.get('position_in_group') or 1
         ps_msg.is_in_sub_queue = bool(subscriptions_by_topic)
         ps_msg.reply_to_sk = reply_to_sk
         ps_msg.deliver_to_sk = deliver_to_sk
@@ -217,7 +243,7 @@ class Publish(AdminService):
         # Opaque attributes - we only need reply to sub_keys to be placed in there
         # but we do not do it unless we known that any such sub key was actually requested.
         if reply_to_sk or deliver_to_sk:
-            set_instance_opaque_attrs(ps_msg, input, only=_opaque_only)
+            set_instance_opaque_attrs(ps_msg, input, only=_GetMessage._opaque_only)
 
         # If there are any subscriptions for the topic this message was published to, we want to establish
         # based on what subscription pattern each subscriber will receive the message.
@@ -236,14 +262,14 @@ class Publish(AdminService):
             response = topic.before_publish_hook_service_invoker(topic, ps_msg)
 
             # Hook service decided that we should not process this message
-            if response['hook_action'] == _skip:
+            if response['hook_action'] == _GetMessage._skip:
                 logger_audit.info('Skipping message pub_msg_id:`%s`, pub_correl_id:`%s`, ext_client_id:`%s`',
                     ps_msg.pub_msg_id, ps_msg.pub_correl_id, ps_msg.ext_client_id)
                 return
 
         # These are needed only for GD messages that are stored in SQL
         if has_gd:
-            data_prefix, data_prefix_short = self._get_data_prefixes(ps_msg.data)
+            data_prefix, data_prefix_short = self._get_data_prefixes(ps_msg.data) # type: ignore
             ps_msg.data_prefix = data_prefix
             ps_msg.data_prefix_short = data_prefix_short
 
@@ -251,8 +277,19 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_messages_from_data(self, topic, data_list, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
-        has_no_sk_server, reply_to_sk):
+    def _get_messages_from_data(
+        self,
+        *,
+        topic:'Topic',
+        data_list:'any_',
+        input:'dict',
+        now:'float',
+        pub_pattern_matched:'str',
+        endpoint_id:'int',
+        subscriptions_by_topic:'sublist',
+        has_no_sk_server:'bool',
+        reply_to_sk:'strnone'
+    ) -> 'any_':
 
         # List of messages with GD enabled
         gd_msg_list = []
@@ -286,37 +323,42 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def get_pub_pattern_matched(self, endpoint_id, input):
+    def get_pub_pattern_matched(self, endpoint_id:'int', input:'anydict') -> 'tuple_[int, str]':
         """ Returns a publication pattern matched that allows the endpoint to publish messages
         or raises an exception if no pattern was matched. Takes into account various IDs possibly given on input,
         depending on what our caller wanted to provide.
         """
         pubsub = self.server.worker_store.pubsub
-        security_id = input.security_id or None
-        ws_channel_id = input.ws_channel_id or None
+        security_id = input['security_id'] or None
+        ws_channel_id = input['ws_channel_id'] or None
 
         if not endpoint_id:
 
             if security_id:
                 endpoint_id = pubsub.get_endpoint_id_by_sec_id(security_id)
             elif ws_channel_id:
-                endpoint_id = pubsub.get_endpoint_id_by_ws_channel_id(ws_channel_id)
+                endpoint_id_by_wsx_id = pubsub.get_endpoint_id_by_ws_channel_id(ws_channel_id)
+                if endpoint_id_by_wsx_id:
+                    endpoint_id = endpoint_id_by_wsx_id
+                else:
+                    raise Exception('Could not find endpoint by WSX channel ID -> `%s`', ws_channel_id)
             else:
                 raise Exception('Either security_id or ws_channel_id is required if there is no endpoint_id')
 
             kwargs = {'security_id':security_id} if security_id else {'ws_channel_id':ws_channel_id}
-            pub_pattern_matched = pubsub.is_allowed_pub_topic(input.topic_name, **kwargs)
+            pub_pattern_matched = pubsub.is_allowed_pub_topic(input['topic_name'], **kwargs)
 
         else:
-            pub_pattern_matched = pubsub.is_allowed_pub_topic_by_endpoint_id(input.topic_name, endpoint_id)
+            pub_pattern_matched = pubsub.is_allowed_pub_topic_by_endpoint_id(input['topic_name'], endpoint_id)
 
         # Not allowed, raise an exception in that case
         if not pub_pattern_matched:
             self.logger.warning('No pub pattern matched topic `%s` and endpoint `%s` (#2)',
-                input.topic_name, self.pubsub.get_endpoint_by_id(endpoint_id).name)
+                input['topic_name'], self.pubsub.get_endpoint_by_id(endpoint_id).name)
             raise Forbidden(self.cid)
 
         # Alright, we are in
+        pub_pattern_matched = cast_('str', pub_pattern_matched)
         return endpoint_id, pub_pattern_matched
 
 # ################################################################################################################################
@@ -396,25 +438,38 @@ class Publish(AdminService):
 
         # Input messages may contain a mix of GD and non-GD messages, and we need to extract them separately.
         msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
-            topic, data_list, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
-            has_no_sk_server, input.get('reply_to_sk', None))
+            topic = topic,
+            data_list = data_list,
+            input = input,
+            now = now,
+            pub_pattern_matched = pub_pattern_matched,
+            endpoint_id = endpoint_id,
+            subscriptions_by_topic = subscriptions_by_topic,
+            has_no_sk_server = has_no_sk_server,
+            reply_to_sk = input.get('reply_to_sk', None)
+        )
 
         # Create a wrapper object for all the input data and metadata
         is_wsx = bool(input.get('ws_channel_id'))
-        ctx = PubCtx(self.server.cluster_id, pubsub, topic, endpoint_id, pubsub.get_endpoint_by_id(endpoint_id).name,
-            subscriptions_by_topic, msg_id_list, gd_msg_list, non_gd_msg_list, pub_pattern_matched,
-            input.get('ext_client_id'), False, now, is_wsx)
+        ctx = PubCtx(
+            cluster_id = self.server.cluster_id,
+            pubsub = pubsub,
+            topic = topic,
+            endpoint_id = endpoint_id,
+            endpoint_name = pubsub.get_endpoint_by_id(endpoint_id).name,
+            subscriptions_by_topic = subscriptions_by_topic,
+            msg_id_list = msg_id_list,
+            gd_msg_list = gd_msg_list,
+            non_gd_msg_list = non_gd_msg_list,
+            pub_pattern_matched = pub_pattern_matched,
+            ext_client_id = input.get('ext_client_id') or '',
+            is_re_run = False,
+            now = now,
+            is_wsx = is_wsx,
+        )
 
         # We have all the input data, publish the message(s) now
         self._publish(ctx)
-
-# ################################################################################################################################
-
-    def _cleanup_sql_data(self, session, cluster_id, topic_id, now):
-        delete_msg_delivered(session, cluster_id, topic_id)
-        delete_msg_expired(session, cluster_id, topic_id, now)
-        delete_enq_delivered(session, cluster_id, topic_id)
-        delete_enq_marked_deleted(session, cluster_id, topic_id)
 
 # ################################################################################################################################
 
@@ -453,13 +508,9 @@ class Publish(AdminService):
         # We don't always have GD messages on input so there is no point in running an SQL transaction otherwise.
         if has_gd_msg_list:
 
-            with closing(self.odb.session()) as session:
+            with closing(self.odb.session()) as session: # type: ignore
 
-                # No matter if we can publish or not, we may possibly cleanup old messages first.
-                if ctx.topic.needs_msg_cleanup():
-                    self._cleanup_sql_data(session, ctx.cluster_id, ctx.topic.id, ctx.now)
-
-                # .. test first if we should check the depth in this iteration.
+                # Test first if we should check the depth in this iteration.
                 if ctx.topic.needs_depth_check():
 
                     # Get current depth of this topic ..
@@ -584,7 +635,7 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def reject_publication(self, topic_name, is_gd):
+    def reject_publication(self, topic_name:'str', is_gd:'bool') -> 'None':
         """ Raises an exception to indicate that a publication was rejected.
         """
         raise ServiceUnavailable(self.cid,
@@ -592,9 +643,14 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _update_pub_metadata(self, ctx:'PubCtx', has_topic, has_endpoint, endpoint_data_len, endpoint_max_history,
-        _topic_optional=_meta_topic_optional, _topic_key=_meta_topic_key, _endpoint_key=_meta_endpoint_key,
-        _sort_key=itemgetter('pub_time', 'ext_pub_time')):
+    def _update_pub_metadata(
+        self,
+        ctx:'PubCtx',
+        has_topic:'bool',
+        has_endpoint:'bool',
+        endpoint_data_len:'int',
+        endpoint_max_history:'int'
+    ) -> 'None':
         """ Updates in background metadata about a topic and/or publisher.
         """
         try:
@@ -611,7 +667,7 @@ class Publish(AdminService):
 
             # Prepare a document to update the topic's metadata with
             if has_topic:
-                topic_key = _topic_key % (ctx.cluster_id, ctx.topic.id)
+                topic_key = _meta_topic_key % (ctx.cluster_id, ctx.topic.id)
                 topic_data = {
                     'pub_time': dt_now,
                     'topic_id': ctx.topic.id,
@@ -624,7 +680,7 @@ class Publish(AdminService):
                     'server_pid': self.server.pid,
                 }
 
-                for name in _topic_optional:
+                for name in _meta_topic_optional:
                     value = ctx.last_msg.get(name)
                     if value:
                         topic_data[name] = value
@@ -634,10 +690,11 @@ class Publish(AdminService):
 
             # Prepare a request to udpate the endpoint's metadata with
             if has_endpoint:
-                endpoint_key = _endpoint_key % (ctx.cluster_id, ctx.endpoint_id)
+                endpoint_key = _meta_endpoint_key % (ctx.cluster_id, ctx.endpoint_id)
 
                 idx_found = None
                 endpoint_topic_list = self.server.pub_sub_metadata.get(endpoint_key) or []
+                endpoint_topic_list = cast_(dictlist, endpoint_topic_list)
 
                 # If we already have something stored in RAM, find information about this topic and remove it
                 # to make room for the newest entry.
@@ -669,7 +726,7 @@ class Publish(AdminService):
 
                 # Append the newest entry and sort all results by publication time
                 endpoint_topic_list.append(endpoint_data)
-                endpoint_topic_list.sort(key=_sort_key, reverse=True)
+                endpoint_topic_list.sort(key=_meta_sort_key, reverse=True)
 
                 # Store only as many entries as configured to
                 endpoint_topic_list = endpoint_topic_list[:endpoint_max_history]
