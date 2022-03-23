@@ -52,7 +52,7 @@ if 0:
     from zato.distlock import Lock
     from zato.server.connection.web_socket import WebSocket
     from zato.server.base.parallel import ParallelServer
-    from zato.server.pubsub.model import topiclist, subnone
+    from zato.server.pubsub.model import subnone, topiclist
     from zato.server.pubsub.task import msgiter, PubSubTool
     from zato.server.service import Service
 
@@ -720,7 +720,7 @@ class PubSub:
         sub_key,          # type: str
         ignore_missing,   # type: bool
         _invalid=object() # type: any_
-        ) -> 'Subscription':
+        ) -> 'subnone':
         """ Deletes a subscription from the list of subscription. By default, it is not an error to call
         the method with an invalid sub_key. Must be invoked with self.lock held.
         """
@@ -948,7 +948,7 @@ class PubSub:
         endpoint_id=0, # type: int
         _pub_role=_pub_role, # type: anytuple
         _sub_role=_sub_role  # type: anytuple
-        ) -> 'bool':
+        ) -> 'str | bool':
         """ An internal function that decides whether an endpoint, a security definition,
         or a WSX channel are allowed to publish or subscribe to topics.
         """
@@ -987,12 +987,12 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def is_allowed_pub_topic(self, name:'str', security_id:'int'=0, ws_channel_id:'int'=0) -> 'bool':
+    def is_allowed_pub_topic(self, name:'str', security_id:'int'=0, ws_channel_id:'int'=0) -> 'str | bool':
         return self._is_allowed('pub_topic_patterns', name, True, security_id, ws_channel_id)
 
 # ################################################################################################################################
 
-    def is_allowed_pub_topic_by_endpoint_id(self, name:'str', endpoint_id:'int') -> 'bool':
+    def is_allowed_pub_topic_by_endpoint_id(self, name:'str', endpoint_id:'int') -> 'str | bool':
         return self._is_allowed(
             target='pub_topic_patterns',
             name=name,
@@ -1004,7 +1004,7 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def is_allowed_sub_topic(self, name:'str', security_id:'int'=0, ws_channel_id:'int'=0) -> 'bool':
+    def is_allowed_sub_topic(self, name:'str', security_id:'int'=0, ws_channel_id:'int'=0) -> 'str | bool':
         return self._is_allowed(
             target='sub_topic_patterns',
             name=name,
@@ -1015,7 +1015,7 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def is_allowed_sub_topic_by_endpoint_id(self, name:'str', endpoint_id:'int') -> 'bool':
+    def is_allowed_sub_topic_by_endpoint_id(self, name:'str', endpoint_id:'int') -> 'str | bool':
         return self._is_allowed(
             target='sub_topic_patterns',
             name=name,
@@ -1637,7 +1637,7 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def invoke_on_unsubscribed_hook(self, hook:'callable_', topic_id:'int', sub:'Subscription') -> 'any_':
+    def invoke_on_unsubscribed_hook(self, hook:'callable_', topic_id:'int', sub:'subnone') -> 'any_':
         return self._invoke_on_sub_unsub_hook(hook, topic_id, sub_key='', sub=sub)
 
 # ################################################################################################################################
@@ -1955,6 +1955,8 @@ class PubSub:
             # .. it may be a Python class representing the service ..
             if isclass(name) and issubclass(name, Service):
                 name = name.get_name()
+            else:
+                name = cast_('str', name)
 
             # .. but if there is no such service at all, we give up.
             if not self.server.service_store.has_service(name):
