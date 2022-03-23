@@ -147,7 +147,7 @@ class PubSubTestCase(RESTClientTestCase):
         self.assertIsInstance(pub_sub_data['published_by_id'], int)
 
         self.assertDictEqual(pub_sub_data['data'], expected_pub_sub_data)
-        self.assertDictEqual(pub_sub_data['pub_pattern_matched'], {})
+        self.assertEqual(pub_sub_data['pub_pattern_matched'], '')
 
         self.assertTrue(pub_sub_data['size'] >= 100)
         self.assertTrue(pub_sub_data['has_gd'])
