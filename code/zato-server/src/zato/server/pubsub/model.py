@@ -390,11 +390,6 @@ class Topic(ToDictBase):
 
 # ################################################################################################################################
 
-    def needs_msg_cleanup(self) -> 'bool':
-        return self.msg_pub_counter_gd % 10000 == 0
-
-# ################################################################################################################################
-
     def needs_depth_check(self) -> 'bool':
         return self.msg_pub_counter_gd % self.depth_check_freq == 0
 

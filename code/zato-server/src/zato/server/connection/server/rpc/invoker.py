@@ -171,8 +171,20 @@ class RemoteServerInvoker(ServerInvoker):
                     if pid == 'response':
                         pid = kwargs_pid
 
-                    # This will not exist if we were invoking a specific PID
-                    per_pid_data = pid_data.get('pid_data', '')
+                    # It may be a string if there is a low-level exception ..
+                    if isinstance(pid_data, str):
+                        per_pid_data = pid_data
+
+                    # .. otherwise, it may be a dict or.
+                    else:
+
+                        # If it is a dict, not that per_pid_data will not exist if we were invoking a specific PID
+                        if isinstance(pid_data, dict):
+                            per_pid_data = pid_data.get('pid_data', '')
+
+                        # .. otherwise, it may be None, which we assign as is.
+                        else:
+                            per_pid_data = pid_data
 
                     # We go here if there is no response for a PID ..
                     if per_pid_data == '':
@@ -198,9 +210,13 @@ class RemoteServerInvoker(ServerInvoker):
                             if isinstance(per_pid_data, str) and per_pid_data[0] == '{':
                                 pid_data['pid_data'] = loads(per_pid_data)
 
-                        per_pid_response = from_dict(PerPIDResponse, pid_data) # type: PerPIDResponse
-                        per_pid_response.pid = pid
-                        out.data[pid] = per_pid_response
+                        if isinstance(pid_data, dict):
+                            per_pid_response = from_dict(PerPIDResponse, pid_data) # type: PerPIDResponse
+                            per_pid_response.pid = pid
+                            out.data[pid] = per_pid_response
+                        else:
+                            logger.info('Object pid_data is not a dict -> %s -> `%s`', type(pid_data), pid_data)
+                            out.data[pid] = pid_data
 
         # .. and return the result to our caller.
         return out
