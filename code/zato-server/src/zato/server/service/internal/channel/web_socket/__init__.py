@@ -240,8 +240,23 @@ class _BaseAPICommand(_BaseCommand):
         self.logger.info('WSX API response: `%s` (%s)', server_response, self.cid)
 
         if server_response:
-            response_data = server_response.get('response_data') or {}
+
+            # It may be a dict on a successful invocation ..
+            if isinstance(server_response, dict):
+                data = server_response
+
+            # .. otherwise, it may be a ServiceInvocationResult object.
+            else:
+                data = server_response.data
+
+            # The actual response may be a dict by default (on success),
+            # or a string representation of a traceback object caught
+            # while invoking another PID.
+            response_data = data.get('response_data') or {}
+
+            # No matter what it is, we can return it now.
             self.response.payload.response_data = response_data
+
         else:
             self.logger.warning('No server response from %s:%s received to command `%s` (sr:%s)',
                 server_name, server_proc_pid, self.request.input, server_response)
