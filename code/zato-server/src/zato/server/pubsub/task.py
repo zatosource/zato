@@ -29,6 +29,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.common.api import GENERIC, PUBSUB
+from zato.common.exception import RuntimeInvocationError
 from zato.common.json_internal import json_loads
 from zato.common.odb.api import SQLRow
 from zato.common.pubsub import PubSubMessage
