@@ -66,11 +66,13 @@ class ZatoEventsIPC(SubprocessIPC):
 # ################################################################################################################################
 
     def start_zato_events_connector(self, *args, **kwargs):
-        return self.start_connector(*args, **kwargs)
+        # return self.start_connector(*args, **kwargs)
+        pass
 
 # ################################################################################################################################
 
     def invoke_zato_events_connector(self, *args, **kwargs):
-        return self.invoke_connector(*args, **kwargs)
+        # return self.invoke_connector(*args, **kwargs)
+        pass
 
 # ################################################################################################################################
