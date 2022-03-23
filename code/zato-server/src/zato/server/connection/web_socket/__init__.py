@@ -61,7 +61,7 @@ from ws4py.server.wsgiutils import WebSocketWSGIApplication
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.audit_log import DataReceived, DataSent
-from zato.common.exception import ParsingException, Reportable
+from zato.common.exception import ParsingException, Reportable, RuntimeInvocationError
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.typing_ import cast_, dataclass
 from zato.common.util.api import new_cid
@@ -1427,14 +1427,13 @@ class WebSocket(_WebSocket):
 
         except RuntimeError as e:
             if str(e) == _cannot_send:
-                msg = 'Cannot send message (socket terminated #2), disconnecting client, cid:`%s`, msg:`%s` conn:`%s`'
+                msg = 'Cannot send message (socket terminated #2), cid:`%s`, msg:`%s` conn:`%s`'
                 data_msg = self._shorten_data(msg)
                 logger.info(data_msg, cid, serialized, self.peer_conn_info_pretty)
                 logger_zato.info(data_msg, cid, serialized, self.peer_conn_info_pretty)
-                self.disconnect_client(cid, close_code.runtime_invoke_client, 'Client invocation runtime error')
-                raise Exception('WSX client disconnected cid:`{}, peer:`{}`'.format(cid, self.peer_conn_info_pretty))
-            else:
-                raise
+
+            self.disconnect_client(cid, close_code.runtime_invoke_client, 'Client invocation runtime error')
+            raise RuntimeInvocationError(cid, 'WSX client disconnected cid:`{}, peer:`{}`'.format(cid, self.peer_conn_info_pretty))
 
         # Wait for response but only if it is not a pub/sub message,
         # these are always asynchronous and that channel's WSX hook

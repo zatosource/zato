@@ -369,6 +369,8 @@ class DeliveryTask:
 
             if isinstance(e, IOError):
                 result.reason_code = reason_code.Error_IO
+            elif isinstance(e, RuntimeInvocationError):
+                result.reason_code = reason_code.Error_Runtime_Invoke
             else:
                 result.reason_code = reason_code.Error_Other
 
@@ -520,6 +522,12 @@ class DeliveryTask:
 
                         if result.is_ok:
                             continue
+
+                        # This was a runtime invocation error - for instance, a low-level WebSocket exception,
+                        # which is unrecoverable and we need to stop our task. When the client reconnects,
+                        # the delivery will pick up where we left.
+                        elif result.reason_code == reason_code.Error_Runtime_Invoke:
+                            self.stop()
 
                         # Sleep for a moment because we have just run out of all messages.
                         elif result.reason_code == reason_code.No_Msg:

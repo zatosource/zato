@@ -38,6 +38,11 @@ class ZatoException(Exception):
 
 # ################################################################################################################################
 
+class RuntimeInvocationError(ZatoException):
+    pass
+
+# ################################################################################################################################
+
 class ClientSecurityException(ZatoException):
     """ An exception for signalling errors stemming from security problems
     on the client side, such as invalid username or password.
