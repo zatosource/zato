@@ -871,10 +871,11 @@ def invoke_action_handler(req, service_name, send_attrs):
         if response.ok:
             response_data = response.data['response_data']
             if isinstance(response_data, dict):
-                response_data = dict(response_data)
+                response_data = dumps(response_data)
                 logger.info('Returning `%s` from `%s`', response_data, service_name)
-            return HttpResponse(dumps(response_data), content_type='application/javascript')
+            return HttpResponse(response_data, content_type='application/javascript')
         else:
+            logger.warn('Raising exception based on `%s` (`%s`)', response.details, service_name)
             raise Exception(response.details)
     except Exception:
         msg = 'Caught an exception, e:`{}`'.format(format_exc())

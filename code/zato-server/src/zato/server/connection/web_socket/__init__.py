@@ -1424,6 +1424,7 @@ class WebSocket(_WebSocket):
                 self.send(serialized, cid, msg.in_reply_to)
             else:
                 self.ping(serialized)
+
         except RuntimeError as e:
             if str(e) == _cannot_send:
                 msg = 'Cannot send message (socket terminated #2), disconnecting client, cid:`%s`, msg:`%s` conn:`%s`'
