@@ -610,9 +610,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def _run_stats_client(self, events_tcp_port):
         # type: (int) -> None
-        # self.stats_client.init('127.0.0.1', events_tcp_port)
-        # self.stats_client.run()
-        pass
+        self.stats_client.init('127.0.0.1', events_tcp_port)
+        self.stats_client.run()
 
 # ################################################################################################################################
 
@@ -904,7 +903,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         ipc_config_name_to_enabled = {
             IBMMQIPC.ipc_config_name: config.has_ibm_mq,
             SFTPIPC.ipc_config_name: config.has_sftp,
-            ZatoEventsIPC.ipc_config_name: False,
+            ZatoEventsIPC.ipc_config_name: True,
         }
 
         for ipc_config_name, is_enabled in ipc_config_name_to_enabled.items():
@@ -971,11 +970,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         }
 
         # Zato events connector always starts
-        # self.connector_events.start_zato_events_connector(ipc_tcp_start_port, extra_options_kwargs=extra_options_kwargs)
+        self.connector_events.start_zato_events_connector(ipc_tcp_start_port, extra_options_kwargs=extra_options_kwargs)
 
         # Wait until the events connector started - this will let other parts
         # of the server assume that it is always available.
-        # wait_until_port_taken(self.connector_events.ipc_tcp_port, timeout=5)
+        wait_until_port_taken(self.connector_events.ipc_tcp_port, timeout=5)
 
 # ################################################################################################################################
 
