@@ -28,7 +28,7 @@ from zato.common.util.api import ensure_pubsub_hook_is_valid
 from zato.common.util.pubsub import get_last_pub_metadata
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.connection.http_soap import BadRequest
-from zato.server.service import AsIs, Bool, Dict, Int, List, Model, Opaque, Service
+from zato.server.service import AsIs, Bool, Int, List, Model, Opaque, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.internal.pubsub.search import NonGDSearchService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
@@ -38,7 +38,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, stranydict
     Bunch = Bunch
 
 # ################################################################################################################################
@@ -74,23 +74,27 @@ _meta_endpoint_key = PUBSUB.REDIS.META_ENDPOINT_PUB_KEY
 
 # ################################################################################################################################
 
-def _format_meta_topic_key(cluster_id, topic_id):
-    # type: (int, int) -> str
+def _format_meta_topic_key(cluster_id:'int', topic_id:'int') -> 'str':
     return _meta_topic_key % (cluster_id, topic_id)
 
 # ################################################################################################################################
 
-def broker_message_hook(self, input, instance, attrs, service_type):
-    # type: (Service, Bunch, PubSubTopic, Bunch, str)
+def broker_message_hook(
+    self:'Service',
+    input:'stranydict',
+    instance:'PubSubTopic',
+    attrs:'stranydict',
+    service_type:'str'
+) -> 'None':
 
     if service_type == 'create_edit':
-        with closing(self.odb.session()) as session:
-            topic = pubsub_topic(session, input.cluster_id, instance.id)
-            input.is_internal = topic.is_internal
-            input.max_depth_gd = topic.max_depth_gd
-            input.max_depth_non_gd = topic.max_depth_non_gd
-            input.hook_service_id = topic.hook_service_id
-            input.hook_service_name = topic.hook_service_name
+        with closing(self.odb.session()) as session: # type: ignore
+            topic = pubsub_topic(session, input['cluster_id'], instance.id)
+            input['is_internal'] = topic.is_internal
+            input['max_depth_gd'] = topic.max_depth_gd
+            input['max_depth_non_gd'] = topic.max_depth_non_gd
+            input['hook_service_id'] = topic.hook_service_id
+            input['hook_service_name'] = topic.hook_service_name
 
 # ################################################################################################################################
 
@@ -101,8 +105,7 @@ def _add_limits(item:'any_') -> 'None':
 
 # ################################################################################################################################
 
-def response_hook(self, input, instance, attrs, service_type):
-    # type: (Service, Bunch, PubSubTopic, Bunch, str)
+def response_hook(self:'Service', input:'stranydict', instance:'PubSubTopic', attrs:'stranydict', service_type:'str') -> 'None':
 
     if service_type == 'get_list':
 
@@ -123,8 +126,8 @@ def response_hook(self, input, instance, attrs, service_type):
                 topic_id_list.append(item.id)
 
             # .. query the database to find depth of all the topics from the list ..
-            with closing(self.odb.session()) as session:
-                depth_by_topic = get_gd_depth_topic_list(session, input.cluster_id, topic_id_list)
+            with closing(self.odb.session()) as session: # type: ignore
+                depth_by_topic = get_gd_depth_topic_list(session, input['cluster_id'], topic_id_list)
 
             # .. convert it to a dict to make it easier to use it ..
             depth_by_topic = dict(depth_by_topic)
@@ -157,20 +160,18 @@ def response_hook(self, input, instance, attrs, service_type):
 
 # ################################################################################################################################
 
-def pre_opaque_attrs_hook(self, input, instance, attrs):
-    # type: (Service, Bunch, PubSubTopic, Bunch)
+def pre_opaque_attrs_hook(self:'Service', input:'stranydict', instance:'PubSubTopic', attrs:'stranydict') -> 'None':
 
     if not input.get('hook_service_name'):
         if input.get('hook_service_id'):
-            hook_service_name = self.server.service_store.get_service_name_by_id(input.hook_service_id)
-            input.hook_service_name = hook_service_name
+            hook_service_name = self.server.service_store.get_service_name_by_id(input['hook_service_id'])
+            input['hook_service_name'] = hook_service_name
 
 # ################################################################################################################################
 
-def instance_hook(self, input, instance, attrs):
-    # type: (Service, Bunch, PubSubTopic, Bunch)
+def instance_hook(self:'Service', input:'stranydict', instance:'PubSubTopic', attrs:'stranydict') -> 'None':
 
-    if attrs.is_create_edit:
+    if attrs['is_create_edit']:
 
         # Populate a field that ODB requires even if it is reserved for future use
         instance.pub_buffer_size_gd = 0
@@ -184,7 +185,6 @@ def instance_hook(self, input, instance, attrs):
         if hook_service_name:
             hook_service_id = self.server.service_store.get_service_id_by_name(hook_service_name)
             instance.hook_service_id = hook_service_id
-
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -365,7 +365,7 @@ class Get(AdminService):
             'current_depth_gd', Int('limit_retention'), Int('limit_message_expiry'), Int('limit_sub_inactivity'), \
                 'last_pub_time', 'on_no_subs_pub'
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         # Local aliases
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
@@ -398,7 +398,7 @@ class ClearTopicNonGD(AdminService):
         input_required = ('topic_id',)
         output_optional = 'status'
 
-    def handle(self):
+    def handle(self) -> 'None':
         self.pubsub.sync_backlog.clear_topic(self.request.input.topic_id)
         self.response.payload.status = 'ok.{}.{}'.format(self.server.name, self.server.pid)
 
@@ -412,7 +412,7 @@ class Clear(AdminService):
         input_required = 'id'
         input_required = 'cluster_id'
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         # Local aliases
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
@@ -456,7 +456,7 @@ class GetPublisherList(AdminService):
             AsIs('last_correl_id'), 'last_in_reply_to', 'service_name', 'sec_name', 'ws_channel_name', AsIs('ext_client_id'))
         output_repeated = True
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         # Local aliases
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
@@ -493,7 +493,7 @@ class GetGDMessageList(AdminService):
 
 # ################################################################################################################################
 
-    def get_gd_data(self, session):
+    def get_gd_data(self, session:'any_') -> 'anylist':
 
         # Local aliases
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
@@ -503,7 +503,7 @@ class GetGDMessageList(AdminService):
 
 # ################################################################################################################################
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         # Response to produce ..
         out = []
@@ -547,7 +547,7 @@ class GetNonGDMessageList(NonGDSearchService):
 
 # ################################################################################################################################
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         # Local aliases
         topic_id = self.request.input.topic_id
@@ -574,7 +574,7 @@ class GetServerMessageList(AdminService):
 
 # ################################################################################################################################
 
-    def handle(self):
+    def handle(self) -> 'None':
         self.response.payload.data = self.pubsub.sync_backlog.get_messages_by_topic_id(
             self.request.input.topic_id, True, self.request.input.query)
 
@@ -585,12 +585,12 @@ class GetInRAMMessageList(AdminService):
     """ Returns all in-RAM messages matching input sub_keys. Messages, if there were any, are deleted from RAM.
     """
     class SimpleIO:
-        input_required = (List('sub_key_list'),)
-        output_optional = (Dict('messages'),)
+        input_required = List('sub_key_list')
+        output_optional = List('messages')
 
-    def handle(self):
+    def handle(self) -> 'None':
 
-        out = {}
+        out = []
         topic_sub_keys = {}
 
         with closing(self.odb.session()) as session: # type: ignore
@@ -604,7 +604,7 @@ class GetInRAMMessageList(AdminService):
             data = self.pubsub.sync_backlog.retrieve_messages_by_sub_keys(topic_id, sub_keys)
 
             # .. which is why we can extend out directly - sub_keys are always unique
-            out.update(data)
+            out.extend(data)
 
         self.response.payload.messages = out
 
@@ -619,7 +619,7 @@ class GetNonGDDepth(AdminService):
         output_optional = (Int('depth'),)
         response_elem = None
 
-    def handle(self):
+    def handle(self) -> 'None':
         self.response.payload.depth = self.pubsub.get_non_gd_topic_depth(self.request.input.topic_name)
 
 # ################################################################################################################################
@@ -632,7 +632,7 @@ class CollectNonGDDepth(AdminService):
         input_required = ('topic_name',)
         output_optional = (Int('current_depth_non_gd'),)
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         reply = self.server.rpc.invoke_all('zato.pubsub.topic.get-non-gd-depth', {
             'topic_name':self.request.input.topic_name
@@ -650,7 +650,7 @@ class CollectNonGDDepth(AdminService):
 
 class GetTopicMetadata(AdminService):
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         # All the topic IDs we need to find our in-RAM metadata for
         topic_id_list = self.request.raw_request['topic_id_list']

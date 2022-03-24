@@ -2238,7 +2238,7 @@ class PubSubTopic(Base):
     is_api_sub_allowed = Column(Boolean(), nullable=False)
 
     # How many messages to buffer in RAM before they are actually saved in SQL / pushed to tasks
-    pub_buffer_size_gd = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD))
+    pub_buffer_size_gd = cast_('int', Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD)))
 
     task_sync_interval = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_SYNC_INTERVAL))
     task_delivery_interval = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_DELIVERY_INTERVAL))
@@ -2247,7 +2247,7 @@ class PubSubTopic(Base):
     opaque1 = Column(_JSON(), nullable=True)
 
     # A hook service invoked during publications to this specific topic
-    hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
+    hook_service_id = cast_('intnone', Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=name, cascade='all, delete, delete-orphan'))
