@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -19,24 +17,30 @@ from zato.server.service import AsIs, Dict, List
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+_batch_size=PUBSUB.DEFAULT.GET_BATCH_SIZE
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class GetMessages(AdminService):
     """ Returns a list of messages available for a given sub_key.
     Returns up to batch_size messages, if batch_size is not given, it is equal to 100.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('sub_key',)
-        input_optional = ('batch_size',)
-        output_optional = (AsIs('msg_id'), AsIs('correl_id'), 'in_reply_to', 'priority', 'size',
-            'data_format', 'mime_type', 'data', 'expiration', 'expiration_time', 'ext_client_id', 'topic_name',
-            'recv_time', 'delivery_count')
+        input_required = 'sub_key'
+        input_optional = 'batch_size'
+        output_optional = AsIs('msg_id'), AsIs('correl_id'), 'in_reply_to', 'priority', 'size', \
+            'data_format', 'mime_type', 'data', 'expiration', 'expiration_time', 'ext_client_id', 'topic_name', \
+            'recv_time', 'delivery_count'
         output_repeated = True
 
-    def handle(self, _batch_size=PUBSUB.DEFAULT.GET_BATCH_SIZE):
+    def handle(self) -> 'None':
         input = self.request.input
         batch_size = input.batch_size or _batch_size
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             msg_list = get_messages(session, self.server.cluster_id, input.sub_key, batch_size, utcnow_as_ms())
 
             for elem in msg_list:
@@ -69,19 +73,18 @@ class AcknowledgeDelivery(AdminService):
     """ Invoked by API clients to confirm that delivery of all messages from input msg_id_list was successful.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('sub_key', List('msg_id_list'),)
+        input_required = 'sub_key', List('msg_id_list')
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         sub_key = self.request.input.sub_key
         msg_id_list = self.request.input.msg_id_list
 
         if msg_id_list:
-            with closing(self.odb.session()) as session:
+            with closing(self.odb.session()) as session: # type: ignore
 
                 # Call SQL UPDATE ..
-                acknowledge_delivery(
-                    session, self.server.cluster_id, sub_key, msg_id_list, utcnow_as_ms())
+                acknowledge_delivery(session, self.server.cluster_id, sub_key, msg_id_list, utcnow_as_ms())
 
                 # .. and confirm the transaction
                 session.commit()
@@ -92,10 +95,10 @@ class GetQueueDepthBySubKey(AdminService):
     """ For each sub_key given on input, return depth of its associated message queue.
     """
     class SimpleIO(AdminSIO):
-        input_optional = ('sub_key', List('sub_key_list'))
-        output_optional = (Dict('queue_depth'),)
+        input_optional = 'sub_key', List('sub_key_list')
+        output_optional = Dict('queue_depth')
 
-    def handle(self):
+    def handle(self) -> 'None':
         input = self.request.input
         input.require_any('sub_key', 'sub_key_list')
 
@@ -105,7 +108,7 @@ class GetQueueDepthBySubKey(AdminService):
         # Response to return
         response = {}
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             for item in sub_key_list:
                 response[item] = get_queue_depth_by_sub_key(session, self.server.cluster_id, item, utcnow_as_ms())
 

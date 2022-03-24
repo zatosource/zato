@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-# stdlib
-from operator import itemgetter
 
 # Zato
 from zato.common.api import SEARCH
@@ -16,15 +13,17 @@ from zato.common.util.time_ import datetime_from_ms
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 _page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class NonGDSearchService(AdminService):
     """ A base class for services that produce a list of paginated non-GD messages.
     """
-    def _post_process_msg_list(self, msg_list):
+    def _post_process_msg_list(self, msg_list) -> 'None':
 
         for msg in msg_list:
 
@@ -37,7 +36,9 @@ class NonGDSearchService(AdminService):
             msg['endpoint_id'] = msg.pop('published_by_id')
             msg['endpoint_name'] = self.pubsub.get_endpoint_by_id(msg['endpoint_id']).name
 
-    def set_non_gd_msg_list_response(self, msg_list, cur_page, _sort_key=itemgetter('pub_time')):
+# ################################################################################################################################
+
+    def set_non_gd_msg_list_response(self, msg_list, cur_page) -> 'None':
         """ Paginates a list of non-GD messages (from topics or queues) and returns results.
         """
         # Build the results metadata
@@ -50,4 +51,5 @@ class NonGDSearchService(AdminService):
         # .. and this is metadata so it goes to _meta.
         self.response.payload._meta = search_results.to_dict()
 
+# ################################################################################################################################
 # ################################################################################################################################

@@ -22,11 +22,10 @@ from future.utils import itervalues
 # ################################################################################################################################
 
 if 0:
-    from typing import Callable
     from zato.common.pubsub import PubSubMessage
+    from zato.common.typing_ import any_, anydict, callable_
     from zato.server.pubsub.model import Subscription
 
-    Callable = Callable
     PubSubMessage = PubSubMessage
     Subscription = Subscription
 
@@ -39,7 +38,8 @@ class NotifyPubSubMessage(AdminService):
     def handle(self):
         # The request that we have on input needs to be sent to a pubsub_tool for each sub_key,
         # even if it is possibly the same pubsub_tool for more than one input sub_key.
-        req = self.request.raw_request['request']
+        raw_request = self.request.raw_request # type: anydict
+        req = raw_request['request']
 
         for sub_key in req['sub_key_list']:
             pubsub_tool = self.pubsub.pubsub_tool_by_sub_key[sub_key]
@@ -52,7 +52,7 @@ class CreateDeliveryTask(AdminService):
     """ Starts a new delivery task for endpoints other than WebSockets (which are handled separately).
     """
     def handle(self):
-        config = self.request.raw_request
+        config = self.request.raw_request # type: anydict
 
         # Creates a pubsub_tool that will handle this subscription and registers it with pubsub
         pubsub_tool = PubSubTool(self.pubsub, self.server, config['endpoint_type'])
@@ -85,18 +85,18 @@ class DeliverMessage(AdminService):
 
 # ################################################################################################################################
 
-    def handle(self):
-        msg = self.request.input.msg # type: list[PubSubMessage]
+    def handle(self) -> 'None':
+        msg = self.request.input.msg # type: any_
 
         subscription = self.request.input.subscription # type: Subscription
-        endpoint_impl_getter = self.pubsub.endpoint_impl_getter[subscription.config.endpoint_type] # type: Callable
+        endpoint_impl_getter = self.pubsub.endpoint_impl_getter[subscription.config['endpoint_type']] # type: callable_
 
-        func = deliver_func[subscription.config.endpoint_type] # type: Callable
+        func = deliver_func[subscription.config['endpoint_type']] # type: callable_
         func(self, msg, subscription, endpoint_impl_getter)
 
 # ################################################################################################################################
 
-    def _get_data_from_message(self, msg):
+    def _get_data_from_message(self, msg:'any_') -> 'any_':
 
         # A list of messages is given on input so we need to serialize each of them individually
         if isinstance(msg, list):
@@ -113,22 +113,23 @@ class DeliverMessage(AdminService):
     def _deliver_rest_soap(self,
         msg:'list[PubSubMessage]',
         subscription:'Subscription',
-        impl_getter:'Callable',
+        impl_getter:'callable_',
         _suds:'str'=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id,
         _rest:'str'=URL_TYPE.PLAIN_HTTP
-        ):
-        if not subscription.config.out_http_soap_id:
+        ) -> 'None':
+
+        if not subscription.config['out_http_soap_id']:
             raise ValueError('Missing out_http_soap_id for subscription `{}`'.format(subscription))
         else:
             data = self._get_data_from_message(msg)
-            http_soap = impl_getter(subscription.config.out_http_soap_id) # type: dict
+            http_soap = impl_getter(subscription.config['out_http_soap_id']) # type: any_
 
             _is_rest = http_soap['config']['transport'] == _rest # type: bool
             _has_suds = http_soap['config']['serialization_type'] == _suds # type: bool
 
             # If it is REST or a suds-based connection, we can just invoke it directly
             if _is_rest or (not _has_suds):
-                http_soap.conn.http_request(subscription.config.out_http_method, self.cid, data=data)
+                http_soap.conn.http_request(subscription.config['out_http_method'], self.cid, data=data)
 
             # .. while suds-based outgoing connections need to invoke the hook service which will
             # in turn issue a SOAP request to the remote server.
@@ -137,21 +138,26 @@ class DeliverMessage(AdminService):
 
 # ################################################################################################################################
 
-    def _deliver_amqp(self, msg, subscription, _ignored_impl_getter):
+    def _deliver_amqp(
+        self,
+        msg:'PubSubMessage',
+        subscription:'Subscription',
+        _ignored_impl_getter # type: ignore
+    ) -> 'None':
 
         # Ultimately we should use impl_getter to get the outconn
         for value in itervalues(self.server.worker_store.worker_config.out_amqp):
-            if value['config']['id'] == subscription.config.out_amqp_id:
+            if value['config']['id'] == subscription.config['out_amqp_id']:
 
                 data = self._get_data_from_message(msg)
                 name = value['config']['name']
                 kwargs = {}
 
-                if subscription.config.amqp_exchange:
-                    kwargs['exchange'] = subscription.config.amqp_exchange
+                if subscription.config['amqp_exchange']:
+                    kwargs['exchange'] = subscription.config['amqp_exchange']
 
-                if subscription.config.amqp_routing_key:
-                    kwargs['routing_key'] = subscription.config.amqp_routing_key
+                if subscription.config['amqp_routing_key']:
+                    kwargs['routing_key'] = subscription.config['amqp_routing_key']
 
                 self.outgoing.amqp.send(dumps(data), name, **kwargs)
 
@@ -160,13 +166,12 @@ class DeliverMessage(AdminService):
 
 # ################################################################################################################################
 
-    def _deliver_wsx(self, msg, subscription, _ignored_impl_getter):
+    def _deliver_wsx(self, msg, subscription, _ignored_impl_getter) -> 'None': # type: ignore
         raise NotImplementedError('WSX deliveries should be handled by each socket\'s deliver_pubsub_msg')
 
 # ################################################################################################################################
 
-    def _deliver_srv(self, msg, subscription, _ignored_impl_getter):
-        # type: (object, Subscription, object)
+    def _deliver_srv(self, msg:'any_', subscription:'Subscription', _ignored_impl_getter:'any_') -> 'None':
 
         # Reusable
         is_list = isinstance(msg, list)
@@ -207,12 +212,12 @@ class GetServerPIDForSubKey(AdminService):
 
 # ################################################################################################################################
 
-    def _raise_bad_request(self, sub_key):
+    def _raise_bad_request(self, sub_key:'str') -> 'None':
         raise BadRequest(self.cid, 'No such sub_key found `{}`'.format(sub_key))
 
 # ################################################################################################################################
 
-    def handle(self):
+    def handle(self) -> 'None':
         sub_key = self.request.input.sub_key
         try:
             server = self.pubsub.get_delivery_server_by_sub_key(sub_key, needs_lock=False)

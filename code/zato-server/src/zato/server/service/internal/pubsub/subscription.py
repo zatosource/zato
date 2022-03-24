@@ -26,8 +26,9 @@ from zato.common.odb.query.pubsub.subscribe import add_subscription, add_wsx_sub
      move_messages_to_sub_queue
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id_no_search
 from zato.common.pubsub import new_sub_key
-from zato.common.util.api import get_sa_model_columns, make_repr
 from zato.common.simpleio_ import drop_sio_elems
+from zato.common.typing_ import cast_
+from zato.common.util.api import get_sa_model_columns, make_repr
 from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
 from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub, Topic
@@ -38,8 +39,8 @@ from zato.server.service.internal.pubsub import common_sub_data
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import any_, boolnone, intnone, optional, strnone
     from zato.common.model.wsx import WSXConnectorConfig
-
     WSXConnectorConfig = WSXConnectorConfig
 
 # ################################################################################################################################
@@ -66,48 +67,61 @@ sub_impl_input_optional.remove('topic_name')
 class SubCtx:
     """ A container for information pertaining to a given subscription request.
     """
-    def __init__(self, cluster_id, pubsub):
-        self.pubsub = pubsub # type: PubSub
-        self.cluster_id = cluster_id
-        self.server_id = None
-        self.has_gd = None
-        self.sub_pattern_matched = None
-        self.topic = None # type: Topic
-        self.is_internal = None
-        self.active_status = None
-        self.endpoint_type = None
-        self.endpoint_id = None
-        self.delivery_method = None
-        self.delivery_data_format = None
-        self.delivery_batch_size = None
-        self.wrap_one_msg_in_list = None
-        self.delivery_max_retry = None
-        self.delivery_err_should_block = None
-        self.wait_sock_err = None
-        self.wait_non_sock_err = None
-        self.ext_client_id = None
-        self.delivery_endpoint = None
-        self.out_http_soap_id = None
-        self.out_http_method = None
-        self.out_amqp_id = None
-        self.creation_time = None
-        self.sub_key = None
-        self.ws_sub = None
+    pubsub: 'PubSub'
+    cluster_id: 'int'
+    topic: 'Topic'
+    creation_time: 'float'
 
-    def __repr__(self):
+    has_gd: 'any_' = None
+    is_internal: 'boolnone' = None
+    topic_name: 'str' = ''
+    server_id: 'intnone' = None
+    sub_pattern_matched: 'strnone' = None
+    active_status: 'strnone' = None
+    endpoint_type: 'strnone' = None
+    endpoint_id: 'intnone' = None
+    delivery_method: 'strnone' = None
+    delivery_data_format: 'strnone' = None
+    delivery_batch_size: 'intnone' = None
+    wrap_one_msg_in_list: 'boolnone' = None
+    delivery_max_retry: 'intnone' = None
+    delivery_err_should_block: 'boolnone' = None
+    wait_sock_err:'intnone' = None
+    wait_non_sock_err:'intnone' = None
+    ext_client_id: 'strnone' = None
+    delivery_endpoint: 'strnone' = None
+    out_http_soap_id: 'intnone' = None
+    out_http_method: 'strnone' = None
+    out_amqp_id: 'intnone' = None
+    sub_key: 'strnone' = None
+    security_id: 'intnone' = None
+    ws_channel_id: 'intnone' = None
+    ws_channel_name: 'strnone' = None
+    sql_ws_client_id: 'intnone' = None
+    unsub_on_wsx_close: 'boolnone' = None
+    ws_pub_client_id: 'strnone' = None
+    web_socket: 'optional[WebSocket]'
+
+    def __init__(self, cluster_id:'int', pubsub:'PubSub') -> 'None':
+        self.cluster_id = cluster_id
+        self.pubsub = pubsub
+
+    def __repr__(self) -> 'str':
         return make_repr(self)
 
-    def set_endpoint_id(self):
+    def set_endpoint_id(self) -> 'None':
         if self.endpoint_id:
             return
         elif self.security_id:
             self.endpoint_id = self.pubsub.get_endpoint_id_by_sec_id(self.security_id)
         elif self.ws_channel_id:
-            self.endpoint_id = self.pubsub.get_endpoint_id_by_ws_channel_id(self.ws_channel_id)
+            wsx_endpoint_id = self.pubsub.get_endpoint_id_by_ws_channel_id(self.ws_channel_id)
+            if wsx_endpoint_id:
+                self.endpoint_id = wsx_endpoint_id
         else:
             raise ValueError('Could not obtain endpoint_id')
 
-    def after_properties_set(self):
+    def after_properties_set(self) -> 'None':
         """ A hook that lets subclasses customize this object after it is known that all common properties have been set.
         """
 
@@ -116,7 +130,7 @@ class SubCtx:
 class SubCtxAMQP(SubCtx):
     """ Pub/sub context config for AMQP endpoints.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
         super(SubCtxAMQP, self).__init__(*args, **kwargs)
         self.amqp_exchange = None
         self.amqp_routing_key = None
@@ -127,7 +141,7 @@ class SubCtxAMQP(SubCtx):
 class SubCtxFiles(SubCtx):
     """ Pub/sub context config for local files-based endpoints.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
         super(SubCtxFiles, self).__init__(*args, **kwargs)
         self.files_directory_list = None
 
@@ -136,7 +150,7 @@ class SubCtxFiles(SubCtx):
 class SubCtxFTP(SubCtx):
     """ Pub/sub context config for FTP endpoints.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
         super(SubCtxFTP, self).__init__(*args, **kwargs)
         self.ftp_directory_list = None
 
@@ -145,7 +159,7 @@ class SubCtxFTP(SubCtx):
 class SubCtxSecBased(SubCtx):
     """ Pub/sub context config for endpoints based around security definitions (e.g. REST and SOAP).
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
         super(SubCtxSecBased, self).__init__(*args, **kwargs)
         self.security_id = None
 
@@ -154,12 +168,12 @@ class SubCtxSecBased(SubCtx):
 class SubCtxREST(SubCtxSecBased):
     """ Pub/sub context config for REST endpoints.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
         super(SubCtxREST, self).__init__(*args, **kwargs)
         self.out_rest_http_soap_id = None
         self.rest_delivery_endpoint = None
 
-    def after_properties_set(self):
+    def after_properties_set(self) -> 'None':
         super(SubCtxREST, self).after_properties_set()
         self.out_http_soap_id = self.out_rest_http_soap_id
         self.delivery_endpoint = self.rest_delivery_endpoint
@@ -169,39 +183,16 @@ class SubCtxREST(SubCtxSecBased):
 class SubCtxService(SubCtx):
     """ Pub/sub context config for Zato service endpoints.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
         super(SubCtxService, self).__init__(*args, **kwargs)
         self.service_id = None
-
-# ################################################################################################################################
-
-class SubCtxSMSTwilio(SubCtx):
-    """ Pub/sub context config for SMS Twilio endpoints.
-    """
-    def __init__(self, *args, **kwargs):
-        super(SubCtxSMSTwilio, self).__init__(*args, **kwargs)
-        self.sms_twilio_from = None
-        self.sms_twilio_to_list = None
-
-# ################################################################################################################################
-
-class SubCtxSMTP(SubCtx):
-    """ Pub/sub context config for SMTP endpoints.
-    """
-    def __init__(self, *args, **kwargs):
-        super(SubCtxSMTP, self).__init__(*args, **kwargs)
-        self.smtp_is_html = None
-        self.smtp_subject = None
-        self.smtp_from = None
-        self.smtp_to_list = None
-        self.smtp_body = None
 
 # ################################################################################################################################
 
 class SubCtxSOAP(SubCtxSecBased):
     """ Pub/sub context config for SOAP endpoints.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
         super(SubCtxSOAP, self).__init__(*args, **kwargs)
         self.out_soap_http_soap_id = None
         self.soap_delivery_endpoint = None
@@ -216,14 +207,14 @@ class SubCtxSOAP(SubCtxSecBased):
 class SubCtxWebSockets(SubCtx):
     """ Pub/sub context config for WebSockets endpoints.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
         super(SubCtxWebSockets, self).__init__(*args, **kwargs)
         self.ws_channel_id = None
         self.ws_channel_name = None
-        self.ws_pub_client_id = None
+        self.ws_pub_client_id = ''
         self.sql_ws_client_id = None
-        self.unsub_on_wsx_close = None
-        self.web_socket = None # type: WebSocket
+        self.unsub_on_wsx_close = True
+        self.web_socket = None
 
 # ################################################################################################################################
 
@@ -233,8 +224,6 @@ ctx_class = {
     PUBSUB.ENDPOINT_TYPE.FTP.id: SubCtxFTP,
     PUBSUB.ENDPOINT_TYPE.REST.id: SubCtxREST,
     PUBSUB.ENDPOINT_TYPE.SERVICE.id: SubCtxService,
-    PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id: SubCtxSMSTwilio,
-    PUBSUB.ENDPOINT_TYPE.SMTP.id: SubCtxSMTP,
     PUBSUB.ENDPOINT_TYPE.SOAP.id: SubCtxSOAP,
     PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: SubCtxWebSockets,
 }
@@ -244,7 +233,14 @@ ctx_class = {
 class _Subscribe(AdminService):
     """ Base class for services implementing pub/sub subscriptions.
     """
-    def _get_sub_pattern_matched(self, topic_name, ws_channel_id, sql_ws_client_id, security_id, endpoint_id):
+    def _get_sub_pattern_matched(
+        self,
+        topic_name:'str',
+        ws_channel_id:'intnone',
+        sql_ws_client_id:'intnone',
+        security_id:'intnone',
+        endpoint_id:'intnone'
+    ) -> 'str':
         pubsub = self.server.worker_store.pubsub
 
         if ws_channel_id and (not sql_ws_client_id):
@@ -263,7 +259,7 @@ class _Subscribe(AdminService):
 
         # Alright, we can proceed
         else:
-            return sub_pattern_matched
+            return cast_('str', sub_pattern_matched)
 
     # Check if subscription is allowed and getting a pattern that would have matched is the same thing.
     _is_subscription_allowed = _get_sub_pattern_matched
@@ -273,7 +269,7 @@ class _Subscribe(AdminService):
 class SubscribeServiceImpl(_Subscribe):
     """ Lower-level service that actually handles pub/sub subscriptions. Each endpoint_type has its own subclass.
     """
-    endpoint_type = None
+    endpoint_type:'str'
 
     class SimpleIO(AdminSIO):
         input_required = 'topic_name'
@@ -284,7 +280,7 @@ class SubscribeServiceImpl(_Subscribe):
 
 # ################################################################################################################################
 
-    def _get_sub_ctx(self):
+    def _get_sub_ctx(self) -> 'SubCtx':
         """ Returns a new pub/sub config context specific to self.endpoint_type.
         """
         # Create output object
@@ -303,12 +299,12 @@ class SubscribeServiceImpl(_Subscribe):
         # Return data
         return ctx
 
-    def _handle_subscription(self, ctx):
+    def _handle_subscription(self, ctx:'SubCtx') -> 'None':
         raise NotImplementedError('Must be implement by subclasses')
 
 # ################################################################################################################################
 
-    def handle(self):
+    def handle(self) -> 'None':
         # Get basic pub/sub subscription context
         ctx = self._get_sub_ctx()
 
@@ -332,7 +328,7 @@ class SubscribeServiceImpl(_Subscribe):
 
 # ################################################################################################################################
 
-    def _subscribe_impl(self, ctx):
+    def _subscribe_impl(self, ctx:'SubCtx') -> 'None':
         """ Invoked by subclasses to subscribe callers using input pub/sub config context.
         """
         with self.lock('zato.pubsub.subscribe.%s' % (ctx.topic_name)):
@@ -340,10 +336,24 @@ class SubscribeServiceImpl(_Subscribe):
             # Is it a WebSockets client?
             is_wsx = bool(ctx.ws_channel_id)
 
-            # Endpoint on whose behalf the subscription will be made
-            endpoint = self.pubsub.get_endpoint_by_id(ctx.endpoint_id)
+            # These casts are needed for pylance
+            web_socket = cast_('WebSocket', None)
+            sql_ws_client_id = cast_('int', None)
+            ws_channel_name = cast_('str', None)
+            ws_pub_client_id = cast_('str', None)
 
-            with closing(self.odb.session()) as session:
+            if is_wsx:
+
+                web_socket = cast_('WebSocket', ctx.web_socket)
+                sql_ws_client_id = cast_('int', ctx.sql_ws_client_id)
+                ws_channel_name = cast_('str', ctx.ws_channel_name)
+                ws_pub_client_id = cast_('str', ctx.ws_pub_client_id)
+
+            # Endpoint on whose behalf the subscription will be made
+            endpoint_id = cast_('int', ctx.endpoint_id)
+            endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
+
+            with closing(self.odb.session()) as session: # type: ignore
                 with session.no_autoflush:
 
                     # Non-WebSocket clients cannot subscribe to the same topic multiple times
@@ -353,7 +363,7 @@ class SubscribeServiceImpl(_Subscribe):
                                 endpoint.name, ctx.topic.name))
 
                     ctx.creation_time = now = utcnow_as_ms()
-                    sub_key = new_sub_key(self.endpoint_type, ctx.ext_client_id)
+                    sub_key = new_sub_key(self.endpoint_type, cast_('str', ctx.ext_client_id))
 
                     # Create a new subscription object and flush the session because the subscription's ID
                     # may be needed for the WSX subscription
@@ -402,11 +412,17 @@ class SubscribeServiceImpl(_Subscribe):
                             ctx.ext_client_id, ctx.ws_channel_id, ps_sub.id)
 
                         # This object will be transient - dropped each time a WSX client disconnects
-                        self.pubsub.add_wsx_client_pubsub_keys(session, ctx.sql_ws_client_id, sub_key, ctx.ws_channel_name,
-                            ctx.ws_pub_client_id, ctx.web_socket.get_peer_info_dict())
+                        self.pubsub.add_wsx_client_pubsub_keys(
+                            session,
+                            sql_ws_client_id,
+                            sub_key,
+                            ws_channel_name,
+                            ws_pub_client_id,
+                            web_socket.get_peer_info_dict()
+                        )
 
                         # Let the WebSocket connection object know that it should handle this particular sub_key
-                        ctx.web_socket.pubsub_tool.add_sub_key(sub_key)
+                        web_socket.pubsub_tool.add_sub_key(sub_key)
 
                     # Commit all changes
                     session.commit()
@@ -419,9 +435,9 @@ class SubscribeServiceImpl(_Subscribe):
                         # Let the pub/sub task know it can fetch any messages possibly enqueued for that subscriber,
                         # note that since this is a new subscription, it is certain that only GD messages may be available,
                         # never non-GD ones.
-                        ctx.web_socket.pubsub_tool.enqueue_gd_messages_by_sub_key(sub_key)
+                        web_socket.pubsub_tool.enqueue_gd_messages_by_sub_key(sub_key)
 
-                        gd_depth, non_gd_depth = ctx.web_socket.pubsub_tool.get_queue_depth(sub_key)
+                        gd_depth, non_gd_depth = web_socket.pubsub_tool.get_queue_depth(sub_key)
                         self.response.payload.queue_depth = gd_depth + non_gd_depth
                     else:
 
@@ -453,7 +469,7 @@ class SubscribeWebSockets(SubscribeServiceImpl):
     name = 'zato.pubsub.subscription.subscribe-websockets'
     endpoint_type = PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
 
-    def _handle_subscription(self, ctx):
+    def _handle_subscription(self, ctx:'SubCtxWebSockets') -> 'None':
         ctx.delivery_method = PUBSUB.DELIVERY_METHOD.WEB_SOCKET.id # This is a WebSocket so delivery_method is always fixed
         self._subscribe_impl(ctx)
 
@@ -464,7 +480,7 @@ class SubscribeREST(SubscribeServiceImpl):
     """
     endpoint_type = PUBSUB.ENDPOINT_TYPE.REST.id
 
-    def _handle_subscription(self, ctx):
+    def _handle_subscription(self, ctx:'SubCtx') -> 'None':
         self._subscribe_impl(ctx)
 
 # ################################################################################################################################
@@ -474,7 +490,7 @@ class SubscribeSOAP(SubscribeServiceImpl):
     """
     endpoint_type = PUBSUB.ENDPOINT_TYPE.SOAP.id
 
-    def _handle_subscription(self, ctx):
+    def _handle_subscription(self, ctx:'SubCtx') -> 'None':
         self._subscribe_impl(ctx)
 
 # ################################################################################################################################
@@ -484,7 +500,7 @@ class SubscribeAMQP(SubscribeServiceImpl):
     """
     endpoint_type = PUBSUB.ENDPOINT_TYPE.AMQP.id
 
-    def _handle_subscription(self, ctx):
+    def _handle_subscription(self, ctx:'SubCtxAMQP') -> 'None':
         self._subscribe_impl(ctx)
 
 # ################################################################################################################################
@@ -494,7 +510,7 @@ class SubscribeService(SubscribeServiceImpl):
     """
     endpoint_type = PUBSUB.ENDPOINT_TYPE.SERVICE.id
 
-    def _handle_subscription(self, ctx):
+    def _handle_subscription(self, ctx:'SubCtx') -> 'None':
         self._subscribe_impl(ctx)
 
 # ################################################################################################################################
@@ -502,7 +518,7 @@ class SubscribeService(SubscribeServiceImpl):
 class Create(_Subscribe):
     """ Creates a new pub/sub subscription by invoking a subscription service specific to input endpoint_type.
     """
-    def handle(self):
+    def handle(self) -> 'None':
 
         # This is a multi-line string of topic names
         topic_list_text = [elem.strip() for elem in (self.request.raw_request.pop('topic_list_text', '') or '').splitlines()]
@@ -559,8 +575,8 @@ class DeleteAll(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'endpoint_id')
 
-    def handle(self):
-        with closing(self.odb.session()) as session:
+    def handle(self) -> 'None':
+        with closing(self.odb.session()) as session: # type: ignore
 
             # Get all subscriptions for that endpoint ..
             items = pubsub_subscription_list_by_endpoint_id_no_search(
@@ -583,7 +599,7 @@ class CreateWSXSubscriptionForCurrent(AdminService):
         input_required = 'topic_name'
         output_optional = 'sub_key'
 
-    def handle(self):
+    def handle(self) -> 'None':
         self.response.payload.sub_key = self.pubsub.subscribe(
             self.request.input.topic_name, use_current_wsx=True, service=self)
 
@@ -598,7 +614,7 @@ class CreateWSXSubscription(AdminService):
         response_elem = None
         force_empty_keys = True
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         # Local aliases
         topic_name = self.request.input.topic_name
@@ -683,7 +699,7 @@ class UpdateInteractionMetadata(AdminService):
     class SimpleIO:
         input_required = List('sub_key'), Opaque('last_interaction_time'), 'last_interaction_type', 'last_interaction_details'
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         # Local aliases
         req = self.request.input
@@ -694,7 +710,7 @@ class UpdateInteractionMetadata(AdminService):
         else:
             last_interaction_time = req.last_interaction_time
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
 
             # Run the query
             session.execute(
