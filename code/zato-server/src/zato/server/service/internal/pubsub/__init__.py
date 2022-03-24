@@ -352,7 +352,7 @@ class ResumeWSXSubscription(AdminService):
         for messages in messages_list: # type: dict
             messages = messages['response']
             for sub_key, sub_key_data in messages.items():
-                for msg in sub_key_data.values():
+                for msg in sub_key_data:
                     out[sub_key].append(msg)
 
         # Do not return empty lists unnecessarily - note that it may happen that all sub_keys
