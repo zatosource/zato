@@ -105,7 +105,7 @@ if 0:
     from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_
     from zato.common.util.time_ import TimeUtil
-    from zato.distlock import LockManager
+    from zato.distlock import Lock
     from zato.server.connection.ftp import FTPStore
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
@@ -1152,7 +1152,7 @@ class Service:
 
 # ################################################################################################################################
 
-    def lock(self, name=None, *args, **kwargs) -> 'LockManager':
+    def lock(self, name:'str'='', *args:'any_', **kwargs:'any_') -> 'Lock':
         """ Creates a distributed lock.
 
         name - defaults to self.name effectively making access to this service serialized
