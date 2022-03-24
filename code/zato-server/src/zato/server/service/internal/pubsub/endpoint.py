@@ -149,7 +149,7 @@ class Create(AdminService):
         input = self.request.input
         cluster_id = input.get('cluster_id') or self.server.cluster_id
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
 
             existing_one = session.query(PubSubEndpoint.id).\
                 filter(PubSubEndpoint.cluster_id==cluster_id).\
@@ -209,7 +209,7 @@ class Get(AdminService):
             'security_id', 'ws_channel_id', 'sec_type', 'sec_name', 'ws_channel_name', 'sub_key')
 
     def handle(self):
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             self.response.payload = pubsub_endpoint(session, self.request.input.cluster_id, self.request.input.id)
 
 # ################################################################################################################################
@@ -293,7 +293,7 @@ class GetEndpointQueue(_GetEndpointQueue):
         output_optional = common_sub_data
 
     def handle(self):
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             item = pubsub_endpoint_queue(session, self.request.input.cluster_id, self.request.input.id)
             item.creation_time = datetime_from_ms(item.creation_time * 1000.0)
             if getattr(item, 'last_interaction_time', None):
@@ -322,7 +322,7 @@ class GetEndpointQueueList(_GetEndpointQueue):
 
     def handle(self):
         response = []
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             for item in self.get_data(session):
 
                 item = item.get_value()
@@ -375,7 +375,7 @@ class UpdateEndpointQueue(AdminService):
         else:
             out_http_soap_id = None
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             item = session.query(PubSubSubscription).\
                 filter(PubSubSubscription.id==self.request.input.id).\
                 filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
@@ -444,7 +444,7 @@ class ClearEndpointQueue(AdminService):
             is_in_staging = None
 
         # Remove all references to the queue given on input
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             q = session.query(PubSubEndpointEnqueuedMessage).\
                 filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
                 filter(PubSubEndpointEnqueuedMessage.sub_key==self.request.input.sub_key)
@@ -481,7 +481,7 @@ class DeleteEndpointQueue(AdminService):
 
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
 
             # First we need a list of topics to which sub_keys were related - required by broker messages.
             topic_sub_keys = get_topic_sub_keys_from_sub_keys(session, cluster_id, sub_key_list)
@@ -542,7 +542,7 @@ class GetEndpointQueueMessagesGD(AdminService, _GetMessagesBase):
             pubsub_messages_for_queue, session, self.request.input.cluster_id, sub.sub_key, True, False)
 
     def handle(self):
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             self.response.payload[:] = [elem.get_value() for elem in self.get_data(session)]
 
         for item in self.response.payload:
@@ -625,7 +625,7 @@ class GetEndpointSummary(_GetEndpointSummaryBase):
         response_elem = 'zato_pubsub_subscription_get_endpoint_summary_response'
 
     def handle(self):
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             item = pubsub_endpoint_summary(session, self.server.cluster_id, self.request.input.endpoint_id)
 
             if item.last_seen:
@@ -664,7 +664,7 @@ class GetEndpointSummaryList(_GetEndpointSummaryBase):
         return result
 
     def handle(self):
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             self.response.payload[:] = self.get_data(session)
 
 # ################################################################################################################################
@@ -768,7 +768,7 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
                     topic_name = '(None)'
 
                 # .. make sure that all of the sub_keys actually still exist ..
-                with closing(self.odb.session()) as session:
+                with closing(self.odb.session()) as session: # type: ignore
                     response = ensure_subs_exist(session, topic_name, response, response, 'returning to endpoint')
 
                 self.response.payload[:] = response
