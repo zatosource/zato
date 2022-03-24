@@ -193,6 +193,8 @@ class HL7RequestData:
 class Request:
     """ Wraps a service request and adds some useful meta-data.
     """
+    raw_request: 'any_'
+
     __slots__ = ('service', 'logger', 'payload', 'raw_request', 'input', 'cid', 'data_format', 'transport',
         'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_wsgi_environ', 'channel_params',
         'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq', 'hl7', 'enforce_string_encoding')
