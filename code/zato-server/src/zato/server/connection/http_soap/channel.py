@@ -46,8 +46,6 @@ from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbid
      TooManyRequests, Unauthorized
 from zato.server.service.internal import AdminService
 
-stack_format = None
-
 # ################################################################################################################################
 
 if 0:
@@ -82,6 +80,10 @@ _status_method_not_allowed = '{} {}'.format(METHOD_NOT_ALLOWED, HTTP_RESPONSES[M
 _status_unauthorized = '{} {}'.format(UNAUTHORIZED, HTTP_RESPONSES[UNAUTHORIZED])
 _status_forbidden = '{} {}'.format(FORBIDDEN, HTTP_RESPONSES[FORBIDDEN])
 _status_too_many_requests = '{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO_MANY_REQUESTS])
+
+# ################################################################################################################################
+
+stack_format = None
 
 # ################################################################################################################################
 
