@@ -39,7 +39,7 @@ from zato.server.service.internal.pubsub import common_sub_data
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, intnone, optional, strnone
+    from zato.common.typing_ import any_, boolnone, intnone, optional, strnone
     from zato.common.model.wsx import WSXConnectorConfig
     WSXConnectorConfig = WSXConnectorConfig
 
@@ -69,36 +69,37 @@ class SubCtx:
     """
     pubsub: 'PubSub'
     cluster_id: 'int'
-    server_id: 'int'
-    has_gd: 'any_'
-    sub_pattern_matched: 'str'
     topic: 'Topic'
     is_internal: 'bool'
-    active_status: 'str'
-    endpoint_type: 'str'
-    endpoint_id: 'int'
-    delivery_method: 'str'
-    delivery_data_format: 'str'
-    delivery_batch_size: 'int'
-    wrap_one_msg_in_list: 'bool'
-    delivery_max_retry: 'int'
-    delivery_err_should_block: 'bool'
-    wait_sock_err:'int'
-    wait_non_sock_err:'int'
-    ext_client_id: 'str'
-    delivery_endpoint: 'strnone'
-    out_http_soap_id: 'intnone'
-    out_http_method: 'strnone'
-    out_amqp_id: 'intnone'
+    has_gd: 'any_'
     creation_time: 'float'
-    sub_key: 'str'
-    security_id: 'intnone'
-    ws_channel_id: 'intnone'
-    ws_channel_name: 'strnone'
-    sql_ws_client_id: 'intnone'
-    topic_name: 'str'
-    unsub_on_wsx_close: 'bool'
-    ws_pub_client_id: 'str'
+
+    topic_name: 'str' = ''
+    server_id: 'intnone' = None
+    sub_pattern_matched: 'strnone' = None
+    active_status: 'strnone' = None
+    endpoint_type: 'strnone' = None
+    endpoint_id: 'intnone' = None
+    delivery_method: 'strnone' = None
+    delivery_data_format: 'strnone' = None
+    delivery_batch_size: 'intnone' = None
+    wrap_one_msg_in_list: 'boolnone' = None
+    delivery_max_retry: 'intnone' = None
+    delivery_err_should_block: 'boolnone' = None
+    wait_sock_err:'intnone' = None
+    wait_non_sock_err:'intnone' = None
+    ext_client_id: 'strnone' = None
+    delivery_endpoint: 'strnone' = None
+    out_http_soap_id: 'intnone' = None
+    out_http_method: 'strnone' = None
+    out_amqp_id: 'intnone' = None
+    sub_key: 'strnone' = None
+    security_id: 'intnone' = None
+    ws_channel_id: 'intnone' = None
+    ws_channel_name: 'strnone' = None
+    sql_ws_client_id: 'intnone' = None
+    unsub_on_wsx_close: 'boolnone' = None
+    ws_pub_client_id: 'strnone' = None
     web_socket: 'optional[WebSocket]'
 
     def __init__(self, cluster_id:'int', pubsub:'PubSub') -> 'None':
@@ -346,10 +347,11 @@ class SubscribeServiceImpl(_Subscribe):
                 web_socket = cast_('WebSocket', ctx.web_socket)
                 sql_ws_client_id = cast_('int', ctx.sql_ws_client_id)
                 ws_channel_name = cast_('str', ctx.ws_channel_name)
-                ws_pub_client_id = ctx.ws_pub_client_id
+                ws_pub_client_id = cast_('str', ctx.ws_pub_client_id)
 
             # Endpoint on whose behalf the subscription will be made
-            endpoint = self.pubsub.get_endpoint_by_id(ctx.endpoint_id)
+            endpoint_id = cast_('int', ctx.endpoint_id)
+            endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
 
             with closing(self.odb.session()) as session: # type: ignore
                 with session.no_autoflush:
@@ -361,7 +363,7 @@ class SubscribeServiceImpl(_Subscribe):
                                 endpoint.name, ctx.topic.name))
 
                     ctx.creation_time = now = utcnow_as_ms()
-                    sub_key = new_sub_key(self.endpoint_type, ctx.ext_client_id)
+                    sub_key = new_sub_key(self.endpoint_type, cast_('str', ctx.ext_client_id))
 
                     # Create a new subscription object and flush the session because the subscription's ID
                     # may be needed for the WSX subscription
