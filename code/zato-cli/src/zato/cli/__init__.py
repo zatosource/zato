@@ -141,14 +141,20 @@ command_imports = (
     ('create_cluster', 'zato.cli.create_cluster.Create'),
     ('create_lb', 'zato.cli.create_lb.Create'),
     ('create_odb', 'zato.cli.create_odb.Create'),
+    ('create_rest_channel', 'zato.cli.rest.CreateChannel'),
+    ('create_rest_outconn', 'zato.cli.rest.CreateOutconn'),
     ('create_scheduler', 'zato.cli.create_scheduler.Create'),
     ('create_server', 'zato.cli.create_server.Create'),
     ('create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
     ('create_user', 'zato.cli.web_admin_auth.CreateUser'),
     ('create_web_admin', 'zato.cli.create_web_admin.Create'),
+    ('create_wsx_channel', 'zato.cli.wsx.CreateChannel'),
+    ('create_wsx_outconn', 'zato.cli.wsx.CreateOutconn'),
     ('crypto_create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
     ('delete_odb', 'zato.cli.delete_odb.Delete'),
     ('delete_basic_auth', 'zato.cli.basic_auth.DeleteDefinition'),
+    ('delete_rest_channel', 'zato.cli.rest.DeleteChannel'),
+    ('delete_wsx_channel', 'zato.cli.wsx.DeleteChannel'),
     ('decrypt', 'zato.cli.crypto.Decrypt'),
     ('encrypt', 'zato.cli.crypto.Encrypt'),
     ('enmasse', 'zato.cli.enmasse.Enmasse'),
@@ -185,9 +191,6 @@ command_imports = (
     ('stop', 'zato.cli.stop.Stop'),
     ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
     ('wait', 'zato.cli.wait.Wait'),
-    ('wsx_create_channel', 'zato.cli.wsx.CreateChannel'),
-    ('wsx_create_outconn', 'zato.cli.wsx.CreateOutconn'),
-    ('wsx_delete_channel', 'zato.cli.wsx.DeleteChannel'),
 )
 
 # ################################################################################################################################
@@ -1000,16 +1003,12 @@ class ServerAwareCommand(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _invoke_service_and_log_response(
+    def _invoke_service(
         self,
         service:'str',
         request:'anydict',
-        hook_func:'callnone'=None,
-        needs_stdout:'bool'=True
+        hook_func:'callnone'=None
     ) -> 'None':
-
-        # stdlib
-        import sys
 
         # Pass all the data to the underlying service and get its response ..
         response = self.zato_client.invoke(**{
@@ -1032,7 +1031,25 @@ class ServerAwareCommand(ZatoCommand):
             data = response.details or '{}'
             data = loads(data)
 
-        # .. at this point, we are ready to serialize the data to JSON
+        return data
+
+# ################################################################################################################################
+
+    def _invoke_service_and_log_response(
+        self,
+        service:'str',
+        request:'anydict',
+        hook_func:'callnone'=None,
+        needs_stdout:'bool'=True
+    ) -> 'None':
+
+        # stdlib
+        import sys
+
+        # Invoke the service first ..
+        data = self._invoke_service(service, request, hook_func)
+
+        # .. now, we are ready to serialize the data to JSON.
         data = dumps(data, indent=2)
 
         # No matter what data we have, we can log it now if we are told to do so.
