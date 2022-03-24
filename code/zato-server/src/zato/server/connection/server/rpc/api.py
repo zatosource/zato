@@ -14,12 +14,14 @@ from zato.server.connection.server.rpc.invoker import LocalServerInvoker, Remote
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import any_
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.server.rpc.config import ConfigSource, RemoteServerInvocationCtx
     from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvoker
 
     ConfigSource = ConfigSource
     ParallelServer = ParallelServer
+    PerPIDResponse = PerPIDResponse
     RemoteServerInvocationCtx = RemoteServerInvocationCtx
 
 # ################################################################################################################################
@@ -42,11 +44,11 @@ class ConfigCtx:
     """ A config-like class that knows how to return details needed to invoke local or remote servers.
     """
     def __init__(self,
-            config_source,
-            parallel_server,
-            local_server_invoker_class=LocalServerInvoker,
-            remote_server_invoker_class=RemoteServerInvoker
-        ):
+        config_source,
+        parallel_server,
+        local_server_invoker_class=LocalServerInvoker,
+        remote_server_invoker_class=RemoteServerInvoker
+    ):
         # type: (ConfigSource, ParallelServer) -> None
         self.config_source = config_source
         self.parallel_server = parallel_server
@@ -108,7 +110,7 @@ class ServerRPC:
 
 # ################################################################################################################################
 
-    def invoke_all(self, service, request=None, *args, **kwargs):
+    def invoke_all(self, service:'str', request:'any_'=None, *args:'any_', **kwargs:'any_') -> 'InvokeAllResult':
 
         # First, make sure that we are aware of all the servers currently available
         self.populate_invokers()
