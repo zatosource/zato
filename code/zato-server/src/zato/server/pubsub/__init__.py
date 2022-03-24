@@ -47,7 +47,7 @@ from zato.server.pubsub.sync import InRAMSync
 
 if 0:
     from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, commondict, dictlist, intdict, \
-        intanydict, intlist, intnone, intset, list_, stranydict, strintdict, strintnone, strstrdict, strlist, strlistdict, \
+        intanydict, intlist, intnone, intset, list_, stranydict, strintdict, strstrdict, strlist, strlistdict, \
         strlistempty, strtuple, type_
     from zato.distlock import Lock
     from zato.server.connection.web_socket import WebSocket
@@ -1427,7 +1427,7 @@ class PubSub:
         topic_name, # type: str
         sub_keys,   # type: strlist
         non_gd_msg_list, # type: dictlist
-        from_error=0,    # type: int
+        error_source='', # type: str
         _logger=logger   # type: logging.Logger
         ) -> 'None':
         """ Stores in RAM up to input non-GD messages for each sub_key. A backlog queue for each sub_key
@@ -1436,7 +1436,7 @@ class PubSub:
         go to disk (or to another location that logger_overflown is configured to use).
         """
         _logger.info('Storing in RAM. CID:`%r`, topic ID:`%r`, name:`%r`, sub_keys:`%r`, ngd-list:`%r`, e:`%s`',
-            cid, topic_id, topic_name, sub_keys, [elem['pub_msg_id'] for elem in non_gd_msg_list], from_error)
+            cid, topic_id, topic_name, sub_keys, [elem['pub_msg_id'] for elem in non_gd_msg_list], error_source)
 
         with self.lock:
 
@@ -1445,7 +1445,7 @@ class PubSub:
                 sub_keys, non_gd_msg_list)
 
             # .. and set a flag to signal that there are some available.
-            self._set_sync_has_msg(topic_id, False, True, 'PubSub.store_in_ram ({})'.format(from_error))
+            self._set_sync_has_msg(topic_id, False, True, 'PubSub.store_in_ram ({})'.format(error_source))
 
 # ################################################################################################################################
 
@@ -2137,7 +2137,7 @@ class PubSub:
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def delete_message(self, sub_key:'str', msg_id:'str', has_gd:'bool', *args:'anytuple', **kwargs:'strintnone') -> 'any_':
+    def delete_message(self, sub_key:'str', msg_id:'str', has_gd:'bool', *args:'anytuple', **kwargs:'any_') -> 'any_':
         """ Deletes a message from a subscriber's queue.
         DELETE /zato/pubsub/msg/{msg_id}
         """
