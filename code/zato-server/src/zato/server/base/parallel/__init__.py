@@ -186,7 +186,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.audit_pii = audit_pii
         self.has_fg = False
         self.startup_callable_tool = None # type: StartupCallableTool
-        self.default_internal_pubsub_endpoint_id = None
+        self.default_internal_pubsub_endpoint_id = 0
         self.rate_limiting = None # type: RateLimiting
         self.jwt_secret = None # type: bytes
         self._hash_secret_method = None # type: unicode
