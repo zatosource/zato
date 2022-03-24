@@ -280,6 +280,7 @@ class ConfigStore:
         self.out_sql = None   # type: ConfigDict
         self.out_sap = None   # type: ConfigDict
         self.out_plain_http = None # type: ConfigDict
+        self.out_amqp = None # type: ConfigDict
 
         # Local on-disk configuraion repository
         self.repo_location = None # type: str

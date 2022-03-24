@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from ftplib import FTP_PORT
@@ -23,7 +21,17 @@ from zato.common.json_internal import json_dumps
 from zato.common.odb.const import WMQ_DEFAULT_PRIORITY
 from zato.common.odb.model.base import Base, _JSON
 from zato.common.odb.model.sso import _SSOAttr, _SSOPasswordReset, _SSOGroup, _SSOLinkedAuth, _SSOSession, _SSOUser
+from zato.common.typing_ import cast_
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import floatnone, intnone
+    floatnone = floatnone
+    intnone = intnone
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def to_json(model, return_as_dict=False):
@@ -2160,10 +2168,10 @@ class PubSubEndpoint(Base):
     is_active = Column(Boolean(), nullable=False, server_default=sa_true()) # Unusued for now
     endpoint_type = Column(String(40), nullable=False) # WSX, REST, AMQP and other types
 
-    last_seen = Column(BigInteger(), nullable=True)
-    last_pub_time = Column(BigInteger(), nullable=True)
-    last_sub_time = Column(BigInteger(), nullable=True)
-    last_deliv_time = Column(BigInteger(), nullable=True)
+    last_seen = cast_('intnone', Column(BigInteger(), nullable=True))
+    last_pub_time = cast_('intnone', Column(BigInteger(), nullable=True))
+    last_sub_time = cast_('intnone', Column(BigInteger(), nullable=True))
+    last_deliv_time = cast_('intnone', Column(BigInteger(), nullable=True))
 
     # Endpoint's role, e.g. publisher, subscriber or both
     role = Column(String(40), nullable=False)
@@ -2184,7 +2192,7 @@ class PubSubEndpoint(Base):
     opaque1 = Column(_JSON(), nullable=True)
 
     # Endpoint is a service
-    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
+    service_id = cast_('intnone', Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True))
 
     # Identifies the endpoint through its security definition, e.g. a username/password combination.
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
@@ -2230,7 +2238,7 @@ class PubSubTopic(Base):
     is_api_sub_allowed = Column(Boolean(), nullable=False)
 
     # How many messages to buffer in RAM before they are actually saved in SQL / pushed to tasks
-    pub_buffer_size_gd = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD))
+    pub_buffer_size_gd = cast_('int', Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD)))
 
     task_sync_interval = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_SYNC_INTERVAL))
     task_delivery_interval = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_DELIVERY_INTERVAL))
@@ -2239,7 +2247,7 @@ class PubSubTopic(Base):
     opaque1 = Column(_JSON(), nullable=True)
 
     # A hook service invoked during publications to this specific topic
-    hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
+    hook_service_id = cast_('intnone', Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=name, cascade='all, delete, delete-orphan'))
@@ -2338,7 +2346,7 @@ class PubSubMessage(Base):
 
     pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=False) # When the row was created
     ext_pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=True) # When the message was created by publisher
-    expiration_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
+    expiration_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
     last_updated = Column(Numeric(20, 7, asdecimal=False), nullable=True)
 
     data = Column(Text(2 * 10 ** 9), nullable=False) # 2 GB to prompt a promotion to LONGTEXT under MySQL
@@ -2347,9 +2355,9 @@ class PubSubMessage(Base):
     data_prefix_short = Column(String(200), nullable=False)
     data_format = Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.DATA_FORMAT)
     mime_type = Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.MIME_TYPE)
-    size = Column(Integer, nullable=False)
-    priority = Column(Integer, nullable=False, server_default=str(PUBSUB.PRIORITY.DEFAULT))
-    expiration = Column(BigInteger, nullable=False, server_default='0')
+    size = cast_('int', Column(Integer, nullable=False))
+    priority = cast_('int', Column(Integer, nullable=False, server_default=str(PUBSUB.PRIORITY.DEFAULT)))
+    expiration = cast_('int', Column(BigInteger, nullable=False, server_default='0'))
     has_gd = Column(Boolean(), nullable=False, server_default=sa_true()) # Guaranteed delivery
 
     # Is the message in at least one delivery queue, meaning that there is at least one

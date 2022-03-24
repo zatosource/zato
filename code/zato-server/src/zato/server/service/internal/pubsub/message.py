@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -19,18 +17,23 @@ from bunch import Bunch
 from sqlalchemy import and_, exists
 
 # Zato
-from zato.common.api import DATA_FORMAT
 from zato.common.exception import NotFound
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage
 from zato.common.odb.query import pubsub_message, pubsub_queue_message
+from zato.common.typing_ import cast_
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub import get_expiration, get_priority
 from zato.server.service import AsIs, Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-_JSON = DATA_FORMAT.JSON
+if 0:
+    from zato.common.typing_ import any_, stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 MsgInsert = PubSubMessage.__table__.insert
 EndpointTopicInsert = PubSubEndpointTopic.__table__.insert
@@ -68,8 +71,8 @@ class GetFromTopicGD(AdminService):
         input_required = _GetSIO.input_required + ('cluster_id',)
         input_optional = ('needs_sub_queue_check',)
 
-    def handle(self, _not_given=object()):
-        with closing(self.odb.session()) as session:
+    def handle(self, _not_given:'any_'=object()) -> 'None':
+        with closing(self.odb.session()) as session: # type: ignore
             needs_sub_queue_check = self.request.input.get('needs_sub_queue_check', _not_given)
             needs_sub_queue_check = needs_sub_queue_check if needs_sub_queue_check is not _not_given else True
             item = pubsub_message(session, self.request.input.cluster_id, self.request.input.msg_id, needs_sub_queue_check).\
@@ -88,9 +91,9 @@ class GetFromTopicGD(AdminService):
 class GetFromServerTopicNonGD(AdminService):
     """ Returns a non-GD message from current server.
     """
-    SimpleIO = _GetSIO
+    SimpleIO = _GetSIO # type: ignore
 
-    def handle(self):
+    def handle(self) -> 'None':
         msg = self.pubsub.sync_backlog.get_message_by_id(self.request.input.msg_id)
 
         # We need to re-arrange attributes but we don't want to update the original message in place
@@ -117,7 +120,7 @@ class GetFromTopicNonGD(AdminService):
     class SimpleIO(_GetSIO):
         input_required = _GetSIO.input_required + ('server_name', 'server_pid')
 
-    def handle(self):
+    def handle(self) -> 'None':
         server = self.server.rpc[self.request.input.server_name]
         response = server.invoke(GetFromServerTopicNonGD.get_name(), {
             'msg_id': self.request.input.msg_id,
@@ -135,8 +138,8 @@ class Has(AdminService):
         input_required = ('cluster_id', AsIs('msg_id'))
         output_required = (Bool('found'),)
 
-    def handle(self):
-        with closing(self.odb.session()) as session:
+    def handle(self) -> 'None':
+        with closing(self.odb.session()) as session: # type: ignore
             self.response.payload.found = session.query(
                 exists().where(and_(
                     PubSubMessage.pub_msg_id==self.request.input.msg_id,
@@ -152,8 +155,8 @@ class TopicDeleteGD(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', AsIs('msg_id'))
 
-    def handle(self):
-        with closing(self.odb.session()) as session:
+    def handle(self) -> 'None':
+        with closing(self.odb.session()) as session: # type: ignore
             ps_msg = session.query(PubSubMessage).\
                 filter(PubSubMessage.cluster_id==self.request.input.cluster_id).\
                 filter(PubSubMessage.pub_msg_id==self.request.input.msg_id).\
@@ -175,7 +178,7 @@ class DeleteTopicNonGDMessage(AdminService):
     class SimpleIO(AdminSIO):
         input_required = (AsIs('msg_id'),)
 
-    def handle(self):
+    def handle(self) -> 'None':
         self.pubsub.sync_backlog.delete_msg_by_id(self.request.input.msg_id)
 
 # ################################################################################################################################
@@ -186,7 +189,7 @@ class TopicDeleteNonGD(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'server_name', 'server_pid', AsIs('msg_id'))
 
-    def handle(self):
+    def handle(self) -> 'None':
         server = self.server.rpc[self.request.input.server_name]
         server.invoke(DeleteTopicNonGDMessage.get_name(), {
             'msg_id': self.request.input.msg_id,
@@ -203,7 +206,7 @@ class QueueDeleteServerNonGD(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('sub_key', AsIs('msg_id'))
 
-    def handle(self):
+    def handle(self) -> 'None':
         pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
         pubsub_tool.delete_messages(self.request.input.sub_key, [self.request.input.msg_id])
 
@@ -215,7 +218,7 @@ class QueueDeleteNonGD(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('sub_key', AsIs('msg_id'), 'server_name', 'server_pid')
 
-    def handle(self):
+    def handle(self) -> 'None':
         sk_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
 
         if sk_server:
@@ -236,8 +239,8 @@ class QueueDeleteGD(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', AsIs('msg_id'), 'sub_key')
 
-    def handle(self):
-        with closing(self.odb.session()) as session:
+    def handle(self) -> 'None':
+        with closing(self.odb.session()) as session: # type: ignore
             ps_msg = session.query(PubSubEndpointEnqueuedMessage).\
                 filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
                 filter(PubSubEndpointEnqueuedMessage.pub_msg_id==self.request.input.msg_id).\
@@ -273,7 +276,7 @@ class DeleteDeliveryTaskMessage(AdminService):
     class SimpleIO(AdminSIO):
         input_required = (AsIs('msg_id'), 'sub_key')
 
-    def handle(self):
+    def handle(self) -> 'None':
         pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
         pubsub_tool.delete_messages(self.request.input.sub_key, [self.request.input.msg_id])
 
@@ -282,9 +285,9 @@ class DeleteDeliveryTaskMessage(AdminService):
 class UpdateServerNonGD(AdminService):
     """ Updates a non-GD message on current server.
     """
-    SimpleIO = _UpdateSIO
+    SimpleIO = _UpdateSIO # type: ignore
 
-    def handle(self):
+    def handle(self) -> 'None':
         self.response.payload.msg_id = self.request.input.msg_id
         self.response.payload.found = self.pubsub.sync_backlog.update_msg(self.request.input)
 
@@ -293,15 +296,17 @@ class UpdateServerNonGD(AdminService):
 class _Update(AdminService):
     """ Base class for services updating GD or non-GD messages.
     """
-    SimpleIO = _UpdateSIO
+    _message_update_has_gd:'bool'
 
-    def _get_item(self):
+    SimpleIO = _UpdateSIO # type: ignore
+
+    def _get_item(self, *args:'any_', **kwargs:'any_') -> 'PubSubMessage':
         raise NotImplementedError('Must be overridden by subclasses')
 
-    def _save_item(self):
+    def _save_item(self, *args:'any_', **kwargs:'any_') -> 'None':
         raise NotImplementedError('Must be overridden by subclasses')
 
-    def handle(self):
+    def handle(self) -> 'None':
         input = self.request.input
         self.response.payload.msg_id = input.msg_id
         session = self.odb.session() if self._message_update_has_gd else None
@@ -331,9 +336,10 @@ class _Update(AdminService):
                     from_ = utcnow_as_ms()
                 else:
                     from_ = item.pub_time
+                from_ = cast_('float', from_)
                 item.expiration_time = from_ + (item.expiration / 1000.0)
             else:
-                item.expiration_time = 'zzz'
+                item.expiration_time = None
 
             # Save data to its storage, SQL for GD and RAM for non-GD messages
             found = self._save_item(item, input, session)
@@ -344,7 +350,7 @@ class _Update(AdminService):
                 item.expiration_time * 1000.0) if item.expiration_time else None
         finally:
             if session:
-                session.close()
+                session.close() # type: ignore
 
 # ################################################################################################################################
 
@@ -353,13 +359,13 @@ class UpdateGD(_Update):
     """
     _message_update_has_gd = True
 
-    def _get_item(self, input, session):
+    def _get_item(self, input:'stranydict', session:'any_') -> 'PubSubMessage':
         return session.query(PubSubMessage).\
-            filter(PubSubMessage.cluster_id==input.cluster_id).\
-            filter(PubSubMessage.pub_msg_id==input.msg_id).\
+            filter(PubSubMessage.cluster_id==input['cluster_id']).\
+            filter(PubSubMessage.pub_msg_id==input['msg_id']).\
             first()
 
-    def _save_item(self, item, _ignored, session):
+    def _save_item(self, item:'any_', _ignored:'any_', session:'any_') -> 'bool':
         session.add(item)
         session.commit()
         return True
@@ -371,10 +377,10 @@ class UpdateNonGD(_Update):
     """
     _message_update_has_gd = False
 
-    def _get_item(self, input, _ignored):
+    def _get_item(self, input:'any_', _ignored:'any_') -> 'Bunch':
         return Bunch()
 
-    def _save_item(self, item, input, _ignored):
+    def _save_item(self, item:'any_', input:'any_', _ignored:'any_') -> 'bool':
         server = self.server.rpc[self.request.input.server_name]
         response = server.invoke(UpdateServerNonGD.get_name(), item, pid=self.request.input.server_pid)
         self.response.payload = response['response']
@@ -394,7 +400,7 @@ class GetFromQueueGD(AdminService):
             'published_by_name', 'pub_pattern_matched')
 
     def handle(self):
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             item = pubsub_queue_message(session, self.request.input.cluster_id, self.request.input.msg_id).\
                 first()
             if item:
@@ -417,7 +423,7 @@ class GetFromQueueServerNonGD(AdminService):
     class SimpleIO(_GetSIO):
         input_required = _GetSIO.input_required + ('sub_key',)
 
-    def handle(self):
+    def handle(self) -> 'None':
         pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
         msg = pubsub_tool.get_message(self.request.input.sub_key, self.request.input.msg_id)
         if msg:
@@ -429,15 +435,21 @@ class GetFromQueueServerNonGD(AdminService):
             for name in ('pub_time', 'ext_pub_time', 'expiration_time', 'recv_time'):
                 value = msg.pop(name, None)
                 if value:
+                    value = cast_('float', value)
                     msg[name] = datetime_from_ms(value * 1000.0)
 
-            msg['published_by_name'] = self.pubsub.get_endpoint_by_id(msg['published_by_id']).name
+            published_by_id = msg['published_by_id']
+            published_by_id = cast_('int', published_by_id)
 
-            subscriber_id = self.pubsub.get_subscription_by_sub_key(self.request.input.sub_key).endpoint_id
-            subscriber_name = self.pubsub.get_endpoint_by_id(subscriber_id).name
+            msg['published_by_name'] = self.pubsub.get_endpoint_by_id(published_by_id).name
 
-            msg['subscriber_id'] = subscriber_id
-            msg['subscriber_name'] = subscriber_name
+            sub = self.pubsub.get_subscription_by_sub_key(self.request.input.sub_key)
+            if sub:
+                subscriber_id = sub.endpoint_id
+                subscriber_name = self.pubsub.get_endpoint_by_id(subscriber_id).name
+
+                msg['subscriber_id'] = subscriber_id
+                msg['subscriber_name'] = subscriber_name
 
             self.response.payload = msg
 
@@ -449,7 +461,7 @@ class GetFromQueueNonGD(AdminService):
     class SimpleIO(_GetSIO):
         input_required = _GetSIO.input_required + ('sub_key', 'server_name', 'server_pid')
 
-    def handle(self):
+    def handle(self) -> 'None':
         sk_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
 
         if sk_server:
