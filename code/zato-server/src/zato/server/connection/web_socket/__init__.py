@@ -695,7 +695,7 @@ class WebSocket(_WebSocket):
 
                 msg.is_auth = True
             else:
-                msg.in_reply_to = meta.get('in_reply_to')
+                msg.in_reply_to = meta.get('in_reply_to') or None
                 msg.is_auth = False
 
                 ctx = meta.get('ctx')
