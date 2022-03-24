@@ -656,7 +656,7 @@ class Message(PubSubMessage):
         self.sub_key = ''
         self.pub_msg_id = ''
         self.pub_correl_id = ''
-        self.in_reply_to = ''
+        self.in_reply_to = None
         self.ext_client_id = ''
         self.group_id = ''
         self.position_in_group = 0
