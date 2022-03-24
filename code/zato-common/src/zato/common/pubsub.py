@@ -24,7 +24,7 @@ from zato.common.util.time_ import utcnow_as_ms
 
 if 0:
     from zato.common.typing_ import any_, anylist, callable_, commondict, floatnone, optional, stranydict, \
-        strlist, strtuple
+        strlist, strnone, strtuple
     from zato.server.connection.http_soap.outgoing import SudsSOAPWrapper
     from zato.server.pubsub.model import Topic
 
@@ -134,7 +134,7 @@ class PubSubMessage:
     sub_key:       'str'
     pub_msg_id:    'str'
     pub_correl_id: 'str'
-    in_reply_to:   'str'
+    in_reply_to:   'strnone'
     ext_client_id: 'str'
 
     group_id:          'str'
@@ -181,7 +181,7 @@ class PubSubMessage:
         self.sub_key = ''
         self.pub_msg_id = ''
         self.pub_correl_id = ''
-        self.in_reply_to = ''
+        self.in_reply_to = None
         self.ext_client_id = ''
         self.group_id = ''
         self.position_in_group = -1
