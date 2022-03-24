@@ -11,6 +11,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime
+from decimal import Decimal as decimal_
 from typing import           \
     Any as any_,             \
     BinaryIO as binaryio_,   \
@@ -77,7 +78,9 @@ boolnone     = optional[bool]
 callable_    = callable_[..., any_]
 callnone     = optional[callable_]
 cast_        = cast_
-commondict   = dict_[str, union_[int, str_, bool, float, anydict, anylist, None]]
+commondict   = dict_[str, union_[int, str_, bool, float, anydict, anylist, datetime, None]]
+decimal_     = decimal_
+decnone      = optional[decimal_]
 dictlist     = list_[anydict]
 dictnone     = optional[anydict]
 dtnone       = optional[datetime]
