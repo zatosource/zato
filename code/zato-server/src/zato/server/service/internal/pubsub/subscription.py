@@ -343,7 +343,7 @@ class SubscribeServiceImpl(_Subscribe):
             # Endpoint on whose behalf the subscription will be made
             endpoint = self.pubsub.get_endpoint_by_id(ctx.endpoint_id)
 
-            with closing(self.odb.session()) as session:
+            with closing(self.odb.session()) as session: # type: ignore
                 with session.no_autoflush:
 
                     # Non-WebSocket clients cannot subscribe to the same topic multiple times
@@ -560,7 +560,7 @@ class DeleteAll(AdminService):
         input_required = ('cluster_id', 'endpoint_id')
 
     def handle(self):
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
 
             # Get all subscriptions for that endpoint ..
             items = pubsub_subscription_list_by_endpoint_id_no_search(
@@ -694,7 +694,7 @@ class UpdateInteractionMetadata(AdminService):
         else:
             last_interaction_time = req.last_interaction_time
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
 
             # Run the query
             session.execute(

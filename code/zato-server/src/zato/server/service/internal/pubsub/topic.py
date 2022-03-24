@@ -418,7 +418,7 @@ class Clear(AdminService):
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
         topic_id = self.request.input.id
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
 
             self.logger.info('Clearing topic `%s` (id:%s)', self.pubsub.get_topic_by_id(topic_id).name, topic_id)
 
@@ -463,7 +463,7 @@ class GetPublisherList(AdminService):
 
         response = []
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
 
             # Get last pub time for that specific endpoint to this very topic
             last_data = pubsub_publishers_for_topic(session, cluster_id, self.request.input.topic_id).all()
@@ -509,7 +509,7 @@ class GetGDMessageList(AdminService):
         out = []
 
         # .. collect the data ..
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             data = self.get_gd_data(session)
 
         # .. use ISO timestamps ..
@@ -593,7 +593,7 @@ class GetInRAMMessageList(AdminService):
         out = {}
         topic_sub_keys = {}
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             for topic_id, sub_key in get_topics_by_sub_keys(session, self.server.cluster_id, self.request.input.sub_key_list):
                 sub_keys = topic_sub_keys.setdefault(topic_id, [])
                 sub_keys.append(sub_key)

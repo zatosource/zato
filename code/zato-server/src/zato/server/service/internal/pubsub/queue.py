@@ -36,7 +36,7 @@ class GetMessages(AdminService):
         input = self.request.input
         batch_size = input.batch_size or _batch_size
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             msg_list = get_messages(session, self.server.cluster_id, input.sub_key, batch_size, utcnow_as_ms())
 
             for elem in msg_list:
@@ -77,7 +77,7 @@ class AcknowledgeDelivery(AdminService):
         msg_id_list = self.request.input.msg_id_list
 
         if msg_id_list:
-            with closing(self.odb.session()) as session:
+            with closing(self.odb.session()) as session: # type: ignore
 
                 # Call SQL UPDATE ..
                 acknowledge_delivery(
@@ -105,7 +105,7 @@ class GetQueueDepthBySubKey(AdminService):
         # Response to return
         response = {}
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             for item in sub_key_list:
                 response[item] = get_queue_depth_by_sub_key(session, self.server.cluster_id, item, utcnow_as_ms())
 
