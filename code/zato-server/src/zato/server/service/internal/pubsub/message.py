@@ -423,7 +423,7 @@ class GetFromQueueServerNonGD(AdminService):
     class SimpleIO(_GetSIO):
         input_required = _GetSIO.input_required + ('sub_key',)
 
-    def handle(self):
+    def handle(self) -> 'None':
         pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
         msg = pubsub_tool.get_message(self.request.input.sub_key, self.request.input.msg_id)
         if msg:
@@ -461,7 +461,7 @@ class GetFromQueueNonGD(AdminService):
     class SimpleIO(_GetSIO):
         input_required = _GetSIO.input_required + ('sub_key', 'server_name', 'server_pid')
 
-    def handle(self):
+    def handle(self) -> 'None':
         sk_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
 
         if sk_server:
