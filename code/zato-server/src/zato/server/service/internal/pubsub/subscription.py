@@ -70,10 +70,10 @@ class SubCtx:
     pubsub: 'PubSub'
     cluster_id: 'int'
     topic: 'Topic'
-    is_internal: 'bool'
-    has_gd: 'any_'
     creation_time: 'float'
 
+    has_gd: 'any_' = None
+    is_internal: 'boolnone' = None
     topic_name: 'str' = ''
     server_id: 'intnone' = None
     sub_pattern_matched: 'strnone' = None
