@@ -15,14 +15,15 @@ from traceback import format_exc
 from zato.common.api import PUBSUB
 from zato.common.exception import Forbidden
 from zato.common.odb.model import PubSubSubscription, PubSubTopic
+from zato.common.typing_ import cast_
 from zato.server.service import AsIs, Bool, DateTime, Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import anydict, anylist, anytuple, stranydict, strlist
     from zato.server.pubsub.task import PubSubTool
-
     PubSubTool = PubSubTool
 
 # ################################################################################################################################
@@ -59,6 +60,7 @@ hook_type_model = {
 
 _no_sk='no-sk'
 _notify_error='notify-error'
+_wsx_expected_endpoint_type=PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,7 +72,7 @@ class CommonSubData:
         'out_http_method', DateTime('creation_time'), DateTime('last_interaction_time'), 'last_interaction_type',
         'last_interaction_details', Int('total_depth'), Int('current_depth_gd'),
         Int('current_depth_non_gd'), 'sub_key', 'has_gd', 'is_staging_enabled', 'sub_id', 'name', AsIs('ws_ext_client_id'),
-        AsIs('ext_client_id'), 'topic_id')
+        AsIs('ext_client_id'), 'topic_id') # type: anytuple
     amqp = ('out_amqp_id', 'amqp_exchange', 'amqp_routing_key')
     files = ('files_directory_list',)
     ftp = ('ftp_directory_list',)
@@ -78,10 +80,10 @@ class CommonSubData:
     rest = ('out_rest_http_soap_id', 'rest_delivery_endpoint')
     service = ('service_id',)
     sms_twilio = ('sms_twilio_from', 'sms_twilio_to_list')
-    smtp = (Bool('smtp_is_html'), 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body')
+    smtp = (Bool('smtp_is_html'), 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body') # type: anytuple
     soap = ('out_soap_http_soap_id', 'soap_delivery_endpoint')
     wsx = ('ws_channel_id', 'ws_channel_name', AsIs('ws_pub_client_id'), 'sql_ws_client_id', Bool('unsub_on_wsx_close'),
-        Opaque('web_socket'))
+        Opaque('web_socket')) # type: anytuple
 
 # ################################################################################################################################
 
@@ -96,10 +98,10 @@ class AfterPublish(AdminService):
     """ A hook service invoked after each publication, sends messages from current server to delivery tasks.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('cid', AsIs('topic_id'), 'topic_name', 'is_bg_call', Opaque('pub_time_max'))
-        input_optional = (Opaque('subscriptions'), Opaque('non_gd_msg_list'), 'has_gd_msg_list')
+        input_required = ('cid', AsIs('topic_id'), 'topic_name', 'is_bg_call', Opaque('pub_time_max')) # type: anytuple
+        input_optional = (Opaque('subscriptions'), Opaque('non_gd_msg_list'), 'has_gd_msg_list') # type: anytuple
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         try:
 
@@ -172,20 +174,34 @@ class AfterPublish(AdminService):
 
 # ################################################################################################################################
 
-    def _store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, is_gd, from_error=False):
+    def _store_in_ram(
+        self,
+        cid:'str',
+        topic_id:'int',
+        topic_name:'str',
+        sub_keys:'strlist',
+        non_gd_msg_list:'anylist',
+        error_source:'str'=''
+    ) -> 'None':
         """ Stores in RAM all input messages for all sub_keys.
         """
-        self.pubsub.store_in_ram(cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_error)
+        self.pubsub.store_in_ram(cid, topic_id, topic_name, sub_keys, non_gd_msg_list, error_source)
 
 # ################################################################################################################################
 
-    def _notify_pub_sub(self, current_servers, non_gd_msg_list, has_gd_msg_list, is_bg_call, pub_time_max,
-        endpoint_type_service=endpoint_type_service):
+    def _notify_pub_sub(
+        self,
+        current_servers: 'anydict',
+        non_gd_msg_list: 'anylist',
+        has_gd_msg_list: 'bool',
+        is_bg_call: 'bool',
+        pub_time_max: 'float'
+    ) -> 'anylist':
         """ Notifies all relevant remote servers about new messages available for delivery.
         For GD messages     - a flag is sent to indicate that there is at least one message waiting in SQL DB.
         For non-GD messages - their actual contents is sent.
         """
-        notif_error_sub_keys = []
+        notif_error_sub_keys = [] # type: strlist
 
         for server_info, sub_key_list in current_servers.items():
             server_name, server_pid, pub_client_id, channel_name, endpoint_type = server_info
@@ -227,7 +243,7 @@ class ResumeWSXSubscription(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('sub_key',)
 
-    def handle(self, _expected_endpoint_type=PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id):
+    def handle(self) -> 'None':
 
         # Local aliases
         sub_key_list = [self.request.input.sub_key]
@@ -254,20 +270,24 @@ class ResumeWSXSubscription(AdminService):
         for sub_key in sub_key_list:
             sub = self.pubsub.get_subscription_by_sub_key(sub_key)
 
-            if sub.config.endpoint_type != _expected_endpoint_type:
+            if not sub:
+                self.logger.info('No such sub_key `%s` (ResumeWSXSubscription)', sub_key)
+                continue
+
+            if sub.config['endpoint_type'] != _wsx_expected_endpoint_type:
                 self.logger.warning('Subscription `%s` endpoint_type:`%s` did not match `%s`',
-                    sub_key, sub.config.endpoint_type, _expected_endpoint_type)
+                    sub_key, sub.config['endpoint_type'], _wsx_expected_endpoint_type)
                 raise Forbidden(self.cid)
 
-            if wsx_endpoint.name != sub.config.endpoint_name:
-                expected_endpoint = self.pubsub.get_endpoint_by_id(sub.config.endpoint_id)
+            if wsx_endpoint.name != sub.config['endpoint_name']:
+                expected_endpoint = self.pubsub.get_endpoint_by_id(sub.config['endpoint_id'])
                 self.logger.warning('Current WSX endpoint did not match sub_key `%s` endpoint, current:%s (%s) vs. expected:%s (%s)',
                     sub_key, wsx_endpoint.name, wsx_endpoint.id, expected_endpoint.name, expected_endpoint.id)
 
                 raise Forbidden(self.cid)
 
         try:
-            with closing(self.odb.session()) as session:
+            with closing(self.odb.session()) as session: # type: ignore
 
                 # Everything is performed using that WebSocket's pub/sub lock to ensure that both
                 # in-RAM and SQL (non-GD and GD) messages are made available to the WebSocket as a single unit.
@@ -279,8 +299,9 @@ class ResumeWSXSubscription(AdminService):
                     }, timeout=120)
 
                     # Parse non-GD messages on output from all servers, if any at all, into per-sub_key lists ..
-                    if reply.data:
-                        non_gd_messages = self._parse_non_gd_messages(sub_key_list, reply.data)
+                    reply_data = cast_('anylist', reply.data) # type: ignore
+                    if reply_data:
+                        non_gd_messages = self._parse_non_gd_messages(sub_key_list, reply_data)
 
                         # If there are any non-GD messages, add them to this WebSocket's pubsub tool.
                         if non_gd_messages:
@@ -301,7 +322,7 @@ class ResumeWSXSubscription(AdminService):
 
                     # Everything is ready - note that pubsub_tool itself will enqueue any initial messages
                     # using its enqueue_initial_messages method which does it in batches.
-                    session.commit()
+                    session.commit() # type: ignore
 
         except Exception:
             self.logger.warning('Error while resuming WSX pub/sub for keys `%s`, e:`%s`', sub_key_list, format_exc())
@@ -320,9 +341,13 @@ class ResumeWSXSubscription(AdminService):
 
 # ################################################################################################################################
 
-    def _parse_non_gd_messages(self, sub_key_list, messages_list):
-        # type: (list, list)
-        out = dict.fromkeys(sub_key_list, [])
+    def _parse_non_gd_messages(
+        self,
+        sub_key_list: 'strlist',
+        messages_list: 'anylist'
+    ) -> 'anydict':
+
+        out = dict.fromkeys(sub_key_list, []) # type: stranydict
 
         for messages in messages_list: # type: dict
             messages = messages['response']
