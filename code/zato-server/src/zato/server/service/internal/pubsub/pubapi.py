@@ -12,12 +12,10 @@ from traceback import format_exc
 # rapidjson
 from rapidjson import dumps
 
-# Python 2/3 compatibility
-from future.utils import itervalues
-
 # Zato
 from zato.common.api import CHANNEL, ContentType, CONTENT_TYPE, PUBSUB, ZATO_NONE
 from zato.common.exception import BadRequest, Forbidden, PubSubSubscriptionExists
+from zato.common.typing_ import cast_
 from zato.common.util.auth import parse_basic_auth
 from zato.server.service import AsIs, Int, Service
 from zato.server.service.internal.pubsub.subscription import CreateWSXSubscription
@@ -26,13 +24,16 @@ from zato.server.service.internal.pubsub.subscription import CreateWSXSubscripti
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import any_, anylist
+    from zato.server.connection.http_soap.url_data import URLData
     from zato.server.connection.web_socket import WebSocket
+    URLData = URLData
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 delete_channels_allowed = {CHANNEL.WEB_SOCKET, CHANNEL.SERVICE, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
+_invoke_channels=(CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,7 +62,7 @@ class SubSIO(BaseSIO):
 
 class _PubSubService(Service):
 
-    def _pubsub_check_credentials(self, _invoke_channels=(CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)):
+    def _pubsub_check_credentials(self) -> 'int':
 
         # If we are being through a CHANNEL.INVOKE* channel, it means that our caller used self.invoke
         # or self.invoke_async, so there will never by any credentials in HTTP headers (there is no HTTP request after all),
@@ -78,7 +79,12 @@ class _PubSubService(Service):
         except ValueError:
             raise Forbidden(self.cid)
 
-        basic_auth = itervalues(self.server.worker_store.request_dispatcher.url_data.basic_auth_config)
+        url_data = cast_('URLData', self.server.worker_store.request_dispatcher.url_data)
+        basic_auth = url_data.basic_auth_config.values()
+
+        # Assume we are not allowed by default
+        auth_ok = False
+        security_id = None
 
         for item in basic_auth:
             config = item['config']
@@ -91,6 +97,9 @@ class _PubSubService(Service):
                     auth_ok = False
 
         if not auth_ok:
+            raise Forbidden(self.cid)
+
+        if not security_id:
             raise Forbidden(self.cid)
 
         try:
@@ -112,7 +121,7 @@ class TopicService(_PubSubService):
 
 # ################################################################################################################################
 
-    def _publish(self, endpoint_id):
+    def _publish(self, endpoint_id:'int') -> 'any_':
         """ POST /zato/pubsub/topic/{topic_name} {"data":"my data", ...}
         """
         # We always require some data on input
@@ -217,7 +226,7 @@ class SubscribeService(_PubSubService):
 
 # ################################################################################################################################
 
-    def handle_POST(self):
+    def handle_POST(self) -> 'None':
         """ POST /zato/pubsub/subscribe/topic/{topic_name}
         """
         # Checks credentials and returns endpoint_id if valid
@@ -243,7 +252,7 @@ class SubscribeService(_PubSubService):
 
 # ################################################################################################################################
 
-    def _handle_DELETE(self):
+    def _handle_DELETE(self) -> 'None':
         """ Low-level implementation of DELETE /zato/pubsub/subscribe/topic/{topic_name}
         """
         # Local aliases
@@ -328,7 +337,7 @@ class SubscribeService(_PubSubService):
 
 # ################################################################################################################################
 
-    def handle_DELETE(self):
+    def handle_DELETE(self) -> 'None':
         """ DELETE /zato/pubsub/subscribe/topic/{topic_name}
         """
         # Call our implementation ..
@@ -344,7 +353,7 @@ class PublishMessage(Service):
     """
     SimpleIO = TopicSIO
 
-    def handle(self):
+    def handle(self) -> 'None':
         response = self.invoke(TopicService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'POST'})
         self.response.payload = response
 
@@ -355,7 +364,7 @@ class GetMessages(Service):
     """
     SimpleIO = TopicSIO
 
-    def handle(self):
+    def handle(self) -> 'None':
         response = self.invoke(TopicService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'PATCH'})
         self.response.payload = response
 
@@ -366,7 +375,7 @@ class Subscribe(Service):
     """
     SimpleIO = SubSIO
 
-    def handle(self):
+    def handle(self) -> 'None':
         response = self.invoke(SubscribeService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'POST'})
         self.response.payload = response
 
@@ -385,7 +394,7 @@ class Unsubscribe(Service):
     """
     SimpleIO = SubSIO
 
-    def handle(self):
+    def handle(self) -> 'None':
         response = self.invoke(SubscribeService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'DELETE'})
         self.response.payload = response
 

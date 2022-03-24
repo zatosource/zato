@@ -38,8 +38,8 @@ class MigrateDeliveryServer(AdminService):
         self.logger.info('About to migrate delivery task for sub_key `%s` (%s) to server `%s`',
             sub_key, endpoint_type, new_delivery_server_name)
 
-        # First, let other servers know that this sub_key is no longer being handled,
-        # we do it synchronously to make sure that they do not send anything to us anymore.
+        # First, let other servers know that this sub_key is no longer being handled.
+        # We do it synchronously to make sure that they do not send anything to us anymore.
         reply = self.server.rpc.invoke_all('zato.pubsub.migrate.notify-delivery-task-stopping', {
             'sub_key': sub_key,
             'endpoint_type': endpoint_type,
