@@ -17,7 +17,7 @@ from zato.common.util.open_ import open_r, open_w
 
 if 0:
     from zato.client import ZatoClient
-    from zato.common.typing_ import anydict, callnone
+    from zato.common.typing_ import any_, anydict, callnone, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1008,7 +1008,7 @@ class ServerAwareCommand(ZatoCommand):
         service:'str',
         request:'anydict',
         hook_func:'callnone'=None
-    ) -> 'None':
+    ) -> 'stranydict':
 
         # Pass all the data to the underlying service and get its response ..
         response = self.zato_client.invoke(**{
@@ -1035,6 +1035,24 @@ class ServerAwareCommand(ZatoCommand):
 
 # ################################################################################################################################
 
+    def _log_response(
+        self,
+        data:'any_',
+        needs_stdout:'bool'=True
+    ) -> 'None':
+
+        # stdlib
+        import sys
+
+        # We are ready to serialize the data to JSON ..
+        data = dumps(data, indent=2)
+
+        # .. no matter what data we have, we can log it now if we are told to do so.
+        if needs_stdout:
+            sys.stdout.write(data + '\n')
+
+# ################################################################################################################################
+
     def _invoke_service_and_log_response(
         self,
         service:'str',
@@ -1043,18 +1061,11 @@ class ServerAwareCommand(ZatoCommand):
         needs_stdout:'bool'=True
     ) -> 'None':
 
-        # stdlib
-        import sys
-
         # Invoke the service first ..
         data = self._invoke_service(service, request, hook_func)
 
-        # .. now, we are ready to serialize the data to JSON.
-        data = dumps(data, indent=2)
-
-        # No matter what data we have, we can log it now if we are told to do so.
-        if needs_stdout:
-            sys.stdout.write(data + '\n')
+        # .. and log its output now.
+        self._log_response(data, needs_stdout)
 
 # ################################################################################################################################
 # ################################################################################################################################
