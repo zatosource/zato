@@ -11,14 +11,16 @@ import sys
 
 # Zato
 from zato.cli import ServerAwareCommand
-from zato.common.api import CONNECTION
+from zato.common.api import CONNECTION, ZATO_NONE
 from zato.common.util.api import fs_safe_now
+from zato.common.util.cli import BasicAuthManager
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from argparse import Namespace
+    from zato.common.typing_ import stranydict
     Namespace = Namespace
 
 # ################################################################################################################################
@@ -34,8 +36,29 @@ class Config:
 
 class SecurityAwareCommand(ServerAwareCommand):
 
-    def _get_security_id(self, *, basic_auth:'str', api_key:'str') -> 'str':
-        pass
+    def _get_security_id(self, *, name:'str', basic_auth:'str', api_key:'str') -> 'stranydict':
+
+        out = {}
+
+        if basic_auth:
+            _basic_auth = basic_auth.split(',')
+            _basic_auth = [elem.strip() for elem in _basic_auth]
+            username, password = _basic_auth
+            manager = BasicAuthManager(self, name, True, username, 'API', password)
+            response = manager.create()
+
+            out['security_id'] = response['id']
+            out['username'] = username
+            out['password'] = password
+
+        elif api_key:
+            out['security_id'] = ZATO_NONE
+
+        else:
+            out['security_id'] = ZATO_NONE
+
+        # No matter what we had on input, we can return our output now.
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,13 +100,16 @@ class CreateChannel(SecurityAwareCommand):
         max_bytes_requests = getattr(args, 'max_bytes_requests', None) or Config.MaxBytesRequests
         max_bytes_responses = getattr(args, 'max_bytes_requests', None) or Config.MaxBytesResponses
 
+        # For later use
+        now = fs_safe_now()
+
         # Assume that the channel should be active
         is_active = getattr(args, 'is_active', True)
         if is_active is None:
             is_active = True
 
         # Generate a name if one is not given
-        name = name or 'auto.rest.channel.' + fs_safe_now()
+        name = name or 'auto.rest.channel.' + now
 
         # If we have no URL path, base it on the auto-generate name
         if not url_path:
@@ -93,9 +119,10 @@ class CreateChannel(SecurityAwareCommand):
         is_audit_log_received_active = bool(store_requests)
         is_audit_log_sent_active = bool(store_responses)
 
-        # Obtain the security ID based on input data,
-        # creating the definition if necessary.
-        security_id = self._get_security_id(basic_auth=basic_auth, api_key=api_key)
+        # Obtain the security ID based on input data, creating the definition if necessary.
+        sec_name = 'auto.sec.' + now
+        security_info = self._get_security_id(name=sec_name, basic_auth=basic_auth, api_key=api_key)
+        security_id = security_info.pop('security_id')
 
         # API service to invoke
         service = 'zato.http-soap.create'
@@ -107,9 +134,7 @@ class CreateChannel(SecurityAwareCommand):
             'service': channel_service,
             'is_active': is_active,
             'connection': CONNECTION.CHANNEL,
-
-            security_id: security_id,
-
+            'security_id': security_id,
             'is_audit_log_received_active': is_audit_log_received_active,
             'is_audit_log_sent_active': is_audit_log_sent_active,
 
@@ -120,7 +145,14 @@ class CreateChannel(SecurityAwareCommand):
             'max_bytes_per_message_sent': max_bytes_responses,
         }
 
-        self._invoke_service_and_log_response(service, request)
+        # Invoke the base service that creates a channel ..
+        response = self._invoke_service(service, request)
+
+        # .. update the response with the channel security definition's details ..
+        response.update(security_info)
+
+        # .. finally, log the response for the caller.
+        self._log_response(response, needs_stdout=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -236,12 +268,17 @@ if __name__ == '__main__':
     from argparse import Namespace
     from os import environ
 
+    now = fs_safe_now()
+
+    username = 'cli.username.' + now
+    password = 'cli.password.' + now
+
     args = Namespace()
     args.verbose      = True
     args.store_log    = False
     args.store_config = False
     args.service = Config.ServiceName
-    args.sub_list = 'zato.ping, zato.ping2'
+    args.basic_auth = f'{username}, {password}'
     args.path = environ['ZATO_SERVER_BASE_DIR']
 
     command = CreateChannel(args)
