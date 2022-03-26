@@ -48,7 +48,7 @@ class SecurityAwareCommand(ServerAwareCommand):
         elif credentials_lower == 'false':
             username, password = None, None
 
-            '''
+            """
             Request; service:`zato.security.apikey.create`,
                 data:`{'cluster_id': '1', 'name': 'My API Key', 'is_active': 'on', 'username': 'X-My-Header',
                 'is_rate_limit_active': None,
@@ -60,7 +60,7 @@ class SecurityAwareCommand(ServerAwareCommand):
                 data:`{'id': '64', 'password1': '******', 'password2': '******'}`
             Response; service:`zato.security.apikey.change-password`,
                 data:`{"zato_security_apikey_change_password_response": {"id": 64}}`
-            '''
+            """
 
         else:
             _credentials = credentials.split(',')
