@@ -14,7 +14,7 @@ from uuid import uuid4
 from zato.cli import ServerAwareCommand
 from zato.common.api import CONNECTION, ZATO_NONE
 from zato.common.util.api import fs_safe_now
-from zato.common.util.cli import BasicAuthManager
+from zato.common.util.cli import APIKeyManager, BasicAuthManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,30 +37,28 @@ class Config:
 
 class SecurityAwareCommand(ServerAwareCommand):
 
-    def _extract_credentials(self, name:'str', credentials:'str') -> 'anytuple':
+    def _extract_credentials(self, name:'str', credentials:'str', needs_header:'bool') -> 'anytuple':
 
         credentials_lower = credentials.lower()
 
         if credentials_lower == 'true':
             username = name
-            password = 'api.password.' + uuid4().hex
+            value_type = 'key' if needs_header else 'password'
+            password = 'api.{}.'.format(value_type) + uuid4().hex
+
+            # If the username is represented through an HTTP header,
+            # turn the value into one.
+            if needs_header:
+
+                # 'T' is included below because it was part of the timestamp,
+                # e.g. auto.rest.channel.2022_03_26T19_47_12_191630.
+                username = username.replace('.', '-').replace('_', '-').replace('T', '-')
+                username = username.split('-')
+                username = [elem.capitalize() for elem in username]
+                username = 'X-' + '-'.join(username)
 
         elif credentials_lower == 'false':
             username, password = None, None
-
-            """
-            Request; service:`zato.security.apikey.create`,
-                data:`{'cluster_id': '1', 'name': 'My API Key', 'is_active': 'on', 'username': 'X-My-Header',
-                'is_rate_limit_active': None,
-                'rate_limit_type': 'APPROXIMATE', 'rate_limit_def': None, 'rate_limit_check_parent_def': None}`
-            Response; service:`zato.security.apikey.create`,
-            data:`{"zato_security_apikey_create_response": {"id": 64, "name": "My API Key"}}`
-
-            Request; service:`zato.security.apikey.change-password`,
-                data:`{'id': '64', 'password1': '******', 'password2': '******'}`
-            Response; service:`zato.security.apikey.change-password`,
-                data:`{"zato_security_apikey_change_password_response": {"id": 64}}`
-            """
 
         else:
             _credentials = credentials.split(',')
@@ -74,25 +72,33 @@ class SecurityAwareCommand(ServerAwareCommand):
     def _get_security_id(self, *, name:'str', basic_auth:'str', api_key:'str') -> 'stranydict':
 
         out = {}
-        username = None
-        password = None
 
         if basic_auth:
 
-            username, password = self._extract_credentials(name, basic_auth)
+            username, password = self._extract_credentials(name, basic_auth, False)
             manager = BasicAuthManager(self, name, True, username, 'API', password)
             response = manager.create()
+
+            out['username'] = username
+            out['password'] = password
             out['security_id'] = response['id']
 
         elif api_key:
-            out['security_id'] = ZATO_NONE
+
+            header, key = self._extract_credentials(name, api_key, True)
+            manager = APIKeyManager(self, name, True, header, key)
+            response = manager.create()
+
+            out['header'] = header
+            out['key'] = key
+            out['security_id'] = response['id']
 
         else:
-            out['security_id'] = ZATO_NONE
+            # Use empty credentials to explicitly indicate that none are required
+            out['username'] = None
+            out['password'] = None
 
-        # Append credentials, even if they are None
-        out['username'] = username
-        out['password'] = password
+            out['security_id'] = ZATO_NONE
 
         # No matter what we had on input, we can return our output now.
         return out
@@ -210,88 +216,18 @@ class DeleteChannel(SecurityAwareCommand):
 
         # Make sure we have input data to delete the channel by
         if not (id or name):
-            self.logger.warn('Cannot continue. To delete a WebSocket channel, either --id or --name is required on input.')
+            self.logger.warn('Cannot continue. To delete a REST channel, either --id or --name is required on input.')
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
 
         # API service to invoke
-        service = 'zato.channel.web-socket.delete'
+        service = 'zato.http-soap.delete'
 
         # API request to send
         request = {
             'id': id,
             'name': name,
+            'connection': CONNECTION.CHANNEL,
             'should_raise_if_missing': False
-        }
-
-        self._invoke_service_and_log_response(service, request)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class CreateOutconn(SecurityAwareCommand):
-    """ Creates a new outgoing WebSocket connection.
-    """
-    opts = [
-        {'name':'--name', 'help':'Name of the connection to create', 'required':False,},
-        {'name':'--address',   'help':'TCP address of a WebSocket server to connect to', 'required':False},
-        {'name':'--sub-list',   'help':'A comma-separate list of topics the connection should subscribe to', 'required':False},
-        {'name':'--on-connect-service',
-            'help':'Service to invoke when the WebSocket connects to a remote server', 'required':False},
-        {'name':'--on-message-service',
-            'help':'Service to invoke when the WebSocket receives a message from the remote server', 'required':False},
-        {'name':'--on-close-service',
-            'help':'Service to invoke when the remote server closes its WebSocket connection', 'required':False},
-        {'name':'--path', 'help':'Path to a Zato server', 'required':True},
-    ]
-
-    def execute(self, args:'Namespace'):
-
-        # This can be specified by users
-        name = getattr(args, 'name', None)
-        address = getattr(args, 'address', None)
-        on_connect_service_name = getattr(args, 'on_connect_service', None)
-        on_message_service_name = getattr(args, 'on_message_service', None)
-        on_close_service_name = getattr(args, 'on_close_service', None)
-        subscription_list = getattr(args, 'sub_list', '')
-
-        # This is fixed
-        is_zato = getattr(args, 'is_zato', True)
-        is_active = getattr(args, 'is_active', True)
-        has_auto_reconnect = getattr(args, 'has_auto_reconnect', True)
-
-        # Generate a name if one is not given
-        name = name or 'auto.wsx.outconn.' + fs_safe_now()
-
-        # If we have no address to connect to, use the on employed for testing
-        if not address:
-            address = 'ws://127.0.0.1:47043/zato.wsx.apitests'
-
-        # Convert the subscription list to the format that the service expects
-        if subscription_list:
-            subscription_list = subscription_list.split(',')
-            subscription_list = [elem.strip() for elem in subscription_list]
-            subscription_list = '\n'.join(subscription_list)
-
-        # API service to invoke
-        service = 'zato.generic.connection.create'
-
-        # API request to send
-        request = {
-            'name': name,
-            'address': address,
-            'is_zato': is_zato,
-            'is_active': is_active,
-            'has_auto_reconnect': has_auto_reconnect,
-            'on_connect_service_name': on_connect_service_name,
-            'on_message_service_name': on_message_service_name,
-            'on_close_service_name': on_close_service_name,
-            'subscription_list': subscription_list,
-            'pool_size': 1,
-            'is_channel': False,
-            'is_outconn': True,
-            'is_internal': False,
-            'sec_use_rbac': False,
-            'type_': Config.WSXOutconnType,
         }
 
         self._invoke_service_and_log_response(service, request)
@@ -315,7 +251,8 @@ if __name__ == '__main__':
     args.store_log    = False
     args.store_config = False
     args.service = Config.ServiceName
-    args.basic_auth = f'{username}, {password}'
+    # args.basic_auth = f'{username}, {password}'
+    args.api_key = 'true'
     args.path = environ['ZATO_SERVER_BASE_DIR']
 
     command = CreateChannel(args)
