@@ -14,7 +14,7 @@ from uuid import uuid4
 from zato.cli import ServerAwareCommand
 from zato.common.api import CONNECTION, ZATO_NONE
 from zato.common.util.api import fs_safe_now
-from zato.common.util.cli import BasicAuthManager
+from zato.common.util.cli import APIKeyManager, BasicAuthManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,25 +60,39 @@ class SecurityAwareCommand(ServerAwareCommand):
     def _get_security_id(self, *, name:'str', basic_auth:'str', api_key:'str') -> 'stranydict':
 
         out = {}
-        username = None
-        password = None
 
         if basic_auth:
 
             username, password = self._extract_credentials(name, basic_auth)
             manager = BasicAuthManager(self, name, True, username, 'API', password)
             response = manager.create()
+
+            out['username'] = username
+            out['password'] = password
             out['security_id'] = response['id']
 
         elif api_key:
-            out['security_id'] = ZATO_NONE
+
+            """
+            Request; service:`zato.security.apikey.create`,
+                data:`{'cluster_id': '1', 'name': 'My API Key', 'is_active': 'on', 'username': 'X-My-Header',
+                'is_rate_limit_active': None,
+                'rate_limit_type': 'APPROXIMATE', 'rate_limit_def': None, 'rate_limit_check_parent_def': None}`
+            Response; service:`zato.security.apikey.create`,
+            data:`{"zato_security_apikey_create_response": {"id": 64, "name": "My API Key"}}`
+
+            Request; service:`zato.security.apikey.change-password`,
+                data:`{'id': '64', 'password1': '******', 'password2': '******'}`
+            Response; service:`zato.security.apikey.change-password`,
+                data:`{"zato_security_apikey_change_password_response": {"id": 64}}`
+            """
 
         else:
-            out['security_id'] = ZATO_NONE
+            # Use empty credentials to explicitly indicate that none are required
+            out['username'] = None
+            out['password'] = None
 
-        # Append credentials, even if they are None
-        out['username'] = username
-        out['password'] = password
+            out['security_id'] = ZATO_NONE
 
         # No matter what we had on input, we can return our output now.
         return out

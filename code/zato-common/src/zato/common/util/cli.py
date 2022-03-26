@@ -230,3 +230,42 @@ class BasicAuthManager(_AuthManager):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class APIKeyManager(_AuthManager):
+
+    create_service = 'zato.security.apikey.create'
+    change_password_service = 'zato.security.apikey.change-password'
+
+    def __init__(
+        self,
+        command:'ServerAwareCommand',
+        name:'str',
+        is_active:'bool',
+        username:'str',
+        realm:'str',
+        password:'str'
+    ) -> 'None':
+
+        super().__init__(command, name, password)
+
+        self.is_active = is_active
+        self.username = username
+        self.realm = realm
+
+# ################################################################################################################################
+
+    def create(self, needs_stdout:'bool'=False) -> 'stranydict':
+
+        # API request to send to create a new definition
+        create_request = {
+            'name': self.name,
+            'realm': self.realm,
+            'username': self.username,
+            'password': self.password,
+            'is_active': self.is_active,
+        }
+
+        return self._create(create_request, needs_stdout)
+
+# ################################################################################################################################
+# ################################################################################################################################
