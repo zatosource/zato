@@ -167,7 +167,7 @@ _audit_msg_type = WEB_SOCKET.AUDIT_KEY
 
 # ################################################################################################################################
 
-log_msg_max_size = 1024
+log_msg_max_size = 8192
 _interact_update_interval = WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL
 
 # ################################################################################################################################
@@ -695,7 +695,7 @@ class WebSocket(_WebSocket):
 
                 msg.is_auth = True
             else:
-                msg.in_reply_to = meta.get('in_reply_to')
+                msg.in_reply_to = meta.get('in_reply_to') or None
                 msg.is_auth = False
 
                 ctx = meta.get('ctx')
