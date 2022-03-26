@@ -286,15 +286,6 @@ class CommandStore:
         self.add_opts(create_rest_channel, rest_mod.CreateChannel.opts)
 
         #
-        # create-rest-outconn
-        #
-
-        create_rest_outconn = subs.add_parser('create-rest-outconn',
-            description=rest_mod.CreateOutconn.__doc__, parents=[base_parser])
-        create_rest_outconn.set_defaults(command='create_rest_outconn')
-        self.add_opts(create_rest_outconn, rest_mod.CreateOutconn.opts)
-
-        #
         # create-wsx-channel
         #
 
