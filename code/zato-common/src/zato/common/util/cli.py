@@ -153,6 +153,9 @@ class _AuthManager:
     # A CLI command on whose behalf we run
     command: 'ServerAwareCommand'
 
+    # Is the definition active upon creation
+    is_active: 'bool'
+
     # API service to invoke to create a new definition
     create_service: 'str'
 
@@ -162,9 +165,10 @@ class _AuthManager:
     name: 'str'
     password: 'str'
 
-    def __init__(self, command:'ServerAwareCommand', name:'str', password:'str') -> 'None':
+    def __init__(self, command:'ServerAwareCommand', name:'str', is_active:'bool', password:'str') -> 'None':
         self.command = command
         self.name = name
+        self.is_active = is_active
         self.password = password
 
 # ################################################################################################################################
@@ -207,9 +211,8 @@ class BasicAuthManager(_AuthManager):
         password:'str'
     ) -> 'None':
 
-        super().__init__(command, name, password)
+        super().__init__(command, name, is_active, password)
 
-        self.is_active = is_active
         self.username = username
         self.realm = realm
 
@@ -241,16 +244,14 @@ class APIKeyManager(_AuthManager):
         command:'ServerAwareCommand',
         name:'str',
         is_active:'bool',
-        username:'str',
-        realm:'str',
-        password:'str'
+        header:'str',
+        key:'str'
     ) -> 'None':
 
-        super().__init__(command, name, password)
+        super().__init__(command, name, is_active, key)
 
-        self.is_active = is_active
-        self.username = username
-        self.realm = realm
+        self.header = header
+        self.key = key
 
 # ################################################################################################################################
 
@@ -259,9 +260,8 @@ class APIKeyManager(_AuthManager):
         # API request to send to create a new definition
         create_request = {
             'name': self.name,
-            'realm': self.realm,
-            'username': self.username,
-            'password': self.password,
+            'username': self.header,
+            'password': self.key,
             'is_active': self.is_active,
         }
 
