@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import sys
+from uuid import uuid4
 
 # Zato
 from zato.cli import ServerAwareCommand
@@ -20,7 +21,7 @@ from zato.common.util.cli import BasicAuthManager
 
 if 0:
     from argparse import Namespace
-    from zato.common.typing_ import stranydict
+    from zato.common.typing_ import anytuple, stranydict
     Namespace = Namespace
 
 # ################################################################################################################################
@@ -36,26 +37,62 @@ class Config:
 
 class SecurityAwareCommand(ServerAwareCommand):
 
+    def _extract_credentials(self, name:'str', credentials:'str') -> 'anytuple':
+
+        credentials_lower = credentials.lower()
+
+        if credentials_lower == 'true':
+            username = name
+            password = 'api.password.' + uuid4().hex
+
+        elif credentials_lower == 'false':
+            username, password = None, None
+
+            '''
+            Request; service:`zato.security.apikey.create`,
+                data:`{'cluster_id': '1', 'name': 'My API Key', 'is_active': 'on', 'username': 'X-My-Header',
+                'is_rate_limit_active': None,
+                'rate_limit_type': 'APPROXIMATE', 'rate_limit_def': None, 'rate_limit_check_parent_def': None}`
+            Response; service:`zato.security.apikey.create`,
+            data:`{"zato_security_apikey_create_response": {"id": 64, "name": "My API Key"}}`
+
+            Request; service:`zato.security.apikey.change-password`,
+                data:`{'id': '64', 'password1': '******', 'password2': '******'}`
+            Response; service:`zato.security.apikey.change-password`,
+                data:`{"zato_security_apikey_change_password_response": {"id": 64}}`
+            '''
+
+        else:
+            _credentials = credentials.split(',')
+            _credentials = [elem.strip() for elem in _credentials]
+            username, password = _credentials
+
+        return username, password
+
+# ################################################################################################################################
+
     def _get_security_id(self, *, name:'str', basic_auth:'str', api_key:'str') -> 'stranydict':
 
         out = {}
+        username = None
+        password = None
 
         if basic_auth:
-            _basic_auth = basic_auth.split(',')
-            _basic_auth = [elem.strip() for elem in _basic_auth]
-            username, password = _basic_auth
+
+            username, password = self._extract_credentials(name, basic_auth)
             manager = BasicAuthManager(self, name, True, username, 'API', password)
             response = manager.create()
-
             out['security_id'] = response['id']
-            out['username'] = username
-            out['password'] = password
 
         elif api_key:
             out['security_id'] = ZATO_NONE
 
         else:
             out['security_id'] = ZATO_NONE
+
+        # Append credentials, even if they are None
+        out['username'] = username
+        out['password'] = password
 
         # No matter what we had on input, we can return our output now.
         return out
