@@ -48,8 +48,9 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_apikey_create_request'
         response_elem = 'zato_security_apikey_create_response'
-        input_required = 'cluster_id', 'name', 'is_active', 'username'
-        input_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+        input_required = 'name', 'is_active', 'username'
+        input_optional = 'cluster_id', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
+            Boolean('rate_limit_check_parent_def')
         output_required = 'id', 'name'
 
     def handle(self):
@@ -59,15 +60,16 @@ class Create(AdminService):
 
         input = self.request.input
         input.password = uuid4().hex
+        cluster_id = input.get('cluster_id') or self.server.cluster_id
 
         with closing(self.odb.session()) as session:
             try:
-                cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
+                cluster = session.query(Cluster).filter_by(id=cluster_id).first()
 
                 # Let's see if we already have a definition of that name before committing
                 # any stuff into the database.
                 existing_one = session.query(APIKeySecurity).\
-                    filter(Cluster.id==input.cluster_id).\
+                    filter(Cluster.id==cluster_id).\
                     filter(APIKeySecurity.name==input.name).first()
 
                 if existing_one:
@@ -99,12 +101,14 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_apikey_edit_request'
         response_elem = 'zato_security_apikey_edit_response'
-        input_required = 'id', 'cluster_id', 'name', 'is_active', 'username'
-        input_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+        input_required = 'id', 'name', 'is_active', 'username'
+        input_optional = 'cluster_id', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
+            Boolean('rate_limit_check_parent_def')
         output_required = 'id', 'name'
 
     def handle(self):
         input = self.request.input
+        cluster_id = input.get('cluster_id') or self.server.cluster_id
 
         # If we have a rate limiting definition, let's check it upfront
         DefinitionParser.check_definition_from_input(input)
@@ -112,7 +116,7 @@ class Edit(AdminService):
         with closing(self.odb.session()) as session:
             try:
                 existing_one = session.query(APIKeySecurity).\
-                    filter(Cluster.id==input.cluster_id).\
+                    filter(Cluster.id==cluster_id).\
                     filter(APIKeySecurity.name==input.name).\
                     filter(APIKeySecurity.id!=input.id).\
                     first()
