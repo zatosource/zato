@@ -237,7 +237,8 @@ class Create(_CreateEdit):
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'is_active', 'transport', 'is_internal', 'cluster_id'
-        output_required = ('id', 'name')
+        output_required = 'id', 'name'
+        output_optional = 'url_path'
 
     def handle(self):
 
@@ -366,6 +367,7 @@ class Create(_CreateEdit):
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
+                self.response.payload.url_path = item.url_path
 
             except Exception:
                 self.logger.error('Object could not be created, e:`%s', format_exc())

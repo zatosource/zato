@@ -204,7 +204,7 @@ class WSXChannelManager:
     def __enter__(self) -> 'WSXChannelManager':
 
         # Command to invoke ..
-        cli_params = ['wsx', 'create-channel']
+        cli_params = ['create-wsx-channel']
 
         # .. credentials are optional ..
         if self.needs_credentials:
@@ -268,14 +268,15 @@ class WSXChannelManager:
         # to delete it explicitly.
 
         # Command to invoke ..
-        cli_params = ['wsx', 'delete-channel', '--id', self.channel_id, '--verbose']
+        cli_params = ['delete-wsx-channel', '--id', self.channel_id, '--verbose']
 
         # .. get its response as a dict ..
         if self.run_cli:
             self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
 
             # If we created any topics, they need to be deleted now
-            self.delete_topics(self.topics)
+            if self.topics:
+                self.delete_topics(self.topics)
 
 # ################################################################################################################################
 # ################################################################################################################################
