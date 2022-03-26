@@ -14,7 +14,7 @@ from traceback import format_exc
 from paste.util.converters import asbool
 
 # Zato
-from zato.common.api import AuditLog, CONNECTION, DATA_FORMAT, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+from zato.common.api import CONNECTION, DATA_FORMAT, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZATO_DEFAULT, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
@@ -25,13 +25,9 @@ from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
 from zato.common.rate_limiting import DefinitionParser
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
+from zato.server.connection.http_soap import BadRequest
 from zato.server.service import AsIs, Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
-
-# ################################################################################################################################
-
-_max_len_messages = AuditLog.Default.max_len_messages
-_max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message
 
 # ################################################################################################################################
 
@@ -562,14 +558,43 @@ class Delete(AdminService, _HTTPSOAPService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_http_soap_delete_request'
         response_elem = 'zato_http_soap_delete_response'
-        input_required = 'id',
+        input_optional = 'id', 'name', 'connection', 'should_raise_if_missing'
+        output_optional = 'details'
 
     def handle(self):
+
+        input = self.request.input
+        input_id = input.get('id')
+        name = input.get('name')
+        connection = input.get('connection')
+
+        has_expected_input = input_id or (name and connection)
+
+        if not has_expected_input:
+            raise Exception('Either ID or name/connection are required on input')
+
         with closing(self.odb.session()) as session:
             try:
-                item = session.query(HTTPSOAP).\
-                    filter(HTTPSOAP.id==self.request.input.id).\
-                    one()
+                query = session.query(HTTPSOAP)
+
+                if input_id:
+                    query = query.\
+                        filter(HTTPSOAP.id==input_id)
+
+                else:
+                    query = query.\
+                        filter(HTTPSOAP.name==name).\
+                        filter(HTTPSOAP.connection==connection)
+
+                item = query.first()
+
+                # Optionally, raise an exception if such an object is missing
+                if not item:
+                    if input.get('should_raise_if_missing', True):
+                        raise BadRequest(self.cid, 'Could not find an object based on input -> `{}`'.format(input))
+                    else:
+                        self.response.payload.details = 'No such object'
+                        return
 
                 opaque = parse_instance_opaque_attr(item)
 
@@ -597,6 +622,8 @@ class Delete(AdminService, _HTTPSOAPService):
                     'old_http_method': old_http_method,
                     'old_http_accept': old_http_accept,
                 }, action)
+
+                self.response.payload.details = 'OK, deleted'
 
             except Exception:
                 session.rollback()
