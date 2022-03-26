@@ -216,16 +216,17 @@ class DeleteChannel(SecurityAwareCommand):
 
         # Make sure we have input data to delete the channel by
         if not (id or name):
-            self.logger.warn('Cannot continue. To delete a WebSocket channel, either --id or --name is required on input.')
+            self.logger.warn('Cannot continue. To delete a REST channel, either --id or --name is required on input.')
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
 
         # API service to invoke
-        service = 'zato.channel.web-socket.delete'
+        service = 'zato.http-soap.delete'
 
         # API request to send
         request = {
             'id': id,
             'name': name,
+            'connection': CONNECTION.CHANNEL,
             'should_raise_if_missing': False
         }
 
