@@ -20,7 +20,8 @@ from sh import CommandNotFound
 
 if 0:
     from sh import RunningCommand
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.cli import ServerAwareCommand
+    from zato.common.typing_ import any_, anydict, anylist, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -143,6 +144,64 @@ class CommandLineServiceInvoker(CommandLineInvoker):
         out = self.invoke(service, {})
         self._assert_command_line_result(out)
         return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BasicAuthManager:
+    def __init__(
+        self,
+        command:'ServerAwareCommand',
+        name:'str',
+        is_active:'bool',
+        username:'str',
+        realm:'str',
+        password:'str'
+    ) -> 'None':
+
+        self.command = command
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.realm = realm
+        self.password = password
+
+# ################################################################################################################################
+
+    def create(self, needs_stdout:'bool'=False) -> 'stranydict':
+
+        # API service to invoke to create a new definition
+        create_service = 'zato.security.basic-auth.create'
+
+        # API request to send to create a new definition
+        create_request = {
+            'name': self.name,
+            'realm': self.realm,
+            'username': self.username,
+            'password': self.password,
+            'is_active': self.is_active,
+        }
+
+        # This will create a new definition and, in the next step, we will change its password.
+        create_response = self.command._invoke_service(create_service, create_request)
+
+        if needs_stdout:
+            self.command._log_response(create_response, needs_stdout=needs_stdout)
+
+        # API service to invoke to create a new definition
+        change_password_service = 'zato.security.basic-auth.change-password'
+
+        # API request to send to create a new definition
+        change_password_request = {
+            'name': self.name,
+            'password1': self.password,
+            'password2': self.password,
+        }
+
+        # Change the newly created definition's password
+        self.command._invoke_service_and_log_response(change_password_service, change_password_request, needs_stdout=False)
+
+        return create_response
 
 # ################################################################################################################################
 # ################################################################################################################################

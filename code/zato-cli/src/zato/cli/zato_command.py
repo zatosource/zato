@@ -119,6 +119,7 @@ class CommandStore:
              info                as info_mod,                \
              openapi_            as openapi_mod,             \
              quickstart          as quickstart_mod,          \
+             rest                as rest_mod,                \
              service             as service_mod,             \
              sso                 as sso_mod,                 \
              stop                as stop_mod,                \
@@ -276,6 +277,42 @@ class CommandStore:
         self.add_opts(create_web_admin, create_web_admin_mod.Create.opts)
 
         #
+        # create-rest-channel
+        #
+
+        create_rest_channel = subs.add_parser('create-rest-channel',
+            description=rest_mod.CreateChannel.__doc__, parents=[base_parser])
+        create_rest_channel.set_defaults(command='create_rest_channel')
+        self.add_opts(create_rest_channel, rest_mod.CreateChannel.opts)
+
+        #
+        # create-rest-outconn
+        #
+
+        create_rest_outconn = subs.add_parser('create-rest-outconn',
+            description=rest_mod.CreateOutconn.__doc__, parents=[base_parser])
+        create_rest_outconn.set_defaults(command='create_rest_outconn')
+        self.add_opts(create_rest_outconn, rest_mod.CreateOutconn.opts)
+
+        #
+        # create-wsx-channel
+        #
+
+        create_wsx_channel = subs.add_parser('create-wsx-channel',
+            description=wsx_mod.CreateChannel.__doc__, parents=[base_parser])
+        create_wsx_channel.set_defaults(command='create_wsx_channel')
+        self.add_opts(create_wsx_channel, wsx_mod.CreateChannel.opts)
+
+        #
+        # create-wsx-outconn
+        #
+
+        create_wsx_outconn = subs.add_parser('create-wsx-outconn',
+            description=wsx_mod.CreateOutconn.__doc__, parents=[base_parser])
+        create_wsx_outconn.set_defaults(command='create_wsx_outconn')
+        self.add_opts(create_wsx_outconn, wsx_mod.CreateOutconn.opts)
+
+        #
         # crypto
         #
         crypto = subs.add_parser('crypto', description='Cryptographic operations')
@@ -308,6 +345,24 @@ class CommandStore:
         delete_odb.set_defaults(command='delete_odb')
 
         self.add_opts(delete_odb, delete_odb_mod.Delete.opts)
+
+        #
+        # delete-rest-channel
+        #
+
+        delete_rest_channel = subs.add_parser('delete-rest-channel',
+            description=rest_mod.DeleteChannel.__doc__, parents=[base_parser])
+        delete_rest_channel.set_defaults(command='delete_rest_channel')
+        self.add_opts(delete_rest_channel, rest_mod.DeleteChannel.opts)
+
+        #
+        # delete-wsx-channel
+        #
+
+        delete_wsx_channel = subs.add_parser('delete-wsx-channel',
+            description=wsx_mod.DeleteChannel.__doc__, parents=[base_parser])
+        delete_wsx_channel.set_defaults(command='delete_wsx_channel')
+        self.add_opts(delete_wsx_channel, wsx_mod.DeleteChannel.opts)
 
         #
         # encrypt
@@ -628,39 +683,6 @@ class CommandStore:
         wait = subs.add_parser('wait', description=wait_mod.Wait.__doc__, parents=[base_parser])
         wait.set_defaults(command='wait')
         self.add_opts(wait, wait_mod.Wait.opts)
-
-        #
-        # WebSockets
-        #
-        wsx = subs.add_parser('wsx', description='WebSockets')
-        wsx_subs = wsx.add_subparsers()
-
-        #
-        # wsx create-channel
-        #
-
-        wsx_create_channel = wsx_subs.add_parser('create-channel',
-            description=wsx_mod.CreateChannel.__doc__, parents=[base_parser])
-        wsx_create_channel.set_defaults(command='wsx_create_channel')
-        self.add_opts(wsx_create_channel, wsx_mod.CreateChannel.opts)
-
-        #
-        # wsx create-outconn
-        #
-
-        wsx_create_outconn = wsx_subs.add_parser('create-outconn',
-            description=wsx_mod.CreateOutconn.__doc__, parents=[base_parser])
-        wsx_create_outconn.set_defaults(command='wsx_create_outconn')
-        self.add_opts(wsx_create_outconn, wsx_mod.CreateOutconn.opts)
-
-        #
-        # wsx delete-channel
-        #
-
-        wsx_delete_channel = wsx_subs.add_parser('delete-channel',
-            description=wsx_mod.DeleteChannel.__doc__, parents=[base_parser])
-        wsx_delete_channel.set_defaults(command='wsx_delete_channel')
-        self.add_opts(wsx_delete_channel, wsx_mod.DeleteChannel.opts)
 
         return parser
 
