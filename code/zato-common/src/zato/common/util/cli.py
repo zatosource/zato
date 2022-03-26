@@ -148,7 +148,55 @@ class CommandLineServiceInvoker(CommandLineInvoker):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BasicAuthManager:
+class _AuthManager:
+
+    # A CLI command on whose behalf we run
+    command: 'ServerAwareCommand'
+
+    # API service to invoke to create a new definition
+    create_service: 'str'
+
+    # API service to invoke to change password of the newly created definition
+    change_password_service: 'str'
+
+    name: 'str'
+    password: 'str'
+
+    def __init__(self, command:'ServerAwareCommand', name:'str', password:'str') -> 'None':
+        self.command = command
+        self.name = name
+        self.password = password
+
+# ################################################################################################################################
+
+    def _create(self, create_request:'stranydict', needs_stdout:'bool'=False) -> 'stranydict':
+
+        # This will create a new definition and, in the next step, we will change its password.
+        create_response = self.command._invoke_service(self.create_service, create_request)
+
+        if needs_stdout:
+            self.command._log_response(create_response, needs_stdout=needs_stdout)
+
+        # API request to send to create a new definition
+        change_password_request = {
+            'name': self.name,
+            'password1': self.password,
+            'password2': self.password,
+        }
+
+        # Change the newly created definition's password
+        self.command._invoke_service_and_log_response(self.change_password_service, change_password_request, needs_stdout=False)
+
+        return create_response
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BasicAuthManager(_AuthManager):
+
+    create_service = 'zato.security.basic-auth.create'
+    change_password_service = 'zato.security.basic-auth.change-password'
+
     def __init__(
         self,
         command:'ServerAwareCommand',
@@ -159,19 +207,15 @@ class BasicAuthManager:
         password:'str'
     ) -> 'None':
 
-        self.command = command
-        self.name = name
+        super().__init__(command, name, password)
+
         self.is_active = is_active
         self.username = username
         self.realm = realm
-        self.password = password
 
 # ################################################################################################################################
 
     def create(self, needs_stdout:'bool'=False) -> 'stranydict':
-
-        # API service to invoke to create a new definition
-        create_service = 'zato.security.basic-auth.create'
 
         # API request to send to create a new definition
         create_request = {
@@ -182,26 +226,7 @@ class BasicAuthManager:
             'is_active': self.is_active,
         }
 
-        # This will create a new definition and, in the next step, we will change its password.
-        create_response = self.command._invoke_service(create_service, create_request)
-
-        if needs_stdout:
-            self.command._log_response(create_response, needs_stdout=needs_stdout)
-
-        # API service to invoke to create a new definition
-        change_password_service = 'zato.security.basic-auth.change-password'
-
-        # API request to send to create a new definition
-        change_password_request = {
-            'name': self.name,
-            'password1': self.password,
-            'password2': self.password,
-        }
-
-        # Change the newly created definition's password
-        self.command._invoke_service_and_log_response(change_password_service, change_password_request, needs_stdout=False)
-
-        return create_response
+        return self._create(create_request, needs_stdout)
 
 # ################################################################################################################################
 # ################################################################################################################################
