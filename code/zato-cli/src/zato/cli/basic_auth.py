@@ -28,7 +28,7 @@ if 0:
 class CreateDefinition(ServerAwareCommand):
     """ Creates a new Basic Auth definition.
     """
-    allow_empty_secrets = True
+    allow_empty_secrets = True # type: ignore
 
     opts = [
         {'name':'--name', 'help':'Name of the definition to create', 'required':False,},
@@ -66,8 +66,8 @@ class DeleteDefinition(ServerAwareCommand):
     """ Deletes a Basic Auth definition.
     """
     opts = [
-        {'name':'--id', 'help':'ID of the channel to create', 'required':False},
-        {'name':'--name', 'help':'Name of the channel to create', 'required':False},
+        {'name':'--id', 'help':'ID of the definition to delete', 'required':False},
+        {'name':'--name', 'help':'Name of the definition to delete', 'required':False},
         {'name':'--path', 'help':'Path to a Zato server', 'required':True},
     ]
 
