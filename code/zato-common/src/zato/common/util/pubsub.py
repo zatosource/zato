@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,12 +11,12 @@ from operator import itemgetter
 
 # Zato
 from zato.common.odb.query import pubsub_endpoint_queue_list_by_sub_keys
-from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 
 if 0:
     from typing import Union as union
+    from zato.common.typing_ import any_, anydict, anylist, dictlist, stranydict, strlist
     from zato.server.base.parallel import ParallelServer
 
     ParallelServer = ParallelServer
@@ -24,7 +24,7 @@ if 0:
 
 # ################################################################################################################################
 
-def make_short_msg_copy_from_dict(msg, data_prefix_len:'int', data_prefix_short_len:'int') -> 'anydict':
+def make_short_msg_copy_from_dict(msg:'stranydict', data_prefix_len:'int', data_prefix_short_len:'int') -> 'stranydict':
     out_msg = {}
     out_msg['msg_id'] = msg['pub_msg_id']
     out_msg['in_reply_to'] = msg.get('in_reply_to')
@@ -50,7 +50,7 @@ def make_short_msg_copy_from_dict(msg, data_prefix_len:'int', data_prefix_short_
 
 # ################################################################################################################################
 
-def make_short_msg_copy_from_msg(msg, data_prefix_len, data_prefix_short_len):
+def make_short_msg_copy_from_msg(msg:'any_', data_prefix_len:'int', data_prefix_short_len:'int') -> 'stranydict':
     out_msg = {}
     out_msg['msg_id'] = msg.pub_msg_id
     out_msg['in_reply_to'] = msg.in_reply_to
@@ -76,8 +76,7 @@ def make_short_msg_copy_from_msg(msg, data_prefix_len, data_prefix_short_len):
 
 # ################################################################################################################################
 
-def get_last_topics(topic_list, as_list=True):
-    # type: (list, bool) -> union[dict, list]
+def get_last_topics(topic_list:'dictlist', as_list:'bool'=True) -> 'dict | list':
 
     # Response to produce
     out = {}
@@ -109,8 +108,7 @@ def get_last_topics(topic_list, as_list=True):
 
 # ################################################################################################################################
 
-def get_last_pub_metadata(server, topic_id_list):
-    # type: (ParallelServer, list) -> dict
+def get_last_pub_metadata(server:'ParallelServer', topic_id_list:'anylist | int') -> 'anydict':
 
     # Make sure we have a list on input
     if isinstance(topic_id_list, list):
@@ -129,7 +127,7 @@ def get_last_pub_metadata(server, topic_id_list):
         'zato.pubsub.topic.get-topic-metadata', {'topic_id_list':topic_id_list}, skip_response_elem=False)
 
     # Produce our response
-    out = get_last_topics(response.data, as_list=False)
+    out = get_last_topics(response.data, as_list=False) # type: any_
 
     if is_single_topic:
         return out.get(input_topic_id) or {}
@@ -138,8 +136,7 @@ def get_last_pub_metadata(server, topic_id_list):
 
 # ################################################################################################################################
 
-def get_endpoint_metadata(server, endpoint_id):
-    # type: (ParallelServer, int) -> dict
+def get_endpoint_metadata(server:'ParallelServer', endpoint_id:'int') -> 'dict | list':
 
     # All topics from all PIDs
     topic_list = []
@@ -160,7 +157,7 @@ def get_endpoint_metadata(server, endpoint_id):
 
 # ################################################################################################################################
 
-def get_topic_sub_keys_from_sub_keys(session, cluster_id, sub_key_list):
+def get_topic_sub_keys_from_sub_keys(session:'any_', cluster_id:'int', sub_key_list:'strlist') -> 'stranydict':
     topic_sub_keys = {}
 
     for item in pubsub_endpoint_queue_list_by_sub_keys(session, cluster_id, sub_key_list):
