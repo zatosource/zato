@@ -339,21 +339,37 @@ class WorkerStore(_WorkerStoreBase):
         # SFTP - attach handles to connections to each ConfigDict now that all their configuration is ready
         self.init_sftp()
 
-        # Request dispatcher - matches URLs, checks security and dispatches HTTP requests to services.
-        self.request_dispatcher = RequestDispatcher(self.server, simple_io_config=self.worker_config.simple_io,
-            return_tracebacks=self.server.return_tracebacks, default_error_message=self.server.default_error_message,
-            http_methods_allowed=self.server.http_methods_allowed)
-
-        self.request_dispatcher.url_data = URLData(
-            self, self.worker_config.http_soap,
+        request_handler = RequestHandler(self.server)
+        url_data = URLData(
+            self,
+            self.worker_config.http_soap,
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
-            self.worker_config.basic_auth, self.worker_config.jwt, self.worker_config.ntlm, self.worker_config.oauth,
-            self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws,
-            self.worker_config.xpath_sec, self.worker_config.tls_channel_sec,
-            self.worker_config.tls_key_cert, self.worker_config.vault_conn_sec, self.kvdb, self.broker_client, self.server.odb,
-            self.server.jwt_secret, self.vault_conn_api)
+            self.worker_config.basic_auth,
+            self.worker_config.jwt,
+            self.worker_config.ntlm,
+            self.worker_config.oauth,
+            self.worker_config.wss,
+            self.worker_config.apikey,
+            self.worker_config.aws,
+            self.worker_config.xpath_sec,
+            self.worker_config.tls_channel_sec,
+            self.worker_config.tls_key_cert,
+            self.worker_config.vault_conn_sec,
+            self.kvdb,
+            self.broker_client,
+            self.server.odb,
+            self.server.jwt_secret,
+            self.vault_conn_api
+        )
 
-        self.request_dispatcher.request_handler = RequestHandler(self.server)
+        # Request dispatcher - matches URLs, checks security and dispatches HTTP requests to services.
+        self.request_dispatcher = RequestDispatcher(
+            self.server,
+            simple_io_config=self.worker_config.simple_io,
+            return_tracebacks=self.server.return_tracebacks,
+            default_error_message=self.server.default_error_message,
+            http_methods_allowed=self.server.http_methods_allowed
+        )
 
         # Create all the expected connections and objects
         self.init_sql()
