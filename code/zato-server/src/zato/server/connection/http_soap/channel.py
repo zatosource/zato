@@ -49,11 +49,10 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import any_, stranydict
     from zato.server.service import Service
-    from zato.server.base.parallel import ParallelServer
+    from zato.server.base.parallel import ParallelServer, servernone, strlist
     from zato.server.connection.http_soap.url_data import URLData
-
-    # For pyflakes
     ParallelServer = ParallelServer
     Service = Service
     URLData = URLData
@@ -216,9 +215,19 @@ class _HashCtx:
 class RequestDispatcher:
     """ Dispatches all the incoming HTTP/SOAP requests to appropriate handlers.
     """
-    def __init__(self, server=None, url_data=None, security=None, request_handler=None, simple_io_config=None,
-            return_tracebacks=None, default_error_message=None, http_methods_allowed=None):
-        # type: (ParallelServer, URLData, object, RequestHandler, dict, bool, unicode, list)
+    def __init__(
+        self,
+        *,
+        server:'ParallelServer',
+        url_data:'URLData'=None,
+        security=None,
+        request_handler=None,
+        simple_io_config=None,
+        return_tracebacks=None,
+        default_error_message=None,
+        http_methods_allowed=None
+    ) -> 'None':
+        # type: (, , object, RequestHandler, dict, bool, unicode, list)
 
         self.server = server
         self.url_data = url_data
