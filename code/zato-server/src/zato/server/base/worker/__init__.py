@@ -364,11 +364,13 @@ class WorkerStore(_WorkerStoreBase):
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP requests to services.
         self.request_dispatcher = RequestDispatcher(
-            self.server,
-            simple_io_config=self.worker_config.simple_io,
-            return_tracebacks=self.server.return_tracebacks,
-            default_error_message=self.server.default_error_message,
-            http_methods_allowed=self.server.http_methods_allowed
+            server = self.server,
+            url_data = url_data,
+            request_handler = request_handler,
+            simple_io_config = self.worker_config.simple_io,
+            return_tracebacks = self.server.return_tracebacks,
+            default_error_message = self.server.default_error_message,
+            http_methods_allowed = self.server.http_methods_allowed
         )
 
         # Create all the expected connections and objects
