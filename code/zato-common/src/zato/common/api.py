@@ -247,6 +247,7 @@ class SEC_DEF_TYPE:
     TLS_CHANNEL_SEC = 'tls_channel_sec'
     TLS_KEY_CERT = 'tls_key_cert'
     VAULT = 'vault_conn_sec'
+    WSS = 'wss'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -261,6 +262,7 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.TLS_CHANNEL_SEC: 'TLS channel',
     SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
     SEC_DEF_TYPE.VAULT: 'Vault',
+    SEC_DEF_TYPE.WSS: 'WS-Security',
 }
 
 # ################################################################################################################################
@@ -1102,7 +1104,10 @@ class STOMP:
 # ################################################################################################################################
 
 CONTENT_TYPE = Bunch(
-    JSON = 'application/json'
+    JSON = 'application/json',
+    PLAIN_XML = 'application/xml',
+    SOAP11 = 'text/xml',
+    SOAP12 = 'application/soap+xml; charset=utf-8',
 )
 
 class ContentType:
