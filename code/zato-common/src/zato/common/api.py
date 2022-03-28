@@ -45,7 +45,6 @@ TRACE1 = 6
 SECONDS_IN_DAY = 86400 # 60 seconds * 60 minutes * 24 hours (and we ignore leap seconds)
 
 scheduler_date_time_format = '%Y-%m-%d %H:%M:%S'
-soap_date_time_format = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 # TODO: Classes that have this attribute defined (no matter the value) will not be deployed
 # onto servers.
@@ -358,12 +357,11 @@ class DATA_FORMAT(Attrs):
     JSON = 'json'
     POST = 'post'
     SOAP = 'soap'
-    XML = 'xml'
 
     def __iter__(self):
         # Note that DICT and other attributes aren't included because they're never exposed to the external world as-is,
         # they may at most only used so that services can invoke each other directly
-        return iter((self.XML, self.JSON, self.CSV, self.POST, self.HL7))
+        return iter((self.JSON, self.CSV, self.POST, self.HL7))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -766,11 +764,9 @@ class PUBSUB:
         DICT = NameId('Dict', DATA_FORMAT.DICT)
         JSON = NameId('JSON', DATA_FORMAT.JSON)
         POST = NameId('POST', DATA_FORMAT.POST)
-        SOAP = NameId('SOAP', DATA_FORMAT.SOAP)
-        XML  = NameId('XML', DATA_FORMAT.XML)
 
         def __iter__(self):
-            return iter((self.CSV, self.DICT, self.JSON, self.POST, self.SOAP, self.XML))
+            return iter((self.CSV, self.DICT, self.JSON, self.POST))
 
     class HOOK_TYPE:
         BEFORE_PUBLISH = 'pubsub_before_publish'
@@ -1130,10 +1126,7 @@ class STOMP:
 # ################################################################################################################################
 
 CONTENT_TYPE = Bunch(
-    JSON = 'application/json',
-    PLAIN_XML = 'application/xml',
-    SOAP11 = 'text/xml',
-    SOAP12 = 'application/soap+xml; charset=utf-8',
+    JSON = 'application/json'
 )
 
 class ContentType:
@@ -1205,11 +1198,9 @@ class WEB_SOCKET:
 
 class APISPEC:
     OPEN_API_V3 = 'openapi_v3'
-    SOAP_12 = 'soap_12'
     NAMESPACE_NULL = ''
     DEFAULT_TAG = 'public'
     GENERIC_INVOKE_PATH = '/zato/api/invoke/{service_name}' # OpenAPI
-    SOAP_INVOKE_PATH    = '/zato/api/soap/invoke'           # SOAP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1592,20 +1583,17 @@ class HL7:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# TODO: SIMPLE_IO.FORMAT should be removed with in favour of plain DATA_FORMAT
+# TODO: SIMPLE_IO.FORMAT should be removed in favour of plain DATA_FORMAT
 class SIMPLE_IO:
 
     class FORMAT(Attrs):
         JSON = DATA_FORMAT.JSON
-        XML = DATA_FORMAT.XML
 
     COMMON_FORMAT = OrderedDict()
     COMMON_FORMAT[DATA_FORMAT.JSON] = 'JSON'
-    COMMON_FORMAT[DATA_FORMAT.XML] = 'XML'
 
     HTTP_SOAP_FORMAT = OrderedDict()
     HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
-    HTTP_SOAP_FORMAT[DATA_FORMAT.XML] = 'XML'
     HTTP_SOAP_FORMAT[HL7.Const.Version.v2.id] = HL7.Const.Version.v2.name
 
 # ################################################################################################################################

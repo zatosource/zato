@@ -208,7 +208,7 @@ class Create(ZatoCommand):
         from zato.common.api import APISPEC
         from zato.common.odb.model import HTTPSOAP
 
-        for url_path in (APISPEC.GENERIC_INVOKE_PATH, APISPEC.SOAP_INVOKE_PATH):
+        for url_path in (APISPEC.GENERIC_INVOKE_PATH,):
             channel = HTTPSOAP(None, url_path, True, True, 'channel', 'plain_http',
                 None, url_path, None, '', None, None,
                 merge_url_params_req=True, service=service, security=pubapi_sec,
