@@ -253,9 +253,6 @@ ping_interval=30
 
 [content_type]
 json = {JSON}
-plain_xml = {PLAIN_XML}
-soap11 = {SOAP11}
-soap12 = {SOAP12}
 
 [zeromq_mdp]
 linger=0

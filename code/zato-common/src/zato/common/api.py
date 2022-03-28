@@ -131,20 +131,11 @@ engine_display_name = {
 
 # All URL types Zato understands.
 class URL_TYPE:
-    SOAP = 'soap'
+    SOAP       = 'soap' # Used only by outgoing connections
     PLAIN_HTTP = 'plain_http'
 
     def __iter__(self):
-        return iter((self.SOAP, self.PLAIN_HTTP))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# Whether WS-Security passwords are transmitted in clear-text or not.
-ZATO_WSS_PASSWORD_CLEAR_TEXT = Bunch(name='clear_text', label='Clear text')
-ZATO_WSS_PASSWORD_TYPES = {
-    ZATO_WSS_PASSWORD_CLEAR_TEXT.name:ZATO_WSS_PASSWORD_CLEAR_TEXT.label,
-}
+        return iter([self.PLAIN_HTTP])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -255,9 +246,7 @@ class SEC_DEF_TYPE:
     OAUTH = 'oauth'
     TLS_CHANNEL_SEC = 'tls_channel_sec'
     TLS_KEY_CERT = 'tls_key_cert'
-    WSS = 'wss'
     VAULT = 'vault_conn_sec'
-    XPATH_SEC = 'xpath_sec'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -271,9 +260,7 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.OAUTH: 'OAuth 1.0',
     SEC_DEF_TYPE.TLS_CHANNEL_SEC: 'TLS channel',
     SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
-    SEC_DEF_TYPE.WSS: 'WS-Security',
     SEC_DEF_TYPE.VAULT: 'Vault',
-    SEC_DEF_TYPE.XPATH_SEC: 'XPath',
 }
 
 # ################################################################################################################################
@@ -356,7 +343,6 @@ class DATA_FORMAT(Attrs):
     HL7  = 'hl7'
     JSON = 'json'
     POST = 'post'
-    SOAP = 'soap'
 
     def __iter__(self):
         # Note that DICT and other attributes aren't included because they're never exposed to the external world as-is,
@@ -725,16 +711,6 @@ class PARAMS_PRIORITY:
 class NONCE_STORE:
     KEY_PATTERN = 'zato:nonce-store:{}:{}' # E.g. zato:nonce-store:oauth:27
     DEFAULT_MAX_LOG = 25000
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class MSG_PATTERN_TYPE:
-    JSON_POINTER = NameId('JSONPointer', 'json-pointer')
-    XPATH = NameId('XPath', 'xpath')
-
-    def __iter__(self):
-        return iter((self.JSON_POINTER, self.XPATH))
 
 # ################################################################################################################################
 # ################################################################################################################################

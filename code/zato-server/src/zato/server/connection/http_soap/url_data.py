@@ -62,12 +62,9 @@ else:
         OAuthSignatureMethod_PLAINTEXT = OAuthToken = _Placeholder
 
 # ################################################################################################################################
-
-logger = logging.getLogger(__name__)
-
 # ################################################################################################################################
 
-_internal_url_path_indicator = '{}/zato/'.format(MISC.SEPARATOR)
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,8 +80,8 @@ class URLData(CyURLData, OAuthDataStore):
     """ Performs URL matching and security checks.
     """
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
-                 oauth_config=None, wss_config=None, apikey_config=None, aws_config=None, \
-                 xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
+                 oauth_config=None, apikey_config=None, aws_config=None, \
+                 tls_channel_sec_config=None, tls_key_cert_config=None, \
                  vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, jwt_secret=None, vault_conn_api=None):
         super(URLData, self).__init__(channel_data)
 
@@ -94,10 +91,8 @@ class URLData(CyURLData, OAuthDataStore):
         self.jwt_config = jwt_config # type: dict
         self.ntlm_config = ntlm_config # type: dict
         self.oauth_config = oauth_config # type: dict
-        self.wss_config = wss_config # type: dict
         self.apikey_config = apikey_config # type: dict
         self.aws_config = aws_config # type: dict
-        self.xpath_sec_config = xpath_sec_config # type: dict
         self.tls_channel_sec_config = tls_channel_sec_config # type: dict
         self.tls_key_cert_config = tls_key_cert_config # type: dict
         self.vault_conn_sec_config = vault_conn_sec_config # type: dict
@@ -365,52 +360,6 @@ class URLData(CyURLData, OAuthDataStore):
         else:
             # Store for later use, custom channels may want to inspect it later on
             wsgi_environ['zato.oauth.request'] = oauth_request
-
-        return True
-
-# ################################################################################################################################
-
-    def _handle_security_xpath_sec(self, cid, sec_def, ignored_path_info, ignored_body, wsgi_environ, ignored_post_data=None,
-        enforce_auth=True):
-
-        payload = wsgi_environ['zato.request.payload']
-        user_msg = 'Invalid username or password'
-
-        username = payload.xpath(sec_def.username_expr)
-        if not username:
-            if enforce_auth:
-                logger.error('%s `%s` expr:`%s`, value:`%r`', user_msg, '(no username)', sec_def.username_expr, username)
-                raise Unauthorized(cid, user_msg, 'zato-xpath')
-            else:
-                return False
-
-        username = username[0]
-
-        if username != sec_def.username:
-            if enforce_auth:
-                logger.error('%s `%s` expr:`%s`, value:`%r`', user_msg, '(username)', sec_def.username_expr, username)
-                raise Unauthorized(cid, user_msg, 'zato-xpath')
-            else:
-                return False
-
-        if sec_def.get('password_expr'):
-
-            password = payload.xpath(sec_def.password_expr)
-            if not password:
-                if enforce_auth:
-                    logger.error('%s `%s` expr:`%s`', user_msg, '(no password)', sec_def.password_expr)
-                    raise Unauthorized(cid, user_msg, 'zato-xpath')
-                else:
-                    return False
-
-            password = password[0]
-
-            if password != sec_def.password:
-                if enforce_auth:
-                    logger.error('%s `%s` expr:`%s`', user_msg, '(password)', sec_def.password_expr)
-                    raise Unauthorized(cid, user_msg, 'zato-xpath')
-                else:
-                    return False
 
         return True
 
@@ -969,94 +918,6 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
-    def _update_wss(self, name, config):
-        if name in self.wss_config:
-            self.wss_config[name].clear()
-
-        self.wss_config[name] = Bunch()
-        self.wss_config[name].config = config
-
-    def wss_get(self, name):
-        """ Returns the configuration of the WSS definition of the given name.
-        """
-        with self.url_sec_lock:
-            return self.wss_config.get(name)
-
-    def on_broker_msg_SECURITY_WSS_CREATE(self, msg, *args):
-        """ Creates a new WS-Security definition.
-        """
-        with self.url_sec_lock:
-            self._update_wss(msg.name, msg)
-
-    def on_broker_msg_SECURITY_WSS_EDIT(self, msg, *args):
-        """ Updates an existing WS-Security definition.
-        """
-        with self.url_sec_lock:
-            del self.wss_config[msg.old_name]
-            self._update_wss(msg.name, msg)
-            self._update_url_sec(msg, SEC_DEF_TYPE.WSS)
-
-    def on_broker_msg_SECURITY_WSS_DELETE(self, msg, *args):
-        """ Deletes a WS-Security definition.
-        """
-        with self.url_sec_lock:
-            self._delete_channel_data('wss', msg.name)
-            del self.wss_config[msg.name]
-            self._update_url_sec(msg, SEC_DEF_TYPE.WSS, True)
-
-    def on_broker_msg_SECURITY_WSS_CHANGE_PASSWORD(self, msg, *args):
-        """ Changes the password of a WS-Security definition.
-        """
-        with self.url_sec_lock:
-            # The message's 'password' attribute already takes the salt
-            # into account.
-            self.wss_config[msg.name]['config']['password'] = msg.password
-            self._update_url_sec(msg, SEC_DEF_TYPE.WSS)
-
-# ################################################################################################################################
-
-    def _update_xpath_sec(self, name, config):
-        self.xpath_sec_config[name] = Bunch()
-        self.xpath_sec_config[name].config = config
-
-    def xpath_sec_get(self, name):
-        """ Returns the configuration of the XPath security definition
-        of the given name.
-        """
-        with self.url_sec_lock:
-            return self.xpath_sec_config.get(name)
-
-    def on_broker_msg_SECURITY_XPATH_SEC_CREATE(self, msg, *args):
-        """ Creates a new XPath security definition.
-        """
-        with self.url_sec_lock:
-            self._update_xpath_sec(msg.name, msg)
-
-    def on_broker_msg_SECURITY_XPATH_SEC_EDIT(self, msg, *args):
-        """ Updates an existing XPath security definition.
-        """
-        with self.url_sec_lock:
-            del self.xpath_sec_config[msg.old_name]
-            self._update_xpath_sec(msg.name, msg)
-            self._update_url_sec(msg, SEC_DEF_TYPE.XPATH_SEC)
-
-    def on_broker_msg_SECURITY_XPATH_SEC_DELETE(self, msg, *args):
-        """ Deletes an XPath security definition.
-        """
-        with self.url_sec_lock:
-            self._delete_channel_data('xpath_sec', msg.name)
-            del self.xpath_sec_config[msg.name]
-            self._update_url_sec(msg, SEC_DEF_TYPE.XPATH_SEC, True)
-
-    def on_broker_msg_SECURITY_XPATH_SEC_CHANGE_PASSWORD(self, msg, *args):
-        """ Changes password of an XPath security definition.
-        """
-        with self.url_sec_lock:
-            self.xpath_sec_config[msg.name]['config']['password'] = msg.password
-            self._update_url_sec(msg, SEC_DEF_TYPE.XPATH_SEC)
-
-# ################################################################################################################################
-
     def _update_tls_channel_sec(self, name, config):
         self.tls_channel_sec_config[name] = Bunch()
         self.tls_channel_sec_config[name].config = config
@@ -1312,7 +1173,7 @@ class URLData(CyURLData, OAuthDataStore):
             self._create_channel(msg, old_data)
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
-        """ Deletes an HTTP/SOAP channel.
+        """ Deletes an HTTP channel.
         """
         with self.url_sec_lock:
             self._delete_channel(msg)

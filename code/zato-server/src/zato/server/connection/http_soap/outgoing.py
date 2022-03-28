@@ -37,7 +37,6 @@ from zato.common.exception import Inactive, TimeoutException
 from zato.common.json_internal import dumps, loads
 from zato.common.marshal_.api import Model
 from zato.common.util.api import get_component_name
-from zato.common.xml_ import soapenv11_namespace, soapenv12_namespace
 from zato.server.connection.queue import ConnectionQueue
 
 # ################################################################################################################################
@@ -50,6 +49,11 @@ if 0:
 
 logger = getLogger(__name__)
 has_debug = logger.isEnabledFor(DEBUG)
+
+# ################################################################################################################################
+
+soapenv11_namespace = 'http://schemas.xmlsoap.org/soap/envelope/'
+soapenv12_namespace = 'http://www.w3.org/2003/05/soap-envelope'
 
 # ################################################################################################################################
 
@@ -316,7 +320,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         """ Returns a username and password pair or None, if no security definition
         has been attached.
         """
-        if self.config['sec_type'] in (SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.WSS):
+        if self.config['sec_type'] in (SEC_DEF_TYPE.BASIC_AUTH,):
             auth = (self.config['username'], self.config['password'])
         else:
             auth = None
@@ -340,11 +344,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if not headers.get('Content-Type'):
             headers['Content-Type'] = soap_config['content_type']
 
-        if self.config['sec_type'] == SEC_DEF_TYPE.WSS:
-            soap_header = soap_config['header']
-        else:
-            soap_header = ''
-
+        soap_header = ''
         return soap_config['message'].format(header=soap_header, data=data), headers
 
 # ################################################################################################################################
