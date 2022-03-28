@@ -297,10 +297,6 @@ class ConfigLoader:
         query = self.odb.get_tls_key_cert_list(server.cluster.id, True)
         self.config.tls_key_cert = ConfigDict.from_query('tls_key_cert', query, decrypt_func=self.decrypt)
 
-        # WS-Security
-        query = self.odb.get_wss_list(server.cluster.id, True)
-        self.config.wss = ConfigDict.from_query('wss', query, decrypt_func=self.decrypt)
-
         # Vault connections
         query = self.odb.get_vault_connection_list(server.cluster.id, True)
         self.config.vault_conn_sec = ConfigDict.from_query('vault_conn_sec', query, decrypt_func=self.decrypt)
@@ -333,14 +329,6 @@ class ConfigLoader:
             http_soap.append(hs_item)
 
         self.config.http_soap = http_soap
-
-        # Namespaces
-        query = self.odb.get_namespace_list(server.cluster.id, True)
-        self.config.msg_ns = ConfigDict.from_query('msg_ns', query, decrypt_func=self.decrypt)
-
-        # XPath
-        query = self.odb.get_xpath_list(server.cluster.id, True)
-        self.config.xpath = ConfigDict.from_query('msg_xpath', query, decrypt_func=self.decrypt)
 
         # JSON Pointer
         query = self.odb.get_json_pointer_list(server.cluster.id, True)
@@ -568,7 +556,7 @@ class ConfigLoader:
         for instance, because it is a cluster newly migrated from 2.0 to 3.0, and encrypt them now in ODB.
         """
         sec_config_dict_types = (
-            'apikey', 'aws', 'basic_auth', 'jwt', 'ntlm', 'oauth', 'tls_key_cert', 'wss', 'vault_conn_sec', 'xpath_sec'
+            'apikey', 'aws', 'basic_auth', 'jwt', 'ntlm', 'oauth', 'tls_key_cert', 'vault_conn_sec'
         )
 
         # Global lock to make sure only one server attempts to do it at a time

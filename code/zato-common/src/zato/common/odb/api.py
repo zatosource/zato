@@ -36,8 +36,7 @@ from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import query
 from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
-     WSSDefinition, VaultConnection
+     JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, VaultConnection
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
@@ -683,9 +682,7 @@ class ODBManager(SessionWrapper):
                 SEC_DEF_TYPE.JWT: JWT,
                 SEC_DEF_TYPE.OAUTH: OAuth,
                 SEC_DEF_TYPE.TLS_CHANNEL_SEC: TLSChannelSecurity,
-                SEC_DEF_TYPE.WSS: WSSDefinition,
                 SEC_DEF_TYPE.VAULT: VaultConnection,
-                SEC_DEF_TYPE.XPATH_SEC: XPathSecurity,
             }
 
             result = {}
@@ -712,6 +709,10 @@ class ODBManager(SessionWrapper):
                 result[target].sec_use_rbac = item.sec_use_rbac
 
                 if item.security_id:
+
+                    # Ignore WS-Security (WSS) which has been removed in 3.2
+                    if item.sec_type == 'wss':
+                        continue
 
                     # For later use
                     result[target].sec_def = Bunch()

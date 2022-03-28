@@ -118,12 +118,8 @@
                             <span class="like-a">Vault &rarr;</span>
                             <ul>
                                 <li><a href="{% url "security-vault-conn" %}?cluster={{ cluster_id|default:'' }}">Connections</a></li>
-                                <!-- <li><a href="{% url "security-vault-conn" %}?cluster={{ cluster_id|default:'' }}">Policies</a></li> -->
                             </ul>
                         </li>
-
-                        <li><a href="{% url "security-wss" %}?cluster={{ cluster_id|default:'' }}">WS-Security</a></li>
-                        <li><a href="{% url "security-xpath" %}?cluster={{ cluster_id|default:'' }}">XPath</a></li>
                     </ul>
                 </li>
                 <li><span class="like-a">Connections &darr;</span>

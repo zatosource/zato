@@ -32,7 +32,6 @@ from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
 from zato.common.marshal_.api import ModelValidationError
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
-from zato.common.util.api import payload_from_request
 from zato.common.util.exception import pretty_format_exception
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
@@ -281,12 +280,6 @@ class RequestDispatcher:
 
                         if sec.sec_def.sec_type == SEC_DEF_TYPE.OAUTH:
                             post_data.update(QueryDict(payload, encoding='utf-8'))
-
-                        # Eagerly parse the request but only if we expect XPath-based credentials. The request will be re-used
-                        # in later steps, it won't be parsed twice or more.
-                        elif sec.sec_def.sec_type == SEC_DEF_TYPE.XPATH_SEC:
-                            wsgi_environ['zato.request.payload'] = payload_from_request(
-                                self.server.json_parser, cid, payload, channel_item.data_format, channel_item.transport)
 
                     # Will raise an exception on any security violation
                     auth_result = self.url_data.check_security(
