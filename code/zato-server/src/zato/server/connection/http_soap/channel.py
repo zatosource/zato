@@ -18,15 +18,12 @@ from traceback import format_exc
 # Django
 from django.http import QueryDict
 
-# Paste
-from paste.util.converters import asbool
-
 # regex
 from regex import compile as regex_compile
 
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, HL7, HTTP_SOAP, MISC, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
-     URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE, ZATO_OK
+     URL_PARAMS_PRIORITY, ZATO_NONE
 from zato.common.audit_log import DataReceived, DataSent
 from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES
@@ -37,7 +34,6 @@ from zato.common.marshal_.api import ModelValidationError
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.util.api import payload_from_request
 from zato.common.util.exception import pretty_format_exception
-from zato.common.xml_ import zato_namespace
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
 from zato.server.service.internal import AdminService
@@ -104,44 +100,11 @@ for code, response in HTTP_RESPONSES.items():
 class ModuleCtx:
     Channel = CHANNEL.HTTP_SOAP
     No_URL_Match = (None, False)
-    HTTP_SOAP_Action = 'HTTP_SOAPACTION'
     Rate_Limit_HTTP = RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP
     Rate_Limit_SSO_User = RATE_LIMIT.OBJECT_TYPE.SSO_USER
     Exception_Separator = '*' * 80
     SIO_JSON = SIMPLE_IO.FORMAT.JSON
     Dict_Like = (DATA_FORMAT.JSON, DATA_FORMAT.DICT)
-
-# ################################################################################################################################
-
-soap_doc = """<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518"><soap:Body>{body}</soap:Body></soap:Envelope>""" # noqa
-
-# ################################################################################################################################
-
-zato_message_soap = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518">
-  <soap:Body>{data}</soap:Body>
-</soap:Envelope>"""
-
-# ################################################################################################################################
-
-zato_message_plain = b'{data}'
-zato_message_declaration = b"<?xml version='1.0' encoding='UTF-8'?>" + zato_message_plain
-zato_message_declaration_uni = zato_message_declaration.decode('utf8')
-
-# ################################################################################################################################
-
-# Returned if there has been any exception caught.
-soap_error = """<?xml version='1.0' encoding='UTF-8'?>
-<SOAP-ENV:Envelope
-  xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
-  xmlns:xsi="http://www.w3.org/1999/XMLSchema-instance"
-  xmlns:xsd="http://www.w3.org/1999/XMLSchema">
-   <SOAP-ENV:Body>
-     <SOAP-ENV:Fault>
-     <faultcode>SOAP-ENV:{faultcode}</faultcode>
-     <faultstring><![CDATA[cid [{cid}], faultstring [{faultstring}]]]></faultstring>
-      </SOAP-ENV:Fault>
-  </SOAP-ENV:Body>
-</SOAP-ENV:Envelope>"""
 
 # ################################################################################################################################
 
@@ -172,19 +135,8 @@ def client_json_error(cid:'str', details:'any_') -> 'str':
 
 # ################################################################################################################################
 
-def client_soap_error(cid:'str', faultstring:'str') -> 'str':
-    return soap_error.format(**{'faultcode':'Client', 'cid':cid, 'faultstring':faultstring})
-
-# ################################################################################################################################
-
-def server_soap_error(cid:'str', faultstring:'str') -> 'str':
-    return soap_error.format(**{'faultcode':'Server', 'cid':cid, 'faultstring':faultstring})
-
-# ################################################################################################################################
-
 client_error_wrapper = {
     DATA_FORMAT.JSON: client_json_error,
-    DATA_FORMAT.SOAP: client_soap_error,
     HL7.Const.Version.v2.id: client_json_error,
 }
 
@@ -231,7 +183,7 @@ class _HashCtx:
 # ################################################################################################################################
 
 class RequestDispatcher:
-    """ Dispatches all the incoming HTTP/SOAP requests to appropriate handlers.
+    """ Dispatches all the incoming HTTP requests to appropriate handlers.
     """
     def __init__(
         self,
@@ -260,31 +212,6 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
-    def wrap_error_message(self, cid:'str', url_type:'str', msg:'str') -> 'str':
-        """ Wraps an error message in a transport-specific envelope.
-        """
-        if url_type == URL_TYPE.SOAP:
-            return server_soap_error(cid, msg)
-
-        # Let's return the message as-is if we didn't have any specific envelope
-        # to use.
-        return msg
-
-# ################################################################################################################################
-
-    def _handle_quotes_soap_action(self, soap_action:'str') -> 'str':
-        """ Make sure quotes around SOAP actions are ignored so these two
-        are equivalent:
-        - SOAPAction: "my.soap.action"
-        - SOAPAction: my.soap.action
-        """
-        if soap_action[0] == '"' and soap_action[-1] == '"':
-            soap_action = soap_action[1:-1]
-
-        return soap_action
-
-# ################################################################################################################################
-
     def dispatch(
         self,
         cid:'str',
@@ -309,16 +236,11 @@ class RequestDispatcher:
             wsgi_environ['zato.http.response.status'] = _status_method_not_allowed
             return client_json_error(cid, 'Unsupported HTTP method')
 
-        if ModuleCtx.HTTP_SOAP_Action in wsgi_environ:
-            soap_action = self._handle_quotes_soap_action(wsgi_environ[ModuleCtx.HTTP_SOAP_Action])
-        else:
-            soap_action = ''
-
-        # Can we recognize this combination of URL path and SOAP action at all?
+        # Can we recognize this URL path?
         # This gives us the URL info and security data - but note that here
         # we still haven't validated credentials, only matched the URL.
         # Credentials are checked in a call to self.url_data.check_security
-        url_match, channel_item = self.url_data.match(path_info, soap_action, http_method, http_accept, bool(soap_action))
+        url_match, channel_item = self.url_data.match(path_info, http_method, http_accept)
 
         if _has_debug and channel_item:
             logger.debug('url_match:`%r`, channel_item:`%r`', url_match, sorted(channel_item.items()))
@@ -531,7 +453,7 @@ class RequestDispatcher:
                 try:
                     error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'])
                 except KeyError:
-                    # It's OK. Apparently it's neither 'soap' nor json'
+                    # It is not a data format that we have a wrapper for.
                     if logger.isEnabledFor(TRACE1):
                         msg = 'No client error wrapper for transport:`{}`, data_format:`{}`'.format(
                             channel_item.get('transport'), channel_item.get('data_format'))
@@ -543,7 +465,7 @@ class RequestDispatcher:
 
                 return response
 
-        # This is 404, no such URL path and SOAP action is not known either.
+        # This is 404, no such URL path.
         else:
 
             # Indicate HTTP 404
@@ -594,7 +516,6 @@ class RequestHandler:
     """
     def __init__(self, server:'ParallelServer') -> 'None':
         self.server = server
-        self.use_soap_envelope = asbool(self.server.fs_server_config.misc.use_soap_envelope) # type: bool
 
 # ################################################################################################################################
 
@@ -605,7 +526,7 @@ class RequestHandler:
         transport = kwargs.get('transport', '')
 
         self.set_payload(service.response, data_format, transport, service)
-        self.set_content_type(service.response, data_format, transport, kwargs.get('url_match'), kwargs.get('channel_item'))
+        self.set_content_type(service.response, data_format)
 
         return service.response
 
@@ -778,31 +699,6 @@ class RequestHandler:
 
 # ################################################################################################################################
 
-    def _get_xml_admin_payload(
-        self,
-        service_instance:'Service',
-        zato_message_template:'str',
-        payload:'any_'
-    ) -> 'str':
-
-        if payload:
-            data=payload.getvalue()
-        else:
-            data="""<{response_elem} xmlns="{namespace}">
-                <zato_env>
-                  <cid>{cid}</cid>
-                  <result>{result}</result>
-                </zato_env>
-              </{response_elem}>
-            """.format(
-                response_elem=getattr(service_instance.SimpleIO, 'response_elem', 'response'), # type: ignore
-                namespace=getattr(service_instance.SimpleIO, 'namespace', zato_namespace),     # type: ignore
-                cid=service_instance.cid, result=ZATO_OK)
-
-        return zato_message_template.format(data=data.encode('utf-8') if isinstance(data, str) else data)
-
-# ################################################################################################################################
-
     def _needs_admin_response(
         self,
         service_instance:'Service',
@@ -820,7 +716,7 @@ class RequestHandler:
         service_instance:'Service'
     ) -> 'None':
         """ Sets the actual payload to represent the service's response out of what the service produced.
-        This includes converting dictionaries into JSON, adding Zato metadata and wrapping the mesasge in SOAP if need be.
+        This includes converting dictionaries into JSON or adding Zato metadata.
         """
 
         if self._needs_admin_response(service_instance):
@@ -833,18 +729,6 @@ class RequestHandler:
                     payload = zato_env
 
                 response.payload = dumps(payload)
-
-            else:
-                if transport == URL_TYPE.SOAP:
-                    zato_message_template = zato_message_soap
-                else:
-                    zato_message_template = zato_message_declaration_uni
-
-                if response.payload:
-                    if not isinstance(response.payload, str):
-                        response.payload = self._get_xml_admin_payload(service_instance, zato_message_template, response.payload)
-                else:
-                    response.payload = self._get_xml_admin_payload(service_instance, zato_message_template, None)
         else:
             if not isinstance(response.payload, str):
                 if isinstance(response.payload, dict) and data_format in ModuleCtx.Dict_Like:
@@ -856,20 +740,12 @@ class RequestHandler:
                         value = ''
                     response.payload = value
 
-        if transport == URL_TYPE.SOAP:
-            if not isinstance(service_instance, AdminService):
-                if self.use_soap_envelope:
-                    response.payload = soap_doc.format(body=response.payload)
-
 # ################################################################################################################################
 
     def set_content_type(
         self,
         response:'any_',
-        data_format:'str',
-        transport:'str',
-        ignored_url_match:'any_',
-        channel_item:'any_'
+        data_format:'str'
     ) -> 'None':
         """ Sets a response's content type if one hasn't been supplied by the user.
         """
@@ -878,15 +754,7 @@ class RequestHandler:
             content_type = response.content_type
         else:
             # .. or they did not so let's find out if we're using SimpleIO ..
-            if data_format == SIMPLE_IO.FORMAT.XML:
-                if transport == URL_TYPE.SOAP:
-                    if channel_item.soap_version == '1.1':
-                        content_type = self.server.soap11_content_type
-                    else:
-                        content_type = self.server.soap12_content_type
-                else:
-                    content_type = self.server.plain_xml_content_type
-            elif data_format == SIMPLE_IO.FORMAT.JSON:
+            if data_format == SIMPLE_IO.FORMAT.JSON:
                 content_type = self.server.json_content_type
 
             # .. alright, let's use the default value after all.

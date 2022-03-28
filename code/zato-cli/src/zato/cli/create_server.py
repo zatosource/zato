@@ -124,7 +124,6 @@ ensure_sql_connections_exist=True
 http_server_header=Zato
 zeromq_connect_sleep=0.1
 aws_host=
-use_soap_envelope=True
 fifo_response_buffer_size=0.2 # In MB
 jwt_secret=zato+secret://zato.server_conf.misc.jwt_secret
 enforce_service_invokes=False
