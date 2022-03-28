@@ -348,10 +348,8 @@ class WorkerStore(_WorkerStoreBase):
             self.worker_config.jwt,
             self.worker_config.ntlm,
             self.worker_config.oauth,
-            self.worker_config.wss,
             self.worker_config.apikey,
             self.worker_config.aws,
-            self.worker_config.xpath_sec,
             self.worker_config.tls_channel_sec,
             self.worker_config.tls_key_cert,
             self.worker_config.vault_conn_sec,
@@ -959,7 +957,7 @@ class WorkerStore(_WorkerStoreBase):
             handler = getattr(self.request_dispatcher.url_data, 'on_broker_msg_' + action_name)
             handler(msg)
 
-            for transport in('soap', 'plain_http'):
+            for transport in('plain_http',):
                 config_dict = getattr(self.worker_config, 'out_' + transport)
 
                 for conn_name in config_dict.copy_keys():

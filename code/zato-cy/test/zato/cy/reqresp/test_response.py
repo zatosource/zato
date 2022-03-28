@@ -1,20 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from copy import deepcopy
 from http.client import OK
-
-# lxml
-from lxml.etree import _Element as EtreeElement
-from lxml.objectify import ObjectifiedElement
 
 # Zato
 from zato.common.api import DATA_FORMAT, ZATO_OK
@@ -111,21 +105,6 @@ class ResponseTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def test_set_payload_dict_has_sio_case_1a(self):
-
-        MyService = deepcopy(MyBaseService)
-        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
-
-        response = Response()
-        response.init('abc', MyService._sio, DATA_FORMAT.XML)
-
-        # Note that 'ddd' is optional so it can be missing
-        # and that 'fff' is not in SIO so it should be ignored.
-        data = {'aaa':'111', 'bbb':'222', 'ccc':'333', 'eee':'555', 'fff':'666', 'qqq':777, 'www':888}
-        response.payload = data
-
-# ################################################################################################################################
-
     def test_set_payload_dict_no_sio_case_1b(self):
 
         response = Response()
@@ -149,10 +128,8 @@ class ResponseTestCase(BaseSIOTestCase):
         data_06 = False
         data_07 = 1
         data_08 = 2.0
-        data_09 = EtreeElement()
-        data_10 = ObjectifiedElement()
 
-        elems = [data_01, data_02, data_03, data_04, data_05, data_06, data_07, data_08, data_09, data_10]
+        elems = [data_01, data_02, data_03, data_04, data_05, data_06, data_07, data_08]
 
         response = Response()
         response.init('abc', None, DATA_FORMAT.CSV)

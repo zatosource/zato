@@ -442,9 +442,8 @@ class SchedulerFacade:
 # ################################################################################################################################
 
 class Service:
-    """ A base class for all services deployed on Zato servers, no matter
-    the transport and protocol, be it plain HTTP, SOAP, IBM MQ or any other,
-    regardless whether they're built-in or user-defined ones.
+    """ A base class for all services deployed on Zato servers, no matter the transport and protocol, be it REST, IBM MQ
+    or any other, regardless whether they arere built-in or user-defined ones.
     """
     schedule: SchedulerFacade
 

@@ -66,8 +66,7 @@ from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
 from zato.admin.web.views.sms import twilio
-from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, oauth, rbac, \
-     wss, xpath as xpath_sec
+from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, oauth, rbac
 from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as tls_channel, key_cert as tls_key_cert
 from zato.admin.web.views.security.vault import connection as vault_conn
 from zato.admin.web.views.stats import service_usage as stats_service_usage
@@ -451,44 +450,6 @@ urlpatterns += [
         login_required(vault_conn.Edit()), name=vault_conn.Edit.url_name),
     url(r'^zato/security/vault/conn/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(vault_conn.Delete()), name=vault_conn.Delete.url_name),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. WS-Security
-
-    url(r'^zato/security/wss/$',
-        login_required(wss.index), name='security-wss'),
-    url(r'^zato/security/wss/create/$',
-        login_required(wss.create), name='security-wss-create'),
-    url(r'^zato/security/wss/edit/$',
-        login_required(wss.edit), name='security-wss-edit'),
-    url(r'^zato/security/wss/change-password/$',
-        login_required(wss.change_password), name='security-wss-change-password'),
-    url(r'^zato/security/wss/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(wss.Delete()), name=wss.Delete.url_name),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. XPath
-
-    url(r'^zato/security/xpath/$',
-        login_required(xpath_sec.Index()), name=xpath_sec.Index.url_name),
-    url(r'^zato/security/xpath/$',
-        login_required(xpath_sec.Index()), name=xpath_sec.Index.url_name),
-    url(r'^zato/security/xpath/create/$',
-        login_required(xpath_sec.Create()), name=xpath_sec.Create.url_name),
-    url(r'^zato/security/xpath/edit/$',
-        login_required(xpath_sec.Edit()), name=xpath_sec.Edit.url_name),
-    url(r'^zato/security/xpath/change-password/$',
-        login_required(xpath_sec.change_password), name='security-xpath-change-password'),
-    url(r'^zato/security/xpath/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(xpath_sec.Delete()), name=xpath_sec.Delete.url_name),
     ]
 
 # ################################################################################################################################
@@ -991,7 +952,7 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # HTTP/SOAP
+    # HTTP
 
     url(r'^zato/http-soap/$',
         login_required(http_soap.index), name='http-soap'),

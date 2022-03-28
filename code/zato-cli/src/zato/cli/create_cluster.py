@@ -230,7 +230,7 @@ class Create(ZatoCommand):
         # Zato
         from zato.common.api import DATA_FORMAT
         from zato.common.odb.model import Service
-        from zato.common.util.api import get_http_json_channel, get_http_soap_channel
+        from zato.common.util.api import get_http_json_channel
 
         for name, impl_name in iteritems(zato_services):
 
@@ -257,7 +257,6 @@ class Create(ZatoCommand):
             elif 'check' in name:
                 self.add_check(session, cluster, service, pubapi_sec)
 
-            session.add(get_http_soap_channel(name, service, cluster, pubapi_sec))
             session.add(get_http_json_channel(name, service, cluster, pubapi_sec))
 
 # ################################################################################################################################
@@ -268,12 +267,10 @@ class Create(ZatoCommand):
 
         # Zato
         from zato.common.api import SIMPLE_IO
-        from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, Service, WSSDefinition
+        from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, Service
 
         passwords = {
             'ping.plain_http.basic_auth': None,
-            'ping.soap.basic_auth': None,
-            'ping.soap.wss.clear_text': None,
         }
 
         for password in passwords:
@@ -299,19 +296,12 @@ class Create(ZatoCommand):
         # All the possible options
         #
         # Plain HTTP / Basic auth
-        # SOAP / Basic auth
-        # SOAP / WSS / Clear text
         #
 
-        transports = ['plain_http', 'soap']
-        wss_types = ['clear_text']
+        transports = ['plain_http',]
 
         for transport in transports:
-
-            if transport == 'plain_http':
-                data_format = SIMPLE_IO.FORMAT.JSON
-            else:
-                data_format = SIMPLE_IO.FORMAT.XML
+            data_format = SIMPLE_IO.FORMAT.JSON
 
             base_name = 'ping.{0}.basic_auth'.format(transport)
             zato_name = 'zato.{0}'.format(base_name)
@@ -326,21 +316,6 @@ class Create(ZatoCommand):
                 None, zato_name, True, True, 'channel', transport, None, url, None, soap_action,
                 soap_version, data_format, service=ping_service, security=sec, cluster=cluster)
             session.add(channel)
-
-            if transport == 'soap':
-                for wss_type in wss_types:
-                    base_name = 'ping.{0}.wss.{1}'.format(transport, wss_type)
-                    zato_name = 'zato.{0}'.format(base_name)
-                    url = '/zato/{0}'.format(base_name)
-                    password = passwords[base_name]
-
-                    sec = WSSDefinition(None, zato_name, True, zato_name, password, wss_type, False, True, 3600, 3600, cluster)
-                    session.add(sec)
-
-                    channel = HTTPSOAP(
-                        None, zato_name, True, True, 'channel', transport, None, url, None, soap_action,
-                        soap_version, data_format, service=ping_service, security=sec, cluster=cluster)
-                    session.add(channel)
 
 # ################################################################################################################################
 

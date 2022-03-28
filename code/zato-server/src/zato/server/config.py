@@ -287,7 +287,6 @@ class ConfigStore:
 
         # Security definitions
         self.basic_auth = None # type: ConfigDict
-        self.wss = None # type: ConfigDict
 
         # URL security
         self.url_sec = None # type: ConfigDict
@@ -309,9 +308,6 @@ class ConfigStore:
 
         # JSON Pointer
         self.json_pointer = None # type: ConfigDict
-
-        # XPath
-        self.xpath = None # type: ConfigDict
 
         # Services
         self.service = None # type: ConfigDict
