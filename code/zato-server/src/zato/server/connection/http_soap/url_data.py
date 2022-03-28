@@ -26,7 +26,7 @@ from zato.common.vault_ import VAULT
 from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
 from zato.common.util.api import parse_tls_channel_security_definition, update_apikey_username_to_channel
-from zato.common.util.auth import on_basic_auth, on_wsse_pwd, WSSE
+from zato.common.util.auth import on_basic_auth
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.connection.http_soap import Forbidden, Unauthorized
 from zato.server.jwt_ import JWT
@@ -115,7 +115,6 @@ class URLData(CyURLData, OAuthDataStore):
 
         self.url_sec_lock = RLock()
         self.update_lock = RLock()
-        self._wss = WSSE()
         self._target_separator = MISC.SEPARATOR
 
         self._oauth_server = OAuthServer(self)
@@ -318,46 +317,6 @@ class URLData(CyURLData, OAuthDataStore):
                 return False
 
         return result
-
-# ################################################################################################################################
-
-    def _handle_security_wss(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
-        """ Performs the authentication using WS-Security.
-        """
-        if not body:
-            if enforce_auth:
-                raise Unauthorized(cid, 'No message body found in [{}]'.format(body), 'zato-wss')
-            else:
-                return False
-
-        url_config = {}
-
-        url_config['wsse-pwd-password'] = sec_def['password']
-        url_config['wsse-pwd-username'] = sec_def['username']
-        url_config['wsse-pwd-reject-empty-nonce-creation'] = sec_def['reject_empty_nonce_creat']
-        url_config['wsse-pwd-reject-stale-tokens'] = sec_def['reject_stale_tokens']
-        url_config['wsse-pwd-reject-expiry-limit'] = sec_def['reject_expiry_limit']
-        url_config['wsse-pwd-nonce-freshness-time'] = sec_def['nonce_freshness_time']
-
-        try:
-            result = on_wsse_pwd(self._wss, url_config, body, False)
-        except Exception:
-            if enforce_auth:
-                msg = 'Could not parse the WS-Security data, body:`{}`, e:`{}`'.format(body, format_exc())
-                raise Unauthorized(cid, msg, 'zato-wss')
-            else:
-                return False
-
-        if not result:
-            if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`, sec-wall code:`{}`, description:`{}`\n'.format(
-                    path_info, cid, result.code, result.description)
-                logger.error(msg)
-                raise Unauthorized(cid, msg, 'zato-wss')
-            else:
-                return False
-
-        return True
 
 # ################################################################################################################################
 
