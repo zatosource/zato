@@ -42,6 +42,7 @@ CONNECTION_PLURAL = {
 
 TRANSPORT = {
     'plain_http': 'REST',
+    'soap': 'SOAP',
     }
 
 CACHE_TYPE = {
