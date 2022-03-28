@@ -582,7 +582,11 @@ class URLData(CyURLData, OAuthDataStore):
         """
         items = list(iteritems(self.url_sec))
         for target_match, url_info in items:
-            sec_def = url_info.sec_def
+            sec_def = url_info.get('sec_def')
+            if not sec_def:
+                if url_info.get('data_format') != 'xml':
+                    self.logger.warn('Missing sec_def for url_info -> %s', url_info)
+                return
             if sec_def != ZATO_NONE and sec_def.sec_type == sec_def_type:
                 name = msg.get('old_name') if msg.get('old_name') else msg.get('name')
                 if sec_def.name == name:
