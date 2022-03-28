@@ -17,19 +17,13 @@ from traceback import format_exc
 # gevent
 from gevent.lock import RLock
 
-# lxml
-from lxml.etree import fromstring, tostring
-
 # parse
 from parse import PARSE_RE
 
 # requests
-import requests
+from requests.adapters import HTTPAdapter
 from requests.exceptions import Timeout as RequestsTimeout
-from requests.sessions import Session as requests_session
-
-# Python 2/3 compatibility
-from past.builtins import basestring, unicode
+from requests.sessions import Session as RequestsSession
 
 # Zato
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE
@@ -40,24 +34,30 @@ from zato.common.util.api import get_component_name
 from zato.server.connection.queue import ConnectionQueue
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
+    from requests import Response
+    from zato.common.typing_ import any_, dictnone, stranydict, strstrdict
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
 has_debug = logger.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 soapenv11_namespace = 'http://schemas.xmlsoap.org/soap/envelope/'
 soapenv12_namespace = 'http://www.w3.org/2003/05/soap-envelope'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class HTTPSAdapter(requests.adapters.HTTPAdapter):
+class HTTPSAdapter(HTTPAdapter):
     """ An adapter which exposes a method for clearing out the underlying pool. Useful with HTTPS as it allows to update TLS
     material on the fly.
     """
@@ -65,23 +65,24 @@ class HTTPSAdapter(requests.adapters.HTTPAdapter):
         self.poolmanager.clear()
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class BaseHTTPSOAPWrapper:
     """ Base class for HTTP/SOAP connection wrappers.
     """
-    def __init__(self, config, _requests_session=None):
+    def __init__(self, config:'stranydict', _requests_session:'any_'=None) -> 'None':
         self.config = config
         self.config['timeout'] = float(self.config['timeout']) if self.config['timeout'] else 0
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
-        self.requests_session = requests_session or _requests_session
-        self.session = requests_session()
+        self.RequestsSession = RequestsSession or _requests_session
+        self.session = RequestsSession()
         self.https_adapter = HTTPSAdapter()
         self.session.mount('https://', self.https_adapter)
         self._component_name = get_component_name()
         self.default_content_type = self.get_default_content_type()
 
-        self.address = None
+        self.address = ''
         self.path_params = []
         self.base_headers = {}
 
@@ -94,7 +95,19 @@ class BaseHTTPSOAPWrapper:
 
         self.set_address_data()
 
-    def invoke_http(self, cid, method, address, data, headers, hooks, *args, **kwargs):
+# ################################################################################################################################
+
+    def invoke_http(
+        self,
+        cid:'str',
+        method:'str',
+        address:'str',
+        data:'str',
+        headers:'strstrdict',
+        hooks:'any_',
+        *args:'any_',
+        **kwargs:'any_'
+    ) -> 'Response':
 
         json = kwargs.pop('json', None)
 
@@ -113,7 +126,9 @@ class BaseHTTPSOAPWrapper:
         except RequestsTimeout:
             raise TimeoutException(cid, format_exc())
 
-    def ping(self, cid, return_response=False, log_verbose=False):
+# ################################################################################################################################
+
+    def ping(self, cid:'str', return_response:'bool'=False, log_verbose:'bool'=False) -> 'any_':
         """ Pings a given HTTP/SOAP resource
         """
         logger.info('Pinging:`%s`', self.config_no_sensitive)
@@ -123,7 +138,7 @@ class BaseHTTPSOAPWrapper:
 
         start = datetime.utcnow()
 
-        def zato_pre_request_hook(hook_data, *args, **kwargs):
+        def zato_pre_request_hook(hook_data:'stranydict', *args:'any_', **kwargs:'any_') -> 'None':
             entry = '{} (UTC) {} {}\n'.format(datetime.utcnow().isoformat(),
                 hook_data['request'].method, hook_data['request'].url)
             verbose.write(entry)
@@ -144,7 +159,9 @@ class BaseHTTPSOAPWrapper:
 
         return response if return_response else value
 
-    def get_default_content_type(self):
+# ################################################################################################################################
+
+    def get_default_content_type(self) -> 'str':
 
         if self.config['content_type']:
             return self.config['content_type']
@@ -156,12 +173,7 @@ class BaseHTTPSOAPWrapper:
             if self.config['transport'] == URL_TYPE.PLAIN_HTTP:
 
                 # JSON
-                if self.config['data_format'] == DATA_FORMAT.JSON:
-                    return CONTENT_TYPE.JSON
-
-                # Plain XML
-                elif self.config['data_format'] == DATA_FORMAT.XML:
-                    return CONTENT_TYPE.PLAIN_XML
+                return CONTENT_TYPE.JSON
 
             # SOAP
             elif self.config['transport'] == URL_TYPE.SOAP:
@@ -171,11 +183,16 @@ class BaseHTTPSOAPWrapper:
                     return CONTENT_TYPE.SOAP11
 
                 # SOAP 1.2
-                elif self.config['soap_version'] == '1.2':
+                else:
                     return CONTENT_TYPE.SOAP12
 
-    def _create_headers(self, cid, user_headers, now=None, _deepcopy=deepcopy):
-        headers = _deepcopy(self.base_headers)
+        # If we are here, assume it is regular text by default
+        return 'text/plain'
+
+# ################################################################################################################################
+
+    def _create_headers(self, cid:'str', user_headers:'strstrdict', now:'str'='') -> 'strstrdict':
+        headers = deepcopy(self.base_headers)
         headers.update({
             'X-Zato-CID': cid,
             'X-Zato-Component': self._component_name,
@@ -193,7 +210,9 @@ class BaseHTTPSOAPWrapper:
 
         return headers
 
-    def set_address_data(self):
+# ################################################################################################################################
+
+    def set_address_data(self) -> 'None':
         """Sets the full address to invoke and parses input URL's configuration,
         to extract any named parameters that will have to be passed in by users
         during actual calls to the resource.
@@ -210,11 +229,12 @@ class BaseHTTPSOAPWrapper:
         logger.debug('self.address:[%s], self.path_params:[%s]', self.address, self.path_params)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
     """ A thin wrapper around the API exposed by the 'requests' package.
     """
-    def __init__(self, server, config, requests_module=None):
+    def __init__(self, server, config, requests_module=None) -> 'None':
         # type: (ParallelServer, dict, object) -> None
         super(HTTPSOAPWrapper, self).__init__(config, requests_module)
 
@@ -257,7 +277,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         """
         self.set_auth()
 
-    def set_auth(self):
+    def set_auth(self) -> 'None':
 
         sec_type = self.config['sec_type']
 
@@ -277,15 +297,15 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
 # ################################################################################################################################
 
-    def __str__(self):
+    def __str__(self) -> 'str':
         return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
 
     __repr__ = __str__
 
 # ################################################################################################################################
 
-    def format_address(self, cid, params):
-        """ Formats a URL path to an external resource. Note that exception raised
+    def format_address(self, cid:'str', params:'stranydict') -> 'tuple[str, dict]':
+        """ Formats a URL path to an external resource. Note that exceptions raised
         do not contain anything except for CID. This is in order to keep any potentially
         sensitive data from leaking to clients.
         """
@@ -308,7 +328,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
 # ################################################################################################################################
 
-    def _impl(self):
+    def _impl(self) -> 'RequestsSession':
         """ Returns the self.session object through which access to HTTP/SOAP
         resources is mediated.
         """
@@ -316,7 +336,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
     impl = property(fget=_impl, doc=_impl.__doc__)
 
-    def _get_auth(self):
+# ################################################################################################################################
+
+    def _get_auth(self) -> 'None | tuple[str, str]':
         """ Returns a username and password pair or None, if no security definition
         has been attached.
         """
@@ -327,16 +349,20 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         return auth
 
-    auth = property(fget=_get_auth, doc=_get_auth)
+    auth = property(fget=_get_auth, doc=_get_auth.__doc__)
 
-    def _enforce_is_active(self):
+# ################################################################################################################################
+
+    def _enforce_is_active(self) -> 'None':
         if not self.config['is_active']:
             raise Inactive(self.config['name'])
 
-    def _soap_data(self, data, headers):
+# ################################################################################################################################
+
+    def _soap_data(self, data:'str', headers:'stranydict') -> 'tuple[str, stranydict]':
         """ Wraps the data in a SOAP-specific messages and adds the headers required.
         """
-        soap_config = self.soap[self.config['soap_version']]
+        soap_config = self.soap[self.config['soap_version']] # type: strstrdict
 
         # The idea here is that even though there usually won't be the Content-Type
         # header provided by the user, we shouldn't overwrite it if one has been
@@ -349,7 +375,17 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
 # ################################################################################################################################
 
-    def http_request(self, method, cid, data='', params=None, _has_debug=has_debug, *args, **kwargs):
+    def http_request(
+        self,
+        method:'str',
+        cid:'str',
+        data:'any_'='',
+        params:'dictnone'=None,
+        *args:'any_',
+        **kwargs:'any_'
+    ) -> 'Response':
+
+        # First, make sure that the connection is active
         self._enforce_is_active()
 
         # Pop it here for later use because we cannot pass it to the requests module
@@ -362,7 +398,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if needs_serialize_based_on_content_type:
 
             # We never touch strings/unicode because apparently the user already serialized outgoing data
-            needs_request_serialize = not isinstance(data, basestring)
+            needs_request_serialize = not isinstance(data, str)
 
             if needs_request_serialize:
 
@@ -370,9 +406,6 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                     if isinstance(data, Model):
                         data = data.to_dict()
                     data = dumps(data)
-
-                elif data and self.config['data_format'] == DATA_FORMAT.XML:
-                    data = tostring(data)
 
         headers = self._create_headers(cid, kwargs.pop('headers', {}))
         if self.config['transport'] == 'soap':
@@ -386,7 +419,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             address, qs_params = self.address, dict(params)
 
         if needs_serialize_based_on_content_type:
-            if isinstance(data, unicode):
+            if isinstance(data, str):
                 data = data.encode('utf-8')
 
         logger.info('Sending -> %s', data)
@@ -396,55 +429,50 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
-        if _has_debug:
+        if has_debug:
             logger.debug('CID:`%s`, response:`%s`', cid, response.text)
 
         if self.config['data_format'] == DATA_FORMAT.JSON:
             try:
-                response.data = loads(response.text)
+                response.data = loads(response.text) # type: ignore
             except ValueError as e:
                 raise Exception('Could not parse JSON response `{}`; e:`{}`'.format(response.text, e.args[0]))
 
-        elif self.config['data_format'] == DATA_FORMAT.XML:
-            if response.text and response.headers.get('Content-Type') in ('application/xml', 'text/xml'):
-                response.data = fromstring(response.text)
-
         # Support for SIO models loading
         if model:
-            response.data = self.server.marshal_api.from_dict(None, response.data, model)
+            response.data = self.server.marshal_api.from_dict(None, response.data, model) # type: ignore
 
         return response
 
 # ################################################################################################################################
 
-    def get(self, cid, params=None, *args, **kwargs):
+    def get(self, cid:'str', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
         return self.http_request('GET', cid, '', params, *args, **kwargs)
 
-    def delete(self, cid, params=None, *args, **kwargs):
+    def delete(self, cid:'str', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
         return self.http_request('DELETE', cid, '', params, *args, **kwargs)
 
-    def options(self, cid, params=None, *args, **kwargs):
+    def options(self, cid:'str', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
         return self.http_request('OPTIONS', cid, '', params, *args, **kwargs)
 
-# ################################################################################################################################
-
-    def post(self, cid, data='', params=None, *args, **kwargs):
+    def post(self, cid:'str', data:'str'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
         return self.http_request('POST', cid, data, params, *args, **kwargs)
 
     send = post
 
-    def put(self, cid, data='', params=None, *args, **kwargs):
+    def put(self, cid:'str', data:'str'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
         return self.http_request('PUT', cid, data, params, *args, **kwargs)
 
-    def patch(self, cid, data='', params=None, *args, **kwargs):
+    def patch(self, cid:'str', data:'str'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
         return self.http_request('PATCH', cid, data, params, *args, **kwargs)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
     """ A thin wrapper around the suds SOAP library
     """
-    def __init__(self, config):
+    def __init__(self, config:'stranydict') -> 'None':
         super(SudsSOAPWrapper, self).__init__(config)
         self.set_auth()
         self.update_lock = RLock()
@@ -458,12 +486,16 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
             self.config['pool_size'], self.config['queue_build_cap'], self.config['name'], self.conn_type, self.address,
             self.add_client)
 
-    def set_auth(self):
+# ################################################################################################################################
+
+    def set_auth(self) -> 'None':
         """ Configures the security for requests, if any is to be configured at all.
         """
         self.suds_auth = {'username':self.config['username'], 'password':self.config['password']}
 
-    def add_client(self):
+# ################################################################################################################################
+
+    def add_client(self) -> 'None':
 
         logger.info('About to add a client to `%s` (%s)', self.address, self.conn_type)
 
@@ -474,6 +506,9 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
             from suds.transport.https import HttpAuthenticated
             from suds.transport.https import WindowsHttpAuthenticated
             from suds.wsse import Security, UsernameToken
+
+            client = None
+            transport = None
 
             sec_type = self.config['sec_type']
 
@@ -497,14 +532,19 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
             if not sec_type:
                 client = Client(self.address, autoblend=True, timeout=self.config['timeout'])
 
-            self.client.put_client(client)
+            if client:
+                self.client.put_client(client)
+            else:
+                logger.warning('SOAP client to `%s` is None', self.address)
 
         except Exception:
             logger.warning('Error while adding a SOAP client to `%s` (%s) e:`%s`', self.address, self.conn_type, format_exc())
 
-    def build_client_queue(self):
+# ################################################################################################################################
 
+    def build_client_queue(self) -> 'None':
         with self.update_lock:
             self.client.build_queue()
 
+# ################################################################################################################################
 # ################################################################################################################################
