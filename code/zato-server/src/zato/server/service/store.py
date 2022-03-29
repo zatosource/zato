@@ -244,8 +244,19 @@ def get_batch_indexes(services, max_batch_size):
 class ServiceStore:
     """ A store of Zato services.
     """
-    def __init__(self, services=None, odb=None, server=None, is_testing=False):
-        # type: (dict, ODBManager, ParallelServer, bool)
+    services: 'stranydict'
+    odb: 'ODBManager'
+    server: 'ParallelServer'
+    is_testing:'bool'
+
+    def __init__(
+        self,
+        *,
+        services: 'stranydict',
+        odb: 'ODBManager',
+        server: 'ParallelServer',
+        is_testing:'bool'
+    ) -> 'None':
         self.services = services
         self.odb = odb
         self.server = server
