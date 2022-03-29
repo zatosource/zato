@@ -63,6 +63,7 @@ class Arbiter:
     kills them if needed. It also manages application reloading
     via SIGHUP/USR2.
     """
+    zato_deployment_key: 'str'
 
     # A flag indicating if a worker failed to
     # to boot. If a worker process exist with

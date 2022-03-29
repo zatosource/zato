@@ -59,7 +59,7 @@ def ip_list_from_interface(interface, allow_loopback=False):
 
 # ################################################################################################################################
 
-def get_preferred_ip(base_bind, user_prefs):
+def get_preferred_ip(base_bind, user_prefs) -> 'str':
     """ Given user preferences, iterate over all address in all interfaces and check if any matches what users prefer.
     Note that preferences can include actual names of interfaces, not only IP or IP ranges.
     """
@@ -107,7 +107,7 @@ def get_preferred_ip(base_bind, user_prefs):
                 return current
 
     # Ok, still nothing, so we need to find something ourselves
-    loopback_ip = None
+    loopback_ip = ''
 
     # First let's try the first non-loopback interface.
     for elem in current_ifaces:

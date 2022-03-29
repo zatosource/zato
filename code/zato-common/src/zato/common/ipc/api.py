@@ -63,7 +63,7 @@ class IPCAPI:
     """ API through which IPC is performed.
     """
     name: 'str'
-    on_message_callback: 'callback_'
+    on_message_callback: 'callable_'
     pid: 'int'
 
     def __init__(self):

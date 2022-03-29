@@ -100,6 +100,7 @@ iterator_    = iterator_
 noreturn     = noreturn
 set_         = set_
 stranydict   = dict_[str, any_]
+strbytes     = union_[str_, bytes]
 strlistdict  = dict_[str, anylist]
 strdictdict  = dict_[str, anydict]
 strint       = union_[str_, int]
