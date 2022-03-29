@@ -181,7 +181,7 @@ class KVDB:
 
 # ################################################################################################################################
 
-    def translate(self, system1, key1, value1, system2, key2, default=''):
+    def translate(self, system1:'str', key1:'str', value1:'str', system2:'str', key2:'str', default:'str'='') -> 'str':
         return self.conn.hget(
             _KVDB.SEPARATOR.join(
                 (_KVDB.TRANSLATION, system1, key1, value1, system2, key2)), 'value2') or default
