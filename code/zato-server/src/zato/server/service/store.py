@@ -47,6 +47,7 @@ from zato.common.match import Matcher
 from zato.common.marshal_.api import Model as DataClassModel
 from zato.common.marshal_.simpleio import DataClassSimpleIO
 from zato.common.odb.model.base import Base as ModelBase
+from zato.common.typing_ import cast_
 from zato.common.util.api import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
 from zato.common.util.platform_ import is_non_windows
 from zato.server.config import ConfigDict
@@ -56,9 +57,6 @@ from zato.server.service.internal import AdminService
 
 # Zato - Cython
 from zato.simpleio import CySimpleIO
-
-# Python 2/3 compatibility
-from past.builtins import basestring
 
 # ################################################################################################################################
 
@@ -120,7 +118,7 @@ class _TestingWorkerStore:
     cache_api = None
 
     def __init__(self):
-        self.worker_config = None # type: _TestingWorkerConfig
+        self.worker_config = cast_('_TestingWorkerConfig', None)
 
 # ################################################################################################################################
 
@@ -137,17 +135,16 @@ class InRAMService:
     __slots__ = 'cluster_id', 'id', 'name', 'impl_name', 'deployment_info', 'service_class', 'is_active', 'is_internal', \
         'slow_threshold', 'source_code_info'
 
-    def __init__(self):
-        self.cluster_id = None       # type: int
-        self.id = None               # type: int
-        self.impl_name = None        # type: str
-        self.name = None             # type: str
-        self.deployment_info = None  # type: str
-        self.service_class = None    # type: object
-        self.is_active = None        # type: bool
-        self.is_internal = None      # type: bool
-        self.slow_threshold = None   # type: int
-        self.source_code_info = None # type: SourceCodeInfo
+    cluster_id: 'int'
+    id: 'int'
+    impl_name: 'str'
+    name: 'str'
+    deployment_info: 'str'
+    service_class: 'type[Service]'
+    is_active: 'bool'
+    is_internal: 'bool'
+    slow_threshold: 'int'
+    source_code_info: 'SourceCodeInfo'
 
     def __repr__(self):
         return '<{} at {} name:{} impl_name:{}>'.format(self.__class__.__name__, hex(id(self)), self.name, self.impl_name)
@@ -180,7 +177,7 @@ class DeploymentInfo:
     def __init__(self):
         self.to_process = []      # type: List
         self.total_size = 0       # type: int
-        self.total_size_human = 0 # type: str
+        self.total_size_human = 0 # type: int
 
 # ################################################################################################################################
 
@@ -1015,7 +1012,7 @@ class ServiceStore:
             if is_internal is None:
                 is_internal = item.startswith('zato')
 
-            if isinstance(item, basestring):
+            if isinstance(item, str):
 
                 # A regular directory
                 if os.path.isdir(item):
