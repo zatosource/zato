@@ -51,7 +51,8 @@ from zato.sso.odb.query import get_rate_limiting_info as get_sso_user_rate_limit
 
 if 0:
     from sqlalchemy.orm import Session
-    from zato.common.typing_ import commondict
+    from zato.common.crypto.api import CryptoManager
+    from zato.common.typing_ import callable_, commondict
     from zato.server.base.parallel import ParallelServer
 
     Session = Session
@@ -528,19 +529,17 @@ class _Server:
 class ODBManager(SessionWrapper):
     """ Manages connections to a given component's Operational Database.
     """
-    def __init__(self, parallel_server=None, well_known_data=None, token=None, crypto_manager=None, server_id=None,
-            server_name=None, cluster_id=None, pool=None, decrypt_func=None):
-        # type: (ParallelServer, str, str, object, int, str, int, object, object)
-        super(ODBManager, self).__init__()
-        self.parallel_server = parallel_server
-        self.well_known_data = well_known_data
-        self.token = token
-        self.crypto_manager = crypto_manager
-        self.server_id = server_id
-        self.server_name = server_name
-        self.cluster_id = cluster_id
-        self.pool = pool
-        self.decrypt_func = decrypt_func
+    parallel_server: 'ParallelServer'
+    well_known_data:'str'
+    token:'str'
+    crypto_manager:'CryptoManager'
+    server_id:'int'
+    server_name:'str'
+    cluster_id:'int'
+    pool:'SQLConnectionPool'
+    decrypt_func:'callable_'
+
+    def __init__(self) -> 'None':
         self.server = None
         self.cluster = None
 
