@@ -74,7 +74,6 @@ from zato.sso.util import new_user_id, normalize_sso_config
 if 0:
     from bunch import Bunch
     from zato.common.typing_ import any_, dictnone
-    from zato.server.base.parallel import ParallelServer
     from zato.server.ext.zunicorn.config import Config as ZunicornConfig
 
 # ################################################################################################################################
@@ -97,8 +96,8 @@ class ZatoGunicornApplication(Application):
         self.repo_location = repo_location
         self.config_main = config_main
         self.crypto_config = crypto_config
-        self.zato_host = None
-        self.zato_port = None
+        self.zato_host = ''
+        self.zato_port = -1
         self.zato_config = {}
         super(ZatoGunicornApplication, self).__init__(*args, **kwargs)
 
@@ -146,7 +145,10 @@ class ZatoGunicornApplication(Application):
 
 # ################################################################################################################################
 
-def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None) -> 'None':
+def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None) -> 'ParallelServer | None':
+
+    # Type hints
+    preferred_address: 'str'
 
     options = options or {}
 
@@ -256,7 +258,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server_config.main.token = server_config.main.token.encode('utf8')
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
-    preferred_address = server_config.preferred_address.get('address')
+    preferred_address = server_config.preferred_address.get('address') or ''
 
     if not preferred_address:
         preferred_address = get_preferred_ip(server_config.main.gunicorn_bind, server_config.preferred_address)
@@ -370,7 +372,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     profiler_enabled = server_config.get('profiler', {}).get('enabled', False)
 
     # New in 2.0 so it's optional.
-    sentry_config = server_config.get('sentry')
+    sentry_config = server_config.get('sentry') or {}
 
     dsn = sentry_config.pop('dsn', None)
     if dsn:

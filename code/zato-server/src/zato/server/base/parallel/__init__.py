@@ -83,15 +83,15 @@ if 0:
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
-    from zato.common.typing_ import any_, anydict, anylist, anyset, strnone
+    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, strbytes, strnone
+    from zato.server.connection.cache import Cache
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.ext.zunicorn.arbiter import Arbiter
+    from zato.server.ext.zunicorn.workers.ggevent import GeventWorker
     from zato.server.service.store import ServiceStore
     from zato.simpleio import SIOServerConfig
     from zato.server.startup_callable import StartupCallableTool
     from zato.sso.api import SSOAPI
-
-    # For pyflakes
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
@@ -121,6 +121,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
     kv_data_api: 'KVDataAPI'
+    on_wsgi_request: 'any_'
 
     cluster: 'ClusterModel'
     worker_store: 'WorkerStore'
@@ -148,6 +149,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.service_modules = []
         self.service_sources = []   # Set in a config file
         self.base_dir = ''
+        self.logs_dir = ''
         self.tls_dir = ''
         self.static_dir = ''
         self.json_schema_dir = 'server-'
@@ -1040,34 +1042,37 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def get_cache(self, cache_type, cache_name) -> 'Cache':
+    def get_cache(self, cache_type:'str', cache_name:'str') -> 'Cache':
         """ Returns a cache object of given type and name.
         """
         return self.worker_store.cache_api.get_cache(cache_type, cache_name)
 
 # ################################################################################################################################
 
-    def get_from_cache(self, cache_type, cache_name, key) -> 'any_':
+    def get_from_cache(self, cache_type:'str', cache_name:'str', key:'str') -> 'any_':
         """ Returns a value from input cache by key, or None if there is no such key.
         """
         return self.worker_store.cache_api.get_cache(cache_type, cache_name).get(key)
 
 # ################################################################################################################################
 
-    def set_in_cache(self, cache_type, cache_name, key, value) -> 'any_':
+    def set_in_cache(self, cache_type:'str', cache_name:'str', key:'str', value:'any_') -> 'any_':
         """ Sets a value in cache for input parameters.
         """
         return self.worker_store.cache_api.get_cache(cache_type, cache_name).set(key, value)
 
 # ################################################################################################################################
 
-    def invoke_all_pids(self, service, request, timeout=5, *args, **kwargs) -> 'anydict':
+    def invoke_all_pids(self, service:'str', request:'any_', timeout:'int'=5, *args:'any_', **kwargs:'any_') -> 'anydict':
         """ Invokes a given service in each of processes current server has.
         """
-        try:
-            # PID -> response from that process
-            out = {}
+        # PID -> response from that process
+        out = {}
 
+        # Per-PID response
+        response:'anydict'
+
+        try:
             # Get all current PIDs
             data = self.invoke('zato.info.get-worker-pids', serialize=False).getvalue(False)
             pids = data['response']['pids']
@@ -1099,7 +1104,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def invoke_by_pid(self, service, request, target_pid, *args, **kwargs) -> 'any_':
+    def invoke_by_pid(self, service:'str', request:'any_', target_pid:'int', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service in a worker process by the latter's PID.
         """
         return self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid,
@@ -1132,14 +1137,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def invoke_async(self, service, request, callback, *args, **kwargs) -> 'any_':
+    def invoke_async(self, service:'str', request:'any_', callback:'callable_', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service in background.
         """
         return self.worker_store.invoke(service, request, is_async=True, callback=callback, *args, **kwargs)
 
 # ################################################################################################################################
 
-    def publish_pickup(self, topic_name, request, *args, **kwargs) -> 'None':
+    def publish_pickup(self, topic_name:'str', request:'any_', *args:'any_', **kwargs:'any_') -> 'None':
         """ Publishes a pickedup file to a named topic.
         """
         _ = self.invoke('zato.pubsub.publish.publish', {
@@ -1161,11 +1166,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def deliver_pubsub_msg(self, msg) -> 'None':
+    def deliver_pubsub_msg(self, msg:'Bunch') -> 'None':
         """ A callback method invoked by pub/sub delivery tasks for each messages that is to be delivered.
         """
         subscription = self.worker_store.pubsub.subscriptions_by_sub_key[msg.sub_key]
-        topic = self.worker_store.pubsub.topics[subscription.config.topic_id]
+        topic = self.worker_store.pubsub.topics[subscription.config['topic_id']]
 
         if topic.before_delivery_hook_service_invoker:
             response = topic.before_delivery_hook_service_invoker(topic, msg)
@@ -1187,17 +1192,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def hash_secret(self, data, name='zato.default') -> 'str':
+    def hash_secret(self, data:'str', name:'str'='zato.default') -> 'str':
         return self.crypto_manager.hash_secret(data, name)
 
 # ################################################################################################################################
 
-    def verify_hash(self, given, expected, name='zato.default') -> 'bool':
+    def verify_hash(self, given:'str', expected:'str', name:'str'='zato.default') -> 'bool':
         return self.crypto_manager.verify_hash(given, expected, name)
 
 # ################################################################################################################################
 
-    def decrypt(self, data, _prefix=SECRETS.PREFIX, _marker=SECRETS.EncryptedMarker) -> 'str':
+    def decrypt(self, data:'strbytes', _prefix:'str'=SECRETS.PREFIX, _marker:'str'=SECRETS.EncryptedMarker) -> 'str':
         """ Returns data decrypted using server's CryptoManager.
         """
 
@@ -1211,7 +1216,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def decrypt_no_prefix(self, data) -> 'str':
+    def decrypt_no_prefix(self, data:'str') -> 'str':
         return self.crypto_manager.decrypt(data)
 
 # ################################################################################################################################
@@ -1290,7 +1295,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     @staticmethod
-    def on_starting(arbiter) -> 'None':
+    def on_starting(arbiter:'Arbiter') -> 'None':
         """ A Gunicorn hook for setting the deployment key for this particular
         set of server processes. It needs to be added to the arbiter because
         we want for each worker to be (re-)started to see the same key.
@@ -1300,7 +1305,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     @staticmethod
-    def worker_exit(arbiter, worker) -> 'None':
+    def worker_exit(arbiter:'Arbiter', worker:'GeventWorker') -> 'None':
 
         # Invoke cleanup procedures
         app = worker.app.zato_wsgi_app # type: ParallelServer
@@ -1309,7 +1314,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     @staticmethod
-    def before_pid_kill(arbiter, worker) -> 'None':
+    def before_pid_kill(arbiter:'Arbiter', worker:'GeventWorker') -> 'None':
         pass
 
 # ################################################################################################################################

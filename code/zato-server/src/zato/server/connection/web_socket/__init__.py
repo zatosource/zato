@@ -6,12 +6,6 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Make sure we are gevent-friendly - this is needed if we run
-# the code from the __main__ block.
-if 0:
-    from gevent.monkey import patch_all
-    patch_all()
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -32,7 +26,6 @@ streaming.Utf8Validator = _UTF8Validator
 # ################################################################################################################################
 
 # stdlib
-import os
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses, UNPROCESSABLE_ENTITY
 from json import loads as stdlib_loads
@@ -63,7 +56,7 @@ from zato.common.api import CHANNEL, DATA_FORMAT, PUBSUB, SEC_DEF_TYPE, WEB_SOCK
 from zato.common.audit_log import DataReceived, DataSent
 from zato.common.exception import ParsingException, Reportable, RuntimeInvocationError
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
-from zato.common.typing_ import cast_, dataclass
+from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid
 from zato.common.util.hook import HookTool
 from zato.common.util.wsx import cleanup_wsx_client, ContextHandler
