@@ -33,7 +33,6 @@ from gevent import Timeout, spawn
 from gevent.lock import RLock
 
 # Python 2/3 compatibility
-from future.utils import iterkeys
 from zato.common.py23_ import maxint
 
 # Zato
@@ -44,10 +43,8 @@ from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.json_internal import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
-from zato.common.nav import DictNav, ListNav
-from zato.common.typing_ import anydict
-from zato.common.util.api import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, \
-     spawn_greenlet, uncamelify
+from zato.common.typing_ import cast_
+from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
 from zato.server.commands import CommandsFacade
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -73,7 +70,7 @@ from zato.simpleio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictLi
 
 # For pyflakes
 AsIs = AsIs
-CSV = CSV
+CSV = CSV # type: ignore
 Bool = Bool
 dataclass = dataclass
 Date = Date
@@ -89,8 +86,8 @@ Model = Model
 ModelCtx = ModelCtx
 Opaque = Opaque
 Text = Text
-UTC = UTC
-UUID = UUID
+UTC = UTC # type: ignore
+UUID = UUID # type: ignore
 
 # ################################################################################################################################
 
@@ -103,7 +100,8 @@ if 0:
     from zato.common.json_schema import Validator as JSONSchemaValidator
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, dictnone, intnone, \
+        stranydict, strnone, strlist
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
     from zato.server.connection.ftp import FTPStore
@@ -125,11 +123,11 @@ if 0:
     CySimpleIO = CySimpleIO
     FTPStore = FTPStore
     JSONSchemaValidator = JSONSchemaValidator
-    KVDBAPI = KVDBAPI
+    KVDBAPI = KVDBAPI # type: ignore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager
-    SSOAPI = SSOAPI
+    SSOAPI = SSOAPI # type: ignore
     timedelta = timedelta
     TimeUtil = TimeUtil
     WorkerStore = WorkerStore
@@ -137,6 +135,7 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+_get_logger=logging.getLogger
 
 # ################################################################################################################################
 
@@ -163,12 +162,13 @@ _async_callback = CHANNEL.INVOKE_ASYNC_CALLBACK
 
 # ################################################################################################################################
 
-_wsgi_channels = (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)
+_wsgi_channels = {CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
 
 # ################################################################################################################################
 
 _response_raw_types=(bytes, str, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
 _utz_utc = timezone.utc
+_utcnow = datetime.utcnow
 
 # ################################################################################################################################
 
@@ -180,19 +180,27 @@ after_handle_hooks = ('after_handle', 'finalize_handle')
 # The almost identical methods below are defined separately because they are used in critical paths
 # where every if counts.
 
-def call_hook_no_service(hook):
+def call_hook_no_service(hook:'callable_') -> 'None':
     try:
         hook()
     except Exception:
         logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc())
 
-def call_hook_with_service(hook, service):
+def call_hook_with_service(hook:'callable_', service:'Service') -> 'None':
     try:
         hook(service)
     except Exception:
         logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc())
 
 internal_invoke_keys = {'target', 'set_response_func', 'cid'}
+
+# ################################################################################################################################
+
+class ModuleCtx:
+    HTTP_Channels = {CHANNEL.HTTP_SOAP, CHANNEL.INVOKE}
+    Channel_Scheduler = CHANNEL.SCHEDULER
+    Channel_Service = CHANNEL.SERVICE
+    Pattern_Call_Channels = {CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL}
 
 # ################################################################################################################################
 
@@ -217,8 +225,17 @@ class ChannelInfo:
     """
     __slots__ = ('id', 'name', 'type', 'data_format', 'is_internal', 'match_target', 'impl', 'security', 'sec')
 
-    def __init__(self, id, name, type, data_format, is_internal, match_target, security, impl):
-        # type: (int, str, str, str, bool, object, ChannelSecurityInfo, object)
+    def __init__(
+        self,
+        id: 'intnone',
+        name: 'strnone',
+        type: 'strnone',
+        data_format: 'strnone',
+        is_internal: 'boolnone',
+        match_target: 'any_',
+        security: 'ChannelSecurityInfo',
+        impl: 'any_'
+    ) -> 'None':
         self.id = id
         self.name = name
         self.type = type
@@ -228,7 +245,7 @@ class ChannelInfo:
         self.impl = impl
         self.security = self.sec = security
 
-    def __repr__(self):
+    def __repr__(self) -> 'str':
         return make_repr(self)
 
 # ################################################################################################################################
@@ -245,16 +262,16 @@ class ChannelSecurityInfo:
     """
     __slots__ = ('id', 'name', 'type', 'username', 'impl')
 
-    def __init__(self, id, name, type, username, impl):
-        self.id = id     # type: int
-        self.name = name # type: str
-        self.type = type # type: str
-        self.username = username # type: str
-        self.impl = impl # type: dict
+    def __init__(self, id:'intnone', name:'strnone', type:'strnone', username:'strnone', impl:'any_') -> 'None':
+        self.id = id
+        self.name = name
+        self.type = type
+        self.username = username
+        self.impl = impl
 
 # ################################################################################################################################
 
-    def to_dict(self, needs_impl=False):
+    def to_dict(self, needs_impl:'bool'=False) -> 'stranydict':
         out = {
             'id': self.id,
             'name': self.name,
@@ -272,14 +289,13 @@ class ChannelSecurityInfo:
 class _WSXChannel:
     """ Provides communication with WebSocket channels.
     """
-    def __init__(self, server, channel_name):
-        # type: (ParallelServer, str)
+    def __init__(self, server:'ParallelServer', channel_name:'str') -> 'None':
         self.server = server
         self.channel_name = channel_name
 
 # ################################################################################################################################
 
-    def broadcast(self, data, _action=BROKER_MSG_CHANNEL.WEB_SOCKET_BROADCAST.value):
+    def broadcast(self, data:'str', _action:'str'=BROKER_MSG_CHANNEL.WEB_SOCKET_BROADCAST.value) -> 'None':
         """ Sends data to all WSX clients connected to this channel.
         """
         # type: (str, str)
@@ -297,8 +313,7 @@ class _WSXChannel:
 class _WSXChannelContainer:
     """ A thin wrapper to mediate access to WebSocket channels.
     """
-    def __init__(self, server):
-        # type: (ParallelServer)
+    def __init__(self, server:'ParallelServer') -> 'None':
         self.server = server
         self._lock = RLock()
         self._channels = {}
@@ -318,8 +333,7 @@ class _WSXChannelContainer:
 
 # ################################################################################################################################
 
-    def get(self, channel_name):
-        # type: (str) -> _WSXChannel
+    def get(self, channel_name:'str') -> '_WSXChannel | None':
         try:
             return self[channel_name]
         except KeyError:
@@ -332,8 +346,7 @@ class WSXFacade:
     """
     __slots__ = 'server', 'channel', 'out'
 
-    def __init__(self, server):
-        # type: (ParallelServer) -> None
+    def __init__(self, server:'ParallelServer') -> 'None':
         self.server = server
         self.channel = _WSXChannelContainer(self.server)
 
@@ -352,8 +365,7 @@ class PatternsFacade:
     """
     __slots__ = ('invoke_retry', 'fanout', 'parallel')
 
-    def __init__(self, invoking_service, cache, lock):
-        # type: (Service, dict, RLock) -> None
+    def __init__(self, invoking_service:'Service', cache:'anydict', lock:'RLock') -> 'None':
         self.invoke_retry = InvokeRetry(invoking_service)
         self.fanout = FanOut(invoking_service, cache, lock)
         self.parallel = ParallelExec(invoking_service, cache, lock)
@@ -363,8 +375,7 @@ class PatternsFacade:
 class SchedulerFacade:
     """ The API through which jobs can be scheduled.
     """
-    def __init__(self, server):
-        # type: (ParallelServer) -> None
+    def __init__(self, server:'ParallelServer') -> 'None':
         self.server = server
 
     def onetime(
@@ -374,7 +385,7 @@ class SchedulerFacade:
         name='',          # type: str
         *,
         prefix='',        # type: str
-        start_date='',    # type: str
+        start_date='',    # type: any_
         after_seconds=0,  # type: int
         after_minutes=0,  # type: int
         data=''           # type: any_
@@ -457,101 +468,116 @@ class Service:
     cloud = Cloud()
     definition = Definition()
     im = InstantMessaging()
-    odb = None    # type: ODBManager
-    kvdb = None   # type: KVDB
-    pubsub = None # type: PubSub
-    cassandra_conn = None  # type: CassandraAPI
-    cassandra_query = None # type: CassandraQueryAPI
-    email = None  # type: EMailAPI
-    search = None # type: SearchAPI
+    odb:'ODBManager'
+    kvdb:'KVDB'
+    pubsub:'PubSub'
+    static_config:'Bunch'
+
+    email:'EMailAPI | None' = None
+    search:'SearchAPI | None' = None
+    patterns: 'PatternsFacade | None' = None
+    cassandra_conn:'CassandraAPI | None' = None
+    cassandra_query:'CassandraQueryAPI | None' = None
+
     amqp = AMQPFacade()
     commands = CommandsFacade()
 
     # For WebSockets
-    wsx = None # type: WSXFacade
+    wsx:'WSXFacade'
 
-    _msg_ns_store = None
-    _json_pointer_store = None
-    _xpath_store = None
+    _worker_store:'WorkerStore'
+    _worker_config:'ConfigStore'
+    _out_ftp:'FTPStore'
+    _out_plain_http:'ConfigDict'
 
-    _worker_store = None  # type: WorkerStore
-    _worker_config = None # type: ConfigStore
-    _out_ftp = None       # type: FTPStore
-    _out_plain_http = None # type: ConfigDict
-
-    _has_before_job_hooks = None # type: bool
-    _has_after_job_hooks = None  # type: bool
+    _has_before_job_hooks:'bool' = False
+    _has_after_job_hooks:'bool' = False
     _before_job_hooks = []
     _after_job_hooks = []
 
+    has_sio:'bool'
+
     # Cython based SimpleIO definition created by service store when the class is deployed
-    _sio = None # type: CySimpleIO
+    _sio:'CySimpleIO'
 
     # Rate limiting
-    _has_rate_limiting = None # type: bool
+    _has_rate_limiting:'bool' = False
 
     # User management and SSO
-    sso = None # type: SSOAPI
+    sso:'SSOAPI'
 
     # Crypto operations
-    crypto = None # type: ServerCryptoManager
+    crypto:'ServerCryptoManager'
 
     # Audit log
-    audit_pii = None # type: AuditPII
+    audit_pii:'AuditPII'
 
     # By default, services do not use JSON Schema
     schema = '' # type: str
 
     # JSON Schema validator attached only if service declares a schema to use
-    _json_schema_validator = None # type: JSONSchemaValidator
+    _json_schema_validator:'JSONSchemaValidator | None' = None
 
-    def __init__(self, _get_logger=logging.getLogger, _Bunch=Bunch, _Request=Request, _Response=Response,
-            _DictNav=DictNav, _ListNav=ListNav, _Outgoing=Outgoing, _WMQFacade=WMQFacade, _ZMQFacade=ZMQFacade,
-            *ignored_args, **ignored_kwargs):
+    server: 'ParallelServer'
+    broker_client: 'BrokerClient'
+    time: 'TimeUtil'
+
+    # These two are the same
+    chan: 'ChannelInfo'
+    channel: 'ChannelInfo'
+
+    # When was the service invoked
+    invocation_time: 'datetime'
+
+    # When did our 'handle' method finished processing the request
+    handle_return_time: 'datetime'
+
+    # # A timedelta object with the processing time up to microseconds
+    processing_time_raw: 'timedelta'
+
+    # Processing time in milliseconds
+    processing_time: 'float'
+
+    component_enabled_sms: 'bool'
+    component_enabled_hl7: 'bool'
+    component_enabled_email: 'bool'
+    component_enabled_search: 'bool'
+    component_enabled_ibm_mq: 'bool'
+    component_enabled_zeromq: 'bool'
+    component_enabled_patterns: 'bool'
+    component_enabled_cassandra: 'bool'
+    component_enabled_target_matcher: 'bool'
+    component_enabled_invoke_matcher: 'bool'
+
+    def __init__(
+        self,
+        *ignored_args:'any_',
+        **ignored_kwargs:'any_'
+    ) -> 'None':
         self.name = self.__class__.__service_name # Will be set through .get_name by Service Store
         self.impl_name = self.__class__.__service_impl_name # Ditto
         self.logger = _get_logger(self.name) # type: Logger
-        self.server = None        # type: ParallelServer
-        self.broker_client = None # type: BrokerClient
-        self.channel = None # type: ChannelInfo
-        self.chan = self.channel # type: ChannelInfo
-        self.cid = None          # type: str
-        self.in_reply_to = None  # type: str
-        self.data_format = None  # type: str
-        self.transport = None    # type: str
-        self.wsgi_environ = None # type: anydict
-        self.job_type = None     # type: str
-        self.environ = _Bunch()
-        self.request = _Request(self) # type: Request
-        self.response = _Response(self.logger) # type: Response
-        self.time = None # type: TimeUtil
-        self.patterns = None
+        self.cid = ''
+        self.in_reply_to = ''
+        self.data_format = ''
+        self.transport = ''
+        self.wsgi_environ = {} # type: anydict
+        self.job_type = ''     # type: str
+        self.environ = Bunch()
+        self.request = Request(self) # type: Request
+        self.response = Response(self.logger) # type: ignore
         self.user_config = Bunch()
-        self.dictnav = _DictNav
-        self.listnav = _ListNav
         self.has_validate_input = False
         self.has_validate_output = False
         self.cache = None
 
-        # When was the service invoked
-        self.invocation_time = None # type: datetime
-
-        # When did our 'handle' method finished processing the request
-        self.handle_return_time = None # type: datetime
-
-        # # A timedelta object with the processing time up to microseconds
-        self.processing_time_raw = None # type: timedelta
-
-        # Processing time in milliseconds
-        self.processing_time = None # type: int
-
         self.usage = 0 # How many times the service has been invoked
         self.slow_threshold = maxint # After how many ms to consider the response came too late
 
-        self.out = self.outgoing = _Outgoing(
+        self.out = self.outgoing = Outgoing(
             self.amqp,
             self._out_ftp,
-            _WMQFacade(self) if self.component_enabled_ibm_mq else None,
+            WMQFacade(self) if self.component_enabled_ibm_mq else None,
             self._worker_config.out_odoo,
             self._out_plain_http,
             self._worker_config.out_soap,
@@ -572,8 +598,8 @@ class Service:
 # ################################################################################################################################
 
     @staticmethod
-    def get_name_static(class_):
-        return Service.get_name(class_)
+    def get_name_static(class_:'type[Service]') -> 'str':
+        return Service.get_name(class_) # type: ignore
 
 # ################################################################################################################################
 
@@ -588,14 +614,14 @@ class Service:
                 name = service_name_from_impl(class_.get_impl_name())
                 name = class_.convert_impl_name(name)
 
-            class_.__service_name = name
+            class_.__service_name = name # type: str
 
         return class_.__service_name
 
 # ################################################################################################################################
 
     @classmethod
-    def get_impl_name(class_):
+    def get_impl_name(class_:'type[Service]') -> 'str':
         if not hasattr(class_, '__service_impl_name'):
             class_.__service_impl_name = '{}.{}'.format(class_.__module__, class_.__name__)
         return class_.__service_impl_name
@@ -603,7 +629,7 @@ class Service:
 # ################################################################################################################################
 
     @staticmethod
-    def convert_impl_name(name):
+    def convert_impl_name(name:'str') -> 'str':
         # TODO: Move the replace functionality over to uncamelify, possibly modifying its regexp
         split = uncamelify(name).split('.')
 
@@ -618,7 +644,7 @@ class Service:
 # ################################################################################################################################
 
     @classmethod
-    def add_http_method_handlers(class_):
+    def add_http_method_handlers(class_:'type[Service]') -> 'None':
 
         for name in dir(class_):
             if name.startswith('handle_'):
@@ -631,7 +657,7 @@ class Service:
 
 # ################################################################################################################################
 
-    def _init(self, may_have_wsgi_environ=False):
+    def _init(self, may_have_wsgi_environ:'bool'=False) -> 'None':
         """ Actually initializes the service.
         """
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
@@ -671,10 +697,9 @@ class Service:
 
 # ################################################################################################################################
 
-    def set_response_data(self, service, _raw_types=_response_raw_types, **kwargs):
-        # type: (Service, tuple, object)
+    def set_response_data(self, service:'Service', **kwargs:'any_') -> 'any_':
         response = service.response.payload
-        if not isinstance(response, _raw_types):
+        if not isinstance(response, _response_raw_types):
             response = response.getvalue(serialize=kwargs.get('serialize'))
             if kwargs.get('as_bunch'):
                 response = bunchify(response)
@@ -684,7 +709,7 @@ class Service:
 
 # ################################################################################################################################
 
-    def _invoke(self, service, channel, http_channels=(CHANNEL.HTTP_SOAP, CHANNEL.INVOKE)):
+    def _invoke(self, service:'Service', channel:'str') -> 'None':
         #
         # If channel is HTTP and there are any per-HTTP verb methods, it means we want for the service to be a REST target.
         # Let's say it is POST. If we have handle_POST, it is invoked. If there is no handle_POST,
@@ -696,7 +721,7 @@ class Service:
         #
 
         # Ok, this is HTTP
-        if channel in http_channels:
+        if channel in ModuleCtx.HTTP_Channels:
 
             # We have at least one per-HTTP verb handler
             if service.http_method_handlers:
@@ -721,7 +746,7 @@ class Service:
 
 # ################################################################################################################################
 
-    def extract_target(self, name):
+    def extract_target(self, name:'str') -> 'tuple[str, str]':
         """ Splits a service's name into name and target, if the latter is provided on input at all.
         """
         # It can be either a name or a name followed by the target to invoke the service on,
@@ -740,7 +765,7 @@ class Service:
     def update_handle(self,
         set_response_func, # type: Callable
         service,       # type: Service
-        raw_request,   # type: object
+        raw_request,   # type: any_
         channel,       # type: str
         data_format,   # type: str
         transport,     # type: str
@@ -748,14 +773,10 @@ class Service:
         broker_client, # type: BrokerClient
         worker_store,  # type: WorkerStore
         cid,           # type: str
-        simple_io_config, # type: dict
-        _utcnow=datetime.utcnow,
-        _call_hook_with_service=call_hook_with_service,
-        _call_hook_no_service=call_hook_no_service,
-        _CHANNEL_SCHEDULER=CHANNEL.SCHEDULER,
-        _CHANNEL_SERVICE=CHANNEL.SERVICE,
-        _pattern_call_channels=(CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL),
-        *args, **kwargs):
+        simple_io_config, # type: anydict
+        *args:'any_',
+        **kwargs:'any_'
+    ) -> 'any_':
 
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
@@ -767,7 +788,7 @@ class Service:
         if not isinstance(payload, ObjectifiedElement) and not payload:
             payload = payload_from_request(server.json_parser, cid, raw_request, data_format, transport, channel_item)
 
-        job_type = kwargs.get('job_type')
+        job_type = kwargs.get('job_type') or ''
         channel_params = kwargs.get('channel_params', {})
         merge_channel_params = kwargs.get('merge_channel_params', True)
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
@@ -794,7 +815,7 @@ class Service:
                 # we are in fact interested in checking the target service's rate limit,
                 # not our own.
                 if service._has_rate_limiting:
-                    self.server.rate_limiting.check_limit(self.cid, _CHANNEL_SERVICE, service.name,
+                    self.server.rate_limiting.check_limit(self.cid, ModuleCtx.Channel_Service, service.name,
                         self.wsgi_environ['zato.http.remote_addr'])
 
                 if service.server.component_enabled.stats:
@@ -818,14 +839,14 @@ class Service:
                 # All hooks are optional so we check if they have not been replaced with None by ServiceStore.
 
                 # Call before job hooks if any are defined and we are called from the scheduler
-                if service.call_hooks and service._has_before_job_hooks and self.channel.type == _CHANNEL_SCHEDULER:
+                if service.call_hooks and service._has_before_job_hooks and self.channel.type == ModuleCtx.Channel_Scheduler:
                     for elem in service._before_job_hooks:
                         if elem:
-                            _call_hook_with_service(elem, service)
+                            call_hook_with_service(elem, service)
 
                 # Called before .handle - catches exceptions
                 if service.call_hooks and service.before_handle:
-                    _call_hook_no_service(service.before_handle)
+                    call_hook_no_service(service.before_handle)
 
                 # Called before .handle - does not catch exceptions
                 if service.validate_input:
@@ -840,20 +861,20 @@ class Service:
 
                 # Called after .handle - catches exceptions
                 if service.call_hooks and service.after_handle:
-                    _call_hook_no_service(service.after_handle)
+                    call_hook_no_service(service.after_handle)
 
                 # Call after job hooks if any are defined and we are called from the scheduler
-                if service._has_after_job_hooks and self.channel.type == _CHANNEL_SCHEDULER:
+                if service._has_after_job_hooks and self.channel.type == ModuleCtx.Channel_Scheduler:
                     for elem in service._after_job_hooks:
                         if elem:
-                            _call_hook_with_service(elem, service)
+                            call_hook_with_service(elem, service)
 
                 # Internal method - always defined and called
                 service.post_handle()
 
                 # Optional, almost never overridden.
                 if service.finalize_handle:
-                    _call_hook_no_service(service.finalize_handle)
+                    call_hook_no_service(service.finalize_handle)
 
             except Exception as ex:
                 e = ex
@@ -863,13 +884,15 @@ class Service:
                     response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
                     # If this was fan-out/fan-in we need to always notify our callbacks no matter the result
-                    if channel in _pattern_call_channels:
+                    if channel in ModuleCtx.Pattern_Call_Channels:
 
                         if channel == CHANNEL.FANOUT_CALL:
-                            func = self.patterns.fanout.on_call_finished
+                            fanout = self.patterns.fanout # type: ignore
+                            func = fanout.on_call_finished
                             exc_data = e
                         else:
-                            func = self.patterns.parallel.on_call_finished
+                            parallel = self.patterns.parallel # type: ignore
+                            func = parallel.on_call_finished
                             exc_data = exc_formatted
 
                         if isinstance(service.response.payload, SimpleIOPayload):
@@ -890,7 +913,7 @@ class Service:
 
                 else:
                     if e:
-                        raise e if isinstance(e, Exception) else Exception(e)
+                        raise e
 
         # We don't accept it but some response needs to be returned anyway.
         else:
@@ -900,7 +923,10 @@ class Service:
 
         if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
 
-            keys = list(iterkeys(response))
+            # If if has .keys, it means it is a dict.
+            response = cast_('dict', response)
+
+            keys = list(response)
             try:
                 keys.remove('_meta')
             except ValueError:
@@ -913,8 +939,9 @@ class Service:
 
             # This covers responses that have only one top-level element
             # and that element's name is 'response' or, e.g. 'zato_amqp_...'
-            if len(keys) == 1 and (response_elem == 'response' or response_elem.startswith('zato')):
-                return response[response_elem]
+            if len(keys) == 1:
+                if response_elem == 'response' or (isinstance(response_elem, str) and response_elem.startswith('zato')):
+                    return response[response_elem]
 
             # .. otherwise, this could be a dictionary of elements other than the above
             # so we just return the dict as it is.
@@ -926,8 +953,19 @@ class Service:
 
 # ################################################################################################################################
 
-    def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=DATA_FORMAT.DICT,
-        transport=None, serialize=False, as_bunch=False, timeout=None, raise_timeout=True, **kwargs):
+    def invoke_by_impl_name(
+        self,
+        impl_name,  # type: str
+        payload='', # type: str | dict
+        channel=CHANNEL.INVOKE,       # type: str
+        data_format=DATA_FORMAT.DICT, # type: str
+        transport='',       # type: str
+        serialize=False,    # type: bool
+        as_bunch=False,     # type: bool
+        timeout=0,          # type: int
+        raise_timeout=True, # type: bool
+        **kwargs:'any_'
+    ) -> 'any_':
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
         """
         if self.component_enabled_target_matcher:
@@ -973,16 +1011,18 @@ class Service:
         set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
-            self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), None)
+            self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), {})
 
         kwargs.update({'serialize':serialize, 'as_bunch':as_bunch})
 
         if timeout:
+            g = None
             try:
                 g = spawn(self.update_handle, *invoke_args, **kwargs)
                 return g.get(block=True, timeout=timeout)
             except Timeout:
-                g.kill()
+                if g:
+                    g.kill()
                 logger.warning('Service `%s` timed out (%s)', service.name, self.cid)
                 if raise_timeout:
                     raise
@@ -991,7 +1031,7 @@ class Service:
 
 # ################################################################################################################################
 
-    def invoke(self, name, *args, **kwargs):
+    def invoke(self, name:'str', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service synchronously by its name.
         """
         # The 'name' parameter is actually a service class,
@@ -1000,7 +1040,7 @@ class Service:
             name = name.get_name()
 
         if self.component_enabled_target_matcher:
-            name, target = self.extract_target(name)
+            name, target = self.extract_target(name) # type: ignore
             kwargs['target'] = target
 
         if self._enforce_service_invokes and self.invokes:
@@ -1013,20 +1053,31 @@ class Service:
 
 # ################################################################################################################################
 
-    def invoke_by_id(self, service_id, *args, **kwargs):
+    def invoke_by_id(self, service_id:'int', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service synchronously by its ID.
         """
         if self.component_enabled_target_matcher:
-            service_id, target = self.extract_target(service_id)
+            service_id, target = self.extract_target(service_id) # type: ignore
             kwargs['target'] = target
 
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
 
 # ################################################################################################################################
 
-    def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=DATA_FORMAT.DICT,
-        transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None, callback=None,
-        zato_ctx=None, environ=None):
+    def invoke_async(
+        self,
+        name,       # type: str
+        payload='', # type: str
+        channel=CHANNEL.INVOKE_ASYNC, # type: str
+        data_format=DATA_FORMAT.DICT, # type: str
+        transport='', # type: str
+        expiration=BROKER.DEFAULT_EXPIRATION, # type: int
+        to_json_string=False, # type: bool
+        cid='',        # type: str
+        callback=None, # type: str | Service | None
+        zato_ctx=None, # type: stranydict | None
+        environ=None   # type: stranydict | None
+    ) -> 'str':
         """ Invokes a service asynchronously by its name.
         """
 
@@ -1078,7 +1129,7 @@ class Service:
         async_ctx.environ = environ
 
         if callback:
-            async_ctx.callback = callback if isinstance(callback, (list, tuple)) else [callback]
+            async_ctx.callback = list(callback) if isinstance(callback, (list, tuple)) else [callback]
 
         spawn_greenlet(self._invoke_async, async_ctx, channel)
 
@@ -1086,8 +1137,12 @@ class Service:
 
 # ################################################################################################################################
 
-    def _invoke_async(self, ctx, channel, _async_callback=_async_callback, _new_cid=new_cid):
-        # type: (AsyncCtx, str, object) -> None
+    def _invoke_async(
+        self,
+        ctx,     # type: AsyncCtx
+        channel, # type: str
+        _async_callback=_async_callback, # type: Service | str
+    ) -> 'None':
 
         # Invoke our target service ..
         response = self.invoke(ctx.service_name, ctx.data, data_format=ctx.data_format, channel=channel, skip_response_elem=True)
@@ -1095,15 +1150,13 @@ class Service:
         # .. and report back the response to our callback(s), if there are any.
         if ctx.callback:
             for callback_service in ctx.callback: # type: str
-                self.invoke(callback_service, payload=response, channel=_async_callback, cid=_new_cid,
+                _ = self.invoke(callback_service, payload=response, channel=_async_callback, cid=new_cid,
                     data_format=ctx.data_format, in_reply_to=ctx.cid, environ=ctx.environ,
                     skip_response_elem=True)
 
 # ################################################################################################################################
 
-    def post_handle(self, _get_response_value=get_response_value, _utcnow=datetime.utcnow,
-        _service_time_basic=KVDB.SERVICE_TIME_BASIC, _service_time_raw=KVDB.SERVICE_TIME_RAW,
-        _service_time_raw_by_minute=KVDB.SERVICE_TIME_RAW_BY_MINUTE):
+    def post_handle(self) -> 'None':
         """ An internal method executed after the service has completed and has
         a response ready to return. Updates its statistics and, optionally, stores
         a sample request/response pair.
@@ -1138,12 +1191,12 @@ class Service:
 
 # ################################################################################################################################
 
-    def translate(self, *args, **kwargs):
+    def translate(self, *args:'any_', **kwargs:'any_') -> 'str':
         raise NotImplementedError('An initializer should override this method')
 
 # ################################################################################################################################
 
-    def handle(self):
+    def handle(self) -> 'None':
         """ The only method Zato services need to implement in order to process
         incoming requests.
         """
@@ -1177,96 +1230,96 @@ class Service:
 
 # ################################################################################################################################
 
-    def accept(self, _zato_no_op_marker=zato_no_op_marker):
+    def accept(self, _zato_no_op_marker:'any_'=zato_no_op_marker) -> 'bool':
         return True
 
 # ################################################################################################################################
 
-    def spawn(self, *args, **kwargs):
+    def spawn(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return spawn(*args, **kwargs)
 
 # ################################################################################################################################
 
     @classmethod
-    def before_add_to_store(cls, logger):
+    def before_add_to_store(cls, logger:'Logger') -> 'bool':
         """ Invoked right before the class is added to the service store.
         """
         return True
 
-    def before_job(self, _zato_no_op_marker=zato_no_op_marker):
+    def before_job(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked  if the service has been defined as a job's invocation target,
         regardless of the job's type.
         """
 
-    def before_one_time_job(self, _zato_no_op_marker=zato_no_op_marker):
+    def before_one_time_job(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked if the service has been defined as a one-time job's
         invocation target.
         """
 
-    def before_interval_based_job(self, _zato_no_op_marker=zato_no_op_marker):
+    def before_interval_based_job(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked if the service has been defined as an interval-based job's
         invocation target.
         """
 
-    def before_cron_style_job(self, _zato_no_op_marker=zato_no_op_marker):
+    def before_cron_style_job(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked if the service has been defined as a cron-style job's
         invocation target.
         """
 
-    def before_handle(self, _zato_no_op_marker=zato_no_op_marker, *args, **kwargs):
+    def before_handle(self, _zato_no_op_marker=zato_no_op_marker, *args, **kwargs): # type: ignore
         """ Invoked just before the actual service receives the request data.
         """
 
-    def after_job(self, _zato_no_op_marker=zato_no_op_marker):
+    def after_job(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked  if the service has been defined as a job's invocation target,
         regardless of the job's type.
         """
 
-    def after_one_time_job(self, _zato_no_op_marker=zato_no_op_marker):
+    def after_one_time_job(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked if the service has been defined as a one-time job's
         invocation target.
         """
 
-    def after_interval_based_job(self, _zato_no_op_marker=zato_no_op_marker):
+    def after_interval_based_job(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked if the service has been defined as an interval-based job's
         invocation target.
         """
 
-    def after_cron_style_job(self, _zato_no_op_marker=zato_no_op_marker):
+    def after_cron_style_job(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked if the service has been defined as a cron-style job's
         invocation target.
         """
 
-    def after_handle(self, _zato_no_op_marker=zato_no_op_marker):
+    def after_handle(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked right after the actual service has been invoked, regardless
         of whether the service raised an exception or not.
         """
 
-    def finalize_handle(self, _zato_no_op_marker=zato_no_op_marker):
+    def finalize_handle(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Offers the last chance to influence the service's operations.
         """
 
     @staticmethod
-    def after_add_to_store(logger):
+    def after_add_to_store(logger): # type: ignore
         """ Invoked right after the class has been added to the service store.
         """
 
-    def validate_input(self, _zato_no_op_marker=zato_no_op_marker):
+    def validate_input(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked right before handle. Any exception raised means handle will not be called.
         """
 
-    def validate_output(self, _zato_no_op_marker=zato_no_op_marker):
+    def validate_output(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked right after handle. Any exception raised means further hooks will not be called.
         """
 
-    def get_request_hash(self, _zato_no_op_marker=zato_no_op_marker, *args, **kwargs):
+    def get_request_hash(self, _zato_no_op_marker=zato_no_op_marker, *args, **kwargs): # type: ignore
         """ Lets services compute an incoming request's hash to decide whether i is already kept in cache,
         if one is configured for this request's channel.
         """
 
 # ################################################################################################################################
 
-    def _log_input_output(self, user_msg, level, suppress_keys, is_response):
+    def _log_input_output(self, user_msg:'str', level:'int', suppress_keys:'strlist', is_response:'bool') -> 'stranydict':
 
         suppress_keys = suppress_keys or []
         suppressed_msg = '(suppressed)'
@@ -1297,47 +1350,48 @@ class Service:
 
         return msg
 
-    def log_input(self, user_msg='', level=logging.INFO, suppress_keys=None):
+    def log_input(self, user_msg:'str'='', level:'int'=logging.INFO, suppress_keys:'any_'=None) -> 'stranydict':
         return self._log_input_output(user_msg, level, suppress_keys, False)
 
-    def log_output(self, user_msg='', level=logging.INFO, suppress_keys=('wsgi_environ',)):
+    def log_output(self, user_msg:'str'='', level:'int'=logging.INFO, suppress_keys:'any_'=('wsgi_environ',)) -> 'stranydict':
         return self._log_input_output(user_msg, level, suppress_keys, True)
 
 # ################################################################################################################################
 
     @staticmethod
     def update(
-             service,               # type: Service
-             channel_type,          # type: str
-             server,                # type: ParallelServer
-             broker_client,         # type: object
-             _ignored,              # type: object
-             cid,                   # type: str
-             payload,               # type: object
-             raw_request,           # type: object
-             transport=None,        # type: str
-             simple_io_config=None, # type: object
-             data_format=None,      # type: str
-             wsgi_environ=None,     # type: dict
-             job_type=None,         # type: str
-             channel_params=None,   # type: object
-             merge_channel_params=True, # type: object
-             params_priority=None,  # type: object
-             in_reply_to=None,      # type: str
-             environ=None,          # type: object
-             init=True,             # type: bool
-             wmq_ctx=None,          # type: object
-             channel_info=None,     # type: ChannelInfo
-             channel_item=None,     # type: dict
-             _wsgi_channels=_wsgi_channels, # type: object
-             _AMQP=CHANNEL.AMQP,        # type: str
-             _IBM_MQ=CHANNEL.IBM_MQ, # type: str
-             _HL7v2=HL7.Const.Version.v2.id
-             ):
+        service,               # type: Service
+        channel_type,          # type: str
+        server,                # type: ParallelServer
+        broker_client,         # type: BrokerClient
+        _ignored,              # type: any_
+        cid,                   # type: str
+        payload,               # type: any_
+        raw_request,           # type: any_
+        transport='',          # type: str
+        simple_io_config=None, # type: anydictnone
+        data_format='',        # type: str
+        wsgi_environ=None,     # type: dictnone
+        job_type='',           # type: str
+        channel_params=None,   # type: dictnone
+        merge_channel_params=True, # type: bool
+        params_priority='',        # type: str
+        in_reply_to='',        # type: str
+        environ=None,          # type: dictnone
+        init=True,             # type: bool
+        wmq_ctx=None,          # type: dictnone
+        channel_info=None,     # type: ChannelInfo | None
+        channel_item=None,     # type: dictnone
+        _AMQP=CHANNEL.AMQP,            # type: str
+        _IBM_MQ=CHANNEL.IBM_MQ,        # type: str
+        _HL7v2=HL7.Const.Version.v2.id # type: str
+    ) -> 'None':
         """ Takes a service instance and updates it with the current request's context data.
         """
+        wsgi_environ = wsgi_environ or {}
+
         service.server = server
-        service.broker_client = broker_client # type: BrokerClient
+        service.broker_client = broker_client
         service.cid = cid
         service.request.payload = payload
         service.request.raw_request = raw_request
@@ -1345,7 +1399,7 @@ class Service:
         service.data_format = data_format
         service.wsgi_environ = wsgi_environ or {}
         service.job_type = job_type
-        service.translate = server.kvdb.translate
+        service.translate = server.kvdb.translate # type: ignore
         service.user_config = server.user_config
         service.static_config = server.static_config
         service.time = server.time_util
@@ -1358,6 +1412,7 @@ class Service:
         service.environ = environ or {}
 
         channel_item = wsgi_environ.get('zato.channel_item') or {}
+        channel_item = cast_('stranydict', channel_item)
         sec_def_info = wsgi_environ.get('zato.sec_def', {})
 
         if channel_type == _AMQP:
@@ -1369,24 +1424,35 @@ class Service:
         elif data_format == _HL7v2:
             service.request.hl7 = HL7RequestData(channel_item['hl7_mllp_conn_ctx'], payload)
 
+        chan_sec_info = ChannelSecurityInfo(
+            sec_def_info.get('id'),
+            sec_def_info.get('name'),
+            sec_def_info.get('type'),
+            sec_def_info.get('username'),
+            sec_def_info.get('impl')
+        )
+
         service.channel = service.chan = channel_info or ChannelInfo(
-            channel_item.get('id'), channel_item.get('name'), channel_type,
-            channel_item.get('data_format'), channel_item.get('is_internal'), channel_item.get('match_target'),
-            ChannelSecurityInfo(sec_def_info.get('id'), sec_def_info.get('name'), sec_def_info.get('type'),
-                sec_def_info.get('username'), sec_def_info.get('impl')), channel_item)
+            channel_item.get('id'),
+            channel_item.get('name'),
+            channel_type,
+            channel_item.get('data_format'),
+            channel_item.get('is_internal'),
+            channel_item.get('match_target'),
+            chan_sec_info, channel_item
+        )
 
         if init:
             service._init(channel_type in _wsgi_channels)
 
 # ################################################################################################################################
 
-    def new_instance(self, service_name, *args, **kwargs):
+    def new_instance(self, service_name:'str', *args:'any_', **kwargs:'any_') -> 'Service':
         """ Creates a new service instance without invoking its handle method.
         """
-        # type: (str, str, str) -> object
-
-        service, ignored_is_active = \
-            self.server.service_store.new_instance_by_name(service_name, *args, **kwargs) # type: (Service, bool)
+        service: 'Service'
+        service, _ = \
+            self.server.service_store.new_instance_by_name(service_name, *args, **kwargs)
 
         service.update(service, CHANNEL.NEW_INSTANCE, self.server, broker_client=self.broker_client, _ignored=None,
             cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, wsgi_environ=self.wsgi_environ)
@@ -1398,6 +1464,8 @@ class Service:
 class _Hook(Service):
     """ Base class for all hook services.
     """
+    _hook_func_name: 'stranydict'
+
     class SimpleIO:
         input_required = (Opaque('ctx'),)
         output_optional = ('hook_action',)
@@ -1414,23 +1482,23 @@ class PubSubHook(_Hook):
     """
     _hook_func_name = {}
 
-    def before_publish(self, _zato_no_op_marker=zato_no_op_marker):
+    def before_publish(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked for each pub/sub message before it is published to a topic.
         """
 
-    def before_delivery(self, _zato_no_op_marker=zato_no_op_marker):
+    def before_delivery(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked for each pub/sub message right before it is delivered to an endpoint.
         """
 
-    def on_outgoing_soap_invoke(self, _zato_no_op_marker=zato_no_op_marker):
+    def on_outgoing_soap_invoke(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked for each message that is to be sent through outgoing a SOAP Suds connection.
         """
 
-    def on_subscribed(self, _zato_no_op_marker=zato_no_op_marker):
+    def on_subscribed(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked for each new topic subscription.
         """
 
-    def on_unsubscribed(self, _zato_no_op_marker=zato_no_op_marker):
+    def on_unsubscribed(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked each time a client unsubscribes.
         """
 
@@ -1447,19 +1515,19 @@ class WSXHook(_Hook):
     """
     _hook_func_name = {}
 
-    def on_connected(self, _zato_no_op_marker=zato_no_op_marker):
+    def on_connected(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked each time a new WSX connection is established.
         """
 
-    def on_disconnected(self, _zato_no_op_marker=zato_no_op_marker):
+    def on_disconnected(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked each time an existing WSX connection is dropped.
         """
 
-    def on_pubsub_response(self, _zato_no_op_marker=zato_no_op_marker):
+    def on_pubsub_response(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked each time a response to a previous pub/sub message arrives.
         """
 
-    def on_vault_mount_point_needed(self, _zato_no_op_marker=zato_no_op_marker):
+    def on_vault_mount_point_needed(self, _zato_no_op_marker=zato_no_op_marker): # type: ignore
         """ Invoked each time there is need to discover the name of a Vault mount point
         that a particular WSX channel is secured ultimately with, i.e. the mount point
         where the incoming user's credentials are stored in.
