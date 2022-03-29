@@ -52,6 +52,7 @@ from zato.sso.odb.query import get_rate_limiting_info as get_sso_user_rate_limit
 if 0:
     from sqlalchemy.orm import Session
     from zato.common.crypto.api import CryptoManager
+    from zato.common.odb.model import Cluster as ClusterModel, Server as ServerModel
     from zato.common.typing_ import callable_, commondict
     from zato.server.base.parallel import ParallelServer
 
@@ -538,10 +539,8 @@ class ODBManager(SessionWrapper):
     cluster_id:'int'
     pool:'SQLConnectionPool'
     decrypt_func:'callable_'
-
-    def __init__(self) -> 'None':
-        self.server = None
-        self.cluster = None
+    server:'ServerModel'
+    cluster:'ClusterModel'
 
 # ################################################################################################################################
 

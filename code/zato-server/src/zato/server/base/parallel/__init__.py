@@ -34,7 +34,7 @@ from simdjson import Parser as SIMDJSONParser
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import DATA_FORMAT, default_internal_modules, HotDeploy, RATE_LIMIT, SERVER_STARTUP, \
+from zato.common.api import DATA_FORMAT, default_internal_modules, HotDeploy, KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, \
     SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
@@ -77,18 +77,13 @@ from zato.server.sso import SSOTool
 
 # ################################################################################################################################
 
-# Python 2/3 compatibility
-from past.builtins import unicode
-
-# ################################################################################################################################
-
 if 0:
 
     # Zato
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anydict, anylist, anyset, strnone
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.ext.zunicorn.arbiter import Arbiter
     from zato.server.service.store import ServiceStore
@@ -125,6 +120,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     config: 'ConfigStore'
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
+    kv_data_api: 'KVDataAPI'
 
     cluster: 'ClusterModel'
     worker_store: 'WorkerStore'
@@ -163,11 +159,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.logging_config = Bunch()
         self.logging_conf_path = 'server-'
         self.sio_config = cast_('SIOServerConfig', None)
-        self.sso_config = None
+        self.sso_config = Bunch()
         self.connector_server_grace_time = None
-        self.id = 0    # type: int
-        self.name = '' # type: str
-        self.worker_id = -1 # type: int
+        self.id = -1
+        self.name = ''
+        self.worker_id = ''
         self.worker_pid = -1
         self.cluster_id = -1
         self.cluster_name = ''
@@ -184,7 +180,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.return_tracebacks = False
         self.default_error_message = ''
         self.time_util = TimeUtil()
-        self.preferred_address = None # type: unicode
+        self.preferred_address = ''
         self.crypto_use_tls = False
         self.pid = -1
         self.sync_internal = False
@@ -203,7 +199,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self._hash_secret_rounds = -1
         self._hash_secret_salt_size = -1
         self.sso_tool = SSOTool(self)
-        self.platform_system = platform_system().lower() # type: unicode
+        self.platform_system = platform_system().lower()
         self.has_posix_ipc = is_posix
         self.user_config = Bunch()
         self.stderr_path = ''
@@ -213,6 +209,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.kvdb_dir = 'ParallelServer-kvdb_dir'
         self.marshal_api = MarshalAPI()
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
+        self.enforce_service_invokes = False
 
         # Transient API for in-RAM messages
         self.zato_kvdb = ZatoKVDB()
@@ -334,14 +331,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def maybe_on_first_worker(self, server):
+    def maybe_on_first_worker(self, server:'ParallelServer') -> 'anyset':
         """ This method will execute code with a distibuted lock held. We need a lock because we can have multiple worker
         processes fighting over the right to redeploy services. The first worker to obtain the lock will actually perform
         the redeployment and set a flag meaning that for this particular deployment key (and remember that each server restart
         means a new deployment key) the services have been already deployed. Further workers will check that the flag exists
         and will skip the deployment altogether.
         """
-        def import_initial_services_jobs():
+        def import_initial_services_jobs() -> 'anyset':
 
             # All non-internal services that we have deployed
             locally_deployed = []
@@ -381,11 +378,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             return set(locally_deployed)
 
-        lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, self.deployment_key)
-        already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED,
-                                                 self.fs_server_config.main.token, self.deployment_key)
+        lock_name = '{}{}:{}'.format(
+            CommonKVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, self.deployment_key)
 
-        logger.debug('Will use the lock_name: `%s`', lock_name)
+        already_deployed_flag = '{}{}:{}'.format(
+            CommonKVDB.LOCK_SERVER_ALREADY_DEPLOYED, self.fs_server_config.main.token, self.deployment_key)
+
+        logger.debug('Using lock_name: `%s`', lock_name)
 
         with self.zato_lock_manager(lock_name, ttl=self.deployment_lock_expires, block=self.deployment_lock_timeout):
             if self.kv_data_api.get(already_deployed_flag):
@@ -425,14 +424,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def get_full_name(self):
+    def get_full_name(self) -> 'str':
         """ Returns this server's full name in the form of server@cluster.
         """
         return '{}@{}'.format(self.name, self.cluster_name)
 
 # ################################################################################################################################
 
-    def add_pickup_conf_from_env_hot_deploy(self):
+    def add_pickup_conf_from_env_hot_deploy(self) -> 'None':
 
         # Bunch
         from bunch import bunchify
@@ -467,7 +466,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def add_pickup_conf_from_env_user_conf(self):
+    def add_pickup_conf_from_env_user_conf(self) -> 'None':
 
         # Bunch
         from bunch import bunchify
@@ -505,7 +504,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def add_pickup_conf_from_env_variables(self):
+    def add_pickup_conf_from_env_variables(self) -> 'None':
 
         # Code hot-deployment
         self.add_pickup_conf_from_env_hot_deploy()
@@ -515,10 +514,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _after_init_common(self, server):
+    def _after_init_common(self, server:'ParallelServer') -> 'anyset':
         """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
         """
-        def _normalise_service_source_path(name:str) -> str:
+        def _normalise_service_source_path(name:'str') -> 'str':
             if not os.path.isabs(name):
                 name = os.path.normpath(os.path.join(self.base_dir, name))
             return name
@@ -592,7 +591,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def set_up_odb(self):
+    def set_up_odb(self) -> 'None':
         # This is the call that creates an SQLAlchemy connection
         self.config.odb_data['fs_sql_config'] = self.fs_sql_config
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
@@ -602,7 +601,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def build_server_rpc(self):
+    def build_server_rpc(self) -> 'ServerRPC':
 
         # What our configuration backend is
         config_source = ODBConfigSource(self.odb, self.cluster_name, self.name, self.decrypt)
@@ -615,7 +614,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _run_stats_client(self, events_tcp_port):
+    def _run_stats_client(self, events_tcp_port) -> 'None':
         # type: (int) -> None
         self.stats_client.init('127.0.0.1', events_tcp_port)
         self.stats_client.run()
@@ -623,7 +622,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     @staticmethod
-    def start_server(parallel_server:'ParallelServer', zato_deployment_key:'str'=''):
+    def start_server(parallel_server:'ParallelServer', zato_deployment_key:'str'='') -> 'None':
 
         # Easier to type
         self = parallel_server
@@ -886,7 +885,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if is_posix:
             spawn_greenlet(self.ipc_api.run)
 
-            events_config = self.connector_config_ipc.get_config(ZatoEventsIPC.ipc_config_name, as_dict=True) # type: dict
+            connector_config_ipc = cast_('ConnectorConfigIPC', self.connector_config_ipc)
+            events_config = cast_('anydict', connector_config_ipc.get_config(ZatoEventsIPC.ipc_config_name, as_dict=True))
             events_tcp_port = events_config['port']
 
             # Statistics
@@ -901,11 +901,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _populate_connector_config(self, config):
+    def _populate_connector_config(self, config:'SubprocessStartConfig') -> 'None':
         """ Called when we are not the first worker and, if any connector is enabled,
         we need to get its configuration through IPC and populate our own accordingly.
         """
-        # type: (SubprocessStartConfig)
 
         ipc_config_name_to_enabled = {
             IBMMQIPC.ipc_config_name: config.has_ibm_mq,
@@ -917,6 +916,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if is_enabled:
                 response = self.connector_config_ipc.get_config(ipc_config_name)
                 if response:
+                    response = cast_('str', response)
                     response = loads(response)
                     connector_suffix = ipc_config_name.replace('zato-', '').replace('-', '_')
                     connector_attr = 'connector_{}'.format(connector_suffix)
@@ -925,11 +925,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def init_subprocess_connectors(self, config):
+    def init_subprocess_connectors(self, config:'SubprocessStartConfig') -> 'None':
         """ Sets up subprocess-based connectors.
         """
-        # type: (SubprocessStartConfig)
-
         # Common
         ipc_tcp_start_port = int(self.fs_server_config.misc.get('ipc_tcp_start_port', 34567))
 
@@ -985,16 +983,21 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def set_up_sso_rate_limiting(self):
+    def set_up_sso_rate_limiting(self) -> 'None':
         for item in self.odb.get_sso_user_rate_limiting_info():
             self._create_sso_user_rate_limiting(item.user_id, True, item.rate_limit_def)
 
 # ################################################################################################################################
 
-    def _create_sso_user_rate_limiting(self, user_id, is_active, rate_limit_def, _type=RATE_LIMIT.OBJECT_TYPE.SSO_USER):
+    def _create_sso_user_rate_limiting(
+        self,
+        user_id:'str',
+        is_active:'bool',
+        rate_limit_def:'str',
+    ) -> 'None':
         self.rate_limiting.create({
             'id': user_id,
-            'type_': _type,
+            'type_': RATE_LIMIT.OBJECT_TYPE.SSO_USER,
             'name': user_id,
             'is_active': is_active,
             'parent_type': None,
@@ -1003,7 +1006,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _get_sso_session(self):
+    def _get_sso_session(self) -> 'any_':
         """ Returns a session function suitable for SSO operations.
         """
         pool_name = self.sso_config.sql.name
@@ -1023,13 +1026,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def configure_sso(self):
+    def configure_sso(self) -> 'None':
         if self.is_sso_enabled:
             self.sso_api.post_configure(self._get_sso_session, self.odb.is_sqlite)
 
 # ################################################################################################################################
 
-    def invoke_startup_services(self):
+    def invoke_startup_services(self) -> 'None':
         stanza = 'startup_services_first_worker' if self.is_starting_first else 'startup_services_any_worker'
         _invoke_startup_services('Parallel', stanza,
             self.fs_server_config, self.repo_location, self.broker_client, None,
@@ -1037,28 +1040,28 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def get_cache(self, cache_type, cache_name):
+    def get_cache(self, cache_type, cache_name) -> 'Cache':
         """ Returns a cache object of given type and name.
         """
         return self.worker_store.cache_api.get_cache(cache_type, cache_name)
 
 # ################################################################################################################################
 
-    def get_from_cache(self, cache_type, cache_name, key):
+    def get_from_cache(self, cache_type, cache_name, key) -> 'any_':
         """ Returns a value from input cache by key, or None if there is no such key.
         """
         return self.worker_store.cache_api.get_cache(cache_type, cache_name).get(key)
 
 # ################################################################################################################################
 
-    def set_in_cache(self, cache_type, cache_name, key, value):
+    def set_in_cache(self, cache_type, cache_name, key, value) -> 'any_':
         """ Sets a value in cache for input parameters.
         """
         return self.worker_store.cache_api.get_cache(cache_type, cache_name).set(key, value)
 
 # ################################################################################################################################
 
-    def invoke_all_pids(self, service, request, timeout=5, *args, **kwargs):
+    def invoke_all_pids(self, service, request, timeout=5, *args, **kwargs) -> 'anydict':
         """ Invokes a given service in each of processes current server has.
         """
         try:
@@ -1096,7 +1099,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def invoke_by_pid(self, service, request, target_pid, *args, **kwargs):
+    def invoke_by_pid(self, service, request, target_pid, *args, **kwargs) -> 'any_':
         """ Invokes a service in a worker process by the latter's PID.
         """
         return self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid,
@@ -1129,17 +1132,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def invoke_async(self, service, request, callback, *args, **kwargs):
+    def invoke_async(self, service, request, callback, *args, **kwargs) -> 'any_':
         """ Invokes a service in background.
         """
         return self.worker_store.invoke(service, request, is_async=True, callback=callback, *args, **kwargs)
 
 # ################################################################################################################################
 
-    def publish_pickup(self, topic_name, request, *args, **kwargs):
+    def publish_pickup(self, topic_name, request, *args, **kwargs) -> 'None':
         """ Publishes a pickedup file to a named topic.
         """
-        self.invoke('zato.pubsub.publish.publish', {
+        _ = self.invoke('zato.pubsub.publish.publish', {
             'topic_name': topic_name,
             'endpoint_id': self.default_internal_pubsub_endpoint_id,
             'has_gd': False,
@@ -1158,7 +1161,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def deliver_pubsub_msg(self, msg):
+    def deliver_pubsub_msg(self, msg) -> 'None':
         """ A callback method invoked by pub/sub delivery tasks for each messages that is to be delivered.
         """
         subscription = self.worker_store.pubsub.subscriptions_by_sub_key[msg.sub_key]
@@ -1169,32 +1172,32 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if response['skip_msg']:
                 raise SkipDelivery(msg.pub_msg_id)
 
-        self.invoke('zato.pubsub.delivery.deliver-message', {'msg':msg, 'subscription':subscription})
+        _ = self.invoke('zato.pubsub.delivery.deliver-message', {'msg':msg, 'subscription':subscription})
 
 # ################################################################################################################################
 
-    def encrypt(self, data:'any_', prefix:'str'=SECRETS.PREFIX) -> 'str':
+    def encrypt(self, data:'any_', prefix:'str'=SECRETS.PREFIX) -> 'strnone':
         """ Returns data encrypted using server's CryptoManager.
         """
         if data:
-            data = data.encode('utf8') if isinstance(data, unicode) else data
+            data = data.encode('utf8') if isinstance(data, str) else data
             encrypted = self.crypto_manager.encrypt(data)
             encrypted = encrypted.decode('utf8')
             return '{}{}'.format(prefix, encrypted)
 
 # ################################################################################################################################
 
-    def hash_secret(self, data, name='zato.default'):
+    def hash_secret(self, data, name='zato.default') -> 'str':
         return self.crypto_manager.hash_secret(data, name)
 
 # ################################################################################################################################
 
-    def verify_hash(self, given, expected, name='zato.default'):
+    def verify_hash(self, given, expected, name='zato.default') -> 'bool':
         return self.crypto_manager.verify_hash(given, expected, name)
 
 # ################################################################################################################################
 
-    def decrypt(self, data, _prefix=SECRETS.PREFIX, _marker=SECRETS.EncryptedMarker):
+    def decrypt(self, data, _prefix=SECRETS.PREFIX, _marker=SECRETS.EncryptedMarker) -> 'str':
         """ Returns data decrypted using server's CryptoManager.
         """
 
@@ -1208,12 +1211,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def decrypt_no_prefix(self, data):
+    def decrypt_no_prefix(self, data) -> 'str':
         return self.crypto_manager.decrypt(data)
 
 # ################################################################################################################################
 
-    def set_up_zato_kvdb(self):
+    def set_up_zato_kvdb(self) -> 'None':
 
         self.kvdb_dir = os.path.join(self.work_dir, 'kvdb', 'v10')
 
@@ -1224,7 +1227,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def load_zato_kvdb_data(self):
+    def load_zato_kvdb_data(self) -> 'None':
 
         #
         # Only now do we know what the full paths for KVDB data are so we can set them accordingly here ..
@@ -1257,7 +1260,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def save_zato_main_proc_state(self):
+    def save_zato_main_proc_state(self) -> 'None':
         self.slow_responses.save_data()
         self.usage_samples.save_data()
         self.current_usage.save_data()
@@ -1287,7 +1290,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     @staticmethod
-    def on_starting(arbiter):
+    def on_starting(arbiter) -> 'None':
         """ A Gunicorn hook for setting the deployment key for this particular
         set of server processes. It needs to be added to the arbiter because
         we want for each worker to be (re-)started to see the same key.
@@ -1297,7 +1300,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     @staticmethod
-    def worker_exit(arbiter, worker):
+    def worker_exit(arbiter, worker) -> 'None':
 
         # Invoke cleanup procedures
         app = worker.app.zato_wsgi_app # type: ParallelServer
@@ -1306,12 +1309,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     @staticmethod
-    def before_pid_kill(arbiter, worker):
+    def before_pid_kill(arbiter, worker) -> 'None':
         pass
 
 # ################################################################################################################################
 
-    def cleanup_wsx(self, needs_pid=False):
+    def cleanup_wsx(self, needs_pid:'bool'=False) -> 'None':
         """ Delete persistent information about WSX clients currently registered with the server.
         """
         wsx_service = 'zato.channel.web-socket.client.delete-by-server'
@@ -1321,7 +1324,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def cleanup_on_stop(self):
+    def cleanup_on_stop(self) -> 'None':
         """ A shutdown cleanup procedure.
         """
 
@@ -1370,7 +1373,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def notify_new_package(self, package_id):
+    def notify_new_package(self, package_id:'int') -> 'None':
         """ Publishes a message on the broker so all the servers (this one including
         can deploy a new package).
         """
