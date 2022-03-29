@@ -179,8 +179,8 @@ class NumberRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def set_last_duration(self, key, current_duration):
-        # type: (str, int) -> None
+    def set_last_duration(self, key:'str', current_duration:'float') -> 'None':
+
         with self.update_lock:
 
             per_key_dict = self.current_value[key]
