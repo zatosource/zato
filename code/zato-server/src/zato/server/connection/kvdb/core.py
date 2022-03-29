@@ -209,8 +209,7 @@ class BaseRepo(InRAMStore):
 
 # ################################################################################################################################
 
-    def load_data(self):
-        # type: (str) -> None
+    def load_data(self) -> 'None':
         with self.update_lock:
             if os.path.exists(self.data_path):
                 with open(self.data_path, 'rb') as f:

@@ -66,9 +66,8 @@ if 0:
 
     from inspect import ArgSpec
     from zato.common.odb.api import ODBManager
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import anydict, stranydict
     from zato.server.base.parallel import ParallelServer
-
     ODBManager     = ODBManager
     ParallelServer = ParallelServer
 
