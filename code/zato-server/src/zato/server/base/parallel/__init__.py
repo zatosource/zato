@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,7 +18,11 @@ from traceback import format_exc
 from uuid import uuid4
 
 # gevent
-import gevent.monkey # Needed for Cassandra
+from gevent.lock import RLock
+
+# Needed for Cassandra
+import gevent.monkey # type: ignore
+gevent.monkey        # type: ignore
 
 # Paste
 from paste.util.converters import asbool
@@ -30,7 +34,7 @@ from simdjson import Parser as SIMDJSONParser
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import DATA_FORMAT, default_internal_modules, HotDeploy, KVDB, RATE_LIMIT, SERVER_STARTUP, \
+from zato.common.api import DATA_FORMAT, default_internal_modules, HotDeploy, RATE_LIMIT, SERVER_STARTUP, \
     SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
@@ -40,11 +44,13 @@ from zato.common.events.common import Default as EventsDefault
 from zato.common.ipc.api import IPCAPI
 from zato.common.json_internal import dumps, loads
 from zato.common.kv_data import KVDataAPI
+from zato.common.kvdb.api import KVDB
 from zato.common.marshal_.api import MarshalAPI
+from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
-from zato.common.typing_ import optional
+from zato.common.typing_ import cast_, optional
 from zato.common.util.api import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, fs_safe_name, \
     hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
     register_diag_handlers
@@ -82,7 +88,7 @@ if 0:
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anylist
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.ext.zunicorn.arbiter import Arbiter
     from zato.server.service.store import ServiceStore
@@ -114,99 +120,99 @@ megabyte = 10**6
 class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
-    def __init__(self):
+    odb: 'ODBManager'
+    kvdb: 'KVDB'
+    config: 'ConfigStore'
+    crypto_manager: 'ServerCryptoManager'
+    sql_pool_store: 'PoolStore'
+
+    cluster: 'ClusterModel'
+    worker_store: 'WorkerStore'
+    service_store: 'ServiceStore'
+
+    rpc = 'ServerRPC'
+    sso_api: 'SSOAPI'
+    rate_limiting: 'RateLimiting'
+    broker_client: 'BrokerClient'
+    zato_lock_manager: 'LockManager'
+    startup_callable_tool: 'StartupCallableTool'
+
+    def __init__(self) -> 'None':
         self.logger = logger
-        self.host = None
-        self.port = None
+        self.host = ''
+        self.port = -1
         self.is_starting_first = '<not-set>'
-        self.crypto_manager = None # type: ServerCryptoManager
-        self.odb = None # type: ODBManager
         self.odb_data = None
-        self.config = None # type: ConfigStore
-        self.repo_location = None
-        self.user_conf_location = None
-        self.sql_pool_store = None
-        self.soap11_content_type = None
-        self.soap12_content_type = None
-        self.plain_xml_content_type = None
-        self.json_content_type = None
-        self.service_modules = None   # Set programmatically in Spring
+        self.repo_location = ''
+        self.user_conf_location = ''
+        self.soap11_content_type = ''
+        self.soap12_content_type = ''
+        self.plain_xml_content_type = ''
+        self.json_content_type = ''
+        self.service_modules = []
         self.service_sources = []   # Set in a config file
-        self.base_dir = None          # type: unicode
-        self.tls_dir = None           # type: unicode
-        self.static_dir = None        # type: unicode
-        self.json_schema_dir = None   # type: unicode
-        self.sftp_channel_dir = None  # type: unicode
-        self.hot_deploy_config = None # type: Bunch
+        self.base_dir = ''
+        self.tls_dir = ''
+        self.static_dir = ''
+        self.json_schema_dir = 'server-'
+        self.sftp_channel_dir = 'server-'
+        self.hot_deploy_config = Bunch()
         self.fs_server_config = None # type: any_
-        self.fs_sql_config = None # type: Bunch
-        self.pickup_config = None # type: Bunch
-        self.logging_config = None # type: Bunch
-        self.logging_conf_path = None # type: unicode
-        self.sio_config = None # type: SIOServerConfig
+        self.fs_sql_config = Bunch()
+        self.pickup_config = Bunch()
+        self.logging_config = Bunch()
+        self.logging_conf_path = 'server-'
+        self.sio_config = cast_('SIOServerConfig', None)
         self.sso_config = None
         self.connector_server_grace_time = None
         self.id = 0    # type: int
         self.name = '' # type: str
-        self.worker_id = None # type: int
-        self.worker_pid = None # type: int
-        self.cluster = None # type: ClusterModel
-        self.cluster_id = None # type: int
-        self.cluster_name = None # type: str
-        self.kvdb = None # type: KVDB
-        self.startup_jobs = None # type: dict
-        self.worker_store = None # type: WorkerStore
-        self.service_store = None # type: ServiceStore
-        self.request_dispatcher_dispatch = None
-        self.deployment_lock_expires = None # type: int
-        self.deployment_lock_timeout = None # type: int
+        self.worker_id = -1 # type: int
+        self.worker_pid = -1
+        self.cluster_id = -1
+        self.cluster_name = ''
+        self.startup_jobs = {}
+        self.deployment_lock_expires = -1
+        self.deployment_lock_timeout = -1
         self.deployment_key = ''
-        self.has_gevent = None # type: bool
+        self.has_gevent = True
+        self.request_dispatcher_dispatch = None
         self.delivery_store = None
-        self.static_config = None # type: Bunch()
+        self.static_config = Bunch()
         self.component_enabled = Bunch()
         self.client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
-        self.broker_client = None # type: BrokerClient
-        self.return_tracebacks = None # type: bool
-        self.default_error_message = None # type: unicode
+        self.return_tracebacks = False
+        self.default_error_message = ''
         self.time_util = TimeUtil()
         self.preferred_address = None # type: unicode
-        self.crypto_use_tls = None # type: bool
-        self.rpc = None # type: ServerRPC
-        self.zato_lock_manager = None # type: LockManager
-        self.pid = None # type: int
-        self.sync_internal = None # type: bool
+        self.crypto_use_tls = False
+        self.pid = -1
+        self.sync_internal = False
         self.ipc_api = IPCAPI()
-        self.fifo_response_buffer_size = None # type: int # Will be in megabytes
-        self.is_first_worker = None # type: bool
+        self.fifo_response_buffer_size = -1
+        self.is_first_worker = False
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
         self.connector_config_ipc = ConnectorConfigIPC()
-        self.sso_api = None # type: SSOAPI
         self.is_sso_enabled = False
         self.audit_pii = audit_pii
         self.has_fg = False
-        self.startup_callable_tool = None # type: StartupCallableTool
         self.default_internal_pubsub_endpoint_id = 0
-        self.rate_limiting = None # type: RateLimiting
-        self.jwt_secret = None # type: bytes
-        self._hash_secret_method = None # type: unicode
-        self._hash_secret_rounds = None # type: int
-        self._hash_secret_salt_size = None # type: int
+        self.jwt_secret = b''
+        self._hash_secret_method = ''
+        self._hash_secret_rounds = -1
+        self._hash_secret_salt_size = -1
         self.sso_tool = SSOTool(self)
         self.platform_system = platform_system().lower() # type: unicode
         self.has_posix_ipc = is_posix
         self.user_config = Bunch()
-        self.stderr_path = None # type: str
+        self.stderr_path = ''
         self.json_parser = SIMDJSONParser()
         self.work_dir = 'ParallelServer-work_dir'
         self.events_dir = 'ParallelServer-events_dir'
         self.kvdb_dir = 'ParallelServer-kvdb_dir'
         self.marshal_api = MarshalAPI()
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
-
-        # SQL-based key/value data
-        self.kv_data_api = None # type: KVDataAPI
 
         # Transient API for in-RAM messages
         self.zato_kvdb = ZatoKVDB()
@@ -233,11 +239,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Internal caches - not to be used by user services
         self.internal_cache_patterns = {}
-        self.internal_cache_lock_patterns = gevent.lock.RLock()
+        self.internal_cache_lock_patterns = RLock()
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
-        self.user_ctx_lock = gevent.lock.RLock()
+        self.user_ctx_lock = RLock()
 
         # Connectors
         self.connector_ftp    = FTPIPC(self)
@@ -265,7 +271,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def deploy_missing_services(self, locally_deployed):
+    def deploy_missing_services(self, locally_deployed:'anylist') -> 'None':
         """ Deploys services that exist on other servers but not on ours.
         """
         # The locally_deployed list are all the services that we could import based on our current
