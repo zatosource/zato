@@ -298,7 +298,7 @@ class ConfigStore:
         self.broker_config = None
 
         # ODB
-        self.odb_data = None
+        self.odb_data = Bunch()
 
         # SimpleIO
         self.simple_io = None # type: ConfigDict
@@ -311,6 +311,11 @@ class ConfigStore:
 
         # Services
         self.service = None # type: ConfigDict
+
+        # IBM MQ
+        self.definition_wmq = None # type: ConfigDict
+        self.out_wmq = None        # type: ConfigDict
+        self.channel_wmq = None    # type: ConfigDict
 
 # ################################################################################################################################
 

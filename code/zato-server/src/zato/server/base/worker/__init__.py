@@ -103,14 +103,10 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-# Type hints
 if 0:
-
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigStore
     from zato.server.service import Service
-
-    # For pyflakes
     ConfigStore    = ConfigStore
     ParallelServer = ParallelServer
     Service        = Service
@@ -173,7 +169,7 @@ _WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 class WorkerStore(_WorkerStoreBase):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
-    def __init__(self, worker_config:'ConfigStore'=None, server:'ParallelServer'=None) -> 'None':
+    def __init__(self, worker_config:'ConfigStore', server:'ParallelServer') -> 'None':
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_ready = False
         self.worker_config = worker_config
