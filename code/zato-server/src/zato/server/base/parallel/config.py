@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -28,7 +28,9 @@ from zato.url_dispatcher import Matcher
 
 if 0:
     from zato.common.model.wsx import WSXConnectorConfig
-
+    from zato.common.odb.model import Server as ServerModel
+    from zato.common.typing_ import anydict, anydictnone, anylist
+    from zato.server.base.parallel import ParallelServer
     WSXConnectorConfig = WSXConnectorConfig
 
 # ################################################################################################################################
@@ -39,7 +41,12 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_audit_max_len_messages = AuditLog.Default.max_len_messages
+class ModuleCtx:
+    Audit_Max_Len_Messages = AuditLog.Default.max_len_messages
+    Config_Store = ('apikey', 'basic_auth', 'jwt')
+    Rate_Limit_Exact = RATE_LIMIT.TYPE.EXACT.id
+    Rate_Limit_Sec_Def = RATE_LIMIT.OBJECT_TYPE.SEC_DEF
+    Rate_Limit_HTTP_SOAP = RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,7 +57,10 @@ class ConfigLoader:
 
 # ################################################################################################################################
 
-    def set_up_config(self, server) -> 'None':
+    def set_up_config(
+        self:'ParallelServer',  # type: ignore
+        server:'ServerModel'
+    ) -> 'None':
 
         # Which components are enabled
         self.component_enabled.stats = asbool(self.fs_server_config.component_enabled.stats)
@@ -301,10 +311,6 @@ class ConfigLoader:
         query = self.odb.get_vault_connection_list(server.cluster.id, True)
         self.config.vault_conn_sec = ConfigDict.from_query('vault_conn_sec', query, decrypt_func=self.decrypt)
 
-        # XPath
-        query = self.odb.get_xpath_sec_list(server.cluster.id, True)
-        self.config.xpath_sec = ConfigDict.from_query('xpath_sec', query, decrypt_func=self.decrypt)
-
         # Encrypt all secrets
         self._encrypt_secrets()
 
@@ -385,34 +391,46 @@ class ConfigLoader:
 
 # ################################################################################################################################
 
-    def delete_object_rate_limiting(self, object_type, object_name):
+    def delete_object_rate_limiting(
+        self:'ParallelServer', # type: ignore
+        object_type:'str',
+        object_name:'str'
+    ) -> 'None':
         if self.rate_limiting.has_config(object_type, object_name):
             self.rate_limiting.delete(object_type, object_name)
 
 # ################################################################################################################################
 
-    def set_up_rate_limiting(self, _config_store=('apikey', 'basic_auth', 'jwt'), _sec_def=RATE_LIMIT.OBJECT_TYPE.SEC_DEF,
-        _http_soap=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP):
+    def set_up_rate_limiting(
+        self:'ParallelServer', # type: ignore
+    ) -> 'None':
 
-        for config_store_name in _config_store:
+        for config_store_name in ModuleCtx.Config_Store:
             config_dict = self.config[config_store_name] # type: ConfigDict
             for object_name in config_dict: # type: str
-                self.set_up_object_rate_limiting(_sec_def, object_name, config_store_name)
+                self.set_up_object_rate_limiting(ModuleCtx.Rate_Limit_Sec_Def, object_name, config_store_name)
 
         for item in self.config['http_soap']: # type: dict
             # Set up rate limiting only if we know there is configuration for it available
             if 'is_rate_limit_active' in item:
-                self.set_up_object_rate_limiting(_http_soap, item['name'], config=item)
+                self.set_up_object_rate_limiting(ModuleCtx.Rate_Limit_HTTP_SOAP, item['name'], config_=item)
 
 # ################################################################################################################################
 
-    def set_up_object_rate_limiting(self, object_type, object_name, config_store_name=None, config=None,
-        _exact=RATE_LIMIT.TYPE.EXACT.id):
+    def set_up_object_rate_limiting(
+        self:'ParallelServer',  # type: ignore
+        object_type,            # type: str
+        object_name,            # type: str
+        config_store_name='',   # type: str
+        config_=None, # type: anydictnone
+    ):
         # type: (str, str, str, dict) -> bool
 
-        if not config:
-            config = self.config[config_store_name].get(object_name) # type: ConfigDict
-            config = config['config'] # type: dict
+        if not config_:
+            config_dict = self.config[config_store_name].get(object_name) # type: ConfigDict
+            config = config_dict['config'] # type: anydict
+        else:
+            config = config_
 
         is_rate_limit_active = config.get('is_rate_limit_active') or False # type: bool
 
@@ -420,7 +438,7 @@ class ConfigLoader:
 
             # This is reusable no matter if it is edit or create action
             rate_limit_def = config['rate_limit_def']
-            is_exact = config['rate_limit_type'] == _exact
+            is_exact = config['rate_limit_type'] == ModuleCtx.Rate_Limit_Exact
 
             # Base dict that will be used as is, if we are to create the rate limiting configuration,
             # or it will be updated with existing configuration, if it already exists.
@@ -459,11 +477,13 @@ class ConfigLoader:
 
 # ################################################################################################################################
 
-    def set_up_object_audit_log(self, object_type, object_id, config, is_edit):
-        # type: (str, str, WSXConnectorConfig, bool)
-
-        # For type completion
-        audit_log = self.audit_log # type: AuditLog
+    def set_up_object_audit_log(
+        self:'ParallelServer', # type: ignore
+        object_type, # type: str
+        object_id,   # type: str
+        config,      # type: WSXConnectorConfig
+        is_edit      # type: bool
+    ) -> 'None':
 
         # Prepare a new configuration object for that log ..
         log_config = LogContainerConfig()
@@ -472,11 +492,11 @@ class ConfigLoader:
         log_config.object_id = object_id
 
         if isinstance(config, dict):
-            config_max_len_messages_sent = config['max_len_messages_sent']
-            config_max_len_messages_received = config['max_len_messages_received']
+            config_max_len_messages_sent = config['max_len_messages_sent'] or 0
+            config_max_len_messages_received = config['max_len_messages_received'] or 0
         else:
-            config_max_len_messages_sent = config.max_len_messages_sent
-            config_max_len_messages_received = config.max_len_messages_received
+            config_max_len_messages_sent = config.max_len_messages_sent or 0
+            config_max_len_messages_received = config.max_len_messages_received or 0
 
         log_config.max_len_messages_sent     = config_max_len_messages_sent
         log_config.max_len_messages_received = config_max_len_messages_received
@@ -486,25 +506,33 @@ class ConfigLoader:
         log_config.max_bytes_per_message_received = int(config_max_len_messages_received) * 1000
 
         # .. and now we can create our audit log container
-        func = audit_log.edit_container if is_edit else audit_log.create_container
+        func = self.audit_log.edit_container if is_edit else self.audit_log.create_container
         func(log_config)
 
 # ################################################################################################################################
 
-    def set_up_object_audit_log_by_config(self, object_type, object_id, config, is_edit):
-        # type: (str, str, WSXConnectorConfig, bool)
+    def set_up_object_audit_log_by_config(
+        self:'ParallelServer', # type: ignore
+        object_type, # type: str
+        object_id,   # type: str
+        config,      # type: WSXConnectorConfig
+        is_edit      # type: bool
+    ) -> 'None':
 
         if getattr(config, 'is_audit_log_sent_active', False) or getattr(config, 'is_audit_log_received_active', False):
 
             # These may be string objects
-            config.max_len_messages_sent     = int(config.max_len_messages_sent or _audit_max_len_messages)
-            config.max_len_messages_received = int(config.max_len_messages_received or _audit_max_len_messages)
+            config.max_len_messages_sent     = int(config.max_len_messages_sent or ModuleCtx.Audit_Max_Len_Messages)
+            config.max_len_messages_received = int(config.max_len_messages_received or ModuleCtx.Audit_Max_Len_Messages)
 
             self.set_up_object_audit_log(object_type, object_id, config, is_edit)
 
 # ################################################################################################################################
 
-    def _after_init_accepted(self, locally_deployed):
+    def _after_init_accepted(
+        self: 'ParallelServer', # type: ignore
+        locally_deployed        # type: anylist
+    ) -> 'None':
 
         # Deploy missing services found on other servers
         if locally_deployed:
@@ -521,7 +549,7 @@ class ConfigLoader:
 
 # ################################################################################################################################
 
-    def get_config_odb_data(self, parallel_server):
+    def get_config_odb_data(self, parallel_server:'ParallelServer') -> 'Bunch':
         """ Returns configuration with regards to ODB data.
         """
         odb_data = Bunch()
@@ -548,7 +576,9 @@ class ConfigLoader:
 
 # ################################################################################################################################
 
-    def _encrypt_secrets(self):
+    def _encrypt_secrets(
+        self: 'ParallelServer' # type: ignore
+    ) -> 'None':
         """ All passwords are always encrypted so we need to look up any that are not,
         for instance, because it is a cluster newly migrated from 2.0 to 3.0, and encrypt them now in ODB.
         """
@@ -560,7 +590,7 @@ class ConfigLoader:
         with self.zato_lock_manager('zato_encrypt_secrets'):
 
             # An SQL session shared by all updates
-            with closing(self.odb.session()) as session:
+            with closing(self.odb.session()) as session: # type: ignore
 
                 # Iterate over all security definitions
                 for sec_config_dict_type in sec_config_dict_types:
@@ -590,7 +620,7 @@ class ConfigLoader:
 
 # ################################################################################################################################
 
-    def _after_init_non_accepted(self, server):
+    def _after_init_non_accepted(self, server:'ParallelServer') -> 'None':
         raise NotImplementedError("This Zato version doesn't support join states other than ACCEPTED")
 
 # ################################################################################################################################
