@@ -174,7 +174,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.deployment_lock_timeout = -1
         self.deployment_key = ''
         self.has_gevent = True
-        self.request_dispatcher_dispatch = None
+        self.request_dispatcher_dispatch = cast_('callable_', None)
         self.delivery_store = None
         self.static_config = Bunch()
         self.component_enabled = Bunch()
