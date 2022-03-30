@@ -24,9 +24,7 @@ if 0:
 class PubSub(WorkerImpl):
     """ Publish/subscribe-related functionality for worker objects.
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.pubsub = self.pubsub # type: ServerPubSub
+    pubsub: 'ServerPubSub'
 
 # ################################################################################################################################
 
@@ -64,7 +62,10 @@ class PubSub(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_PUBSUB_ENDPOINT_EDIT(self, msg):
+    def on_broker_msg_PUBSUB_ENDPOINT_EDIT(
+        self:'WorkerStore', # type: ignore
+        msg, # type: Bunch
+    ) -> 'None':
         self.pubsub.edit_endpoint(msg)
 
 # ################################################################################################################################

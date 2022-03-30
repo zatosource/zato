@@ -102,12 +102,13 @@ logger = logging.getLogger(__name__)
 
 if 0:
     from zato.broker.client import BrokerClient
-    from zato.common.typing_ import any_, anylist, callable_, callnone, dictnone, stranydict
+    from zato.common.typing_ import any_, anylist, callable_, callnone, dictnone, stranydict, tuple_, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
     from zato.server.config import ConfigStore
     from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
     from zato.server.service import Service
+    from zato.server.store import BaseAPI
     ConfigStore    = ConfigStore
     ParallelServer = ParallelServer
     Service        = Service
@@ -173,7 +174,7 @@ _WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 class WorkerStore(_WorkerStoreBase):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
-    broker_client: 'BrokerClient'
+    broker_client: 'BrokerClient | None' = None
 
     def __init__(self, worker_config:'ConfigStore', server:'ParallelServer') -> 'None':
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -689,7 +690,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def init_simple(self, config:'Bunch', api, name) -> 'None':
+    def init_simple(self, config:'Bunch', api:'BaseAPI', name:'str') -> 'None':
         for k, v in config.items():
             self._update_queue_build_cap(v.config)
             try:
@@ -724,7 +725,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _set_up_zmq_channel(self, name, config, action, start=False) -> 'None':
+    def _set_up_zmq_channel(self, name:'str', config:'Bunch', action:'str', start:'bool'=False) -> 'None':
         """ Actually initializes a ZeroMQ channel, taking into account dissimilarities between MDP ones and PULL/SUB.
         """
         # We need to consult old_socket_type because it may very well be the case that someone
@@ -823,8 +824,8 @@ class WorkerStore(_WorkerStoreBase):
     def init_amqp(self) -> 'None':
         """ Initializes all AMQP connections.
         """
-        def _name_matches(def_name) -> 'callable_':
-            def _inner(config):
+        def _name_matches(def_name:'str') -> 'callable_':
+            def _inner(config:'stranydict') -> 'bool':
                 return config['def_name']==def_name
             return _inner
 
@@ -949,7 +950,14 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _update_auth(self, msg, action_name, sec_type, visit_wrapper, keys=None) -> 'None':
+    def _update_auth(
+        self,
+        msg,           # type: Bunch
+        action_name,   # type: str
+        sec_type,      # type: str
+        visit_wrapper, # type: callable_
+        keys=None      # type: tupnone
+    ) -> 'None':
         """ A common method for updating auth-related configuration.
         """
         with self.update_lock:
@@ -970,7 +978,7 @@ class WorkerStore(_WorkerStoreBase):
                         else:
                             visit_wrapper(wrapper, msg)
 
-    def _visit_wrapper_edit(self, wrapper, msg, keys) -> 'None':
+    def _visit_wrapper_edit(self, wrapper:'HTTPSOAPWrapper', msg:'Bunch', keys:'tuple_') -> 'None':
         """ Updates a given wrapper's security configuration.
         """
         if wrapper.config['security_name'] == msg['old_name']:
@@ -985,14 +993,14 @@ class WorkerStore(_WorkerStoreBase):
                 wrapper.config[key1] = msg[key2]
             wrapper.set_auth()
 
-    def _visit_wrapper_delete(self, wrapper, msg) -> 'None':
+    def _visit_wrapper_delete(self, wrapper:'HTTPSOAPWrapper', msg:'Bunch') -> 'None':
         """ Deletes a wrapper.
         """
         config_dict = getattr(self.worker_config, 'out_' + wrapper.config['transport'])
         if wrapper.config['security_name'] == msg['name']:
             del config_dict[wrapper.config['name']]
 
-    def _visit_wrapper_change_password(self, wrapper, msg) -> 'None':
+    def _visit_wrapper_change_password(self, wrapper:'HTTPSOAPWrapper', msg:'Bunch') -> 'None':
         """ Changes a wrapper's password.
         """
         if wrapper.config['security_name'] == msg['name']:
@@ -1001,8 +1009,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _convert_pickup_config_to_file_transfer(self, name, config) -> 'Bunch | None':
-        # type: (dict) -> Bunch
+    def _convert_pickup_config_to_file_transfer(self, name:'str', config:'Bunch') -> 'Bunch | None':
 
         # Convert paths to full ones
         pickup_from_list = config.get('pickup_from') or []
@@ -1077,7 +1084,13 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _add_service_pickup_to_file_transfer(self, name, pickup_dir, delete_after_pickup, deploy_in_place) -> 'None':
+    def _add_service_pickup_to_file_transfer(
+        self,
+        name,       # type: str
+        pickup_dir, # type: str
+        delete_after_pickup, # type: bool
+        deploy_in_place      # type: bool
+    ) -> 'None':
 
         # Explicitly create configuration for hot-deployment
         hot_deploy_name = '{}.{}'.format(pickup_conf_item_prefix, name)
@@ -1469,7 +1482,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _update_tls_outconns(self, material_type_id, update_key, msg) -> 'None':
+    def _update_tls_outconns(self, material_type_id:'str', update_key:'str', msg:'Bunch') -> 'None':
 
         for config_dict, config_data in self.yield_outconn_http_config_dicts():
 
@@ -1483,7 +1496,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _add_tls_from_msg(self, config_attr, msg, msg_key) -> 'None':
+    def _add_tls_from_msg(self, config_attr:'str', msg:'Bunch', msg_key:'str') -> 'None':
         config = getattr(self.worker_config, config_attr)
         config[msg.name] = Bunch(config=Bunch(value=msg[msg_key]))
 
@@ -1594,36 +1607,6 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def xpath_sec_get(self, name:'str') -> 'Bunch':
-        """ Returns the configuration of an XPath security definition of the given name.
-        """
-        self.request_dispatcher.url_data.xpath_sec_get(name)
-
-    def on_broker_msg_SECURITY_XPATH_SEC_CREATE(self, msg:'Bunch', *args:'any_') -> 'None':
-        """ Creates a new XPath security definition
-        """
-        dispatcher.notify(broker_message.SECURITY.XPATH_SEC_CREATE.value, msg)
-
-    def on_broker_msg_SECURITY_XPATH_SEC_EDIT(self, msg:'Bunch', *args:'any_') -> 'None':
-        """ Updates an existing XPath security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.XPATH_SEC,
-                self._visit_wrapper_edit, keys=('is_active', 'username', 'name'))
-
-    def on_broker_msg_SECURITY_XPATH_SEC_DELETE(self, msg:'Bunch', *args:'any_') -> 'None':
-        """ Deletes an XPath security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.XPATH_SEC,
-                self._visit_wrapper_delete)
-
-    def on_broker_msg_SECURITY_XPATH_SEC_CHANGE_PASSWORD(self, msg:'Bunch', *args:'any_') -> 'None':
-        """ Changes password of an XPath security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.XPATH_SEC,
-                self._visit_wrapper_change_password)
-
-# ################################################################################################################################
-
     def invoke(self, service:'str', payload:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service by its name with request on input.
         """
@@ -1645,7 +1628,7 @@ class WorkerStore(_WorkerStoreBase):
             'zato_ctx': kwargs.get('zato_ctx'),
             'wsgi_environ': kwargs.get('wsgi_environ'),
             'channel_item': kwargs.get('channel_item'),
-        }, channel, None, needs_response=True, serialize=serialize, skip_response_elem=kwargs.get('skip_response_elem'))
+        }, channel, '', needs_response=True, serialize=serialize, skip_response_elem=kwargs.get('skip_response_elem'))
 
 # ################################################################################################################################
 
@@ -1674,7 +1657,7 @@ class WorkerStore(_WorkerStoreBase):
         else:
             payload = msg['payload']
 
-        service, is_active = self.server.service_store.new_instance_by_name(msg['service']) # type: (Service, bool)
+        service, is_active = self.server.service_store.new_instance_by_name(msg['service'])
         if not is_active:
             msg = 'Could not invoke an inactive service:`{}`, cid:`{}`'.format(service.get_name(), cid)
             logger.warning(msg)
@@ -1688,7 +1671,7 @@ class WorkerStore(_WorkerStoreBase):
             environ=msg.get('environ'))
 
         if skip_response_elem:
-            response = dumps(response) # type: bytes
+            response = dumps(response)
             response = response.decode('utf8')
 
         # Invoke the callback, if any.
@@ -1781,7 +1764,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _get_outconn_rest(self, value:'str', by_name:'bool'=True) -> 'HTTPSOAPWrapper | None':
+    def _get_outconn_rest(self, value:'str', by_name:'bool'=True) -> 'dictnone':
 
         item_key = 'name' if by_name else 'id'
 
@@ -1794,18 +1777,18 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def get_channel_rest(self, name:'str') -> 'dictnone':
+    def get_channel_rest(self, name:'str') -> 'Bunch':
         return self._get_channel_rest(CONNECTION.CHANNEL, name)
 
 # ################################################################################################################################
 
-    def get_outconn_rest(self, name:'str') -> 'HTTPSOAPWrapper | None':
+    def get_outconn_rest(self, name:'str') -> 'dictnone':
         return self._get_outconn_rest(name)
 
 # ################################################################################################################################
 
-    def get_outconn_rest_by_id(self, id:'str') -> 'HTTPSOAPWrapper | None':
-        return self._get_outconn_rest(int(id), False)
+    def get_outconn_rest_by_id(self, id:'str') -> 'dictnone':
+        return self._get_outconn_rest(id, False)
 
 # ################################################################################################################################
 
@@ -1829,7 +1812,13 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _delete_config_close_wrapper(self, name, config_dict, conn_type, log_func) -> 'None':
+    def _delete_config_close_wrapper(
+        self,
+        name,        # type: str
+        config_dict, # type: ConfigDict
+        conn_type,   # type: str
+        log_func     # type: callable_
+    ) -> 'None':
         """ Deletes a wrapper-based connection's config and closes its underlying wrapper.
         """
         # Delete the connection first, if it exists at all ..
@@ -1848,7 +1837,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _delete_config_close_wrapper_http_soap(self, name, transport, log_func) -> 'None':
+    def _delete_config_close_wrapper_http_soap(self, name:'str', transport:'str', log_func:'callable_') -> 'None':
         """ Deletes/closes an HTTP/SOAP outconn.
         """
         # Are we dealing with plain HTTP or SOAP?
@@ -1945,27 +1934,38 @@ class WorkerStore(_WorkerStoreBase):
             return
         else:
             mod = inspect.getmodule(service_info['service_class'])
-            del sys.modules[mod.__name__]
+            if mod:
+                del sys.modules[mod.__name__]
 
     def on_broker_msg_SERVICE_EDIT(self, msg:'Bunch', *args:'any_') -> 'None':
-        # type: (dict)
         del msg['action']
         self.server.service_store.edit_service_data(msg)
 
 # ################################################################################################################################
 
     def on_broker_msg_OUTGOING_FTP_CREATE_EDIT(self, msg:'Bunch', *args:'any_') -> 'None':
-        self.worker_config.out_ftp.create_edit(msg, msg.get('old_name'))
+        out_ftp = cast_('FTPStore', self.worker_config.out_ftp)
+        out_ftp.create_edit(msg, msg.get('old_name'))
 
     def on_broker_msg_OUTGOING_FTP_DELETE(self, msg:'Bunch', *args:'any_') -> 'None':
-        self.worker_config.out_ftp.delete(msg.name)
+        out_ftp = cast_('FTPStore', self.worker_config.out_ftp)
+        out_ftp.delete(msg.name)
 
     def on_broker_msg_OUTGOING_FTP_CHANGE_PASSWORD(self, msg:'Bunch', *args:'any_') -> 'None':
-        self.worker_config.out_ftp.change_password(msg.name, msg.password)
+        out_ftp = cast_('FTPStore', self.worker_config.out_ftp)
+        out_ftp.change_password(msg.name, msg.password)
 
 # ################################################################################################################################
 
-    def on_broker_msg_hot_deploy(self, msg, service, payload, action, *args, **kwargs):
+    def on_broker_msg_hot_deploy(
+        self,
+        msg,     # type: Bunch
+        service, # type: str
+        payload, # type: any_
+        action,  # type: str
+        *args,   # type: any_
+        **kwargs # type: any_
+    ) -> 'any_':
         msg.cid = new_cid()
         msg.service = service
         msg.payload = payload
@@ -2024,7 +2024,13 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _on_broker_msg_cloud_create_edit(self, msg, conn_type, config_dict, wrapper_class) -> 'Bunch':
+    def _on_broker_msg_cloud_create_edit(
+        self,
+        msg,          # type: Bunch
+        conn_type,    # type: str
+        config_dict,  # type: ConfigDict
+        wrapper_class # type: any_
+    ) -> 'Bunch':
 
         # It might be a rename
         old_name = msg.get('old_name')
@@ -2096,7 +2102,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _on_broker_msg_NOTIF_SQL_CREATE_EDIT(self, msg, source_service_type) -> 'None':
+    def _on_broker_msg_NOTIF_SQL_CREATE_EDIT(self, msg:'Bunch', source_service_type:'str') -> 'None':
         msg.source_service_type = source_service_type
         self.create_edit_notifier(msg, 'NOTIF_SQL', self.server.worker_store.worker_config.notif_sql)
 
@@ -2259,7 +2265,14 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def zmq_channel_create_edit(self, name, msg, action, lock_timeout, start) -> 'None':
+    def zmq_channel_create_edit(
+        self,
+        name,   # type: str
+        msg,    # type: Bunch
+        action, # type: str
+        lock_timeout, # type: int
+        start   # type: bool
+    ) -> 'None':
         with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=lock_timeout):
             self._set_up_zmq_channel(name, msg, action, start)
 
@@ -2308,14 +2321,22 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_ipc_message(self, msg, success=IPC.STATUS.SUCCESS, failure=IPC.STATUS.FAILURE) -> 'None':
+    def on_ipc_message(
+        self,
+        msg, # type: any_
+        success=IPC.STATUS.SUCCESS, # type: str
+        failure=IPC.STATUS.FAILURE  # type: str
+    ) -> 'None':
 
         # If there is target_pid we cannot continue if we are not the recipient.
         if msg.target_pid and msg.target_pid != self.server.pid:
             return
 
-        # We get here if there is no target_pid or if there is one and it matched that of ours.
+        # By default, assume we will not succeed.
+        status = failure
+        response = 'default-ipc-response'
 
+        # We get here if there is no target_pid or if there is one and it matched that of ours.
         try:
             response = self.invoke(
                 msg.service,
