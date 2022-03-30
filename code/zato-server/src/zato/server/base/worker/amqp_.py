@@ -20,6 +20,7 @@ from zato.server.base.worker.common import WorkerImpl
 
 if 0:
     from bunch import Bunch
+    from zato.common.typing_ import any_, dictnone, strnone
     from zato.server.base.worker import WorkerStore
 
 # ################################################################################################################################
@@ -57,7 +58,7 @@ class AMQP(WorkerImpl):
     ) -> 'None':
 
         # Convert to a dataclass first
-        msg = AMQPConnectorConfig.from_dict(msg)
+        msg = AMQPConnectorConfig.from_dict(msg) # type: ignore
 
         # Definitions are always active
         msg.is_active = True
@@ -161,7 +162,16 @@ class AMQP(WorkerImpl):
 
 # ################################################################################################################################
 
-    def amqp_invoke(self, msg, out_name, exchange='/', routing_key=None, properties=None, headers=None, **kwargs):
+    def amqp_invoke(
+        self:'WorkerStore', # type: ignore
+        msg,          # type: Bunch
+        out_name,     # type: str
+        exchange='/', # type: str
+        routing_key=None, # type: strnone
+        properties=None,  # type: dictnone
+        headers=None,     # type: dictnone
+        **kwargs          # type: any_
+    ) -> 'any_':
         """ Invokes a remote AMQP broker sending it a message with the specified routing key to an exchange through
         a named outgoing connection. Optionally, lower-level details can be provided in properties and they will be
         provided directly to the underlying AMQP library (kombu). Headers are AMQP headers attached to each message.
@@ -171,13 +181,21 @@ class AMQP(WorkerImpl):
 
         return self.amqp_api.invoke(def_name, out_name, msg, exchange, routing_key, properties, headers, **kwargs)
 
-    def _amqp_invoke_async(self, *args, **kwargs):
+    def _amqp_invoke_async(
+        self:'WorkerStore', # type: ignore
+        *args,   # type: any_
+        **kwargs # type: any_
+    ) -> 'None':
         try:
             self.amqp_invoke(*args, **kwargs)
         except Exception:
             logger.warning(format_exc())
 
-    def amqp_invoke_async(self, *args, **kwargs):
+    def amqp_invoke_async(
+        self:'WorkerStore', # type: ignore
+        *args,   # type: any_
+        **kwargs # type: any_
+    ) -> 'None':
         spawn_greenlet(self._amqp_invoke_async, *args, **kwargs)
 
 # ################################################################################################################################
