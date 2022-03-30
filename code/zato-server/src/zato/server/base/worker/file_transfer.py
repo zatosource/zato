@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,11 +15,11 @@ from zato.common.util.file_transfer import parse_extra_into_list
 from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
     from bunch import Bunch
-
-    Bunch = Bunch
+    from zato.server.base.worker import WorkerStore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -133,8 +133,10 @@ class FileTransfer(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _edit_file_transfer_channel(self, msg):
-        # type: (Bunch) -> None
+    def _edit_file_transfer_channel(
+        self:'WorkerStore', # type: ignore
+        msg, # type: Bunch
+    ) -> 'None':
 
         # If we have a scheduler job on input ..
         if msg.scheduler_job_id:
@@ -150,7 +152,10 @@ class FileTransfer(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _delete_file_transfer_channel(self, msg):
+    def _delete_file_transfer_channel(
+        self:'WorkerStore', # type: ignore
+        msg, # type: Bunch
+    ) -> 'None':
 
         # Our caller in generic.py has already created the channel object
         # so we only need to disassociate ourselves with a scheduler's job, if any.
