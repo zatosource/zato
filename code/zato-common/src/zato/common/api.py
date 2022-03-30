@@ -1660,7 +1660,7 @@ class SourceCodeInfo:
     __slots__ = 'source', 'source_html', 'len_source', 'path', 'hash', 'hash_method', 'server_name'
 
     def __init__(self):
-        self.source = ''        # type: str
+        self.source = b''       # type: bytes
         self.source_html = ''   # type: str
         self.len_source = 0     # type: int
         self.path = None        # type: str
