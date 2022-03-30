@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from copy import deepcopy
@@ -32,7 +30,7 @@ from zato.common.util.sql import ElemsWithOpaqueMaker
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import anylist, stranydict
     from zato.server.connection.ftp import FTPStore
     FTPStore = FTPStore
 
@@ -336,7 +334,7 @@ class ConfigStore:
         self.odb_data = Bunch()
 
         # SimpleIO
-        self.simple_io = None # type: ConfigDict
+        self.simple_io = None # type: stranydict
 
         # Namespace
         self.msg_ns = None # type: ConfigDict
