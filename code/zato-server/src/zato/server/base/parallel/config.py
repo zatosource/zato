@@ -50,7 +50,7 @@ class ConfigLoader:
 
 # ################################################################################################################################
 
-    def set_up_config(self, server):
+    def set_up_config(self, server) -> 'None':
 
         # Which components are enabled
         self.component_enabled.stats = asbool(self.fs_server_config.component_enabled.stats)

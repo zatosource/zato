@@ -458,9 +458,9 @@ class Service:
     """
     schedule: SchedulerFacade
 
-    call_hooks = True
+    call_hooks:'bool' = True
     _filter_by = None
-    _enforce_service_invokes = None
+    enforce_service_invokes: 'bool'
     invokes = []
     http_method_handlers = {}
 
@@ -540,10 +540,12 @@ class Service:
 
     component_enabled_sms: 'bool'
     component_enabled_hl7: 'bool'
+    component_enabled_odoo: 'bool'
     component_enabled_email: 'bool'
     component_enabled_search: 'bool'
     component_enabled_ibm_mq: 'bool'
     component_enabled_zeromq: 'bool'
+    component_enabled_msg_path: 'bool'
     component_enabled_patterns: 'bool'
     component_enabled_cassandra: 'bool'
     component_enabled_target_matcher: 'bool'
@@ -604,7 +606,7 @@ class Service:
 # ################################################################################################################################
 
     @classmethod
-    def get_name(class_) -> 'str':
+    def get_name(class_:'type[Service]') -> 'str':
         """ Returns a service's name, settings its .name attribute along. This will
         be called once while the service is being deployed.
         """
