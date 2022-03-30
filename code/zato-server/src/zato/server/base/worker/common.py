@@ -22,10 +22,9 @@ class WorkerImpl:
     """ Base class for objects that implement worker functionality. Does not implement anything itself,
     instead serving as a common marker for all derived subclasses.
     """
-    def __init__(self):
-        self.server = None # type: ParallelServer
-        self.worker_idx = None # type: int
-        self.url_data = None # type: URLData
+    server: 'ParallelServer'
+    url_data: 'URLData'
+    worker_idx: 'int'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -27,13 +27,18 @@ if 0:
 class WebSocket(WorkerImpl):
     """ WebSocket-related functionality for worker objects.
     """
-    def __init__(self):
-        super(WebSocket, self).__init__()
-        self.web_socket_api = None # type: ConnectorStore
+    web_socket_api: 'ConnectorStore'
 
 # ################################################################################################################################
 
-    def web_socket_channel_create_edit(self, name, msg, action, lock_timeout, start):
+    def web_socket_channel_create_edit(
+        self:'WorkerStore', # type: ignore
+        name,   # type: str
+        msg,    # type: Bunch
+        action, # type: str
+        lock_timeout, # type: int
+        start  # type: bool
+    ) -> 'None':
         with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=lock_timeout):
             func = getattr(self.web_socket_api, action)
             func(name, msg, self.on_message_invoke_service, self.request_dispatcher.url_data.authenticate_web_socket)
