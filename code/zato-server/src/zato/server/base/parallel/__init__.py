@@ -139,7 +139,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.host = ''
         self.port = -1
         self.is_starting_first = '<not-set>'
-        self.odb_data = None
+        self.odb_data = Bunch()
         self.repo_location = ''
         self.user_conf_location = ''
         self.soap11_content_type = ''
