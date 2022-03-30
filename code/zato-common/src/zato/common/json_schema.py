@@ -25,21 +25,11 @@ from zato.common.util.open_ import open_r
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
-
-    # stdlib
+if 0:
     from typing import Callable
-
-    # Bunch
     from bunch import Bunch
-
-    # Zato
+    from zato.common.typing_ import anydict
     from zato.server.base.parallel import ParallelServer
-
-    # For pyflakes
     Bunch = Bunch
     Callable = Callable
     ParallelServer = ParallelServer
@@ -50,8 +40,7 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-def get_service_config(item, server):
-    # type: (Bunch, ParallelServer) -> dict
+def get_service_config(item:'anydict', server:'ParallelServer') -> 'anydict':
 
     # By default services are allowed to validate input using JSON Schema
     is_json_schema_enabled = item.get('is_json_schema_enabled', True)

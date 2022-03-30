@@ -29,6 +29,7 @@ from zato.common.util.api import make_repr
 from zato.simpleio import ServiceInput
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
 
@@ -47,7 +48,7 @@ if 0:
     # Zato
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import PoolStore
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, stranydict
     from zato.hl7.mllp.server import ConnCtx as HL7ConnCtx
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.email import EMailAPI
@@ -323,8 +324,9 @@ class Outgoing:
 # ################################################################################################################################
 
 class AWS:
-    def __init__(self, s3=None):
-        self.s3 = s3
+    __slots__ = 's3',
+
+    s3: 'ConfigDict'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -334,9 +336,11 @@ class Cloud:
     """
     __slots__ = 'aws', 'dropbox'
 
-    def __init__(self, aws=None, dropbox=None):
-        self.aws = aws or AWS()
-        self.dropbox = dropbox
+    aws: 'AWS'
+    dropbox: 'stranydict'
+
+    def __init__(self) -> 'None':
+        self.aws = AWS()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -346,9 +350,7 @@ class Definition:
     """
     __slots__ = 'kafka',
 
-    def __init__(self, kafka=None):
-        # type: (dict)
-        self.kafka = kafka
+    kafka: 'stranydict'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -358,10 +360,8 @@ class InstantMessaging:
     """
     __slots__ = 'slack', 'telegram'
 
-    def __init__(self, slack=None, telegram=None):
-        # type: (dict, dict)
-        self.slack = slack
-        self.telegram = telegram
+    slack: 'stranydict'
+    telegram: 'stranydict'
 
 # ################################################################################################################################
 # ################################################################################################################################
