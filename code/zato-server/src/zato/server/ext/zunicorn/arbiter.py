@@ -63,6 +63,7 @@ class Arbiter:
     kills them if needed. It also manages application reloading
     via SIGHUP/USR2.
     """
+    zato_deployment_key: 'str'
 
     # A flag indicating if a worker failed to
     # to boot. If a worker process exist with
@@ -272,8 +273,7 @@ class Arbiter:
         except SystemExit:
             raise
         except Exception:
-            self.log.info("Unhandled exception in main loop",
-                          exc_info=True)
+            self.log.info("Unhandled exception in main loop", exc_info=True)
             self.stop(False)
             if self.pidfile is not None:
                 self.pidfile.unlink()
@@ -569,11 +569,9 @@ class Arbiter:
                     # infinite start/stop cycles.
                     exitcode = status >> 8
                     if exitcode == self.WORKER_BOOT_ERROR:
-                        reason = "Worker failed to boot."
-                        raise HaltServer(reason, self.WORKER_BOOT_ERROR)
+                        sys.exit(self.WORKER_BOOT_ERROR)
                     if exitcode == self.APP_LOAD_ERROR:
-                        reason = "App failed to load."
-                        raise HaltServer(reason, self.APP_LOAD_ERROR)
+                        sys.exit(self.APP_LOAD_ERROR)
 
                     worker = self.WORKERS.pop(wpid, None)
                     if not worker:
@@ -644,8 +642,8 @@ class Arbiter:
             print("%s" % e, file=sys.stderr)
             sys.stderr.flush()
             sys.exit(self.APP_LOAD_ERROR)
-        except:
-            self.log.exception("Exception in worker process")
+        except Exception as e:
+            self.log.exception("Exception in worker process -> `%s`", e.args[0])
             if not worker.booted:
                 sys.exit(self.WORKER_BOOT_ERROR)
             sys.exit(-1)
@@ -658,8 +656,8 @@ class Arbiter:
                 try:
                     worker.tmp.close()
                     self.cfg.worker_exit(self, worker)
-                except:
-                    self.log.warning("Exception during worker exit:\n%s", traceback.format_exc())
+                except Exception as e:
+                    self.log.warning("Exception during worker exit -> %s", e.args[0])
 
     def spawn_workers(self):
         """\

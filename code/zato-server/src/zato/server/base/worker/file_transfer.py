@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,15 +11,18 @@ from bunch import bunchify
 
 # Zato
 from zato.common.api import FILE_TRANSFER
+from zato.common.typing_ import cast_
 from zato.common.util.file_transfer import parse_extra_into_list
 from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
     from bunch import Bunch
-
-    Bunch = Bunch
+    from zato.common.typing_ import tuple_
+    from zato.server.base.worker import WorkerStore
+    from zato.server.base.worker.generic import Generic
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,7 +35,7 @@ class FileTransfer(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _file_transfer_get_scheduler_job_by_id(self, job_id):
+    def _file_transfer_get_scheduler_job_by_id(self, job_id:'int') -> 'Bunch':
 
         # This returns a SimpleIO payload object ..
         response = self.server.invoke('zato.scheduler.job.get-by-id', {
@@ -64,14 +67,20 @@ class FileTransfer(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _file_transfer_save_scheduler_job(self, data):
+    def _file_transfer_save_scheduler_job(self, data:'Bunch') -> 'None':
         data['cluster_id'] = self.server.cluster_id
         data['service'] = data.service_name
         self.server.invoke('zato.scheduler.job.edit', data)
 
 # ################################################################################################################################
 
-    def _file_transfer_modify_scheduler_job(self, job, job_id, channel_id, add_or_remove):
+    def _file_transfer_modify_scheduler_job(
+        self,
+        job,    # type: Bunch | None
+        job_id, # type: int
+        channel_id, # type: int
+        add_or_remove # type: bool
+    ) -> 'None':
         """ Finds a job along with its extra data and either adds or removes a file transfer channel for it.
         """
         # We store IDs as string objects but we compare then as integers
@@ -116,7 +125,7 @@ class FileTransfer(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _create_file_transfer_channel(self, msg):
+    def _create_file_transfer_channel(self, msg:'Bunch') -> 'None':
 
         # Our caller in generic.py has already created the channel object
         # so we only need to associate ourselves with a scheduler's job, if any.
@@ -125,16 +134,18 @@ class FileTransfer(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _disassociate_channel_from_scheduler_jobs(self, msg):
+    def _disassociate_channel_from_scheduler_jobs(self, msg:'Bunch') -> 'None':
 
         for item in self._file_transfer_get_scheduler_job_list():
             item = bunchify(item)
-            self._file_transfer_modify_scheduler_job(item, None, msg.id, False)
+            self._file_transfer_modify_scheduler_job(item, cast_('int', None), msg.id, False)
 
 # ################################################################################################################################
 
-    def _edit_file_transfer_channel(self, msg):
-        # type: (Bunch) -> None
+    def _edit_file_transfer_channel(
+        self:'WorkerStore', # type: ignore
+        msg, # type: Bunch
+    ) -> 'None':
 
         # If we have a scheduler job on input ..
         if msg.scheduler_job_id:
@@ -150,7 +161,10 @@ class FileTransfer(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _delete_file_transfer_channel(self, msg):
+    def _delete_file_transfer_channel(
+        self:'WorkerStore', # type: ignore
+        msg, # type: Bunch
+    ) -> 'None':
 
         # Our caller in generic.py has already created the channel object
         # so we only need to disassociate ourselves with a scheduler's job, if any.
@@ -158,7 +172,10 @@ class FileTransfer(WorkerImpl):
 
 # ################################################################################################################################
 
-    def get_file_transfer_channel_by_id(self, channel_id):
+    def get_file_transfer_channel_by_id(
+        self:'Generic', # type: ignore
+        channel_id, # type: int
+    ) -> 'tuple_':
         return self._find_conn_info(channel_id)
 
 # ################################################################################################################################

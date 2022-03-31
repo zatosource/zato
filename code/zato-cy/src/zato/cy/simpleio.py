@@ -30,7 +30,7 @@ import cython as cy
 from dateutil.parser import parse as dt_parse
 
 # lxml
-from lxml.etree import _Element as EtreeElementClass, Element, SubElement, tostring as etree_to_string, XPath
+from lxml.etree import _Element as EtreeElementClass, SubElement, XPath
 
 # Zato
 from zato.common.api import APISPEC, DATA_FORMAT, ZATO_NONE
@@ -92,7 +92,6 @@ DATA_FORMAT_CSV:cy.unicode  = DATA_FORMAT.CSV
 DATA_FORMAT_DICT:cy.unicode = DATA_FORMAT.DICT
 DATA_FORMAT_JSON:cy.unicode = DATA_FORMAT.JSON
 DATA_FORMAT_POST:cy.unicode = DATA_FORMAT.POST
-DATA_FORMAT_XML:cy.unicode  = DATA_FORMAT.XML
 
 # ################################################################################################################################
 
@@ -304,12 +303,10 @@ class Elem:
         self.parse_to = {}
 
         self.parse_from[DATA_FORMAT_JSON] = self.from_json
-        self.parse_from[DATA_FORMAT_XML] = self.from_xml
         self.parse_from[DATA_FORMAT_CSV] = self.from_csv
         self.parse_from[DATA_FORMAT_DICT] = self.from_dict
 
         self.parse_to[DATA_FORMAT_JSON] = self.to_json
-        self.parse_to[DATA_FORMAT_XML] = self.to_xml
         self.parse_to[DATA_FORMAT_CSV] = self.to_csv
         self.parse_to[DATA_FORMAT_DICT] = self.to_dict
 
@@ -910,31 +907,6 @@ class SIO_TYPE_MAP:
             UTC: ('string', 'date-time'),
         }
 
-    class SOAP_12:
-
-        name    = APISPEC.SOAP_12
-        STRING  = ('string', 'xsd:string')
-        DEFAULT = STRING
-        INTEGER = ('integer', 'xsd:integer')
-        FLOAT   = ('float', 'xsd:float')
-        BOOLEAN = ('boolean', 'xsd:boolean')
-        LIST    = ('list', 'zato:list')
-        DICT    = ('dict', 'zato:dict')
-
-        map = {
-            AsIs: STRING,
-            Bool: BOOLEAN,
-            CSV: STRING,
-            Dict: ('dict', 'zato:dict'),
-            Float: ('number', 'float'),
-            Int: INTEGER,
-            List: ('list', 'zato:list'),
-            DictList: ('list-of-dicts', 'zato:list-of-dicts'),
-            Opaque: ('opaque', 'anyType'),
-            Text: STRING,
-            UTC: ('string', 'xsd:dateTime'),
-        }
-
 # ################################################################################################################################
 
     class ZATO:
@@ -965,7 +937,7 @@ class SIO_TYPE_MAP:
 # ################################################################################################################################
 
     def __iter__(self):
-        return iter((self.OPEN_API_V3, self.SOAP_12, self.ZATO))
+        return iter((self.OPEN_API_V3, self.ZATO))
 
 # ################################################################################################################################
 
@@ -2177,40 +2149,11 @@ class CySimpleIO:
 # ################################################################################################################################
 
     @cy.returns(object)
-    def _get_output_xml(self, data:object, serialise:cy.int) -> object:
-        dict_items:object = self._convert_to_dicts(data, DATA_FORMAT_XML)
-        out:cy.unicode
-        dict_item:dict
-        xml_sub_elem:object
-        xml_item:object
-
-        root:cy.unicode = self.definition._response_elem or 'response'
-        namespace:cy.unicode = self.definition._xml_config.namespace or ''
-        if namespace:
-            namespace = '{'+ namespace + '}'
-
-        root_elem:object = Element('{}{}'.format(namespace, root))
-
-        if isinstance(dict_items, list):
-            for dict_item in dict_items:
-                xml_item = SubElement(root_elem, '{}{}'.format(namespace, 'item'))
-                self._convert_dict_to_xml(xml_item, namespace, dict_item)
-        else:
-            self._convert_dict_to_xml(root_elem, namespace, dict_items)
-
-        return self.serialise(root_elem, DATA_FORMAT_XML) if serialise else root_elem
-
-# ################################################################################################################################
-
-    @cy.returns(object)
     def get_output(self, data:object, data_format:cy.unicode, serialise:cy.int=True) -> object: # noqa: E252
         """ Returns input converted to the output format, possibly including serialisation to a string representation.
         """
         if data_format == DATA_FORMAT_JSON:
             return self._get_output_json(data, serialise)
-
-        elif data_format == DATA_FORMAT_XML:
-            return self._get_output_xml(data, serialise)
 
         # Note that 'serialise' is ignored for CSV
         elif data_format == DATA_FORMAT_CSV:
@@ -2231,14 +2174,6 @@ class CySimpleIO:
         """
         if data_format == DATA_FORMAT_JSON:
             return self.server_config.json_encoder.encode(data)
-
-        elif data_format == DATA_FORMAT_XML:
-            xml_serialised = etree_to_string(data,
-                xml_declaration=self.definition._xml_config.declaration,
-                encoding=self.definition._xml_config.encoding,
-                pretty_print=self.definition._xml_config.pretty_print
-            )
-            return xml_serialised.decode('utf8')
 
         elif data_format == DATA_FORMAT_POST:
             return self._get_output_post(data)
