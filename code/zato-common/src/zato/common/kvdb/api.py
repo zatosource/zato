@@ -28,6 +28,12 @@ from zato.common.util.kvdb import has_redis_sentinels
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.server.base.parallel import ParallelServer
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -36,6 +42,8 @@ logger = getLogger(__name__)
 class KVDB:
     """ A wrapper around the Zato's key-value database.
     """
+    server: 'ParallelServer'
+
     def __init__(self, config=None, decrypt_func=None):
 
         self.conn = None
@@ -173,7 +181,7 @@ class KVDB:
 
 # ################################################################################################################################
 
-    def translate(self, system1, key1, value1, system2, key2, default=''):
+    def translate(self, system1:'str', key1:'str', value1:'str', system2:'str', key2:'str', default:'str'='') -> 'str':
         return self.conn.hget(
             _KVDB.SEPARATOR.join(
                 (_KVDB.TRANSLATION, system1, key1, value1, system2, key2)), 'value2') or default

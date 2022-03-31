@@ -101,6 +101,9 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
     stdout_redirect = ''
     stderr_redirect = ''
 
+    # This is the exit code as it will be returned by sarge
+    exit_code = 0
+
     # We always run in foreground under Windows
     if is_windows:
         run_in_fg = True
@@ -122,7 +125,7 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
         if stdin_data:
             run_kwargs['input'] = stdin_data
 
-        sarge_run(program, **run_kwargs)
+        p = sarge_run(program, **run_kwargs)
 
         # Wait a moment for any potential errors
         _err = _stderr.wait_for_error()
@@ -131,10 +134,17 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
                 logger.warning('Stderr received from program `%s` e:`%s`, kw:`%s`', program, _err, run_kwargs)
                 sys.exit(failed_to_start_err)
 
+        # Update the exit code ..
+        exit_code = p.returncode
+
     except KeyboardInterrupt:
         if on_keyboard_interrupt:
             on_keyboard_interrupt()
         sys.exit(0)
+
+    finally:
+        # We can now return the exit code to our caller
+        return exit_code
 
 # ################################################################################################################################
 

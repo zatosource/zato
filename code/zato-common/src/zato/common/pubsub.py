@@ -24,7 +24,7 @@ from zato.common.util.time_ import utcnow_as_ms
 
 if 0:
     from zato.common.typing_ import any_, anylist, callable_, commondict, floatnone, optional, stranydict, \
-        strlist, strnone, strtuple
+        strlist, strnone, strtuple, tupnone
     from zato.server.connection.http_soap.outgoing import SudsSOAPWrapper
     from zato.server.pubsub.model import Topic
 
@@ -219,7 +219,7 @@ class PubSubMessage:
 
     def to_dict(
         self,
-        skip=None,               # type: strtuple
+        skip=None,               # type: tupnone
         needs_utf8_encode=False, # type: bool
         needs_utf8_decode=False, # type: bool
         add_id_attrs=False,      # type: bool
@@ -343,7 +343,7 @@ class HookCtx:
     soap_suds_client: 'optional[SudsSOAPWrapper]'
     response: 'any_'
 
-    def __init__(self, msg:'any_', soap_suds_client:'SudsSOAPWrapper'=None) -> 'None':
+    def __init__(self, msg:'any_', soap_suds_client:'optional[SudsSOAPWrapper]'=None) -> 'None':
         self.msg = msg
         self.soap_suds_client = soap_suds_client
         self.response = None

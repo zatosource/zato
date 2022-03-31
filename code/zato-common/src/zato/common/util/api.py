@@ -56,7 +56,7 @@ from gevent.greenlet import Greenlet
 from gevent.hub import Hub
 
 # lxml
-from lxml import etree, objectify
+from lxml import etree
 
 # OpenSSL
 from OpenSSL import crypto
@@ -115,7 +115,6 @@ from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
 from zato.common.util.logging_ import ColorFormatter
 from zato.common.util.open_ import open_r
-from zato.common.xml_ import soap_body_path, soap_body_xpath
 from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_request
 
 # ################################################################################################################################
@@ -161,7 +160,6 @@ aslist = as_list
 
 _data_format_json      = DATA_FORMAT.JSON
 _data_format_json_like = DATA_FORMAT.JSON, DATA_FORMAT.DICT
-_data_format_xml       = DATA_FORMAT.XML
 _data_format_hl7_v2    = HL7.Const.Version.v2.id
 
 # ################################################################################################################################
@@ -479,12 +477,6 @@ def payload_from_request(json_parser, cid, request, data_format, transport, chan
 
         if data_format in _data_format_json_like:
 
-            # It is possible that we have an XML request converted
-            # to an ObjectifiedElement instance on input and sent
-            # using the data format of dict. This happens in IBM MQ channels.
-            if isinstance(request, objectify.ObjectifiedElement):
-                return request
-
             if not request:
                 return ''
 
@@ -502,27 +494,6 @@ def payload_from_request(json_parser, cid, request, data_format, transport, chan
                     raise
             else:
                 payload = request
-
-        #
-        # XML
-        #
-        elif data_format == _data_format_xml:
-            if transport == 'soap':
-                if isinstance(request, objectify.ObjectifiedElement):
-                    soap = request
-                else:
-                    soap = objectify.fromstring(request)
-                body = soap_body_xpath(soap)
-                if not body:
-                    raise ZatoException(cid, 'Client did not send `{}` element'.format(soap_body_path))
-                payload = get_body_payload(body)
-            else:
-                if isinstance(request, objectify.ObjectifiedElement):
-                    payload = request
-                elif len(request) == 0:
-                    payload = objectify.fromstring('<empty/>')
-                else:
-                    payload = objectify.fromstring(request)
 
         #
         # HL7 v2
@@ -1358,12 +1329,6 @@ def parse_tls_channel_security_definition(value):
 def get_http_json_channel(name, service, cluster, security):
     return HTTPSOAP(None, '{}.json'.format(name), True, True, 'channel', 'plain_http', None, '/zato/json/{}'.format(name),
         None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=security)
-
-# ################################################################################################################################
-
-def get_http_soap_channel(name, service, cluster, security):
-    return HTTPSOAP(None, name, True, True, 'channel', 'soap', None, '/zato/soap', None, name, '1.1',
-        SIMPLE_IO.FORMAT.XML, service=service, cluster=cluster, security=security)
 
 # ################################################################################################################################
 

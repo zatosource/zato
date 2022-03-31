@@ -22,7 +22,6 @@ from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.odb.model import Cluster
 from zato.common.util.api import get_response_value, replace_private_key
 from zato.common.util.sql import search as sql_search
-from zato.common.xml_ import zato_namespace
 from zato.server.service import AsIs, Bool, Int, Service
 
 # ################################################################################################################################
@@ -55,12 +54,11 @@ class SearchTool:
 # ################################################################################################################################
 
 class AdminSIO:
-    namespace = zato_namespace
+    pass
 
 # ################################################################################################################################
 
 class GetListAdminSIO:
-    namespace = zato_namespace
     input_optional = (Int('cur_page'), Bool('paginate'), 'query')
 
 # ################################################################################################################################
