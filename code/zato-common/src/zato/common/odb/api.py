@@ -248,7 +248,7 @@ class SQLConnectionPool:
         try:
             self.engine = self._create_engine(engine_url, self.config, _extra)
         except Exception as e:
-            self.logger.warning('Could not create SQL connection `%s`, e:`%s`', self.config['name'], e.args[0])
+            self.logger.warning('Could not create SQL connection `%s`, e:`%s`', self.name, e.args[0])
 
         if self.engine and (not self._is_unittest_engine(engine_url)) and self._is_sa_engine(engine_url):
             event.listen(self.engine, 'checkin', self.on_checkin)
@@ -509,7 +509,9 @@ class PoolStore:
         """
         with self._lock:
             for _ignored_name, wrapper in self.wrappers.items():
-                wrapper.pool.engine.dispose()
+                if wrapper.pool:
+                    if wrapper.pool.engine:
+                        wrapper.pool.engine.dispose()
 
 # ################################################################################################################################
 
