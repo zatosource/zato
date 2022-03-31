@@ -153,7 +153,7 @@ command_imports = (
     ('crypto_create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
     ('delete_odb', 'zato.cli.delete_odb.Delete'),
     ('delete_api_key', 'zato.cli.security.api_key.DeleteDefinition'),
-    ('delete_basic_auth', 'zato.cli.basic_auth.DeleteDefinition'),
+    ('delete_basic_auth', 'zato.cli.security.basic_auth.DeleteDefinition'),
     ('delete_rest_channel', 'zato.cli.rest.channel.DeleteChannel'),
     ('delete_wsx_channel', 'zato.cli.wsx.DeleteChannel'),
     ('decrypt', 'zato.cli.crypto.Decrypt'),
@@ -962,7 +962,7 @@ class ManageCommand(ZatoCommand):
         os.chdir(self.component_dir)
 
         handler = self._get_dispatch()[json_data['component']]
-        handler(args)
+        return handler(args)
 
 # ################################################################################################################################
 
