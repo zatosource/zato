@@ -17,9 +17,6 @@ from traceback import format_exc
 # Bunch
 from bunch import bunchify
 
-# lxml
-from lxml import objectify
-
 # requests
 import requests
 
@@ -33,8 +30,6 @@ from six import PY3
 # Zato
 from zato.common.api import BROKER, ZATO_NOT_GIVEN, ZATO_OK
 from zato.common.exception import ZatoException
-from zato.common.xml_ import soap_data_path, soap_data_xpath, soap_fault_xpath, zato_data_path, \
-     zato_data_xpath, zato_details_xpath, zato_result_xpath
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb.model import Server
 
@@ -207,37 +202,6 @@ class JSONResponse(_StructuredResponse):
     def set_has_data(self):
         self.has_data = bool(self.data)
 
-class XMLResponse(_StructuredResponse):
-    """ Stores responses from XML services.
-    """
-    def load_func(self, data):
-        return objectify.fromstring(data)
-
-    def set_has_data(self):
-        self.has_data = self.data is not None
-
-class SOAPResponse(XMLResponse):
-    """ Stores responses from SOAP services.
-    """
-    path, xpath = soap_data_path, soap_data_xpath
-
-    def init(self):
-        if self.set_data():
-            self.set_has_data()
-
-    def set_data(self):
-        if self._set_data_details():
-            data = self.xpath(self.data)
-            if not data:
-                self.details = 'No {} in SOAP response'.format(self.path)
-            else:
-                if soap_fault_xpath(data[0]):
-                    self.details = data[0]
-                else:
-                    self.data = data[0]
-                    self.ok = True
-                    return True
-
 # ################################################################################################################################
 
 class JSONSIOResponse(_Response):
@@ -282,32 +246,6 @@ class JSONSIOResponse(_Response):
     def set_data(self, payload, _ignored):
         self.data = payload
         return True
-
-class SOAPSIOResponse(_Response):
-    """ Stores responses from SOAP SIO services.
-    """
-    def init(self):
-        response = objectify.fromstring(self.inner.text)
-
-        soap_fault = soap_fault_xpath(response)
-        if soap_fault:
-            self.details = soap_fault[0]
-        else:
-            zato_data = zato_data_xpath(response)
-            if not zato_data:
-                msg = 'Server did not send a business payload ({} element is missing), soap_response:[{}]'.format(
-                    zato_data_path, self.inner.text)
-                self.details = msg
-
-            # We have a payload but hadn't there been any errors at the server's side?
-            zato_result = zato_result_xpath(response)
-
-            if zato_result[0] == ZATO_OK:
-                self.ok = True
-                self.data = zato_data[0]
-                self.has_data = True
-            else:
-                self.details = zato_details_xpath(response)[0]
 
 class ServiceInvokeResponse(JSONSIOResponse):
     """ Stores responses from SIO services invoked through the zato.service.invoke service.
@@ -449,14 +387,6 @@ class JSONSIOClient(_JSONClient):
     """
     response_class = JSONSIOResponse
 
-class SOAPSIOClient(_Client):
-    """ Client for services that accept Simple IO (SIO) in SOAP.
-    """
-    def invoke(self, soap_action, payload=None, headers=None):
-        headers = headers or {}
-        headers['SOAPAction'] = soap_action
-        return super(SOAPSIOClient, self).invoke(payload, SOAPSIOResponse, headers=headers)
-
 class AnyServiceInvoker(_Client):
     """ Uses zato.service.invoke to invoke other services. The services being invoked
     don't have to be available through any channels, it suffices for zato.service.invoke
@@ -500,18 +430,6 @@ class AnyServiceInvoker(_Client):
 
     def invoke_async(self, *args, **kwargs):
         return self._invoke(is_async=True, *args, **kwargs)
-
-# ################################################################################################################################
-
-class XMLClient(_Client):
-    def invoke(self, payload='', headers=None):
-        return super(XMLClient, self).invoke(payload, XMLResponse, headers=headers)
-
-class SOAPClient(_Client):
-    def invoke(self, soap_action, payload='', headers=None):
-        headers = headers or {}
-        headers['SOAPAction'] = soap_action
-        return super(SOAPClient, self).invoke(payload, SOAPResponse, headers=headers)
 
 # ################################################################################################################################
 

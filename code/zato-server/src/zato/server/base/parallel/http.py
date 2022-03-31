@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -17,30 +17,47 @@ from pytz import UTC
 # tzlocal
 from tzlocal import get_localzone
 
-# Python 2/3 compatibility
-from future.utils import iteritems
-from past.builtins import unicode
-
 # Zato
 from zato.common.api import NO_REMOTE_ADDRESS
 from zato.common.util.api import new_cid
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from pytz.tzinfo import BaseTzInfo
+    from zato.common.typing_ import any_, callable_, list_, stranydict
+    from zato.server.base.parallel import ParallelServer
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 ACCESS_LOG_DT_FORMAT = '%d/%b/%Y:%H:%M:%S %z'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class HTTPHandler:
     """ Handles incoming HTTP requests.
     """
-    def on_wsgi_request(self, wsgi_environ, start_response, _new_cid=new_cid, _local_zone=get_localzone(),
-        _utcnow=datetime.utcnow, _INFO=INFO, _UTC=UTC, _ACCESS_LOG_DT_FORMAT=ACCESS_LOG_DT_FORMAT,
-        _no_remote_address=NO_REMOTE_ADDRESS, **kwargs):
+    def on_wsgi_request(
+        self:'ParallelServer', # type: ignore
+        wsgi_environ,     # type: stranydict
+        start_response,   # type: callable_
+        _new_cid=new_cid, # type: callable_
+        _local_zone=get_localzone(), # type: BaseTzInfo
+        _utcnow=datetime.utcnow, # type: callable_
+        _INFO=INFO, # type: int
+        _UTC=UTC,   # type: any_
+        _ACCESS_LOG_DT_FORMAT=ACCESS_LOG_DT_FORMAT, # type: str
+        _no_remote_address=NO_REMOTE_ADDRESS,       # type: str
+        **kwargs:'any_'
+    ) -> 'list_[bytes]':
         """ Handles incoming HTTP requests.
         """
         cid = kwargs.get('cid', _new_cid())
@@ -80,9 +97,9 @@ class HTTPHandler:
             # 405 because this was an invalid HTTP method
             channel_name = '-'
 
-        start_response(wsgi_environ['zato.http.response.status'], iteritems(wsgi_environ['zato.http.response.headers']))
+        start_response(wsgi_environ['zato.http.response.status'], wsgi_environ['zato.http.response.headers'].items())
 
-        if isinstance(payload, unicode):
+        if isinstance(payload, str):
             payload = payload.encode('utf-8')
 
         if self.needs_access_log:
@@ -91,18 +108,26 @@ class HTTPHandler:
             # is not in a list of paths to ignore.
             if self.needs_all_access_log or wsgi_environ['PATH_INFO'] not in self.access_log_ignore:
 
-                self.access_logger_log(_INFO, '', None, None, {
-                    'remote_ip': remote_addr,
-                    'cid_resp_time': '%s/%s' % (cid, (_utcnow() - request_ts_utc).total_seconds()),
-                    'channel_name': channel_name,
-                    'req_timestamp_utc': request_ts_utc.strftime(_ACCESS_LOG_DT_FORMAT),
-                    'req_timestamp': request_ts_local.strftime(_ACCESS_LOG_DT_FORMAT),
-                    'method': wsgi_environ['REQUEST_METHOD'],
-                    'path': wsgi_environ['PATH_INFO'],
-                    'http_version': wsgi_environ['SERVER_PROTOCOL'],
-                    'status_code': wsgi_environ['zato.http.response.status'].split()[0],
-                    'response_size': len(payload),
-                    'user_agent': wsgi_environ.get('HTTP_USER_AGENT', '(None)'),
+                self.access_logger_log(
+                    _INFO,
+                    '',
+                    None, # type: ignore
+                    None,
+                    {
+                        'remote_ip': remote_addr,
+                        'cid_resp_time': '%s/%s' % (cid, (_utcnow() - request_ts_utc).total_seconds()),
+                        'channel_name': channel_name,
+                        'req_timestamp_utc': request_ts_utc.strftime(_ACCESS_LOG_DT_FORMAT),
+                        'req_timestamp': request_ts_local.strftime(_ACCESS_LOG_DT_FORMAT),
+                        'method': wsgi_environ['REQUEST_METHOD'],
+                        'path': wsgi_environ['PATH_INFO'],
+                        'http_version': wsgi_environ['SERVER_PROTOCOL'],
+                        'status_code': wsgi_environ['zato.http.response.status'].split()[0],
+                        'response_size': len(payload),
+                        'user_agent': wsgi_environ.get('HTTP_USER_AGENT', '(None)'),
                 })
 
         return [payload]
+
+# ################################################################################################################################
+# ################################################################################################################################

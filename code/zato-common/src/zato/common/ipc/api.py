@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import errno
@@ -31,9 +29,6 @@ from gevent import sleep
 # pyrapidjson
 from rapidjson import loads
 
-# Python 2/3 compatibility
-from builtins import bytes
-
 # Zato
 from zato.common.api import IPC
 from zato.common.ipc.publisher import Publisher
@@ -42,9 +37,17 @@ from zato.common.util.api import spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import callable_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 fifo_create_mode = stat.S_IRUSR | stat.S_IWUSR
@@ -54,14 +57,16 @@ fifo_ignore_err = errno.EAGAIN, errno.EWOULDBLOCK
 _F_SETPIPE_SZ = 1031
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class IPCAPI:
     """ API through which IPC is performed.
     """
-    def __init__(self, name=None, on_message_callback=None, pid=None):
-        self.name = name
-        self.on_message_callback = on_message_callback
-        self.pid = pid
+    name: 'str'
+    on_message_callback: 'callable_'
+    pid: 'int'
+
+    def __init__(self):
         self.pid_publishers = {} # Target PID -> Publisher object connected to that target PID's subscriber socket
         self.subscriber = None
 
@@ -194,4 +199,5 @@ class IPCAPI:
         finally:
             os.remove(fifo_path)
 
+# ################################################################################################################################
 # ################################################################################################################################

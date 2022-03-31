@@ -1,20 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from base64 import b64encode
 from unittest import TestCase
 from uuid import uuid4
-
-# lxml
-from lxml import etree
 
 # mock
 from mock import patch
@@ -26,12 +21,12 @@ from nose.tools import eq_
 from future.utils import iteritems
 
 # Zato
-from zato.common.api import common_namespaces, ZATO_OK
+from zato.common.api import ZATO_OK
 from zato.common.json_internal import dumps, loads
 from zato.common.test import rand_bool, rand_int, rand_object, rand_string
 from zato.common.util.api import new_cid, make_repr
 from zato.client import AnyServiceInvoker, CID_NO_CLIP, _Client, JSONClient, JSONSIOClient, \
-     RawDataClient, _Response, SOAPClient, SOAPSIOClient, _StructuredResponse, XMLClient
+     RawDataClient, _Response, _StructuredResponse
 
 # ##############################################################################
 
@@ -94,78 +89,6 @@ class JSONClientTestCase(_Base):
         eq_(response.has_data, True)
         eq_(response.cid, cid)
 
-class XMLClientTestCase(_Base):
-    client_class = XMLClient
-
-    def test_client(self):
-
-        cid = new_cid()
-        headers = {'x-zato-cid':cid}
-        ok = True
-        text = '<abc>{}</abc>'.format(rand_string())
-        status_code = rand_int()
-
-        client = self.get_client(FakeInnerResponse(headers, ok, text, status_code))
-        response = client.invoke()
-
-        eq_(response.ok, ok)
-        eq_(response.inner.text, text)
-        eq_(etree.tostring(response.data), text)
-        eq_(response.has_data, True)
-        eq_(response.cid, cid)
-
-class SOAPClientTestCase(_Base):
-    client_class = SOAPClient
-
-    def test_client_ok(self):
-
-        cid = new_cid()
-        headers = {'x-zato-cid':cid}
-        ok = True
-        _rand = rand_string()
-        soap_action = rand_string()
-
-        text = """
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
-             <soapenv:Body>
-              <abc>{}</abc>
-             </soapenv:Body>
-            </soapenv:Envelope>""".format(_rand).strip()
-        status_code = rand_int()
-
-        client = self.get_client(FakeInnerResponse(headers, ok, text, status_code))
-        response = client.invoke(soap_action)
-
-        expected_response_data = """
-            <abc xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">{}</abc>
-            """.format(_rand).strip()
-
-        eq_(response.details, None)
-        eq_(response.ok, ok)
-        eq_(response.inner.text, text)
-        eq_(etree.tostring(response.data), expected_response_data)
-        eq_(response.has_data, True)
-        eq_(response.cid, cid)
-
-    def test_client_no_soap_response(self):
-
-        cid = new_cid()
-        headers = {'x-zato-cid':cid}
-        ok = False
-        soap_action = rand_string()
-
-        text = '<abc/>'
-        status_code = rand_int()
-
-        client = self.get_client(FakeInnerResponse(headers, ok, text, status_code))
-        response = client.invoke(soap_action)
-
-        eq_(response.ok, ok)
-        eq_(response.details, 'No /soapenv:Envelope/soapenv:Body/*[1] in SOAP response')
-        eq_(response.inner.text, text)
-        eq_(response.has_data, False)
-        eq_(response.cid, cid)
-
 # ##############################################################################
 
 class JSONSIOClientTestCase(_Base):
@@ -204,109 +127,6 @@ class JSONSIOClientTestCase(_Base):
         eq_(response.cid, cid)
         eq_(response.cid, sio_response['zato_env']['cid'])
         eq_(response.details, sio_response['zato_env']['details'])
-
-class SOAPSIOClientTestCase(_Base):
-    client_class = SOAPSIOClient
-
-    def test_client_ok(self):
-
-        cid = new_cid()
-        headers = {'x-zato-cid':cid}
-        ok = True
-        status_code = rand_int()
-        rand_id, soap_action = rand_string(), rand_string()
-
-        sio_response = """<zato_outgoing_amqp_edit_response xmlns="https://zato.io/ns/20130518">
-           <zato_env>
-            <cid>{}</cid>
-            <result>ZATO_OK</result>
-           </zato_env>
-           <item>
-            <id>{}</id>
-            <name>crm.account</name>
-           </item>
-          </zato_outgoing_amqp_edit_response>
-        """.format(cid, rand_id)
-
-        text = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518">
-             <soap:Body>
-              {}
-             </soap:Body>
-            </soap:Envelope>""".format(sio_response).strip()
-
-        client = self.get_client(FakeInnerResponse(headers, ok, text, status_code))
-        response = client.invoke(soap_action, '')
-
-        eq_(response.ok, ok)
-        eq_(response.inner.text, text)
-        eq_(response.has_data, True)
-        eq_(response.cid, cid)
-
-        path_items = (
-            ('zato_env', 'cid'),
-            ('zato_env', 'result'),
-            ('item', 'id'),
-            ('item', 'name'),
-        )
-
-        for items in path_items:
-            path = '//zato:zato_outgoing_amqp_edit_response/zato:' + '/zato:'.join(items)
-            xpath = etree.XPath(path, namespaces=common_namespaces)
-
-            expected = xpath(etree.fromstring(text))[0].text
-            actual = xpath(response.data)[0]
-
-            self.assertEqual(expected, actual)
-
-    def test_client_soap_fault(self):
-
-        cid = new_cid()
-        headers = {'x-zato-cid':cid}
-        ok = False
-        status_code = rand_int()
-        soap_action = rand_string()
-
-        text = b"""<?xml version='1.0' encoding='UTF-8'?>
- <SOAP-ENV:Envelope
-   xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
-   xmlns:xsi="http://www.w3.org/1999/XMLSchema-instance"
-   xmlns:xsd="http://www.w3.org/1999/XMLSchema">
-    <SOAP-ENV:Body>
-      <SOAP-ENV:Fault>
-      <faultcode>SOAP-ENV:Client</faultcode>
- <faultstring><![CDATA[cid [K68438211212681798524426103126], faultstring
- [Traceback (most recent call last):
-File
-"/opt/zato/code/zato-server/src/zato/server/connection/http_soap/
-channel.py", line 126, in dispatch
-  service_info, response = handler.handle(cid, wsgi_environ, payload, transport,
-  worker_store, self.simple_io_config, data_format, path_info)
-File
-"/opt/zato/code/zato-server/src/zato/server/connection/http_soap/
-channel.py", line 227, in handle
-  service_instance.handle()
-File
-"/opt/zato/code/zato-server/src/zato/server/service/internal/
-definition/amqp.py", line 174, in handle
-  filter(ConnDefAMQP.id==self.request.input.id).\
-File
-"/opt/zato/code/eggs/SQLAlchemy-0.7.9-py2.7-linux-x86_64.egg/sqlalchemy/
-orm/query.py", line 2190, in one
-  raise orm_exc.NoResultFound("No row was found for one()")
-NoResultFound: No row was found for one()
-]]]></faultstring>
-       </SOAP-ENV:Fault>
-   </SOAP-ENV:Body>
- </SOAP-ENV:Envelope>""" # noqa: JS101, JS102
-
-        client = self.get_client(FakeInnerResponse(headers, ok, text, status_code))
-        response = client.invoke(soap_action, '')
-
-        eq_(response.ok, ok)
-        eq_(response.inner.text, text)
-        eq_(response.has_data, False)
-        eq_(response.cid, cid)
-        eq_('NoResultFound: No row was found for one()' in response.details.getchildren()[1].text, True)
 
 # ##############################################################################
 
@@ -440,7 +260,7 @@ class TestHeaders(TestCase):
         return self.InnerInvokeResponse
 
     def test_clients(self):
-        for class_ in AnyServiceInvoker, JSONClient, JSONSIOClient, XMLClient, RawDataClient, SOAPClient, SOAPSIOClient:
+        for class_ in AnyServiceInvoker, JSONClient, JSONSIOClient, RawDataClient:
             with patch('zato.client._Client.inner_invoke', self.get_inner_invoke()):
 
                 client = class_(*rand_string(2))

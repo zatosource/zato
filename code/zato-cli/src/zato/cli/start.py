@@ -113,7 +113,7 @@ Examples:
         # Zato
         from zato.common.util.proc import start_python_process
 
-        start_python_process(
+        exit_code = start_python_process(
             name, self.args.fg, py_path, program_dir, on_keyboard_interrupt, self.SYS_ERROR.FAILED_TO_START, {
                 'sync_internal': self.args.sync_internal,
                 'secret_key': self.args.secret_key or '',
@@ -126,13 +126,18 @@ Examples:
             if not self.args.fg and self.verbose:
                 self.logger.debug('Zato {} `{}` starting in background'.format(name, self.component_dir))
             else:
-                self.logger.info('OK')
+                # Print out the success message only if there is no specific exit code,
+                # meaning that it is neither 0 nor None.
+                if not exit_code:
+                    self.logger.info('OK')
+
+        return exit_code
 
 # ################################################################################################################################
 
     def _on_server(self, show_output=True, *ignored):
         self.run_check_config()
-        self.start_component('zato.server.main', 'server', self.component_dir, self.delete_pidfile)
+        return self.start_component('zato.server.main', 'server', self.component_dir, self.delete_pidfile)
 
 # ################################################################################################################################
 
