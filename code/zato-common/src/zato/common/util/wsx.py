@@ -19,6 +19,12 @@ from zato.common.util.open_ import open_r, open_rw
 
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import stranydict
+    from zato.server.service import Service
+
+# ################################################################################################################################
+
 logger_zato = getLogger('zato')
 logger_wsx = getLogger('zato_web_socket')
 
@@ -37,8 +43,8 @@ if 0:
 
 # ################################################################################################################################
 
-def find_wsx_environ(service, raise_if_not_found=True):
-    wsx_environ = service.wsgi_environ.get('zato.request_ctx.async_msg', {}).get('environ')
+def find_wsx_environ(service:'Service', raise_if_not_found:'bool'=True) -> 'stranydict':
+    wsx_environ = service.wsgi_environ.get('zato.request_ctx.async_msg', {}).get('environ') or {}
     if not wsx_environ:
         if raise_if_not_found:
             raise Exception('Could not find `[\'zato.request_ctx.async_msg\'][\'environ\']` in WSGI environ `{}`'.format(

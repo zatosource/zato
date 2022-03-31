@@ -742,7 +742,7 @@ class Publish(AdminService):
                         'sub_key': [sub.sub_key for sub in ctx.subscriptions_by_topic],
                         'last_interaction_time': ctx.now,
                         'last_interaction_type': 'publish',
-                        'last_interaction_details': 'zzz',
+                        'last_interaction_details': 'publish',
                     }
                     self.invoke('zato.pubsub.subscription.update-interaction-metadata', request)
 
