@@ -1376,6 +1376,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())
 
+            import sys
+            sys.exit(3) # Same as arbiter's WORKER_BOOT_ERROR
+
 # ################################################################################################################################
 
     def notify_new_package(self, package_id:'int') -> 'None':
