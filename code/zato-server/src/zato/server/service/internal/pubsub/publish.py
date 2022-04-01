@@ -530,18 +530,9 @@ class Publish(AdminService):
                     logger_pubsub.debug(_inserting_gd_msg, ctx.topic.name, pub_msg_list, ctx.endpoint_name,
                         ctx.ext_client_id, self.cid)
 
-                # We may possibly need to filter out subscriptions that do not already exist - this is needed because
-                # we took our list of subscribers from self.pubsub but it is possible that between the time
-                # we got this list and when this transaction started, some of the subscribers
-                # have been already deleted from the database so, if we were not filter them out, we would be
-                # potentially trying to insert rows pointing to foreign keys that no longer exist.
-                ctx.subscriptions_by_topic = ensure_subs_exist(
-                    session, ctx.topic.name, ctx.gd_msg_list, ctx.subscriptions_by_topic,
-                    'publishing to topic')
-
                 # This is the call that runs SQL INSERT statements with messages for topics and subscriber queues
-                sql_publish_with_retry(session, self.cid, ctx.cluster_id, ctx.topic.id, ctx.subscriptions_by_topic,
-                    ctx.gd_msg_list, ctx.now)
+                sql_publish_with_retry(session, self.odb.session, self.cid, ctx.cluster_id, ctx.topic.id, ctx.topic.name,
+                    ctx.subscriptions_by_topic, ctx.gd_msg_list, ctx.now)
 
                 # Run an SQL commit for all queries above ..
                 session.commit()
