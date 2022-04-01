@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from itertools import chain
@@ -28,12 +26,20 @@ from zato.common.odb.model import Base, SecurityBase
 from zato.common.util.search import SearchResults
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger_zato = getLogger('zato')
 logger_pubsub = getLogger('zato_pubsub')
 
 has_debug = logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 _default_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
@@ -131,6 +137,26 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
 
                 # Push the counter
                 attempts += 1
+
+# ################################################################################################################################
+
+def sql_query_with_retry(query:'any_', query_name:'str', *args:'any_') -> 'None':
+    """ Keeps repeating a given SQL query until it succeeds.
+    """
+    idx = 0
+    is_ok = False
+
+    while not is_ok:
+
+        idx += 1
+
+        if has_debug:
+            logger_zato.info(f'{query_name} -> is_ok.{idx}:`{is_ok}`')
+
+        is_ok = query(*args)
+
+        if has_debug:
+            logger_zato.info(f'{query_name} -> is_ok.{idx}:`{is_ok}`')
 
 # ################################################################################################################################
 # ################################################################################################################################
