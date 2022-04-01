@@ -24,7 +24,7 @@ from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
 from zato.common.json_ import dumps as json_dumps
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
-from zato.common.pubsub import ensure_subs_exist, new_msg_id, PubSubMessage
+from zato.common.pubsub import new_msg_id, PubSubMessage
 from zato.common.typing_ import cast_, dictlist, optional
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_ms
