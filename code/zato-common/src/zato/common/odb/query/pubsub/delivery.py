@@ -23,7 +23,7 @@ from zato.common.util.sql import sql_op_with_deadlock_retry, sql_query_with_retr
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, intnone, intset, strlist
+    from zato.common.typing_ import any_, anylist, intnone, intset, strlist
 
 # ################################################################################################################################
 
