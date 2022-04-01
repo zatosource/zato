@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from contextlib import closing
 from logging import DEBUG, getLogger
 from traceback import format_exc
 
@@ -15,9 +16,8 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.common.api import PUBSUB
-from zato.common.exception import BadRequest
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, PubSubTopic
-from zato.common.pubsub import msg_pub_ignore
+from zato.common.pubsub import ensure_subs_exist, msg_pub_ignore
 from zato.common.util.sql import sql_op_with_deadlock_retry
 
 # ################################################################################################################################
@@ -47,10 +47,33 @@ _initialized=PUBSUB.DELIVERY_STATUS.INITIALIZED
 sub_only_keys = ('sub_pattern_matched', 'topic_name')
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by_topic, gd_msg_list, now):
+class PublishOpCtx:
+    needs_topic_messages:'bool' = True
+    needs_queue_messages:'bool' = True
+    is_queue_insert_ok:'bool'   = False
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _sql_publish_with_retry(
+    publish_op_ctx:'PublishOpCtx',
+    session,
+    cid,
+    cluster_id,
+    topic_id,
+    topic_name,
+    subscriptions_by_topic,
+    gd_msg_list,
+    now
+) -> 'PublishOpCtx':
     """ A low-level implementation of sql_publish_with_retry.
     """
+
+    # Added for type hints
+    sub_keys_by_topic = 'default-sub-keys-by-topic'
+    topic_messages_inserted = 'default-topic-messages-inserted'
 
     #
     # We need to temporarily remove selected keys from gd_msg_list while we insert the topic
@@ -75,10 +98,12 @@ def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by
         sub_attrs = sub_only.setdefault(pub_msg_id, {})
 
         for name in sub_only_keys:
-            sub_attrs[name] = msg.pop(name)
+            sub_attrs[name] = msg.pop(name, None)
 
     # Publish messages - INSERT rows, each representing an individual message
-    topic_messages_inserted = insert_topic_messages(session, cid, gd_msg_list)
+    if publish_op_ctx.needs_topic_messages:
+        topic_messages_inserted = insert_topic_messages(session, cid, gd_msg_list)
+        publish_op_ctx.needs_topic_messages = False
 
     if has_debug:
         sub_keys_by_topic = sorted(elem.sub_key for elem in subscriptions_by_topic)
@@ -86,7 +111,7 @@ def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by
                 cid, topic_messages_inserted, cluster_id, topic_id, sub_keys_by_topic, gd_msg_list, now)
 
     # If any messages were inserted ..
-    if topic_messages_inserted:
+    if publish_op_ctx.needs_queue_messages:
 
         # .. move references to the messages to each subscriber's queue ..
         if subscriptions_by_topic:
@@ -100,51 +125,83 @@ def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by
                     for name in sub_only_keys:
                         msg[name] = sub_only[pub_msg_id][name]
 
-                insert_queue_messages(session, cluster_id, subscriptions_by_topic, gd_msg_list, topic_id, now, cid)
+                # This is the call that adds references to each of GD message for each of the input subscribers.
+                insert_queue_messages(
+                    session,
+                    cluster_id,
+                    subscriptions_by_topic,
+                    gd_msg_list,
+                    topic_id,
+                    now,
+                    cid
+                )
 
                 if has_debug:
                     logger_zato.info('Inserted queue messages `%s` `%s` `%s` `%s` `%s` `%s`', cid, cluster_id,
                         sub_keys_by_topic, gd_msg_list, topic_id, now)
 
                 # No integrity error / no deadlock = all good
-                return True
+                publish_op_ctx.is_queue_insert_ok = True
+                publish_op_ctx.needs_queue_messages = False
 
             except IntegrityError as e:
-                logger_zato.warn('Caught IntegrityError (_sql_publish_with_retry) `%s` `%s`', e, cid)
+                logger_zato.info('Caught IntegrityError (_sql_publish_with_retry) `%s` `%s`', e, cid)
 
                 # If we have an integrity error here it means that our transaction, the whole of it,
                 # was rolled back - this will happen on MySQL in case in case of deadlocks which may
                 # occur because delivery tasks update the table that insert_queue_messages wants to insert to.
                 # We need to return False for our caller to understand that the whole transaction needs
                 # to be repeated.
-                return False
+                publish_op_ctx.is_queue_insert_ok = False
+                publish_op_ctx.needs_queue_messages = True
 
         else:
 
             if has_debug:
                 logger_zato.info('No subscribers in `%s`', cid)
 
-            # No subscribers, also good
-            return True
+    return publish_op_ctx
 
 # ################################################################################################################################
 
-def sql_publish_with_retry(*args):
+def sql_publish_with_retry(session, new_session_func, cid, cluster_id, topic_id, topic_name, subscriptions_by_topic,
+        gd_msg_list, now):
     """ Populates SQL structures with new messages for topics and their counterparts in subscriber queues.
     In case of a deadlock will retry the whole transaction, per MySQL's requirements, which rolls back
     the whole of it rather than a deadlocking statement only.
     """
-    is_ok = False
 
-    while not is_ok:
+    publish_op_ctx = PublishOpCtx()
 
-        if has_debug:
-            logger_zato.info('sql_publish_with_retry -> is_ok.1:`%s`', is_ok)
-
-        is_ok = _sql_publish_with_retry(*args)
+    while publish_op_ctx.needs_queue_messages:
 
         if has_debug:
-            logger_zato.info('sql_publish_with_retry -> is_ok.2:`%s`', is_ok)
+            logger_zato.info('sql_publish_with_retry -> is_ok.1:`%s`', publish_op_ctx.is_queue_insert_ok)
+
+        publish_op_ctx = _sql_publish_with_retry(
+            publish_op_ctx,
+            session,
+            cid,
+            cluster_id,
+            topic_id,
+            topic_name,
+            subscriptions_by_topic,
+            gd_msg_list,
+            now
+        )
+
+        if not publish_op_ctx.is_queue_insert_ok:
+            # We may possibly need to filter out subscriptions that do not already exist - this is needed because
+            # we took our list of subscribers from self.pubsub but it is possible that between the time
+            # we got this list and when this transaction started, some of the subscribers
+            # have been already deleted from the database so, if we were not filter them out, we would be
+            # potentially trying to insert rows pointing to foreign keys that no longer exist.
+            with closing(new_session_func()) as new_session: # type: ignore
+                subscriptions_by_topic = ensure_subs_exist(
+                    new_session, topic_name, gd_msg_list, subscriptions_by_topic, '_sql_publish_with_retry')
+
+        if has_debug:
+            logger_zato.info('sql_publish_with_retry -> is_ok.2:`%s`', publish_op_ctx.is_queue_insert_ok)
 
 # ################################################################################################################################
 
@@ -171,13 +228,7 @@ def insert_topic_messages(session, cid, msg_list):
 
         if has_debug:
             logger_zato.info('Caught IntegrityError (insert_topic_messages) `%s` `%s`', cid, format_exc())
-
-        str_e = str(e)
-
-        if 'pubsb_msg_pubmsg_id_idx' in str_e:
-            raise BadRequest(cid, 'Duplicate msg_id:`{}`'.format(str_e))
-        else:
-            raise
+        raise
 
 # ################################################################################################################################
 

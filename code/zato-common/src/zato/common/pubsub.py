@@ -407,18 +407,23 @@ def ensure_subs_exist(
     # Find the intersection (shared elements) of what we have on input and what the database actually contains ..
     shared = sk_set & existing_sk_set
 
-    # .. log if there was anything removed ..
-    to_remove = sk_set - shared
-    if to_remove:
-        logger.info('Removing sub_keys %s before %s `%s`; left -> %s',
-            to_remove, log_action, topic_name, [elem['pub_msg_id'] for elem in gd_msg_list])
-
     # .. populate the output list ..
     for sub in sub_key_related_objects:
         if sub['sub_key'] in shared:
             out.append(sub)
 
-    # .. and remove the result to our caller.
+    # .. log if there was anything removed ..
+    to_remove = sk_set - shared
+
+    if to_remove:
+        logger.info('Removed sub_keys %s before %s `%s`; left %s -> %s',
+            to_remove, log_action, topic_name,
+            sorted(elem['sub_key']    for elem in out),
+            sorted(elem['pub_msg_id'] for elem in gd_msg_list)
+        )
+        to_remove
+
+    # .. and return the result to our caller.
     return out
 
 # ################################################################################################################################

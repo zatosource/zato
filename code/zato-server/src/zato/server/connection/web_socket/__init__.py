@@ -872,7 +872,7 @@ class WebSocket(_WebSocket):
                         else:
                             self.pings_missed += 1
                             if self.pings_missed < self.pings_missed_threshold:
-                                logger.warning(
+                                logger.info(
                                     'Peer %s (%s) missed %s/%s ping messages from %s (%s). Last response time: %s{} (%s)'.format(
                                         ' UTC' if self.ping_last_response_time else ''),
 
