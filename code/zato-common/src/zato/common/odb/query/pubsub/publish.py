@@ -224,7 +224,7 @@ def insert_topic_messages(session, cid, msg_list):
         return sql_op_with_deadlock_retry(cid, 'insert_topic_messages', _insert_topic_messages, session, msg_list)
 
     # Catch duplicate MsgId values sent by clients
-    except IntegrityError as e:
+    except IntegrityError:
 
         if has_debug:
             logger_zato.info('Caught IntegrityError (insert_topic_messages) `%s` `%s`', cid, format_exc())
