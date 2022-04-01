@@ -1648,7 +1648,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
         if client:
             return client.disconnect_client(cid)
         else:
-            logger.info('No such WSX client `%s` (%s)', pub_client_id, cid)
+            logger.info('No such WSX client `%s` (%s) (disconnect_client)', pub_client_id, cid)
 
 # ################################################################################################################################
 
@@ -1658,7 +1658,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
         if client:
             return client.notify_pubsub_message(cid, request)
         else:
-            logger.info('No such WSX client `%s` (%s)', pub_client_id, cid)
+            logger.info('No such WSX client `%s` (%s) (notify_pubsub_message)', pub_client_id, cid)
 
 # ################################################################################################################################
 
@@ -1667,7 +1667,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
         if client:
             return client.subscribe_to_topic(cid, request)
         else:
-            logger.info('No such WSX client `%s` (%s)', pub_client_id, cid)
+            logger.info('No such WSX client `%s` (%s) (subscribe_to_topic)', pub_client_id, cid)
 
 # ################################################################################################################################
 
@@ -1676,7 +1676,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
         if client:
             return client
         else:
-            logger.info('No such WSX client `%s`', pub_client_id)
+            logger.info('No such WSX client `%s` (get_client_by_pub_id)', pub_client_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
