@@ -386,7 +386,6 @@ class GetChannelList(AdminService):
     def handle(self):
         channel_type_class = {
             'plain_http': HTTPSOAP,
-            'soap': HTTPSOAP,
             'amqp': ChannelAMQP,
             'jms-wmq': ChannelWMQ,
             'zmq': ChannelZMQ,

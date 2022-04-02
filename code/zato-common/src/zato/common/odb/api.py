@@ -36,8 +36,7 @@ from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import query
 from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
-     WSSDefinition, VaultConnection
+     JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, VaultConnection
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
@@ -52,7 +51,9 @@ from zato.sso.odb.query import get_rate_limiting_info as get_sso_user_rate_limit
 
 if 0:
     from sqlalchemy.orm import Session
-    from zato.common.typing_ import commondict
+    from zato.common.crypto.api import CryptoManager
+    from zato.common.odb.model import Cluster as ClusterModel, Server as ServerModel
+    from zato.common.typing_ import callable_, commondict
     from zato.server.base.parallel import ParallelServer
 
     Session = Session
@@ -247,7 +248,7 @@ class SQLConnectionPool:
         try:
             self.engine = self._create_engine(engine_url, self.config, _extra)
         except Exception as e:
-            self.logger.warning('Could not create SQL connection `%s`, e:`%s`', self.config['name'], e.args[0])
+            self.logger.warning('Could not create SQL connection `%s`, e:`%s`', self.name, e.args[0])
 
         if self.engine and (not self._is_unittest_engine(engine_url)) and self._is_sa_engine(engine_url):
             event.listen(self.engine, 'checkin', self.on_checkin)
@@ -508,7 +509,9 @@ class PoolStore:
         """
         with self._lock:
             for _ignored_name, wrapper in self.wrappers.items():
-                wrapper.pool.engine.dispose()
+                if wrapper.pool:
+                    if wrapper.pool.engine:
+                        wrapper.pool.engine.dispose()
 
 # ################################################################################################################################
 
@@ -529,21 +532,17 @@ class _Server:
 class ODBManager(SessionWrapper):
     """ Manages connections to a given component's Operational Database.
     """
-    def __init__(self, parallel_server=None, well_known_data=None, token=None, crypto_manager=None, server_id=None,
-            server_name=None, cluster_id=None, pool=None, decrypt_func=None):
-        # type: (ParallelServer, str, str, object, int, str, int, object, object)
-        super(ODBManager, self).__init__()
-        self.parallel_server = parallel_server
-        self.well_known_data = well_known_data
-        self.token = token
-        self.crypto_manager = crypto_manager
-        self.server_id = server_id
-        self.server_name = server_name
-        self.cluster_id = cluster_id
-        self.pool = pool
-        self.decrypt_func = decrypt_func
-        self.server = None
-        self.cluster = None
+    parallel_server: 'ParallelServer'
+    well_known_data:'str'
+    token:'str'
+    crypto_manager:'CryptoManager'
+    server_id:'int'
+    server_name:'str'
+    cluster_id:'int'
+    pool:'SQLConnectionPool'
+    decrypt_func:'callable_'
+    server:'ServerModel'
+    cluster:'ClusterModel'
 
 # ################################################################################################################################
 
@@ -683,9 +682,7 @@ class ODBManager(SessionWrapper):
                 SEC_DEF_TYPE.JWT: JWT,
                 SEC_DEF_TYPE.OAUTH: OAuth,
                 SEC_DEF_TYPE.TLS_CHANNEL_SEC: TLSChannelSecurity,
-                SEC_DEF_TYPE.WSS: WSSDefinition,
                 SEC_DEF_TYPE.VAULT: VaultConnection,
-                SEC_DEF_TYPE.XPATH_SEC: XPathSecurity,
             }
 
             result = {}
@@ -712,6 +709,10 @@ class ODBManager(SessionWrapper):
                 result[target].sec_use_rbac = item.sec_use_rbac
 
                 if item.security_id:
+
+                    # Ignore WS-Security (WSS) which has been removed in 3.2
+                    if item.sec_type == 'wss':
+                        continue
 
                     # For later use
                     result[target].sec_def = Bunch()

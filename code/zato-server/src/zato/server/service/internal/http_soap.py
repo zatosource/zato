@@ -65,12 +65,6 @@ class _HTTPSOAPService:
                    sec_def.sec_type not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT, SEC_DEF_TYPE.APIKEY):
                     raise Exception('Unsupported sec_type `{}`'.format(sec_def.sec_type))
 
-                elif transport == URL_TYPE.SOAP and sec_def.sec_type \
-                     not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM, SEC_DEF_TYPE.WSS):
-
-                    raise Exception('Security type must be HTTP Basic Auth, NTLM or WS-Security, not `{}`'.format(
-                        sec_def.sec_type))
-
             info['security_name'] = sec_def.name
             info['sec_type'] = sec_def.sec_type
 
