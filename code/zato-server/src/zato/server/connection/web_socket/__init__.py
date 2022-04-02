@@ -1257,8 +1257,8 @@ class WebSocket(_WebSocket):
                 except RuntimeError as e:
                     if e.args[0] == _cannot_send:
                         msg = 'Ignoring message (socket terminated #1), cid:`%s`, request:`%s` conn:`%s`'
-                        logger.warning(msg, cid, request, self.peer_conn_info_pretty)
-                        logger_zato.warning(msg, cid, request, self.peer_conn_info_pretty)
+                        logger.info(msg, cid, request, self.peer_conn_info_pretty)
+                        logger_zato.info(msg, cid, request, self.peer_conn_info_pretty)
                     else:
                         raise
 

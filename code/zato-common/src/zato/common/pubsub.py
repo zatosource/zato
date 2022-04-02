@@ -23,6 +23,7 @@ from zato.common.util.time_ import utcnow_as_ms
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.orm.session import Session as SQLSession
     from zato.common.typing_ import any_, anylist, callable_, commondict, floatnone, optional, stranydict, \
         strlist, strnone, strtuple, tupnone
     from zato.server.connection.http_soap.outgoing import SudsSOAPWrapper
@@ -385,18 +386,22 @@ all_dict_keys = list(all_dict_keys) # type: ignore[assignment]
 # ################################################################################################################################
 
 def ensure_subs_exist(
-    session:     'any_',
+    session:     'SQLSession',
     topic_name:  'str',
     gd_msg_list: 'anylist',
-    sub_key_related_objects:'anylist',
+    sub_key_aware_objects:'anylist',
     log_action:'str',
+    context_str:'str',
     ) -> 'anylist':
 
     # A list of input objects that we will return, which will mean that they do exist in the database
     out = []
 
+    # Length of what we have on input, for logging purposes
+    len_orig_sk_list = len(sub_key_aware_objects)
+
     # A list of sub keys from which we will potentially remove subscriptions that do not exist
-    sk_set = {elem['sub_key'] for elem in sub_key_related_objects}
+    sk_set = {elem['sub_key'] for elem in sub_key_aware_objects}
 
     query  = pubsub_sub_key_list(session)
     query  = query.filter(PubSubSubscription.sub_key.in_(sk_set))
@@ -408,7 +413,7 @@ def ensure_subs_exist(
     shared = sk_set & existing_sk_set
 
     # .. populate the output list ..
-    for sub in sub_key_related_objects:
+    for sub in sub_key_aware_objects:
         if sub['sub_key'] in shared:
             out.append(sub)
 
@@ -416,8 +421,13 @@ def ensure_subs_exist(
     to_remove = sk_set - shared
 
     if to_remove:
-        logger.info('Removed sub_keys %s before %s `%s`; left %s -> %s',
-            to_remove, log_action, topic_name,
+        logger.info('Removed sub_keys -> %s -> %s before %s `%s`; len_org:%s, len_out:%s;  left %s -> %s',
+            context_str,
+            to_remove,
+            log_action,
+            topic_name,
+            len_orig_sk_list,
+            len(out),
             sorted(elem['sub_key']    for elem in out),
             sorted(elem['pub_msg_id'] for elem in gd_msg_list)
         )

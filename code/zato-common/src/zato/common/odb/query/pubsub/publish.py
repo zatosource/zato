@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,15 +18,26 @@ from sqlalchemy.exc import IntegrityError
 from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, PubSubTopic
 from zato.common.pubsub import ensure_subs_exist, msg_pub_ignore
-from zato.common.util.sql import sql_op_with_deadlock_retry
+from zato.common.util.sql.retry import sql_op_with_deadlock_retry
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from sqlalchemy.orm.session import Session as SQLSession
+    from zato.common.typing_ import any_, callable_, strdictlist
+    from zato.server.pubsub.model import sublist
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger_zato = getLogger('zato')
 logger_pubsub = getLogger('zato_pubsub')
 
-has_debug = logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
+has_debug = True # logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
+DEBUG
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 MsgInsert = PubSubMessage.__table__.insert
@@ -39,11 +50,9 @@ EndpointTable = PubSubEndpoint.__table__
 EndpointTopicTable = PubSubEndpointTopic.__table__
 
 # ################################################################################################################################
-
-_initialized=PUBSUB.DELIVERY_STATUS.INITIALIZED
-
 # ################################################################################################################################
 
+_float_str = PUBSUB.FLOAT_STRING_CONVERT
 sub_only_keys = ('sub_pattern_matched', 'topic_name')
 
 # ################################################################################################################################
@@ -52,21 +61,142 @@ sub_only_keys = ('sub_pattern_matched', 'topic_name')
 class PublishOpCtx:
     needs_topic_messages:'bool' = True
     needs_queue_messages:'bool' = True
-    is_queue_insert_ok:'bool'   = False
+    is_queue_insert_ok:'bool | str'   = 'not-set-yet'
+
+    def __init__(self, pub_counter:'int') -> 'None':
+
+        # This is a server-wide counter of messages published
+        self.pub_counter = pub_counter
+
+        # This is a counter increaed after each unsuccessful queue insertion attempt.
+        self.queue_insert_attempt = 0
+
+    def on_new_iter(self) -> 'None':
+
+        # This is invoked in each iteration of a publication loop.
+
+        # First, increase the publication attempt counter ..
+        self.queue_insert_attempt += 1
+
+        # .. now, reset out the indicator pointing to whether the insertion was successful.
+        self.is_queue_insert_ok = 'not-set-yet'
+
+    def get_counter_ctx_str(self) -> 'str':
+        return f'{self.pub_counter}:{self.queue_insert_attempt}'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PublishWithRetryManager:
+
+    def __init__(
+        self,
+
+        now,         # type: float
+        cid,         # type: str
+        topic_id,    # type: int
+        topic_name,  # type: str
+        cluster_id,  # type: int
+        pub_counter, # type: int
+
+        session,          # type: SQLSession
+        new_session_func, # type: callable_
+
+        gd_msg_list,            # type: strdictlist
+        subscriptions_by_topic, # type: sublist
+
+    ) -> 'None':
+
+        self.now = now
+        self.cid = cid
+        self.topic_id = topic_id
+        self.topic_name = topic_name
+        self.cluster_id = cluster_id
+        self.pub_counter = pub_counter
+
+        self.session = session
+        self.new_session_func = new_session_func
+
+        self.gd_msg_list = gd_msg_list
+        self.subscriptions_by_topic = subscriptions_by_topic
+
+# ################################################################################################################################
+
+    def run(self):
+
+        # This is a reusable context object that will be employed
+        # by all the iterations of the publication loop.
+        publish_op_ctx = PublishOpCtx(self.pub_counter)
+
+        # We make a reference to the subscriptions here because we may want to modify it
+        # in case queue messages could not be inserted.
+        subscriptions_by_topic = self.subscriptions_by_topic
+
+        while publish_op_ctx.needs_queue_messages:
+
+            # We have just entered a new iteration of this loop (possibly it is the first time)
+            # so we need to carry out a few metadata-related tasks first.
+            publish_op_ctx.on_new_iter()
+
+            # This is reusable
+            counter_ctx_str = publish_op_ctx.get_counter_ctx_str()
+
+            if has_debug:
+                logger_zato.info('sql_publish_with_retry -> %s -> is_ok.1:`%s`',
+                    counter_ctx_str,
+                    publish_op_ctx.is_queue_insert_ok
+                )
+
+            publish_op_ctx = _sql_publish_with_retry(
+                publish_op_ctx,
+                self.session,
+                self.cid,
+                self.cluster_id,
+                self.topic_id,
+                subscriptions_by_topic,
+                self.gd_msg_list,
+                self.now
+            )
+
+            if not publish_op_ctx.is_queue_insert_ok:
+
+                if has_debug:
+                    logger_zato.info('sql_publish_with_retry -> %s -> is_ok.2:`%s`',
+                        counter_ctx_str,
+                        publish_op_ctx.is_queue_insert_ok
+                    )
+                    has_debug
+
+                # We may possibly need to filter out subscriptions that do not exist anymore - this is needed because
+                # we took our list of subscribers from self.pubsub but it is possible that between the time
+                # we got this list and when this transaction started, some of the subscribers
+                # have been already deleted from the database so, if we were not filter them out, we would be
+                # potentially trying to insert rows pointing to foreign keys that no longer exist.
+                with closing(self.new_session_func()) as new_session: # type: ignore
+                    subscriptions_by_topic = ensure_subs_exist(
+                        new_session,
+                        self.topic_name,
+                        self.gd_msg_list,
+                        subscriptions_by_topic,
+                        '_sql_publish_with_retry',
+                        counter_ctx_str
+                    )
+
+            else:
+                has_debug
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _sql_publish_with_retry(
     publish_op_ctx:'PublishOpCtx',
-    session,
-    cid,
-    cluster_id,
-    topic_id,
-    topic_name,
-    subscriptions_by_topic,
-    gd_msg_list,
-    now
+    session,    # type: SQLSession
+    cid,        # type: str
+    cluster_id, # type: int
+    topic_id,   # type: int
+    subscriptions_by_topic, # type: sublist
+    gd_msg_list, # type: strdictlist
+    now          # type: float
 ) -> 'PublishOpCtx':
     """ A low-level implementation of sql_publish_with_retry.
     """
@@ -107,8 +237,17 @@ def _sql_publish_with_retry(
 
     if has_debug:
         sub_keys_by_topic = sorted(elem.sub_key for elem in subscriptions_by_topic)
-        logger_zato.info('With topic_messages_inserted `%s` `%s` `%s` `%s` `%s` `%s` `%s`',
-                cid, topic_messages_inserted, cluster_id, topic_id, sub_keys_by_topic, gd_msg_list, now)
+        logger_zato.info(
+            'With topic_messages_inserted -> %s -> `%s` `%s` `%s` `%s` `%s` `%s` `%s`',
+                publish_op_ctx.get_counter_ctx_str(),
+                cid,
+                topic_messages_inserted,
+                cluster_id,
+                topic_id,
+                sub_keys_by_topic,
+                gd_msg_list,
+                now
+            )
 
     # If any messages were inserted ..
     if publish_op_ctx.needs_queue_messages:
@@ -125,6 +264,12 @@ def _sql_publish_with_retry(
                     for name in sub_only_keys:
                         msg[name] = sub_only[pub_msg_id][name]
 
+                if has_debug:
+                    logger_zato.info('Inserting queue messages for sub_keys_by_topic -> %s -> `%s`',
+                        publish_op_ctx.get_counter_ctx_str(),
+                        sub_keys_by_topic
+                    )
+
                 # This is the call that adds references to each of GD message for each of the input subscribers.
                 insert_queue_messages(
                     session,
@@ -137,75 +282,87 @@ def _sql_publish_with_retry(
                 )
 
                 if has_debug:
-                    logger_zato.info('Inserted queue messages `%s` `%s` `%s` `%s` `%s` `%s`', cid, cluster_id,
-                        sub_keys_by_topic, gd_msg_list, topic_id, now)
+                    logger_zato.info('Inserted queue messages -> %s -> `%s` `%s` `%s` `%s` `%s` `%s`',
+                        publish_op_ctx.get_counter_ctx_str(),
+                        cid, cluster_id, sub_keys_by_topic, gd_msg_list, topic_id, now)
 
                 # No integrity error / no deadlock = all good
-                publish_op_ctx.is_queue_insert_ok = True
-                publish_op_ctx.needs_queue_messages = False
+                is_queue_insert_ok = True
 
             except IntegrityError as e:
-                logger_zato.info('Caught IntegrityError (_sql_publish_with_retry) `%s` `%s`', e, cid)
+                logger_zato.info('Caught IntegrityError (_sql_publish_with_retry) -> %s -> `%s` `%s`',
+                publish_op_ctx.get_counter_ctx_str(),
+                e,
+                cid)
 
                 # If we have an integrity error here it means that our transaction, the whole of it,
                 # was rolled back - this will happen on MySQL in case in case of deadlocks which may
                 # occur because delivery tasks update the table that insert_queue_messages wants to insert to.
                 # We need to return False for our caller to understand that the whole transaction needs
                 # to be repeated.
-                publish_op_ctx.is_queue_insert_ok = False
-                publish_op_ctx.needs_queue_messages = True
+                is_queue_insert_ok = False
+
+            # Update publication context based on whether queue messages were inserted or not.
+            publish_op_ctx.is_queue_insert_ok = is_queue_insert_ok
+            publish_op_ctx.needs_queue_messages = not is_queue_insert_ok
 
         else:
 
             if has_debug:
-                logger_zato.info('No subscribers in `%s`', cid)
+                logger_zato.info('No subscribers in -> %s -> `%s`',
+                publish_op_ctx.get_counter_ctx_str(),
+                cid)
 
     return publish_op_ctx
 
 # ################################################################################################################################
 
-def sql_publish_with_retry(session, new_session_func, cid, cluster_id, topic_id, topic_name, subscriptions_by_topic,
-        gd_msg_list, now):
+def sql_publish_with_retry(
+
+    now,         # type: float
+    cid,         # type: str
+    topic_id,    # type: int
+    topic_name,  # type: str
+    cluster_id,  # type: int
+    pub_counter, # type: int
+
+    session,          # type: SQLSession
+    new_session_func, # type: callable_
+
+    gd_msg_list,            # type: strdictlist
+    subscriptions_by_topic, # type: sublist
+) -> 'PublishWithRetryManager':
+
     """ Populates SQL structures with new messages for topics and their counterparts in subscriber queues.
     In case of a deadlock will retry the whole transaction, per MySQL's requirements, which rolls back
     the whole of it rather than a deadlocking statement only.
     """
 
-    publish_op_ctx = PublishOpCtx()
+    # Build the manager object responsible for the publication ..
+    publish_with_retry_manager = PublishWithRetryManager(
+        now,
+        cid,
+        topic_id,
+        topic_name,
+        cluster_id,
+        pub_counter,
 
-    while publish_op_ctx.needs_queue_messages:
+        session,
+        new_session_func,
 
-        if has_debug:
-            logger_zato.info('sql_publish_with_retry -> is_ok.1:`%s`', publish_op_ctx.is_queue_insert_ok)
+        gd_msg_list,
+        subscriptions_by_topic,
+    )
 
-        publish_op_ctx = _sql_publish_with_retry(
-            publish_op_ctx,
-            session,
-            cid,
-            cluster_id,
-            topic_id,
-            topic_name,
-            subscriptions_by_topic,
-            gd_msg_list,
-            now
-        )
+    # .. publish the message(s) ..
+    publish_with_retry_manager.run()
 
-        if not publish_op_ctx.is_queue_insert_ok:
-            # We may possibly need to filter out subscriptions that do not already exist - this is needed because
-            # we took our list of subscribers from self.pubsub but it is possible that between the time
-            # we got this list and when this transaction started, some of the subscribers
-            # have been already deleted from the database so, if we were not filter them out, we would be
-            # potentially trying to insert rows pointing to foreign keys that no longer exist.
-            with closing(new_session_func()) as new_session: # type: ignore
-                subscriptions_by_topic = ensure_subs_exist(
-                    new_session, topic_name, gd_msg_list, subscriptions_by_topic, '_sql_publish_with_retry')
-
-        if has_debug:
-            logger_zato.info('sql_publish_with_retry -> is_ok.2:`%s`', publish_op_ctx.is_queue_insert_ok)
+    # .. and return the manager to our caller.
+    return publish_with_retry_manager
 
 # ################################################################################################################################
 
-def _insert_topic_messages(session, msg_list, msg_pub_ignore=msg_pub_ignore):
+def _insert_topic_messages(session:'SQLSession', msg_list:'strdictlist') -> 'None':
     """ A low-level implementation for insert_topic_messages.
     """
     # Delete keys that cannot be inserted in SQL
@@ -217,7 +374,7 @@ def _insert_topic_messages(session, msg_list, msg_pub_ignore=msg_pub_ignore):
 
 # ################################################################################################################################
 
-def insert_topic_messages(session, cid, msg_list):
+def insert_topic_messages(session:'SQLSession', cid:'str', msg_list:'strdictlist') -> 'any_':
     """ Publishes messages to a topic, i.e. runs an INSERT that inserts rows, one for each message.
     """
     try:
@@ -232,22 +389,38 @@ def insert_topic_messages(session, cid, msg_list):
 
 # ################################################################################################################################
 
-def _insert_queue_messages(session, queue_msgs):
+def _insert_queue_messages(session:'SQLSession', queue_msgs:'strdictlist') -> 'None':
     """ A low-level call to enqueue messages.
     """
     session.execute(EnqueuedMsgInsert().values(queue_msgs))
 
 # ################################################################################################################################
 
-def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list, topic_id, now, cid, _initialized=_initialized,
-    _float_str=PUBSUB.FLOAT_STRING_CONVERT):
+def insert_queue_messages(
+    session,    # type: SQLSession
+    cluster_id, # type: int
+    subscriptions_by_topic, # type: sublist
+    msg_list, # type: strdictlist
+    topic_id, # type: int
+    now,      # type: float
+    cid       # type: str
+)-> 'any_':
     """ Moves messages to each subscriber's queue, i.e. runs an INSERT that adds relevant references to the topic message.
     Also, updates each message's is_in_sub_queue flag to indicate that it is no longer available for other subscribers.
     """
+
+    # All the queue messages to be inserted.
     queue_msgs = []
+
+    # Note that it is possible that there will be messages in msg_list
+    # for which no subscriber will be found in the outer loop.
+    # This is possible if one or more subscriptions were removed in between
+    # the time when the publication was triggered and when the SQL query actually runs.
+    # In such a case, such message(s) will not be delivered to a sub_key that no longer exists.
 
     for sub in subscriptions_by_topic:
         for msg in msg_list:
+
             # Enqueues the message for each subscriber
             queue_msgs.append({
                 'creation_time': _float_str.format(now),
@@ -262,4 +435,5 @@ def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list,
     # Move the message to endpoint queues
     return sql_op_with_deadlock_retry(cid, 'insert_queue_messages', _insert_queue_messages, session, queue_msgs)
 
+# ################################################################################################################################
 # ################################################################################################################################
