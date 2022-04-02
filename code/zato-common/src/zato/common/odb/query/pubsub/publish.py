@@ -141,11 +141,9 @@ class PublishWithRetryManager:
             # This is reusable
             counter_ctx_str = publish_op_ctx.get_counter_ctx_str()
 
-            if has_debug:
-                logger_zato.info('sql_publish_with_retry -> %s -> is_ok.1:`%s`',
-                    counter_ctx_str,
-                    publish_op_ctx.is_queue_insert_ok
-                )
+            logger_zato.info('SQL publish with retry -> %s -> On new loop iter',
+                counter_ctx_str,
+            )
 
             publish_op_ctx = _sql_publish_with_retry(
                 publish_op_ctx,
@@ -153,21 +151,20 @@ class PublishWithRetryManager:
                 self.cid,
                 self.cluster_id,
                 self.topic_id,
+                self.topic_name,
                 subscriptions_by_topic,
                 self.gd_msg_list,
                 self.now
             )
 
+            logger_zato.info('SQL publish with retry -> %s -> is_queue_ok:%s',
+                counter_ctx_str,
+                publish_op_ctx.is_queue_insert_ok
+            )
+
             if not publish_op_ctx.is_queue_insert_ok:
 
-                if has_debug:
-                    logger_zato.info('sql_publish_with_retry -> %s -> is_ok.2:`%s`',
-                        counter_ctx_str,
-                        publish_op_ctx.is_queue_insert_ok
-                    )
-                    has_debug
-
-                # We may possibly need to filter out subscriptions that do not exist anymore - this is needed because
+                # We may need to filter out subscriptions that do not exist anymore - this is needed because
                 # we took our list of subscribers from self.pubsub but it is possible that between the time
                 # we got this list and when this transaction started, some of the subscribers
                 # have been already deleted from the database so, if we were not filter them out, we would be
@@ -194,6 +191,7 @@ def _sql_publish_with_retry(
     cid,        # type: str
     cluster_id, # type: int
     topic_id,   # type: int
+    topic_name, # type: str
     subscriptions_by_topic, # type: sublist
     gd_msg_list, # type: strdictlist
     now          # type: float
@@ -203,7 +201,9 @@ def _sql_publish_with_retry(
 
     # Added for type hints
     sub_keys_by_topic = 'default-sub-keys-by-topic'
-    topic_messages_inserted = 'default-topic-messages-inserted'
+
+    # This is reusable
+    counter_ctx_str = publish_op_ctx.get_counter_ctx_str()
 
     #
     # We need to temporarily remove selected keys from gd_msg_list while we insert the topic
@@ -230,30 +230,37 @@ def _sql_publish_with_retry(
         for name in sub_only_keys:
             sub_attrs[name] = msg.pop(name, None)
 
-    # Publish messages - INSERT rows, each representing an individual message
+    # Publish messages - insert rows, each representing an individual message.
     if publish_op_ctx.needs_topic_messages:
-        topic_messages_inserted = insert_topic_messages(session, cid, gd_msg_list)
+
+        # This is the place where the insert to the topic table statement is executed.
+        insert_topic_messages(session, cid, gd_msg_list)
+
+        # If we are here, it means that the insert above was successful
+        # and we can set a flag for later use to indicate that.
         publish_op_ctx.needs_topic_messages = False
 
-    if has_debug:
-        sub_keys_by_topic = sorted(elem.sub_key for elem in subscriptions_by_topic)
+        # Log details about the messages inserted.
         logger_zato.info(
-            'With topic_messages_inserted -> %s -> `%s` `%s` `%s` `%s` `%s` `%s` `%s`',
-                publish_op_ctx.get_counter_ctx_str(),
-                cid,
-                topic_messages_inserted,
-                cluster_id,
-                topic_id,
-                sub_keys_by_topic,
-                gd_msg_list,
-                now
+            'Topic messages inserted -> %s -> %s -> %s -> %s',
+                counter_ctx_str, cid, topic_name, gd_msg_list
             )
 
-    # If any messages were inserted ..
+    # We enter here only if it is necessary, i.e. if there has not been previously
+    # a succcessful insertion already in a previous iteration of the publication loop.
     if publish_op_ctx.needs_queue_messages:
 
-        # .. move references to the messages to each subscriber's queue ..
-        if subscriptions_by_topic:
+        # Sort alphabetically all the sub_keys to make it easy to find them in logs.
+        sub_keys_by_topic = sorted(elem.sub_key for elem in subscriptions_by_topic)
+
+        # .. we may still have an empty list om input - this will happen if all the subscriptions
+        # .. that we thought would exist have already been deleted ..
+        if not sub_keys_by_topic:
+
+            # .. in such a situation, store a message in logs and do nothing else.
+            logger_zato.info('No subscribers in -> %s -> `%s`', counter_ctx_str, cid)
+
+        else:
 
             try:
 
@@ -264,36 +271,29 @@ def _sql_publish_with_retry(
                     for name in sub_only_keys:
                         msg[name] = sub_only[pub_msg_id][name]
 
+                len_sub_keys_by_topic = len(sub_keys_by_topic)
+                suffix = ' ' if len(sub_keys_by_topic) == 1 else 's '
+
                 if has_debug:
-                    logger_zato.info('Inserting queue messages for sub_keys_by_topic -> %s -> `%s`',
-                        publish_op_ctx.get_counter_ctx_str(),
-                        sub_keys_by_topic
+
+                    logger_zato.info('Inserting queue messages for %s sub_key%s-> %s -> %s -> %s',
+                        len_sub_keys_by_topic, suffix, counter_ctx_str, cid, sub_keys_by_topic
                     )
 
                 # This is the call that adds references to each of GD message for each of the input subscribers.
-                insert_queue_messages(
-                    session,
-                    cluster_id,
-                    subscriptions_by_topic,
-                    gd_msg_list,
-                    topic_id,
-                    now,
-                    cid
-                )
+                insert_queue_messages(session, cluster_id, subscriptions_by_topic, gd_msg_list, topic_id, now, cid)
 
                 if has_debug:
-                    logger_zato.info('Inserted queue messages -> %s -> `%s` `%s` `%s` `%s` `%s` `%s`',
-                        publish_op_ctx.get_counter_ctx_str(),
-                        cid, cluster_id, sub_keys_by_topic, gd_msg_list, topic_id, now)
+                    logger_zato.info('Inserted queue messages for %s sub_key%s-> %s -> %s -> %s',
+                        len_sub_keys_by_topic, suffix, counter_ctx_str, cid, sub_keys_by_topic
+                    )
 
                 # No integrity error / no deadlock = all good
                 is_queue_insert_ok = True
 
             except IntegrityError as e:
                 logger_zato.info('Caught IntegrityError (_sql_publish_with_retry) -> %s -> `%s` `%s`',
-                publish_op_ctx.get_counter_ctx_str(),
-                e,
-                cid)
+                    counter_ctx_str, cid, e)
 
                 # If we have an integrity error here it means that our transaction, the whole of it,
                 # was rolled back - this will happen on MySQL in case in case of deadlocks which may
@@ -306,13 +306,7 @@ def _sql_publish_with_retry(
             publish_op_ctx.is_queue_insert_ok = is_queue_insert_ok
             publish_op_ctx.needs_queue_messages = not is_queue_insert_ok
 
-        else:
-
-            if has_debug:
-                logger_zato.info('No subscribers in -> %s -> `%s`',
-                publish_op_ctx.get_counter_ctx_str(),
-                cid)
-
+    # This is returned no matter what happened earlier above.
     return publish_op_ctx
 
 # ################################################################################################################################
