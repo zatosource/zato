@@ -137,12 +137,12 @@ command_imports = (
     ('cache_set', 'zato.cli.cache.CacheSet'),
     ('check_config', 'zato.cli.check_config.CheckConfig'),
     ('component_version', 'zato.cli.component_version.ComponentVersion'),
-    ('create_basic_auth', 'zato.cli.basic_auth.CreateDefinition'),
+    ('create_api_key', 'zato.cli.security.api_key.CreateDefinition'),
+    ('create_basic_auth', 'zato.cli.security.basic_auth.CreateDefinition'),
     ('create_cluster', 'zato.cli.create_cluster.Create'),
     ('create_lb', 'zato.cli.create_lb.Create'),
     ('create_odb', 'zato.cli.create_odb.Create'),
-    ('create_rest_channel', 'zato.cli.rest.CreateChannel'),
-    ('create_rest_outconn', 'zato.cli.rest.CreateOutconn'),
+    ('create_rest_channel', 'zato.cli.rest.channel.CreateChannel'),
     ('create_scheduler', 'zato.cli.create_scheduler.Create'),
     ('create_server', 'zato.cli.create_server.Create'),
     ('create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
@@ -152,8 +152,9 @@ command_imports = (
     ('create_wsx_outconn', 'zato.cli.wsx.CreateOutconn'),
     ('crypto_create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
     ('delete_odb', 'zato.cli.delete_odb.Delete'),
-    ('delete_basic_auth', 'zato.cli.basic_auth.DeleteDefinition'),
-    ('delete_rest_channel', 'zato.cli.rest.DeleteChannel'),
+    ('delete_api_key', 'zato.cli.security.api_key.DeleteDefinition'),
+    ('delete_basic_auth', 'zato.cli.security.basic_auth.DeleteDefinition'),
+    ('delete_rest_channel', 'zato.cli.rest.channel.DeleteChannel'),
     ('delete_wsx_channel', 'zato.cli.wsx.DeleteChannel'),
     ('decrypt', 'zato.cli.crypto.Decrypt'),
     ('encrypt', 'zato.cli.crypto.Encrypt'),
@@ -961,7 +962,7 @@ class ManageCommand(ZatoCommand):
         os.chdir(self.component_dir)
 
         handler = self._get_dispatch()[json_data['component']]
-        handler(args)
+        return handler(args)
 
 # ################################################################################################################################
 

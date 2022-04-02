@@ -45,7 +45,6 @@ TRACE1 = 6
 SECONDS_IN_DAY = 86400 # 60 seconds * 60 minutes * 24 hours (and we ignore leap seconds)
 
 scheduler_date_time_format = '%Y-%m-%d %H:%M:%S'
-soap_date_time_format = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 # TODO: Classes that have this attribute defined (no matter the value) will not be deployed
 # onto servers.
@@ -132,20 +131,11 @@ engine_display_name = {
 
 # All URL types Zato understands.
 class URL_TYPE:
-    SOAP = 'soap'
+    SOAP       = 'soap' # Used only by outgoing connections
     PLAIN_HTTP = 'plain_http'
 
     def __iter__(self):
-        return iter((self.SOAP, self.PLAIN_HTTP))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# Whether WS-Security passwords are transmitted in clear-text or not.
-ZATO_WSS_PASSWORD_CLEAR_TEXT = Bunch(name='clear_text', label='Clear text')
-ZATO_WSS_PASSWORD_TYPES = {
-    ZATO_WSS_PASSWORD_CLEAR_TEXT.name:ZATO_WSS_PASSWORD_CLEAR_TEXT.label,
-}
+        return iter([self.PLAIN_HTTP])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -256,9 +246,8 @@ class SEC_DEF_TYPE:
     OAUTH = 'oauth'
     TLS_CHANNEL_SEC = 'tls_channel_sec'
     TLS_KEY_CERT = 'tls_key_cert'
-    WSS = 'wss'
     VAULT = 'vault_conn_sec'
-    XPATH_SEC = 'xpath_sec'
+    WSS = 'wss'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -272,9 +261,8 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.OAUTH: 'OAuth 1.0',
     SEC_DEF_TYPE.TLS_CHANNEL_SEC: 'TLS channel',
     SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
-    SEC_DEF_TYPE.WSS: 'WS-Security',
     SEC_DEF_TYPE.VAULT: 'Vault',
-    SEC_DEF_TYPE.XPATH_SEC: 'XPath',
+    SEC_DEF_TYPE.WSS: 'WS-Security',
 }
 
 # ################################################################################################################################
@@ -357,13 +345,11 @@ class DATA_FORMAT(Attrs):
     HL7  = 'hl7'
     JSON = 'json'
     POST = 'post'
-    SOAP = 'soap'
-    XML = 'xml'
 
     def __iter__(self):
         # Note that DICT and other attributes aren't included because they're never exposed to the external world as-is,
         # they may at most only used so that services can invoke each other directly
-        return iter((self.XML, self.JSON, self.CSV, self.POST, self.HL7))
+        return iter((self.JSON, self.CSV, self.POST, self.HL7))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -731,16 +717,6 @@ class NONCE_STORE:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MSG_PATTERN_TYPE:
-    JSON_POINTER = NameId('JSONPointer', 'json-pointer')
-    XPATH = NameId('XPath', 'xpath')
-
-    def __iter__(self):
-        return iter((self.JSON_POINTER, self.XPATH))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class HTTP_SOAP_SERIALIZATION_TYPE:
     STRING_VALUE = NameId('String', 'string')
     SUDS = NameId('Suds', 'suds')
@@ -766,11 +742,9 @@ class PUBSUB:
         DICT = NameId('Dict', DATA_FORMAT.DICT)
         JSON = NameId('JSON', DATA_FORMAT.JSON)
         POST = NameId('POST', DATA_FORMAT.POST)
-        SOAP = NameId('SOAP', DATA_FORMAT.SOAP)
-        XML  = NameId('XML', DATA_FORMAT.XML)
 
         def __iter__(self):
-            return iter((self.CSV, self.DICT, self.JSON, self.POST, self.SOAP, self.XML))
+            return iter((self.CSV, self.DICT, self.JSON, self.POST))
 
     class HOOK_TYPE:
         BEFORE_PUBLISH = 'pubsub_before_publish'
@@ -1205,11 +1179,9 @@ class WEB_SOCKET:
 
 class APISPEC:
     OPEN_API_V3 = 'openapi_v3'
-    SOAP_12 = 'soap_12'
     NAMESPACE_NULL = ''
     DEFAULT_TAG = 'public'
     GENERIC_INVOKE_PATH = '/zato/api/invoke/{service_name}' # OpenAPI
-    SOAP_INVOKE_PATH    = '/zato/api/soap/invoke'           # SOAP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1592,20 +1564,17 @@ class HL7:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# TODO: SIMPLE_IO.FORMAT should be removed with in favour of plain DATA_FORMAT
+# TODO: SIMPLE_IO.FORMAT should be removed in favour of plain DATA_FORMAT
 class SIMPLE_IO:
 
     class FORMAT(Attrs):
         JSON = DATA_FORMAT.JSON
-        XML = DATA_FORMAT.XML
 
     COMMON_FORMAT = OrderedDict()
     COMMON_FORMAT[DATA_FORMAT.JSON] = 'JSON'
-    COMMON_FORMAT[DATA_FORMAT.XML] = 'XML'
 
     HTTP_SOAP_FORMAT = OrderedDict()
     HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
-    HTTP_SOAP_FORMAT[DATA_FORMAT.XML] = 'XML'
     HTTP_SOAP_FORMAT[HL7.Const.Version.v2.id] = HL7.Const.Version.v2.name
 
 # ################################################################################################################################
@@ -1691,7 +1660,7 @@ class SourceCodeInfo:
     __slots__ = 'source', 'source_html', 'len_source', 'path', 'hash', 'hash_method', 'server_name'
 
     def __init__(self):
-        self.source = ''        # type: str
+        self.source = b''       # type: bytes
         self.source_html = ''   # type: str
         self.len_source = 0     # type: int
         self.path = None        # type: str

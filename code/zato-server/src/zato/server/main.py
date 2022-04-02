@@ -72,25 +72,38 @@ from zato.sso.util import new_user_id, normalize_sso_config
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from bunch import Bunch
+    from zato.common.typing_ import any_, dictnone
+    from zato.server.ext.zunicorn.config import Config as ZunicornConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ZatoGunicornApplication(Application):
-    def __init__(self, zato_wsgi_app, repo_location, config_main, crypto_config, *args, **kwargs):
+
+    cfg: 'ZunicornConfig'
+
+    def __init__(
+        self,
+        zato_wsgi_app:'ParallelServer',
+        repo_location:'str',
+        config_main:'Bunch',
+        crypto_config:'Bunch',
+        *args:'any_',
+        **kwargs:'any_'
+    ) -> 'None':
         self.zato_wsgi_app = zato_wsgi_app
         self.repo_location = repo_location
         self.config_main = config_main
         self.crypto_config = crypto_config
-        self.zato_host = None
-        self.zato_port = None
+        self.zato_host = ''
+        self.zato_port = -1
         self.zato_config = {}
         super(ZatoGunicornApplication, self).__init__(*args, **kwargs)
 
 # ################################################################################################################################
 
-    def init(self, *ignored_args, **ignored_kwargs):
+    def init(self, *ignored_args:'any_', **ignored_kwargs:'any_') -> 'None':
         self.cfg.set('post_fork', self.zato_wsgi_app.post_fork) # Initializes a worker
         self.cfg.set('on_starting', self.zato_wsgi_app.on_starting) # Generates the deployment key
         self.cfg.set('before_pid_kill', self.zato_wsgi_app.before_pid_kill) # Cleans up before the worker exits
@@ -132,8 +145,10 @@ class ZatoGunicornApplication(Application):
 
 # ################################################################################################################################
 
-def run(base_dir, start_gunicorn_app=True, options=None):
-    # type: (str, bool, dict)
+def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None) -> 'ParallelServer | None':
+
+    # Type hints
+    preferred_address: 'str'
 
     options = options or {}
 
@@ -185,12 +200,12 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     # We know we don't need warnings because users may explicitly configure no certificate validation.
     # We don't want for urllib3 to warn us about it.
     import requests as _r
-    _r.packages.urllib3.disable_warnings()
+    _r.packages.urllib3.disable_warnings() # type: ignore
 
     repo_location = os.path.join(base_dir, 'config', 'repo')
 
     # Configure the logging first, before configuring the actual server.
-    logging.addLevelName('TRACE1', TRACE1)
+    logging.addLevelName('TRACE1', TRACE1) # type: ignore
     logging_conf_path = os.path.join(repo_location, 'logging.conf')
 
     with open_r(logging_conf_path) as f:
@@ -243,7 +258,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server_config.main.token = server_config.main.token.encode('utf8')
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
-    preferred_address = server_config.preferred_address.get('address')
+    preferred_address = server_config.preferred_address.get('address') or ''
 
     if not preferred_address:
         preferred_address = get_preferred_ip(server_config.main.gunicorn_bind, server_config.preferred_address)
@@ -283,35 +298,40 @@ def run(base_dir, start_gunicorn_app=True, options=None):
         locale.setlocale(locale.LC_ALL, user_locale)
         value = 12345
         logger.info('Locale is `%s`, amount of %s -> `%s`', user_locale, value, locale.currency(
-            value, grouping=True).decode('utf-8'))
+            value, grouping=True))
 
     if server_config.misc.http_proxy:
         os.environ['http_proxy'] = server_config.misc.http_proxy
 
     # Basic components needed for the server to boot up
     kvdb = KVDB()
-    odb_manager = ODBManager(well_known_data=ZATO_CRYPTO_WELL_KNOWN_DATA)
+    odb_manager = ODBManager()
+    odb_manager.well_known_data = ZATO_CRYPTO_WELL_KNOWN_DATA
     sql_pool_store = PoolStore()
 
-    service_store = ServiceStore()
-    service_store.odb = odb_manager
-    service_store.services = {}
-
+    # Create it upfront here
     server = ParallelServer()
+
+    service_store = ServiceStore(
+        services={},
+        odb=odb_manager,
+        server=server,
+        is_testing=False
+    )
+
     server.odb = odb_manager
     server.service_store = service_store
     server.service_store.server = server
     server.sql_pool_store = sql_pool_store
-    server.service_modules = []
     server.kvdb = kvdb
-    server.stderr_path = options.get('stderr_path')
+    server.stderr_path = options.get('stderr_path') or ''
 
     # Assigned here because it is a circular dependency
     odb_manager.parallel_server = server
 
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
-    server.has_fg = options.get('fg')
+    server.has_fg = options.get('fg') or False
     server.crypto_manager = crypto_manager
     server.odb_data = server_config.odb
     server.host = zato_gunicorn_app.zato_host
@@ -352,7 +372,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     profiler_enabled = server_config.get('profiler', {}).get('enabled', False)
 
     # New in 2.0 so it's optional.
-    sentry_config = server_config.get('sentry')
+    sentry_config = server_config.get('sentry') or {}
 
     dsn = sentry_config.pop('dsn', None)
     if dsn:
@@ -433,4 +453,5 @@ if __name__ == '__main__':
 
     run(server_base_dir, options=cmd_line_options)
 
+# ################################################################################################################################
 # ################################################################################################################################

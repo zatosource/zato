@@ -167,9 +167,6 @@ def index(req):
                 if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type not in (
                     SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT, SEC_DEF_TYPE.APIKEY):
                     continue
-                elif transport == URL_TYPE.SOAP and def_item.sec_type not in (
-                    SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM, SEC_DEF_TYPE.WSS):
-                    continue
 
             _security.append(def_item)
 

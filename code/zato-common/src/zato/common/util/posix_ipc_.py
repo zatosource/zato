@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -26,7 +26,7 @@ from zato.common.json_internal import dumps, loads
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strordict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -236,7 +236,7 @@ class ConnectorConfigIPC(SharedMemoryIPC):
     def set_config(self, connector_key, config):
         self.set_key(self.key_name, connector_key, config)
 
-    def get_config(self, connector_key, timeout=60, as_dict=False):
+    def get_config(self, connector_key:'str', timeout:'int'=60, as_dict:'bool'=False) -> 'strordict':
         response = self.get_key(self.key_name, connector_key, timeout)
         if response:
             return loads(response) if as_dict else response

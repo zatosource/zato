@@ -1,18 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from copy import deepcopy
-
-# lxml
-from lxml.objectify import fromstring as objectify_from_string
 
 # Zato
 from zato.common.api import DATA_FORMAT
@@ -82,19 +77,6 @@ class ResponseSerialiseNoResponseElem(BaseSIOTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def test_sio_response_from_sqlalchemy_orm_single_xml(self):
-
-        result = self._prepare_sio_response_from_orm(DATA_FORMAT.XML, False)
-        result = result.encode('utf8')
-        root = objectify_from_string(result)
-
-        self.assertEqual(root.tag, 'response')
-        self.assertEqual(root.cluster_id, test_odb_data.cluster_id)
-        self.assertEqual(root.name, test_odb_data.name)
-        self.assertTrue(root.is_active)
-
-# ################################################################################################################################
-
     def test_sio_response_from_sqlalchemy_orm_single_csv(self):
 
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.CSV, False)
@@ -128,19 +110,6 @@ class ResponseSerialiseNoResponseElem(BaseSIOTestCase, ODBTestCase):
         self.assertEqual(result['cluster_id'], test_odb_data.cluster_id)
         self.assertEqual(result['name'], test_odb_data.name)
         self.assertIs(result['is_active'], test_odb_data.is_active)
-
-# ################################################################################################################################
-
-    def test_sio_response_from_sqlalchemy_orm_list_xml(self):
-
-        result = self._prepare_sio_response_from_orm(DATA_FORMAT.XML, True)
-        result = result.encode('utf8')
-        root = objectify_from_string(result)
-
-        self.assertEqual(root.tag, 'response')
-        self.assertEqual(root.item.cluster_id, test_odb_data.cluster_id)
-        self.assertEqual(root.item.name, test_odb_data.name)
-        self.assertTrue(root.item.is_active)
 
 # ################################################################################################################################
 
@@ -182,18 +151,6 @@ class ResponseSerialiseNoResponseElem(BaseSIOTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def test_sio_response_from_zato_single_xml(self):
-
-        result = self._prepare_sio_response_from_zato(DATA_FORMAT.XML, False)
-        result = result.encode('utf8')
-        root = objectify_from_string(result)
-
-        self.assertEqual(root.cluster_id, test_odb_data.cluster_id)
-        self.assertEqual(root.name, test_odb_data.name)
-        self.assertTrue(root.is_active)
-
-# ################################################################################################################################
-
     def test_sio_response_from_zato_single_csv(self):
 
         result = self._prepare_sio_response_from_zato(DATA_FORMAT.CSV, False)
@@ -227,18 +184,6 @@ class ResponseSerialiseNoResponseElem(BaseSIOTestCase, ODBTestCase):
         self.assertEqual(result['cluster_id'], test_odb_data.cluster_id)
         self.assertEqual(result['name'], test_odb_data.name)
         self.assertIs(result['is_active'], test_odb_data.is_active)
-
-# ################################################################################################################################
-
-    def test_sio_response_from_zato_list_xml(self):
-
-        result = self._prepare_sio_response_from_zato(DATA_FORMAT.XML, True)
-        result = result.encode('utf8')
-        root = objectify_from_string(result)
-
-        self.assertEqual(root.item.cluster_id, test_odb_data.cluster_id)
-        self.assertEqual(root.item.name, test_odb_data.name)
-        self.assertTrue(root.item.is_active)
 
 # ################################################################################################################################
 
