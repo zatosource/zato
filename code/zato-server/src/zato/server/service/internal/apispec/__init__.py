@@ -17,7 +17,6 @@ from bunch import bunchify
 
 # Zato
 from zato.server.apispec.spec.openapi import OpenAPIGenerator
-from zato.server.apispec.spec.wsdl import WSDLGenerator
 from zato.server.service import List, Opaque, Service
 
 # Zato
@@ -128,13 +127,6 @@ class GetSphinx(Service):
                 f.close()
 
                 files[relative_path] = contents
-
-# ################################################################################################################################
-
-    def get_wsdl_spec(self, data):
-        services = bunchify(data)
-        target_ns = 'urn:zato-apispec'
-        return WSDLGenerator(services, target_ns).generate()
 
 # ################################################################################################################################
 
@@ -441,7 +433,6 @@ class GetSphinx(Service):
         self.add_default_files(files)
         self.add_services(data, files)
 
-        files['download/api.wsdl'] = self.get_wsdl_spec(data)
         files['download/openapi.yaml'] = self.get_openapi_spec(
             data, req.needs_api_invoke, req.needs_rest_channels, req.api_invoke_path)
 

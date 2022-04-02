@@ -46,6 +46,7 @@ from zato.server.pubsub.sync import InRAMSync
 # ################################################################################################################################
 
 if 0:
+    from zato.common.model.wsx import WSXConnectorConfig
     from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, commondict, dictlist, intdict, \
         intanydict, intlist, intnone, intset, list_, stranydict, strintdict, strstrdict, strlist, strlistdict, \
         strlistempty, strtuple, type_
@@ -1939,8 +1940,22 @@ class PubSub:
         has_gd = kwargs.get('has_gd') # type: ignore
         has_gd = cast_(bool, has_gd)
 
-        endpoint_id = kwargs.get('endpoint_id') or self.server.default_internal_pubsub_endpoint_id # type: ignore
-        endpoint_id = cast_(int, endpoint_id)
+        # By default, assume that cannot find any enpoint on input
+        endpoint_id = None
+
+        # If this is a WebSocket, we need to find its ws_channel_id ..
+        if from_service:
+            wsx_environ = find_wsx_environ(from_service, raise_if_not_found=False)
+            if wsx_environ:
+                wsx_config = wsx_environ['ws_channel_config'] # type: WSXConnectorConfig
+                ws_channel_id = wsx_config.id
+                endpoint_id = self.get_endpoint_id_by_ws_channel_id(ws_channel_id)
+
+        # Otherwise, use various default data.
+        if not endpoint_id:
+            endpoint_id = kwargs.get('endpoint_id') or self.server.default_internal_pubsub_endpoint_id # type: ignore
+            endpoint_id = cast_(int, endpoint_id)
+            ws_channel_id = None
 
         # If input name is a topic, let us just use it
         if self.has_topic_by_name(name):
@@ -2024,6 +2039,7 @@ class PubSub:
             'ext_client_id': ext_client_id,
             'ext_pub_time': ext_pub_time,
             'endpoint_id': endpoint_id,
+            'ws_channel_id': ws_channel_id,
             'reply_to_sk': reply_to_sk,
             'deliver_to_sk': deliver_to_sk,
             'user_ctx': user_ctx,

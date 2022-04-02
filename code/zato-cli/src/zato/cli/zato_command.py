@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,14 +11,22 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import cloghandler
 cloghandler = cloghandler # For pyflakes
 
+# Zato
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from argparse import ArgumentParser
+    from zato.common.typing_ import any_, callnone, dictlist, strlist, tuple_
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class CommandStore:
 
-# ################################################################################################################################
-
-    def add_opts(self, parser, opts):
+    def add_opts(self, parser:'ArgumentParser', opts:'dictlist') -> 'None':
         """ Adds parser-specific options.
         """
         for opt in opts:
@@ -32,7 +40,7 @@ class CommandStore:
 
 # ################################################################################################################################
 
-    def build_core_parser(self):
+    def build_core_parser(self) -> 'tuple_':
 
         # stdlib
         import argparse
@@ -51,7 +59,13 @@ class CommandStore:
 
 # ################################################################################################################################
 
-    def load_start_parser(self, parser=None, base_parser=None, subs=None, formatter_class=None):
+    def load_start_parser(
+        self,
+        parser=None,         # type: ArgumentParser | None
+        base_parser=None,    # type: ArgumentParser | None
+        subs=None,           # type: any_
+        formatter_class=None # type: callnone
+    ) -> 'ArgumentParser':
 
         # Zato
         from zato.cli import start as start_mod
@@ -68,20 +82,20 @@ class CommandStore:
         start_.set_defaults(command='start')
         self.add_opts(start_, start_mod.Start.opts)
 
-        return parser
+        return cast_('ArgumentParser', parser)
 
     add_start_server_parser = load_start_parser
 
 # ################################################################################################################################
 
-    def load_version_parser(self):
+    def load_version_parser(self) -> 'ArgumentParser':
         parser, _, _, _ = self.build_core_parser()
         self._add_version(parser)
         return parser
 
 # ################################################################################################################################
 
-    def _add_version(self, parser):
+    def _add_version(self, parser:'ArgumentParser') -> 'None':
 
         # Zato
         from zato.common.version import get_version
@@ -90,12 +104,11 @@ class CommandStore:
 
 # ################################################################################################################################
 
-    def load_full_parser(self):
+    def load_full_parser(self) -> 'ArgumentParser':
 
         # Zato
         from zato.cli import \
              apispec             as apispec_mod,             \
-             basic_auth          as basic_auth_mod,          \
              ca_create_ca        as ca_create_ca_mod,        \
              ca_create_lb_agent  as ca_create_lb_agent_mod,  \
              ca_create_scheduler as ca_create_scheduler_mod, \
@@ -119,7 +132,6 @@ class CommandStore:
              info                as info_mod,                \
              openapi_            as openapi_mod,             \
              quickstart          as quickstart_mod,          \
-             rest                as rest_mod,                \
              service             as service_mod,             \
              sso                 as sso_mod,                 \
              stop                as stop_mod,                \
@@ -132,6 +144,15 @@ class CommandStore:
             cleanup              as pubsub_cleanup_mod,      \
             endpoint             as pubsub_endpoint_mod,     \
             topic                as pubsub_topic_mod # noqa: E272
+
+        # Zato - REST
+        from zato.cli.rest import \
+            channel              as rest_channel_mod  # noqa: E272
+
+        # Zato - Security
+        from zato.cli.security import \
+            api_key              as sec_api_key_mod,         \
+            basic_auth           as sec_basic_auth_mod # noqa: E272
 
         parser, base_parser, subs, formatter_class = self.build_core_parser()
         self._add_version(parser)
@@ -231,10 +252,15 @@ class CommandStore:
         create = subs.add_parser('create', description='Creates new Zato components')
         create_subs = create.add_subparsers()
 
+        create_api_key = create_subs.add_parser(
+            'api-key', description=sec_api_key_mod.CreateDefinition.__doc__, parents=[base_parser])
+        create_api_key.set_defaults(command='create_api_key')
+        self.add_opts(create_api_key, sec_api_key_mod.CreateDefinition.opts)
+
         create_basic_auth = create_subs.add_parser(
-            'basic-auth', description=basic_auth_mod.CreateDefinition.__doc__, parents=[base_parser])
+            'basic-auth', description=sec_basic_auth_mod.CreateDefinition.__doc__, parents=[base_parser])
         create_basic_auth.set_defaults(command='create_basic_auth')
-        self.add_opts(create_basic_auth, basic_auth_mod.CreateDefinition.opts)
+        self.add_opts(create_basic_auth, sec_basic_auth_mod.CreateDefinition.opts)
 
         create_cluster = create_subs.add_parser(
             'cluster', description=create_cluster_mod.Create.__doc__, parents=[base_parser])
@@ -281,9 +307,9 @@ class CommandStore:
         #
 
         create_rest_channel = subs.add_parser('create-rest-channel',
-            description=rest_mod.CreateChannel.__doc__, parents=[base_parser])
+            description=rest_channel_mod.CreateChannel.__doc__, parents=[base_parser])
         create_rest_channel.set_defaults(command='create_rest_channel')
-        self.add_opts(create_rest_channel, rest_mod.CreateChannel.opts)
+        self.add_opts(create_rest_channel, rest_channel_mod.CreateChannel.opts)
 
         #
         # create-wsx-channel
@@ -327,10 +353,15 @@ class CommandStore:
         delete = subs.add_parser('delete', description=delete_odb_mod.Delete.__doc__)
         delete_subs = delete.add_subparsers()
 
+        delete_api_key = delete_subs.add_parser('api-key', description='Deletes an API key definition',
+            parents=[base_parser])
+        delete_api_key.set_defaults(command='delete_api_key')
+        self.add_opts(delete_api_key, sec_basic_auth_mod.DeleteDefinition.opts)
+
         delete_basic_auth = delete_subs.add_parser('basic-auth', description='Deletes a Basic Auth definition',
             parents=[base_parser])
         delete_basic_auth.set_defaults(command='delete_basic_auth')
-        self.add_opts(delete_basic_auth, basic_auth_mod.DeleteDefinition.opts)
+        self.add_opts(delete_basic_auth, sec_basic_auth_mod.DeleteDefinition.opts)
 
         delete_odb = delete_subs.add_parser('odb', description='Deletes a Zato ODB', parents=[base_parser])
         delete_odb.set_defaults(command='delete_odb')
@@ -342,9 +373,9 @@ class CommandStore:
         #
 
         delete_rest_channel = subs.add_parser('delete-rest-channel',
-            description=rest_mod.DeleteChannel.__doc__, parents=[base_parser])
+            description=rest_channel_mod.DeleteChannel.__doc__, parents=[base_parser])
         delete_rest_channel.set_defaults(command='delete_rest_channel')
-        self.add_opts(delete_rest_channel, rest_mod.DeleteChannel.opts)
+        self.add_opts(delete_rest_channel, rest_channel_mod.DeleteChannel.opts)
 
         #
         # delete-wsx-channel
@@ -681,8 +712,7 @@ command_store = CommandStore()
 
 # ################################################################################################################################
 
-def pre_process_quickstart(sys_argv, opts_idx):
-    # type: (list, int) -> None
+def pre_process_quickstart(sys_argv:'strlist', opts_idx:'int') -> 'None':
 
     # We know that it exists so we can skip the try/except ValueError: block
     create_idx = sys_argv.index('create')
@@ -903,7 +933,7 @@ def pre_process_sys_argv(sys_argv):
 
 # ################################################################################################################################
 
-def main():
+def main() -> 'any_':
 
     # stdlib
     import os

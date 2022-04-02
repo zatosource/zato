@@ -164,8 +164,8 @@ cdef class CyURLData:
 
 # ################################################################################################################################
 
-    cpdef tuple match(self, unicode url_path, unicode soap_action, unicode http_method, unicode http_accept,
-        bint has_soap_action, unicode sep=target_separator, _bunchify=bunchify, _log_trace1=logger.log,
+    cpdef tuple match(self, unicode url_path, unicode http_method, unicode http_accept,
+        unicode sep=target_separator, _bunchify=bunchify, _log_trace1=logger.log,
         _trace1=TRACE1):
         """ Attemps to match the combination of SOAPt Action and URL path against
         the list of HTTP channel targets.
@@ -176,7 +176,7 @@ cdef class CyURLData:
         cdef object item_bunch
 
         cdef unicode target = ''
-        target += soap_action
+        target += '' # This used to be a SOAP action, now it is always an empty string
         target += sep
         target += http_method
         target += sep

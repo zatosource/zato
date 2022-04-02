@@ -13,7 +13,6 @@ from contextlib import closing
 # Zato
 from zato.client import AnyServiceInvoker
 from zato.common.api import INFO_FORMAT, MISC, SERVER_JOIN_STATUS, SERVER_UP_STATUS
-from zato.common.broker_message import SERVER_STATUS
 from zato.common.component_info import format_info, get_info, get_worker_pids
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.query import server_list
@@ -31,7 +30,7 @@ class GetInfo(Service):
         channel = self.server.worker_store.get_channel_rest(MISC.DefaultAdminInvokeChannel)
         out = {}
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session: # type: ignore
             for item in server_list(session, self.server.cluster_id, None, None, False):
                 server_info = out.setdefault(item.name, {})
                 server_info['cluster_name'] = item.cluster_name
@@ -82,16 +81,5 @@ class GetWorkerPids(Service):
 
     def handle(self):
         self.response.payload.pids = get_worker_pids(self.server.base_dir)
-
-# ################################################################################################################################
-
-class SetServerUpStatus(Service):
-    """ Notifies all worker processes that current one has just started.
-    """
-    def handle(self):
-        self.broker_client.publish({
-            'action': SERVER_STATUS.STATUS_CHANGED.value,
-            'status': SERVER_UP_STATUS.RUNNING,
-        })
 
 # ################################################################################################################################
