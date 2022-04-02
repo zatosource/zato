@@ -786,7 +786,14 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
 
                 # .. make sure that all of the sub_keys actually still exist ..
                 with closing(self.odb.session()) as session: # type: ignore
-                    response = ensure_subs_exist(session, topic_name, response, response, 'returning to endpoint')
+                    response = ensure_subs_exist(
+                        session,
+                        topic_name,
+                        response,
+                        response,
+                        'returning to endpoint',
+                        '<no-ctx-string>'
+                    )
 
                 self.response.payload[:] = response
         else:
