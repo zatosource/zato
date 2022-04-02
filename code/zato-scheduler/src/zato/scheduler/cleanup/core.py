@@ -91,10 +91,10 @@ class CleanupConfig:
     DeltaNotInteracted = 86_400
 
     # How many messages to delete from a queue or topic in one batch
-    MsgDeleteBatchSize = 50
+    MsgDeleteBatchSize = 5000
 
     # How long to sleep after deleting messages from a single group (no matter if queue, topic or subscriber)
-    DeleteSleepTime = 0.2 # In seconds
+    DeleteSleepTime = 0.02 # In seconds
 
 # ################################################################################################################################
 # ################################################################################################################################

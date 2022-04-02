@@ -531,11 +531,27 @@ class Publish(AdminService):
                         ctx.ext_client_id, self.cid)
 
                 # This is the call that runs SQL INSERT statements with messages for topics and subscriber queues
-                sql_publish_with_retry(session, self.odb.session, self.cid, ctx.cluster_id, ctx.topic.id, ctx.topic.name,
-                    ctx.subscriptions_by_topic, ctx.gd_msg_list, ctx.now)
+                _ = sql_publish_with_retry(
+
+                    ctx.now,
+                    self.cid,
+                    ctx.topic.id,
+                    ctx.topic.name,
+                    ctx.cluster_id,
+                    self.server.get_pub_counter(),
+
+                    session,
+                    self.odb.session,
+
+                    ctx.gd_msg_list,
+                    ctx.subscriptions_by_topic
+                )
 
                 # Run an SQL commit for all queries above ..
                 session.commit()
+
+                # .. increase the publication counter now that we have committed the messages ..
+                self.server.incr_pub_counter()
 
             # .. and set a flag to signal that there are some GD messages available
             ctx.pubsub.set_sync_has_msg(

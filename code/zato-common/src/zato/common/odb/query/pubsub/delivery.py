@@ -18,7 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, PubSubSubscription, Server, \
      WebSocketClient, WebSocketClientPubSubKeys
-from zato.common.util.sql import sql_op_with_deadlock_retry, sql_query_with_retry
+from zato.common.util.sql.retry import sql_op_with_deadlock_retry, sql_query_with_retry
 
 # ################################################################################################################################
 
