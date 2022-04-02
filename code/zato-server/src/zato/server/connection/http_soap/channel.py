@@ -207,7 +207,7 @@ class RequestDispatcher:
         self.http_methods_allowed = http_methods_allowed
 
         # To reduce the number of attribute lookups
-        self._sso_api_user = self.server.sso_api.user if self.server.sso_api else None
+        self._sso_api_user = getattr(self.server, 'sso_api', None)
 
 # ################################################################################################################################
 
