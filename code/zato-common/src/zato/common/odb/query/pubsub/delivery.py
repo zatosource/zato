@@ -1,30 +1,36 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 from logging import getLogger
+from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy import update
+from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, PubSubSubscription, Server, \
      WebSocketClient, WebSocketClientPubSubKeys
+from zato.common.util.sql.retry import sql_op_with_deadlock_retry, sql_query_with_retry
 
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, intnone, intset, strlist
+    from zato.common.typing_ import any_, anylist, intnone, intset, strlist
 
 # ################################################################################################################################
 
-logger = getLogger('zato_pubsub.sql')
+logger_zato = getLogger('zato')
+logger_pubsub = getLogger('zato_pubsub')
+
+has_debug = True# logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
@@ -111,7 +117,7 @@ def _get_sql_msg_data_by_sub_key(
     """ Returns all SQL messages queued up for a given sub_key that are not being delivered
     or have not been delivered already.
     """
-    logger.info('Getting GD messages for `%s` last_run:%r pub_time_max:%r needs_result:%d unexp:%d', sub_key_list, last_sql_run,
+    logger_pubsub.info('Getting GD messages for `%s` last_run:%r pub_time_max:%r needs_result:%d unexp:%d', sub_key_list, last_sql_run,
         pub_time_max, int(needs_result), int(include_unexpired_only))
 
     query = _get_base_sql_msg_query(session, columns, sub_key_list, pub_time_max, cluster_id, include_unexpired_only)
@@ -181,7 +187,7 @@ def get_sql_msg_ids_by_sub_key(
 
 # ################################################################################################################################
 
-def confirm_pubsub_msg_delivered(
+def _confirm_pubsub_msg_delivered_query(
     session,    # type: any_
     cluster_id, # type: int
     sub_key,    # type: str
@@ -200,6 +206,26 @@ def confirm_pubsub_msg_delivered(
         where(PubSubEndpointEnqueuedMessage.pub_msg_id.in_(delivered_pub_msg_id_list)).\
         where(PubSubEndpointEnqueuedMessage.sub_key==sub_key)
     )
+
+# ################################################################################################################################
+
+def _confirm_pubsub_msg_delivered(*args:'any_') -> 'bool':
+    try:
+        return sql_op_with_deadlock_retry(
+            None,
+            '_confirm_pubsub_msg_delivered_query',
+            _confirm_pubsub_msg_delivered_query,
+            *args
+        )
+    except IntegrityError:
+        if has_debug:
+            logger_zato.info('Caught IntegrityError (_confirm_pubsub_msg_delivered) `%s` -> `%s`', args, format_exc())
+        return False
+
+# ################################################################################################################################
+
+def confirm_pubsub_msg_delivered(*args:'anylist') -> 'None':
+    sql_query_with_retry(_confirm_pubsub_msg_delivered, '_confirm_pubsub_msg_delivered', *args)
 
 # ################################################################################################################################
 

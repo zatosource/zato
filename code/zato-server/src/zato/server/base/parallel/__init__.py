@@ -213,6 +213,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
         self.enforce_service_invokes = False
 
+        # A server-wide publication counter, indicating which one the current publication is,
+        # increased after each successful publication.
+        self.pub_counter = 1
+
+        # A lock to guard the publication counter.
+        self.pub_counter_lock = RLock()
+
         # Transient API for in-RAM messages
         self.zato_kvdb = ZatoKVDB()
 
@@ -1218,6 +1225,18 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def decrypt_no_prefix(self, data:'str') -> 'str':
         return self.crypto_manager.decrypt(data)
+
+# ################################################################################################################################
+
+    def incr_pub_counter(self):
+        with self.pub_counter_lock:
+            self.pub_counter += 1
+
+# ################################################################################################################################
+
+    def get_pub_counter(self):
+        with self.pub_counter_lock:
+            return self.pub_counter
 
 # ################################################################################################################################
 

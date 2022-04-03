@@ -38,6 +38,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 if 0:
     from bunch import Bunch
+    from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, stranydict
     Bunch = Bunch
 
@@ -88,7 +89,7 @@ def broker_message_hook(
 ) -> 'None':
 
     if service_type == 'create_edit':
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             topic = pubsub_topic(session, input['cluster_id'], instance.id)
             input['is_internal'] = topic.is_internal
             input['max_depth_gd'] = topic.max_depth_gd
@@ -126,7 +127,7 @@ def response_hook(self:'Service', input:'stranydict', instance:'PubSubTopic', at
                 topic_id_list.append(item.id)
 
             # .. query the database to find depth of all the topics from the list ..
-            with closing(self.odb.session()) as session: # type: ignore
+            with closing(self.odb.session()) as session:
                 depth_by_topic = get_gd_depth_topic_list(session, input['cluster_id'], topic_id_list)
 
             # .. convert it to a dict to make it easier to use it ..
@@ -243,7 +244,7 @@ class DeleteTopics(Service):
 
     def _get_topic_data(self, query:'any_', condition:'any_') -> 'anylist':
 
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             topic_data = query(session, condition)
 
         topic_data = [dict(elem) for elem in topic_data]
@@ -372,7 +373,7 @@ class Get(AdminService):
         topic_id   = self.request.input.id
         topic_name = self.request.input.name
 
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             topic = pubsub_topic(session, cluster_id, topic_id, topic_name)
             topic['current_depth_gd'] = get_gd_depth_topic(session, cluster_id, topic.id)
 
@@ -418,7 +419,7 @@ class Clear(AdminService):
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
         topic_id = self.request.input.id
 
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
 
             self.logger.info('Clearing topic `%s` (id:%s)', self.pubsub.get_topic_by_id(topic_id).name, topic_id)
 
@@ -463,7 +464,7 @@ class GetPublisherList(AdminService):
 
         response = []
 
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
 
             # Get last pub time for that specific endpoint to this very topic
             last_data = pubsub_publishers_for_topic(session, cluster_id, self.request.input.topic_id).all()
@@ -493,7 +494,7 @@ class GetGDMessageList(AdminService):
 
 # ################################################################################################################################
 
-    def get_gd_data(self, session:'any_') -> 'anylist':
+    def get_gd_data(self, session:'SASession') -> 'anylist':
 
         # Local aliases
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
@@ -509,7 +510,7 @@ class GetGDMessageList(AdminService):
         out = []
 
         # .. collect the data ..
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             data = self.get_gd_data(session)
 
         # .. use ISO timestamps ..
@@ -593,7 +594,7 @@ class GetInRAMMessageList(AdminService):
         out = []
         topic_sub_keys = {}
 
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             for topic_id, sub_key in get_topics_by_sub_keys(session, self.server.cluster_id, self.request.input.sub_key_list):
                 sub_keys = topic_sub_keys.setdefault(topic_id, [])
                 sub_keys.append(sub_key)
