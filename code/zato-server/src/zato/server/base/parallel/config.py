@@ -590,7 +590,7 @@ class ConfigLoader:
         with self.zato_lock_manager('zato_encrypt_secrets'):
 
             # An SQL session shared by all updates
-            with closing(self.odb.session()) as session: # type: ignore
+            with closing(self.odb.session()) as session:
 
                 # Iterate over all security definitions
                 for sec_config_dict_type in sec_config_dict_types:

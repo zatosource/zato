@@ -508,7 +508,7 @@ class Publish(AdminService):
         # We don't always have GD messages on input so there is no point in running an SQL transaction otherwise.
         if has_gd_msg_list:
 
-            with closing(self.odb.session()) as session: # type: ignore
+            with closing(self.odb.session()) as session:
 
                 # Test first if we should check the depth in this iteration.
                 if ctx.topic.needs_depth_check():

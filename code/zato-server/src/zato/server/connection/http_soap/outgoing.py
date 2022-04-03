@@ -38,6 +38,7 @@ from zato.server.connection.queue import ConnectionQueue
 
 if 0:
     from requests import Response
+    from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, dictnone, stranydict, strstrdict
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
@@ -70,7 +71,7 @@ class HTTPSAdapter(HTTPAdapter):
 class BaseHTTPSOAPWrapper:
     """ Base class for HTTP/SOAP connection wrappers.
     """
-    def __init__(self, config:'stranydict', _requests_session:'any_'=None) -> 'None':
+    def __init__(self, config:'stranydict', _requests_session:'SASession'=None) -> 'None':
         self.config = config
         self.config['timeout'] = float(self.config['timeout']) if self.config['timeout'] else 0
         self.config_no_sensitive = deepcopy(self.config)
