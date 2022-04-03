@@ -89,17 +89,6 @@
                         <li><a href="{% url "security-basic-auth" %}?cluster={{ cluster_id|default:'' }}">HTTP Basic Auth</a></li>
                         <li><a href="{% url "security-jwt" %}?cluster={{ cluster_id|default:'' }}">JWT</a></li>
                         <li><a href="{% url "security-ntlm" %}?cluster={{ cluster_id|default:'' }}">NTLM</a></li>
-
-                        <li>
-                            <span class="like-a">RBAC &rarr;</span>
-                            <ul>
-                                <li><a href="{% url "security-rbac-role" %}?cluster={{ cluster_id|default:'' }}">Roles</a></li>
-                                <li><a href="{% url "security-rbac-client-role" %}?cluster={{ cluster_id|default:'' }}">Client roles</a></li>
-                                <li><a href="{% url "security-rbac-permission" %}?cluster={{ cluster_id|default:'' }}">Permissions</a></li>
-                                <li><a href="{% url "security-rbac-role-permission" %}?cluster={{ cluster_id|default:'' }}">Permissions<br/>for roles</a></li>
-                            </ul>
-                        </li>
-
                         <li>
                             <span class="like-a">SSL/TLS &rarr;</span>
                             <ul>
