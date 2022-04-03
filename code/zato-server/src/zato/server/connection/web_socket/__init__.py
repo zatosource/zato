@@ -872,7 +872,7 @@ class WebSocket(_WebSocket):
                         else:
                             self.pings_missed += 1
                             if self.pings_missed < self.pings_missed_threshold:
-                                logger.warning(
+                                logger.info(
                                     'Peer %s (%s) missed %s/%s ping messages from %s (%s). Last response time: %s{} (%s)'.format(
                                         ' UTC' if self.ping_last_response_time else ''),
 
@@ -1257,8 +1257,8 @@ class WebSocket(_WebSocket):
                 except RuntimeError as e:
                     if e.args[0] == _cannot_send:
                         msg = 'Ignoring message (socket terminated #1), cid:`%s`, request:`%s` conn:`%s`'
-                        logger.warning(msg, cid, request, self.peer_conn_info_pretty)
-                        logger_zato.warning(msg, cid, request, self.peer_conn_info_pretty)
+                        logger.info(msg, cid, request, self.peer_conn_info_pretty)
+                        logger_zato.info(msg, cid, request, self.peer_conn_info_pretty)
                     else:
                         raise
 
@@ -1648,7 +1648,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
         if client:
             return client.disconnect_client(cid)
         else:
-            logger.info('No such WSX client `%s` (%s)', pub_client_id, cid)
+            logger.info('No such WSX client `%s` (%s) (disconnect_client)', pub_client_id, cid)
 
 # ################################################################################################################################
 
@@ -1658,7 +1658,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
         if client:
             return client.notify_pubsub_message(cid, request)
         else:
-            logger.info('No such WSX client `%s` (%s)', pub_client_id, cid)
+            logger.info('No such WSX client `%s` (%s) (notify_pubsub_message)', pub_client_id, cid)
 
 # ################################################################################################################################
 
@@ -1667,7 +1667,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
         if client:
             return client.subscribe_to_topic(cid, request)
         else:
-            logger.info('No such WSX client `%s` (%s)', pub_client_id, cid)
+            logger.info('No such WSX client `%s` (%s) (subscribe_to_topic)', pub_client_id, cid)
 
 # ################################################################################################################################
 
@@ -1676,7 +1676,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
         if client:
             return client
         else:
-            logger.info('No such WSX client `%s`', pub_client_id)
+            logger.info('No such WSX client `%s` (get_client_by_pub_id)', pub_client_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
