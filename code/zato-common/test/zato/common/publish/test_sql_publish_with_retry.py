@@ -67,51 +67,6 @@ class SQLPublishWithRetryTestCase(TestCase):
 
     def get_gd_msg_list(self) -> 'dictlist':
         out = []
-
-        msg1 = {
-            'cluster_id': 1,
-            'data': 'abc',
-            'data_prefix': 'abc',
-            'data_prefix_short': 'abc',
-            'deliver_to_sk': [],
-            'delivery_count': 0,
-            'delivery_status': '2',
-            'expiration': 2,
-            'expiration_time': 3.1,
-            'expiration_time_iso': '',
-            'ext_client_id': 'ext.client.1',
-            'ext_pub_time': '0.9',
-            'ext_pub_time_iso': '',
-            'group_id': '',
-            'has_gd': True,
-            'in_reply_to': '',
-            'is_in_sub_queue': True,
-            'mime_type': 'text/plain',
-            'position_in_group': 1,
-            'pub_correl_id': '',
-            'pub_msg_id': 'zpsm001',
-            'pub_pattern_matched': 'pub=/*',
-            'pub_time': '1.1',
-            'pub_time_iso': '',
-            'published_by_id': 8,
-            'recv_time': 1.0,
-            'recv_time_iso': '',
-            'reply_to_sk': [],
-            'server_name': '',
-            'server_pid': 0,
-            'size': 3,
-            'sub_key': '',
-            'sub_pattern_matched': {'zpsk.wsx.ext.client.1.111': 'sub=/*'},
-            'topic_id': 53,
-            'topic_name': '/*',
-            'zato_ctx': '{\n\n}'
-        }
-
-        msg2 = {}
-
-        # out.append(msg1)
-        # out.append(msg2)
-
         return out
 
 # ################################################################################################################################
