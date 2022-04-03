@@ -518,7 +518,7 @@ class DeliveryTask:
 
                         if not self.keep_running:
                             msg = 'Skipping delivery loop after r:%s, kr:%d [lend:%d]'
-                            logger.warning(msg, result, self.keep_running, self.len_delivered)
+                            logger.info(msg, result, self.keep_running, self.len_delivered)
                             continue
 
                         if result.is_ok:
