@@ -128,7 +128,6 @@
                             <span class="like-a">Definitions &rarr;</span>
                             <ul>
                                 <li class='wide'><a href="{% url "def-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
-                                <li class='wide'><a href="{% url "def-cassandra" %}?cluster={{ cluster_id|default:'' }}">Cassandra</a></li>
                                 <li class='wide'><a href="{% url "definition-kafka" %}?cluster={{ cluster_id|default:'' }}&amp;type_=def-kafka">Kafka</a></li>
                                 <li class='wide'><a href="{% url "definition-wmq" %}?cluster={{ cluster_id|default:'' }}">IBM MQ</a></li>
                             </ul>
@@ -200,12 +199,6 @@
                             <span class="like-a">Notifications &rarr;</span>
                             <ul>
                                 <li><a href="{% url "notif-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
-                            </ul>
-                        </li>
-                        <li>
-                            <span class="like-a">Queries &rarr;</span>
-                            <ul>
-                                <li class='wide'><a href="{% url "query-cassandra" %}?cluster={{ cluster_id|default:'' }}">Cassandra</a></li>
                             </ul>
                         </li>
                         <li>
