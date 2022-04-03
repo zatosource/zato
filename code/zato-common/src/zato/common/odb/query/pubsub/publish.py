@@ -23,7 +23,7 @@ from zato.common.util.sql.retry import sql_op_with_deadlock_retry
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.orm.session import Session as SQLSession
+    from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, callable_, strdictlist
     from zato.server.pubsub.model import sublist
 
@@ -109,7 +109,7 @@ class PublishWithRetryManager:
         cluster_id,  # type: int
         pub_counter, # type: int
 
-        session,          # type: SQLSession
+        session,          # type: SASession
         new_session_func, # type: callable_
 
         gd_msg_list,            # type: strdictlist
@@ -401,7 +401,7 @@ def sql_publish_with_retry(
     cluster_id,  # type: int
     pub_counter, # type: int
 
-    session,          # type: SQLSession
+    session,          # type: SASession
     new_session_func, # type: callable_
 
     gd_msg_list,            # type: strdictlist
