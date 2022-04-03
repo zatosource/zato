@@ -421,7 +421,7 @@ def ensure_subs_exist(
     to_remove = sk_set - shared
 
     if to_remove:
-        logger.info('Removed sub_keys -> %s -> %s before %s `%s`; len_org:%s, len_out:%s;  left %s -> %s',
+        logger.info('Removed sub_keys -> %s -> %s before %s `%s`; len_orig:%s, len_out:%s;  left %s -> %s',
             context_str,
             to_remove,
             log_action,
