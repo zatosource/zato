@@ -15,7 +15,6 @@ from rapidjson import dumps
 # Zato
 from zato.common.api import CHANNEL, ContentType, CONTENT_TYPE, PUBSUB, ZATO_NONE
 from zato.common.exception import BadRequest, Forbidden, PubSubSubscriptionExists
-from zato.common.typing_ import cast_
 from zato.common.util.auth import parse_basic_auth
 from zato.server.service import AsIs, Int, Service
 from zato.server.service.internal.pubsub.subscription import CreateWSXSubscription
@@ -79,7 +78,7 @@ class _PubSubService(Service):
         except ValueError:
             raise Forbidden(self.cid)
 
-        url_data = cast_('URLData', self.server.worker_store.request_dispatcher.url_data)
+        url_data = self.server.worker_store.request_dispatcher.url_data
         basic_auth = url_data.basic_auth_config.values()
 
         # Assume we are not allowed by default
