@@ -24,7 +24,7 @@ from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
 from zato.common.json_ import dumps as json_dumps
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
-from zato.common.pubsub import ensure_subs_exist, new_msg_id, PubSubMessage
+from zato.common.pubsub import new_msg_id, PubSubMessage
 from zato.common.typing_ import cast_, dictlist, optional
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_ms
@@ -508,7 +508,7 @@ class Publish(AdminService):
         # We don't always have GD messages on input so there is no point in running an SQL transaction otherwise.
         if has_gd_msg_list:
 
-            with closing(self.odb.session()) as session: # type: ignore
+            with closing(self.odb.session()) as session:
 
                 # Test first if we should check the depth in this iteration.
                 if ctx.topic.needs_depth_check():
@@ -530,21 +530,28 @@ class Publish(AdminService):
                     logger_pubsub.debug(_inserting_gd_msg, ctx.topic.name, pub_msg_list, ctx.endpoint_name,
                         ctx.ext_client_id, self.cid)
 
-                # We may possibly need to filter out subscriptions that do not already exist - this is needed because
-                # we took our list of subscribers from self.pubsub but it is possible that between the time
-                # we got this list and when this transaction started, some of the subscribers
-                # have been already deleted from the database so, if we were not filter them out, we would be
-                # potentially trying to insert rows pointing to foreign keys that no longer exist.
-                ctx.subscriptions_by_topic = ensure_subs_exist(
-                    session, ctx.topic.name, ctx.gd_msg_list, ctx.subscriptions_by_topic,
-                    'publishing to topic')
-
                 # This is the call that runs SQL INSERT statements with messages for topics and subscriber queues
-                sql_publish_with_retry(session, self.cid, ctx.cluster_id, ctx.topic.id, ctx.subscriptions_by_topic,
-                    ctx.gd_msg_list, ctx.now)
+                _ = sql_publish_with_retry(
+
+                    ctx.now,
+                    self.cid,
+                    ctx.topic.id,
+                    ctx.topic.name,
+                    ctx.cluster_id,
+                    self.server.get_pub_counter(),
+
+                    session,
+                    self.odb.session,
+
+                    ctx.gd_msg_list,
+                    ctx.subscriptions_by_topic
+                )
 
                 # Run an SQL commit for all queries above ..
                 session.commit()
+
+                # .. increase the publication counter now that we have committed the messages ..
+                self.server.incr_pub_counter()
 
             # .. and set a flag to signal that there are some GD messages available
             ctx.pubsub.set_sync_has_msg(
