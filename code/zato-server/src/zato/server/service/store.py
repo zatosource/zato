@@ -65,6 +65,7 @@ if 0:
 
     from inspect import ArgSpec
     from types import ModuleType
+    from sqlalchemy.orm.session import Session as SASession
     from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anylist, callable_, dictnone, intstrdict, stranydict, strint, \
         strintdict, stroriter, tuple_
@@ -797,7 +798,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _store_in_ram(self, session:'any_', to_process:'inramlist') -> 'None':
+    def _store_in_ram(self, session:'SASession', to_process:'inramlist') -> 'None':
 
         if self.is_testing:
             services = {}
@@ -1009,7 +1010,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _store_in_odb(self, session:'any_', to_process:'inramlist') -> 'None':
+    def _store_in_odb(self, session:'SASession', to_process:'inramlist') -> 'None':
 
         # Indicates boundaries of deployment batches
         batch_indexes = get_batch_indexes(to_process, self.max_batch_size)
@@ -1028,7 +1029,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def get_basic_data_services(self, session:'any_') -> 'anydict':
+    def get_basic_data_services(self, session:'SASession') -> 'anydict':
 
         # We will return service keyed by their names
         out = {}
@@ -1142,7 +1143,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def after_import(self, session:'any_', info:'DeploymentInfo') -> 'None':
+    def after_import(self, session:'SASession', info:'DeploymentInfo') -> 'None':
 
         # Names of all services that have been just deployed ..
         deployed_service_name_list = [item.name for item in info.to_process]

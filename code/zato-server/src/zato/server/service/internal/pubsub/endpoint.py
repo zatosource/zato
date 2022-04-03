@@ -40,7 +40,8 @@ from six import add_metaclass
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, anylist, stranydict
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.common.typing_ import anylist, stranydict
     from zato.server.pubsub.model import subnone
     from zato.server.service import Service
     Bunch   = Bunch
@@ -129,7 +130,7 @@ def broker_message_hook(
     service_type:'str'
 ) -> 'None':
     if service_type == 'create_edit':
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             input['is_internal'] = pubsub_endpoint(session, input['cluster_id'], instance.id).is_internal
 
 # ################################################################################################################################
@@ -157,7 +158,7 @@ class Create(AdminService):
         input = self.request.input
         cluster_id = input.get('cluster_id') or self.server.cluster_id
 
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
 
             existing_one = session.query(PubSubEndpoint.id).\
                 filter(PubSubEndpoint.cluster_id==cluster_id).\
@@ -216,7 +217,7 @@ class Get(AdminService):
             'security_id', 'ws_channel_id', 'sec_type', 'sec_name', 'ws_channel_name', 'sub_key')
 
     def handle(self):
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             self.response.payload = pubsub_endpoint(session, self.request.input.cluster_id, self.request.input.id)
 
 # ################################################################################################################################
@@ -256,7 +257,7 @@ class GetEndpointQueueNonGDDepth(AdminService):
 # ################################################################################################################################
 
 class _GetEndpointQueue(AdminService):
-    def _add_queue_depths(self, session:'any_', item:'stranydict') -> 'None':
+    def _add_queue_depths(self, session:'SASession', item:'stranydict') -> 'None':
 
         current_depth_gd_q = session.query(PubSubEndpointEnqueuedMessage.id).\
             filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
@@ -300,7 +301,7 @@ class GetEndpointQueue(_GetEndpointQueue):
         output_optional = common_sub_data
 
     def handle(self) -> 'None':
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             item = pubsub_endpoint_queue(session, self.request.input.cluster_id, self.request.input.id)
             item.creation_time = datetime_from_ms(item.creation_time * 1000.0)
             if getattr(item, 'last_interaction_time', None):
@@ -323,13 +324,13 @@ class GetEndpointQueueList(_GetEndpointQueue):
         request_elem = 'zato_pubsub_endpoint_get_endpoint_queue_list_request'
         response_elem = 'zato_pubsub_endpoint_get_endpoint_queue_list_response'
 
-    def get_data(self, session:'any_') -> 'anylist':
+    def get_data(self, session:'SASession') -> 'anylist':
         return self._search(pubsub_subscription_list_by_endpoint_id, session, self.request.input.cluster_id,
             self.request.input.endpoint_id, False)
 
     def handle(self) -> 'None':
         response = []
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             for item in self.get_data(session):
 
                 item = item.get_value()
@@ -382,7 +383,7 @@ class UpdateEndpointQueue(AdminService):
         else:
             out_http_soap_id = None
 
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             item = session.query(PubSubSubscription).\
                 filter(PubSubSubscription.id==self.request.input.id).\
                 filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
@@ -458,7 +459,7 @@ class ClearEndpointQueue(AdminService):
             is_in_staging = None
 
         # Remove all references to the queue given on input
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             q = session.query(PubSubEndpointEnqueuedMessage).\
                 filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
                 filter(PubSubEndpointEnqueuedMessage.sub_key==self.request.input.sub_key)
@@ -495,7 +496,7 @@ class DeleteEndpointQueue(AdminService):
 
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
 
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
 
             # First we need a list of topics to which sub_keys were related - required by broker messages.
             topic_sub_keys = get_topic_sub_keys_from_sub_keys(session, cluster_id, sub_key_list)
@@ -546,7 +547,7 @@ class GetEndpointQueueMessagesGD(AdminService, _GetMessagesBase):
     _filter_by = PubSubMessage.data_prefix,
     SimpleIO = _GetEndpointQueueMessagesSIO # type: ignore
 
-    def get_data(self, session:'any_') -> 'anylist':
+    def get_data(self, session:'SASession') -> 'anylist':
 
         input = self.request.input
         sub = self._get_sub_by_sub_input(input)
@@ -559,7 +560,7 @@ class GetEndpointQueueMessagesGD(AdminService, _GetMessagesBase):
             pubsub_messages_for_queue, session, self.request.input.cluster_id, sub.sub_key, True, False)
 
     def handle(self) -> 'None':
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             self.response.payload[:] = [elem.get_value() for elem in self.get_data(session)]
 
         for item in self.response.payload:
@@ -642,7 +643,7 @@ class GetEndpointSummary(_GetEndpointSummaryBase):
         response_elem = 'zato_pubsub_subscription_get_endpoint_summary_response'
 
     def handle(self) -> 'None':
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             item = pubsub_endpoint_summary(session, self.server.cluster_id, self.request.input.endpoint_id)
 
             if item.last_seen:
@@ -665,7 +666,7 @@ class GetEndpointSummaryList(_GetEndpointSummaryBase):
         request_elem = 'zato_pubsub_endpoint_get_endpoint_summary_list_request'
         response_elem = 'zato_pubsub_endpoint_get_endpoint_summary_list_response'
 
-    def get_data(self, session:'any_') -> 'anylist':
+    def get_data(self, session:'SASession') -> 'anylist':
 
         result = self._search(pubsub_endpoint_summary_list, session, self.request.input.cluster_id,
             self.request.input.get('topic_id') or None, False)
@@ -681,7 +682,7 @@ class GetEndpointSummaryList(_GetEndpointSummaryBase):
         return result
 
     def handle(self):
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
 # ################################################################################################################################
@@ -785,7 +786,7 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
                     topic_name = '(None)'
 
                 # .. make sure that all of the sub_keys actually still exist ..
-                with closing(self.odb.session()) as session: # type: ignore
+                with closing(self.odb.session()) as session:
                     response = ensure_subs_exist(
                         session,
                         topic_name,
