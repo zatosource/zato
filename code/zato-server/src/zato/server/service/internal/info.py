@@ -30,7 +30,7 @@ class GetInfo(Service):
         channel = self.server.worker_store.get_channel_rest(MISC.DefaultAdminInvokeChannel)
         out = {}
 
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             for item in server_list(session, self.server.cluster_id, None, None, False):
                 server_info = out.setdefault(item.name, {})
                 server_info['cluster_name'] = item.cluster_name

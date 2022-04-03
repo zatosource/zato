@@ -46,6 +46,7 @@ from zato.server.pubsub.sync import InRAMSync
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.orm.session import Session as SASession
     from zato.common.model.wsx import WSXConnectorConfig
     from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, commondict, dictlist, intdict, \
         intanydict, intlist, intnone, intset, list_, stranydict, strintdict, strstrdict, strlist, strlistdict, \
@@ -1387,7 +1388,7 @@ class PubSub:
 
     def get_initial_sql_msg_ids_by_sub_key(
         self,
-        session:'any_',
+        session:'SASession',
         sub_key:'str',
         pub_time_max:'float'
         ) -> 'anytuple':
