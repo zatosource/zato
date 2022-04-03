@@ -23,7 +23,7 @@ from zato.common.util.sql.retry import sql_op_with_deadlock_retry
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.orm.session import Session as SQLSession
+    from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, callable_, strdictlist
     from zato.server.pubsub.model import sublist
 
@@ -109,7 +109,7 @@ class PublishWithRetryManager:
         cluster_id,  # type: int
         pub_counter, # type: int
 
-        session,          # type: SQLSession
+        session,          # type: SASession
         new_session_func, # type: callable_
 
         gd_msg_list,            # type: strdictlist
@@ -239,21 +239,35 @@ class PublishWithRetryManager:
         # Publish messages - insert rows, each representing an individual message.
         if publish_op_ctx.needs_topic_messages:
 
-            # This is the place where the insert to the topic table statement is executed.
-            self.insert_topic_messages(cid, gd_msg_list)
+            # It may be the case that we do not have any message to publish ..
+            if not gd_msg_list:
 
-            # If we are here, it means that the insert above was successful
-            # and we can set a flag for later use to indicate that.
-            publish_op_ctx.needs_topic_messages = False
+                # .. in such a situation, store a message in logs ..
+                logger_pubsub.info('No messages in -> %s -> `%s`', counter_ctx_str, cid)
 
-            # Log details about the messages inserted.
-            logger_pubsub.info(
-                'Topic messages inserted -> %s -> %s -> %s -> %s',
-                    counter_ctx_str, cid, topic_name, gd_msg_list
-                )
+                # .. now, indicate that the publication went fine (seeing as there was nothing to publish)
+                # .. and that no queue insertion should be carried out.
+                publish_op_ctx.needs_topic_messages = False
+                publish_op_ctx.needs_queue_messages = False
+
+            else:
+
+                # This is the place where the insert to the topic table statement is executed.
+                self.insert_topic_messages(cid, gd_msg_list)
+
+                # If we are here, it means that the insert above was successful
+                # and we can set a flag for later use to indicate that.
+                publish_op_ctx.needs_topic_messages = False
+
+                # Log details about the messages inserted.
+                logger_pubsub.info(
+                    'Topic messages inserted -> %s -> %s -> %s -> %s',
+                        counter_ctx_str, cid, topic_name, gd_msg_list
+                    )
 
         # We enter here only if it is necessary, i.e. if there has not been previously
-        # a succcessful insertion already in a previous iteration of the publication loop.
+        # a succcessful insertion already in a previous iteration of the publication loop
+        # and if there are any messages to publish at all.
         if publish_op_ctx.needs_queue_messages:
 
             # Sort alphabetically all the sub_keys to make it easy to find them in logs.
@@ -401,7 +415,7 @@ def sql_publish_with_retry(
     cluster_id,  # type: int
     pub_counter, # type: int
 
-    session,          # type: SQLSession
+    session,          # type: SASession
     new_session_func, # type: callable_
 
     gd_msg_list,            # type: strdictlist

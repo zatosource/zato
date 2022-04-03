@@ -30,6 +30,7 @@ from zato.server.service.internal import AdminService, AdminSIO
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, stranydict
 
 # ################################################################################################################################
@@ -72,7 +73,7 @@ class GetFromTopicGD(AdminService):
         input_optional = ('needs_sub_queue_check',)
 
     def handle(self, _not_given:'any_'=object()) -> 'None':
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             needs_sub_queue_check = self.request.input.get('needs_sub_queue_check', _not_given)
             needs_sub_queue_check = needs_sub_queue_check if needs_sub_queue_check is not _not_given else True
             item = pubsub_message(session, self.request.input.cluster_id, self.request.input.msg_id, needs_sub_queue_check).\
@@ -139,7 +140,7 @@ class Has(AdminService):
         output_required = (Bool('found'),)
 
     def handle(self) -> 'None':
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             self.response.payload.found = session.query(
                 exists().where(and_(
                     PubSubMessage.pub_msg_id==self.request.input.msg_id,
@@ -156,7 +157,7 @@ class TopicDeleteGD(AdminService):
         input_required = ('cluster_id', AsIs('msg_id'))
 
     def handle(self) -> 'None':
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             ps_msg = session.query(PubSubMessage).\
                 filter(PubSubMessage.cluster_id==self.request.input.cluster_id).\
                 filter(PubSubMessage.pub_msg_id==self.request.input.msg_id).\
@@ -240,7 +241,7 @@ class QueueDeleteGD(AdminService):
         input_required = ('cluster_id', AsIs('msg_id'), 'sub_key')
 
     def handle(self) -> 'None':
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             ps_msg = session.query(PubSubEndpointEnqueuedMessage).\
                 filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
                 filter(PubSubEndpointEnqueuedMessage.pub_msg_id==self.request.input.msg_id).\
@@ -359,13 +360,13 @@ class UpdateGD(_Update):
     """
     _message_update_has_gd = True
 
-    def _get_item(self, input:'stranydict', session:'any_') -> 'PubSubMessage':
+    def _get_item(self, input:'stranydict', session:'SASession') -> 'PubSubMessage':
         return session.query(PubSubMessage).\
             filter(PubSubMessage.cluster_id==input['cluster_id']).\
             filter(PubSubMessage.pub_msg_id==input['msg_id']).\
             first()
 
-    def _save_item(self, item:'any_', _ignored:'any_', session:'any_') -> 'bool':
+    def _save_item(self, item:'any_', _ignored:'any_', session:'SASession') -> 'bool':
         session.add(item)
         session.commit()
         return True
@@ -400,7 +401,7 @@ class GetFromQueueGD(AdminService):
             'published_by_name', 'pub_pattern_matched')
 
     def handle(self):
-        with closing(self.odb.session()) as session: # type: ignore
+        with closing(self.odb.session()) as session:
             item = pubsub_queue_message(session, self.request.input.cluster_id, self.request.input.msg_id).\
                 first()
             if item:

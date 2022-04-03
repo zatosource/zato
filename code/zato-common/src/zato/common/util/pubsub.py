@@ -16,6 +16,7 @@ from zato.common.odb.query import pubsub_endpoint_queue_list_by_sub_keys
 
 if 0:
     from typing import Union as union
+    from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, anydict, anylist, dictlist, stranydict, strlist
     from zato.server.base.parallel import ParallelServer
 
@@ -157,7 +158,7 @@ def get_endpoint_metadata(server:'ParallelServer', endpoint_id:'int') -> 'dict |
 
 # ################################################################################################################################
 
-def get_topic_sub_keys_from_sub_keys(session:'any_', cluster_id:'int', sub_key_list:'strlist') -> 'stranydict':
+def get_topic_sub_keys_from_sub_keys(session:'SASession', cluster_id:'int', sub_key_list:'strlist') -> 'stranydict':
     topic_sub_keys = {}
 
     for item in pubsub_endpoint_queue_list_by_sub_keys(session, cluster_id, sub_key_list):

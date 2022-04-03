@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_ping_query(fs_sql_config, engine_params):
+def get_ping_query(fs_sql_config, engine_params, default_query='select 1+1'):
     """ Returns a ping query for input engine and component-wide SQL configuration.
     """
     ping_query = None
@@ -27,7 +27,14 @@ def get_ping_query(fs_sql_config, engine_params):
             ping_query = 'SELECT 1'
 
         if not ping_query:
-            raise ValueError('Could not find ping_query for {}'.format(engine_params))
+
+            # Use the default one, if we have any ..
+            if default_query:
+                ping_query = default_query
+
+            # .. otherwise, report an error.
+            else:
+                raise ValueError('Could not find ping_query for {}'.format(engine_params))
 
     # If we are here it means that a query was found
     return ping_query

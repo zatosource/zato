@@ -42,7 +42,7 @@ from zato.server.pubsub.model import DeliveryResultCtx
 
 if 0:
     from collections.abc import ValuesView
-    from sqlalchemy.orm import Session
+    from sqlalchemy.orm.session import Session as SASession
     from zato.common.pubsub import HandleNewMessageCtx
     from zato.common.typing_ import any_, anydict, anylist, anytuple, boolnone, callable_, dict_, dictlist, intset, \
         set_, strlist, tuple_
@@ -1060,7 +1060,7 @@ class PubSubTool:
 
         try:
             if ctx.has_gd:
-                session = cast('Session', self.pubsub.server.odb.session())
+                session = cast('SASession', self.pubsub.server.odb.session())
             else:
                 if not ctx.non_gd_msg_list:
                     # This is an unusual situation but not an erroneous one because it is possible
@@ -1140,7 +1140,7 @@ class PubSubTool:
     def _fetch_gd_messages_by_sk_list(self,
         sub_key_list, # type: strlist
         pub_time_max, # type: float
-        session=None  # type: Session
+        session=None  # type: SASession
         ) -> 'sqlmsgiter':
         """ Part of the low-level implementation of enqueue_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
@@ -1208,7 +1208,7 @@ class PubSubTool:
 
 # ################################################################################################################################
 
-    def enqueue_gd_messages_by_sub_key(self, sub_key:'str', session:'Session'=None) -> 'None':
+    def enqueue_gd_messages_by_sub_key(self, sub_key:'str', session:'SASession'=None) -> 'None':
         """ Fetches GD messages from SQL for sub_key given on input and adds them to local queue of messages to deliver.
         """
         with self.sub_key_locks[sub_key]:
