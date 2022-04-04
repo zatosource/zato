@@ -545,7 +545,8 @@ class Publish(AdminService):
                     before_queue_insert_func = None,
 
                     gd_msg_list = ctx.gd_msg_list,
-                    subscriptions_by_topic = ctx.subscriptions_by_topic
+                    subscriptions_by_topic = ctx.subscriptions_by_topic,
+                    should_collect_ctx = False
                 )
 
                 # Run an SQL commit for all queries above ..

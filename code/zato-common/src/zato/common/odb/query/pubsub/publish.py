@@ -116,6 +116,8 @@ class PublishWithRetryManager:
         gd_msg_list,            # type: strdictlist
         subscriptions_by_topic, # type: sublist
 
+        should_collect_ctx # type: bool
+
     ) -> 'None':
 
         self.now = now
@@ -131,6 +133,9 @@ class PublishWithRetryManager:
 
         self.gd_msg_list = gd_msg_list
         self.subscriptions_by_topic = subscriptions_by_topic
+
+        self.should_collect_ctx = should_collect_ctx
+        self.ctx_history = []
 
 # ################################################################################################################################
 
@@ -153,6 +158,10 @@ class PublishWithRetryManager:
             # This is reusable
             counter_ctx_str = publish_op_ctx.get_counter_ctx_str()
 
+            # Collect context metadata, if told to.
+            if self.should_collect_ctx:
+                self.ctx_history.append(f'Counter -> {counter_ctx_str}')
+
             logger_pubsub.info('SQL publish with retry -> %s -> On new loop iter',
                 counter_ctx_str,
             )
@@ -168,12 +177,18 @@ class PublishWithRetryManager:
                 self.now
             )
 
+            if self.should_collect_ctx:
+                self.ctx_history.append(f'Result -> {publish_op_ctx.is_queue_insert_ok}')
+
             logger_pubsub.info('SQL publish with retry -> %s -> is_queue_ok:%s',
                 counter_ctx_str,
                 publish_op_ctx.is_queue_insert_ok
             )
 
             if not publish_op_ctx.is_queue_insert_ok:
+
+                if self.should_collect_ctx:
+                    self.ctx_history.append(f'Queue insert OK -> {publish_op_ctx.is_queue_insert_ok}')
 
                 # We may need to filter out subscriptions that do not exist anymore - this is needed because
                 # we took our list of subscribers from self.pubsub but it is possible that between the time
@@ -189,6 +204,9 @@ class PublishWithRetryManager:
                         '_sql_publish_with_retry',
                         counter_ctx_str
                     )
+
+                if self.should_collect_ctx:
+                    self.ctx_history.append(f'Sub by topic -> {subscriptions_by_topic}')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -425,6 +443,8 @@ def sql_publish_with_retry(
 
     gd_msg_list,            # type: strdictlist
     subscriptions_by_topic, # type: sublist
+
+    should_collect_ctx # type: bool
 ) -> 'PublishWithRetryManager':
 
     """ Populates SQL structures with new messages for topics and their counterparts in subscriber queues.
@@ -447,6 +467,8 @@ def sql_publish_with_retry(
 
         gd_msg_list,
         subscriptions_by_topic,
+
+        should_collect_ctx
     )
 
     # .. publish the message(s) ..
