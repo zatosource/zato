@@ -202,17 +202,17 @@ class SQLPublishWithRetryTestCase(CommandLineTestCase):
                 subscriptions_by_topic.append(sub)
 
                 publish_with_retry_manager = sql_publish_with_retry(
-                    now,
-                    cid,
-                    topic_id,
-                    topic_name,
-                    cluster_id,
-                    pub_counter,
-                    session,
-                    new_session_func,
-                    None,
-                    gd_msg_list,
-                    subscriptions_by_topic,
+                    now = now,
+                    cid = cid,
+                    topic_id = topic_id,
+                    topic_name = topic_name,
+                    cluster_id = cluster_id,
+                    pub_counter = pub_counter,
+                    session = session,
+                    new_session_func = new_session_func,
+                    before_queue_insert_func = before_queue_insert_func,
+                    gd_msg_list = gd_msg_list,
+                    subscriptions_by_topic = subscriptions_by_topic,
                 )
 
         return publish_with_retry_manager
