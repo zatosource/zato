@@ -17,7 +17,7 @@ from zato.common.test import CommandLineTestCase
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, stranydict, strlist, strlistnone
+    from zato.common.typing_ import any_, anydict, stranydict, strintdict, strlist, strlistnone
     from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper, _ZatoWSXClientImpl
 
 # ################################################################################################################################
@@ -103,7 +103,7 @@ class WSXChannelManager:
     channel_id: 'str'
     security_id: 'str'
     security_name: 'str'
-    pubsub_endpoint_id: 'str'
+    pubsub_endpoint_id: 'int'
     needs_credentials: 'bool'
     wsx_channel_address: 'str'
     run_cli: 'bool'
@@ -126,6 +126,7 @@ class WSXChannelManager:
         self.needs_credentials = needs_credentials
         self.run_cli = run_cli
         self.topics = topics or []
+        self.topic_name_to_id = {} # type: strintdict
 
         self.channel_id = ''
         self.security_id = ''
@@ -164,7 +165,8 @@ class WSXChannelManager:
             cli_params.append('--verbose')
 
             if self.run_cli:
-                _ = self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
+                response = self.test_case.run_zato_cli_json_command(cli_params) # type: anydict
+                self.topic_name_to_id[topic_name] = response['id']
 
 # ################################################################################################################################
 
