@@ -533,19 +533,19 @@ class Publish(AdminService):
                 # This is the call that runs SQL INSERT statements with messages for topics and subscriber queues
                 _ = sql_publish_with_retry(
 
-                    ctx.now,
-                    self.cid,
-                    ctx.topic.id,
-                    ctx.topic.name,
-                    ctx.cluster_id,
-                    self.server.get_pub_counter(),
+                    now = ctx.now,
+                    cid = self.cid,
+                    topic_id = ctx.topic.id,
+                    topic_name = ctx.topic.name,
+                    cluster_id = ctx.cluster_id,
+                    pub_counter = self.server.get_pub_counter(),
 
-                    session,
-                    self.odb.session,
-                    None,
+                    session = session,
+                    new_session_func = self.odb.session,
+                    before_queue_insert_func = None,
 
-                    ctx.gd_msg_list,
-                    ctx.subscriptions_by_topic
+                    gd_msg_list = ctx.gd_msg_list,
+                    subscriptions_by_topic = ctx.subscriptions_by_topic
                 )
 
                 # Run an SQL commit for all queries above ..
