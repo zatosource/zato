@@ -9,22 +9,29 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from contextlib import closing
-from unittest import main, TestCase
+from unittest import main
 
 # Zato
+from zato.common.api import PUBSUB
 from zato.common.odb.api import PoolStore, SessionWrapper
-from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
+from zato.common.odb.model import PubSubSubscription
+from zato.common.odb.query.pubsub.publish import PublishWithRetryManager, sql_publish_with_retry
+from zato.common.test import CommandLineTestCase
+from zato.common.test.wsx_ import WSXChannelManager
+from zato.common.util.api import fs_safe_now
+from zato.common.util.time_ import utcnow_as_ms
+from zato.server.pubsub import Subscription
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import dictlist
+    from zato.common.typing_ import any_, anydict, callable_, callnone, dictlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SQLPublishWithRetryTestCase(TestCase):
+class SQLPublishWithRetryTestCase(CommandLineTestCase):
 
     def setUp(self) -> 'None':
 
@@ -65,55 +72,177 @@ class SQLPublishWithRetryTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def get_gd_msg_list(self) -> 'dictlist':
-        out = []
-        return out
+    def get_gd_msg_list(
+        self,
+        topic_name:'str',
+        topic_id:'int',
+        sub_key:'str',
+        pubsub_endpoint_id:'int',
+        ext_client_id:'str',
+    ) -> 'dictlist':
+
+        return [{
+            'cluster_id': 1,
+            'data': 'abc',
+            'data_prefix': 'abc',
+            'data_prefix_short': 'abc',
+            'deliver_to_sk': [],
+            'delivery_count': 0,
+            'delivery_status': '2',
+            'expiration': 2,
+            'expiration_time': 3.1,
+            'expiration_time_iso': '',
+            'ext_client_id': ext_client_id,
+            'ext_pub_time': '0.9',
+            'ext_pub_time_iso': '',
+            'group_id': '',
+            'has_gd': True,
+            'in_reply_to': '',
+            'is_in_sub_queue': True,
+            'mime_type': 'text/plain',
+            'position_in_group': 1,
+            'pub_correl_id': '',
+            'pub_msg_id': 'zpsm001',
+            'pub_pattern_matched': 'pub=/*',
+            'pub_time': '1.1',
+            'pub_time_iso': '',
+            'published_by_id': pubsub_endpoint_id,
+            'recv_time': 1.0,
+            'recv_time_iso': '',
+            'reply_to_sk': [],
+            'server_name': '',
+            'server_pid': 0,
+            'size': 3,
+            'sub_key': '',
+            'sub_pattern_matched': {sub_key: 'sub=/*'},
+            'topic_id': topic_id,
+            'topic_name': topic_name,
+            'zato_ctx': '{\n\n}'
+        }]
 
 # ################################################################################################################################
 
-    def test_sql_publish_with_retry(self):
+    def create_sql_sub(
+        self,
+        new_session_func:'callable_',
+        pubsub_endpoint_id:'int',
+        sub_key:'str',
+        topic_id:'int'
+    ) -> 'anydict':
+
+        with closing(new_session_func()) as session: # type: any_
+
+            sub = PubSubSubscription()
+
+            sub.sub_key = sub_key # type: ignore
+            sub.endpoint_id = pubsub_endpoint_id # type: ignore
+            sub.topic_id = topic_id # type: ignore
+            sub.creation_time = utcnow_as_ms() # type: ignore
+            sub.sub_pattern_matched = 'sub=/*' # type: ignore
+            sub.is_durable = True # type: ignore
+            sub.has_gd = True # type: ignore
+            sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id # type: ignore
+            sub.is_staging_enabled = False # type: ignore
+            sub.delivery_method = PUBSUB.DELIVERY_METHOD.NOTIFY.id # type: ignore
+            sub.delivery_data_format = 'text/plain' # type: ignore
+            sub.wrap_one_msg_in_list = True # type: ignore
+            sub.delivery_max_size = 111 # type: ignore
+            sub.delivery_max_retry = 1 # type: ignore
+            sub.delivery_err_should_block = False # type: ignore
+            sub.wait_sock_err = 1 # type: ignore
+            sub.wait_non_sock_err = 1 # type: ignore
+
+            session.add(sub)
+            session.commit()
+
+            dict_info = sub.asdict()
+
+        return dict_info
+
+# ################################################################################################################################
+
+    def _run_test(self, before_queue_insert_func:'callnone') -> 'PublishWithRetryManager':
+
+        # If we are here, it means that we can proceed.
+
+        now_safe = fs_safe_now()
+
+        topic_name = f'/wsx.pubsub.test.{now_safe}.1'
+        topics = [topic_name]
+
+        with WSXChannelManager(self, needs_pubsub=True, run_cli=True, topics=topics) as ctx:
+
+            now = 1.0
+            cid = 'cid.zxc'
+            sub_key = f'zpsk.{now_safe}'
+            cluster_id = 1
+            pub_counter = 1
+            ext_client_id = 'ext.client.id.1'
+
+            new_session_func = self.odb.session
+
+            topic_id = ctx.topic_name_to_id[topic_name]
+            gd_msg_list = self.get_gd_msg_list(topic_name, topic_id, sub_key, ctx.pubsub_endpoint_id, ext_client_id)
+            subscriptions_by_topic = []
+
+            with closing(self.odb.session()) as session:
+
+                sub_info = self.create_sql_sub(
+                    new_session_func,
+                    ctx.pubsub_endpoint_id,
+                    sub_key,
+                    topic_id
+                )
+
+                sub_info['topic_name'] = topic_name
+                sub_info['task_delivery_interval'] = 1
+                sub_info['ext_client_id'] = ext_client_id
+
+                sub = Subscription(sub_info)
+                subscriptions_by_topic.append(sub)
+
+                publish_with_retry_manager = sql_publish_with_retry(
+                    now,
+                    cid,
+                    topic_id,
+                    topic_name,
+                    cluster_id,
+                    pub_counter,
+                    session,
+                    new_session_func,
+                    None,
+                    gd_msg_list,
+                    subscriptions_by_topic,
+                )
+
+        return publish_with_retry_manager
+
+# ################################################################################################################################
+
+    def test_sql_publish_with_retry_ok(self):
 
         # Skip the test if we are not to run.
         if not self.should_run:
             return
 
-        # If we are here, it means that we can proceed.
+        # In this test, we do not update the subscription list at all,
+        # assuming rather that everything should be published as it is given on input.
+        before_queue_insert_func = None
 
-        now = 1.0
-        cid = 'abc'
-
-        topic_id = 1234
-        topic_name = '/test-sql-publish-with-retry-1'
-
-        cluster_id = 1
-        pub_counter = 1
-
-        new_session_func = self.odb.session
-
-        gd_msg_list = self.get_gd_msg_list()
-        subscriptions_by_topic = []
-
-        with closing(self.odb.session()) as session:
-
-            publish_with_retry_manager = sql_publish_with_retry(
-                now,
-                cid,
-                topic_id,
-                topic_name,
-                cluster_id,
-                pub_counter,
-                session,
-                new_session_func,
-                gd_msg_list,
-                subscriptions_by_topic
-            )
-
-            publish_with_retry_manager
+        _ = self._run_test(before_queue_insert_func)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
+    # stdlib
+    import logging
+
+    log_level = logging.INFO
+    log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+    logging.basicConfig(level=log_level, format=log_format)
+
     main()
 
 # ################################################################################################################################
