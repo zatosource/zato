@@ -320,6 +320,9 @@ class PublishWithRetryManager:
                     logger_pubsub.info('Inserting queue messages for %s sub_key%s-> %s -> %s -> %s',
                         publish_op_ctx.len_sub_keys_by_topic, publish_op_ctx.suffix, counter_ctx_str, cid, sub_keys_by_topic)
 
+                    if self.before_queue_insert_func:
+                        self.before_queue_insert_func(self, sub_keys_by_topic)
+
                     # This is the call that adds references to each of GD message for each of the input subscribers.
                     self.insert_queue_messages(cluster_id, subscriptions_by_topic, gd_msg_list, topic_id, now, cid)
 

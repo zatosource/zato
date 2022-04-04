@@ -26,7 +26,13 @@ from zato.server.pubsub import Subscription
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, callable_, callnone, dictlist
+    from zato.common.typing_ import anydict, callable_, callnone, dictlist, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+PubSubSubscriptionTable  = PubSubSubscription.__table__
+PubSubSubscriptionDelete = PubSubSubscriptionTable.delete
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -130,7 +136,7 @@ class SQLPublishWithRetryTestCase(CommandLineTestCase):
         topic_id:'int'
     ) -> 'anydict':
 
-        with closing(new_session_func()) as session: # type: any_
+        with closing(new_session_func()) as session:
 
             sub = PubSubSubscription()
 
@@ -254,6 +260,38 @@ class SQLPublishWithRetryTestCase(CommandLineTestCase):
 
         # .. and confirm the result.
         self.assertListEqual(publish_with_retry_manager.ctx_history, ['Counter -> 1:1', 'Result -> True'])
+
+# ################################################################################################################################
+
+    def test_sql_publish_with_retry_one_sub_delete_sub(self):
+
+        # Skip the test if we are not to run.
+        if not self.should_run:
+            return
+
+        def _before_queue_insert_func(
+            publish_with_retry_manager:'PublishWithRetryManager',
+            sub_keys_by_topic:'strlist'
+        ) -> 'None':
+
+            session = publish_with_retry_manager.new_session_func()
+            session.execute(
+                PubSubSubscriptionDelete().\
+                where(PubSubSubscription.sub_key.in_(sub_keys_by_topic))
+            )
+            session.commit()
+
+        # In this test, we update the subscription list and we collect context information.
+        before_queue_insert_func = _before_queue_insert_func
+        should_collect_ctx = True
+
+        # Run the test ..
+        publish_with_retry_manager = self._run_test(before_queue_insert_func, should_collect_ctx)
+
+        # .. and confirm the result.
+        self.assertListEqual(publish_with_retry_manager.ctx_history,
+            ['Counter -> 1:1', 'Result -> False', 'Queue insert OK -> False', 'Sub by topic -> []',
+             'Counter -> 1:2', 'Result -> True'])
 
 # ################################################################################################################################
 # ################################################################################################################################
