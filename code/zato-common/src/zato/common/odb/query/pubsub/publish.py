@@ -24,7 +24,7 @@ from zato.common.util.sql.retry import sql_op_with_deadlock_retry
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, callable_, strdictlist
+    from zato.common.typing_ import any_, callable_, callnone, strdictlist
     from zato.server.pubsub.model import sublist
 
 # ################################################################################################################################
@@ -111,6 +111,7 @@ class PublishWithRetryManager:
 
         session,          # type: SASession
         new_session_func, # type: callable_
+        before_queue_insert_func, # type: callnone
 
         gd_msg_list,            # type: strdictlist
         subscriptions_by_topic, # type: sublist
@@ -126,6 +127,7 @@ class PublishWithRetryManager:
 
         self.session = session
         self.new_session_func = new_session_func
+        self.before_queue_insert_func = before_queue_insert_func
 
         self.gd_msg_list = gd_msg_list
         self.subscriptions_by_topic = subscriptions_by_topic
@@ -243,7 +245,7 @@ class PublishWithRetryManager:
             if not gd_msg_list:
 
                 # .. in such a situation, store a message in logs ..
-                logger_pubsub.info('No messages in -> %s -> `%s`', counter_ctx_str, cid)
+                logger_pubsub.info('No messages in -> %s -> %s', counter_ctx_str, cid)
 
                 # .. now, indicate that the publication went fine (seeing as there was nothing to publish)
                 # .. and that no queue insertion should be carried out.
@@ -278,7 +280,7 @@ class PublishWithRetryManager:
             if not sub_keys_by_topic:
 
                 # .. in such a situation, store a message in logs ..
-                logger_pubsub.info('No subscribers in -> %s -> `%s`', counter_ctx_str, cid)
+                logger_pubsub.info('No subscribers in -> %s -> %s', counter_ctx_str, cid)
 
                 # .. now, indicate to the caller that the insertion went fine (seeing as there was nothing to insert)
                 # .. and that it should not repeat the call.
@@ -311,7 +313,7 @@ class PublishWithRetryManager:
                     is_queue_insert_ok = True
 
                 except IntegrityError as e:
-                    err_msg = 'Caught IntegrityError (_sql_publish_with_retry) -> %s -> `%s` `%s`'
+                    err_msg = 'Caught IntegrityError (_sql_publish_with_retry) -> %s -> %s -> `%s`'
                     logger_zato.info(err_msg, counter_ctx_str, cid, e)
                     logger_pubsub.info(err_msg, counter_ctx_str, cid, e)
 
@@ -351,7 +353,7 @@ class PublishWithRetryManager:
 
         # Catch duplicate MsgId values sent by clients
         except IntegrityError as e:
-            err_msg = 'Caught IntegrityError (insert_topic_messages) `%s` `%s`'
+            err_msg = 'Caught IntegrityError (insert_topic_messages) -> %s -> `%s`'
             logger_zato.info(err_msg, cid, e)
             logger_pubsub.info(err_msg, cid, e)
             raise
@@ -417,6 +419,7 @@ def sql_publish_with_retry(
 
     session,          # type: SASession
     new_session_func, # type: callable_
+    before_queue_insert_func, # type: callnone,
 
     gd_msg_list,            # type: strdictlist
     subscriptions_by_topic, # type: sublist
@@ -438,6 +441,7 @@ def sql_publish_with_retry(
 
         session,
         new_session_func,
+        before_queue_insert_func,
 
         gd_msg_list,
         subscriptions_by_topic,

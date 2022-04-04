@@ -542,6 +542,7 @@ class Publish(AdminService):
 
                     session,
                     self.odb.session,
+                    None,
 
                     ctx.gd_msg_list,
                     ctx.subscriptions_by_topic
