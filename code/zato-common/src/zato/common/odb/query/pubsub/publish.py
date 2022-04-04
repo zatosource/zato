@@ -410,6 +410,8 @@ class PublishWithRetryManager:
 
 def sql_publish_with_retry(
 
+    *,
+
     now,         # type: float
     cid,         # type: str
     topic_id,    # type: int
