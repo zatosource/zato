@@ -161,7 +161,7 @@ class SQLPublishWithRetryTestCase(CommandLineTestCase):
 
 # ################################################################################################################################
 
-    def _run_test(self, before_queue_insert_func:'callnone') -> 'PublishWithRetryManager':
+    def _run_test(self, before_queue_insert_func:'callnone', should_collect_ctx:'bool') -> 'PublishWithRetryManager':
 
         # If we are here, it means that we can proceed.
 
@@ -213,13 +213,14 @@ class SQLPublishWithRetryTestCase(CommandLineTestCase):
                     before_queue_insert_func = before_queue_insert_func,
                     gd_msg_list = gd_msg_list,
                     subscriptions_by_topic = subscriptions_by_topic,
+                    should_collect_ctx = should_collect_ctx,
                 )
 
         return publish_with_retry_manager
 
 # ################################################################################################################################
 
-    def test_sql_publish_with_retry_ok(self):
+    def test_sql_publish_with_retry_no_updates_no_context(self):
 
         # Skip the test if we are not to run.
         if not self.should_run:
@@ -228,8 +229,31 @@ class SQLPublishWithRetryTestCase(CommandLineTestCase):
         # In this test, we do not update the subscription list at all,
         # assuming rather that everything should be published as it is given on input.
         before_queue_insert_func = None
+        should_collect_ctx = False
 
-        _ = self._run_test(before_queue_insert_func)
+        # Run the test ..
+        publish_with_retry_manager = self._run_test(before_queue_insert_func, should_collect_ctx)
+
+        # .. and confirm the result.
+        self.assertListEqual(publish_with_retry_manager.ctx_history, [])
+
+# ################################################################################################################################
+
+    def test_sql_publish_with_retry_no_updates_collect_ctx(self):
+
+        # Skip the test if we are not to run.
+        if not self.should_run:
+            return
+
+        # In this test, we do not update the subscription list at all, but we collect context information.
+        before_queue_insert_func = None
+        should_collect_ctx = True
+
+        # Run the test ..
+        publish_with_retry_manager = self._run_test(before_queue_insert_func, should_collect_ctx)
+
+        # .. and confirm the result.
+        self.assertListEqual(publish_with_retry_manager.ctx_history, ['Counter -> 1:1', 'Result -> True'])
 
 # ################################################################################################################################
 # ################################################################################################################################
