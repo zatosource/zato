@@ -24,7 +24,7 @@ from zato.common.util.sql.retry import sql_op_with_deadlock_retry
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, callable_, strdictlist
+    from zato.common.typing_ import any_, callable_, callnone, strdictlist
     from zato.server.pubsub.model import sublist
 
 # ################################################################################################################################
@@ -111,9 +111,12 @@ class PublishWithRetryManager:
 
         session,          # type: SASession
         new_session_func, # type: callable_
+        before_queue_insert_func, # type: callnone
 
         gd_msg_list,            # type: strdictlist
         subscriptions_by_topic, # type: sublist
+
+        should_collect_ctx # type: bool
 
     ) -> 'None':
 
@@ -126,9 +129,13 @@ class PublishWithRetryManager:
 
         self.session = session
         self.new_session_func = new_session_func
+        self.before_queue_insert_func = before_queue_insert_func
 
         self.gd_msg_list = gd_msg_list
         self.subscriptions_by_topic = subscriptions_by_topic
+
+        self.should_collect_ctx = should_collect_ctx
+        self.ctx_history = []
 
 # ################################################################################################################################
 
@@ -151,6 +158,10 @@ class PublishWithRetryManager:
             # This is reusable
             counter_ctx_str = publish_op_ctx.get_counter_ctx_str()
 
+            # Collect context metadata, if told to.
+            if self.should_collect_ctx:
+                self.ctx_history.append(f'Counter -> {counter_ctx_str}')
+
             logger_pubsub.info('SQL publish with retry -> %s -> On new loop iter',
                 counter_ctx_str,
             )
@@ -166,12 +177,18 @@ class PublishWithRetryManager:
                 self.now
             )
 
+            if self.should_collect_ctx:
+                self.ctx_history.append(f'Result -> {publish_op_ctx.is_queue_insert_ok}')
+
             logger_pubsub.info('SQL publish with retry -> %s -> is_queue_ok:%s',
                 counter_ctx_str,
                 publish_op_ctx.is_queue_insert_ok
             )
 
             if not publish_op_ctx.is_queue_insert_ok:
+
+                if self.should_collect_ctx:
+                    self.ctx_history.append(f'Queue insert OK -> {publish_op_ctx.is_queue_insert_ok}')
 
                 # We may need to filter out subscriptions that do not exist anymore - this is needed because
                 # we took our list of subscribers from self.pubsub but it is possible that between the time
@@ -187,6 +204,9 @@ class PublishWithRetryManager:
                         '_sql_publish_with_retry',
                         counter_ctx_str
                     )
+
+                if self.should_collect_ctx:
+                    self.ctx_history.append(f'Sub by topic -> {subscriptions_by_topic}')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -243,7 +263,7 @@ class PublishWithRetryManager:
             if not gd_msg_list:
 
                 # .. in such a situation, store a message in logs ..
-                logger_pubsub.info('No messages in -> %s -> `%s`', counter_ctx_str, cid)
+                logger_pubsub.info('No messages in -> %s -> %s', counter_ctx_str, cid)
 
                 # .. now, indicate that the publication went fine (seeing as there was nothing to publish)
                 # .. and that no queue insertion should be carried out.
@@ -278,7 +298,7 @@ class PublishWithRetryManager:
             if not sub_keys_by_topic:
 
                 # .. in such a situation, store a message in logs ..
-                logger_pubsub.info('No subscribers in -> %s -> `%s`', counter_ctx_str, cid)
+                logger_pubsub.info('No subscribers in -> %s -> %s', counter_ctx_str, cid)
 
                 # .. now, indicate to the caller that the insertion went fine (seeing as there was nothing to insert)
                 # .. and that it should not repeat the call.
@@ -300,6 +320,9 @@ class PublishWithRetryManager:
                     logger_pubsub.info('Inserting queue messages for %s sub_key%s-> %s -> %s -> %s',
                         publish_op_ctx.len_sub_keys_by_topic, publish_op_ctx.suffix, counter_ctx_str, cid, sub_keys_by_topic)
 
+                    if self.before_queue_insert_func:
+                        self.before_queue_insert_func(self, sub_keys_by_topic)
+
                     # This is the call that adds references to each of GD message for each of the input subscribers.
                     self.insert_queue_messages(cluster_id, subscriptions_by_topic, gd_msg_list, topic_id, now, cid)
 
@@ -311,7 +334,7 @@ class PublishWithRetryManager:
                     is_queue_insert_ok = True
 
                 except IntegrityError as e:
-                    err_msg = 'Caught IntegrityError (_sql_publish_with_retry) -> %s -> `%s` `%s`'
+                    err_msg = 'Caught IntegrityError (_sql_publish_with_retry) -> %s -> %s -> `%s`'
                     logger_zato.info(err_msg, counter_ctx_str, cid, e)
                     logger_pubsub.info(err_msg, counter_ctx_str, cid, e)
 
@@ -351,7 +374,7 @@ class PublishWithRetryManager:
 
         # Catch duplicate MsgId values sent by clients
         except IntegrityError as e:
-            err_msg = 'Caught IntegrityError (insert_topic_messages) `%s` `%s`'
+            err_msg = 'Caught IntegrityError (insert_topic_messages) -> %s -> `%s`'
             logger_zato.info(err_msg, cid, e)
             logger_pubsub.info(err_msg, cid, e)
             raise
@@ -408,6 +431,8 @@ class PublishWithRetryManager:
 
 def sql_publish_with_retry(
 
+    *,
+
     now,         # type: float
     cid,         # type: str
     topic_id,    # type: int
@@ -417,9 +442,12 @@ def sql_publish_with_retry(
 
     session,          # type: SASession
     new_session_func, # type: callable_
+    before_queue_insert_func, # type: callnone,
 
     gd_msg_list,            # type: strdictlist
     subscriptions_by_topic, # type: sublist
+
+    should_collect_ctx # type: bool
 ) -> 'PublishWithRetryManager':
 
     """ Populates SQL structures with new messages for topics and their counterparts in subscriber queues.
@@ -438,9 +466,12 @@ def sql_publish_with_retry(
 
         session,
         new_session_func,
+        before_queue_insert_func,
 
         gd_msg_list,
         subscriptions_by_topic,
+
+        should_collect_ctx
     )
 
     # .. publish the message(s) ..
