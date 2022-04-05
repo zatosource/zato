@@ -23,6 +23,7 @@ from zato.common.odb.query.pubsub.endpoint import pubsub_endpoint_summary, pubsu
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id
 from zato.common.pubsub import ensure_subs_exist, msg_pub_attrs
 from zato.common.simpleio_ import drop_sio_elems
+from zato.common.typing_ import cast_
 from zato.common.util.pubsub import get_endpoint_metadata, get_topic_sub_keys_from_sub_keys, make_short_msg_copy_from_msg
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, Bool, Int, List
@@ -40,11 +41,13 @@ from six import add_metaclass
 
 if 0:
     from bunch import Bunch
+    from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import anylist, stranydict
     from zato.server.pubsub.model import subnone
     from zato.server.service import Service
     Bunch   = Bunch
+    Column = Column
     Service = Service
     subnone = subnone
 
@@ -465,7 +468,7 @@ class ClearEndpointQueue(AdminService):
                 filter(PubSubEndpointEnqueuedMessage.sub_key==self.request.input.sub_key)
 
             if is_in_staging is not None:
-                q = q.filter(PubSubEndpointEnqueuedMessage.is_in_staging.is_(is_in_staging))
+                q = q.filter(cast_('Column', PubSubEndpointEnqueuedMessage.is_in_staging).is_(is_in_staging))
             q.delete()
 
             session.commit()

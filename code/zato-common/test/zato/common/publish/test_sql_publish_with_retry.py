@@ -18,6 +18,7 @@ from zato.common.odb.model import PubSubSubscription
 from zato.common.odb.query.pubsub.publish import PublishWithRetryManager, sql_publish_with_retry
 from zato.common.test import CommandLineTestCase
 from zato.common.test.wsx_ import WSXChannelManager
+from zato.common.typing_ import cast_
 from zato.common.util.api import fs_safe_now
 from zato.common.util.time_ import utcnow_as_ms
 from zato.server.pubsub import Subscription
@@ -26,7 +27,9 @@ from zato.server.pubsub import Subscription
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy import Column
     from zato.common.typing_ import anydict, callable_, callnone, dictlist, strlist
+    Column = Column
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,23 +143,23 @@ class SQLPublishWithRetryTestCase(CommandLineTestCase):
 
             sub = PubSubSubscription()
 
-            sub.sub_key = sub_key # type: ignore
-            sub.endpoint_id = pubsub_endpoint_id # type: ignore
-            sub.topic_id = topic_id # type: ignore
-            sub.creation_time = utcnow_as_ms() # type: ignore
-            sub.sub_pattern_matched = 'sub=/*' # type: ignore
-            sub.is_durable = True # type: ignore
-            sub.has_gd = True # type: ignore
-            sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id # type: ignore
-            sub.is_staging_enabled = False # type: ignore
-            sub.delivery_method = PUBSUB.DELIVERY_METHOD.NOTIFY.id # type: ignore
-            sub.delivery_data_format = 'text/plain' # type: ignore
-            sub.wrap_one_msg_in_list = True # type: ignore
-            sub.delivery_max_size = 111 # type: ignore
-            sub.delivery_max_retry = 1 # type: ignore
-            sub.delivery_err_should_block = False # type: ignore
-            sub.wait_sock_err = 1 # type: ignore
-            sub.wait_non_sock_err = 1 # type: ignore
+            sub.sub_key = sub_key
+            sub.endpoint_id = pubsub_endpoint_id
+            sub.topic_id = topic_id
+            sub.creation_time = utcnow_as_ms()
+            sub.sub_pattern_matched = 'sub=/*'
+            sub.is_durable = True
+            sub.has_gd = True
+            sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
+            sub.is_staging_enabled = False
+            sub.delivery_method = PUBSUB.DELIVERY_METHOD.NOTIFY.id
+            sub.delivery_data_format = 'text/plain'
+            sub.wrap_one_msg_in_list = True
+            sub.delivery_max_size = 111
+            sub.delivery_max_retry = 1
+            sub.delivery_err_should_block = False
+            sub.wait_sock_err = 1
+            sub.wait_non_sock_err = 1
 
             session.add(sub)
             session.commit()
@@ -277,7 +280,7 @@ class SQLPublishWithRetryTestCase(CommandLineTestCase):
             session = publish_with_retry_manager.new_session_func()
             session.execute(
                 PubSubSubscriptionDelete().\
-                where(PubSubSubscription.sub_key.in_(sub_keys_by_topic))
+                where(cast_('Column', PubSubSubscription.sub_key).in_(sub_keys_by_topic))
             )
             session.commit()
 

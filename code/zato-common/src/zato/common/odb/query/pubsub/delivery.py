@@ -23,20 +23,20 @@ from zato.common.util.sql.retry import sql_op_with_deadlock_retry, sql_query_wit
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, intnone, intset, strlist
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.common.typing_ import any_, anylist, anytuple, intnone, intset, listnone, strlist
 
 # ################################################################################################################################
 
 logger_zato = getLogger('zato')
 logger_pubsub = getLogger('zato_pubsub')
 
-has_debug = True# logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
-
 # ################################################################################################################################
 
 _initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
 _delivered = PUBSUB.DELIVERY_STATUS.DELIVERED
-_wsx = PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+
+_float_str=PUBSUB.FLOAT_STRING_CONVERT
 
 # ################################################################################################################################
 
@@ -71,13 +71,12 @@ sql_msg_id_columns = (
 # ################################################################################################################################
 
 def _get_base_sql_msg_query(
-    session,
-    columns,
-    sub_key_list,
-    pub_time_max,
-    cluster_id,
-    include_unexpired_only,
-    _float_str=PUBSUB.FLOAT_STRING_CONVERT
+    session, # type: SASession
+    columns, # type: anytuple
+    sub_key_list, # type: strlist
+    pub_time_max, # type: float
+    cluster_id,   # type: int
+    include_unexpired_only # type: bool
     ):
     query = session.query(*columns).\
         filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
@@ -102,17 +101,15 @@ def _get_base_sql_msg_query(
 # ################################################################################################################################
 
 def _get_sql_msg_data_by_sub_key(
-    session,
-    cluster_id,
-    sub_key_list,
-    last_sql_run,
-    pub_time_max,
-    columns,
-    include_unexpired_only,
-    ignore_list=None,
-    needs_result=True,
-    _initialized=_initialized,
-    _float_str=PUBSUB.FLOAT_STRING_CONVERT
+    session, # type: SASession
+    cluster_id,   # type: int
+    sub_key_list, # type: strlist
+    last_sql_run, # type: float
+    pub_time_max, # type: float
+    columns,      # type: anytuple
+    include_unexpired_only, # type: bool
+    ignore_list=None, # type: listnone
+    needs_result=True # type: bool
     ):
     """ Returns all SQL messages queued up for a given sub_key that are not being delivered
     or have not been delivered already.
@@ -146,7 +143,7 @@ def _get_sql_msg_data_by_sub_key(
 # ################################################################################################################################
 
 def get_sql_messages_by_sub_key(
-    session,      # type: any_
+    session,      # type: SASession
     cluster_id,   # type: int
     sub_key_list, # type: strlist
     last_sql_run, # type: float
@@ -160,7 +157,7 @@ def get_sql_messages_by_sub_key(
 # ################################################################################################################################
 
 def get_sql_messages_by_msg_id_list(
-    session,      # type: any_
+    session,      # type: SASession
     cluster_id,   # type: int
     sub_key,      # type: str
     pub_time_max, # type: float
@@ -174,13 +171,13 @@ def get_sql_messages_by_msg_id_list(
 # ################################################################################################################################
 
 def get_sql_msg_ids_by_sub_key(
-    session,      # type: any_
+    session,      # type: SASession
     cluster_id,   # type: intnone
     sub_key,      # type: str
     last_sql_run, # type: float
     pub_time_max, # type: float
     include_unexpired_only=True, # type: bool
-    needs_result=False,          # type: bool
+    needs_result=False           # type: bool
     ) -> 'any_':
     return _get_sql_msg_data_by_sub_key(session, cluster_id, [sub_key], last_sql_run, pub_time_max, sql_msg_id_columns,
         include_unexpired_only, needs_result=needs_result)
@@ -188,12 +185,11 @@ def get_sql_msg_ids_by_sub_key(
 # ################################################################################################################################
 
 def _confirm_pubsub_msg_delivered_query(
-    session,    # type: any_
+    session,    # type: SASession
     cluster_id, # type: int
     sub_key,    # type: str
     delivered_pub_msg_id_list, # type: strlist
-    now,                       # type: float
-    _delivered=_delivered      # type: int
+    now                        # type: float
     ) -> 'None':
     """ Returns all SQL messages queued up for a given sub_key.
     """
@@ -218,8 +214,7 @@ def _confirm_pubsub_msg_delivered(*args:'any_') -> 'bool':
             *args
         )
     except IntegrityError:
-        if has_debug:
-            logger_zato.info('Caught IntegrityError (_confirm_pubsub_msg_delivered) `%s` -> `%s`', args, format_exc())
+        logger_zato.info('Caught IntegrityError (_confirm_pubsub_msg_delivered) `%s` -> `%s`', args, format_exc())
         return False
 
 # ################################################################################################################################
@@ -230,7 +225,7 @@ def confirm_pubsub_msg_delivered(*args:'anylist') -> 'None':
 # ################################################################################################################################
 
 def get_delivery_server_for_sub_key(
-    session,    # type: any_
+    session,    # type: SASession
     cluster_id, # type: int
     sub_key,    # type: str
     is_wsx      # type: bool
