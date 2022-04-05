@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -129,35 +129,6 @@ class SubCtx:
 
 # ################################################################################################################################
 
-class SubCtxAMQP(SubCtx):
-    """ Pub/sub context config for AMQP endpoints.
-    """
-    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
-        super(SubCtxAMQP, self).__init__(*args, **kwargs)
-        self.amqp_exchange = None
-        self.amqp_routing_key = None
-        self.out_amqp_id = None
-
-# ################################################################################################################################
-
-class SubCtxFiles(SubCtx):
-    """ Pub/sub context config for local files-based endpoints.
-    """
-    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
-        super(SubCtxFiles, self).__init__(*args, **kwargs)
-        self.files_directory_list = None
-
-# ################################################################################################################################
-
-class SubCtxFTP(SubCtx):
-    """ Pub/sub context config for FTP endpoints.
-    """
-    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
-        super(SubCtxFTP, self).__init__(*args, **kwargs)
-        self.ftp_directory_list = None
-
-# ################################################################################################################################
-
 class SubCtxSecBased(SubCtx):
     """ Pub/sub context config for endpoints based around security definitions (e.g. REST and SOAP).
     """
@@ -191,21 +162,6 @@ class SubCtxService(SubCtx):
 
 # ################################################################################################################################
 
-class SubCtxSOAP(SubCtxSecBased):
-    """ Pub/sub context config for SOAP endpoints.
-    """
-    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
-        super(SubCtxSOAP, self).__init__(*args, **kwargs)
-        self.out_soap_http_soap_id = None
-        self.soap_delivery_endpoint = None
-
-    def after_properties_set(self):
-        super(SubCtxSOAP, self).after_properties_set()
-        self.out_http_soap_id = self.out_soap_http_soap_id
-        self.delivery_endpoint = self.soap_delivery_endpoint
-
-# ################################################################################################################################
-
 class SubCtxWebSockets(SubCtx):
     """ Pub/sub context config for WebSockets endpoints.
     """
@@ -221,12 +177,8 @@ class SubCtxWebSockets(SubCtx):
 # ################################################################################################################################
 
 ctx_class = {
-    PUBSUB.ENDPOINT_TYPE.AMQP.id: SubCtxAMQP,
-    PUBSUB.ENDPOINT_TYPE.FILES.id: SubCtxFiles,
-    PUBSUB.ENDPOINT_TYPE.FTP.id: SubCtxFTP,
     PUBSUB.ENDPOINT_TYPE.REST.id: SubCtxREST,
     PUBSUB.ENDPOINT_TYPE.SERVICE.id: SubCtxService,
-    PUBSUB.ENDPOINT_TYPE.SOAP.id: SubCtxSOAP,
     PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: SubCtxWebSockets,
 }
 
@@ -483,26 +435,6 @@ class SubscribeREST(SubscribeServiceImpl):
     endpoint_type = PUBSUB.ENDPOINT_TYPE.REST.id
 
     def _handle_subscription(self, ctx:'SubCtx') -> 'None':
-        self._subscribe_impl(ctx)
-
-# ################################################################################################################################
-
-class SubscribeSOAP(SubscribeServiceImpl):
-    """ Handles pub/sub subscriptions for SOAP clients.
-    """
-    endpoint_type = PUBSUB.ENDPOINT_TYPE.SOAP.id
-
-    def _handle_subscription(self, ctx:'SubCtx') -> 'None':
-        self._subscribe_impl(ctx)
-
-# ################################################################################################################################
-
-class SubscribeAMQP(SubscribeServiceImpl):
-    """ Handles pub/sub subscriptions for AMQP endpoints.
-    """
-    endpoint_type = PUBSUB.ENDPOINT_TYPE.AMQP.id
-
-    def _handle_subscription(self, ctx:'SubCtxAMQP') -> 'None':
         self._subscribe_impl(ctx)
 
 # ################################################################################################################################
