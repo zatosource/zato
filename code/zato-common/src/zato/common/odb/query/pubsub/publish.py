@@ -442,7 +442,7 @@ def sql_publish_with_retry(
 
     session,          # type: SASession
     new_session_func, # type: callable_
-    before_queue_insert_func, # type: callnone,
+    before_queue_insert_func, # type: callnone
 
     gd_msg_list,            # type: strdictlist
     subscriptions_by_topic, # type: sublist
