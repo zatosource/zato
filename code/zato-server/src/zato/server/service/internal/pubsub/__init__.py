@@ -39,15 +39,9 @@ cleanup_sleep_jitter = [elem / 10.0 for elem in range(1, 4, 1)]
 # ################################################################################################################################
 
 endpoint_type_service = {
-    PUBSUB.ENDPOINT_TYPE.AMQP.id:        'zato.pubsub.delivery.notify-pub-sub-message',
-    PUBSUB.ENDPOINT_TYPE.FILES.id:       'zato.pubsub.delivery.notify-pub-sub-message',
-    PUBSUB.ENDPOINT_TYPE.FTP.id:         'zato.pubsub.delivery.notify-pub-sub-message',
     PUBSUB.ENDPOINT_TYPE.INTERNAL.id:    'zato.pubsub.delivery.notify-pub-sub-message',
     PUBSUB.ENDPOINT_TYPE.REST.id:        'zato.pubsub.delivery.notify-pub-sub-message',
     PUBSUB.ENDPOINT_TYPE.SERVICE.id:     'zato.pubsub.delivery.notify-pub-sub-message',
-    PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id:  'zato.pubsub.delivery.notify-pub-sub-message',
-    PUBSUB.ENDPOINT_TYPE.SMTP.id:        'zato.pubsub.delivery.notify-pub-sub-message',
-    PUBSUB.ENDPOINT_TYPE.SOAP.id:        'zato.pubsub.delivery.notify-pub-sub-message',
     PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: 'zato.channel.web-socket.client.notify-pub-sub-message',
 }
 
