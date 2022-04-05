@@ -116,14 +116,13 @@ class MsgConst:
 
 def get_priority(
     cid,   # type: str
-    input, # type: anydict
+    priority, # type: intnone
     _pri_min=_pri_min, # type: int
     _pri_max=_pri_max, # type: int
     _pri_def=_pri_def  # type: int
     ) -> 'int':
     """ Get and validate message priority.
     """
-    priority = input.get('priority')
     if priority:
         if priority < _pri_min or priority > _pri_max:
             raise BadRequest(cid, 'Priority `{}` outside of allowed range {}-{}'.format(priority, _pri_min, _pri_max))
@@ -136,12 +135,12 @@ def get_priority(
 
 def get_expiration(
     cid:'str',
-    input:'anydict',
+    expiration:'intnone',
     topic_limit_message_expiry:'int',
     default_expiration:'int'=_default_expiration) -> 'int':
     """ Get and validate message expiration.
     """
-    expiration = input.get('expiration', 0)
+    expiration = expiration or 0
     if expiration is not None and expiration < 0:
         raise BadRequest(cid, 'Expiration `{}` must not be negative'.format(expiration))
 
