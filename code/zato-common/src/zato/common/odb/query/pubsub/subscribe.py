@@ -19,8 +19,7 @@ from zato.common.util.time_ import utcnow_as_ms
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import boolnone, intnone, strnone
-    from zato.server.service.internal.pubsub.subscription import SubCtx
+    from zato.common.typing_ import any_, boolnone, intnone, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,7 +74,7 @@ def add_subscription(
     session,    # type: SASession
     cluster_id, # type: int
     sub_key,    # type: str
-    ctx         # type: SubCtx
+    ctx         # type: any_
 ) -> 'PubSubSubscription':
     """ Adds an object representing a subscription regardless of the underlying protocol.
     """
