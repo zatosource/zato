@@ -127,7 +127,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     worker_store: 'WorkerStore'
     service_store: 'ServiceStore'
 
-    rpc = 'ServerRPC'
+    rpc: 'ServerRPC'
     sso_api: 'SSOAPI'
     rate_limiting: 'RateLimiting'
     broker_client: 'BrokerClient'

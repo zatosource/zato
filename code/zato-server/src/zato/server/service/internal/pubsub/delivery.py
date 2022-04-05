@@ -16,9 +16,6 @@ from zato.common.json_internal import dumps
 from zato.server.service import Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
-# Python 2/3 compatibility
-from future.utils import itervalues
-
 # ################################################################################################################################
 
 if 0:
@@ -146,7 +143,7 @@ class DeliverMessage(AdminService):
     ) -> 'None':
 
         # Ultimately we should use impl_getter to get the outconn
-        for value in itervalues(self.server.worker_store.worker_config.out_amqp):
+        for value in self.server.worker_store.worker_config.out_amqp.values():
             if value['config']['id'] == subscription.config['out_amqp_id']:
 
                 data = self._get_data_from_message(msg)

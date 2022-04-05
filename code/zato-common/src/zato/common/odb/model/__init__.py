@@ -27,9 +27,13 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import floatnone, intnone
+    from datetime import datetime
+    from zato.common.typing_ import boolnone, floatnone, intnone, strnone
+    boolnone = boolnone
+    datetime = datetime
     floatnone = floatnone
     intnone = intnone
+    strnone = strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1995,27 +1999,27 @@ class ChannelWebSocket(Base):
     __table_args__ = (UniqueConstraint('name', 'cluster_id'),
                       UniqueConstraint('address', 'cluster_id'), {})
 
-    id = Column(Integer, Sequence('web_socket_chan_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    is_internal = Column(Boolean(), nullable=False)
-    is_out = Column(Boolean(), nullable=False, default=sa_false())
+    id = cast_('int', Column(Integer, Sequence('web_socket_chan_seq'), primary_key=True))
+    name = cast_('str', Column(String(200), nullable=False))
+    is_active = cast_('bool', Column(Boolean(), nullable=False))
+    is_internal = cast_('bool', Column(Boolean(), nullable=False))
+    is_out = cast_('bool', Column(Boolean(), nullable=False, default=sa_false()))
 
-    address = Column(String(200), nullable=False)
-    data_format = Column(String(20), nullable=False)
-    new_token_wait_time = Column(Integer(), nullable=False)
-    token_ttl = Column(Integer(), nullable=False)
+    address = cast_('str', Column(String(200), nullable=False))
+    data_format = cast_('str', Column(String(20), nullable=False))
+    new_token_wait_time = cast_('int', Column(Integer(), nullable=False))
+    token_ttl = cast_('int', Column(Integer(), nullable=False))
 
     # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
+    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
 
-    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
+    service_id = cast_('intnone', Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True))
     service = relationship('Service', backref=backref('web_socket', order_by=name, cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
     cluster = relationship(Cluster, backref=backref('web_socket_list', order_by=name, cascade='all, delete, delete-orphan'))
 
-    security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
+    security_id = cast_('intnone', Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True))
 
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, address=None, data_format=None,
             new_token_wait_time=None, token_ttl=None, service_id=None, service=None, cluster_id=None, cluster=None,
@@ -2052,39 +2056,39 @@ class WebSocketClient(Base):
     {})
 
     # This ID is for SQL
-    id = Column(Integer, Sequence('web_socket_cli_seq'), primary_key=True)
+    id = cast_('int', Column(Integer, Sequence('web_socket_cli_seq'), primary_key=True))
 
-    is_internal = Column(Boolean(), nullable=False)
+    is_internal = cast_('bool', Column(Boolean(), nullable=False))
 
     # This one is assigned by Zato
-    pub_client_id = Column(String(200), nullable=False)
+    pub_client_id = cast_('str', Column(String(200), nullable=False))
 
     # These are assigned by clients themselves
-    ext_client_id = Column(String(200), nullable=False)
-    ext_client_name = Column(String(200), nullable=True)
+    ext_client_id = cast_('str', Column(String(200), nullable=False))
+    ext_client_name = cast_('strnone', Column(String(200), nullable=True))
 
-    local_address = Column(String(400), nullable=False)
-    peer_address = Column(String(400), nullable=False)
-    peer_fqdn = Column(String(400), nullable=False)
+    local_address = cast_('str', Column(String(400), nullable=False))
+    peer_address = cast_('str', Column(String(400), nullable=False))
+    peer_fqdn = cast_('str', Column(String(400), nullable=False))
 
-    connection_time = Column(DateTime, nullable=False)
-    last_seen = Column(DateTime, nullable=False)
+    connection_time = cast_('datetime', Column(DateTime, nullable=False))
+    last_seen = cast_('datetime', Column(DateTime, nullable=False))
 
-    server_proc_pid = Column(Integer, nullable=False)
-    server_name = Column(String(200), nullable=False) # References server.name
+    server_proc_pid = cast_('int', Column(Integer, nullable=False))
+    server_name = cast_('str', Column(String(200), nullable=False)) # References server.name
 
     # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
+    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
 
-    channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=False)
+    channel_id = cast_('int', Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=False))
     channel = relationship(
         ChannelWebSocket, backref=backref('clients', order_by=local_address, cascade='all, delete, delete-orphan'))
 
-    server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=False)
+    server_id = cast_('int', Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=False))
     server = relationship(
         Server, backref=backref('server_web_socket_clients', order_by=local_address, cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
     cluster = relationship(
         Cluster, backref=backref('web_socket_client_list', order_by=last_seen, cascade='all, delete, delete-orphan'))
 
@@ -2099,19 +2103,19 @@ class WebSocketClientPubSubKeys(Base):
         Index('wscl_psk_sk', 'cluster_id', 'sub_key', unique=False),
     {})
 
-    id = Column(Integer, Sequence('web_socket_cli_ps_seq'), primary_key=True)
+    id = cast_('int', Column(Integer, Sequence('web_socket_cli_ps_seq'), primary_key=True))
 
     # The same as in web_socket_sub.sub_key
-    sub_key = Column(String(200), nullable=False)
+    sub_key = cast_('str', Column(String(200), nullable=False))
 
     # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
+    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
 
-    client_id = Column(Integer, ForeignKey('web_socket_client.id', ondelete='CASCADE'), nullable=False)
+    client_id = cast_('int', Column(Integer, ForeignKey('web_socket_client.id', ondelete='CASCADE'), nullable=False))
     client = relationship(
         WebSocketClient, backref=backref('web_socket_cli_ps_keys', order_by=id, cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
     cluster = relationship(Cluster, backref=backref(
         'web_socket_cli_ps_keys', order_by=id, cascade='all, delete, delete-orphan'))
 
@@ -2128,23 +2132,23 @@ class WebSocketSubscription(Base):
         Index('wssub_subkey_chan_idx', 'cluster_id', 'sub_key', 'channel_id', unique=True),
     {})
 
-    id = Column(Integer, Sequence('web_socket_sub_seq'), primary_key=True)
-    is_internal = Column(Boolean(), nullable=False)
-    ext_client_id = Column(String(200), nullable=False)
+    id = cast_('int', Column(Integer, Sequence('web_socket_sub_seq'), primary_key=True))
+    is_internal = cast_('bool', Column(Boolean(), nullable=False))
+    ext_client_id = cast_('str', Column(String(200), nullable=False))
 
     # Each transient, per-connection, web_socket_cli_ps_keys.sub_key will refer to this column
-    sub_key = Column(String(200), nullable=False)
+    sub_key = cast_('str', Column(String(200), nullable=False))
 
     # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
+    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
 
-    channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
+    channel_id = cast_('intnone', Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True))
     channel = relationship(
         ChannelWebSocket, backref=backref('web_socket_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    subscription_id = Column(Integer, ForeignKey('pubsub_sub.id', ondelete='CASCADE'), nullable=False)
+    subscription_id = cast_('int', Column(Integer, ForeignKey('pubsub_sub.id', ondelete='CASCADE'), nullable=False))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
     cluster = relationship(Cluster, backref=backref('web_socket_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
@@ -2162,11 +2166,11 @@ class PubSubEndpoint(Base):
         UniqueConstraint('cluster_id', 'ws_channel_id'),
     {})
 
-    id = Column(Integer, Sequence('pubsub_endp_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_internal = Column(Boolean(), nullable=False, server_default=sa_false())
-    is_active = Column(Boolean(), nullable=False, server_default=sa_true()) # Unusued for now
-    endpoint_type = Column(String(40), nullable=False) # WSX, REST, AMQP and other types
+    id = cast_('int', Column(Integer, Sequence('pubsub_endp_seq'), primary_key=True))
+    name = cast_('str', Column(String(200), nullable=False))
+    is_internal = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_false()))
+    is_active = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_true())) # Unusued for now
+    endpoint_type = cast_('str', Column(String(40), nullable=False)) # WSX, REST, AMQP and other types
 
     last_seen = cast_('intnone', Column(BigInteger(), nullable=True))
     last_pub_time = cast_('intnone', Column(BigInteger(), nullable=True))
@@ -2174,40 +2178,40 @@ class PubSubEndpoint(Base):
     last_deliv_time = cast_('intnone', Column(BigInteger(), nullable=True))
 
     # Endpoint's role, e.g. publisher, subscriber or both
-    role = Column(String(40), nullable=False)
+    role = cast_('str', Column(String(40), nullable=False))
 
     # Tags describing this endpoint
-    tags = Column(Text, nullable=True) # Unusued for now
+    tags = cast_('strnone', Column(Text, nullable=True)) # Unusued for now
 
     # Patterns for topics that this endpoint may subscribe to
-    topic_patterns = Column(Text, nullable=True)
+    topic_patterns = cast_('strnone', Column(Text, nullable=True))
 
     # Patterns for tags of publishers
-    pub_tag_patterns = Column(Text, nullable=True) # Unused for now
+    pub_tag_patterns = cast_('strnone', Column(Text, nullable=True)) # Unused for now
 
     # Patterns for tags of messages
-    message_tag_patterns = Column(Text, nullable=True) # Unused for now
+    message_tag_patterns = cast_('strnone', Column(Text, nullable=True)) # Unused for now
 
     # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
+    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
 
     # Endpoint is a service
     service_id = cast_('intnone', Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True))
 
     # Identifies the endpoint through its security definition, e.g. a username/password combination.
-    security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
+    security_id = cast_('intnone', Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True))
     security = relationship(SecurityBase, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
     # Identifies the endpoint through a reference to a generic connection
-    gen_conn_id = Column(Integer, ForeignKey('generic_conn.id', ondelete='CASCADE'), nullable=True)
+    gen_conn_id = cast_('intnone', Column(Integer, ForeignKey('generic_conn.id', ondelete='CASCADE'), nullable=True))
     gen_conn = relationship('GenericConn', backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
     # Identifies the endpoint through a long-running WebSockets channel
-    ws_channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
+    ws_channel_id = cast_('intnone', Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True))
     ws_channel = relationship(
         ChannelWebSocket, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
     cluster = relationship(Cluster, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
     sec_type = None         # Not used by DB
@@ -2227,29 +2231,30 @@ class PubSubTopic(Base):
         Index('pubsb_tp_name_idx', 'cluster_id', 'name', unique=True),
     {})
 
-    id = Column(Integer, Sequence('pubsub_topic_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    is_internal = Column(Boolean(), nullable=False, default=False)
-    max_depth_gd = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD)
-    max_depth_non_gd = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_NON_GD)
-    depth_check_freq = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DEPTH_CHECK_FREQ)
-    has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
-    is_api_sub_allowed = Column(Boolean(), nullable=False)
+    id = cast_('int', Column(Integer, Sequence('pubsub_topic_seq'), primary_key=True))
+    name = cast_('str', Column(String(200), nullable=False))
+    is_active = cast_('bool', Column(Boolean(), nullable=False))
+    is_internal = cast_('bool', Column(Boolean(), nullable=False, default=False))
+    max_depth_gd = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD))
+    max_depth_non_gd = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_NON_GD))
+    depth_check_freq = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DEPTH_CHECK_FREQ))
+    has_gd = cast_('bool', Column(Boolean(), nullable=False)) # Guaranteed delivery
+    is_api_sub_allowed = cast_('bool', Column(Boolean(), nullable=False))
 
     # How many messages to buffer in RAM before they are actually saved in SQL / pushed to tasks
     pub_buffer_size_gd = cast_('int', Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD)))
 
-    task_sync_interval = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_SYNC_INTERVAL))
-    task_delivery_interval = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_DELIVERY_INTERVAL))
+    task_sync_interval = cast_('int', Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_SYNC_INTERVAL)))
+    task_delivery_interval = cast_('int',
+        Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_DELIVERY_INTERVAL)))
 
     # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
+    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
 
     # A hook service invoked during publications to this specific topic
     hook_service_id = cast_('intnone', Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
     cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=name, cascade='all, delete, delete-orphan'))
 
     # Not used by DB
@@ -2279,27 +2284,27 @@ class PubSubEndpointTopic(Base):
         Index('pubsb_endpt_clsendtp_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=True),
     {})
 
-    id = Column(Integer, Sequence('pubsub_endpt_seq'), primary_key=True)
+    id = cast_('int', Column(Integer, Sequence('pubsub_endpt_seq'), primary_key=True))
 
-    pub_pattern_matched = Column(Text, nullable=False)
-    last_pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=False)
-    pub_msg_id = Column(String(200), nullable=False)
-    pub_correl_id = Column(String(200), nullable=True)
-    in_reply_to = Column(String(200), nullable=True)
-    ext_client_id = Column(Text(), nullable=True)
+    pub_pattern_matched = cast_('str', Column(Text, nullable=False))
+    last_pub_time = cast_('float', Column(Numeric(20, 7, asdecimal=False), nullable=False))
+    pub_msg_id = cast_('str', Column(String(200), nullable=False))
+    pub_correl_id = cast_('strnone', Column(String(200), nullable=True))
+    in_reply_to = cast_('strnone', Column(String(200), nullable=True))
+    ext_client_id = cast_('strnone', Column(Text(), nullable=True))
 
     # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
+    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
 
-    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True)
+    endpoint_id = cast_('intnone', Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True))
     endpoint = relationship(
         PubSubEndpoint, backref=backref('pubsub_endpoint_topics', order_by=endpoint_id, cascade='all, delete, delete-orphan'))
 
-    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
+    topic_id = cast_('int', Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False))
     topic = relationship(
         PubSubTopic, backref=backref('pubsub_endpoint_topics', order_by=topic_id, cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
     cluster = relationship(Cluster, backref=backref('pubsub_endpoint_topics', order_by=cluster_id,
         cascade='all, delete, delete-orphan'))
 
@@ -2321,69 +2326,69 @@ class PubSubMessage(Base):
     {})
 
     # For SQL joins
-    id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
+    id = cast_('int', Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True))
 
     # Publicly visible message identifier
-    pub_msg_id = Column(String(200), nullable=False)
+    pub_msg_id = cast_('str', Column(String(200), nullable=False))
 
     # Publicly visible correlation ID
-    pub_correl_id = Column(String(200), nullable=True)
+    pub_correl_id = cast_('strnone', Column(String(200), nullable=True))
 
     # Publicly visible ID of the message current message is a response to
-    in_reply_to = Column(String(200), nullable=True)
+    in_reply_to = cast_('strnone', Column(String(200), nullable=True))
 
     # ID of an external client on whose behalf the endpoint published the message
-    ext_client_id = Column(Text(), nullable=True)
+    ext_client_id = cast_('strnone', Column(Text(), nullable=True))
 
     # Will group messages belonging logically to the same group, useful if multiple
     # messages are published with the same timestamp by the same client but they still
     # need to be correctly ordered.
-    group_id = Column(Text(), nullable=True)
-    position_in_group = Column(Integer, nullable=True)
+    group_id = cast_('strnone', Column(Text(), nullable=True))
+    position_in_group = cast_('intnone', Column(Integer, nullable=True))
 
     # What matching pattern allowed an endpoint to publish this message
-    pub_pattern_matched = Column(Text, nullable=False)
+    pub_pattern_matched = cast_('str', Column(Text, nullable=False))
 
-    pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=False) # When the row was created
-    ext_pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=True) # When the message was created by publisher
+    pub_time = cast_('float', Column(Numeric(20, 7, asdecimal=False), nullable=False)) # When the row was created
+    ext_pub_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True)) # When the message was created by publisher
     expiration_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
-    last_updated = Column(Numeric(20, 7, asdecimal=False), nullable=True)
+    last_updated = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
 
-    data = Column(Text(2 * 10 ** 9), nullable=False) # 2 GB to prompt a promotion to LONGTEXT under MySQL
+    data = cast_('str', Column(Text(2 * 10 ** 9), nullable=False)) # 2 GB to prompt a promotion to LONGTEXT under MySQL
 
-    data_prefix = Column(Text(), nullable=False)
-    data_prefix_short = Column(String(200), nullable=False)
-    data_format = Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.DATA_FORMAT)
-    mime_type = Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.MIME_TYPE)
+    data_prefix = cast_('str', Column(Text(), nullable=False))
+    data_prefix_short = cast_('str', Column(String(200), nullable=False))
+    data_format = cast_('str', Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.DATA_FORMAT))
+    mime_type = cast_('str', Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.MIME_TYPE))
     size = cast_('int', Column(Integer, nullable=False))
     priority = cast_('int', Column(Integer, nullable=False, server_default=str(PUBSUB.PRIORITY.DEFAULT)))
     expiration = cast_('int', Column(BigInteger, nullable=False, server_default='0'))
-    has_gd = Column(Boolean(), nullable=False, server_default=sa_true()) # Guaranteed delivery
+    has_gd = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_true())) # Guaranteed delivery
 
     # Is the message in at least one delivery queue, meaning that there is at least one
     # subscriber to whom this message will be sent so the message is no longer considered
     # to be available in the topic for other subscribers to receive it,
     # i.e. it can be said that it has been already transported to all subsriber queues (possibly to one only).
-    is_in_sub_queue = Column(Boolean(), nullable=False, server_default=sa_false())
+    is_in_sub_queue = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_false()))
 
     # User-defined arbitrary context data
-    user_ctx = Column(_JSON(), nullable=True)
+    user_ctx = cast_('strnone', Column(_JSON(), nullable=True))
 
     # Zato-defined arbitrary context data
-    zato_ctx = Column(_JSON(), nullable=True)
+    zato_ctx = cast_('strnone', Column(_JSON(), nullable=True))
 
     # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
+    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
 
-    published_by_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
+    published_by_id = cast_('int', Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False))
     published_by = relationship(
         PubSubEndpoint, backref=backref('pubsub_msg_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True)
+    topic_id = cast_('int', Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True))
     topic = relationship(
         PubSubTopic, backref=backref('pubsub_msg_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
     cluster = relationship(Cluster, backref=backref('pubsub_messages', order_by=id, cascade='all, delete, delete-orphan'))
 
     pub_time_utc = None # Not used by DB
@@ -2401,125 +2406,125 @@ class PubSubSubscription(Base):
         Index('pubsb_sub_clust_subk', 'sub_key', unique=True),
     {})
 
-    id = Column(Integer, Sequence('pubsub_sub_seq'), primary_key=True)
-    is_internal = Column(Boolean(), nullable=False, default=False)
+    id = cast_('int', Column(Integer, Sequence('pubsub_sub_seq'), primary_key=True))
+    is_internal = cast_('bool', Column(Boolean(), nullable=False, default=False))
 
-    creation_time = Column(Numeric(20, 7, asdecimal=False), nullable=False)
-    sub_key = Column(String(200), nullable=False) # Externally visible ID of this subscription
-    sub_pattern_matched = Column(Text, nullable=False)
-    deliver_by = Column(Text, nullable=True) # Delivery order, e.g. by priority, date etc.
-    ext_client_id = Column(Text, nullable=True) # Subscriber's ID as it is stored by that external system
+    creation_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=False))
+    sub_key = cast_('str', Column(String(200), nullable=False)) # Externally visible ID of this subscription
+    sub_pattern_matched = cast_('str', Column(Text, nullable=False))
+    deliver_by = cast_('strnone', Column(Text, nullable=True)) # Delivery order, e.g. by priority, date etc.
+    ext_client_id = cast_('strnone', Column(Text, nullable=True)) # Subscriber's ID as it is stored by that external system
 
-    is_durable = Column(Boolean(), nullable=False, default=True) # For now always True = survives cluster restarts
-    has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
+    is_durable = cast_('bool', Column(Boolean(), nullable=False, default=True)) # For now always True = survives cluster restarts
+    has_gd = cast_('bool', Column(Boolean(), nullable=False)) # Guaranteed delivery
 
-    active_status = Column(String(200), nullable=False, default=PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id)
-    is_staging_enabled = Column(Boolean(), nullable=False, default=False)
+    active_status = cast_('str', Column(String(200), nullable=False, default=PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id))
+    is_staging_enabled = cast_('bool', Column(Boolean(), nullable=False, default=False))
 
-    delivery_method = Column(String(200), nullable=False, default=PUBSUB.DELIVERY_METHOD.NOTIFY.id)
-    delivery_data_format = Column(String(200), nullable=False, default=DATA_FORMAT.JSON)
-    delivery_endpoint = Column(Text, nullable=True)
+    delivery_method = cast_('str', Column(String(200), nullable=False, default=PUBSUB.DELIVERY_METHOD.NOTIFY.id))
+    delivery_data_format = cast_('str', Column(String(200), nullable=False, default=DATA_FORMAT.JSON))
+    delivery_endpoint = cast_('strnone', Column(Text, nullable=True))
 
     # This is updated only periodically, e.g. once an hour, rather than each time the subscriber is seen,
     # so the value is not an exact time of the last interaction with the subscriber but a time,
     # within a certain range (default=60 minutes), when any action was last time carried out with the subscriber.
     # For WSX subscribers, this value will never be less than their ping timeout.
-    last_interaction_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
+    last_interaction_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
 
-    last_interaction_type = Column(String(200), nullable=True)
-    last_interaction_details = Column(Text, nullable=True)
+    last_interaction_type = cast_('strnone', Column(String(200), nullable=True))
+    last_interaction_details = cast_('strnone', Column(Text, nullable=True))
 
     # How many messages to deliver in a single batch for that endpoint
-    delivery_batch_size = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE)
+    delivery_batch_size = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE))
 
     # If delivery_batch_size is 1, whether such a single message delivered to endpoint
     # should be sent as-is or wrapped in a single-element list.
-    wrap_one_msg_in_list = Column(Boolean(), nullable=False)
+    wrap_one_msg_in_list = cast_('bool', Column(Boolean(), nullable=False))
 
     # How many bytes to send at most in a single delivery
-    delivery_max_size = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_SIZE) # Unused for now
+    delivery_max_size = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_SIZE)) # Unused for now
 
     # How many times to retry delivery for a single message
-    delivery_max_retry = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_RETRY)
+    delivery_max_retry = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_RETRY))
 
     # Should a failed delivery of a single message block the entire delivery queue
     # until that particular message has been successfully delivered.
-    delivery_err_should_block = Column(Boolean(), nullable=False)
+    delivery_err_should_block = cast_('bool', Column(Boolean(), nullable=False))
 
     # How many seconds to wait on a TCP socket error
-    wait_sock_err = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.WAIT_TIME_SOCKET_ERROR)
+    wait_sock_err = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.WAIT_TIME_SOCKET_ERROR))
 
     # How many seconds to wait on an error other than a TCP socket one
-    wait_non_sock_err = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.WAIT_TIME_NON_SOCKET_ERROR)
+    wait_non_sock_err = cast_('int', Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.WAIT_TIME_NON_SOCKET_ERROR))
 
     # A hook service invoked before messages are delivered for this specific subscription
-    hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
+    hook_service_id = cast_('intnone', Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True))
 
     # REST/POST
-    out_http_method = Column(Text, nullable=True, default='POST') # E.g. POST or PATCH
+    out_http_method = cast_('strnone', Column(Text, nullable=True, default='POST')) # E.g. POST or PATCH
 
     # AMQP
-    amqp_exchange = Column(Text, nullable=True)
-    amqp_routing_key = Column(Text, nullable=True)
+    amqp_exchange = cast_('strnone', Column(Text, nullable=True))
+    amqp_routing_key = cast_('strnone', Column(Text, nullable=True))
 
     # Flat files
-    files_directory_list = Column(Text, nullable=True)
+    files_directory_list = cast_('strnone', Column(Text, nullable=True))
 
     # FTP
-    ftp_directory_list = Column(Text, nullable=True)
+    ftp_directory_list = cast_('strnone', Column(Text, nullable=True))
 
     # SMS - Twilio
-    sms_twilio_from = Column(Text, nullable=True)
-    sms_twilio_to_list = Column(Text, nullable=True)
+    sms_twilio_from = cast_('strnone', Column(Text, nullable=True))
+    sms_twilio_to_list = cast_('strnone', Column(Text, nullable=True))
 
     # SMTP
-    smtp_subject = Column(Text, nullable=True)
-    smtp_from = Column(Text, nullable=True)
-    smtp_to_list = Column(Text, nullable=True)
-    smtp_body = Column(Text, nullable=True)
-    smtp_is_html = Column(Boolean(), nullable=True)
+    smtp_subject = cast_('strnone', Column(Text, nullable=True))
+    smtp_from = cast_('strnone', Column(Text, nullable=True))
+    smtp_to_list = cast_('strnone', Column(Text, nullable=True))
+    smtp_body = cast_('strnone', Column(Text, nullable=True))
+    smtp_is_html = cast_('boolnone', Column(Boolean(), nullable=True))
 
     # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
+    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
 
-    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
+    topic_id = cast_('int', Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False))
     topic = relationship(
         PubSubTopic, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True)
+    endpoint_id = cast_('int', Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True))
     endpoint = relationship(
         PubSubEndpoint, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    out_job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=True)
+    out_job_id = cast_('intnone', Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=True))
     out_job = relationship(
         Job, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    out_http_soap_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True)
+    out_http_soap_id = cast_('intnone', Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True))
     out_http_soap = relationship(
         HTTPSOAP, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    out_smtp_id = Column(Integer, ForeignKey('email_smtp.id', ondelete='CASCADE'), nullable=True)
+    out_smtp_id = cast_('intnone', Column(Integer, ForeignKey('email_smtp.id', ondelete='CASCADE'), nullable=True))
     out_smtp = relationship(
         SMTP, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    out_amqp_id = Column(Integer, ForeignKey('out_amqp.id', ondelete='CASCADE'), nullable=True)
+    out_amqp_id = cast_('intnone', Column(Integer, ForeignKey('out_amqp.id', ondelete='CASCADE'), nullable=True))
     out_amqp = relationship(
         OutgoingAMQP, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    out_gen_conn_id = Column(Integer, ForeignKey('generic_conn.id', ondelete='CASCADE'), nullable=True)
+    out_gen_conn_id = cast_('intnone', Column(Integer, ForeignKey('generic_conn.id', ondelete='CASCADE'), nullable=True))
     out_gen_conn = relationship(
         'GenericConn', backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    ws_channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
+    ws_channel_id = cast_('intnone', Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True))
     ws_channel = relationship(
         ChannelWebSocket, backref=backref('pubsub_ws_subs', order_by=id, cascade='all, delete, delete-orphan'))
 
     # Server that will run the delivery task for this subscription
-    server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=True)
+    server_id = cast_('intnone', Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=True))
     server = relationship(
         Server, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
+    cluster_id = cast_('intnone', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True))
     cluster = relationship(
         Cluster, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
@@ -2547,36 +2552,36 @@ class PubSubEndpointEnqueuedMessage(Base):
         'confirm_deleted_rows': False
     }
 
-    id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
-    creation_time = Column(Numeric(20, 7, asdecimal=False), nullable=False) # When was the message enqueued
+    id = cast_('int', Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True))
+    creation_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=False)) # When was the message enqueued
 
-    delivery_count = Column(Integer, nullable=False, server_default='0')
-    last_delivery_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
-    is_in_staging = Column(Boolean(), nullable=False, server_default=sa_false())
-    sub_pattern_matched = Column(Text, nullable=False)
+    delivery_count = cast_('int', Column(Integer, nullable=False, server_default='0'))
+    last_delivery_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
+    is_in_staging = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_false()))
+    sub_pattern_matched = cast_('str', Column(Text, nullable=False))
 
     # A flag indicating whether this message is deliverable at all - will be set to False
     # after delivery_count reaches max retries for subscription or if a hook services decides so.
-    is_deliverable = Column(Boolean(), nullable=False, server_default=sa_true())
+    is_deliverable = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_true()))
 
-    delivery_status = Column(Integer, nullable=False, server_default=str(PUBSUB.DELIVERY_STATUS.INITIALIZED))
-    delivery_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
+    delivery_status = cast_('bool', Column(Integer, nullable=False, server_default=str(PUBSUB.DELIVERY_STATUS.INITIALIZED)))
+    delivery_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
 
     # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
+    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
 
-    pub_msg_id = Column(String(200), ForeignKey('pubsub_message.pub_msg_id', ondelete='CASCADE'), nullable=False)
+    pub_msg_id = cast_('str', Column(String(200), ForeignKey('pubsub_message.pub_msg_id', ondelete='CASCADE'), nullable=False))
 
-    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
+    endpoint_id = cast_('int', Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False))
     endpoint = relationship(PubSubEndpoint,
         backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
+    topic_id = cast_('int', Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False))
     topic = relationship(PubSubTopic, backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    sub_key = Column(String(200), ForeignKey('pubsub_sub.sub_key', ondelete='CASCADE'), nullable=False)
+    sub_key = cast_('str', Column(String(200), ForeignKey('pubsub_sub.sub_key', ondelete='CASCADE'), nullable=False))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
     cluster = relationship(Cluster, backref=backref('pubsub_endpoint_queues', order_by=id, cascade='all, delete, delete-orphan'))
 
     queue_name = None # Not used by DB
@@ -2592,21 +2597,21 @@ class PubSubEndpointQueueInteraction(Base):
         Index('pubsb_enms_qi_endptp_idx', 'cluster_id', 'queue_id', unique=False),
     {})
 
-    id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
-    entry_timestamp = Column(Numeric(20, 7, asdecimal=False), nullable=False) # When the row was created
+    id = cast_('int', Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True))
+    entry_timestamp = cast_('float', Column(Numeric(20, 7, asdecimal=False), nullable=False)) # When the row was created
 
-    inter_type = Column(String(200), nullable=False)
-    inter_details = Column(Text, nullable=True)
+    inter_type = cast_('str', Column(String(200), nullable=False))
+    inter_details = cast_('strnone', Column(Text, nullable=True))
 
     # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
+    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
 
-    queue_id = Column(Integer, ForeignKey('pubsub_endp_msg_queue.id', ondelete='CASCADE'), nullable=False)
+    queue_id = cast_('int', Column(Integer, ForeignKey('pubsub_endp_msg_queue.id', ondelete='CASCADE'), nullable=False))
     queue = relationship(
         PubSubEndpointEnqueuedMessage, backref=backref(
             'pubsub_endpoint_queue_interactions', order_by=id, cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
     cluster = relationship(
         Cluster, backref=backref('pubsub_endpoint_queue_interactions', order_by=id, cascade='all, delete, delete-orphan'))
 
@@ -2618,21 +2623,21 @@ class PubSubChannel(Base):
     __tablename__ = 'pubsub_channel'
     __table_args__ = (UniqueConstraint('cluster_id', 'conn_id', 'conn_type', 'topic_id'), {})
 
-    id = Column(Integer, Sequence('pubsub_channel_seq'), primary_key=True)
-    is_active = Column(Boolean(), nullable=False)
-    is_internal = Column(Boolean(), nullable=False)
+    id = cast_('int', Column(Integer, Sequence('pubsub_channel_seq'), primary_key=True))
+    is_active = cast_('bool', Column(Boolean(), nullable=False))
+    is_internal = cast_('bool', Column(Boolean(), nullable=False))
 
-    conn_id = Column(String(100), nullable=False)
-    conn_type = Column(String(100), nullable=False)
+    conn_id = cast_('str', Column(String(100), nullable=False))
+    conn_type = cast_('str', Column(String(100), nullable=False))
 
     # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
+    opaque1 = cast_('strnone', Column(_JSON(), nullable=True))
 
-    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
+    topic_id = cast_('int', Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False))
     topic = relationship(
         PubSubTopic, backref=backref('pubsub_channel_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
     cluster = relationship(Cluster, backref=backref('pubsub_channel_list', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
