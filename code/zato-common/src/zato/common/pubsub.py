@@ -16,6 +16,7 @@ from ujson import dumps
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.odb.model import PubSubSubscription
 from zato.common.odb.query.pubsub.subscription import pubsub_sub_key_list
+from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid
 from zato.common.util.time_ import utcnow_as_ms
 
@@ -23,6 +24,7 @@ from zato.common.util.time_ import utcnow_as_ms
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SQLSession
     from zato.common.typing_ import any_, anylist, callable_, commondict, floatnone, optional, stranydict, \
         strlist, strnone, strtuple, tupnone
@@ -404,7 +406,7 @@ def ensure_subs_exist(
     sk_set = {elem['sub_key'] for elem in sub_key_aware_objects}
 
     query  = pubsub_sub_key_list(session)
-    query  = query.filter(PubSubSubscription.sub_key.in_(sk_set))
+    query  = query.filter(cast_('Column', PubSubSubscription.sub_key).in_(sk_set))
 
     existing_sk_list = query.all()
     existing_sk_set  = {elem.sub_key for elem in existing_sk_list}
