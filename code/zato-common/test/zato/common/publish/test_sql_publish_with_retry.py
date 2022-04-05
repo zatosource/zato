@@ -18,6 +18,7 @@ from zato.common.odb.model import PubSubSubscription
 from zato.common.odb.query.pubsub.publish import PublishWithRetryManager, sql_publish_with_retry
 from zato.common.test import CommandLineTestCase
 from zato.common.test.wsx_ import WSXChannelManager
+from zato.common.typing_ import cast_
 from zato.common.util.api import fs_safe_now
 from zato.common.util.time_ import utcnow_as_ms
 from zato.server.pubsub import Subscription
@@ -26,7 +27,9 @@ from zato.server.pubsub import Subscription
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy import Column
     from zato.common.typing_ import anydict, callable_, callnone, dictlist, strlist
+    Column = Column
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -277,7 +280,7 @@ class SQLPublishWithRetryTestCase(CommandLineTestCase):
             session = publish_with_retry_manager.new_session_func()
             session.execute(
                 PubSubSubscriptionDelete().\
-                where(PubSubSubscription.sub_key.in_(sub_keys_by_topic))
+                where(cast_('Column', PubSubSubscription.sub_key).in_(sub_keys_by_topic))
             )
             session.commit()
 
