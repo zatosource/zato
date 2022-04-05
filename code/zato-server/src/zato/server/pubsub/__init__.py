@@ -25,7 +25,7 @@ from gevent.lock import RLock
 from texttable import Texttable
 
 # Zato
-from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
+from zato.common.api import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.model import WebSocketClientPubSubKeys
@@ -89,11 +89,13 @@ _end_srv_id = PUBSUB.ENDPOINT_TYPE.SERVICE.id
 
 # ################################################################################################################################
 
-_PRIORITY=PUBSUB.PRIORITY
+_PRIORITY = PUBSUB.PRIORITY
 
-_pri_min=_PRIORITY.MIN
-_pri_max=_PRIORITY.MAX
-_pri_def=_PRIORITY.DEFAULT
+_pri_min = _PRIORITY.MIN
+_pri_max = _PRIORITY.MAX
+_pri_def = _PRIORITY.DEFAULT
+
+_ps_default = PUBSUB.DEFAULT
 
 # ################################################################################################################################
 
@@ -102,33 +104,15 @@ _sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
 
 # ################################################################################################################################
 
-_update_attrs = (
-    'data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_reply_to', 'mime_type', 'expiration', 'expiration_time'
-)
-
-# ################################################################################################################################
-
-_ps_default = PUBSUB.DEFAULT
-
-# ################################################################################################################################
-
-_does_not_exist = object()
-
-# ################################################################################################################################
-
 _default_expiration = PUBSUB.DEFAULT.EXPIRATION
 default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 default_sub_pattern_matched = '(No sub pattern)'
 
 # ################################################################################################################################
-
-_JSON=DATA_FORMAT.JSON
-_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
+# ################################################################################################################################
 
 class MsgConst:
     wsx_sub_resumed = 'WSX subscription resumed, sk:`%s`, peer:`%s`'
-
-# ################################################################################################################################
 
 def get_priority(
     cid,   # type: str

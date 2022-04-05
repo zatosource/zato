@@ -1,32 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Django
 from django import forms
 
 # Zato
 from zato.admin.web.forms import add_security_select, add_select
-from zato.common.api import PUBSUB
-
-# ################################################################################################################################
-
-skip_endpoint_types = (
-    PUBSUB.ENDPOINT_TYPE.FILES.id,
-    PUBSUB.ENDPOINT_TYPE.FTP.id,
-    PUBSUB.ENDPOINT_TYPE.IMAP.id,
-    PUBSUB.ENDPOINT_TYPE.INTERNAL.id,
-    PUBSUB.ENDPOINT_TYPE.SERVICE.id,
-    PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id,
-    PUBSUB.ENDPOINT_TYPE.SMTP.id,
-    PUBSUB.ENDPOINT_TYPE.SQL.id,
-)
+from zato.common.api import PUBSUB, skip_endpoint_types
 
 # ################################################################################################################################
 
