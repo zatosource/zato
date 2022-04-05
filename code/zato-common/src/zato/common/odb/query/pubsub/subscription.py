@@ -19,8 +19,9 @@ from zato.common.odb.query import query_wrapper
 
 if 0:
     from sqlalchemy.sql.selectable import Select
+    from sqlalchemy.orm.query import Query
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, tuple_
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -127,7 +128,7 @@ def pubsub_subscription_list(
 
 # ################################################################################################################################
 
-def pubsub_sub_key_list(session:'SASession') -> 'tuple_':
+def pubsub_sub_key_list(session:'SASession') -> 'Query':
     """ Returns a list of sub_keys and IDs in the database.
     """
     return session.query(
