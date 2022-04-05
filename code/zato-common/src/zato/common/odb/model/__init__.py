@@ -2170,7 +2170,7 @@ class PubSubEndpoint(Base):
     name = cast_('str', Column(String(200), nullable=False))
     is_internal = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_false()))
     is_active = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_true())) # Unusued for now
-    endpoint_type = cast_('str', Column(String(40), nullable=False)) # WSX, REST, AMQP and other types
+    endpoint_type = cast_('str', Column(String(40), nullable=False)) # WSX, REST and other types
 
     last_seen = cast_('intnone', Column(BigInteger(), nullable=True))
     last_pub_time = cast_('intnone', Column(BigInteger(), nullable=True))

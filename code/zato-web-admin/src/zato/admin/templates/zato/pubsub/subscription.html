@@ -29,27 +29,15 @@
     window.zato_dyn_form_skip_edit = true;
     window.zato_dyn_form_skip_clear_field = ['id_out_http_method'];
     window.zato_dyn_form_rows = {
-        'amqp': ['out_amqp_id', 'amqp_details'],
-        'files': ['files_directory_list'],
-        'ftp': ['ftp_directory_list'],
         'rest': ['out_rest_http_soap_id', 'out_http_method'],
         'service': ['service_id'],
-        'sms_twilio': ['sms_twilio_from', 'sms_twilio_to_list'],
-        'smtp': ['out_smtp_id', 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body'],
-        'soap': ['out_soap_http_soap_id'],
     }
 
     window.zato_select_data_target = 'endpoint_id';
     window.zato_select_data_target_items = {
         'endpoint_id': {
-            'amqp': {{ select_data_target.amqp|safe }},
-            'files': [],
-            'ftp': [],
             'rest': {{ select_data_target.rest|safe }},
             'service': [],
-            'sms_twilio': [],
-            'smtp': [],
-            'soap': {{ select_data_target.soap|safe }},
             'websockets': [],
         }
     }
