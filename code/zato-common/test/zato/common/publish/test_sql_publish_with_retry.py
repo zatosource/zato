@@ -140,23 +140,23 @@ class SQLPublishWithRetryTestCase(CommandLineTestCase):
 
             sub = PubSubSubscription()
 
-            sub.sub_key = sub_key # type: ignore
-            sub.endpoint_id = pubsub_endpoint_id # type: ignore
-            sub.topic_id = topic_id # type: ignore
-            sub.creation_time = utcnow_as_ms() # type: ignore
-            sub.sub_pattern_matched = 'sub=/*' # type: ignore
-            sub.is_durable = True # type: ignore
-            sub.has_gd = True # type: ignore
-            sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id # type: ignore
-            sub.is_staging_enabled = False # type: ignore
-            sub.delivery_method = PUBSUB.DELIVERY_METHOD.NOTIFY.id # type: ignore
-            sub.delivery_data_format = 'text/plain' # type: ignore
-            sub.wrap_one_msg_in_list = True # type: ignore
-            sub.delivery_max_size = 111 # type: ignore
-            sub.delivery_max_retry = 1 # type: ignore
-            sub.delivery_err_should_block = False # type: ignore
-            sub.wait_sock_err = 1 # type: ignore
-            sub.wait_non_sock_err = 1 # type: ignore
+            sub.sub_key = sub_key
+            sub.endpoint_id = pubsub_endpoint_id
+            sub.topic_id = topic_id
+            sub.creation_time = utcnow_as_ms()
+            sub.sub_pattern_matched = 'sub=/*'
+            sub.is_durable = True
+            sub.has_gd = True
+            sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
+            sub.is_staging_enabled = False
+            sub.delivery_method = PUBSUB.DELIVERY_METHOD.NOTIFY.id
+            sub.delivery_data_format = 'text/plain'
+            sub.wrap_one_msg_in_list = True
+            sub.delivery_max_size = 111
+            sub.delivery_max_retry = 1
+            sub.delivery_err_should_block = False
+            sub.wait_sock_err = 1
+            sub.wait_non_sock_err = 1
 
             session.add(sub)
             session.commit()

@@ -18,6 +18,7 @@ from zato.common.odb.query import count
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.sql.selectable import Select
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, anylist, intlist, strlist
 
@@ -86,7 +87,7 @@ def get_gd_depth_topic_list(session:'SASession', cluster_id:'int', topic_id_list
 
 # ################################################################################################################################
 
-def _get_topic_list_by_condition(condition:'any_') -> 'anylist':
+def _get_topic_list_by_condition(condition:'any_') -> 'Select':
     """ Returns topics matching the input condition.
     """
     q = select([
