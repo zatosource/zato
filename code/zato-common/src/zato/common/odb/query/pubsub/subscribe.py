@@ -11,25 +11,30 @@ from sqlalchemy import and_, exists, insert, update
 from sqlalchemy.sql import expression as expr
 
 # Zato
-from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, WebSocketSubscription
 from zato.common.util.time_ import utcnow_as_ms
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.common.typing_ import boolnone, intnone, strnone
+    from zato.server.service.internal.pubsub.subscription import SubCtx
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 MsgTable = PubSubMessage.__table__
 
 # ################################################################################################################################
-
-_initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
-
 # ################################################################################################################################
 
 def has_subscription(
-    session,
-    cluster_id,
-    topic_id,
-    endpoint_id
+    session,    # type: SASession
+    cluster_id, # type: int
+    topic_id,   # type: int
+    endpoint_id # type: intnone
 ) -> 'bool':
     """ Returns a boolean flag indicating whether input endpoint has subscription to a given topic.
     """
@@ -43,13 +48,13 @@ def has_subscription(
 # ################################################################################################################################
 
 def add_wsx_subscription(
-    session,
-    cluster_id,
-    is_internal,
-    sub_key,
-    ext_client_id,
-    ws_channel_id,
-    sub_id
+    session,       # type: SASession
+    cluster_id,    # type: int
+    is_internal,   # type: boolnone
+    sub_key,       # type: strnone
+    ext_client_id, # type: strnone
+    ws_channel_id, # type: intnone
+    sub_id         # type: int
 ) -> 'WebSocketSubscription':
     """ Adds an object representing a subscription of a WebSockets client.
     """
@@ -67,10 +72,10 @@ def add_wsx_subscription(
 # ################################################################################################################################
 
 def add_subscription(
-    session,
-    cluster_id,
-    sub_key,
-    ctx
+    session,    # type: SASession
+    cluster_id, # type: int
+    sub_key,    # type: str
+    ctx         # type: SubCtx
 ) -> 'PubSubSubscription':
     """ Adds an object representing a subscription regardless of the underlying protocol.
     """
@@ -137,13 +142,13 @@ def add_subscription(
 # ################################################################################################################################
 
 def move_messages_to_sub_queue(
-    session,
-    cluster_id,
-    topic_id,
-    endpoint_id,
-    sub_pattern_matched,
-    sub_key,
-    pub_time_max
+    session,     # type: SASession
+    cluster_id,  # type: int
+    topic_id,    # type: int
+    endpoint_id, # type: intnone
+    sub_pattern_matched, # type: strnone
+    sub_key,     # type: str
+    pub_time_max # type: float
 ) -> 'None':
     """ Move all unexpired messages from topic to a given subscriber's queue. This method must be called with a global lock
     held for topic because it carries out its job through a couple of non-atomic queries.
