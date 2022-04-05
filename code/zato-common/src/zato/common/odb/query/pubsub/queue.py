@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,7 +18,8 @@ from zato.common.util.time_ import utcnow_as_ms
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strlistempty
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.common.typing_ import anylist, intlist, strlistempty
 
 # ################################################################################################################################
 
@@ -33,7 +34,13 @@ _waiting = PUBSUB.DELIVERY_STATUS.WAITING_FOR_CONFIRMATION
 
 # ################################################################################################################################
 
-def get_messages(session, cluster_id, sub_key, batch_size, now, _initialized=_initialized, _waiting=_waiting):
+def get_messages(
+    session,     # type: SASession
+    cluster_id,  # type: int
+    sub_key,     # type: str
+    batch_size,  # type: int
+    now          # type: float
+) -> 'anylist':
     """ Returns up to batch_size messages for input sub_key and mark them as being delivered.
     """
     # First, get all messages but note it is SELECT FOR UPDATE
@@ -66,7 +73,14 @@ def get_messages(session, cluster_id, sub_key, batch_size, now, _initialized=_in
 
 # ################################################################################################################################
 
-def _set_delivery_status(session, cluster_id, sub_key, msg_id_list, now, status):
+def _set_delivery_status(
+    session,     # type: SASession
+    cluster_id,  # type: int
+    sub_key,     # type: str
+    msg_id_list, # type: intlist
+    now,         # type: float
+    status       # type: int
+) -> 'None':
     session.execute(
         update(PubSubEnqMsg).\
         values({
@@ -82,27 +96,39 @@ def _set_delivery_status(session, cluster_id, sub_key, msg_id_list, now, status)
 # ################################################################################################################################
 
 def set_to_delete(
-    session,     # type: any_
+    session,     # type: SASession
     cluster_id,  # type: int
     sub_key,     # type: str
     msg_id_list, # type: strlistempty
     now,         # type: float
     status=_to_delete # type: int
-    ):
+) -> 'None':
     """ Marks all input messages as to be deleted.
     """
     _set_delivery_status(session, cluster_id, sub_key, msg_id_list, now, status)
 
 # ################################################################################################################################
 
-def acknowledge_delivery(session, cluster_id, sub_key, msg_id_list, now, status=_delivered):
+def acknowledge_delivery(
+    session,     # type: SASession
+    cluster_id,  # type: int
+    sub_key,     # type: str
+    msg_id_list, # type: intlist
+    now,         # type: float
+    status=_delivered # type: int
+) -> 'None':
     """ Confirms delivery of all messages from msg_id_list.
     """
     _set_delivery_status(session, cluster_id, sub_key, msg_id_list, now, status)
 
 # ################################################################################################################################
 
-def get_queue_depth_by_sub_key(session, cluster_id, sub_key, now):
+def get_queue_depth_by_sub_key(
+    session,    # type: SASession
+    cluster_id, # type: int
+    sub_key,    # type: str
+    now         # type: float
+) -> 'int':
     """ Returns queue depth for a given sub_key - does not include messages expired, in staging, or already delivered.
     """
     current_q = session.query(PubSubEnqMsg.id).\
@@ -117,7 +143,11 @@ def get_queue_depth_by_sub_key(session, cluster_id, sub_key, now):
 
 # ################################################################################################################################
 
-def get_queue_depth_by_topic_id_list(session, cluster_id, topic_id_list):
+def get_queue_depth_by_topic_id_list(
+    session,       # type: SASession
+    cluster_id,    # type: int
+    topic_id_list  # type: intlist
+) -> 'anylist':
     """ Returns queue depth for a given sub_key - does not include messages expired, in staging, or already delivered.
     """
     return session.query(PubSubEnqMsg.topic_id, func.count(PubSubEnqMsg.topic_id)).\
