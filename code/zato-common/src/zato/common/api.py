@@ -883,26 +883,16 @@ class PUBSUB:
             Error_Runtime_Invoke = 4
 
     class ENDPOINT_TYPE:
-        AMQP = NameId('AMQP', 'amqp')
-        FILES = NameId('Files', 'files')
-        FTP = NameId('FTP', 'ftp')
-        IMAP = NameId('IMAP', 'imap')
         INTERNAL = NameId('Internal', 'internal')
         REST = NameId('REST', 'rest')
         SERVICE = NameId('Service', 'srv')
-        SMS_TWILIO = NameId('SMS - Twilio', 'smstw')
-        SMTP = NameId('SMTP', 'smtp')
-        SOAP = NameId('SOAP', 'soap')
-        SQL = NameId('SQL', 'sql')
         WEB_SOCKETS = NameId('WebSockets', 'wsx')
 
         def __iter__(self):
             return iter((
-                self.AMQP.id,
                 self.INTERNAL.id,
                 self.REST.id,
                 self.SERVICE.id,
-                self.SOAP.id,
                 self.WEB_SOCKETS.id,
                 self.SERVICE.id
             ))
@@ -921,10 +911,8 @@ class PUBSUB:
 class _PUBSUB_SUBSCRIBE_CLASS:
 
     classes = {
-        PUBSUB.ENDPOINT_TYPE.AMQP.id: 'zato.pubsub.subscription.subscribe-amqp',
         PUBSUB.ENDPOINT_TYPE.REST.id: 'zato.pubsub.subscription.subscribe-rest',
         PUBSUB.ENDPOINT_TYPE.SERVICE.id: 'zato.pubsub.subscription.subscribe-service',
-        PUBSUB.ENDPOINT_TYPE.SOAP.id: 'zato.pubsub.subscription.subscribe-soap',
         PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: 'zato.pubsub.subscription.create-wsx-subscription',
     }
 
@@ -940,16 +928,13 @@ PUBSUB.SUBSCRIBE_CLASS = _PUBSUB_SUBSCRIBE_CLASS
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Not to be made available externally yet.
 skip_endpoint_types = (
-    PUBSUB.ENDPOINT_TYPE.FTP.id,
+
     PUBSUB.ENDPOINT_TYPE.INTERNAL.id,
-    PUBSUB.ENDPOINT_TYPE.IMAP.id,
     PUBSUB.ENDPOINT_TYPE.SERVICE.id,
-    PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id,
-    PUBSUB.ENDPOINT_TYPE.SMTP.id,
-    PUBSUB.ENDPOINT_TYPE.SQL.id,
-    PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id, # This will never be made because WSX clients need to use APIs to subscribe
+
+    # This will never be available externally because WSX clients need to use APIs to subscribe
+    PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
 )
 
 # ################################################################################################################################
