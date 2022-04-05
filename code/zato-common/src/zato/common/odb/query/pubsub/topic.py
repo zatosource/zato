@@ -13,14 +13,17 @@ from sqlalchemy.sql.expression import false as sa_false
 # Zato
 from zato.common.odb.model import PubSubMessage, PubSubTopic, PubSubSubscription
 from zato.common.odb.query import count
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy import Column
     from sqlalchemy.sql.selectable import Select
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, anylist, intlist, strlist
+    Column = Column
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,7 +54,7 @@ def get_topics_by_sub_keys(session:'SASession', cluster_id:'int', sub_keys:'strl
         PubSubTopic.id,
         PubSubSubscription.sub_key).\
         filter(PubSubSubscription.topic_id==PubSubTopic.id).\
-        filter(PubSubSubscription.sub_key.in_(sub_keys)).\
+        filter(cast_('Column', PubSubSubscription.sub_key).in_(sub_keys)).\
         all()
 
 # ################################################################################################################################

@@ -13,14 +13,17 @@ from sqlalchemy import func
 from zato.common.api import PUBSUB
 from zato.common.odb.model import Cluster, PubSubEndpoint, PubSubSubscription
 from zato.common.odb.query import query_wrapper
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy import Column
     from sqlalchemy.orm.query import Query
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, intnone
+    Column = Column
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,7 +43,7 @@ def _pubsub_endpoint_summary(
         PubSubEndpoint.is_active,
         PubSubEndpoint.is_internal,
         PubSubEndpoint.role,
-        PubSubEndpoint.name.label('endpoint_name'),
+        cast_('Column', PubSubEndpoint.name).label('endpoint_name'),
         PubSubEndpoint.endpoint_type,
         PubSubEndpoint.last_seen,
         PubSubEndpoint.last_deliv_time,
@@ -50,7 +53,7 @@ def _pubsub_endpoint_summary(
         outerjoin(PubSubSubscription, PubSubEndpoint.id==PubSubSubscription.endpoint_id).\
         filter(Cluster.id==PubSubEndpoint.cluster_id).\
         filter(Cluster.id==cluster_id).\
-        filter(PubSubEndpoint.role.in_(_subscriber_role))
+        filter(cast_('Column', PubSubEndpoint.role).in_(_subscriber_role))
 
     if topic_id:
         q = q.\

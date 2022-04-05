@@ -39,8 +39,10 @@ from zato.server.service.internal.pubsub import common_sub_data
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy import Column
     from zato.common.typing_ import any_, boolnone, intnone, optional, strnone
     from zato.common.model.wsx import WSXConnectorConfig
+    Column = Column
     WSXConnectorConfig = WSXConnectorConfig
 
 # ################################################################################################################################
@@ -88,7 +90,7 @@ class SubCtx:
     delivery_err_should_block: 'boolnone' = None
     wait_sock_err:'intnone' = None
     wait_non_sock_err:'intnone' = None
-    ext_client_id: 'strnone' = None
+    ext_client_id: 'str' = ''
     delivery_endpoint: 'strnone' = None
     out_http_soap_id: 'intnone' = None
     out_http_method: 'strnone' = None
@@ -363,7 +365,7 @@ class SubscribeServiceImpl(_Subscribe):
                                 endpoint.name, ctx.topic.name))
 
                     ctx.creation_time = now = utcnow_as_ms()
-                    sub_key = new_sub_key(self.endpoint_type, cast_('str', ctx.ext_client_id))
+                    sub_key = new_sub_key(self.endpoint_type, ctx.ext_client_id)
 
                     # Create a new subscription object and flush the session because the subscription's ID
                     # may be needed for the WSX subscription
@@ -720,7 +722,7 @@ class UpdateInteractionMetadata(AdminService):
                     'last_interaction_type': req.last_interaction_type,
                     'last_interaction_details': req.last_interaction_details.encode('utf8'),
                     }).\
-                where(PubSubSubscription.sub_key.in_(req.sub_key))
+                where(cast_('Column', PubSubSubscription.sub_key).in_(req.sub_key))
             )
 
             # And commit it to the database

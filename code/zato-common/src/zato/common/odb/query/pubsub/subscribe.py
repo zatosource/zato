@@ -12,14 +12,17 @@ from sqlalchemy.sql import expression as expr
 
 # Zato
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, WebSocketSubscription
+from zato.common.typing_ import cast_
 from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, boolnone, intnone, strnone
+    Column = Column
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,8 +53,8 @@ def add_wsx_subscription(
     session,       # type: SASession
     cluster_id,    # type: int
     is_internal,   # type: boolnone
-    sub_key,       # type: strnone
-    ext_client_id, # type: strnone
+    sub_key,       # type: str
+    ext_client_id, # type: str
     ws_channel_id, # type: intnone
     sub_id         # type: int
 ) -> 'WebSocketSubscription':
@@ -174,7 +177,7 @@ def move_messages_to_sub_queue(
         filter(PubSubMessage.topic_id==topic_id).\
         filter(PubSubMessage.cluster_id==cluster_id).\
         filter(~PubSubMessage.is_in_sub_queue).\
-        filter(PubSubMessage.pub_msg_id.notin_(enqueued_id_subquery).\
+        filter(cast_('Column', PubSubMessage.pub_msg_id).notin_(enqueued_id_subquery).\
         filter(PubSubMessage.expiration_time > pub_time_max) # type: ignore
     )
 

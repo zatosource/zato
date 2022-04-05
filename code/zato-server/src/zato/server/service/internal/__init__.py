@@ -26,6 +26,11 @@ from zato.server.service import AsIs, Bool, Int, Service
 
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import anylist
+
+# ################################################################################################################################
+
 logger = logging.getLogger('zato_admin')
 
 # ################################################################################################################################
@@ -168,7 +173,7 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-    def _search(self, search_func, session=None, cluster_id=None, *args, **kwargs):
+    def _search(self, search_func, session=None, cluster_id=None, *args, **kwargs) -> 'anylist':
         """ Adds search criteria to an SQLAlchemy query based on the service's (self) search configuration.
         """
 
