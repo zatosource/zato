@@ -191,9 +191,7 @@ class DeliverMessage(AdminService):
 
 # We need to register it here because it refers to DeliverMessage's methods
 deliver_func = {
-    PUBSUB.ENDPOINT_TYPE.AMQP.id: DeliverMessage._deliver_amqp,
     PUBSUB.ENDPOINT_TYPE.REST.id: DeliverMessage._deliver_rest_soap,
-    PUBSUB.ENDPOINT_TYPE.SOAP.id: DeliverMessage._deliver_rest_soap,
     PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: DeliverMessage._deliver_wsx,
     PUBSUB.ENDPOINT_TYPE.SERVICE.id: DeliverMessage._deliver_srv,
 }
