@@ -177,9 +177,8 @@ def move_messages_to_sub_queue(
         filter(PubSubMessage.topic_id==topic_id).\
         filter(PubSubMessage.cluster_id==cluster_id).\
         filter(~PubSubMessage.is_in_sub_queue).\
-        filter(cast_('Column', PubSubMessage.pub_msg_id).notin_(enqueued_id_subquery).\
+        filter(cast_('Column', PubSubMessage.pub_msg_id).notin_(enqueued_id_subquery)).\
         filter(PubSubMessage.expiration_time > pub_time_max) # type: ignore
-    )
 
     # All message IDs that are available in topic for that subscriber, if there are any at all.
     # In theory, it is not required to pull all the messages to build the list in Python, but this is a relatively
