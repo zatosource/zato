@@ -45,6 +45,12 @@ def run(playwright: Playwright) -> None:
     page.click("text=Log out (admin)")
     assert page.url == "http://localhost:8183/accounts/login/?next=/zato/"
 
+    # Click input[name="username"]
+    page.click("input[name=\"username\"]")
+
+    # Fill input[name="username"]
+    page.fill("input[name=\"username\"]", "admin")
+
     # Click input[name="password"]
     page.click("input[name=\"password\"]")
 
@@ -53,7 +59,7 @@ def run(playwright: Playwright) -> None:
 
     # Click text=Log in
     page.click("text=Log in")
-    assert page.url == "http://localhost:8183/accounts/login/"
+    assert page.url == "http://localhost:8183/zato/"
 
     # Click text=My settings
     page.click("text=My settings")
