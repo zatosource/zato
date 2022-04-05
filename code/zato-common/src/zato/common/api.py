@@ -792,6 +792,7 @@ class PUBSUB:
         ON_NO_SUBS_PUB = 'accept'
         SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
         UnsubOnWSXClose = True
+        PositionInGroup = 1
 
         LimitMessageExpiry  = 86_400 # In seconds = 1 day # 0.1
         LimitTopicRetention = 86_400 # In seconds = 1 day # 0.1
