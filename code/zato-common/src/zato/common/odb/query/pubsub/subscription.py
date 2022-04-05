@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # SQLAlchemy
 from sqlalchemy import func
@@ -17,12 +15,25 @@ from zato.common.odb.model import Cluster, PubSubTopic, PubSubEndpoint, PubSubSu
 from zato.common.odb.query import query_wrapper
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from sqlalchemy.sql.selectable import Select
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.common.typing_ import any_, tuple_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 _subscriber_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-def _pubsub_subscription(session, cluster_id):
+def _pubsub_subscription(
+    session,   # type: SASession
+    cluster_id # type: int
+) -> 'Select':
     return session.query(
         PubSubSubscription.id,
         PubSubSubscription.id.label('sub_id'),
@@ -91,7 +102,11 @@ def _pubsub_subscription(session, cluster_id):
 
 # ################################################################################################################################
 
-def pubsub_subscription(session, cluster_id, id):
+def pubsub_subscription(
+    session,    # type: SASession
+    cluster_id, # type: int
+    id          # type: int
+) -> 'any_':
     """ A pub/sub subscription.
     """
     return _pubsub_subscription(session, cluster_id).\
@@ -101,14 +116,18 @@ def pubsub_subscription(session, cluster_id, id):
 # ################################################################################################################################
 
 @query_wrapper
-def pubsub_subscription_list(session, cluster_id, needs_columns=False):
+def pubsub_subscription_list(
+    session,    # type: SASession
+    cluster_id, # type: int
+    needs_columns=False # type: bool
+) -> 'any_':
     """ All pub/sub subscriptions.
     """
     return _pubsub_subscription(session, cluster_id)
 
 # ################################################################################################################################
 
-def pubsub_sub_key_list(session):
+def pubsub_sub_key_list(session:'SASession') -> 'tuple_':
     """ Returns a list of sub_keys and IDs in the database.
     """
     return session.query(
@@ -119,7 +138,12 @@ def pubsub_sub_key_list(session):
 # ################################################################################################################################
 
 @query_wrapper
-def pubsub_subscription_list_by_endpoint_id(session, cluster_id, endpoint_id, needs_columns=False):
+def pubsub_subscription_list_by_endpoint_id(
+    session,     # type: SASession
+    cluster_id,  # type: int
+    endpoint_id, # type: int
+    needs_columns=False # type: bool
+) -> 'any_':
     """ A list of all pub/sub subscriptions for a given endpoint with a search results wrapper.
     """
     return _pubsub_subscription(session, cluster_id).\
@@ -127,7 +151,11 @@ def pubsub_subscription_list_by_endpoint_id(session, cluster_id, endpoint_id, ne
 
 # ################################################################################################################################
 
-def pubsub_subscription_list_by_endpoint_id_no_search(session, cluster_id, endpoint_id):
+def pubsub_subscription_list_by_endpoint_id_no_search(
+    session,    # type: SASession
+    cluster_id, # type: int
+    endpoint_id # type: int
+) -> 'any_':
     """ A list of all pub/sub subscriptions for a given endpoint without a search results wrapper.
     """
     return _pubsub_subscription(session, cluster_id).\
@@ -136,7 +164,11 @@ def pubsub_subscription_list_by_endpoint_id_no_search(session, cluster_id, endpo
 # ################################################################################################################################
 
 @query_wrapper
-def pubsub_endpoint_summary_list(session, cluster_id, needs_columns=False):
+def pubsub_endpoint_summary_list(
+    session,    # type: SASession
+    cluster_id, # type: int
+    needs_columns=False # type: bool
+) -> 'any_':
     return session.query(
         PubSubEndpoint.id,
         PubSubEndpoint.is_active,

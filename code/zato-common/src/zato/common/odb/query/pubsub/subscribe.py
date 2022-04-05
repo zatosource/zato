@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # SQLAlchemy
 from sqlalchemy import and_, exists, insert, update
@@ -27,7 +25,12 @@ _initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
 
 # ################################################################################################################################
 
-def has_subscription(session, cluster_id, topic_id, endpoint_id):
+def has_subscription(
+    session,
+    cluster_id,
+    topic_id,
+    endpoint_id
+) -> 'bool':
     """ Returns a boolean flag indicating whether input endpoint has subscription to a given topic.
     """
     return session.query(exists().where(and_(
@@ -39,7 +42,15 @@ def has_subscription(session, cluster_id, topic_id, endpoint_id):
 
 # ################################################################################################################################
 
-def add_wsx_subscription(session, cluster_id, is_internal, sub_key, ext_client_id, ws_channel_id, sub_id):
+def add_wsx_subscription(
+    session,
+    cluster_id,
+    is_internal,
+    sub_key,
+    ext_client_id,
+    ws_channel_id,
+    sub_id
+) -> 'WebSocketSubscription':
     """ Adds an object representing a subscription of a WebSockets client.
     """
     wsx_sub = WebSocketSubscription()
@@ -55,7 +66,12 @@ def add_wsx_subscription(session, cluster_id, is_internal, sub_key, ext_client_i
 
 # ################################################################################################################################
 
-def add_subscription(session, cluster_id, sub_key, ctx):
+def add_subscription(
+    session,
+    cluster_id,
+    sub_key,
+    ctx
+) -> 'PubSubSubscription':
     """ Adds an object representing a subscription regardless of the underlying protocol.
     """
     # Common
@@ -120,8 +136,15 @@ def add_subscription(session, cluster_id, sub_key, ctx):
 
 # ################################################################################################################################
 
-def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_pattern_matched, sub_key, pub_time_max,
-    _initialized=_initialized):
+def move_messages_to_sub_queue(
+    session,
+    cluster_id,
+    topic_id,
+    endpoint_id,
+    sub_pattern_matched,
+    sub_key,
+    pub_time_max
+) -> 'None':
     """ Move all unexpired messages from topic to a given subscriber's queue. This method must be called with a global lock
     held for topic because it carries out its job through a couple of non-atomic queries.
     """
@@ -169,7 +192,7 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_p
                 expr.column('sub_key'),
                 expr.column('is_in_staging'),
                 expr.column('cluster_id'),
-                ), select_messages)
+                ), select_messages) # type: ignore
 
         # Move messages to subscriber's queue
         session.execute(insert_messages)
