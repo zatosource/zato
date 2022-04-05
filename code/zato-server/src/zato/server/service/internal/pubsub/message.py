@@ -337,7 +337,6 @@ class _Update(AdminService):
                     from_ = utcnow_as_ms()
                 else:
                     from_ = item.pub_time
-                from_ = cast_('float', from_)
                 item.expiration_time = from_ + (item.expiration / 1000.0)
             else:
                 item.expiration_time = None
@@ -360,7 +359,7 @@ class UpdateGD(_Update):
     """
     _message_update_has_gd = True
 
-    def _get_item(self, input:'stranydict', session:'SASession') -> 'PubSubMessage':
+    def _get_item(self, input:'stranydict', session:'SASession') -> 'PubSubMessage | None':
         return session.query(PubSubMessage).\
             filter(PubSubMessage.cluster_id==input['cluster_id']).\
             filter(PubSubMessage.pub_msg_id==input['msg_id']).\

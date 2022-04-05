@@ -1,33 +1,43 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # SQLAlchemy
 from sqlalchemy import and_, exists, insert, update
 from sqlalchemy.sql import expression as expr
 
 # Zato
-from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, WebSocketSubscription
+from zato.common.typing_ import cast_
 from zato.common.util.time_ import utcnow_as_ms
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from sqlalchemy import Column
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.common.typing_ import any_, boolnone, intnone, strnone
+    Column = Column
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 MsgTable = PubSubMessage.__table__
 
 # ################################################################################################################################
-
-_initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
-
 # ################################################################################################################################
 
-def has_subscription(session, cluster_id, topic_id, endpoint_id):
+def has_subscription(
+    session,    # type: SASession
+    cluster_id, # type: int
+    topic_id,   # type: int
+    endpoint_id # type: intnone
+) -> 'bool':
     """ Returns a boolean flag indicating whether input endpoint has subscription to a given topic.
     """
     return session.query(exists().where(and_(
@@ -39,7 +49,15 @@ def has_subscription(session, cluster_id, topic_id, endpoint_id):
 
 # ################################################################################################################################
 
-def add_wsx_subscription(session, cluster_id, is_internal, sub_key, ext_client_id, ws_channel_id, sub_id):
+def add_wsx_subscription(
+    session,       # type: SASession
+    cluster_id,    # type: int
+    is_internal,   # type: boolnone
+    sub_key,       # type: str
+    ext_client_id, # type: str
+    ws_channel_id, # type: intnone
+    sub_id         # type: int
+) -> 'WebSocketSubscription':
     """ Adds an object representing a subscription of a WebSockets client.
     """
     wsx_sub = WebSocketSubscription()
@@ -55,7 +73,12 @@ def add_wsx_subscription(session, cluster_id, is_internal, sub_key, ext_client_i
 
 # ################################################################################################################################
 
-def add_subscription(session, cluster_id, sub_key, ctx):
+def add_subscription(
+    session,    # type: SASession
+    cluster_id, # type: int
+    sub_key,    # type: str
+    ctx         # type: any_
+) -> 'PubSubSubscription':
     """ Adds an object representing a subscription regardless of the underlying protocol.
     """
     # Common
@@ -120,8 +143,15 @@ def add_subscription(session, cluster_id, sub_key, ctx):
 
 # ################################################################################################################################
 
-def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_pattern_matched, sub_key, pub_time_max,
-    _initialized=_initialized):
+def move_messages_to_sub_queue(
+    session,     # type: SASession
+    cluster_id,  # type: int
+    topic_id,    # type: int
+    endpoint_id, # type: intnone
+    sub_pattern_matched, # type: strnone
+    sub_key,     # type: str
+    pub_time_max # type: float
+) -> 'None':
     """ Move all unexpired messages from topic to a given subscriber's queue. This method must be called with a global lock
     held for topic because it carries out its job through a couple of non-atomic queries.
     """
@@ -146,9 +176,9 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_p
         ).\
         filter(PubSubMessage.topic_id==topic_id).\
         filter(PubSubMessage.cluster_id==cluster_id).\
-        filter(PubSubMessage.expiration_time > pub_time_max).\
         filter(~PubSubMessage.is_in_sub_queue).\
-        filter(PubSubMessage.pub_msg_id.notin_(enqueued_id_subquery))
+        filter(cast_('Column', PubSubMessage.pub_msg_id).notin_(enqueued_id_subquery)).\
+        filter(PubSubMessage.expiration_time > pub_time_max) # type: ignore
 
     # All message IDs that are available in topic for that subscriber, if there are any at all.
     # In theory, it is not required to pull all the messages to build the list in Python, but this is a relatively
@@ -169,7 +199,7 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_p
                 expr.column('sub_key'),
                 expr.column('is_in_staging'),
                 expr.column('cluster_id'),
-                ), select_messages)
+                ), select_messages) # type: ignore
 
         # Move messages to subscriber's queue
         session.execute(insert_messages)
