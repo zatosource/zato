@@ -100,9 +100,9 @@ class Model:
         return fields
 
     @classmethod
-    def _zato_from_dict(class_, data):
+    def _zato_from_dict(class_, data, extra=None):
         api = MarshalAPI()
-        return api.from_dict(None, data, class_)
+        return api.from_dict(None, data, class_, extra=extra)
 
     def to_dict(self):
         return asdict(self)

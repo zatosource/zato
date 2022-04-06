@@ -6,7 +6,7 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from zato.server.pubsub.publisher import Publisher, PubRequest
+# Zato
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService
 
@@ -31,22 +31,10 @@ class Publish(AdminService):
 
     def handle(self):
 
-        # Prepare a publisher object that will handle the publication ..
-        publisher = Publisher(
-            cid = self.cid,
-            pubsub = self.pubsub,
-            server = self.server,
-            service_invoke_func = self.invoke,
-            new_session_func = self.odb.session
-        )
+        # Run the publication based on our input  ..
+        response = self.pubsub.impl_publisher.run_from_dict(self.cid, self.request.input)
 
-        # .. prepare the request for the publisher ..
-        request = PubRequest._zato_from_dict(self.request.input)
-
-        # .. run the publication  ..
-        response = publisher.run(request)
-
-        # .. and assign the output to our response, assuming that there was any ..
+        # .. and assign the response to our return data, assuming that there is anything to return.
         if response:
             if isinstance(response, str):
                 self.response.payload.msg_id = response

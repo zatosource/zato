@@ -376,7 +376,7 @@ class Client:
         self.needs_auth = bool(self.config.username)
         self.max_connect_attempts = self.config.max_connect_attempts
         self._json_parser = SIMDJSONParser()
-        self._marshall_api = MarshalAPI()
+        self._marshal_api = MarshalAPI()
         self.logger = getLogger(__name__)
 
         # Keyed by IDs of requests sent from this client to Zato
