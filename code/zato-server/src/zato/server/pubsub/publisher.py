@@ -31,7 +31,7 @@ from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import new_msg_id, PubSubMessage
 from zato.common.typing_ import any_, anydict, anylistnone, anynone, boolnone, cast_, dict_field, intnone, list_field, \
-     strlist, strnone
+     strlistempty, strnone
 from zato.common.util.pubsub import get_expiration, get_priority
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_ms
@@ -41,7 +41,7 @@ from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_m
 
 if 0:
     from zato.common.marshal_.api import MarshalAPI
-    from zato.common.typing_ import any_, anylist, anylistnone, boolnone, callable_, dictlist, intnone, tuple_
+    from zato.common.typing_ import any_, anylist, anylistnone, boolnone, callable_, dictlist, intnone, strlist, tuple_
     from zato.server.base.parallel import ParallelServer
     from zato.server.pubsub import PubSub, Topic
     from zato.server.pubsub.model import sublist
@@ -164,20 +164,20 @@ class PubRequest(Model):
 
     mime_type:  strnone = PUBSUB.DEFAULT.MIME_TYPE
 
-    ext_client_id: str = ''
+    ext_client_id: strnone = ''
     ext_pub_time:  strnone = None
 
     security_id:   intnone = None
     endpoint_id:   intnone = None
     ws_channel_id: intnone = None
 
-    group_id:          str = ''
-    position_in_group: int = PUBSUB.DEFAULT.PositionInGroup
+    group_id:          strnone = ''
+    position_in_group: intnone = PUBSUB.DEFAULT.PositionInGroup
 
-    reply_to_sk:   strlist = list_field()
-    deliver_to_sk: strlist = list_field()
+    reply_to_sk:   strlistempty = list_field()
+    deliver_to_sk: strlistempty = list_field()
 
-    user_ctx:      any_    = None
+    user_ctx:      anynone    = None
     zato_ctx:      anydict = dict_field()
 
 # ################################################################################################################################
