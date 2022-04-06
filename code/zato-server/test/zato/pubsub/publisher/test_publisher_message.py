@@ -28,6 +28,10 @@ class PublisherMessageTestCase(TestCase):
 
     def test_get_data_prefixes(self) -> 'None':
 
+        # Make them shorted for the purposes of our test
+        PublisherTestData.pubsub.data_prefix_len = 7
+        PublisherTestData.pubsub.data_prefix_short_len = 3
+
         publisher = Publisher(
             pubsub = PublisherTestData.pubsub,
             server = cast_('ParallelServer', PublisherTestData.server),
@@ -36,7 +40,11 @@ class PublisherMessageTestCase(TestCase):
             new_session_func = PublisherTestData.new_session_func,
         )
 
-        publisher
+        data = '1234567890'
+        data_prefix, data_prefix_short = publisher.get_data_prefixes(data)
+
+        self.assertEqual(data_prefix, '1234567')
+        self.assertEqual(data_prefix_short, '123')
 
 # ################################################################################################################################
 # ################################################################################################################################
