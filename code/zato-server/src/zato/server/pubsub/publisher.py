@@ -19,6 +19,9 @@ from ciso8601 import parse_datetime_as_naive
 # gevent
 from gevent import spawn
 
+# typing-extensions
+from typing_extensions import TypeAlias
+
 # Zato
 from zato.common.api import PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
@@ -41,6 +44,7 @@ if 0:
     from zato.server.base.parallel import ParallelServer
     from zato.server.pubsub import PubSub, Topic
     from zato.server.pubsub.model import sublist
+    dictlist = dictlist
     sublist = sublist
 
 # ################################################################################################################################
@@ -51,6 +55,11 @@ logger_pubsub = getLogger('zato_pubsub.srv')
 logger_audit = getLogger('zato_pubsub_audit')
 
 has_logger_pubsub_debug = logger_pubsub.isEnabledFor(DEBUG)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+PublicationResult:TypeAlias = 'str | strlist | None'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -416,7 +425,7 @@ class Publisher:
 
 # ################################################################################################################################
 
-    def run(self, request:'PubRequest'):
+    def run(self, request:'PubRequest') -> 'PublicationResult':
 
         endpoint_id = request.endpoint_id
 
@@ -521,11 +530,26 @@ class Publisher:
         )
 
         # We have all the request data, publish the message(s) now
-        self._publish(ctx)
+        return self._publish(ctx)
 
 # ################################################################################################################################
 
-    def _publish(self, ctx:'PubCtx') -> 'str | strlist | None':
+    def _build_response(self, len_gd_msg_list:'int', ctx:'PubCtx') -> 'PublicationResult':
+        """ Return either a single msg_id if there was only one message published or a list of message IDs,
+        one for each message published.
+        """
+        len_msg_list = len_gd_msg_list + len(ctx.non_gd_msg_list)
+
+        if len_msg_list == 1:
+            out = ctx.msg_id_list[0]
+        else:
+            out = ctx.msg_id_list
+
+        return out
+
+# ################################################################################################################################
+
+    def _publish(self, ctx:'PubCtx') -> 'PublicationResult':
         """ Publishes GD and non-GD messages to topics and, if subscribers exist, moves them to their queues / notifies them.
         """
         len_gd_msg_list = len(ctx.gd_msg_list)
@@ -659,11 +683,7 @@ class Publisher:
                     ctx.is_re_run = True
 
                     # Re-run with GD and non-GD reversed now
-                    self._publish(ctx)
-
-                    # Return here so as not to update metadata with information
-                    # about what the re-run is going to overwrite.
-                    return
+                    return self._publish(ctx)
 
         # Update topic and endpoint metadata in background if configured to - we have a series of if's to confirm
         # if it's needed because it is not a given that each publication will require the update and we also
@@ -685,14 +705,9 @@ class Publisher:
                 spawn(self._update_pub_metadata, ctx, has_topic, has_endpoint,
                     ctx.pubsub.endpoint_meta_data_len, ctx.pubsub.endpoint_meta_max_history)
 
-        # Return either a single msg_id if there was only one message published or a list of message IDs,
-        # one for each message published.
-        len_msg_list = len_gd_msg_list + len(ctx.non_gd_msg_list)
-
-        if len_msg_list == 1:
-            return ctx.msg_id_list[0]
-        else:
-            return ctx.msg_id_list
+        # Build and return a response for our caller.
+        out = self._build_response(len_gd_msg_list, ctx)
+        return out
 
 # ################################################################################################################################
 
