@@ -34,6 +34,7 @@ from zato.common.api import CHANNEL, DATA_FORMAT, SIMPLE_IO
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.json_internal import loads
 from zato.common.log_message import CID_LENGTH
+from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb import model
 from zato.common.odb.model import Cluster, ElasticSearch
 from zato.common.odb.api import SessionWrapper, SQLConnectionPool
@@ -235,6 +236,7 @@ def enrich_with_static_config(object_):
         vault_conn_api=None, sms_twilio_api=None)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Expected:
     """ A container for the data a test expects the service to return.
@@ -252,8 +254,9 @@ class Expected:
             return self.data[0]
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class FakeBrokerClient:
+class TestBrokerClient:
 
     def __init__(self):
         self.publish_args = []
@@ -269,10 +272,11 @@ class FakeBrokerClient:
         self.invoke_async_kwargs.append(kwargs)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class FakeKVDB:
+class TestKVDB:
 
-    class FakeConn:
+    class TestConn:
         def __init__(self):
             self.setnx_args = None
             self.setnx_return_value = True
@@ -295,22 +299,24 @@ class FakeKVDB:
             self.delete_args = args
 
     def __init__(self):
-        self.conn = self.FakeConn()
+        self.conn = self.TestConn()
 
     def translate(self, *ignored_args, **ignored_kwargs):
         raise NotImplementedError()
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class FakeServices:
+class TestServices:
     def __getitem__(self, ignored):
         return {'slow_threshold': 1234}
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class FakeServiceStore:
+class TestServiceStore:
     def __init__(self, name_to_impl_name=None, impl_name_to_service=None):
-        self.services = FakeServices()
+        self.services = TestServices()
         self.name_to_impl_name = name_to_impl_name or {}
         self.impl_name_to_service = impl_name_to_service or {}
 
@@ -318,18 +324,25 @@ class FakeServiceStore:
         return self.impl_name_to_service[impl_name](), is_active
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class FakeServer:
-    """ A fake mock server used in test cases.
-    """
+class TestODB:
+    def session(self, *ignored_args, **ignored_kwargs):
+        pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestServer:
+
     def __init__(self, service_store_name_to_impl_name=None, service_store_impl_name_to_service=None, worker_store=None):
-        self.kvdb = FakeKVDB()
-        self.service_store = FakeServiceStore(service_store_name_to_impl_name, service_store_impl_name_to_service)
+
+        self.odb = TestODB()
+        self.kvdb = TestKVDB()
+        self.service_store = TestServiceStore(service_store_name_to_impl_name, service_store_impl_name_to_service)
+        self.marshal_api = MarshalAPI()
         self.worker_store = worker_store
-        self.fs_server_config = Bunch()
-        self.fs_server_config.misc = Bunch()
-        self.fs_server_config.misc.zeromq_connect_sleep = 0.1
-        self.fs_server_config.misc.internal_services_may_be_deleted = False
+
         self.repo_location = rand_string()
         self.delivery_store = None
         self.user_config = Bunch()
@@ -339,6 +352,41 @@ class FakeServer:
         self.ipc_api = None
         self.component_enabled = Bunch()
 
+        self.name = 'TestServerObject'
+        self.pid = 9988
+
+        self.fs_server_config = Bunch()
+
+        self.fs_server_config.misc = Bunch()
+        self.fs_server_config.misc.zeromq_connect_sleep = 0.1
+        self.fs_server_config.misc.internal_services_may_be_deleted = False
+
+        self.fs_server_config.pubsub = Bunch()
+        self.fs_server_config.pubsub_meta_topic = Bunch()
+        self.fs_server_config.pubsub_meta_endpoint_pub = Bunch()
+
+        self.fs_server_config.pubsub.data_prefix_len = 9999
+        self.fs_server_config.pubsub.data_prefix_short_len = 123
+        self.fs_server_config.pubsub.log_if_deliv_server_not_found = True
+        self.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found = False
+
+        self.fs_server_config.pubsub_meta_topic.enabled = True
+        self.fs_server_config.pubsub_meta_topic.store_frequency = 1
+
+        self.fs_server_config.pubsub_meta_endpoint_pub.enabled = True
+        self.fs_server_config.pubsub_meta_endpoint_pub.store_frequency = 1
+        self.fs_server_config.pubsub_meta_endpoint_pub.data_len = 1234
+        self.fs_server_config.pubsub_meta_endpoint_pub.max_history = 111
+
+        self.ctx = {}
+
+# ################################################################################################################################
+
+    def invoke(self, service:'any_', request:'any_') -> 'None':
+        self.ctx['service'] = service
+        self.ctx['request'] = request
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SIOElemWrapper:
@@ -352,6 +400,7 @@ class SIOElemWrapper:
         # of a SIO attribute.
         return cmp(self.value.name, getattr(other, 'name', other))
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ServiceTestCase(TestCase):
@@ -390,7 +439,7 @@ class ServiceTestCase(TestCase):
         }
 
         class_.update(
-            instance, channel, FakeServer(service_store_name_to_impl_name, service_store_impl_name_to_service, worker_store),
+            instance, channel, TestServer(service_store_name_to_impl_name, service_store_impl_name_to_service, worker_store),
             None, worker_store, new_cid(), request_data, request_data, simple_io_config=simple_io_config,
             data_format=data_format, job_type=job_type)
 
@@ -411,7 +460,7 @@ class ServiceTestCase(TestCase):
 
         broker_client_publish = getattr(self, 'broker_client_publish', None)
         if broker_client_publish:
-            instance.broker_client = FakeBrokerClient()
+            instance.broker_client = TestBrokerClient()
             instance.broker_client.publish = broker_client_publish
 
         def set_response_func(*args, **kwargs):
@@ -481,6 +530,7 @@ class ServiceTestCase(TestCase):
     def wrap_force_type(self, elem):
         return SIOElemWrapper(elem)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ODBTestCase(TestCase):
@@ -563,17 +613,20 @@ class ODBTestCase(TestCase):
         return result if is_list else result[0]
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class MyODBService(Service):
     class SimpleIO:
         output = 'cluster_id', 'is_active', 'name'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class MyODBServiceWithResponseElem(MyODBService):
     class SimpleIO(MyODBService.SimpleIO):
         response_elem = 'my_response_elem'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class MyZatoClass:
