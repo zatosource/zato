@@ -68,7 +68,7 @@ def dumps(data, indent=4):
             for key, value in data.items():
                 data[key] = _ensure_serializable(value)
         else:
-            data = _ensure_serializable(value)
+            data = _ensure_serializable(data)
 
     return json_dumps(data, indent=indent)
 
