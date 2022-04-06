@@ -308,7 +308,7 @@ class Publisher:
         ps_msg.cluster_id = self.server.cluster_id
         ps_msg.has_gd = has_gd
         ps_msg.ext_client_id = ext_client_id
-        ps_msg.group_id = request.group_id
+        ps_msg.group_id = request.group_id or ''
         ps_msg.position_in_group = request.position_in_group or PUBSUB.DEFAULT.PositionInGroup
         ps_msg.is_in_sub_queue = bool(subscriptions_by_topic)
         ps_msg.reply_to_sk = reply_to_sk
@@ -540,7 +540,7 @@ class Publisher:
             gd_msg_list = gd_msg_list,
             non_gd_msg_list = non_gd_msg_list,
             pub_pattern_matched = pub_pattern_matched,
-            ext_client_id = request.ext_client_id,
+            ext_client_id = request.ext_client_id or '',
             is_first_run = True,
             now = now,
             is_wsx = is_wsx,
