@@ -30,7 +30,8 @@ from zato.common.marshal_.api import Model
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import new_msg_id, PubSubMessage
-from zato.common.typing_ import cast_, dict_field, list_field
+from zato.common.typing_ import any_, anydict, anylistnone, anynone, boolnone, cast_, dict_field, intnone, list_field, \
+     strlist, strnone
 from zato.common.util.pubsub import get_expiration, get_priority
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_ms
@@ -40,8 +41,7 @@ from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_m
 
 if 0:
     from zato.common.marshal_.api import MarshalAPI
-    from zato.common.typing_ import any_, anydict, anylist, anylistnone, boolnone, callable_, dictlist, intnone, \
-        strlist, strnone, tuple_
+    from zato.common.typing_ import any_, anylist, anylistnone, boolnone, callable_, dictlist, intnone, tuple_
     from zato.server.base.parallel import ParallelServer
     from zato.server.pubsub import PubSub, Topic
     from zato.server.pubsub.model import sublist
@@ -147,38 +147,38 @@ class PubCtx:
 @dataclass(init=False)
 class PubRequest(Model):
 
-    cid: 'str'
-    topic_name: 'str'
-    pub_pattern_matched: 'str' = ''
+    cid: str
+    topic_name: str
+    pub_pattern_matched: str = ''
 
-    msg_id:      'str' = ''
-    correl_id:   'strnone' = None
-    in_reply_to: 'strnone' = None
-    has_gd:      'boolnone' = None
+    msg_id:      str = ''
+    correl_id:   strnone = None
+    in_reply_to: strnone = None
+    has_gd:      boolnone = None
 
-    data:        'any_'        = None
-    data_list:   'anylistnone' = None
+    data:        anynone     = None
+    data_list:   anylistnone = None
 
-    priority:   'intnone' = PUBSUB.PRIORITY.DEFAULT
-    expiration: 'intnone' = PUBSUB.DEFAULT.EXPIRATION
+    priority:   intnone = PUBSUB.PRIORITY.DEFAULT
+    expiration: intnone = PUBSUB.DEFAULT.EXPIRATION
 
-    mime_type:  'strnone' = PUBSUB.DEFAULT.MIME_TYPE
+    mime_type:  strnone = PUBSUB.DEFAULT.MIME_TYPE
 
-    ext_client_id: 'str' = ''
-    ext_pub_time:  'strnone' = None
+    ext_client_id: str = ''
+    ext_pub_time:  strnone = None
 
-    security_id:   'intnone' = None
-    endpoint_id:   'intnone' = None
-    ws_channel_id: 'intnone' = None
+    security_id:   intnone = None
+    endpoint_id:   intnone = None
+    ws_channel_id: intnone = None
 
-    group_id:          'str' = ''
-    position_in_group: 'int' = PUBSUB.DEFAULT.PositionInGroup
+    group_id:          str = ''
+    position_in_group: int = PUBSUB.DEFAULT.PositionInGroup
 
-    reply_to_sk:   'strlist' = list_field()
-    deliver_to_sk: 'strlist' = list_field()
+    reply_to_sk:   strlist = list_field()
+    deliver_to_sk: strlist = list_field()
 
-    user_ctx:      'any_'    = None
-    zato_ctx:      'anydict' = dict_field()
+    user_ctx:      any_    = None
+    zato_ctx:      anydict = dict_field()
 
 # ################################################################################################################################
 # ################################################################################################################################
