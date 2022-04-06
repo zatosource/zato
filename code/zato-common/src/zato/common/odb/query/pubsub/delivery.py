@@ -24,7 +24,7 @@ from zato.common.util.sql.retry import sql_op_with_deadlock_retry, sql_query_wit
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anylist, anytuple, intnone, intset, listnone, strlist
+    from zato.common.typing_ import any_, anytuple, intnone, intset, listnone, strlist
 
 # ################################################################################################################################
 
@@ -219,7 +219,7 @@ def _confirm_pubsub_msg_delivered(*args:'any_') -> 'bool':
 
 # ################################################################################################################################
 
-def confirm_pubsub_msg_delivered(*args:'anylist') -> 'None':
+def confirm_pubsub_msg_delivered(*args:'any_') -> 'None':
     sql_query_with_retry(_confirm_pubsub_msg_delivered, '_confirm_pubsub_msg_delivered', *args)
 
 # ################################################################################################################################

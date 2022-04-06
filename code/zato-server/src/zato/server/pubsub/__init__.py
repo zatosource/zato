@@ -27,7 +27,6 @@ from texttable import Texttable
 # Zato
 from zato.common.api import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
-from zato.common.exception import BadRequest
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
     get_delivery_server_for_sub_key, get_sql_messages_by_msg_id_list as _get_sql_messages_by_msg_id_list, \
@@ -41,6 +40,7 @@ from zato.common.util.hook import HookTool
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
 from zato.server.pubsub.model import Endpoint, HookCtx, strsubdict, sublist, Subscription, SubKeyServer, Topic
+from zato.server.pubsub.publisher import Publisher
 from zato.server.pubsub.sync import InRAMSync
 
 # ################################################################################################################################
@@ -87,14 +87,6 @@ _service_delete_message_non_gd = 'zato.pubsub.message.queue-delete-non-gd'
 
 _end_srv_id = PUBSUB.ENDPOINT_TYPE.SERVICE.id
 
-# ################################################################################################################################
-
-_PRIORITY = PUBSUB.PRIORITY
-
-_pri_min = _PRIORITY.MIN
-_pri_max = _PRIORITY.MAX
-_pri_def = _PRIORITY.DEFAULT
-
 _ps_default = PUBSUB.DEFAULT
 
 # ################################################################################################################################
@@ -104,7 +96,6 @@ _sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
 
 # ################################################################################################################################
 
-_default_expiration = PUBSUB.DEFAULT.EXPIRATION
 default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 default_sub_pattern_matched = '(No sub pattern)'
 
@@ -114,46 +105,7 @@ default_sub_pattern_matched = '(No sub pattern)'
 class MsgConst:
     wsx_sub_resumed = 'WSX subscription resumed, sk:`%s`, peer:`%s`'
 
-def get_priority(
-    cid,   # type: str
-    priority, # type: intnone
-    _pri_min=_pri_min, # type: int
-    _pri_max=_pri_max, # type: int
-    _pri_def=_pri_def  # type: int
-    ) -> 'int':
-    """ Get and validate message priority.
-    """
-    if priority:
-        if priority < _pri_min or priority > _pri_max:
-            raise BadRequest(cid, 'Priority `{}` outside of allowed range {}-{}'.format(priority, _pri_min, _pri_max))
-    else:
-        priority = _pri_def
-
-    return priority
-
 # ################################################################################################################################
-
-def get_expiration(
-    cid:'str',
-    expiration:'intnone',
-    topic_limit_message_expiry:'int',
-    default_expiration:'int'=_default_expiration) -> 'int':
-    """ Get and validate message expiration.
-    """
-    expiration = expiration or 0
-    if expiration is not None and expiration < 0:
-        raise BadRequest(cid, 'Expiration `{}` must not be negative'.format(expiration))
-
-    # If there is no expiration set, try the default one ..
-    expiration = expiration or default_expiration
-
-    # .. however, we can never exceed the limit set by the topic object,
-    # .. so we need to take that into account as well.
-    expiration = min(expiration, topic_limit_message_expiry)
-
-    # We can return the final value now
-    return expiration
-
 # ################################################################################################################################
 
 class PubSub:
@@ -250,6 +202,18 @@ class PubSub:
 
         # Manages access to service hooks
         self.hook_tool = HookTool(self.server, HookCtx, hook_type_to_method, self.invoke_service)
+
+        # Creates SQL sessions
+        self.new_session_func = self.server.odb.session
+
+        # A low level implementation that publishes messages to SQL
+        self.impl_publisher = Publisher(
+            pubsub = self,
+            server = self.server,
+            marshal_api = self.server.marshal_api,
+            service_invoke_func = self.invoke_service,
+            new_session_func = self.new_session_func
+        )
 
         if spawn_trigger_notify:
             _ = spawn_greenlet(self.trigger_notify_pubsub_tasks)
@@ -1271,7 +1235,7 @@ class PubSub:
         """ Adds to self.sub_key_servers information from ODB about which server handles input sub_key.
         Must be called with self.lock held.
         """
-        with closing(self.server.odb.session()) as session: # type: ignore
+        with closing(self.new_session_func()) as session: # type: ignore
             data = get_delivery_server_for_sub_key(session, self.server.cluster_id, sub_key, is_wsx)
 
         if not data:
@@ -1355,7 +1319,7 @@ class PubSub:
         """ Returns all SQL messages queued up for all keys from sub_key_list.
         """
         if not session:
-            session = self.server.odb.session()
+            session = self.new_session_func()
             needs_close = True
         else:
             needs_close = False
@@ -1399,7 +1363,7 @@ class PubSub:
         ) -> 'None':
         """ Sets in SQL delivery status of a given message to True.
         """
-        with closing(self.server.odb.session()) as session: # type: ignore
+        with closing(self.new_session_func()) as session: # type: ignore
             _confirm_pubsub_msg_delivered(session, self.server.cluster_id, sub_key, delivered_pub_msg_id_list, utcnow_as_ms())
             session.commit() # type: ignore
 
@@ -1655,7 +1619,7 @@ class PubSub:
         """
         logger.info('Deleting messages set to be deleted `%s`', msg_list)
 
-        with closing(self.server.odb.session()) as session: # type: ignore
+        with closing(self.new_session_func()) as session: # type: ignore
             set_to_delete(session, self.cluster_id, sub_key, msg_list, utcnow_as_ms())
 
 # ################################################################################################################################
@@ -1914,6 +1878,9 @@ class PubSub:
         # We need to import it here to avoid circular imports
         from zato.server.service import Service
 
+        # Initialize here for type checking
+        ws_channel_id = None
+
         # For later use
         from_service:'Service' = kwargs.get('service') # type: ignore
         ext_client_id = from_service.name if from_service else kwargs.get('ext_client_id')
@@ -1924,7 +1891,7 @@ class PubSub:
         has_gd = kwargs.get('has_gd') # type: ignore
         has_gd = cast_(bool, has_gd)
 
-        # By default, assume that cannot find any enpoint on input
+        # By default, assume that cannot find any endpoint on input
         endpoint_id = None
 
         # If this is a WebSocket, we need to find its ws_channel_id ..
@@ -1939,7 +1906,6 @@ class PubSub:
         if not endpoint_id:
             endpoint_id = kwargs.get('endpoint_id') or self.server.default_internal_pubsub_endpoint_id # type: ignore
             endpoint_id = cast_(int, endpoint_id)
-            ws_channel_id = None
 
         # If input name is a topic, let us just use it
         if self.has_topic_by_name(name):
