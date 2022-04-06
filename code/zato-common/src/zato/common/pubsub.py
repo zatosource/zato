@@ -30,6 +30,7 @@ if 0:
         strlist, strnone, strtuple, tupnone
     from zato.server.connection.http_soap.outgoing import SudsSOAPWrapper
     from zato.server.pubsub.model import Topic
+    Column = Column
 
 # ################################################################################################################################
 # ################################################################################################################################
