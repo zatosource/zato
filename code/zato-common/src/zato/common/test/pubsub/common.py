@@ -21,6 +21,12 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from unittest import TestCase
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -78,6 +84,9 @@ class FullPathTester:
 
     def _run(self):
 
+        # For type hints
+        test = cast_('TestCase', self.test)
+
         # Always make sure that we are unsubscribed before the test runs
         self._unsubscribe('before')
 
@@ -94,7 +103,7 @@ class FullPathTester:
 
         # We expect to have a correct message ID on output
         msg_id = response_publish['msg_id'] # type: str
-        self.test.assertTrue(msg_id.startswith(MSG_PREFIX.MSG_ID))
+        test.assertTrue(msg_id.startswith(MSG_PREFIX.MSG_ID))
 
         # We may potentially need to subscribe after the publication
         if self.sub_after_publish:
@@ -123,27 +132,27 @@ class FullPathTester:
         # because messages are returned in the Last-In-First-Out order (LIFO).
         msg_received = response_received[0]
 
-        self.test.assertEqual(msg_received['data'], data)
-        self.test.assertEqual(msg_received['size'], len(data))
-        self.test.assertEqual(msg_received['sub_key'], self.sub_key)
-        self.test.assertEqual(msg_received['delivery_count'], 1)
-        self.test.assertEqual(msg_received['priority'],   PUBSUB.PRIORITY.DEFAULT)
-        self.test.assertEqual(msg_received['mime_type'],  PUBSUB.DEFAULT.MIME_TYPE)
-        self.test.assertEqual(msg_received['expiration'], PUBSUB.DEFAULT.LimitMessageExpiry)
-        self.test.assertEqual(msg_received['topic_name'], self.topic_name)
+        test.assertEqual(msg_received['data'], data)
+        test.assertEqual(msg_received['size'], len(data))
+        test.assertEqual(msg_received['sub_key'], self.sub_key)
+        test.assertEqual(msg_received['delivery_count'], 1)
+        test.assertEqual(msg_received['priority'],   PUBSUB.PRIORITY.DEFAULT)
+        test.assertEqual(msg_received['mime_type'],  PUBSUB.DEFAULT.MIME_TYPE)
+        test.assertEqual(msg_received['expiration'], PUBSUB.DEFAULT.LimitMessageExpiry)
+        test.assertEqual(msg_received['topic_name'], self.topic_name)
 
         # Dates will start with 2nnn, e.g. 2022, or 2107, depending on a particular field
         date_start = '2'
 
-        self.test.assertTrue(msg_received['pub_time_iso'].startswith(date_start))
-        self.test.assertTrue(msg_received['expiration_time_iso'].startswith(date_start))
-        self.test.assertTrue(msg_received['recv_time_iso'].startswith(date_start))
+        test.assertTrue(msg_received['pub_time_iso'].startswith(date_start))
+        test.assertTrue(msg_received['expiration_time_iso'].startswith(date_start))
+        test.assertTrue(msg_received['recv_time_iso'].startswith(date_start))
 
         # Make sure that keys that are not supposed to be returned to external callers
         # are not returned in the message.
         for name in skip_to_external:
             if name in msg_received:
-                self.test.fail(f'Key `{name}` should not be in message {msg_received}')
+                test.fail(f'Key `{name}` should not be in message {msg_received}')
 
 # ################################################################################################################################
 
