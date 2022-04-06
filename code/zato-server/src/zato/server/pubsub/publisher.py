@@ -133,6 +133,12 @@ class PubCtx:
         self.service_invoke_func = service_invoke_func
         self.new_session_func = new_session_func
         self.current_depth = 0
+
+        # Make sure we have the expected lists on input.
+        if not (self.gd_msg_list or self.non_gd_msg_list):
+            raise ValueError('At least one of gd_msg_list or non_gd_msg_list must be provided')
+
+        # We can now extract the last message for later use by our callers.
         self.last_msg = self.gd_msg_list[-1] if self.gd_msg_list else self.non_gd_msg_list[-1]
 
 # ################################################################################################################################
