@@ -324,8 +324,8 @@ class _Update(AdminService):
             item.data_prefix = input.data[:self.pubsub.data_prefix_len].encode('utf8')
             item.data_prefix_short = input.data[:self.pubsub.data_prefix_short_len].encode('utf8')
             item.size = len(input.data)
-            item.expiration = get_expiration(self.cid, input, item.expiration)
-            item.priority = get_priority(self.cid, input)
+            item.expiration = get_expiration(self.cid, input.get('expiration'), item.expiration)
+            item.priority = get_priority(self.cid, input.get('priority'))
 
             item.msg_id = input.msg_id
             item.pub_correl_id = input.correl_id
