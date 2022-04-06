@@ -10,19 +10,34 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from operator import itemgetter
 
 # Zato
+from zato.common.api import PUBSUB
+from zato.common.exception import BadRequest
 from zato.common.odb.query import pubsub_endpoint_queue_list_by_sub_keys
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from typing import Union as union
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anydict, anylist, dictlist, stranydict, strlist
+    from zato.common.typing_ import any_, anydict, anylist, dictlist, intnone, stranydict, strlist
     from zato.server.base.parallel import ParallelServer
 
     ParallelServer = ParallelServer
     union = union
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+_PRIORITY = PUBSUB.PRIORITY
+
+_pri_min = _PRIORITY.MIN
+_pri_max = _PRIORITY.MAX
+_pri_def = _PRIORITY.DEFAULT
+
+_default_expiration = PUBSUB.DEFAULT.EXPIRATION
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def make_short_msg_copy_from_dict(msg:'stranydict', data_prefix_len:'int', data_prefix_short_len:'int') -> 'stranydict':
@@ -166,5 +181,47 @@ def get_topic_sub_keys_from_sub_keys(session:'SASession', cluster_id:'int', sub_
         sub_keys.append(item.sub_key)
 
     return topic_sub_keys
+
+# ################################################################################################################################
+
+def get_priority(
+    cid,   # type: str
+    priority, # type: intnone
+    _pri_min=_pri_min, # type: int
+    _pri_max=_pri_max, # type: int
+    _pri_def=_pri_def  # type: int
+    ) -> 'int':
+    """ Get and validate message priority.
+    """
+    if priority:
+        if priority < _pri_min or priority > _pri_max:
+            raise BadRequest(cid, 'Priority `{}` outside of allowed range {}-{}'.format(priority, _pri_min, _pri_max))
+    else:
+        priority = _pri_def
+
+    return priority
+
+# ################################################################################################################################
+
+def get_expiration(
+    cid:'str',
+    expiration:'intnone',
+    topic_limit_message_expiry:'int',
+    default_expiration:'int'=_default_expiration) -> 'int':
+    """ Get and validate message expiration.
+    """
+    expiration = expiration or 0
+    if expiration is not None and expiration < 0:
+        raise BadRequest(cid, 'Expiration `{}` must not be negative'.format(expiration))
+
+    # If there is no expiration set, try the default one ..
+    expiration = expiration or default_expiration
+
+    # .. however, we can never exceed the limit set by the topic object,
+    # .. so we need to take that into account as well.
+    expiration = min(expiration, topic_limit_message_expiry)
+
+    # We can return the final value now
+    return expiration
 
 # ################################################################################################################################
