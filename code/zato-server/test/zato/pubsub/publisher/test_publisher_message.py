@@ -31,13 +31,18 @@ class PublisherMessageTestCase(TestCase):
         self,
         *,
         cid,        # type: str
+        msg_id,     # type: str
         topic_name, # type: str
+        pub_pattern_matched # type: str
     ) -> 'PubRequest':
 
         data = {
-            'topic_name': topic_name
+            'msg_id': msg_id,
+            'topic_name': topic_name,
+            'pub_pattern_matched': pub_pattern_matched,
         }
 
+        # Correlation ID (cid) is provided via extra parameters so as to use the same mechanism that the publish service uses.
         out = PubRequest._zato_from_dict(data, extra={'cid':cid})
         return out
 
@@ -71,11 +76,15 @@ class PublisherMessageTestCase(TestCase):
     def test_build_message_default(self) -> 'None':
 
         cid = 'abc'
+        msg_id = 'my.msg.123'
         topic_name = '/my-topic'
+        pub_pattern_matched = '/*'
 
         request = self.get_default_request(
             cid = cid,
-            topic_name = topic_name
+            msg_id = msg_id,
+            topic_name = topic_name,
+            pub_pattern_matched = pub_pattern_matched
         )
 
 # ################################################################################################################################
