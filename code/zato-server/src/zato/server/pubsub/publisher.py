@@ -31,14 +31,15 @@ from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import new_msg_id, PubSubMessage
 from zato.common.typing_ import cast_, dict_field, list_field
+from zato.common.util.pubsub import get_expiration, get_priority
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_ms
-from zato.server.pubsub import get_expiration, get_priority
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.marshal_.api import MarshalAPI
     from zato.common.typing_ import any_, anydict, anylist, anylistnone, boolnone, callable_, dictlist, intnone, \
         optional, strlist, strnone, tuple_
     from zato.server.base.parallel import ParallelServer
@@ -93,6 +94,7 @@ class PubCtx:
     def __init__(
         self,
         *,
+        cid: 'str',
         cluster_id: 'int',
         pubsub: 'PubSub',
         topic: 'Topic',
@@ -104,13 +106,14 @@ class PubCtx:
         non_gd_msg_list: 'anylist',
         pub_pattern_matched: 'str',
         ext_client_id: 'str',
-        is_re_run: 'bool',
+        is_first_run: 'bool',
         now: 'float',
         is_wsx: 'bool',
         service_invoke_func: 'callable_',
         new_session_func: 'callable_',
     ) -> 'None':
 
+        self.cid = cid
         self.cluster_id = cluster_id
         self.pubsub = pubsub
         self.topic = topic
@@ -122,7 +125,7 @@ class PubCtx:
         self.non_gd_msg_list = non_gd_msg_list
         self.pub_pattern_matched = pub_pattern_matched
         self.ext_client_id = ext_client_id
-        self.is_re_run = is_re_run
+        self.is_first_run = is_first_run
         self.now = now
         self.is_wsx = is_wsx
         self.service_invoke_func = service_invoke_func
@@ -136,6 +139,7 @@ class PubCtx:
 @dataclass(init=False)
 class PubRequest(Model):
 
+    cid: 'str'
     topic_name: 'str'
     pub_pattern_matched: 'str' = ''
 
@@ -174,24 +178,24 @@ class PubRequest(Model):
 class Publisher:
     """ Actual implementation of message publishing exposed through other services to the outside world.
     """
-    cid: 'str'
     pubsub: 'PubSub'
     server: 'ParallelServer'
+    marshal_api: 'MarshalAPI'
     service_invoke_func: 'callable_'
     new_session_func: 'callable_'
 
     def __init__(
         self,
         *,
-        cid: 'str',
         pubsub: 'PubSub',
         server: 'ParallelServer',
+        marshal_api: 'MarshalAPI',
         service_invoke_func: 'callable_',
         new_session_func: 'callable_'
     ) -> 'None':
-        self.cid = cid
         self.pubsub = pubsub
         self.server = server
+        self.marshal_api = marshal_api
         self.service_invoke_func = service_invoke_func
         self.new_session_func = new_session_func
 
@@ -216,13 +220,13 @@ class Publisher:
         has_no_sk_server:'bool'
     ) -> 'optional[PubSubMessage]':
 
-        priority = get_priority(self.cid, request.priority)
+        priority = get_priority(request.cid, request.priority)
 
         # So as not to send it to SQL if it is a default value anyway = less overhead = better performance
         if priority == _GetMessage._default_pri:
             priority = None
 
-        expiration = get_expiration(self.cid, request.expiration, topic.limit_message_expiry)
+        expiration = get_expiration(request.cid, request.expiration, topic.limit_message_expiry)
         expiration_time = now + expiration
 
         pub_msg_id = request.msg_id or new_msg_id()
@@ -417,11 +421,17 @@ class Publisher:
         if not pub_pattern_matched:
             logger.warning('No pub pattern matched topic `%s` and endpoint `%s` (#2)',
                 request.topic_name, self.pubsub.get_endpoint_by_id(endpoint_id).name)
-            raise Forbidden(self.cid)
+            raise Forbidden(request.cid)
 
         # Alright, we are in
         pub_pattern_matched = cast_('str', pub_pattern_matched)
         return endpoint_id, pub_pattern_matched
+
+# ################################################################################################################################
+
+    def run_from_dict(self, cid:'str', data:'anydict') -> 'PublicationResult':
+        request = self.marshal_api.from_dict(None, data, PubRequest, extra={'cid':cid}) # type: PubRequest
+        return self.run(request)
 
 # ################################################################################################################################
 
@@ -435,11 +445,11 @@ class Publisher:
         try:
             topic = self.pubsub.get_topic_by_name(request.topic_name) # type: Topic
         except KeyError:
-            raise NotFound(self.cid, 'No such topic `{}`'.format(request.topic_name))
+            raise NotFound(request.cid, 'No such topic `{}`'.format(request.topic_name))
 
         # Reject the message is topic is not active
         if not topic.is_active:
-            raise ServiceUnavailable(self.cid, 'Topic is inactive `{}`'.format(request.topic_name))
+            raise ServiceUnavailable(request.cid, 'Topic is inactive `{}`'.format(request.topic_name))
 
         # We always count time in milliseconds since UNIX epoch
         now = utcnow_as_ms()
@@ -490,7 +500,7 @@ class Publisher:
 
         if has_logger_pubsub_debug:
             logger_pubsub.debug('Subscriptions for topic `%s` `%s` (a:%d, %d/%d, cid:%s)',
-                topic.name, _subs_found, has_all, len(subscriptions_by_topic), len_all_sub, self.cid)
+                topic.name, _subs_found, has_all, len(subscriptions_by_topic), len_all_sub, request.cid)
 
         # If request.data is a list, it means that it is a list of messages, each of which has its own
         # metadata. Otherwise, it's a string to publish and other request parameters describe it.
@@ -511,6 +521,7 @@ class Publisher:
         # Create a wrapper object for all the request data and metadata
         is_wsx = bool(request.ws_channel_id)
         ctx = PubCtx(
+            cid = request.cid,
             cluster_id = self.server.cluster_id,
             pubsub = self.pubsub,
             topic = topic,
@@ -522,7 +533,7 @@ class Publisher:
             non_gd_msg_list = non_gd_msg_list,
             pub_pattern_matched = pub_pattern_matched,
             ext_client_id = request.ext_client_id,
-            is_re_run = False,
+            is_first_run = True,
             now = now,
             is_wsx = is_wsx,
             service_invoke_func = self.service_invoke_func,
@@ -558,8 +569,8 @@ class Publisher:
         # Just so it is not overlooked, log information that no subscribers are found for this topic
         if not ctx.subscriptions_by_topic:
 
-            log_msg = 'No matching subscribers found for topic `%s` (cid:%s, rr:%d)'
-            log_msg_args = ctx.topic.name, self.cid, ctx.is_re_run
+            log_msg = 'No matching subscribers found for topic `%s` (cid:%s, first:%d)'
+            log_msg_args = ctx.topic.name, ctx.cid, ctx.is_first_run
 
             # There are no subscribers and depending on configuration we are to drop messages
             # for whom no one is waiting or continue and place them in the topic directly.
@@ -592,9 +603,12 @@ class Publisher:
                     # Get current depth of this topic ..
                     ctx.current_depth = get_gd_depth_topic(session, ctx.cluster_id, ctx.topic.id)
 
-                    # .. and abort if max depth is already reached.
+                    # .. and abort if max depth is already reached ..
                     if ctx.current_depth + len_gd_msg_list > ctx.topic.max_depth_gd:
-                        self.reject_publication(ctx.topic.name, True)
+
+                        # .. note thath is call raises an exception.
+                        self.reject_publication(ctx.cid, ctx.topic.name, True)
+
                     else:
 
                         # This only updates the local ctx variable
@@ -604,13 +618,13 @@ class Publisher:
 
                 if has_logger_pubsub_debug:
                     logger_pubsub.debug(_inserting_gd_msg, ctx.topic.name, pub_msg_list, ctx.endpoint_name,
-                        ctx.ext_client_id, self.cid)
+                        ctx.ext_client_id, ctx.cid)
 
                 # This is the call that runs SQL INSERT statements with messages for topics and subscriber queues
                 _ = sql_publish_with_retry(
 
                     now = ctx.now,
-                    cid = self.cid,
+                    cid = ctx.cid,
                     topic_id = ctx.topic.id,
                     topic_name = ctx.topic.name,
                     cluster_id = ctx.cluster_id,
@@ -647,17 +661,17 @@ class Publisher:
             msg = 'Message published. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' \
                   ', GD data:`%s`, non-GD data:`%s`'
 
-            logger_audit.info(msg, self.cid, ctx.topic.name, self.pubsub.endpoints[ctx.endpoint_id].name,
+            logger_audit.info(msg, ctx.cid, ctx.topic.name, self.pubsub.endpoints[ctx.endpoint_id].name,
                 ctx.ext_client_id, ctx.pub_pattern_matched, ctx.current_depth, ctx.gd_msg_list, ctx.non_gd_msg_list)
 
         # If this is the very first time we are running during this invocation, try to deliver non-GD messages
-        if not ctx.is_re_run:
+        if ctx.is_first_run:
 
             if ctx.subscriptions_by_topic:
 
                 # Place all the non-GD messages in the in-RAM sync backlog
                 if ctx.non_gd_msg_list:
-                    ctx.pubsub.store_in_ram(self.cid, ctx.topic.id, ctx.topic.name,
+                    ctx.pubsub.store_in_ram(ctx.cid, ctx.topic.id, ctx.topic.name,
                         [item.sub_key for item in ctx.subscriptions_by_topic], ctx.non_gd_msg_list)
 
             # .. however, if there are no subscriptions at the moment while there are non-GD messages,
@@ -680,7 +694,7 @@ class Publisher:
                     # Note the reversed order - now non-GD messages are sent as GD ones and the list of non-GD messages is empty.
                     ctx.gd_msg_list = ctx.non_gd_msg_list[:]
                     ctx.non_gd_msg_list[:] = []
-                    ctx.is_re_run = True
+                    ctx.is_first_run = False
 
                     # Re-run with GD and non-GD reversed now
                     return self._publish(ctx)
@@ -711,10 +725,10 @@ class Publisher:
 
 # ################################################################################################################################
 
-    def reject_publication(self, topic_name:'str', is_gd:'bool') -> 'None':
+    def reject_publication(self, cid:'str', topic_name:'str', is_gd:'bool') -> 'None':
         """ Raises an exception to indicate that a publication was rejected.
         """
-        raise ServiceUnavailable(self.cid,
+        raise ServiceUnavailable(cid,
             'Publication rejected - would exceed {} max depth for `{}`'.format('GD' if is_gd else 'non-GD', topic_name))
 
 # ################################################################################################################################
