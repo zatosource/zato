@@ -265,14 +265,14 @@ class Publisher:
             ext_pub_time = parse_datetime_as_naive(ext_pub_time)
             ext_pub_time = datetime_to_ms(ext_pub_time) / 1000.0
 
-        pub_correl_id = pub_correl_id if pub_correl_id else ''
-        in_reply_to = in_reply_to if in_reply_to else ''
+        pub_correl_id = pub_correl_id if pub_correl_id else None
+        in_reply_to = in_reply_to if in_reply_to else None
         ext_client_id = ext_client_id if ext_client_id else ''
         mime_type = mime_type if mime_type else PUBSUB.DEFAULT.MIME_TYPE
         reply_to_sk = request.reply_to_sk
         deliver_to_sk = request.deliver_to_sk
 
-        user_ctx = request.user_ctx or {}
+        user_ctx = request.user_ctx or None
         zato_ctx = request.zato_ctx or {}
 
         ps_msg = PubSubMessage()
@@ -309,7 +309,7 @@ class Publisher:
         ps_msg.cluster_id = self.server.cluster_id
         ps_msg.has_gd = has_gd
         ps_msg.ext_client_id = ext_client_id
-        ps_msg.group_id = request.group_id or ''
+        ps_msg.group_id = request.group_id or None
         ps_msg.position_in_group = request.position_in_group or PUBSUB.DEFAULT.PositionInGroup
         ps_msg.is_in_sub_queue = bool(subscriptions_by_topic)
         ps_msg.reply_to_sk = reply_to_sk
