@@ -13,53 +13,16 @@ patch_all()
 # stdlib
 from unittest import TestCase
 
-# Bunch
-from bunch import Bunch
-
 # Zato
 from zato.common.api import PUBSUB
+from zato.common.test import TestServer
 from zato.server.pubsub import PubSub
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, stranydict
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TestServer:
-    def __init__(self) -> 'None':
-
-        self.name = 'TestServerObject'
-        self.pid = 9988
-
-        self.fs_server_config = Bunch()
-        self.fs_server_config.pubsub = Bunch()
-        self.fs_server_config.pubsub_meta_topic = Bunch()
-        self.fs_server_config.pubsub_meta_endpoint_pub = Bunch()
-
-        self.fs_server_config.pubsub.data_prefix_len = 9999
-        self.fs_server_config.pubsub.data_prefix_short_len = 123
-        self.fs_server_config.pubsub.log_if_deliv_server_not_found = True
-        self.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found = False
-
-        self.fs_server_config.pubsub_meta_topic.enabled = True
-        self.fs_server_config.pubsub_meta_topic.store_frequency = 1
-
-        self.fs_server_config.pubsub_meta_endpoint_pub.enabled = True
-        self.fs_server_config.pubsub_meta_endpoint_pub.store_frequency = 1
-        self.fs_server_config.pubsub_meta_endpoint_pub.data_len = 1234
-        self.fs_server_config.pubsub_meta_endpoint_pub.max_history = 111
-
-        self.ctx = {}
-
-# ################################################################################################################################
-
-    def invoke(self, service:'any_', request:'any_') -> 'None':
-        self.ctx['service'] = service
-        self.ctx['request'] = request
+    from zato.common.typing_ import stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################

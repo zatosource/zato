@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import asdict, _FIELDS, MISSING, _PARAMS
 from http.client import BAD_REQUEST
 from inspect import isclass
+from typing import Any
 
 try:
     from typing import _GenericAlias as _ListBaseClass # type: ignore
@@ -422,19 +423,28 @@ class MarshalAPI:
 
             # If we do not have a value yet, perhaps we will find a default one
             if field_ctx.value == ZatoNotGiven:
-                if field_ctx.field.default and field_ctx.field.default is not MISSING:
-                    field_ctx.value = field_ctx.field.default
 
-            # Let's check if found any value
+                default = field_ctx.field.default
+                default_factory = field_ctx.field.default_factory
+
+                if default is not MISSING:
+                    field_ctx.value = default
+
+                elif default_factory and default_factory is not MISSING:
+                    field_ctx.value = default_factory()
+
+            # Let's check if we found any value
             if field_ctx.value != ZatoNotGiven:
                 value = field_ctx.value
             else:
                 if field_ctx.is_required:
                     raise self.get_validation_error(field_ctx)
                 else:
-                    # This is most reliable
+                    # This is the most reliable way
                     if 'typing.List' in str(field_ctx.field_type):
                         value = []
+                    elif field_ctx.field_type is Any:
+                        value = None
                     elif issubclass(field_ctx.field_type, str):
                         value = ''
                     elif issubclass(field_ctx.field_type, int):
