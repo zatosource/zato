@@ -689,7 +689,7 @@ class PubAPIInvoker(Service):
         from unittest import defaultTestLoader, TestCase, TextTestRunner
 
         # Zato
-        from zato.common.test.pubsub import FullPathTester, PubSubTestingClass
+        from zato.common.test.pubsub.common import FullPathTester, PubSubTestingClass
 
         class WSXServicesTestCase(TestCase, PubSubTestingClass):
 
