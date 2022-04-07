@@ -30,7 +30,8 @@ from zato.common.marshal_.api import Model
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import new_msg_id, PubSubMessage
-from zato.common.typing_ import cast_, dict_field, list_field
+from zato.common.typing_ import any_, anydict, anylistnone, anynone, boolnone, cast_, dict_field, intnone, list_field, \
+     strlistempty, strnone
 from zato.common.util.pubsub import get_expiration, get_priority
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_ms
@@ -40,13 +41,15 @@ from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_m
 
 if 0:
     from zato.common.marshal_.api import MarshalAPI
-    from zato.common.typing_ import any_, anydict, anylist, anylistnone, boolnone, callable_, dictlist, intnone, \
-        optional, strlist, strnone, tuple_
+    from zato.common.typing_ import anylist, callable_, dictlist, strlist, tuple_
     from zato.server.base.parallel import ParallelServer
     from zato.server.pubsub import PubSub, Topic
     from zato.server.pubsub.model import sublist
+    from zato.server.service import Service
     dictlist = dictlist
+    strlist = strlist
     sublist = sublist
+    Service = Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,6 +134,12 @@ class PubCtx:
         self.service_invoke_func = service_invoke_func
         self.new_session_func = new_session_func
         self.current_depth = 0
+
+        # Make sure we have the expected lists on input.
+        if not (self.gd_msg_list or self.non_gd_msg_list):
+            raise ValueError('At least one of gd_msg_list or non_gd_msg_list must be provided')
+
+        # We can now extract the last message for later use by our callers.
         self.last_msg = self.gd_msg_list[-1] if self.gd_msg_list else self.non_gd_msg_list[-1]
 
 # ################################################################################################################################
@@ -139,38 +148,38 @@ class PubCtx:
 @dataclass(init=False)
 class PubRequest(Model):
 
-    cid: 'str'
-    topic_name: 'str'
-    pub_pattern_matched: 'str' = ''
+    cid: str
+    topic_name: str = ''
+    pub_pattern_matched: str = ''
 
-    msg_id:      'str' = ''
-    correl_id:   'strnone' = None
-    in_reply_to: 'strnone' = None
-    has_gd:      'boolnone' = None
+    msg_id:      strnone = ''
+    correl_id:   strnone = None
+    in_reply_to: strnone = None
+    has_gd:      boolnone = None
 
-    data:        'any_'        = None
-    data_list:   'anylistnone' = None
+    data:        anynone     = None
+    data_list:   anylistnone = None
 
-    priority:   'intnone' = PUBSUB.PRIORITY.DEFAULT
-    expiration: 'intnone' = PUBSUB.DEFAULT.EXPIRATION
+    priority:   intnone = PUBSUB.PRIORITY.DEFAULT
+    expiration: intnone = PUBSUB.DEFAULT.EXPIRATION
 
-    mime_type:  'strnone' = PUBSUB.DEFAULT.MIME_TYPE
+    mime_type:  strnone = PUBSUB.DEFAULT.MIME_TYPE
 
-    ext_client_id: 'str' = ''
-    ext_pub_time:  'strnone' = None
+    ext_client_id: strnone = ''
+    ext_pub_time:  strnone = None
 
-    security_id:   'intnone' = None
-    endpoint_id:   'intnone' = None
-    ws_channel_id: 'intnone' = None
+    security_id:   intnone = None
+    endpoint_id:   intnone = None
+    ws_channel_id: intnone = None
 
-    group_id:          'str' = ''
-    position_in_group: 'int' = PUBSUB.DEFAULT.PositionInGroup
+    group_id:          strnone = ''
+    position_in_group: intnone = PUBSUB.DEFAULT.PositionInGroup
 
-    reply_to_sk:   'strlist' = list_field()
-    deliver_to_sk: 'strlist' = list_field()
+    reply_to_sk:   strlistempty = list_field()
+    deliver_to_sk: strlistempty = list_field()
 
-    user_ctx:      'any_'    = None
-    zato_ctx:      'anydict' = dict_field()
+    user_ctx:      anynone    = None
+    zato_ctx:      anydict = dict_field()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -201,7 +210,7 @@ class Publisher:
 
 # ################################################################################################################################
 
-    def _get_data_prefixes(self, data:'str') -> 'tuple_[str, str]':
+    def get_data_prefixes(self, data:'str') -> 'tuple_[str, str]':
         data_prefix = data[:self.pubsub.data_prefix_len]
         data_prefix_short = data[:self.pubsub.data_prefix_short_len]
 
@@ -209,7 +218,7 @@ class Publisher:
 
 # ################################################################################################################################
 
-    def _get_message(
+    def build_message(
         self,
         topic:'Topic',
         request:'PubRequest',
@@ -218,7 +227,7 @@ class Publisher:
         endpoint_id:'int',
         subscriptions_by_topic:'sublist',
         has_no_sk_server:'bool'
-    ) -> 'optional[PubSubMessage]':
+    ) -> 'PubSubMessage | None':
 
         priority = get_priority(request.cid, request.priority)
 
@@ -256,14 +265,14 @@ class Publisher:
             ext_pub_time = parse_datetime_as_naive(ext_pub_time)
             ext_pub_time = datetime_to_ms(ext_pub_time) / 1000.0
 
-        pub_correl_id = pub_correl_id if pub_correl_id else ''
-        in_reply_to = in_reply_to if in_reply_to else ''
+        pub_correl_id = pub_correl_id if pub_correl_id else None
+        in_reply_to = in_reply_to if in_reply_to else None
         ext_client_id = ext_client_id if ext_client_id else ''
         mime_type = mime_type if mime_type else PUBSUB.DEFAULT.MIME_TYPE
         reply_to_sk = request.reply_to_sk
         deliver_to_sk = request.deliver_to_sk
 
-        user_ctx = request.user_ctx or {}
+        user_ctx = request.user_ctx or None
         zato_ctx = request.zato_ctx or {}
 
         ps_msg = PubSubMessage()
@@ -300,7 +309,7 @@ class Publisher:
         ps_msg.cluster_id = self.server.cluster_id
         ps_msg.has_gd = has_gd
         ps_msg.ext_client_id = ext_client_id
-        ps_msg.group_id = request.group_id
+        ps_msg.group_id = request.group_id or None
         ps_msg.position_in_group = request.position_in_group or PUBSUB.DEFAULT.PositionInGroup
         ps_msg.is_in_sub_queue = bool(subscriptions_by_topic)
         ps_msg.reply_to_sk = reply_to_sk
@@ -337,7 +346,7 @@ class Publisher:
 
         # These are needed only for GD messages that are stored in SQL
         if has_gd:
-            data_prefix, data_prefix_short = self._get_data_prefixes(ps_msg.data) # type: ignore
+            data_prefix, data_prefix_short = self.get_data_prefixes(ps_msg.data) # type: ignore
             ps_msg.data_prefix = data_prefix
             ps_msg.data_prefix_short = data_prefix_short
 
@@ -345,9 +354,10 @@ class Publisher:
 
 # ################################################################################################################################
 
-    def _get_messages_from_data(
+    def get_messages_from_data(
         self,
         *,
+        cid:'str',
         topic:'Topic',
         data_list:'any_',
         request:'PubRequest',
@@ -369,7 +379,8 @@ class Publisher:
 
         if data_list and isinstance(data_list, (list, tuple)):
             for elem in data_list:
-                msg = self._get_message(topic, elem, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
+                elem = self.marshal_api.from_dict(cast_('Service', None), elem, PubRequest, extra={'cid':cid})
+                msg = self.build_message(topic, elem, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
                     has_no_sk_server)
                 if msg:
                     msg_id_list.append(msg.pub_msg_id)
@@ -377,7 +388,7 @@ class Publisher:
                     target_list = gd_msg_list if msg.has_gd else non_gd_msg_list
                     target_list.append(msg_as_dict)
         else:
-            msg = self._get_message(topic, request, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
+            msg = self.build_message(topic, request, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
                 has_no_sk_server)
 
             if msg:
@@ -430,7 +441,7 @@ class Publisher:
 # ################################################################################################################################
 
     def run_from_dict(self, cid:'str', data:'anydict') -> 'PublicationResult':
-        request = self.marshal_api.from_dict(None, data, PubRequest, extra={'cid':cid}) # type: PubRequest
+        request = self.marshal_api.from_dict(cast_('Service', None), data, PubRequest, extra={'cid':cid}) # type: PubRequest
         return self.run(request)
 
 # ################################################################################################################################
@@ -507,7 +518,8 @@ class Publisher:
         data_list = request.data_list if request.data_list else None
 
         # Input messages may contain a mix of GD and non-GD messages, and we need to extract them separately.
-        msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
+        msg_id_list, gd_msg_list, non_gd_msg_list = self.get_messages_from_data(
+            cid = request.cid,
             topic = topic,
             data_list = data_list,
             request = request,
@@ -532,7 +544,7 @@ class Publisher:
             gd_msg_list = gd_msg_list,
             non_gd_msg_list = non_gd_msg_list,
             pub_pattern_matched = pub_pattern_matched,
-            ext_client_id = request.ext_client_id,
+            ext_client_id = request.ext_client_id or '',
             is_first_run = True,
             now = now,
             is_wsx = is_wsx,
@@ -687,7 +699,7 @@ class Publisher:
 
                         logger_pubsub.info(_log_turning_gd_msg.format('no subscribers'), msg['pub_msg_id'])
 
-                        data_prefix, data_prefix_short = self._get_data_prefixes(msg['data'])
+                        data_prefix, data_prefix_short = self.get_data_prefixes(msg['data'])
                         msg['data_prefix'] = data_prefix
                         msg['data_prefix_short'] = data_prefix_short
 
@@ -716,7 +728,7 @@ class Publisher:
                 has_endpoint = False
 
             if has_topic or has_endpoint:
-                spawn(self._update_pub_metadata, ctx, has_topic, has_endpoint,
+                spawn(self.update_pub_metadata, ctx, has_topic, has_endpoint,
                     ctx.pubsub.endpoint_meta_data_len, ctx.pubsub.endpoint_meta_max_history)
 
         # Build and return a response for our caller.
@@ -733,7 +745,7 @@ class Publisher:
 
 # ################################################################################################################################
 
-    def _update_pub_metadata(
+    def update_pub_metadata(
         self,
         ctx:'PubCtx',
         has_topic:'bool',
