@@ -131,23 +131,6 @@ class ValidationTestCase(TestCase):
 
         e = cm.exception # type: ElementMissing
         self.assertEqual(e.reason, 'Element missing: /role_list[0]/name')
-
-# ################################################################################################################################
-
-    def test_unmarshall_top_level_list_is_missing(self):
-
-        # There is no input (and attr_list is a list that is missing)
-        data = {}
-
-        service = cast_('Service', None)
-        api = MarshalAPI()
-
-        with self.assertRaises(ElementMissing) as cm:
-            api.from_dict(service, data, CreateAttrListRequest)
-
-        e = cm.exception # type: ElementMissing
-        self.assertEqual(e.reason, 'Element missing: /attr_list')
-
 # ################################################################################################################################
 
     def test_unmarshall_top_level_list_dict_empty(self):
@@ -330,6 +313,20 @@ class ValidationTestCase(TestCase):
         result.post_code
         result.details
         result.characteristics
+
+# ################################################################################################################################
+
+    def test_unmarshall_top_level_list_is_a_default_list(self):
+
+        # There is no input (and attr_list is a list that is missing but it has a default_factory returning a list)
+        data = {}
+
+        service = cast_('Service', None)
+        api = MarshalAPI()
+
+        result = api.from_dict(service, data, CreateAttrListRequest)
+
+        self.assertListEqual(result.attr_list, [])
 
 # ################################################################################################################################
 
