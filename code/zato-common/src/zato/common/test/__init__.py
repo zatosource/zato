@@ -352,6 +352,7 @@ class TestServer:
         self.ipc_api = None
         self.component_enabled = Bunch()
 
+        self.cluster_id = 1
         self.name = 'TestServerObject'
         self.pid = 9988
 
