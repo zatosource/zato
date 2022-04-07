@@ -137,11 +137,11 @@ class PubSubMessage:
     topic:         'optional[Topic]'
     sub_key:       'str'
     pub_msg_id:    'str'
-    pub_correl_id: 'str'
+    pub_correl_id: 'strnone'
     in_reply_to:   'strnone'
     ext_client_id: 'str'
 
-    group_id:          'str'
+    group_id:          'strnone'
     position_in_group: 'int'
     pub_time:          'float'
     ext_pub_time:      'floatnone'

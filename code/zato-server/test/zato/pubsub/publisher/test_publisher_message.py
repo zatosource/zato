@@ -142,13 +142,13 @@ class PublisherMessageTestCase(TestCase):
         self.assertEqual(message.expiration_time_iso, '')
 
         self.assertEqual(message.ext_pub_time_iso, '')
-        self.assertEqual(message.group_id, '')
+        self.assertIsNone(message.group_id)
         self.assertTrue(message.has_gd)
-        self.assertEqual(message.in_reply_to, '')
+        self.assertIsNone(message.in_reply_to)
         self.assertFalse(message.is_in_sub_queue)
         self.assertEqual(message.mime_type, mime_type)
         self.assertEqual(message.position_in_group, 1)
-        self.assertEqual(message.pub_correl_id, '')
+        self.assertIsNone(message.pub_correl_id)
         self.assertTrue(message.pub_msg_id.startswith('zpsm'))
         self.assertTrue(len(message.pub_msg_id) >= 24)
         self.assertEqual(message.pub_pattern_matched, '/*')
@@ -165,7 +165,7 @@ class PublisherMessageTestCase(TestCase):
         self.assertEqual(message.sub_pattern_matched, {})
         self.assertEqual(message.topic_id, topic.id)
         self.assertEqual(message.topic_name, topic.name)
-        self.assertEqual(message.user_ctx, {})
+        self.assertIsNone(message.user_ctx)
         self.assertEqual(message.zato_ctx, '{\n\n}')
 
 # ################################################################################################################################
