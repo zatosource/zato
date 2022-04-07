@@ -2349,8 +2349,12 @@ class PubSubMessage(Base):
     # What matching pattern allowed an endpoint to publish this message
     pub_pattern_matched = cast_('str', Column(Text, nullable=False))
 
-    pub_time = cast_('float', Column(Numeric(20, 7, asdecimal=False), nullable=False)) # When the row was created
-    ext_pub_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True)) # When the message was created by publisher
+    # When the row was created
+    pub_time = cast_('float', Column(Numeric(20, 7, asdecimal=False), nullable=False))
+
+    # When the message was created by the endpoint publishing it
+    ext_pub_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
+
     expiration_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
     last_updated = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
 
@@ -2564,7 +2568,7 @@ class PubSubEndpointEnqueuedMessage(Base):
     # after delivery_count reaches max retries for subscription or if a hook services decides so.
     is_deliverable = cast_('bool', Column(Boolean(), nullable=False, server_default=sa_true()))
 
-    delivery_status = cast_('bool', Column(Integer, nullable=False, server_default=str(PUBSUB.DELIVERY_STATUS.INITIALIZED)))
+    delivery_status = cast_('int', Column(Integer, nullable=False, server_default=str(PUBSUB.DELIVERY_STATUS.INITIALIZED)))
     delivery_time = cast_('floatnone', Column(Numeric(20, 7, asdecimal=False), nullable=True))
 
     # JSON data is here
