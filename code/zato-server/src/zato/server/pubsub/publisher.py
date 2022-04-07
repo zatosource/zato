@@ -41,12 +41,13 @@ from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_m
 
 if 0:
     from zato.common.marshal_.api import MarshalAPI
-    from zato.common.typing_ import any_, anylist, anylistnone, boolnone, callable_, dictlist, intnone, strlist, tuple_
+    from zato.common.typing_ import anylist, callable_, dictlist, strlist, tuple_
     from zato.server.base.parallel import ParallelServer
     from zato.server.pubsub import PubSub, Topic
     from zato.server.pubsub.model import sublist
     from zato.server.service import Service
     dictlist = dictlist
+    strlist = strlist
     sublist = sublist
     Service = Service
 
@@ -148,10 +149,10 @@ class PubCtx:
 class PubRequest(Model):
 
     cid: str
-    topic_name: str
+    topic_name: str = ''
     pub_pattern_matched: str = ''
 
-    msg_id:      str = ''
+    msg_id:      strnone = ''
     correl_id:   strnone = None
     in_reply_to: strnone = None
     has_gd:      boolnone = None
@@ -356,6 +357,7 @@ class Publisher:
     def get_messages_from_data(
         self,
         *,
+        cid:'str',
         topic:'Topic',
         data_list:'any_',
         request:'PubRequest',
@@ -377,6 +379,7 @@ class Publisher:
 
         if data_list and isinstance(data_list, (list, tuple)):
             for elem in data_list:
+                elem = self.marshal_api.from_dict(cast_('Service', None), elem, PubRequest, extra={'cid':cid})
                 msg = self.build_message(topic, elem, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
                     has_no_sk_server)
                 if msg:
@@ -516,6 +519,7 @@ class Publisher:
 
         # Input messages may contain a mix of GD and non-GD messages, and we need to extract them separately.
         msg_id_list, gd_msg_list, non_gd_msg_list = self.get_messages_from_data(
+            cid = request.cid,
             topic = topic,
             data_list = data_list,
             request = request,

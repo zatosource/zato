@@ -427,7 +427,7 @@ class MarshalAPI:
                 default = field_ctx.field.default
                 default_factory = field_ctx.field.default_factory
 
-                if default and default is not MISSING:
+                if default is not MISSING:
                     field_ctx.value = default
 
                 elif default_factory and default_factory is not MISSING:
