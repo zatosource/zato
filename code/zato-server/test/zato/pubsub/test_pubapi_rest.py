@@ -12,7 +12,7 @@ from time import sleep
 # Zato
 from zato.common.pubsub import prefix_sk
 from zato.common.test.config import TestConfig
-from zato.common.test.pubsub import FullPathTester
+from zato.common.test.pubsub.common import FullPathTester
 from zato.common.test.unittest_ import BasePubSubRestTestCase, PubSubConfig
 from zato.common.typing_ import cast_
 
