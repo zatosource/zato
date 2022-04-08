@@ -190,14 +190,14 @@ class BaseObserver:
                     error_found = True
 
                     if idx == 1 or (idx % log_every == 0):
-                        logger.warning('%s transfer path `%s` is not a directory (%s) (c:%s d:%s t:%s)',
+                        logger.info('%s transfer path `%s` is not a directory (%s) (c:%s d:%s t:%s)',
                             self.observer_type_name_title, self.name, idx, utcnow() - start, self.observer_type_impl)
             else:
                 # Indicate that there was an erorr with path
                 error_found = True
 
                 if idx == 1 or (idx % log_every == 0):
-                    logger.warning('%s transfer path `%r` does not exist (%s) (c:%s d:%s t:%s)',
+                    logger.info('%s transfer path `%r` does not exist (%s) (c:%s d:%s t:%s)',
                         self.observer_type_name_title, path, self.name, idx, utcnow() - start, self.observer_type_impl)
 
             if is_ok:
