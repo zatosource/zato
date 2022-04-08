@@ -3,7 +3,6 @@ name: Compile Zato from source code
 on:
   push:
     branches:
-      - main
       - support/3.2
   schedule:
     # Every day at 03:17 AM
@@ -32,4 +31,4 @@ jobs:
         run: python --version
 
       - name: Clone and compile
-        run: git clone https://github.com/zatosource/zato && cd ./zato && git checkout main && ./code/install.sh && ./code/bin/zato --version
+        run: git clone https://github.com/zatosource/zato && cd ./zato && git checkout support/3.2 && ./code/install.sh && ./code/bin/zato --version
