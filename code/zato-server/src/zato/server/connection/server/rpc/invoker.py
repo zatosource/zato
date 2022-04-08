@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 from logging import getLogger
-from typing import Optional as optional
 
 # Requests
 from requests import get as requests_get
@@ -18,8 +17,8 @@ from simdjson import loads
 
 # Zato
 from zato.client import AnyServiceInvoker
-from zato.common.ext.dataclasses import dataclass, field
-from zato.common.typing_ import from_dict
+from zato.common.ext.dataclasses import dataclass
+from zato.common.typing_ import any_, cast_, dict_field, from_dict, strordictnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,7 +27,7 @@ if 0:
     from requests import Response
     from typing import Callable
     from zato.client import ServiceInvokeResponse
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import anydict, callable_
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.server.rpc.config import RemoteServerInvocationCtx
 
@@ -48,17 +47,17 @@ logger = getLogger('zato')
 
 @dataclass(init=False)
 class ServerInvocationResult:
-    is_ok: bool = False
-    has_data: bool = False
-    data: object = ''
-    error_info: object = ''
+    is_ok: 'bool' = False
+    has_data: 'bool' = False
+    data: 'anydict' = dict_field()
+    error_info: 'any_' = ''
 
 @dataclass
 class PerPIDResponse:
-    is_ok: bool = False
-    pid: int = 0
-    pid_data: optional[dict] = field(default_factory=dict)
-    error_info: object = ''
+    is_ok: 'bool' = False
+    pid: 'int' = 0
+    pid_data: 'strordictnone' = dict_field()
+    error_info: 'any_' = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,7 +81,6 @@ class ServerInvoker:
         raise NotImplementedError(self.__class__)
 
     def invoke_all_pids(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        # type: () -> ServerInvocationResult
         raise NotImplementedError(self.__class__)
 
 # ################################################################################################################################
@@ -91,17 +89,17 @@ class ServerInvoker:
 class LocalServerInvoker(ServerInvoker):
     """ Invokes services directly on the current server, without any network-based RPC.
     """
-    def invoke(self, *args, **kwargs):
+    def invoke(self, *args:'any_', **kwargs:'any_'):
         return self.parallel_server.invoke(*args, **kwargs)
 
 # ################################################################################################################################
 
-    def invoke_async(self, *args, **kwargs):
+    def invoke_async(self, *args:'any_', **kwargs:'any_'):
         return self.parallel_server.invoke_async(*args, **kwargs)
 
 # ################################################################################################################################
 
-    def invoke_all_pids(self, *args, **kwargs):
+    def invoke_all_pids(self, *args:'any_', **kwargs:'any_'):
         return self.parallel_server.invoke_all_pids(*args, **kwargs)
 
 # ################################################################################################################################
@@ -110,9 +108,8 @@ class LocalServerInvoker(ServerInvoker):
 class RemoteServerInvoker(ServerInvoker):
     """ Invokes services on a remote server using RPC.
     """
-    def __init__(self, ctx):
-        # type: (RemoteServerInvocationCtx) -> None
-        super().__init__(None, ctx.cluster_name, ctx.server_name)
+    def __init__(self, ctx:'RemoteServerInvocationCtx') -> 'None':
+        super().__init__(cast_('ParallelServer', None), ctx.cluster_name, ctx.server_name)
         self.invocation_ctx = ctx
 
         # We need to cover both HTTP and HTTPS connections to other servers
@@ -134,8 +131,14 @@ class RemoteServerInvoker(ServerInvoker):
 
 # ################################################################################################################################
 
-    def _invoke(self, invoke_func, service, request=None, *args, **kwargs):
-        # type: (Callable, str, object) -> ServerInvocationResult
+    def _invoke(
+        self,
+        invoke_func,           # type: callable_
+        service:'str',         # type: str
+        request:'any_' = None, # type: any_
+        *args:'any_',          # type: any_
+        **kwargs:'any_'        # type: any_
+    ) -> 'ServerInvocationResult | None':
 
         # Local aliases
         kwargs_pid = kwargs.get('pid')
@@ -165,11 +168,18 @@ class RemoteServerInvoker(ServerInvoker):
 
         if response.ok:
             if response.has_data:
+                response.data = cast_('anydict', response.data)
                 for pid, pid_data in response.data.items():
+
+                    pid_data = cast_('strordictnone', pid_data)
+                    per_pid_data_is_dict = False
 
                     # We may potentially receive it if all_pids is not used
                     if pid == 'response':
                         pid = kwargs_pid
+
+                    # PID is always an integer, no matter how we get its value.
+                    pid = cast_('int', pid)
 
                     # It may be a string if there is a low-level exception ..
                     if isinstance(pid_data, str):
@@ -180,6 +190,7 @@ class RemoteServerInvoker(ServerInvoker):
 
                         # If it is a dict, not that per_pid_data will not exist if we were invoking a specific PID
                         if isinstance(pid_data, dict):
+                            per_pid_data_is_dict = True
                             per_pid_data = pid_data.get('pid_data', '')
 
                         # .. otherwise, it may be None, which we assign as is.
@@ -201,14 +212,22 @@ class RemoteServerInvoker(ServerInvoker):
 
                             out.data[pid] = per_pid_response
 
-                        # .. otherwise, there really was not response for that PID.
+                        # .. otherwise, there really was no response for that PID.
                         else:
-                            pid_data['pid_data'] = None
+
+                            # We need a cast because type checkers may not recognize that it is known to be a dict.
+                            if per_pid_data_is_dict:
+                                pid_data = cast_('anydict', pid_data)
+                                pid_data['pid_data'] = None
 
                     else:
                         if per_pid_data:
                             if isinstance(per_pid_data, str) and per_pid_data[0] == '{':
-                                pid_data['pid_data'] = loads(per_pid_data)
+
+                                # Here, we also need a cast for the same reason as above.
+                                if per_pid_data_is_dict:
+                                    pid_data = cast_('anydict', pid_data)
+                                    pid_data['pid_data'] = loads(per_pid_data)
 
                         if isinstance(pid_data, dict):
                             per_pid_response = from_dict(PerPIDResponse, pid_data) # type: PerPIDResponse
@@ -223,17 +242,17 @@ class RemoteServerInvoker(ServerInvoker):
 
 # ################################################################################################################################
 
-    def invoke(self, *args, **kwargs):
+    def invoke(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self._invoke(self.invoker.invoke, *args, **kwargs)
 
 # ################################################################################################################################
 
-    def invoke_async(self, *args, **kwargs):
+    def invoke_async(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self._invoke(self.invoker.invoke_async, *args, **kwargs)
 
 # ################################################################################################################################
 
-    def invoke_all_pids(self, *args, **kwargs):
+    def invoke_all_pids(self, *args:'any_', **kwargs:'any_') -> 'any_':
         kwargs['all_pids'] = True
         skip_response_elem = kwargs.pop('skip_response_elem', True)
         return self._invoke(self.invoker.invoke, skip_response_elem=skip_response_elem, *args, **kwargs)
