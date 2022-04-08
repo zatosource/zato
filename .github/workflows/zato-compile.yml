@@ -1,0 +1,35 @@
+name: Compile Zato from source code
+
+on:
+  push:
+    branches:
+      - main
+      - support/3.2
+  schedule:
+    # Every day at 03:17 AM
+    - cron: "17 3 * * *"
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zato-compile:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, ubuntu-20.04]
+        python-version: ['3.8', '3.9']
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Display Python version
+        run: python --version
+
+      - name: Clone and compile
+        run: git clone https://github.com/zatosource/zato && cd ./zato && git checkout main && ./code/install.sh && ./code/bin/zato --version
