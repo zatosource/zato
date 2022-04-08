@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.ext.dataclasses import dataclass, field
+from zato.common.ext.dataclasses import dataclass
+from zato.common.typing_ import anylist, list_field
 from zato.server.connection.server.rpc.invoker import LocalServerInvoker, RemoteServerInvoker
 
 # ################################################################################################################################
@@ -35,7 +36,7 @@ class InvokeAllResult:
     is_ok: bool = True
 
     # This is a list of responses from each PID of each server
-    data: list = field(default_factory=list)
+    data: anylist = list_field()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,12 +45,11 @@ class ConfigCtx:
     """ A config-like class that knows how to return details needed to invoke local or remote servers.
     """
     def __init__(self,
-        config_source,
-        parallel_server,
-        local_server_invoker_class=LocalServerInvoker,
-        remote_server_invoker_class=RemoteServerInvoker
+        config_source,   # type: ConfigSource
+        parallel_server, # type: ParallelServer
+        local_server_invoker_class = LocalServerInvoker,  # type: type[LocalServerInvoker]
+        remote_server_invoker_class = RemoteServerInvoker # type: type[RemoteServerInvoker]
     ):
-        # type: (ConfigSource, ParallelServer) -> None
         self.config_source = config_source
         self.parallel_server = parallel_server
         self.local_server_invoker_class = local_server_invoker_class
@@ -72,16 +72,14 @@ class ConfigCtx:
 class ServerRPC:
     """ A facade through which Zato servers can be invoked.
     """
-    def __init__(self, config_ctx):
-        # type: (ConfigCtx) -> None
+    def __init__(self, config_ctx:'ConfigCtx') -> 'None':
         self.config_ctx = config_ctx
         self.current_cluster_name = self.config_ctx.config_source.current_cluster_name
         self._invokers = {}
 
 # ################################################################################################################################
 
-    def _get_invoker_by_server_name(self, server_name):
-        # type: (str) -> ServerInvoker
+    def _get_invoker_by_server_name(self, server_name:'str') -> 'ServerInvoker':
         if server_name == self.config_ctx.parallel_server.name:
             return self.config_ctx.local_server_invoker_class(
                 self.config_ctx.parallel_server,
@@ -93,8 +91,7 @@ class ServerRPC:
 
 # ################################################################################################################################
 
-    def __getitem__(self, server_name):
-        # type: (str) -> ServerInvoker
+    def __getitem__(self, server_name:'str') -> 'ServerInvoker':
         if server_name not in self._invokers:
             server = self._get_invoker_by_server_name(server_name)
             self._invokers[server_name] = server
@@ -104,13 +101,19 @@ class ServerRPC:
 
 # ################################################################################################################################
 
-    def populate_invokers(self):
-        for invoker in self.config_ctx.get_remote_server_invoker_list(): # type: RemoteServerInvoker
+    def populate_invokers(self) -> 'None':
+        for invoker in self.config_ctx.get_remote_server_invoker_list():
             self._invokers[invoker.server_name] = invoker
 
 # ################################################################################################################################
 
-    def invoke_all(self, service:'str', request:'any_'=None, *args:'any_', **kwargs:'any_') -> 'InvokeAllResult':
+    def invoke_all(
+        self,
+        service,        # type: str
+        request = None, # type: any_
+        *args,          # type: any_
+        **kwargs        # type: any_
+    ) -> 'InvokeAllResult':
 
         # First, make sure that we are aware of all the servers currently available
         self.populate_invokers()
