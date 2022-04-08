@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,12 +11,21 @@ from contextlib import closing
 from unittest import main, TestCase
 
 # Zato
-from zato.common.ext.dataclasses import dataclass, field
+from zato.common.ext.dataclasses import dataclass
 from zato.common.odb.model import Base, HTTPBasicAuth, Cluster, Server as ServerModel
 from zato.common.odb.api import ODBManager, SQLConnectionPool
+from zato.common.typing_ import anydict, cast_, dict_field
 from zato.server.connection.server.rpc.api import ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import CredentialsConfig, ODBConfigSource
 from zato.server.connection.server.rpc.invoker import LocalServerInvoker, RemoteServerInvoker, ServerInvoker
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    from zato.server.base.parallel import ParallelServer
+    ParallelServer = ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,22 +51,25 @@ class TestConfig:
 # ################################################################################################################################
 
 class TestCluster:
-    def __init__(self, name):
-        # type: (str) -> None
+    def __init__(self, name:'str') -> 'None':
         self.name = name
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestParallelServer:
-    def __init__(self, cluster, odb, server_name):
-        # type: (TestCluster, ODBManager, str) -> None
+    def __init__(
+        self,
+        cluster,    # type: TestCluster
+        odb,        # type: ODBManager
+        server_name # type: str
+    ) -> 'None':
         self.cluster = cluster
         self.cluster_name = self.cluster.name
         self.odb = odb
         self.name = server_name
 
-    def decrypt(self, data):
+    def decrypt(self, data:'str') -> 'str':
         return data
 
 # ################################################################################################################################
@@ -65,7 +77,7 @@ class TestParallelServer:
 
 class BaseTestServerInvoker:
 
-    @dataclass
+    @dataclass(init=False)
     class InvocationEntry:
         args: tuple
         kwargs: dict
@@ -75,7 +87,7 @@ class BaseTestServerInvoker:
 
 class TestLocalServerInvoker(LocalServerInvoker, BaseTestServerInvoker):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:'any_', **kwargs:'any_'):
 
         # Initialise our base class
         super().__init__(*args, **kwargs)
@@ -83,15 +95,20 @@ class TestLocalServerInvoker(LocalServerInvoker, BaseTestServerInvoker):
         # An entry is added each time self.invoke is called
         self.invocation_history = []
 
-    def invoke(self, *args, **kwargs):
-        self.invocation_history.append(self.InvocationEntry(args, kwargs))
+    def invoke(self, *args:'any_', **kwargs:'any_') -> 'None':
+
+        entry = self.InvocationEntry()
+        entry.args = args
+        entry.kwargs = kwargs
+
+        self.invocation_history.append(entry)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestRemoteServerInvoker(RemoteServerInvoker, BaseTestServerInvoker):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
 
         # Initialise our base class
         super().__init__(*args, **kwargs)
@@ -99,15 +116,20 @@ class TestRemoteServerInvoker(RemoteServerInvoker, BaseTestServerInvoker):
         # An entry is added each time self.invoke is called
         self.invocation_history = []
 
-    def invoke(self, *args, **kwargs):
-        self.invocation_history.append(self.InvocationEntry(args, kwargs))
+    def invoke(self, *args:'any_', **kwargs:'any_') -> 'None':
+
+        entry = self.InvocationEntry()
+        entry.args = args
+        entry.kwargs = kwargs
+
+        self.invocation_history.append(entry)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ServerRPCTestCase(TestCase):
 
-    def setUp(self):
+    def setUp(self) -> 'None':
 
         # Prepare in-memory ODB configuration ..
         odb_name = 'ServerRPCTestCase'
@@ -129,45 +151,45 @@ class ServerRPCTestCase(TestCase):
         with closing(self.odb.session()) as session:
 
             cluster = Cluster()
-            cluster.name = TestConfig.cluster_name
-            cluster.odb_type = 'sqlite'
-            cluster.broker_host = 'localhost-test-broker-host'
-            cluster.broker_port = 123456
-            cluster.lb_host = 'localhost-test-lb-host'
-            cluster.lb_port = 1234561
-            cluster.lb_agent_port = 1234562
+            cluster.name = TestConfig.cluster_name # type: ignore
+            cluster.odb_type = 'sqlite' # type: ignore
+            cluster.broker_host = 'localhost-test-broker-host' # type: ignore
+            cluster.broker_port = 123456 # type: ignore
+            cluster.lb_host = 'localhost-test-lb-host' # type: ignore
+            cluster.lb_port = 1234561 # type: ignore
+            cluster.lb_agent_port = 1234562 # type: ignore
 
             server1 = ServerModel()
             server1.cluster = cluster
-            server1.name = TestConfig.server1_name
-            server1.token = 'abc1'
-            server1.preferred_address = TestConfig.server1_preferred_address
-            server1.bind_port = TestConfig.server1_port
-            server1.crypto_use_tls = TestConfig.crypto_use_tls
+            server1.name = TestConfig.server1_name # type: ignore
+            server1.token = 'abc1' # type: ignore
+            server1.preferred_address = TestConfig.server1_preferred_address # type: ignore
+            server1.bind_port = TestConfig.server1_port # type: ignore
+            server1.crypto_use_tls = TestConfig.crypto_use_tls # type: ignore
 
             server2 = ServerModel()
             server2.cluster = cluster
-            server2.name = TestConfig.server2_name
-            server2.token = 'abc2'
-            server2.preferred_address = TestConfig.server2_preferred_address
-            server2.bind_port = TestConfig.server2_port
-            server2.crypto_use_tls = TestConfig.crypto_use_tls
+            server2.name = TestConfig.server2_name # type: ignore
+            server2.token = 'abc2' # type: ignore
+            server2.preferred_address = TestConfig.server2_preferred_address # type: ignore
+            server2.bind_port = TestConfig.server2_port # type: ignore
+            server2.crypto_use_tls = TestConfig.crypto_use_tls # type: ignore
 
             server3 = ServerModel()
             server3.cluster = cluster
-            server3.name = TestConfig.server3_name
-            server3.token = 'abc3'
-            server3.preferred_address = TestConfig.server3_preferred_address
-            server3.bind_port = TestConfig.server3_port
-            server3.crypto_use_tls = TestConfig.crypto_use_tls
+            server3.name = TestConfig.server3_name # type: ignore
+            server3.token = 'abc3' # type: ignore
+            server3.preferred_address = TestConfig.server3_preferred_address # type: ignore
+            server3.bind_port = TestConfig.server3_port # type: ignore
+            server3.crypto_use_tls = TestConfig.crypto_use_tls # type: ignore
 
             api_credentials = HTTPBasicAuth()
-            api_credentials.cluster = cluster
-            api_credentials.is_active = True
-            api_credentials.name = CredentialsConfig.sec_def_name
-            api_credentials.username = CredentialsConfig.api_user
-            api_credentials.realm = CredentialsConfig.sec_def_name
-            api_credentials.password = TestConfig.api_credentials_password
+            api_credentials.cluster = cluster # type: ignore
+            api_credentials.is_active = True # type: ignore
+            api_credentials.name = CredentialsConfig.sec_def_name # type: ignore
+            api_credentials.username = CredentialsConfig.api_user # type: ignore
+            api_credentials.realm = CredentialsConfig.sec_def_name # type: ignore
+            api_credentials.password = TestConfig.api_credentials_password # type: ignore
 
             session.add(cluster)
             session.add(server1)
@@ -179,7 +201,12 @@ class ServerRPCTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def get_server_rpc(self, odb, local_server_invoker_class=None, remote_server_invoker_class=None):
+    def get_server_rpc(
+        self,
+        odb, # type: ODBManager
+        local_server_invoker_class=None, # type: type[LocalServerInvoker]  | None
+        remote_server_invoker_class=None # type: type[RemoteServerInvoker] | None
+    ) -> 'ServerRPC':
 
         cluster = TestCluster(TestConfig.cluster_name)
         parallel_server = TestParallelServer(cluster, odb, TestConfig.server1_name)
@@ -187,23 +214,32 @@ class ServerRPCTestCase(TestCase):
         config_source = ODBConfigSource(parallel_server.odb, cluster.name, parallel_server.name, parallel_server.decrypt)
         config_ctx = ConfigCtx(
             config_source,
-            parallel_server,
-            local_server_invoker_class=local_server_invoker_class,
-            remote_server_invoker_class=remote_server_invoker_class,
+            cast_('ParallelServer', parallel_server),
+            local_server_invoker_class = cast_('type[LocalServerInvoker]', local_server_invoker_class),
+            remote_server_invoker_class = cast_('type[RemoteServerInvoker]', remote_server_invoker_class),
         )
 
         return ServerRPC(config_ctx)
 
 # ################################################################################################################################
 
-    def get_local_server_invoker(self, local_server_invoker_class=LocalServerInvoker):
-        rpc = self.get_server_rpc(None, local_server_invoker_class=local_server_invoker_class)
+    def get_local_server_invoker(
+        self,
+        local_server_invoker_class=LocalServerInvoker # type: type[LocalServerInvoker]
+    ) -> 'ServerInvoker':
+        rpc = self.get_server_rpc(
+            cast_('ODBManager', None),
+            local_server_invoker_class = local_server_invoker_class
+        )
         return rpc[TestConfig.server1_name]
 
 # ################################################################################################################################
 
-    def get_remote_server_invoker(self, server_name, remote_server_invoker_class=RemoteServerInvoker):
-
+    def get_remote_server_invoker(
+        self,
+        server_name, # type: str
+        remote_server_invoker_class=RemoteServerInvoker # type: type[RemoteServerInvoker]
+    ) -> 'ServerInvoker':
         rpc = self.get_server_rpc(self.odb, remote_server_invoker_class=remote_server_invoker_class)
         return rpc[TestConfig.server2_name]
 
@@ -229,8 +265,11 @@ class ServerRPCTestCase(TestCase):
 
     def test_invoke_local_server(self):
 
+        local_server_invoker_class = cast_('type[LocalServerInvoker]', TestLocalServerInvoker)
         invoker = self.get_local_server_invoker(
-            local_server_invoker_class=TestLocalServerInvoker) # type: TestLocalServerInvoker
+            local_server_invoker_class = local_server_invoker_class
+        )
+        invoker = cast_('TestLocalServerInvoker', invoker)
 
         args1 = (1, 2, 3, 4)
         kwargs1 = {'a1':'a2', 'b1':'b2'}
@@ -254,8 +293,12 @@ class ServerRPCTestCase(TestCase):
 
     def test_invoke_remote_server(self):
 
+        remote_server_invoker_class = cast_('type[RemoteServerInvoker]', TestRemoteServerInvoker)
         invoker = self.get_remote_server_invoker(
-            TestConfig.server2_name, remote_server_invoker_class=TestRemoteServerInvoker) # type: TestRemoteServerInvoker
+            TestConfig.server2_name,
+            remote_server_invoker_class = remote_server_invoker_class
+        )
+        invoker = cast_('TestRemoteServerInvoker', invoker)
 
         args1 = (1, 2, 3, 4)
         kwargs1 = {'a1':'a2', 'b1':'b2'}
@@ -266,8 +309,8 @@ class ServerRPCTestCase(TestCase):
         invoker.invoke(*args1, **kwargs1)
         invoker.invoke(*args2, **kwargs2)
 
-        history1 = invoker.invocation_history[0] # type: TestRemoteServerInvoker.InvocationEntry
-        history2 = invoker.invocation_history[1] # type: TestRemoteServerInvoker.InvocationEntry
+        history1 = invoker.invocation_history[0]
+        history2 = invoker.invocation_history[1]
 
         self.assertTupleEqual(history1.args, args1)
         self.assertDictEqual(history1.kwargs, kwargs1)
@@ -280,8 +323,12 @@ class ServerRPCTestCase(TestCase):
     def test_remote_server_invocation_ctx_is_populated(self):
         """ Confirms that remote server's invocation_ctx contains remote address and API credentials.
         """
+        remote_server_invoker_class = cast_('type[RemoteServerInvoker]', TestRemoteServerInvoker)
         invoker = self.get_remote_server_invoker(
-            TestConfig.server2_name, remote_server_invoker_class=TestRemoteServerInvoker) # type: TestRemoteServerInvoker
+            TestConfig.server2_name,
+            remote_server_invoker_class = remote_server_invoker_class
+        )
+        invoker = cast_('TestRemoteServerInvoker', invoker)
 
         ctx = invoker.invocation_ctx
 
@@ -339,11 +386,11 @@ class ServerRPCTestCase(TestCase):
             ok: bool = True
             has_data: bool = True
             details: str = ''
-            data: dict = field(default_factory=dict)
+            data: anydict = dict_field()
 
-        def invoke_func(server_name):
+        def invoke_func(server_name:'any_') -> 'any_':
 
-            def _inner(service, request, skip_response_elem=True, *args, **kwargs):
+            def _inner(service:'any_', request:'any_', skip_response_elem:'any_'=True, *args:'any_', **kwargs:'any_') -> 'any_':
 
                 # This simulates a response from the Zato client ..
                 response = TestServiceInvokeResponse()
@@ -378,7 +425,7 @@ class ServerRPCTestCase(TestCase):
             return _inner
 
         class StaticRemoteServerInvoker(RemoteServerInvoker):
-            def __init__(self, *args, **kwargs):
+            def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
                 super().__init__(*args, **kwargs)
                 self.invocation_ctx.needs_ping = False
                 self.invoker.invoke = invoke_func(self.server_name)
