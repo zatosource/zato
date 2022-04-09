@@ -367,9 +367,9 @@ class Create(ZatoCommand):
 
         total_steps = total_non_servers_steps + servers
         admin_invoke_password = 'admin.invoke.' + uuid4().hex
-        broker_host = 'localhost'
+        broker_host = '127.0.0.1'
         broker_port = 6379
-        lb_host = 'localhost'
+        lb_host = '127.0.0.1'
         lb_port = 11223
         lb_agent_port = 20151
 
