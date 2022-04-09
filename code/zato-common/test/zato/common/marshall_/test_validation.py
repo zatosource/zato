@@ -13,7 +13,7 @@ from unittest import main, TestCase
 from zato.common.marshal_.api import ElementMissing, MarshalAPI
 from zato.common.test import rand_int, rand_string
 from zato.common.test.marshall_ import Address, AddressWithDefaults, CreateAttrListRequest, CreatePhoneListRequest, \
-    CreateUserRequest, LineParent
+    CreateUserRequest, LineParent, WithAny
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -126,6 +126,7 @@ class ValidationTestCase(TestCase):
 
         e = cm.exception # type: ElementMissing
         self.assertEqual(e.reason, 'Element missing: /role_list[0]/name')
+
 # ################################################################################################################################
 
     def test_unmarshall_top_level_list_dict_empty(self):
@@ -308,6 +309,24 @@ class ValidationTestCase(TestCase):
         result.post_code
         result.details
         result.characteristics
+
+# ################################################################################################################################
+
+    def test_unmarshall_any_should_be_mapped_to_its_default_form(self):
+
+        data = {}
+
+        service = cast_('Service', None)
+        api = MarshalAPI()
+
+        result = api.from_dict(service, data, WithAny) # type: WithAny
+
+        # This should map to None
+        self.assertIsNone(result.str1)
+
+        # But these two use use their default factories to produce default values
+        self.assertListEqual(cast_('list', result.list1), [])
+        self.assertDictEqual(cast_('dict', result.dict1), {})
 
 # ################################################################################################################################
 
