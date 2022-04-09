@@ -10,15 +10,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-try:
-    from .base import Address, AddressWithDefaults, CreateAttrListRequest, CreatePhoneListRequest, CreateUserRequest, \
-        LineParent
-except ImportError:
-    from base import Address, AddressWithDefaults, CreateAttrListRequest, CreatePhoneListRequest, CreateUserRequest, \
-        LineParent
-
 from zato.common.marshal_.api import ElementMissing, MarshalAPI
 from zato.common.test import rand_int, rand_string
+from zato.common.test.marshall_ import Address, AddressWithDefaults, CreateAttrListRequest, CreatePhoneListRequest, \
+    CreateUserRequest, LineParent
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
