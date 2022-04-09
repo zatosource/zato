@@ -57,7 +57,7 @@ class JSONToDataclassTestCase(TestCase):
             ]
         }
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
         result = api.from_dict(service, data, CreateUserRequest) # type: CreateUserRequest
@@ -133,7 +133,7 @@ class JSONToDataclassTestCase(TestCase):
 
         @dataclass
         class CreateAdminRequest(CreateUserRequest):
-            admin_type: str = field(default='MyDefaultValue')
+            admin_type: str = field(default='MyDefaultValue') # type: ignore
 
         data = {
             'request_id': request_id,
@@ -146,7 +146,7 @@ class JSONToDataclassTestCase(TestCase):
             'role_list': [],
         }
 
-        service = None
+        service = cast_('Service', None)
         api = MarshalAPI()
 
         result = api.from_dict(service, data, CreateAdminRequest) # type: CreateAdminRequest
@@ -168,14 +168,13 @@ class JSONToDataclassTestCase(TestCase):
 
         @dataclass
         class MyRequestWithAfterCreated(CreateUserRequest):
-            def after_created(self, ctx):
-                # type: (ModelCtx)
+            def after_created(self, ctx:'ModelCtx') -> 'None':
 
                 if not isinstance(ctx.service, TestService):
                     raise ValueError('Expected for service class to be {} instead of {}'.format(
                         TestService, type(ctx.service)))
 
-                if not isinstance(ctx.data, dict):
+                if not isinstance(ctx.data, dict): # type: ignore
                     raise ValueError('Expected for service class to be a dict instead of {}'.format(type(ctx.data)))
 
                 request_id = ctx.data['request_id']
@@ -201,7 +200,7 @@ class JSONToDataclassTestCase(TestCase):
             'role_list': [],
         }
 
-        service = TestService()
+        service = cast_('Service', TestService())
         api = MarshalAPI()
         api.from_dict(service, data, MyRequestWithAfterCreated)
 
