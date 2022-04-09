@@ -6,13 +6,10 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from typing import List as list_
-
 # Zato
 from zato.common.ext.dataclasses import dataclass, field
 from zato.common.marshal_.api import Model
-from zato.common.typing_ import optional
+from zato.common.typing_ import anynone, anydictnone, anylistnone, dict_field, list_, list_field, optional
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -119,6 +116,15 @@ class CreatePhoneListRequest(Model):
 @dataclass(init=True, repr=False)
 class CreateAttrListRequest(Model):
     attr_list: list_[Attr] = field(default_factory=list) # type: ignore
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False, repr=False)
+class WithAny(Model):
+    str1: anynone
+    list1: anylistnone = list_field()
+    dict1: anydictnone = dict_field()
 
 # ################################################################################################################################
 # ################################################################################################################################
