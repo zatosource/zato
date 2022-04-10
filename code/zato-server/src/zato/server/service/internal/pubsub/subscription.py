@@ -285,7 +285,7 @@ class SubscribeServiceImpl(_Subscribe):
     def _subscribe_impl(self, ctx:'SubCtx') -> 'None':
         """ Invoked by subclasses to subscribe callers using input pub/sub config context.
         """
-        with self.lock('zato.pubsub.subscribe.%s' % (ctx.topic_name)):
+        with self.lock('zato.pubsub.subscribe.%s' % (ctx.topic_name), timeout=90):
 
             # Is it a WebSockets client?
             is_wsx = bool(ctx.ws_channel_id)
