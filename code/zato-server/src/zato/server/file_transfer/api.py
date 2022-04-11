@@ -27,6 +27,7 @@ import globre
 
 # Zato
 from zato.common.api import FILE_TRANSFER
+from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.platform_ import is_linux, is_non_linux
 from zato.server.file_transfer.event import FileTransferEventHandler, singleton
@@ -41,19 +42,12 @@ from zato.server.file_transfer.snapshot import FTPSnapshotMaker, LocalSnapshotMa
 if 0:
     from bunch import Bunch
     from requests import Response
+    from zato.common.typing_ import any_, anydict, anylist
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from zato.server.file_transfer.event import FileTransferEvent
     from zato.server.file_transfer.observer.base import BaseObserver
     from zato.server.file_transfer.snapshot import BaseRemoteSnapshotMaker
-
-    BaseObserver = BaseObserver
-    BaseRemoteSnapshotMaker = BaseRemoteSnapshotMaker
-    Bunch = Bunch
-    FileTransferEvent
-    ParallelServer = ParallelServer
-    Response = Response
-    WorkerStore = WorkerStore
 
 # ################################################################################################################################
 
@@ -96,8 +90,7 @@ suffix_ignored = (
 class FileTransferAPI:
     """ Manages file transfer observers and callbacks.
     """
-    def __init__(self, server, worker_store):
-        # type: (ParallelServer, WorkerStore) -> None
+    def __init__(self, server:'ParallelServer', worker_store:'WorkerStore') -> 'None':
 
         self.server = server
         self.worker_store = worker_store
@@ -142,10 +135,9 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def _create(self, config):
+    def _create(self, config:'Bunch') -> 'None':
         """ Low-level implementation of self.create.
         """
-        # type: (Bunch) -> None
         flags = globre.EXACT
 
         if not config.is_case_sensitive:
@@ -161,10 +153,12 @@ class FileTransferAPI:
 
         # This will be a list in the case of pickup.conf and not a list if read from ODB-based file transfer channels
         if isinstance(config.pickup_from_list, list):
-            pickup_from_list = config.pickup_from_list
+            pickup_from_list = config.pickup_from_list # type: ignore
         else:
-            pickup_from_list = str(config.pickup_from_list) # type: str
+            pickup_from_list = str(config.pickup_from_list) # type: any_
             pickup_from_list = [elem.strip() for elem in pickup_from_list.splitlines()]
+
+        pickup_from_list = cast_('anylist', pickup_from_list)
 
         # Make sure that a parser is given if we are to parse any input ..
         if config.should_parse_on_pickup:
@@ -177,7 +171,8 @@ class FileTransferAPI:
 
         # Create an observer object ..
         observer_class = source_type_to_observer_class[config.source_type]
-        observer = observer_class(self, config) # type: BaseObserver
+        observer = observer_class(self, config) # type: ignore
+        observer = cast_('BaseObserver', observer)
 
         # .. and add it to data containers ..
         self.observer_list.append(observer)
@@ -194,20 +189,17 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def create(self, config):
+    def create(self, config:'Bunch') -> 'None':
         """ Creates a file transfer channel (but does not start it).
         """
-        # type: (Bunch) -> None
         with self.update_lock:
             self._create(config)
 
 # ################################################################################################################################
 
-    def _delete(self, config):
+    def _delete(self, config:'Bunch') -> 'None':
         """ Low-level implementation of self.delete.
         """
-        # type: (Bunch) -> None
-
         # Observer object to delete ..
         observer_to_delete = None
 
@@ -241,24 +233,22 @@ class FileTransferAPI:
             # .. for local transfer under Linux, delete it from any references among paths being observed via inotify.
             if prefer_inotify and config.source_type == source_type_local:
                 for path in observer_path_list:
-                    observer_list = self.inotify_path_to_observer_list.get(path) # type: list
+                    observer_list = self.inotify_path_to_observer_list.get(path) or [] # type: anylist
                     observer_list.remove(observer_to_delete)
 
 # ################################################################################################################################
 
-    def delete(self, config):
+    def delete(self, config:'Bunch') -> 'None':
         """ Deletes a file transfer channel.
         """
-        # type: (Bunch) -> None
         with self.update_lock:
             self._delete(config)
 
 # ################################################################################################################################
 
-    def edit(self, config):
+    def edit(self, config:'Bunch') -> 'None':
         """ Edits a file transfer channel by deleting and recreating it.
         """
-        # type: (Bunch) -> None
         with self.update_lock:
 
             # Delte the channel first ..
@@ -283,7 +273,7 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def get_py_parser(self, name):
+    def get_py_parser(self, name:'str') -> 'any_':
         """ Imports a Python object that represents a parser.
         """
         parts = name.split('.')
@@ -293,14 +283,14 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def get_service_parser(self, name):
+    def get_service_parser(self, name:'str') -> 'None':
         """ Returns a service that will act as a parser.
         """
         raise NotImplementedError()
 
 # ################################################################################################################################
 
-    def get_parser(self, parser_name):
+    def get_parser(self, parser_name:'str') -> 'any_':
         """ Returns a parser by name (may possibly return an already cached one).
         """
         if parser_name in self._parser_cache:
@@ -315,16 +305,14 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def get_observer_by_channel_id(self, channel_id):
-        # type: (int) -> BaseObserver
+    def get_observer_by_channel_id(self, channel_id:'int') -> 'BaseObserver':
         return self.observer_dict[channel_id]
 
 # ################################################################################################################################
 
-    def should_handle(self, channel_name, file_name, suffix_ignored=suffix_ignored):
-        # type: (str, str, str) -> bool
+    def should_handle(self, channel_name:'str', file_name:'str') -> 'bool':
 
-        # Chech all the patterns configured ..
+        # Check all the patterns configured ..
         for pattern in self.pattern_matcher_dict[channel_name]:
 
             # .. we have a match against a pattern ..
@@ -337,10 +325,17 @@ class FileTransferAPI:
                 else:
                     return True
 
+        return False
+
 # ################################################################################################################################
 
-    def invoke_callbacks(self, event, service_list, topic_list, outconn_rest_list):
-        # type: (FileTransferEvent, list, list, list) -> None
+    def invoke_callbacks(
+        self,
+        event,        # type: FileTransferEvent
+        service_list, # type: anylist
+        topic_list,   # type: anylist
+        outconn_rest_list # type: anylist
+    ) -> 'None':
 
         # Do not invoke callbacks if the path is to be ignored
         if self.is_local_path_ignored(event.full_path):
@@ -374,8 +369,7 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def invoke_service_callbacks(self, service_list, request):
-        # type: (list, dict) -> None
+    def invoke_service_callbacks(self, service_list:'anylist', request:'anydict') -> 'None':
 
         for item in service_list: # type: str
             try:
@@ -385,8 +379,7 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def invoke_topic_callbacks(self, topic_list, request):
-        # type: (list, dict) -> None
+    def invoke_topic_callbacks(self, topic_list:'anylist', request:'anydict') -> 'None':
 
         for item in topic_list: # type: str
             try:
@@ -396,12 +389,11 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def _invoke_rest_outconn_callback(self, item_id, request):
-        # type: (str, dict) -> None
+    def _invoke_rest_outconn_callback(self, item_id:'str', request:'anydict') -> 'None':
 
         cid = new_cid()
 
-        item = self.worker_store.get_outconn_rest_by_id(item_id)
+        item = self.worker_store.get_outconn_rest_by_id(item_id) # type: any_
         ping_response = item.ping(cid, return_response=True, log_verbose=True) # type: Response
 
         if ping_response.status_code != OK:
@@ -433,7 +425,7 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def invoke_rest_outconn_callbacks(self, outconn_rest_list, request):
+    def invoke_rest_outconn_callbacks(self, outconn_rest_list, request) -> 'None':
         # type: (list, dict) -> None
 
         for item_id in outconn_rest_list: # type: int
@@ -441,10 +433,15 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def post_handle(self, event, config, observer, snapshot_maker):
+    def post_handle(
+        self,
+        event,    # type: FileTransferEvent
+        config,   # type: Bunch
+        observer, # type: BaseObserver
+        snapshot_maker # type: BaseRemoteSnapshotMaker
+    ) -> 'None':
         """ Runs after callback services have been already invoked, performs clean up if configured to.
         """
-        # type: (FileTransferEvent, Bunch, BaseObserver, BaseRemoteSnapshotMaker) -> None
         if config.move_processed_to:
             observer.move_file(event.full_path, config.move_processed_to, observer, snapshot_maker)
 
@@ -453,7 +450,7 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def _run_linux_inotify_loop(self):
+    def _run_linux_inotify_loop(self) -> 'None':
 
         while self.keep_running:
             try:
@@ -480,7 +477,7 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def _run(self, name=None, log_after_started=False):
+    def _run(self, name:'str'='', log_after_started:'bool'=False) -> 'None':
 
         # Under Linux, for each observer, map each of its watched directories
         # to the actual observer object so that when an event is emitted
@@ -541,13 +538,12 @@ class FileTransferAPI:
         # Under Linux, run the inotify main loop for each watch descriptor created for paths that do exist.
         # Note that if we are not on Linux, each observer.start call above already ran a new greenlet with an observer
         # for a particular directory.
-        if self.is_notify_preferred(observer.channel_config):
+        if self.is_notify_preferred(observer.channel_config): # type: ignore
             spawn_greenlet(self._run_linux_inotify_loop)
 
 # ################################################################################################################################
 
-    def get_inspector_list_by_path(self, path):
-        # type: (str) -> dict
+    def get_inspector_list_by_path(self, path:'str') -> 'anydict':
 
         # Maps the input path to inspectors.
         path_to_inspector = {}
@@ -566,7 +562,7 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def run_inspectors(self, path_to_inspector_list):
+    def run_inspectors(self, path_to_inspector_list:'anydict') -> 'None':
         # type: (dict) -> None
 
         # Run background inspectors waiting for each path from the list
@@ -576,7 +572,7 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def wait_for_deleted_path(self, path):
+    def wait_for_deleted_path(self, path:'str') -> 'None':
         path_to_inspector = self.get_inspector_list_by_path(path)
         self.run_inspectors(path_to_inspector)
 
@@ -587,13 +583,12 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def start_observer(self, name, log_after_started=False):
+    def start_observer(self, name:'str', log_after_started:'bool'=False) -> 'None':
         self._run(name, log_after_started)
 
 # ################################################################################################################################
 
-    def _run_snapshot_observer(self, observer, max_iters=maxsize):
-        # type: (BaseObserver, int) -> None
+    def _run_snapshot_observer(self, observer:'BaseObserver', max_iters:'int'=maxsize) -> 'None':
 
         if not observer.is_active:
             return
@@ -601,7 +596,8 @@ class FileTransferAPI:
         source_type = observer.channel_config.source_type   # type: str
         snapshot_maker_class = source_type_to_snapshot_maker_class[source_type]
 
-        snapshot_maker = snapshot_maker_class(self, observer.channel_config) # type: (BaseRemoteSnapshotMaker)
+        snapshot_maker = snapshot_maker_class(self, observer.channel_config) # type: any_
+        snapshot_maker = cast_('BaseRemoteSnapshotMaker', snapshot_maker)
         snapshot_maker.connect()
 
         for item in observer.path_list: # type: (str)
@@ -609,26 +605,24 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def run_snapshot_observer(self, channel_id, max_iters):
-        # type: (int, int) -> None
+    def run_snapshot_observer(self, channel_id:'int', max_iters:'int') -> 'None':
         observer = self.get_observer_by_channel_id(channel_id) # type: BaseObserver
         self._run_snapshot_observer(observer, max_iters)
 
 # ################################################################################################################################
 
-    def build_relative_dir(self, path):
+    def build_relative_dir(self, path:'str') -> 'str':
         """ Builds a path based on input relative to the server's top-level directory.
         I.e. it extracts what is known as pickup_from in pickup.conf from the incoming path.
         """
-        # type: (str) -> str
 
         # By default, we have no result
-        relative_dir = None
+        relative_dir = '<no-relative-dir>'
 
         try:
             server_base_dir = PurePath(self.server.base_dir)
-            path = PurePath(path)
-            relative_dir = path.relative_to(server_base_dir)
+            path = PurePath(path) # type: ignore
+            relative_dir = path.relative_to(server_base_dir) # type: ignore
         except Exception as e:
 
             # This is used when the .relative_do was not able to build relative_dir
@@ -649,13 +643,13 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def add_local_ignored_path(self, path):
+    def add_local_ignored_path(self, path) -> 'None':
         # type: (str) -> None
         self._local_ignored.add(path)
 
 # ################################################################################################################################
 
-    def remove_local_ignored_path(self, path):
+    def remove_local_ignored_path(self, path) -> 'None':
         # type: (str) -> None
         try:
             self._local_ignored.remove(path)
@@ -664,17 +658,15 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def is_local_path_ignored(self, path):
+    def is_local_path_ignored(self, path) -> 'bool':
         # type: (str) -> bool
         return path in self._local_ignored
 
 # ################################################################################################################################
 
-    def is_notify_preferred(self, channel_config):
+    def is_notify_preferred(self, channel_config:'Bunch') -> 'bool':
         """ Returns True if inotify is the preferred notification method for input configuration and current OS.
         """
-        # type: (Bunch) -> None
-
         # This will be set, for instance, if we run under Vagrant or a similar tool,
         # and we need to share our pickup directories with the host. In such a case,
         # we cannot rely on inotify at all.
@@ -691,6 +683,5 @@ class FileTransferAPI:
         # .. otherwise, we prefer inotify.
         else:
             return True
-
 
 # ################################################################################################################################
