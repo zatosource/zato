@@ -51,8 +51,8 @@ from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
 from zato.common.typing_ import cast_, optional
-from zato.common.util.api import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, fs_safe_name, \
-    hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
+from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
+    fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
     register_diag_handlers
 from zato.common.util.platform_ import is_posix
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
@@ -142,6 +142,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.odb_data = Bunch()
         self.repo_location = ''
         self.user_conf_location = ''
+        self.user_conf_location_extra = set()
         self.soap11_content_type = ''
         self.soap12_content_type = ''
         self.plain_xml_content_type = ''
@@ -451,15 +452,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # We have hot-deployment configuration to process ..
         if items:
 
-            # .. log what we are about to do ..
-            logger.info('Adding hot-deployment configuration from `%s` (env. variable found -> ZATO_HOT_DEPLOY_DIR)', items)
-
             # .. support multiple entries ..
             items = items.split(':')
             items = [elem.strip() for elem in items]
 
             # .. add  the actual configuration ..
             for name in items:
+
+                # .. log what we are about to do ..
+                logger.info('Adding hot-deployment configuration from `%s` (env. variable found -> ZATO_HOT_DEPLOY_DIR)', name)
 
                 # .. stay on the safe side because, here, we do not know where it will be used ..
                 _fs_safe_name = fs_safe_name(name)
@@ -483,10 +484,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Look up user-defined configuration directories
         items = os.environ.get('ZATO_USER_CONF_DIR', '')
 
+        # Ignore files other than that
+        suffixes = ['ini', 'conf']
+        patterns = ['*.' + elem for elem in suffixes]
+        patterns_str = ', '.join(patterns)
+
         # We have user-config details to process ..
         if items:
-
-            logger.info('Adding user-config from `%s` (env. variable found -> ZATO_USER_CONF_DIR)', items)
 
             # .. support multiple entries ..
             items = items.split(':')
@@ -494,6 +498,18 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             # .. add  the actual configuration ..
             for name in items:
+
+                # .. log what we are about to do ..
+                logger.info('Adding user-config from `%s` (env. variable found -> ZATO_USER_CONF_DIR)', name)
+
+                # .. look up files inside the directory and add the path to each
+                # .. to a list of what should be loaded on startup ..
+                if os.path.exists(name) and os.path.isdir(name):
+                    file_item_list = os.listdir(name)
+                    for file_item in file_item_list:
+                        for suffix in suffixes:
+                            if file_item.endswith(suffix):
+                                self.user_conf_location_extra.add(name)
 
                 # .. stay on the safe side because, here, we do not know where it will be used ..
                 _fs_safe_name = fs_safe_name(name)
@@ -504,7 +520,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 # .. and store the configuration for later use now.
                 pickup_from = {
                     'pickup_from': name,
-                    'patterns': '*.ini, *.conf',
+                    'patterns': patterns_str,
                     'parse_on_pickup': False,
                     'delete_after_pickup': False,
                     'services': 'zato.pickup.update-user-conf',
@@ -582,14 +598,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     pickup_from = _normalise_service_source_path(pickup_from)
                     self.service_sources.append(pickup_from)
 
-        # User-config from ./config/repo/user-config
-        for file_name in os.listdir(self.user_conf_location):
-            conf = get_config(self.user_conf_location, file_name)
-
-            # Not used at all in this type of configuration
-            conf.pop('user_config_items', None)
-
-            self.user_config[get_user_config_name(file_name)] = conf
+        # Read all the user config files that are already available on startup
+        self.read_user_config()
 
         # Convert size of FIFO response buffers to megabytes
         self.fifo_response_buffer_size = int(float(self.fs_server_config.misc.fifo_response_buffer_size) * megabyte)
@@ -597,6 +607,34 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         locally_deployed = self.maybe_on_first_worker(server)
 
         return locally_deployed
+
+# ################################################################################################################################
+
+    def _read_user_config_from_repo(self, dir_name:'str') -> 'None':
+
+        # User-config from ./config/repo/user-config
+        for file_name in os.listdir(dir_name):
+
+            user_config_name = get_user_config_name(file_name)
+            conf = get_config_from_file(dir_name, file_name)
+
+            # Not used at all in this type of configuration
+            conf.pop('user_config_items', None)
+
+            self.user_config[user_config_name] = conf
+
+            logger.info('Read user config `%s` from `%s` (dir:%s)', user_config_name, file_name, dir_name)
+
+# ################################################################################################################################
+
+    def read_user_config(self):
+
+        # Reads config files from the default directory
+        self._read_user_config_from_repo(self.user_conf_location)
+
+        # Reads config files from extra directories pointed to by ZATO_USER_CONF_DIR
+        for dir_name in self.user_conf_location_extra:
+            self._read_user_config_from_repo(dir_name)
 
 # ################################################################################################################################
 
