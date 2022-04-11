@@ -610,7 +610,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _read_user_config_from_repo(self, dir_name:'str') -> 'None':
+    def _read_user_config_from_directory(self, dir_name:'str') -> 'None':
 
         # User-config from ./config/repo/user-config
         for file_name in os.listdir(dir_name):
@@ -631,11 +631,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def read_user_config(self):
 
         # Reads config files from the default directory
-        self._read_user_config_from_repo(self.user_conf_location)
+        self._read_user_config_from_directory(self.user_conf_location)
 
         # Reads config files from extra directories pointed to by ZATO_USER_CONF_DIR
         for dir_name in self.user_conf_location_extra:
-            self._read_user_config_from_repo(dir_name)
+            self._read_user_config_from_directory(dir_name)
 
 # ################################################################################################################################
 
