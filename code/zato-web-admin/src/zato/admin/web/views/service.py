@@ -113,7 +113,7 @@ def _get_channels(client, cluster, id, channel_type):
 
     for item in client.invoke('zato.service.get-channel-list', input_dict):
 
-        if channel_type in('plain_http', 'soap'):
+        if channel_type in ['plain_http']:
             url = reverse('http-soap')
             url += '?connection=channel&transport={}'.format(channel_type)
             url += '&cluster={}'.format(cluster.id)
@@ -258,7 +258,7 @@ def overview(req, service_name):
 
                     setattr(service, 'time_{}_1h'.format(name), value)
 
-            for channel_type in('plain_http', 'soap', 'amqp', 'jms-wmq', 'zmq'):
+            for channel_type in('plain_http', 'amqp', 'jms-wmq', 'zmq'):
                 channels = _get_channels(req.zato.client, req.zato.cluster, service.id, channel_type)
                 getattr(service, channel_type.replace('jms-', '') + '_channels').extend(channels)
 
