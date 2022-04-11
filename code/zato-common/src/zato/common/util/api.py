@@ -342,7 +342,9 @@ def new_cid(bytes:'int'=12, _random:'callable_'=random.getrandbits) -> 'str':
 
 # ################################################################################################################################
 
-def get_user_config_name(file_name):
+def get_user_config_name(name:'str') -> 'str':
+    items = name.split(os.sep)
+    file_name = items[-1]
     return file_name.split('.')[0]
 
 # ################################################################################################################################
@@ -371,15 +373,16 @@ def _get_config(conf, bunchified, needs_user_config, repo_location=None):
 # ################################################################################################################################
 
 def get_config(repo_location, config_name, bunchified=True, needs_user_config=True, crypto_manager=None, secrets_conf=None,
-    raise_on_error=False, log_exception=True, require_exists=True):
+    raise_on_error=False, log_exception=True, require_exists=True, conf_location=None):
     """ Returns the configuration object. Will load additional user-defined config files, if any are available.
     """
     # Default output to produce
     result = Bunch()
 
     try:
-        conf_location = os.path.join(repo_location, config_name)
-        conf_location = os.path.abspath(conf_location)
+        if not conf_location:
+            conf_location = os.path.join(repo_location, config_name)
+            conf_location = os.path.abspath(conf_location)
 
         if require_exists:
             if not os.path.exists(conf_location):
@@ -397,6 +400,11 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
             return result
     else:
         return result
+
+# ################################################################################################################################
+
+def get_config_from_file(conf_location, config_name):
+    return get_config(repo_location=None, config_name=config_name, conf_location=conf_location)
 
 # ################################################################################################################################
 
