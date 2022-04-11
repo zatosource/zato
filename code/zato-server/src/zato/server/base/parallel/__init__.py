@@ -615,8 +615,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # User-config from ./config/repo/user-config
         for file_name in os.listdir(dir_name):
 
+            user_conf_full_path = os.path.join(dir_name, file_name)
             user_config_name = get_user_config_name(file_name)
-            conf = get_config_from_file(dir_name, file_name)
+            conf = get_config_from_file(dir_name, user_conf_full_path)
 
             # Not used at all in this type of configuration
             conf.pop('user_config_items', None)
