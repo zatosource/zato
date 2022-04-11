@@ -57,7 +57,7 @@ class BaseObserver:
     should_wait_for_deleted_paths = False
 
     def __init__(self, manager, channel_config):
-        # type: (FileTransferAPI, Bunch, float) -> None
+        # type: (FileTransferAPI, Bunch) -> None
         self.manager = manager
         self.channel_config = channel_config
         self.channel_id = channel_config.id
@@ -98,6 +98,7 @@ class BaseObserver:
 # ################################################################################################################################
 
     def _start(self, observer_start_args):
+
         for path in self.path_list: # type: str
 
             # Start only for paths that are valid - all invalid ones
