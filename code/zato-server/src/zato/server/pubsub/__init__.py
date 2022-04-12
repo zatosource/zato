@@ -55,7 +55,7 @@ if 0:
     from zato.server.connection.web_socket import WebSocket
     from zato.server.base.parallel import ParallelServer
     from zato.server.pubsub.model import subnone, topiclist
-    from zato.server.pubsub.task import msgiter, PubSubTool
+    from zato.server.pubsub.delivery.task import msgiter, PubSubTool
     from zato.server.service import Service
 
 # ################################################################################################################################
