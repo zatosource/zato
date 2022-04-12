@@ -27,7 +27,7 @@ if 0:
     from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SQLSession
     from zato.common.typing_ import any_, anylist, callable_, commondict, floatnone, optional, stranydict, \
-        strlist, strnone, strtuple, tupnone
+        strlist, strlistempty, strnone, strtuple, tupnone
     from zato.server.connection.http_soap.outgoing import SudsSOAPWrapper
     from zato.server.pubsub.model import Topic
     Column = Column
@@ -169,8 +169,8 @@ class PubSubMessage:
     ext_pub_time_iso: 'str'
     expiration_time_iso: 'str'
 
-    reply_to_sk:   'strlist'
-    deliver_to_sk: 'strlist'
+    reply_to_sk:   'strlistempty'
+    deliver_to_sk: 'strlistempty'
     user_ctx:      'any_'
     zato_ctx:      'any_'
     serialized:    'any_'

@@ -20,7 +20,7 @@ from globre import compile as globre_compile
 from future.utils import iteritems
 
 # Zato
-from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
+from zato.common.api import PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.pubsub import dict_keys
 from zato.common.typing_ import any_, anydict, anylist, callable_, cast_, dict_, intnone, list_, optional, strlist, strtuple
@@ -50,28 +50,6 @@ hook_type_to_method = {
 
 # ################################################################################################################################
 
-_service_read_messages_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-gd'
-_service_read_messages_non_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-non-gd'
-
-_service_read_message_gd = 'zato.pubsub.message.get-from-queue-gd'
-_service_read_message_non_gd = 'zato.pubsub.message.get-from-queue-non-gd'
-
-_service_delete_message_gd = 'zato.pubsub.message.queue-delete-gd'
-_service_delete_message_non_gd = 'zato.pubsub.message.queue-delete-non-gd'
-
-# ################################################################################################################################
-
-_pub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.PUBLISHER.id)
-_sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
-
-# ################################################################################################################################
-
-_update_attrs = (
-    'data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_reply_to', 'mime_type', 'expiration', 'expiration_time'
-)
-
-# ################################################################################################################################
-
 _does_not_exist = object()
 
 # ################################################################################################################################
@@ -82,8 +60,6 @@ default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 # ################################################################################################################################
 
 _PRIORITY=PUBSUB.PRIORITY
-_JSON=DATA_FORMAT.JSON
-_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 
 _pri_min=_PRIORITY.MIN
 _pri_max=_PRIORITY.MAX
