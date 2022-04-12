@@ -434,12 +434,10 @@ class PubSubTool:
             gd_msg = GDMessage(sub_key, topic_name, msg.get_value())
             delivery_list = self.delivery_lists[sub_key]
             delivery_list.add(gd_msg) # type: ignore
-            logger.info('Adding a GD message `%s` to delivery_list=%s (%s)',
-                gd_msg.pub_msg_id, hex(id(delivery_list)), sub_key)
+            logger.info('Adding a GD message `%s` to delivery_list=%s (%s)', gd_msg.pub_msg_id, hex(id(delivery_list)), sub_key)
             count += 1
 
-        logger.info('Pushing %d GD message{}to task:%s; msg_ids:%s'.format(
-            ' ' if count==1 else 's '), count, sub_key, msg_ids)
+        logger.info('Pushing %d GD message{}to task:%s; msg_ids:%s'.format(' ' if count==1 else 's '), count, sub_key, msg_ids)
 
 # ################################################################################################################################
 
