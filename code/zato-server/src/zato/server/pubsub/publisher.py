@@ -175,11 +175,11 @@ class PubRequest(Model):
     group_id:          strnone = ''
     position_in_group: intnone = PUBSUB.DEFAULT.PositionInGroup
 
-    reply_to_sk:   strlistempty = list_field()
-    deliver_to_sk: strlistempty = list_field()
+    reply_to_sk:   strlistempty = list_field() # type: ignore
+    deliver_to_sk: strlistempty = list_field() # type: ignore
 
     user_ctx:      anynone    = None
-    zato_ctx:      anydict = dict_field()
+    zato_ctx:      anydict = dict_field() # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
