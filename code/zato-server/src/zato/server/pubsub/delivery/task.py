@@ -296,8 +296,8 @@ class DeliveryTask:
                 if msg.delivery_count >= self.delivery_max_retry:
                     to_delete.append(msg)
 
-            to_deliver:anylist = []
-            to_skip:anylist    = []
+            to_deliver:'anylist' = []
+            to_skip:'anylist'    = []
 
             messages = {
                 _hook_action.DELETE: to_delete,
@@ -414,12 +414,12 @@ class DeliveryTask:
 # ################################################################################################################################
 
     def run(self,
-            default_sleep_time=0.1,          # type: float
-            status_code=run_deliv_sc,        # type: any_
-            reason_code=run_deliv_rc,        # type: any_
-            _notify_methods=_notify_methods, # type: anytuple
-            deliv_exc_msg=deliv_exc_msg      # type: str
-        ) -> 'None':
+        default_sleep_time=0.1,          # type: float
+        status_code=run_deliv_sc,        # type: any_
+        reason_code=run_deliv_rc,        # type: any_
+        _notify_methods=_notify_methods, # type: anytuple
+        deliv_exc_msg=deliv_exc_msg      # type: str
+    ) -> 'None':
         """ Runs the delivery task's main loop.
         """
         # Fill out Python-level metadata first
@@ -557,8 +557,6 @@ class DeliveryTask:
                     # .. thus, we can wait until one arrives.
                     sleep(default_sleep_time)
 
-# ################################################################################################################################
-
         except Exception:
             error_msg = 'Exception in delivery task for sub_key:`%s`, e:`%s`'
             e_formatted = format_exc()
@@ -577,9 +575,15 @@ class DeliveryTask:
 # ################################################################################################################################
 
     def clear(self) -> 'None':
+
+        # For logging purposes ..
         gd, non_gd = self.get_queue_depth()
-        logger.info('Removing messages from delivery list for sub_key:`%s, gd:%d, ngd:%d `%s`', self.sub_key, gd, non_gd,
-            [elem.pub_msg_id for elem in self.delivery_list])
+
+        # .. log  what we are about to do ..
+        logger.info('Removing messages from delivery list for sub_key:`%s, gd:%d, ngd:%d `%s`',
+            self.sub_key, gd, non_gd, [elem.pub_msg_id for elem in self.delivery_list])
+
+        # .. and clear the delivery list now.
         self.delivery_list.clear()
 
 # ################################################################################################################################
@@ -597,6 +601,8 @@ class DeliveryTask:
                 non_gd += 1
 
         return gd, non_gd
+
+# ################################################################################################################################
 
     def get_gd_queue_depth(self) -> int:
         return self.get_queue_depth()[0]
