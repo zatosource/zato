@@ -56,29 +56,11 @@ _default_pri=PUBSUB.PRIORITY.DEFAULT
 _pri_min=PUBSUB.PRIORITY.MIN
 _pri_max=PUBSUB.PRIORITY.MAX
 
-_service_read_messages_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-gd'
-_service_read_messages_non_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-non-gd'
-
-_service_read_message_gd = 'zato.pubsub.message.get-from-queue-gd'
-_service_read_message_non_gd = 'zato.pubsub.message.get-from-queue-non-gd'
-
-_service_delete_message_gd = 'zato.pubsub.message.queue-delete-gd'
-_service_delete_message_non_gd = 'zato.pubsub.message.queue-delete-non-gd'
-
-# ################################################################################################################################
-
-_pub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.PUBLISHER.id)
-_sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
-
 # ################################################################################################################################
 
 _update_attrs = (
     'data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_reply_to', 'mime_type', 'expiration', 'expiration_time'
 )
-
-# ################################################################################################################################
-
-_does_not_exist = object()
 
 # ################################################################################################################################
 
