@@ -2,6 +2,7 @@
 .PHONY: static-check
 
 PY_DIR=$(CURDIR)/../bin
+Zato_Package_Name=zato-broker
 
 pylint:
 	echo Running pylint in zato-broker
@@ -9,6 +10,10 @@ pylint:
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-broker/src/zato/broker
 
-static-check:
-	echo "Running static checks in zato-broker"
+flake8:
+	echo "Running flake8 checks in $(Zato_Package_Name)"
 	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+
+static-check:
+	echo "Running static checks in $(Zato_Package_Name)"
+	$(MAKE) flake8

@@ -3,7 +3,9 @@
 MAKEFLAGS += --silent
 
 default: build
+
 PY_DIR=$(CURDIR)/../bin
+Zato_Package_Name=zato-cy
 
 build:
 	$(PY_DIR)/py $(CURDIR)/setup.py develop
@@ -28,17 +30,21 @@ simpleio-tests:
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/test_*.py -s
 
 run-tests:
-	echo "Running tests in zato-cy"
+	echo "Running tests in $(Zato_Package_Name)"
 	$(MAKE) reqresp-tests
 	$(MAKE) simpleio-tests
 	echo
 
 pylint:
-	echo Running pylint in zato-cy
+	echo Running pylint in $(Zato_Package_Name)
 	$(PY_DIR)/pylint --verbose \
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-cy/src/zato/cy
 
-static-check:
-	echo "Running static checks in zato-cy"
+flake8:
+	echo "Running flake8 checks in $(Zato_Package_Name)"
 	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+
+static-check:
+	echo "Running static checks in $(Zato_Package_Name)"
+	$(MAKE) flake8

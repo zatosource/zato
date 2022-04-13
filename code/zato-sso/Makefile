@@ -2,6 +2,7 @@
 .PHONY: build
 
 PY_DIR=$(CURDIR)/../bin
+Zato_Package_Name=zato-sso
 
 run-tests:
 	$(PY_DIR)/py $(CURDIR)/test/zato/test_command_line.py && \
@@ -25,11 +26,15 @@ run-tests:
 	$(PY_DIR)/py $(CURDIR)/test/zato/test_password_reset.py
 
 pylint:
-	echo Running pylint in zato-sso
+	echo Running pylint in $(Zato_Package_Name)
 	$(PY_DIR)/pylint --verbose \
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-sso/src/zato/sso
 
-static-check:
-	echo "Running static checks in zato-sso"
+flake8:
+	echo "Running flake8 checks in $(Zato_Package_Name)"
 	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+
+static-check:
+	echo "Running static checks in $(Zato_Package_Name)"
+	$(MAKE) flake8

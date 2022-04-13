@@ -2,13 +2,18 @@
 .PHONY: static-check
 
 PY_DIR=$(CURDIR)/../bin
+Zato_Package_Name=zato-zmq
 
 pylint:
-	echo Running pylint in zato-zmq
+	echo Running pylint in $(Zato_Package_Name)
 	$(PY_DIR)/pylint --verbose \
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-zmq/src/zato/zmq_
 
-static-check:
-	echo "Running static checks in zato-zmq"
+flake8:
+	echo "Running flake8 checks in $(Zato_Package_Name)"
 	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+
+static-check:
+	echo "Running static checks in $(Zato_Package_Name)"
+	$(MAKE) flake8
