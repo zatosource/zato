@@ -30,7 +30,7 @@ from zato.common.util.time_ import utcnow_as_ms
 # ################################################################################################################################
 
 if 0:
-    from zato.server.pubsub.task import msgnone
+    from zato.server.pubsub.delivery.message import msgnone
 
 # ################################################################################################################################
 

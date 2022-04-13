@@ -52,7 +52,7 @@ _hook_action = PUBSUB.HOOK_ACTION
 _notify_methods = (PUBSUB.DELIVERY_METHOD.NOTIFY.id, PUBSUB.DELIVERY_METHOD.WEB_SOCKET.id)
 
 run_deliv_sc = PUBSUB.RunDeliveryStatus.StatusCode
-run_deliv_rc = PUBSUB.RunDeliveryStatus.ReasonCode
+ReasonCode = PUBSUB.RunDeliveryStatus.ReasonCode
 
 deliv_exc_msg = 'Exception {}/{} in delivery iter #{} for `{}` sk:{} -> {}'
 getcurrent = cast_('callable_', getcurrent)
@@ -248,10 +248,72 @@ class DeliveryTask:
 
 # ################################################################################################################################
 
+    def _get_reason_code_from_exception(self, e:'Exception') -> 'int':
+
+        if isinstance(e, IOError):
+            reason_code = ReasonCode.Error_IO
+        elif isinstance(e, RuntimeInvocationError):
+            reason_code = ReasonCode.Error_Runtime_Invoke
+        else:
+            reason_code = ReasonCode.Error_Other
+
+        return reason_code
+
+# ################################################################################################################################
+
+    def _get_messages_to_delete(self, current_batch:'msglist') -> 'msglist':
+
+        # There may be requests to delete some of messages while we are running and we obtain the list of
+        # such messages here.
+        with self.interrupt_lock:
+            to_delete = self.delete_requested[:]
+            self.delete_requested.clear()
+
+        # Go through each message and check if any has reached our delivery_max_retry.
+        # Any such message should be deleted so we add it to to_delete. Note that we do it here
+        # because we want for a sub hook to have access to them.
+        for msg in current_batch:
+            if msg.delivery_count >= self.delivery_max_retry:
+                to_delete.append(msg)
+
+        return to_delete
+
+# ################################################################################################################################
+
+    def _invoke_before_delivery_hook(
+        self,
+        current_batch, # type: msglist
+        hook,          # type: callable_
+        to_delete,     # type: msglist
+        to_deliver,    # type: msglist
+        to_skip        # type: msglist
+    ) -> 'None':
+
+        messages = {
+            _hook_action.DELETE: to_delete,
+            _hook_action.DELIVER: to_deliver,
+            _hook_action.SKIP: to_skip,
+        } # type: dict_[str, msglist]
+
+        # We pass the dict to the hook which will in turn update in place the lists that the dict contains.
+        # This is why this method does not return anything, i.e. the lists are modified in place.
+        self.pubsub.invoke_before_delivery_hook(
+            hook, self.sub_config['topic_id'], self.sub_key, current_batch, messages)
+
+# ################################################################################################################################
+
+    def _log_delivered_success(self, len_delivered:'int', delivered_msg_id_list:'strlist') -> 'None':
+
+        suffix = ' ' if len_delivered == 1 else 's '
+        logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [lend:%d]',
+            len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name,
+            self.sub_config['endpoint_name'], self.len_delivered)
+
+# ################################################################################################################################
+
     def run_delivery(self,
-        deliver_pubsub_msg=None,  # type: callnone
-        status_code=run_deliv_sc, # type: any_
-        reason_code=run_deliv_rc  # type: any_
+        deliver_pubsub_msg=None, # type: callnone
+        status_code=run_deliv_sc # type: any_
     ) -> 'DeliveryResultCtx':
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
@@ -272,7 +334,9 @@ class DeliveryTask:
 
             # Deliver up to that many messages in one batch
             delivery_batch_size = self.sub_config['delivery_batch_size'] # type: int
+
             logger.info('Looking for current batch in delivery_list=%s (%s)', hex(id(self.delivery_list)), self.sub_key)
+
             current_batch = self.delivery_list[:delivery_batch_size] # type: ignore
             current_batch = cast_('msglist', current_batch)
 
@@ -280,42 +344,28 @@ class DeliveryTask:
             # whether the message should be delivered, skipped in this iteration or perhaps deleted altogether
             # without even trying to deliver it. If there is no hook, none of messages will be skipped or deleted.
 
-            # There may be requests to delete some of messages while we are running and we obtain the list of
-            # such messages here.
-            with self.interrupt_lock:
-                to_delete = self.delete_requested[:]
-                self.delete_requested.clear()
-
-            # An optional pub/sub hook - note that we are checking it here rather than once upfront
+            # An optional pub/sub hook - note that we are checking it here rather than in __init__
             # because users may change it any time for a topic.
             hook = self.pubsub.get_before_delivery_hook(self.sub_key)
 
-            # Go through each message and check if any has reached our delivery_max_retry.
-            # Any such message should be deleted so we add it to to_delete. Note that we do it here
-            # because we want for a sub hook to have access to them.
-            for msg in current_batch:
-                if msg.delivery_count >= self.delivery_max_retry:
-                    to_delete.append(msg)
+            # Look up all the potential messages that we need to delete.
+            to_delete = self._get_messages_to_delete(current_batch)
 
-            to_deliver:'anylist' = []
-            to_skip:'anylist'    = []
+            # Unlike to_delete, which has to be computed dynamically,
+            # these two can be initialized to their respective empty lists directly.
+            to_deliver:'msglist' = []
+            to_skip:'msglist'    = []
 
-            messages = {
-                _hook_action.DELETE: to_delete,
-                _hook_action.DELIVER: to_deliver,
-                _hook_action.SKIP: to_skip,
-            } # type: dict_[str, msglist]
+            # There is a hook so we can invoke it - it will update in place the lists that we pass to it ..
+            if hook:
+                self._invoke_before_delivery_hook(current_batch, hook, to_delete, to_deliver, to_skip)
 
-            # Without a hook we will always try to deliver all messages that we have in a given batch
-            if not hook:
-                to_deliver[:] = current_batch[:]
+            # .. otherwise, without a hook, we will always try to deliver all messages that we have in a given batch
             else:
-                # There is a hook so we can invoke it - it will update the 'messages' dict in place
-                self.pubsub.invoke_before_delivery_hook(
-                    hook, self.sub_config['topic_id'], self.sub_key, current_batch, messages)
+                to_deliver[:] = current_batch[:]
 
-            # Delete these messages first, before starting any delivery, either because the hooks told us to
-            # or because self.delete_requested was not empty before this iteration.
+            # Delete these messages first, before starting any delivery, either because self._get_messages_to_delete
+            # returned a non-empty list in this iteration or because the hook did.
             if to_delete:
                 self._delete_messages(to_delete)
 
@@ -326,19 +376,14 @@ class DeliveryTask:
             deliver_pubsub_msg(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
 
         except Exception as e:
+
             # Do not attempt to deliver any other message in case of an error. Our parent will sleep for a small amount of
             # time and then re-run us, thanks to which the next time we run we will again iterate over all the messages
             # currently queued up, including the ones that we were not able to deliver in current iteration.
 
+            result.reason_code = self._get_reason_code_from_exception(e)
             result.status_code = status_code.Error
             result.exception_list.append(e)
-
-            if isinstance(e, IOError):
-                result.reason_code = reason_code.Error_IO
-            elif isinstance(e, RuntimeInvocationError):
-                result.reason_code = reason_code.Error_Runtime_Invoke
-            else:
-                result.reason_code = reason_code.Error_Other
 
         else:
             # On successful delivery, remove these messages from SQL and our own delivery_list
@@ -350,7 +395,7 @@ class DeliveryTask:
 
             except Exception as update_err:
                 result.status_code = status_code.Error
-                result.reason_code = reason_code.Error_Other
+                result.reason_code = ReasonCode.Error_Other
                 result.exception_list.append(update_err)
             else:
                 with self.delivery_lock:
@@ -368,16 +413,17 @@ class DeliveryTask:
                     logger.warning('Could not remove delivered messages from self.delivery_list `%s` (%s) -> `%s`',
                         to_deliver, self.delivery_list, result.exception_list)
                 else:
+                    # This is reusable.
                     len_delivered = len(delivered_msg_id_list)
-                    suffix = ' ' if len_delivered == 1 else 's '
-                    logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [lend:%d]',
-                        len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name,
-                        self.sub_config['endpoint_name'], self.len_delivered)
 
+                    # Log success ..
+                    self._log_delivered_success(len_delivered, delivered_msg_id_list)
+
+                    # .. update internal metadata ..
                     self.len_batches += 1
                     self.len_delivered += len_delivered
 
-                    # Indicates that we have successfully delivered all messages currently queued up
+                    # .. and indicate that we have successfully delivered all messages currently queued up
                     # and our delivery list is currently empty.
                     result.status_code = status_code.OK
 
@@ -417,12 +463,12 @@ class DeliveryTask:
     def run(self,
         default_sleep_time=0.1,          # type: float
         status_code=run_deliv_sc,        # type: any_
-        reason_code=run_deliv_rc,        # type: any_
         _notify_methods=_notify_methods, # type: anytuple
         deliv_exc_msg=deliv_exc_msg      # type: str
     ) -> 'None':
         """ Runs the delivery task's main loop.
         """
+
         # Fill out Python-level metadata first
         _greenlet_name = getcurrent().name # type: ignore
         _greenlet_name = cast_('str', _greenlet_name)
@@ -492,11 +538,11 @@ class DeliveryTask:
                         # This was a runtime invocation error - for instance, a low-level WebSocket exception,
                         # which is unrecoverable and we need to stop our task. When the client reconnects,
                         # the delivery will pick up where we left.
-                        elif result.reason_code == reason_code.Error_Runtime_Invoke:
+                        elif result.reason_code == ReasonCode.Error_Runtime_Invoke:
                             self.stop()
 
                         # Sleep for a moment because we have just run out of all messages.
-                        elif result.reason_code == reason_code.No_Msg:
+                        elif result.reason_code == ReasonCode.No_Msg:
                             sleep(default_sleep_time)
 
                         # Otherwise, sleep for a longer time because our endpoint must have returned an error.
@@ -531,7 +577,7 @@ class DeliveryTask:
                                     # .. sleep for a while but only if this was an error (not a warning).
                                     if result.status_code == status_code.Error:
 
-                                        if result.reason_code == reason_code.Error_IO:
+                                        if result.reason_code == ReasonCode.Error_IO:
                                             sleep_time = self.wait_sock_err
                                         else:
                                             sleep_time = self.wait_non_sock_err
