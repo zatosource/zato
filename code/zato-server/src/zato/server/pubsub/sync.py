@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,9 +15,6 @@ from traceback import format_exc
 # gevent
 from gevent import sleep
 from gevent.lock import RLock
-
-# Python 2/3 compatibility
-from future.utils import iteritems, itervalues
 
 # Zato
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
@@ -267,7 +264,7 @@ class InRAMSync:
             _has_topic_msg = False # Was the ID found for at least one topic
             _has_sk_msg = False     # Ditto but for sub_keys
 
-            for _topic_msg_set in itervalues(self.topic_id_msg_id):
+            for _topic_msg_set in self.topic_id_msg_id.values():
                 try:
                     _ = _topic_msg_set.remove(msg_id)
                 except KeyError:
@@ -275,7 +272,7 @@ class InRAMSync:
                 else:
                     _has_topic_msg = True
 
-            for _sk_msg_set in itervalues(self.sub_key_to_msg_id):
+            for _sk_msg_set in self.sub_key_to_msg_id.values():
                 try:
                     _ = _sk_msg_set.remove(msg_id)
                 except KeyError:
@@ -545,7 +542,7 @@ class InRAMSync:
                     # Calling it once will suffice.
                     now = _utcnow()
 
-                    for _, msg in iteritems(self.msg_id_to_msg):
+                    for _, msg in self.msg_id_to_msg.items():
 
                         if now >= msg['expiration_time']:
 
