@@ -522,8 +522,10 @@ class DeliveryTask:
         """
 
         # Fill out Python-level metadata first
-        _greenlet_name = getcurrent().name
+        _current_greenlet = cast_('any_', getcurrent())
+        _greenlet_name = _current_greenlet.name
         _greenlet_name = cast_('str', _greenlet_name)
+
         self.py_object = '{}; {}; {}'.format(current_thread().name, _greenlet_name, self.python_id)
 
         logger.info('Starting delivery task for sub_key:`%s` (%s, %s, %s)',
