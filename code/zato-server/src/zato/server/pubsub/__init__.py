@@ -118,7 +118,7 @@ class PubSub:
         *,
         sync_max_iters=None,       # type: intnone
         spawn_trigger_notify=True # type: bool
-        ) -> 'None':
+    ) -> 'None':
 
         self.cluster_id = cluster_id
         self.server = server
@@ -290,7 +290,7 @@ class PubSub:
         endpoint_id,      # type: int
         topic_name,       # type: str
         needs_error=True, # type: bool
-        ) -> 'subnone':
+    ) -> 'subnone':
 
         with self.lock:
             for sub in self.get_all_subscriptions().values():
@@ -669,7 +669,7 @@ class PubSub:
         sub_key,          # type: str
         ignore_missing,   # type: bool
         _invalid=object() # type: any_
-        ) -> 'subnone':
+    ) -> 'subnone':
         """ Deletes a subscription from the list of subscription. By default, it is not an error to call
         the method with an invalid sub_key. Must be invoked with self.lock held.
         """
@@ -868,7 +868,7 @@ class PubSub:
         self,
         sub_key, # type: str
         _endpoint_type=_end_srv_id # type: str
-        ) -> 'None':
+    ) -> 'None':
 
         if self.service_pubsub_tool:
             self.service_pubsub_tool.add_sub_key(sub_key)
@@ -897,7 +897,7 @@ class PubSub:
         endpoint_id=0, # type: int
         _pub_role=_pub_role, # type: anytuple
         _sub_role=_sub_role  # type: anytuple
-        ) -> 'str | bool':
+    ) -> 'str | bool':
         """ An internal function that decides whether an endpoint, a security definition,
         or a WSX channel are allowed to publish or subscribe to topics.
         """
@@ -1030,7 +1030,7 @@ class PubSub:
         channel_name,     # type: str
         pub_client_id,    # type: str
         wsx_info          # type: anydict
-        ) -> 'None':
+    ) -> 'None':
         """ Adds to SQL information that a given WSX client handles messages for sub_key.
         This information is transient - it will be dropped each time a WSX client disconnects
         """
@@ -1120,7 +1120,7 @@ class PubSub:
         self,
         config, # type: stranydict
         _endpoint_type=PUBSUB.ENDPOINT_TYPE # type: type_[PUBSUB.ENDPOINT_TYPE]
-        ) -> 'None':
+    ) -> 'None':
         """ Low-level implementation of self.set_sub_key_server - must be called with self.lock held.
         """
         sub = self._get_subscription_by_sub_key(config['sub_key'])
@@ -1231,7 +1231,7 @@ class PubSub:
         sub_key, # type: str
         is_wsx,  # type: bool
         _wsx=PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id # type: str
-        ) -> 'None':
+    ) -> 'None':
         """ Adds to self.sub_key_servers information from ODB about which server handles input sub_key.
         Must be called with self.lock held.
         """
@@ -1315,7 +1315,7 @@ class PubSub:
         last_sql_run, # type: float
         pub_time_max, # type: float
         ignore_list   # type: intset
-        ) -> 'anytuple':
+    ) -> 'anytuple':
         """ Returns all SQL messages queued up for all keys from sub_key_list.
         """
         if not session:
@@ -1338,7 +1338,7 @@ class PubSub:
         session:'SASession',
         sub_key:'str',
         pub_time_max:'float'
-        ) -> 'anytuple':
+    ) -> 'anytuple':
         return _get_sql_msg_ids_by_sub_key(session, self.server.cluster_id, sub_key, 0.0, pub_time_max).\
                all()
 
@@ -1350,7 +1350,7 @@ class PubSub:
         sub_key,      # type: str
         pub_time_max, # type: float
         msg_id_list   # type: strlist
-        ) -> 'anytuple':
+    ) -> 'anytuple':
         return _get_sql_messages_by_msg_id_list(session, self.server.cluster_id, sub_key, pub_time_max, msg_id_list).\
                all()
 
@@ -1360,7 +1360,7 @@ class PubSub:
         self,
         sub_key,                  # type: str
         delivered_pub_msg_id_list # type: strlist
-        ) -> 'None':
+    ) -> 'None':
         """ Sets in SQL delivery status of a given message to True.
         """
         with closing(self.new_session_func()) as session: # type: ignore
@@ -1378,7 +1378,7 @@ class PubSub:
         non_gd_msg_list, # type: dictlist
         error_source='', # type: str
         _logger=logger   # type: logging.Logger
-        ) -> 'None':
+    ) -> 'None':
         """ Stores in RAM up to input non-GD messages for each sub_key. A backlog queue for each sub_key
         cannot be longer than topic's max_depth_non_gd and overflowed messages are not kept in RAM.
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
@@ -1540,7 +1540,7 @@ class PubSub:
         messages, # type: anydict
         actions=tuple(PUBSUB.HOOK_ACTION()), # type: strtuple
         _deliver=PUBSUB.HOOK_ACTION.DELIVER  # type: str
-        ) -> 'None':
+    ) -> 'None':
         """ Invokes a hook service for each message from a batch of messages possibly to be delivered and arranges
         each one to a specific key in messages dict.
         """
@@ -1575,7 +1575,7 @@ class PubSub:
         topic_id,   # type: int
         sub_key='', # type: str
         sub=None    # type: subnone
-        ) -> 'any_':
+    ) -> 'any_':
         sub = sub if sub else self._get_subscription_by_sub_key(sub_key)
         return hook(topic=self._get_topic_by_id(topic_id), sub=sub)
 
@@ -1639,7 +1639,7 @@ class PubSub:
         source,       # type: str
         pub_time_max, # type: float
         _float_str=PUBSUB.FLOAT_STRING_CONVERT # type: str
-        ) -> 'None':
+    ) -> 'None':
         """ Invoked by the after-publish service in case there was an error with letting
         a delivery task know about GD messages it was to handle. Resets the topic's
         sync_has_gd_msg flag to True to make sure the notification will be resent
@@ -1676,7 +1676,7 @@ class PubSub:
         value,               # type: bool
         source,              # type: str
         gd_pub_time_max=0.0  # type: float
-        ) -> 'None':
+    ) -> 'None':
         """ Updates a given topic's flags indicating that a message has been published since the last sync.
         Must be called with self.lock held.
         """
@@ -1696,7 +1696,7 @@ class PubSub:
         value,          # type: bool
         source,         # type: str
         gd_pub_time_max # type: float
-        ) -> 'None':
+    ) -> 'None':
         with self.lock:
             self._set_sync_has_msg(topic_id, is_gd, value, source, gd_pub_time_max)
 
@@ -2043,7 +2043,7 @@ class PubSub:
         has_gd,     # type: bool
         *args,      # type: any_
         **kwargs    # type: any_
-        ) -> 'any_':
+    ) -> 'any_':
         """ Looks up messages in subscriber's queue by input criteria without deleting them from the queue.
         """
         service_name = _service_read_messages_gd if has_gd else _service_read_messages_non_gd
@@ -2069,7 +2069,7 @@ class PubSub:
         has_gd,     # type: bool
         *args,      # type: any_
         **kwargs    # type: any_
-        ) -> 'any_':
+    ) -> 'any_':
         """ Returns details of a particular message without deleting it from the subscriber's queue.
         """
         # Forward reference
@@ -2136,7 +2136,7 @@ class PubSub:
         topic_name, # type: str
         _find_wsx_environ=find_wsx_environ, # type: callable_
         **kwargs # type: any_
-        ) -> 'str':
+    ) -> 'str':
 
         # Forward reference
         wsgi_environ = {} # type: stranydict
@@ -2209,7 +2209,7 @@ class PubSub:
         sub_key, # type: str
         service, # type: Service
         _find_wsx_environ=find_wsx_environ # type: callable_
-        ) -> 'None':
+    ) -> 'None':
         """ Invoked by WSX clients that want to resume deliveries of their messages after they reconnect.
         """
         # Get metadata and the WebSocket itself
@@ -2251,7 +2251,7 @@ class PubSub:
         max_depth_gd=_ps_default.TOPIC_MAX_DEPTH_GD,               # type: int
         max_depth_non_gd=_ps_default.TOPIC_MAX_DEPTH_NON_GD,       # type: int
         pub_buffer_size_gd=_ps_default.PUB_BUFFER_SIZE_GD,         # type: int
-        ) -> 'None':
+    ) -> 'None':
 
         _ = self.invoke_service('zato.pubsub.topic.create', {
             'cluster_id': self.server.cluster_id,
