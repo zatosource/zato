@@ -32,7 +32,8 @@ from zato.server.pubsub.model import DeliveryResultCtx
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, boolnone, callable_, dict_, dictlist, strlist, tuple_
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, boolnone, callable_, callnone, dict_, dictlist, \
+         strlist, tuple_
     from zato.server.pubsub import PubSub
     from zato.server.pubsub.delivery.message import GDMessage, Message
     from zato.server.pubsub.delivery.tool import PubSubTool, SortedList
@@ -248,7 +249,7 @@ class DeliveryTask:
 # ################################################################################################################################
 
     def run_delivery(self,
-            deliver_pubsub_msg=None,  # type: callable_
+            deliver_pubsub_msg=None,  # type: callnone
             status_code=run_deliv_sc, # type: any_
             reason_code=run_deliv_rc  # type: any_
         ) -> 'DeliveryResultCtx':
