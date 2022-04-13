@@ -34,10 +34,8 @@ from zato.server.pubsub.model import DeliveryResultCtx
 if 0:
     from zato.common.typing_ import any_, anydict, anylist, boolnone, callable_, callnone, dict_, dictlist, \
          strlist, tuple_
-    from zato.server.pubsub import PubSub
     from zato.server.pubsub.delivery.message import GDMessage, Message
     from zato.server.pubsub.delivery._sorted_list import SortedList
-    from zato.server.pubsub.delivery.tool import PubSubTool
     GDMessage = GDMessage
 
 # ################################################################################################################################
@@ -73,20 +71,26 @@ sqlmsgiter = iterable_['SQLRow']
 class DeliveryTask:
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """
-    def __init__(self,
-        pubsub_tool,   # type: PubSubTool
-        pubsub,        # type: PubSub
+    def __init__(
+        self,
+        *,
+        sub_config,    # type: anydict
         sub_key,       # type: str
         delivery_lock, # type: RLock
         delivery_list, # type: SortedList
         deliver_pubsub_msg,              # type: callable_
         confirm_pubsub_msg_delivered_cb, # type: callable_
-        sub_config # type: anydict
+        enqueue_initial_messages_func,   # type: callable_
+        pubsub_set_to_delete,               # type: callable_
+        pubsub_get_before_delivery_hook,    # type: callable_
+        pubsub_invoke_before_delivery_hook, # type: callable_
     ) -> 'None':
 
         self.keep_running = True
-        self.pubsub_tool = pubsub_tool
-        self.pubsub = pubsub
+        self.enqueue_initial_messages_func = enqueue_initial_messages_func
+        self.pubsub_set_to_delete = pubsub_set_to_delete
+        self.pubsub_get_before_delivery_hook = pubsub_get_before_delivery_hook
+        self.pubsub_invoke_before_delivery_hook = pubsub_invoke_before_delivery_hook
         self.sub_key = sub_key
         self.delivery_lock = delivery_lock
         self.delivery_list = delivery_list
@@ -148,7 +152,7 @@ class DeliveryTask:
         logger.info('Deleting message(s) `%s` from `%s` (%s)', to_delete, self.sub_key, self.topic_name)
 
         # Mark as deleted in SQL
-        self.pubsub.set_to_delete(self.sub_key, [msg.pub_msg_id for msg in to_delete])
+        self.pubsub_set_to_delete(self.sub_key, [msg.pub_msg_id for msg in to_delete])
 
         # Delete from our in-RAM delivery list
         for msg in to_delete:
@@ -301,7 +305,7 @@ class DeliveryTask:
 
         # We pass the dict to the hook which will in turn update in place the lists that the dict contains.
         # This is why this method does not return anything, i.e. the lists are modified in place.
-        self.pubsub.invoke_before_delivery_hook(
+        self.pubsub_invoke_before_delivery_hook(
             hook, self.sub_config['topic_id'], self.sub_key, current_batch, messages)
 
 # ################################################################################################################################
@@ -350,7 +354,7 @@ class DeliveryTask:
 
             # An optional pub/sub hook - note that we are checking it here rather than in __init__
             # because users may change it any time for a topic.
-            hook = self.pubsub.get_before_delivery_hook(self.sub_key)
+            hook = self.pubsub_get_before_delivery_hook(self.sub_key)
 
             # Look up all the potential messages that we need to delete.
             to_delete = self._get_messages_to_delete(current_batch)
@@ -543,7 +547,7 @@ class DeliveryTask:
         #
         # Since this is about messages taken from the database, by definition, all of them they must be GD ones.
         #
-        self.pubsub_tool.enqueue_initial_messages(self.sub_key, self.topic_name, self.sub_config['endpoint_name'])
+        self.enqueue_initial_messages_func(self.sub_key, self.topic_name, self.sub_config['endpoint_name'])
 
         try:
             while self.keep_running:
