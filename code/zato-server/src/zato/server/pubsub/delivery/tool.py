@@ -86,12 +86,12 @@ class PubSubTool:
     """ A utility object for pub/sub-related tasks.
     """
     def __init__(self,
-            pubsub,        # type: PubSub
-            parent,        # type: any_
-            endpoint_type, # type: str
-            is_for_services=False,  # type: bool
-            deliver_pubsub_msg=None # type: callable_
-        ) -> 'None':
+        pubsub,        # type: PubSub
+        parent,        # type: any_
+        endpoint_type, # type: str
+        is_for_services=False,  # type: bool
+        deliver_pubsub_msg=None # type: callable_
+    ) -> 'None':
         self.pubsub = pubsub
         self.parent = parent # This is our parent, e.g. an individual WebSocket on whose behalf we execute
         self.endpoint_type = endpoint_type
@@ -385,7 +385,7 @@ class PubSubTool:
         sub_key_list, # type: strlist
         pub_time_max, # type: float
         session=None  # type: SASession
-        ) -> 'sqlmsgiter':
+    ) -> 'sqlmsgiter':
         """ Part of the low-level implementation of enqueue_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
 
