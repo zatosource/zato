@@ -25,6 +25,8 @@ from zato.common.odb.api import SQLRow
 from zato.common.typing_ import cast_, list_
 from zato.common.util.api import grouper
 from zato.common.util.time_ import utcnow_as_ms
+from zato.server.pubsub.delivery.message import GDMessage, NonGDMessage
+from zato.server.pubsub.delivery.task import DeliveryTask
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,8 +37,7 @@ if 0:
     from zato.common.pubsub import HandleNewMessageCtx
     from zato.common.typing_ import any_, boolnone, callable_, dict_, dictlist, intset, set_, strlist, tuple_
     from zato.server.pubsub import PubSub
-    from zato.server.pubsub.delivery.message import GDMessage, Message, NonGDMessage
-    from zato.server.pubsub.delivery.task import DeliveryTask
+    from zato.server.pubsub.delivery.message import Message
 
 # ################################################################################################################################
 # ################################################################################################################################
