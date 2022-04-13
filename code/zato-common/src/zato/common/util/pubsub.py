@@ -190,7 +190,7 @@ def get_priority(
     _pri_min=_pri_min, # type: int
     _pri_max=_pri_max, # type: int
     _pri_def=_pri_def  # type: int
-    ) -> 'int':
+) -> 'int':
     """ Get and validate message priority.
     """
     if priority:
@@ -207,7 +207,8 @@ def get_expiration(
     cid:'str',
     expiration:'intnone',
     topic_limit_message_expiry:'int',
-    default_expiration:'int'=_default_expiration) -> 'int':
+    default_expiration:'int'=_default_expiration
+) -> 'int':
     """ Get and validate message expiration.
     """
     expiration = expiration or 0
