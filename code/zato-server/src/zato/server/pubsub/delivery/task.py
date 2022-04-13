@@ -73,15 +73,15 @@ class DeliveryTask:
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """
     def __init__(self,
-            pubsub_tool,   # type: PubSubTool
-            pubsub,        # type: PubSub
-            sub_key,       # type: str
-            delivery_lock, # type: RLock
-            delivery_list, # type: SortedList
-            deliver_pubsub_msg,              # type: callable_
-            confirm_pubsub_msg_delivered_cb, # type: callable_
-            sub_config # type: anydict
-        ) -> 'None':
+        pubsub_tool,   # type: PubSubTool
+        pubsub,        # type: PubSub
+        sub_key,       # type: str
+        delivery_lock, # type: RLock
+        delivery_list, # type: SortedList
+        deliver_pubsub_msg,              # type: callable_
+        confirm_pubsub_msg_delivered_cb, # type: callable_
+        sub_config # type: anydict
+    ) -> 'None':
 
         self.keep_running = True
         self.pubsub_tool = pubsub_tool
@@ -249,10 +249,10 @@ class DeliveryTask:
 # ################################################################################################################################
 
     def run_delivery(self,
-            deliver_pubsub_msg=None,  # type: callnone
-            status_code=run_deliv_sc, # type: any_
-            reason_code=run_deliv_rc  # type: any_
-        ) -> 'DeliveryResultCtx':
+        deliver_pubsub_msg=None,  # type: callnone
+        status_code=run_deliv_sc, # type: any_
+        reason_code=run_deliv_rc  # type: any_
+    ) -> 'DeliveryResultCtx':
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
         """
