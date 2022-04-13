@@ -18,8 +18,8 @@ from zato.server.service.internal import AdminService, GetListAdminSIO
 
 # Type checking
 if 0:
-    from zato.server.pubsub.task import DeliveryTask, PubSubTool
-
+    from zato.server.pubsub.delivery.task import DeliveryTask
+    from zato.server.pubsub.delivery.tool import PubSubTool
     DeliveryTask = DeliveryTask
     PubSubTool = PubSubTool
 
