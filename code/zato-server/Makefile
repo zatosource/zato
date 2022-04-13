@@ -3,19 +3,20 @@
 MAKEFLAGS += --silent
 
 PY_DIR=$(CURDIR)/../bin
+Zato_Package_Name=zato-server
 
 pubsub-tests:
-	echo "Running pub/sub tests in zato-server"
+	echo "Running pub/sub tests in $(Zato_Package_Name)"
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/pubsub/test_pubapi_rest.py -s
 	$(PY_DIR)/py        $(CURDIR)/test/zato/pubsub/test_pubapi_services.py
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/pubsub/test_publish.py -s
 
 wsx-tests:
-	echo "Running WSX tests in zato-server"
+	echo "Running WSX tests in $(Zato_Package_Name)"
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/wsx/test_*.py -s
 
 run-tests:
-	echo "Running tests in zato-server"
+	echo "Running tests in $(Zato_Package_Name)"
 	$(MAKE) pubsub-tests
 	$(MAKE) wsx-tests
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/test_*.py -s
@@ -28,18 +29,18 @@ run-tests:
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/stats/test_*.py -s
 
 pylint:
-	echo Running pylint in zato-server
+	echo Running pylint in $(Zato_Package_Name)
 	$(PY_DIR)/pylint --verbose \
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-server/src/zato/server
 
 mypy-apispec:
-	echo "Running mypy in zato-server / apispec"
+	echo "Running mypy in $(Zato_Package_Name) / apispec"
 	$(PY_DIR)/mypy --config-file=$(CURDIR)/../mypy.ini \
 		$(CURDIR)/src/zato/server/apispec/
 
 mypy-pubsub:
-	echo "Running mypy in zato-server / pubsub"
+	echo "Running mypy in $(Zato_Package_Name) / pubsub"
 	$(PY_DIR)/mypy --config-file=$(CURDIR)/../mypy.ini \
 		$(CURDIR)/src/zato/server/pubsub/
 
@@ -61,10 +62,14 @@ pyright:
 	$(MAKE) pyright-pubsub
 
 type-check:
-	echo "Running type checks (zato-server)"
+	echo "Running type checks ($(Zato_Package_Name))"
 	$(MAKE) mypy
 	$(MAKE) pyright
 
-static-check:
-	echo "Running flake8 static checks in zato-server"
+flake8:
+	echo "Running flake8 checks in $(Zato_Package_Name)"
 	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+
+static-check:
+	$(MAKE) flake8
+	$(MAKE) type-check

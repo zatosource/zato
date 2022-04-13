@@ -2,6 +2,7 @@
 .PHONY: static-check
 
 PY_DIR=$(CURDIR)/../bin
+Zato_Package_Name=zato-agent
 
 pylint:
 	echo Running pylint in zato-agent
@@ -9,11 +10,15 @@ pylint:
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-agent/src/zato/agent
 
-static-check:
-	echo "Running static checks in zato-agent"
-	$(PY_DIR)/flake8 --version 1>&2
-	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
-
 type-check:
 	echo "Running type checks in zato-agent"
 	$(PY_DIR)/pyright -p $(CURDIR)/../pyproject.toml .
+
+flake8:
+	echo "Running flake8 checks in $(Zato_Package_Name)"
+	$(PY_DIR)/flake8 --version 1>&2
+	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+
+static-check:
+	echo "Running static checks in $(Zato_Package_Name)"
+	$(MAKE) flake8

@@ -37,8 +37,26 @@ cli-tests:
 sso-tests:
 	cd $(CURDIR)/code/zato-sso && make run-tests
 
+flake8:
+	cd $(CURDIR)/code/zato-agent     && $(MAKE) flake8
+	cd $(CURDIR)/code/zato-broker    && $(MAKE) flake8
+	cd $(CURDIR)/code/zato-cli       && $(MAKE) flake8
+	cd $(CURDIR)/code/zato-client    && $(MAKE) flake8
+	cd $(CURDIR)/code/zato-common    && $(MAKE) flake8
+	cd $(CURDIR)/code/zato-distlock  && $(MAKE) flake8
+	cd $(CURDIR)/code/zato-cy        && $(MAKE) flake8
+	cd $(CURDIR)/code/zato-hl7       && $(MAKE) flake8
+	cd $(CURDIR)/code/zato-lib       && $(MAKE) flake8
+	cd $(CURDIR)/code/zato-scheduler && $(MAKE) flake8
+	cd $(CURDIR)/code/zato-server    && $(MAKE) flake8
+	cd $(CURDIR)/code/zato-sso       && $(MAKE) flake8
+	cd $(CURDIR)/code/zato-testing   && $(MAKE) flake8
+	cd $(CURDIR)/code/zato-web-admin && $(MAKE) flake8
+	cd $(CURDIR)/code/zato-zmq       && $(MAKE) flake8
+	$(CURDIR)/code/bin/flake8 --config=$(CURDIR)/code/tox.ini $(CURDIR)/code/util
+	echo "Flake8 checks OK"
+
 static-check:
-	$(MAKE) type-check
 	cd $(CURDIR)/code/zato-agent     && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-broker    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-cli       && $(MAKE) static-check
