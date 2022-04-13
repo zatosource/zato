@@ -32,7 +32,7 @@ from zato.server.pubsub.model import DeliveryResultCtx
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, boolnone, callable_, callnone, dict_, dictlist, \
+    from zato.common.typing_ import any_, anydict, anylist, boolnone, callable_, callnone, dict_, dictlist, \
          strlist, tuple_
     from zato.server.pubsub import PubSub
     from zato.server.pubsub.delivery.message import GDMessage, Message
@@ -460,11 +460,59 @@ class DeliveryTask:
 
 # ################################################################################################################################
 
+    def _log_delivery_method_changed(self, current_delivery_method:'str') -> 'None':
+        logger.info('Changed delivery_method from `%s` to `%s` for `%s` (%s -> %s)`',
+            self.previous_delivery_method, current_delivery_method, self.sub_key,
+            self.topic_name, self.sub_config['endpoint_name'])
+
+# ################################################################################################################################
+
+    def _log_warnings_from_delivery_task(self, result:'DeliveryResultCtx', len_exception_list:'int') -> 'None':
+
+        # .. log all exceptions reported by the delivery task ..
+        for idx, e in enumerate(result.exception_list, 1): # type: (int, Exception)
+
+            msg_logger = deliv_exc_msg.format(
+                idx, len_exception_list, result.delivery_iter, self.topic_name, self.sub_key,
+                ''.join(format_exception(type(e), e, e.__traceback__)))
+
+            msg_logger_zato = deliv_exc_msg.format(
+                idx, len_exception_list, result.delivery_iter, self.topic_name, self.sub_key,
+                e.args[0])
+
+            logger.warning(msg_logger)
+            logger_zato.warning(msg_logger_zato)
+
+# ################################################################################################################################
+
+    def _sleep_on_delivery_error(self, result:'DeliveryResultCtx', len_exception_list:'int') -> 'None':
+
+        if result.reason_code == ReasonCode.Error_IO:
+            sleep_time = self.wait_sock_err
+        else:
+            sleep_time = self.wait_non_sock_err
+
+        exc_len_one = 'an exception'
+        exc_len_multi = '{} exceptions'
+
+        if len_exception_list == 1:
+            exc_len_msg = exc_len_one
+        else:
+            exc_len_msg = exc_len_multi.format(len_exception_list)
+
+        sleep_msg = 'Sleeping for {}s after {} in iter #{}'.format(
+            sleep_time, exc_len_msg, result.delivery_iter)
+
+        logger.warning(sleep_msg)
+        logger_zato.warning(sleep_msg)
+
+        sleep(sleep_time)
+
+# ################################################################################################################################
+
     def run(self,
-        default_sleep_time=0.1,          # type: float
-        status_code=run_deliv_sc,        # type: any_
-        _notify_methods=_notify_methods, # type: anytuple
-        deliv_exc_msg=deliv_exc_msg      # type: str
+        default_sleep_time=0.1,  # type: float
+        status_code=run_deliv_sc # type: any_
     ) -> 'None':
         """ Runs the delivery task's main loop.
         """
@@ -494,25 +542,27 @@ class DeliveryTask:
         try:
             while self.keep_running:
 
-                # We are a task that does not notify endpoints of nothing - they will query us themselves
-                # so in such a case we can sleep for a while and repeat the loop - perhaps in the meantime
-                # someone will change delivery_method to one that allows for notifications to be sent.
-                # If not, we will be simply looping forever, checking periodically
-                # if we can send notifications already.
+                # Reusable.
+                delivery_method = self.sub_config['delivery_method']
+
+                # We are a task that does not notify endpoints, i.e. we are pull-style and our subscribers
+                # will query us themselves so in this case we can sleep for a while and repeat the loop -
+                # perhaps before the next iteration of the loop begins someone will change delivery_method
+                # to one that allows for notifications to be sent. If not, we will be simply looping forever,
+                # checking periodically below if the delivery method is still the same.
+                if delivery_method not in _notify_methods:
+                    sleep(5)
+                    continue
 
                 # Apparently, our delivery method has changed since the last time our self.sub_config
                 # was modified, so we can log this fact and store it for later use.
-                if self.sub_config['delivery_method'] != self.previous_delivery_method:
-                    logger.info('Changed delivery_method from `%s` to `%s` for `%s` (%s -> %s)`',
-                        self.previous_delivery_method, self.sub_config['delivery_method'], self.sub_key,
-                        self.topic_name, self.sub_config['endpoint_name'])
+                if delivery_method != self.previous_delivery_method:
 
-                    # Our new value is now the last value too until potentially overridden at one point
-                    self.previous_delivery_method = self.sub_config['delivery_method']
+                    # First, log what happened ..
+                    self._log_delivery_method_changed(delivery_method)
 
-                if self.sub_config['delivery_method'] not in _notify_methods:
-                    sleep(5)
-                    continue
+                    # .. now, the new value replaces the previous one - possibly to be replaced again and again in the future.
+                    self.previous_delivery_method = delivery_method
 
                 # Is there any message that we can try to deliver?
                 if self._should_wake():
@@ -554,49 +604,21 @@ class DeliveryTask:
                             # We caught an error or warning ..
                             if not result.is_ok:
 
+                                # Reusable.
                                 len_exception_list = len(result.exception_list)
 
-                                # .. log all exceptions reported by the delivery task ..
-                                for idx, e in enumerate(result.exception_list, 1): # type: (int, Exception)
-
-                                    msg_logger = deliv_exc_msg.format(
-                                        idx, len_exception_list, result.delivery_iter, self.topic_name, self.sub_key,
-                                        ''.join(format_exception(type(e), e, e.__traceback__)))
-
-                                    msg_logger_zato = deliv_exc_msg.format(
-                                        idx, len_exception_list, result.delivery_iter, self.topic_name, self.sub_key,
-                                        e.args[0])
-
-                                    logger.warning(msg_logger)
-                                    logger_zato.warning(msg_logger_zato)
+                                # Log all the exceptions received while trying to deliver the messages ..
+                                self._log_warnings_from_delivery_task(result, len_exception_list)
 
                                 # .. sleep only if there are still some messages to be delivered,
-                                # as it is possible that our lists has been cleared out since the last time we run ..
+                                # .. as it is possible that our lists has been cleared out since the last time we run ..
                                 if self.delivery_list:
 
                                     # .. sleep for a while but only if this was an error (not a warning).
                                     if result.status_code == status_code.Error:
 
-                                        if result.reason_code == ReasonCode.Error_IO:
-                                            sleep_time = self.wait_sock_err
-                                        else:
-                                            sleep_time = self.wait_non_sock_err
-
-                                        exc_len_one = 'an exception'
-                                        exc_len_multi = '{} exceptions'
-
-                                        if len_exception_list == 1:
-                                            exc_len_msg = exc_len_one
-                                        else:
-                                            exc_len_msg = exc_len_multi.format(len_exception_list)
-
-                                        sleep_msg = 'Sleeping for {}s after {} in iter #{}'.format(
-                                            sleep_time, exc_len_msg, result.delivery_iter)
-
-                                        logger.warning(sleep_msg)
-                                        logger_zato.warning(sleep_msg)
-
-                                        sleep(sleep_time)
+                                        # .. OK, we can sleep now.
+                                        self._sleep_on_delivery_error(result, len_exception_list)
 
                 # There was no message to deliver in this turn ..
                 else:
@@ -616,8 +638,6 @@ class DeliveryTask:
         if self.keep_running:
             logger.info('Stopping delivery task for sub_key:`%s`', self.sub_key)
             self.keep_running = False
-            # self.pubsub.log_subscriptions_by_sub_key('DeliveryTask.stop')
-            # self.pubsub.log_subscriptions_by_topic_name('DeliveryTask.stop')
 
 # ################################################################################################################################
 
