@@ -327,7 +327,7 @@ class HandleNewMessageCtx:
         non_gd_msg_list,   # type: anylist
         is_bg_call,        # type: bool
         pub_time_max=0.0   # type: float
-        ) -> 'None':
+    ) -> 'None':
         self.cid = cid
         self.has_gd = has_gd
         self.sub_key_list = sub_key_list
@@ -395,7 +395,7 @@ def ensure_subs_exist(
     sub_key_aware_objects:'anylist',
     log_action:'str',
     context_str:'str',
-    ) -> 'anylist':
+) -> 'anylist':
 
     # A list of input objects that we will return, which will mean that they do exist in the database
     out = []
