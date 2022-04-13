@@ -7,18 +7,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from bisect import bisect_left
 from copy import deepcopy
 from logging import getLogger
 from traceback import format_exc
-from typing import cast, Iterable as iterable_, Iterator as iterator
+from typing import cast, Iterable as iterable_
 
 # gevent
 from gevent import spawn
 from gevent.lock import RLock
-
-# sortedcontainers
-from sortedcontainers import SortedList as _SortedList
 
 # Zato
 from zato.common.odb.api import SQLRow
@@ -26,6 +22,7 @@ from zato.common.typing_ import cast_, list_
 from zato.common.util.api import grouper
 from zato.common.util.time_ import utcnow_as_ms
 from zato.server.pubsub.delivery.message import GDMessage, NonGDMessage
+from zato.server.pubsub.delivery._sorted_list import SortedList
 from zato.server.pubsub.delivery.task import DeliveryTask
 
 # ################################################################################################################################
@@ -35,7 +32,7 @@ if 0:
     from collections.abc import ValuesView
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.pubsub import HandleNewMessageCtx
-    from zato.common.typing_ import any_, boolnone, callable_, dict_, dictlist, intset, set_, strlist, tuple_
+    from zato.common.typing_ import any_, boolnone, callable_, callnone, dict_, dictlist, intset, set_, strlist, tuple_
     from zato.server.pubsub import PubSub
     from zato.server.pubsub.delivery.message import Message
 
@@ -54,35 +51,6 @@ sqlmsgiter = iterable_['SQLRow']
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SortedList(_SortedList):
-    """ A custom subclass that knows how to remove pubsub messages from SortedList instances.
-    """
-
-    def __iter__(self) -> 'iterator[Message]':
-        return super().__iter__() # type: ignore
-
-    def remove_pubsub_msg(self, msg:'Message') -> 'None':
-        """ Removes a pubsub message from a SortedList instance - we cannot use the regular .remove method
-        because it may triggger __cmp__ per https://github.com/grantjenks/sorted_containers/issues/81.
-        """
-        logger.info('In remove_pubsub_msg msg:`%s`, mxs:`%s`', msg.pub_msg_id, self._maxes) # type: ignore
-        pos = bisect_left(self._maxes, msg) # type: ignore
-
-        if pos == len(self._maxes): # type: ignore
-            raise ValueError('{0!r} not in list'.format(msg))
-
-        for _list_idx, _list_msg in enumerate(self._lists[pos]): # type: ignore
-            if msg.pub_msg_id == _list_msg.pub_msg_id: # type: ignore
-                idx = _list_idx
-                break
-        else:
-            raise ValueError('{0!r} not in list'.format(msg))
-
-        self._delete(pos, idx) # type: ignore
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class PubSubTool:
     """ A utility object for pub/sub-related tasks.
     """
@@ -91,7 +59,7 @@ class PubSubTool:
         parent,        # type: any_
         endpoint_type, # type: str
         is_for_services=False,  # type: bool
-        deliver_pubsub_msg=None # type: callable_
+        deliver_pubsub_msg=None # type: callnone
     ) -> 'None':
         self.pubsub = pubsub
         self.parent = parent # This is our parent, e.g. an individual WebSocket on whose behalf we execute
@@ -278,7 +246,7 @@ class PubSubTool:
                 if sub_key not in msg['deliver_to_sk']:
                     continue
 
-            add = self.delivery_lists[sub_key].add # type: ignore
+            add = cast_('callable_', self.delivery_lists[sub_key].add)
             add(NonGDMessage(sub_key, self.server_name, self.server_pid, msg))
 
 # ################################################################################################################################
@@ -305,7 +273,7 @@ class PubSubTool:
 
         try:
             if ctx.has_gd:
-                session = cast('SASession', self.pubsub.server.odb.session())
+                session = self.pubsub.server.odb.session()
             else:
                 if not ctx.non_gd_msg_list:
                     # This is an unusual situation but not an erroneous one because it is possible
@@ -366,8 +334,8 @@ class PubSubTool:
 
         finally:
             if session:
-                session.commit() # type: ignore
-                session.close()  # type: ignore
+                session.commit()
+                session.close()
 
 # ################################################################################################################################
 
@@ -385,7 +353,7 @@ class PubSubTool:
     def _fetch_gd_messages_by_sk_list(self,
         sub_key_list, # type: strlist
         pub_time_max, # type: float
-        session=None  # type: SASession
+        session=None  # type: SASession | None
     ) -> 'sqlmsgiter':
         """ Part of the low-level implementation of enqueue_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
@@ -434,7 +402,7 @@ class PubSubTool:
             msg_ids.append(msg.pub_msg_id)
             gd_msg = GDMessage(sub_key, topic_name, msg.get_value())
             delivery_list = self.delivery_lists[sub_key]
-            delivery_list.add(gd_msg) # type: ignore
+            delivery_list.add(gd_msg)
             logger.info('Adding a GD message `%s` to delivery_list=%s (%s)', gd_msg.pub_msg_id, hex(id(delivery_list)), sub_key)
             count += 1
 
@@ -451,7 +419,7 @@ class PubSubTool:
 
 # ################################################################################################################################
 
-    def enqueue_gd_messages_by_sub_key(self, sub_key:'str', session:'SASession'=None) -> 'None':
+    def enqueue_gd_messages_by_sub_key(self, sub_key:'str', session:'SASession | None'=None) -> 'None':
         """ Fetches GD messages from SQL for sub_key given on input and adds them to local queue of messages to deliver.
         """
         with self.sub_key_locks[sub_key]:
@@ -489,7 +457,7 @@ class PubSubTool:
                         _logger.info('Found %d initial message%sto enqueue for sub_key:`%s` (%s -> %s), g:%d, gs:%d',
                             len_msg_ids, suffix, sub_key, topic_name, endpoint_name, len(groups), _group_size)
 
-                    for idx, group in enumerate(groups, 1): # type: ignore
+                    for idx, group in enumerate(groups, 1):
                         group = cast_('strlist', group)
                         group_msg_ids = [elem for elem in group if elem] # type: strlist
                         logger.info('Enqueuing group %d/%d (gs:%d) (%s, %s -> %s) `%s`',
@@ -505,7 +473,7 @@ class PubSubTool:
 
             finally:
                 if session:
-                    session.close() # type: ignore
+                    session.close()
 
 # ################################################################################################################################
 
