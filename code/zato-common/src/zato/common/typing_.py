@@ -87,6 +87,7 @@ decimal_      = decimal_
 decnone       = optional[decimal_]
 dictlist      = list_[anydict]
 dictnone      = optional[anydict]
+dictorlist    = union_[anydict, anylist]
 dtnone        = optional[datetime]
 floatnone     = optional[float]
 generator_    = generator_

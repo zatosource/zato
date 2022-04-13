@@ -13,18 +13,16 @@ from operator import itemgetter
 from zato.common.api import PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.query import pubsub_endpoint_queue_list_by_sub_keys
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from typing import Union as union
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anydict, anylist, dictlist, intnone, stranydict, strlist
+    from zato.common.typing_ import any_, anydict, anylist, dictlist, dictorlist, intnone, stranydict, strlist
     from zato.server.base.parallel import ParallelServer
-
     ParallelServer = ParallelServer
-    union = union
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,7 +39,7 @@ _default_expiration = PUBSUB.DEFAULT.EXPIRATION
 # ################################################################################################################################
 
 def make_short_msg_copy_from_dict(msg:'stranydict', data_prefix_len:'int', data_prefix_short_len:'int') -> 'stranydict':
-    out_msg = {}
+    out_msg = {} # type: stranydict
     out_msg['msg_id'] = msg['pub_msg_id']
     out_msg['in_reply_to'] = msg.get('in_reply_to')
     out_msg['data'] = msg['data'][:data_prefix_len]
@@ -67,7 +65,7 @@ def make_short_msg_copy_from_dict(msg:'stranydict', data_prefix_len:'int', data_
 # ################################################################################################################################
 
 def make_short_msg_copy_from_msg(msg:'any_', data_prefix_len:'int', data_prefix_short_len:'int') -> 'stranydict':
-    out_msg = {}
+    out_msg = {} # type: stranydict
     out_msg['msg_id'] = msg.pub_msg_id
     out_msg['in_reply_to'] = msg.in_reply_to
     out_msg['data'] = msg.data[:data_prefix_len]
@@ -92,20 +90,20 @@ def make_short_msg_copy_from_msg(msg:'any_', data_prefix_len:'int', data_prefix_
 
 # ################################################################################################################################
 
-def get_last_topics(topic_list:'dictlist', as_list:'bool'=True) -> 'dict | list':
+def get_last_topics(topic_list:'dictlist', as_list:'bool'=True) -> 'dictorlist':
 
-    # Response to produce
-    out = {}
+    # Response to produce if as_list is not True.
+    out = {} # type: anydict
 
-    for item in topic_list: # type: (dict)
+    for item in topic_list: # type: (anydict)
 
-        for _ignored_topic_key, topic_data in item.items(): # type: (str, dict)
+        for _ignored_topic_key, topic_data in item.items(): # type: (str, anydict)
 
             # Local alias
             topic_id = topic_data['topic_id'] # type: int
 
             # .. we may have visited this topic already ..
-            previous = out.get(topic_id, {}) # type: dict
+            previous = out.get(topic_id, {}) # type: anydict
 
             # .. if we have ..
             if previous:
@@ -117,7 +115,7 @@ def get_last_topics(topic_list:'dictlist', as_list:'bool'=True) -> 'dict | list'
                 out[topic_id] = topic_data
 
     if as_list:
-        out = sorted(out.values(), key=itemgetter('pub_time'), reverse=True)
+        out = sorted(out.values(), key=itemgetter('pub_time'), reverse=True) # type: ignore
         return out
     else:
         return out
@@ -152,10 +150,10 @@ def get_last_pub_metadata(server:'ParallelServer', topic_id_list:'anylist | int'
 
 # ################################################################################################################################
 
-def get_endpoint_metadata(server:'ParallelServer', endpoint_id:'int') -> 'dict | list':
+def get_endpoint_metadata(server:'ParallelServer', endpoint_id:'int') -> 'dictorlist':
 
     # All topics from all PIDs
-    topic_list = []
+    topic_list = [] # type: dictlist
 
     # Information about a single topic
     topic_dict = {}
@@ -174,10 +172,12 @@ def get_endpoint_metadata(server:'ParallelServer', endpoint_id:'int') -> 'dict |
 # ################################################################################################################################
 
 def get_topic_sub_keys_from_sub_keys(session:'SASession', cluster_id:'int', sub_key_list:'strlist') -> 'stranydict':
-    topic_sub_keys = {}
+
+    topic_sub_keys = {} # type: stranydict
 
     for item in pubsub_endpoint_queue_list_by_sub_keys(session, cluster_id, sub_key_list):
-        sub_keys = topic_sub_keys.setdefault(item.topic_name, [])
+        topic_name = cast_('str', item.topic_name)
+        sub_keys = topic_sub_keys.setdefault(topic_name, []) # type: strlist
         sub_keys.append(item.sub_key)
 
     return topic_sub_keys
