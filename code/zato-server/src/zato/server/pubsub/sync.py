@@ -17,7 +17,7 @@ from gevent import sleep
 from gevent.lock import RLock
 
 # Zato
-from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
+from zato.common.api import PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.typing_ import any_, anydict, anylist, anyset, anytuple, callable_, dict_, dictlist, intsetdict, strlist, \
      strdictdict, strset, strsetdict
@@ -53,20 +53,6 @@ _default_pri=PUBSUB.PRIORITY.DEFAULT
 _pri_min=PUBSUB.PRIORITY.MIN
 _pri_max=PUBSUB.PRIORITY.MAX
 
-_service_read_messages_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-gd'
-_service_read_messages_non_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-non-gd'
-
-_service_read_message_gd = 'zato.pubsub.message.get-from-queue-gd'
-_service_read_message_non_gd = 'zato.pubsub.message.get-from-queue-non-gd'
-
-_service_delete_message_gd = 'zato.pubsub.message.queue-delete-gd'
-_service_delete_message_non_gd = 'zato.pubsub.message.queue-delete-non-gd'
-
-# ################################################################################################################################
-
-_pub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.PUBLISHER.id)
-_sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
-
 # ################################################################################################################################
 
 _update_attrs = (
@@ -75,17 +61,8 @@ _update_attrs = (
 
 # ################################################################################################################################
 
-_does_not_exist = object()
-
-# ################################################################################################################################
-
 _default_expiration = PUBSUB.DEFAULT.EXPIRATION
 default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
-
-# ################################################################################################################################
-
-_JSON=DATA_FORMAT.JSON
-_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 
 # ################################################################################################################################
 
@@ -95,7 +72,7 @@ def get_priority(
     _pri_min=_pri_min,    # type: int
     _pri_max=_pri_max,    # type: int
     _pri_def=_default_pri # type: int
-    ):
+) -> 'int':
     """ Get and validate message priority.
     """
     priority = input.get('priority')
@@ -113,7 +90,7 @@ def get_expiration(
     cid,   # type: str
     input, # type: anydict
     default_expiration=_default_expiration # type: int
-    ):
+) -> 'int':
     """ Get and validate message expiration.
     Returns (2 ** 31 - 1) * 1000 milliseconds (around 70 years) if expiration is not set explicitly.
     """
@@ -170,7 +147,7 @@ class InRAMSync:
         sub_keys,   # type: strlist
         messages,   # type: dictlist
         _default_pri=_default_pri # type: int
-        ):
+    ) -> 'None':
         """ Adds all input messages to sub_keys for the topic.
         """
         with self.lock:
@@ -570,7 +547,7 @@ class InRAMSync:
                         # Get all sub_keys waiting for these messages and delete the message from each one,
                         # but note that there may be possibly no subscribers at all if the message was published
                         # to a topic without any subscribers.
-                        for sub_key in self.msg_id_to_sub_key.pop(msg_id): # type: ignore[no-redef]
+                        for sub_key in self.msg_id_to_sub_key.pop(msg_id):
                             self.sub_key_to_msg_id[sub_key].remove(msg_id)
 
                         # Remove all references to the message from topic

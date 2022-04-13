@@ -116,13 +116,13 @@ class PubSub:
         server,             # type: ParallelServer
         broker_client=None, # type: any_
         *,
-        sync_max_iters=None,       # type: intnone
+        sync_max_iters=None,      # type: intnone
         spawn_trigger_notify=True # type: bool
     ) -> 'None':
 
         self.cluster_id = cluster_id
         self.server = server
-        self.broker_client = broker_client # type: ignore
+        self.broker_client = broker_client
         self.sync_max_iters = sync_max_iters
         self.lock = RLock()
         self.keep_running = True
@@ -346,7 +346,7 @@ class PubSub:
             if isinstance(sub_data, Subscription):
                 self._write_log_sub_data(sub_data, out)
             else:
-                sorted_sub_data = sorted(sub_data) # type: ignore
+                sorted_sub_data = sorted(sub_data)
                 for item in sorted_sub_data:
                     if isinstance(item, Subscription):
                         self._write_log_sub_data(item, out)
@@ -561,7 +561,7 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def _create_endpoint(self, config:'anydict'):
+    def _create_endpoint(self, config:'anydict') -> 'None':
         self.endpoints[config['id']] = Endpoint(config)
 
         if config['security_id']:
@@ -694,7 +694,7 @@ class PubSub:
         else:
 
             # Now, delete the subscription
-            self.subscriptions_by_sub_key.pop(sub_key, _invalid)
+            _ = self.subscriptions_by_sub_key.pop(sub_key, _invalid)
 
             # Delete the subscription's sk_server first because it depends on the subscription
             # for sk_server table formatting.
@@ -1036,9 +1036,9 @@ class PubSub:
         """
         # Update state in SQL
         ws_sub_key = WebSocketClientPubSubKeys()
-        ws_sub_key.client_id = sql_ws_client_id # type: ignore
-        ws_sub_key.sub_key = sub_key            # type: ignore
-        ws_sub_key.cluster_id = self.cluster_id # type: ignore
+        ws_sub_key.client_id = sql_ws_client_id
+        ws_sub_key.sub_key = sub_key
+        ws_sub_key.cluster_id = self.cluster_id
         session.add(ws_sub_key)
 
         # Update in-RAM state of workers
@@ -1062,10 +1062,10 @@ class PubSub:
         len_columns = len(self.sk_server_table_columns)
 
         table = Texttable()
-        _ = table.set_cols_width(self.sk_server_table_columns) # type: ignore
-        _ = table.set_cols_dtype(['t'] * len_columns)  # type: ignore
-        _ = table.set_cols_align(['c'] * len_columns)  # type: ignore
-        _ = table.set_cols_valign(['m'] * len_columns) # type: ignore
+        _ = table.set_cols_width(self.sk_server_table_columns)
+        _ = table.set_cols_dtype(['t'] * len_columns)
+        _ = table.set_cols_align(['c'] * len_columns)
+        _ = table.set_cols_valign(['m'] * len_columns)
 
         # Add headers
         rows = [['#', 'created', 'name', 'pid', 'channel_name', 'sub_key']] # type: anylist
@@ -1109,7 +1109,7 @@ class PubSub:
             ])
 
         # Add all rows to the table
-        _ = table.add_rows(rows) # type: ignore
+        _ = table.add_rows(rows)
 
         # And return already formatted output
         return cast_('str', table.draw())
@@ -1178,7 +1178,7 @@ class PubSub:
                 logger.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
                 logger_zato.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
 
-                self.sub_key_servers.pop(sub_key, None)
+                _ = self.sub_key_servers.pop(sub_key, None)
 
                 sks_table = self.format_sk_servers(sub_pattern_matched=sub_pattern_matched)
                 msg_sks = 'Current sk_servers after deletion of `%s`:\n%s'
@@ -1235,7 +1235,7 @@ class PubSub:
         """ Adds to self.sub_key_servers information from ODB about which server handles input sub_key.
         Must be called with self.lock held.
         """
-        with closing(self.new_session_func()) as session: # type: ignore
+        with closing(self.new_session_func()) as session:
             data = get_delivery_server_for_sub_key(session, self.server.cluster_id, sub_key, is_wsx)
 
         if not data:
@@ -1363,9 +1363,9 @@ class PubSub:
     ) -> 'None':
         """ Sets in SQL delivery status of a given message to True.
         """
-        with closing(self.new_session_func()) as session: # type: ignore
+        with closing(self.new_session_func()) as session:
             _confirm_pubsub_msg_delivered(session, self.server.cluster_id, sub_key, delivered_pub_msg_id_list, utcnow_as_ms())
-            session.commit() # type: ignore
+            session.commit()
 
 # ################################################################################################################################
 
@@ -1619,7 +1619,7 @@ class PubSub:
         """
         logger.info('Deleting messages set to be deleted `%s`', msg_list)
 
-        with closing(self.new_session_func()) as session: # type: ignore
+        with closing(self.new_session_func()) as session:
             set_to_delete(session, self.cluster_id, sub_key, msg_list, utcnow_as_ms())
 
 # ################################################################################################################################
@@ -1711,8 +1711,8 @@ class PubSub:
 
         _current_iter = 0
         _new_cid      = new_cid
-        _spawn        = spawn # type: ignore
-        _sleep        = sleep # type: ignore
+        _spawn        = cast_('callable_', spawn)
+        _sleep        = cast_('callable_', sleep)
         _self_lock    = self.lock
         _self_topics  = self.topics
 
@@ -1882,14 +1882,14 @@ class PubSub:
         ws_channel_id = None
 
         # For later use
-        from_service:'Service' = kwargs.get('service') # type: ignore
+        from_service = cast_('Service', kwargs.get('service'))
         ext_client_id = from_service.name if from_service else kwargs.get('ext_client_id')
 
         # The first one is used if name is a service, the other one if it is a regular topic
         correl_id = kwargs.get('cid') or kwargs.get('correl_id')
 
-        has_gd = kwargs.get('has_gd') # type: ignore
-        has_gd = cast_(bool, has_gd)
+        has_gd = kwargs.get('has_gd')
+        has_gd = cast_('bool', has_gd)
 
         # By default, assume that cannot find any endpoint on input
         endpoint_id = None
@@ -1904,8 +1904,8 @@ class PubSub:
 
         # Otherwise, use various default data.
         if not endpoint_id:
-            endpoint_id = kwargs.get('endpoint_id') or self.server.default_internal_pubsub_endpoint_id # type: ignore
-            endpoint_id = cast_(int, endpoint_id)
+            endpoint_id = kwargs.get('endpoint_id') or self.server.default_internal_pubsub_endpoint_id
+            endpoint_id = cast_('int', endpoint_id)
 
         # If input name is a topic, let us just use it
         if self.has_topic_by_name(name):
@@ -1941,7 +1941,7 @@ class PubSub:
             # We create a topic for that service to receive messages from unless it already exists
             if not self.has_topic_by_name(topic_name):
                 self.create_topic_for_service(name, topic_name)
-                self.wait_for_topic(topic_name)
+                _ = self.wait_for_topic(topic_name)
 
             # Messages published to services always use GD
             has_gd = True
@@ -2080,7 +2080,7 @@ class PubSub:
             service_data = {
                 'cluster_id': self.server.cluster_id,
                 'msg_id': msg_id
-            } # type: ignore[no-redef]
+            }
         else:
             sub_key = kwargs.get('sub_key')
             server_name = kwargs.get('server_name')
@@ -2096,7 +2096,7 @@ class PubSub:
                 'sub_key': sub_key,
                 'server_name': server_name,
                 'server_pid': server_pid,
-            } # type: ignore[no-redef]
+            }
 
         return self.invoke_service(service_name, service_data, serialize=False).response
 
@@ -2116,8 +2116,8 @@ class PubSub:
             service_name = _service_delete_message_gd
             service_data['cluster_id'] = self.server.cluster_id
         else:
-            server_name = cast_(str, kwargs.get('server_name', ''))
-            server_pid  = cast_(int, kwargs.get('server_pid', 0))
+            server_name = cast_('str', kwargs.get('server_name', ''))
+            server_pid  = cast_('int', kwargs.get('server_pid', 0))
 
             if not(sub_key and server_name and server_pid):
                 raise Exception('All of sub_key, server_name and server_pid are required for non-GD messages')
@@ -2154,7 +2154,7 @@ class PubSub:
 
         # This is a subscription for a WebSocket client ..
         if use_current_wsx:
-            service:Service = kwargs.get('service') # type: ignore
+            service = cast_('Service', kwargs.get('service'))
 
             if use_current_wsx and (not service):
                 raise Exception('Parameter `service` is required if `use_current_wsx` is True')
@@ -2167,7 +2167,7 @@ class PubSub:
 
             # All set, we can carry on with other steps now
             sub_service_name = PUBSUB.SUBSCRIBE_CLASS.get(PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
-            wsgi_environ = service.wsgi_environ # type: ignore[no-redef]
+            wsgi_environ = service.wsgi_environ
             kwargs_wsgi_environ = kwargs.get('wsgi_environ') or {}
             wsgi_environ = wsgi_environ or kwargs_wsgi_environ
             wsgi_environ['zato.request_ctx.pubsub.unsub_on_wsx_close'] = kwargs.get('unsub_on_wsx_close')
@@ -2179,7 +2179,7 @@ class PubSub:
             wsx = None
 
             # Non-WSX endpoints always need to be identified by their names
-            endpoint_name = cast_(str, kwargs.get('endpoint_name'))
+            endpoint_name = cast_('str', kwargs.get('endpoint_name'))
             if not endpoint_name:
                 raise Exception('Parameter `endpoint_name` is required for non-WebSockets subscriptions')
             else:
