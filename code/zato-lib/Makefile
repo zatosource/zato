@@ -1,7 +1,7 @@
 
 .PHONY: static-check
 
-PY_DIR=$(CURDIR)/../bin
+Zato_Python_Dir=$(CURDIR)/../bin
 Zato_Package_Name=zato-lib
 
 pylint:
