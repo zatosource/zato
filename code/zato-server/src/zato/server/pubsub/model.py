@@ -30,7 +30,7 @@ from zato.common.util.time_ import utcnow_as_ms
 # ################################################################################################################################
 
 if 0:
-    from zato.server.pubsub.task import msgnone
+    from zato.server.pubsub.delivery.message import msgnone
 
 # ################################################################################################################################
 
@@ -73,7 +73,7 @@ def get_priority(
     _pri_min=_pri_min, # type: int
     _pri_max=_pri_max, # type: int
     _pri_def=_pri_def  # type: int
-    ):
+) -> 'int':
     """ Get and validate message priority.
     """
     priority = input.get('priority')
@@ -87,7 +87,7 @@ def get_priority(
 
 # ################################################################################################################################
 
-def get_expiration(cid:'str', input:'anydict', default_expiration:'int'=_default_expiration):
+def get_expiration(cid:'str', input:'anydict', default_expiration:'int'=_default_expiration) -> 'int':
     """ Get and validate message expiration.
     Returns (2 ** 31 - 1) * 1000 milliseconds (around 70 years) if expiration is not set explicitly.
     """
@@ -132,7 +132,7 @@ class ToDictBase:
     def to_dict(self) -> 'anydict':
         out = {} # type: anydict
 
-        for name in self._to_dict_keys: # type: ignore
+        for name in self._to_dict_keys:
             name = cast_('str', name)
             value = getattr(self, name, _does_not_exist) # type: any_
             if value is _does_not_exist:
@@ -226,7 +226,7 @@ class Endpoint(ToDictBase):
                     is_pub = line.startswith('pub=') # type: bool
 
                     matcher = line[line.find('=')+1:]
-                    matcher = globre_compile(matcher) # type: ignore
+                    matcher = globre_compile(matcher)
 
                     source = (is_pub, is_topic)
                     target = targets[source] # type: anylist
@@ -449,7 +449,7 @@ class HookCtx:
     def __init__(
         self,
         hook_type,      # type: str
-        topic=None,     # type: topicnone
+        topic=None,     # type: topicnone # type: ignore[valid-type]
         msg=None,       # type: msgnone
         **kwargs        # type: any_
         ) -> 'None':

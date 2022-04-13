@@ -329,8 +329,11 @@ class Create(AdminService):
             # This shouldn't really happen at all because the pickup notifier is to
             # filter such things out but life is full of surprises
             self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.IGNORED)
-            self.logger.warning(
-                'Ignoring package id:`%s`, payload_name:`%s`, not a Python file nor an archive', dp.id, dp.payload_name)
+
+            # Log a warning but only if it is not about a compiled bytecode file.
+            if not dp.payload_name.endswith('.pyc'):
+                self.logger.warning(
+                    'Ignoring package id:`%s`, payload_name:`%s`, not a Python file nor an archive', dp.id, dp.payload_name)
 
 # ################################################################################################################################
 

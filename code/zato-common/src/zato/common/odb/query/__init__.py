@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -36,9 +34,17 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, Cac
 from zato.common.util.search import SearchResults as _SearchResults
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 _not_given = object()
@@ -1087,7 +1093,7 @@ def pubsub_endpoint_queue_list(session, cluster_id, endpoint_id, needs_columns=F
 
 # ################################################################################################################################
 
-def pubsub_endpoint_queue_list_by_sub_keys(session, cluster_id, sub_key_list):
+def pubsub_endpoint_queue_list_by_sub_keys(session, cluster_id, sub_key_list) -> 'anylist':
     return _pubsub_endpoint_queue(session, cluster_id).\
         filter(PubSubSubscription.sub_key.in_(sub_key_list)).\
         all()
