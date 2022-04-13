@@ -36,7 +36,8 @@ if 0:
          strlist, tuple_
     from zato.server.pubsub import PubSub
     from zato.server.pubsub.delivery.message import GDMessage, Message
-    from zato.server.pubsub.delivery.tool import PubSubTool, SortedList
+    from zato.server.pubsub.delivery._sorted_list import SortedList
+    from zato.server.pubsub.delivery.tool import PubSubTool
     GDMessage = GDMessage
 
 # ################################################################################################################################
@@ -169,7 +170,7 @@ class DeliveryTask:
             for msg in self.delivery_list:
                 if msg.pub_msg_id in msg_list:
                     # We can trim it since we know it won't appear again
-                    msg_list.remove(msg.pub_msg_id) # type: ignore
+                    msg_list.remove(msg.pub_msg_id)
                     to_delete.append(msg)
 
             # We are a task that sends out notifications
@@ -193,7 +194,7 @@ class DeliveryTask:
             out = [msg for msg in self.delivery_list]
             len_out = len(out)
         else:
-            out = [] # type: ignore[no-redef]
+            out = []
             for msg in self.delivery_list: # type: Message
                 if msg.has_gd is has_gd:
                     out.append(msg)
@@ -261,7 +262,10 @@ class DeliveryTask:
 
 # ################################################################################################################################
 
-    def _get_messages_to_delete(self, current_batch:'msglist') -> 'msglist':
+    def _get_messages_to_delete(
+        self,
+        current_batch:'msglist' # type: ignore[valid-type]
+    ) -> 'msglist': # type: ignore[valid-type]
 
         # There may be requests to delete some of messages while we are running and we obtain the list of
         # such messages here.
@@ -272,7 +276,7 @@ class DeliveryTask:
         # Go through each message and check if any has reached our delivery_max_retry.
         # Any such message should be deleted so we add it to to_delete. Note that we do it here
         # because we want for a sub hook to have access to them.
-        for msg in current_batch:
+        for msg in current_batch: # type: ignore[attr-defined]
             if msg.delivery_count >= self.delivery_max_retry:
                 to_delete.append(msg)
 
@@ -282,11 +286,11 @@ class DeliveryTask:
 
     def _invoke_before_delivery_hook(
         self,
-        current_batch, # type: msglist
+        current_batch, # type: msglist   # type: ignore[valid-type]
         hook,          # type: callable_
-        to_delete,     # type: msglist
-        to_deliver,    # type: msglist
-        to_skip        # type: msglist
+        to_delete,     # type: msglist   # type: ignore[valid-type]
+        to_deliver,    # type: msglist   # type: ignore[valid-type]
+        to_skip        # type: msglist   # type: ignore[valid-type]
     ) -> 'None':
 
         messages = {
@@ -337,7 +341,7 @@ class DeliveryTask:
 
             logger.info('Looking for current batch in delivery_list=%s (%s)', hex(id(self.delivery_list)), self.sub_key)
 
-            current_batch = self.delivery_list[:delivery_batch_size] # type: ignore
+            current_batch = self.delivery_list[:delivery_batch_size]
             current_batch = cast_('msglist', current_batch)
 
             # For each message from batch we invoke a hook, if there is any, which will decide
@@ -353,8 +357,8 @@ class DeliveryTask:
 
             # Unlike to_delete, which has to be computed dynamically,
             # these two can be initialized to their respective empty lists directly.
-            to_deliver:'msglist' = []
-            to_skip:'msglist'    = []
+            to_deliver:'msglist' = [] # type: ignore[valid-type]
+            to_skip:'msglist'    = [] # type: ignore[valid-type]
 
             # There is a hook so we can invoke it - it will update in place the lists that we pass to it ..
             if hook:
@@ -362,7 +366,7 @@ class DeliveryTask:
 
             # .. otherwise, without a hook, we will always try to deliver all messages that we have in a given batch
             else:
-                to_deliver[:] = current_batch[:]
+                to_deliver[:] = current_batch[:] # type: ignore[index]
 
             # Delete these messages first, before starting any delivery, either because self._get_messages_to_delete
             # returned a non-empty list in this iteration or because the hook did.
@@ -373,7 +377,7 @@ class DeliveryTask:
                 logger.info('Skipping messages `%s`', to_skip)
 
             # This is the call that actually delivers messages
-            deliver_pubsub_msg(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
+            deliver_pubsub_msg(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0]) # type: ignore[index]
 
         except Exception as e:
 
@@ -389,7 +393,7 @@ class DeliveryTask:
             # On successful delivery, remove these messages from SQL and our own delivery_list
             try:
                 # All message IDs that we have delivered
-                delivered_msg_id_list = [msg.pub_msg_id for msg in to_deliver]
+                delivered_msg_id_list = [msg.pub_msg_id for msg in to_deliver] # type: ignore[attr-defined]
                 with self.delivery_lock:
                     self.confirm_pubsub_msg_delivered_cb(self.sub_key, delivered_msg_id_list)
 
@@ -399,7 +403,7 @@ class DeliveryTask:
                 result.exception_list.append(update_err)
             else:
                 with self.delivery_lock:
-                    for msg in to_deliver:
+                    for msg in to_deliver: # type: ignore[attr-defined]
                         try:
                             msg.delivery_count += 1
                             self.delivery_list.remove_pubsub_msg(msg)
@@ -518,7 +522,7 @@ class DeliveryTask:
         """
 
         # Fill out Python-level metadata first
-        _greenlet_name = getcurrent().name # type: ignore
+        _greenlet_name = getcurrent().name
         _greenlet_name = cast_('str', _greenlet_name)
         self.py_object = '{}; {}; {}'.format(current_thread().name, _greenlet_name, self.python_id)
 

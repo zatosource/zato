@@ -160,11 +160,11 @@ class GDMessage(Message):
             self.data = json_loads(self.data)
 
         # Load opaque attributes, if any were provided on input
-        opaque = getattr(msg, _gen_attr, None) # type: ignore
-        if opaque:                             # type: ignore
-            opaque = _loads(opaque)            # type: ignore
-            for key, value in opaque.items():  # type: ignore
-                setattr(self, key, value)      # type: ignore
+        opaque = getattr(msg, _gen_attr, None)
+        if opaque:
+            opaque = _loads(opaque)
+            for key, value in opaque.items():
+                setattr(self, key, value)
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
