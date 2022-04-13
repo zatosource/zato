@@ -4,11 +4,11 @@ MAKEFLAGS += --silent
 
 default: build
 
-PY_DIR=$(CURDIR)/../bin
+Zato_Python_Dir=$(CURDIR)/../bin
 Zato_Package_Name=zato-hl7
 
 build:
-	$(PY_DIR)/py $(CURDIR)/setup.py develop
+	$(Zato_Python_Dir)/py $(CURDIR)/setup.py develop
 
 clean:
 	rm -rf $(CURDIR)/build
@@ -18,7 +18,7 @@ clean:
 	find $(CURDIR) -name '*.egg-info' -exec rm -rf {} +
 
 hl7-tests:
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/hl7/test_*.py -s
+	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/hl7/test_*.py -s
 
 run-tests:
 	$(MAKE) hl7-tests
@@ -27,13 +27,13 @@ run-tests:
 
 pylint:
 	echo Running pylint in $(Zato_Package_Name)
-	$(PY_DIR)/pylint --verbose \
+	$(Zato_Python_Dir)/pylint --verbose \
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-hl7/src/zato/hl7
 
 flake8:
 	echo "Running flake8 checks in $(Zato_Package_Name)"
-	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+	$(Zato_Python_Dir)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
 
 static-check:
 	echo "Running static checks in $(Zato_Package_Name)"
