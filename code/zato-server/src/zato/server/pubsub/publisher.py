@@ -175,11 +175,11 @@ class PubRequest(Model):
     group_id:          strnone = ''
     position_in_group: intnone = PUBSUB.DEFAULT.PositionInGroup
 
-    reply_to_sk:   strlistempty = list_field()
-    deliver_to_sk: strlistempty = list_field()
+    reply_to_sk:   strlistempty = list_field() # type: ignore
+    deliver_to_sk: strlistempty = list_field() # type: ignore
 
     user_ctx:      anynone    = None
-    zato_ctx:      anydict = dict_field()
+    zato_ctx:      anydict = dict_field() # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -283,8 +283,8 @@ class Publisher:
 
         # Convert to string to prevent pg8000 from rounding up float values.
         # Note that the model says these fields are floats and this is why we ignore the type warnings in this case.
-        ps_msg.pub_time = _GetMessage._float_str.format(now) # type: ignore
-        ps_msg.ext_pub_time = _GetMessage._float_str.format(ext_pub_time) if ext_pub_time else ext_pub_time # type: ignore
+        ps_msg.pub_time = _GetMessage._float_str.format(now)
+        ps_msg.ext_pub_time = _GetMessage._float_str.format(ext_pub_time) if ext_pub_time else ext_pub_time
 
         # If the data published is not a string or object, we need to serialise it to JSON
         # so as to be able to save it in the database - a delivery task will later
@@ -300,7 +300,7 @@ class Publisher:
         ps_msg.pub_pattern_matched = pub_pattern_matched
         ps_msg.data = data
         ps_msg.mime_type = mime_type
-        ps_msg.priority = priority # type: ignore
+        ps_msg.priority = priority
         ps_msg.expiration = expiration
         ps_msg.expiration_time = expiration_time
         ps_msg.published_by_id = endpoint_id
@@ -342,11 +342,11 @@ class Publisher:
             if response['hook_action'] == _GetMessage._skip:
                 logger_audit.info('Skipping message pub_msg_id:`%s`, pub_correl_id:`%s`, ext_client_id:`%s`',
                     ps_msg.pub_msg_id, ps_msg.pub_correl_id, ps_msg.ext_client_id)
-                return
+                return None
 
         # These are needed only for GD messages that are stored in SQL
         if has_gd:
-            data_prefix, data_prefix_short = self.get_data_prefixes(ps_msg.data) # type: ignore
+            data_prefix, data_prefix_short = self.get_data_prefixes(ps_msg.data)
             ps_msg.data_prefix = data_prefix
             ps_msg.data_prefix_short = data_prefix_short
 
@@ -369,10 +369,10 @@ class Publisher:
     ) -> 'any_':
 
         # List of messages with GD enabled
-        gd_msg_list = []
+        gd_msg_list = [] # type: anylist
 
         # List of messages without GD enabled
-        non_gd_msg_list = []
+        non_gd_msg_list = [] # type: anylist
 
         # List of all message IDs - in the same order as messages were given on request
         msg_id_list = []
@@ -590,7 +590,7 @@ class Publisher:
                 log_msg_drop = 'Dropping messages. ' + log_msg
                 logger.info(log_msg_drop, *log_msg_args)
                 logger_pubsub.info(log_msg_drop, *log_msg_args)
-                return
+                return None
             else:
                 logger.info(log_msg, *log_msg_args)
                 logger_pubsub.info(log_msg, *log_msg_args)
@@ -670,10 +670,10 @@ class Publisher:
         # optionally, store data in pub/sub audit log.
         if has_pubsub_audit_log:
 
-            msg = 'Message published. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' \
+            log_msg = 'Message published. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' \
                   ', GD data:`%s`, non-GD data:`%s`'
 
-            logger_audit.info(msg, ctx.cid, ctx.topic.name, self.pubsub.endpoints[ctx.endpoint_id].name,
+            logger_audit.info(log_msg, ctx.cid, ctx.topic.name, self.pubsub.endpoints[ctx.endpoint_id].name,
                 ctx.ext_client_id, ctx.pub_pattern_matched, ctx.current_depth, ctx.gd_msg_list, ctx.non_gd_msg_list)
 
         # If this is the very first time we are running during this invocation, try to deliver non-GD messages
