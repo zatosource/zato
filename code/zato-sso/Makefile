@@ -1,35 +1,40 @@
 
 .PHONY: build
 
-PY_DIR=$(CURDIR)/../bin
+Zato_Python_Dir=$(CURDIR)/../bin
+Zato_Package_Name=zato-sso
 
 run-tests:
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_command_line.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_user.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_session.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_user_attr_create.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_user_attr_update.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_user_attr_delete.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_user_attr_get.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_user_attr_exists.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_user_attr_names.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_session_attr_create.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_session_attr_update.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_session_attr_delete.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_session_attr_get.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_session_attr_exists.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_session_attr_names.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_session_list.py &&  \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_linked_auth.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_login_totp.py && \
-	$(PY_DIR)/py $(CURDIR)/test/zato/test_password_reset.py
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_command_line.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_user.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_session.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_user_attr_create.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_user_attr_update.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_user_attr_delete.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_user_attr_get.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_user_attr_exists.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_user_attr_names.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_session_attr_create.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_session_attr_update.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_session_attr_delete.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_session_attr_get.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_session_attr_exists.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_session_attr_names.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_session_list.py &&  \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_linked_auth.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_login_totp.py && \
+	$(Zato_Python_Dir)/py $(CURDIR)/test/zato/test_password_reset.py
 
 pylint:
-	echo Running pylint in zato-sso
-	$(PY_DIR)/pylint --verbose \
+	echo Running pylint in $(Zato_Package_Name)
+	$(Zato_Python_Dir)/pylint --verbose \
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-sso/src/zato/sso
 
+flake8:
+	echo "Running flake8 checks in $(Zato_Package_Name)"
+	$(Zato_Python_Dir)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+
 static-check:
-	echo "Running static checks in zato-sso"
-	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+	echo "Running static checks in $(Zato_Package_Name)"
+	$(MAKE) flake8
