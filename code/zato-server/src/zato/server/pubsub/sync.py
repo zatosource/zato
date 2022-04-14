@@ -314,7 +314,7 @@ class InRAMSync:
         sub_keys, # type: strlist
         delete_msg=True, # type: bool
         delete_sub=False # type: bool
-        ) -> 'dictlist':
+    ) -> 'dictlist':
         """ Low-level implementation of retrieve_messages_by_sub_keys which must be called with self.lock held.
         """
 
@@ -414,7 +414,7 @@ class InRAMSync:
         topic_id,         # type: int
         needs_short_copy, # type: bool
         query=''          # type: str
-        ) -> 'anylist':
+    ) -> 'anylist':
         """ Returns messages for topic by its ID, optionally with pagination and filtering by input query.
         """
 
@@ -459,7 +459,7 @@ class InRAMSync:
         topic_name, # type: str
         sub_keys,   # type: strlist
         pattern='Removing subscription info for `%s` from topic `%s`' # type: str
-        ) -> 'None':
+    ) -> 'None':
         """ Unsubscribes all the sub_keys from the input topic.
         """
 
@@ -580,7 +580,7 @@ class InRAMSync:
         max_depth,  # type: int
         sub_key,    # type: str
         messages    # type: any_
-        ) -> 'None':
+    ) -> 'None':
         # Used by both loggers
         msg = 'Reached max in-RAM delivery depth of %r for topic `%r` (cid:%r). Extra messages will be stored in logs.'
         args = (max_depth, topic_name, cid)
