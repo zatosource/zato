@@ -175,11 +175,11 @@ class PubRequest(Model):
     group_id:          strnone = ''
     position_in_group: intnone = PUBSUB.DEFAULT.PositionInGroup
 
-    reply_to_sk:   strlistempty = list_field() # type: ignore
-    deliver_to_sk: strlistempty = list_field() # type: ignore
+    reply_to_sk:   strlistempty = list_field()
+    deliver_to_sk: strlistempty = list_field()
 
     user_ctx:      anynone    = None
-    zato_ctx:      anydict = dict_field() # type: ignore
+    zato_ctx:      anydict = dict_field()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -346,7 +346,7 @@ class Publisher:
 
         # These are needed only for GD messages that are stored in SQL
         if has_gd:
-            data_prefix, data_prefix_short = self.get_data_prefixes(ps_msg.data)
+            data_prefix, data_prefix_short = self.get_data_prefixes(cast_('str', ps_msg.data))
             ps_msg.data_prefix = data_prefix
             ps_msg.data_prefix_short = data_prefix_short
 
@@ -366,7 +366,7 @@ class Publisher:
         endpoint_id:'int',
         subscriptions_by_topic:'sublist',
         has_no_sk_server:'bool'
-    ) -> 'any_':
+    ) -> 'tuple_[anylist, ...]':
 
         # List of messages with GD enabled
         gd_msg_list = [] # type: anylist
@@ -375,9 +375,11 @@ class Publisher:
         non_gd_msg_list = [] # type: anylist
 
         # List of all message IDs - in the same order as messages were given on request
-        msg_id_list = []
+        msg_id_list = [] # type: anylist
 
         if data_list and isinstance(data_list, (list, tuple)):
+            # Cast it to a list so that its type is known to type checkers
+            data_list = cast_('anylist', data_list)
             for elem in data_list:
                 elem = self.marshal_api.from_dict(cast_('Service', None), elem, PubRequest, extra={'cid':cid})
                 msg = self.build_message(topic, elem, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
