@@ -20,6 +20,7 @@ from sortedcontainers import SortedList as _SortedList
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import any_
     from zato.server.pubsub.delivery.message import Message
 
 # ################################################################################################################################
@@ -36,6 +37,13 @@ class SortedList(_SortedList):
 
     def __iter__(self) -> 'iterator[Message]':
         return super().__iter__()
+
+# ################################################################################################################################
+
+    def __getitem__(self, idx:'any_') -> 'any_':
+        return super().__getitem__(idx)
+
+# ################################################################################################################################
 
     def remove_pubsub_msg(self, msg:'Message') -> 'None':
         """ Removes a pubsub message from a SortedList instance - we cannot use the regular .remove method

@@ -26,8 +26,8 @@ from zato.common.util.time_ import utcnow_as_ms
 if 0:
     from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SQLSession
-    from zato.common.typing_ import any_, anylist, callable_, commondict, floatnone, optional, stranydict, \
-        strlist, strlistempty, strnone, strtuple, tupnone
+    from zato.common.typing_ import any_, anylist, anytuple, callable_, commondict, intnone, optional, stranydict, \
+        strlist, strlistempty, strnone, strorfloat, strtuple, tupnone
     from zato.server.connection.http_soap.outgoing import SudsSOAPWrapper
     from zato.server.pubsub.model import Topic
     Column = Column
@@ -143,13 +143,13 @@ class PubSubMessage:
 
     group_id:          'strnone'
     position_in_group: 'int'
-    pub_time:          'float'
-    ext_pub_time:      'floatnone'
+    pub_time:          'strorfloat'
+    ext_pub_time:      'strorfloat | None'
     data:              'any_'
     data_prefix:       'str'
     data_prefix_short: 'str'
     mime_type:         'str'
-    priority:          'int'
+    priority:          'intnone'
     expiration:        'int'
     expiration_time:   'float'
     has_gd:            'bool'
@@ -232,11 +232,11 @@ class PubSubMessage:
         """ Returns a dict representation of self.
         """
 
-        skip = skip or ()
+        _skip = skip or () # type: anytuple
         out = {} # type: stranydict
 
         for key in sorted(PubSubMessage.pub_attrs):
-            if key != 'topic' and key not in skip:
+            if key != 'topic' and key not in _skip:
                 value = getattr(self, key)
                 if value is not None:
 
@@ -398,7 +398,7 @@ def ensure_subs_exist(
 ) -> 'anylist':
 
     # A list of input objects that we will return, which will mean that they do exist in the database
-    out = []
+    out = [] # type: anylist
 
     # Length of what we have on input, for logging purposes
     len_orig_sk_list = len(sub_key_aware_objects)
@@ -406,11 +406,11 @@ def ensure_subs_exist(
     # A list of sub keys from which we will potentially remove subscriptions that do not exist
     sk_set = {elem['sub_key'] for elem in sub_key_aware_objects}
 
-    query  = pubsub_sub_key_list(session)
-    query  = query.filter(cast_('Column', PubSubSubscription.sub_key).in_(sk_set))
+    query = pubsub_sub_key_list(session) # type: ignore
+    query = query.filter(cast_('Column', PubSubSubscription.sub_key).in_(sk_set)) # type: ignore
 
-    existing_sk_list = query.all()
-    existing_sk_set  = {elem.sub_key for elem in existing_sk_list}
+    existing_sk_list = query.all() # type: ignore
+    existing_sk_set  = {elem.sub_key for elem in existing_sk_list} # type: ignore
 
     # Find the intersection (shared elements) of what we have on input and what the database actually contains ..
     shared = sk_set & existing_sk_set
@@ -431,7 +431,7 @@ def ensure_subs_exist(
             topic_name,
             len_orig_sk_list,
             len(out),
-            sorted(elem['sub_key']    for elem in out),
+            sorted(elem['sub_key']    for elem in out), # type: ignore
             sorted(elem['pub_msg_id'] for elem in gd_msg_list)
         )
         to_remove

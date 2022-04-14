@@ -188,8 +188,17 @@ class PubSubTool:
 
         else:
             self.delivery_tasks[sub_key] = DeliveryTask(
-                self, self.pubsub, sub_key, delivery_lock, delivery_list, self.deliver_pubsub_msg,
-                self.confirm_pubsub_msg_delivered, sub.config)
+                sub_config = sub.config,
+                sub_key = sub_key,
+                delivery_lock = delivery_lock,
+                delivery_list = delivery_list,
+                deliver_pubsub_msg = self.deliver_pubsub_msg,
+                confirm_pubsub_msg_delivered_cb = self.confirm_pubsub_msg_delivered,
+                enqueue_initial_messages_func = self.enqueue_initial_messages,
+                pubsub_set_to_delete = self.pubsub.set_to_delete,
+                pubsub_get_before_delivery_hook = self.pubsub.get_before_delivery_hook,
+                pubsub_invoke_before_delivery_hook = self.pubsub.invoke_before_delivery_hook,
+            )
 
 # ################################################################################################################################
 
