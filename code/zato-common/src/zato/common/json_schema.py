@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import os
@@ -24,6 +22,7 @@ from zato.common.json_rpc import ErrorCtx, JSONRPCBadRequest, ItemResponse
 from zato.common.util.open_ import open_r
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
     from typing import Callable
@@ -35,9 +34,11 @@ if 0:
     ParallelServer = ParallelServer
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 logger = getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 def get_service_config(item:'anydict', server:'ParallelServer') -> 'anydict':
@@ -59,8 +60,15 @@ def get_service_config(item:'anydict', server:'ParallelServer') -> 'anydict':
 # ################################################################################################################################
 
 class ValidationException(Exception):
-    def __init__(self, cid, object_type, object_name, needs_err_details, error_msg, error_msg_details):
-        # type: (str, str, str, bool, str, str)
+    def __init__(
+        self,
+        cid,         # type: str
+        object_type, # type: str
+        object_name, # type: str
+        needs_err_details, # type: bool
+        error_msg,         # type: str
+        error_msg_details  # type: str
+    ) -> 'None':
         self.cid = cid
         self.object_type = object_type
         self.object_name = object_name
