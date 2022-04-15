@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -39,10 +39,11 @@ from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
-from zato.server.pubsub.model import Endpoint, HookCtx, strsubdict, sublist, Subscription, SubKeyServer, Topic
+from zato.server.pubsub.model import HookCtx, strsubdict, sublist, Subscription, SubKeyServer, Topic
 from zato.server.pubsub.publisher import Publisher
 from zato.server.pubsub.sync import InRAMSync
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
@@ -54,16 +55,20 @@ if 0:
     from zato.distlock import Lock
     from zato.server.connection.web_socket import WebSocket
     from zato.server.base.parallel import ParallelServer
-    from zato.server.pubsub.model import subnone, topiclist
-    from zato.server.pubsub.delivery.task import msgiter, PubSubTool
+    from zato.server.pubsub.core.endpoint import EndpointAPI
+    from zato.server.pubsub.model import Endpoint, subnone, topiclist
+    from zato.server.pubsub.delivery.task import msgiter
+    from zato.server.pubsub.delivery.tool import PubSubTool
     from zato.server.service import Service
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger('zato_pubsub.ps')
 logger_zato = logging.getLogger('zato')
 logger_overflow = logging.getLogger('zato_pubsub_overflow')
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 hook_type_to_method = {
@@ -74,6 +79,7 @@ hook_type_to_method = {
     PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED: 'on_unsubscribed',
 }
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 _service_read_messages_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-gd'
@@ -90,10 +96,6 @@ _end_srv_id = PUBSUB.ENDPOINT_TYPE.SERVICE.id
 _ps_default = PUBSUB.DEFAULT
 
 # ################################################################################################################################
-
-_pub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.PUBLISHER.id)
-_sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
-
 # ################################################################################################################################
 
 default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
@@ -109,6 +111,8 @@ class MsgConst:
 # ################################################################################################################################
 
 class PubSub:
+
+    endpoint_api: 'EndpointAPI'
 
     def __init__(
         self,
@@ -147,23 +151,8 @@ class PubSub:
         # Sub key -> SubKeyServer server/PID handling it
         self.sub_key_servers = {} # type: dict_[str, SubKeyServer]
 
-        # Endpoint ID -> Endpoint object
-        self.endpoints = {} # type: dict_[int, Endpoint]
-
         # Topic ID -> Topic object
         self.topics = cast_('inttopicdict', {})
-
-        # Sec def ID -> Endpoint ID
-        self.sec_id_to_endpoint_id = {} # type: intdict
-
-        # Sec def ID -> Sub key (for single-sub key REST clients)
-        self.sec_id_to_single_sub_key = {} # type: intdict
-
-        # WS chan def ID -> Endpoint ID
-        self.ws_channel_id_to_endpoint_id = {} # type: intdict
-
-        # Service ID -> Endpoint ID
-        self.service_id_to_endpoint_id = {} # type: intdict
 
         # Topic name -> Topic ID
         self.topic_name_to_id = {} # type: strintdict
@@ -176,10 +165,6 @@ class PubSub:
 
         # A backlog of messages that have at least one subscription, i.e. this is what delivery servers use.
         self.sync_backlog = InRAMSync(self)
-
-        # Getter methods for each endpoint type that return actual endpoints,
-        # e.g. REST outgoing connections. Values are set by worker store.
-        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE()) # type: anydict
 
         # How many messages have been published through this server, regardless of which topic they were for
         self.msg_pub_counter = 0
@@ -433,43 +418,56 @@ class PubSub:
 
     def get_endpoint_by_id(self, endpoint_id:'int') -> 'Endpoint':
         with self.lock:
-            return self.endpoints[endpoint_id]
+            return self.endpoint_api.get_by_id(endpoint_id)
 
 # ################################################################################################################################
 
     def get_endpoint_by_name(self, endpoint_name:'str') -> 'Endpoint':
         with self.lock:
-            for endpoint in self.endpoints.values():
-                if endpoint.name == endpoint_name:
-                    return endpoint
-            else:
-                raise KeyError('Could not find endpoint by name `{}` among `{}`'.format(endpoint_name, self.endpoints))
-
-# ################################################################################################################################
-
-    def get_endpoint_id_by_sec_id(self, sec_id:'int') -> 'int':
-        with self.lock:
-            return self.sec_id_to_endpoint_id[sec_id]
-
-# ################################################################################################################################
-
-    def get_endpoint_id_by_ws_channel_id(self, ws_channel_id:'int') -> 'intnone':
-        with self.lock:
-            endpoint_id = self.ws_channel_id_to_endpoint_id.get(ws_channel_id)
-            return endpoint_id
+            return self.endpoint_api.get_by_name(endpoint_name)
 
 # ################################################################################################################################
 
     def get_endpoint_by_ws_channel_id(self, ws_channel_id:'int') -> 'Endpoint':
         with self.lock:
-            endpoint_id = self.ws_channel_id_to_endpoint_id[ws_channel_id]
-            return self.endpoints[endpoint_id]
+            return self.endpoint_api.get_by_ws_channel_id(ws_channel_id)
+
+# ################################################################################################################################
+
+    def get_endpoint_id_by_sec_id(self, sec_id:'int') -> 'int':
+        with self.lock:
+            return self.endpoint_api.get_id_by_sec_id(sec_id)
+
+# ################################################################################################################################
+
+    def get_endpoint_id_by_ws_channel_id(self, ws_channel_id:'int') -> 'intnone':
+        with self.lock:
+            return self.endpoint_api.get_id_by_ws_channel_id(ws_channel_id)
 
 # ################################################################################################################################
 
     def get_endpoint_id_by_service_id(self, service_id:'int') -> 'int':
         with self.lock:
-            return self.service_id_to_endpoint_id[service_id]
+            return self.endpoint_api.get_id_by_service_id(service_id)
+
+# ################################################################################################################################
+
+    def create_endpoint(self, config:'anydict') -> 'None':
+        with self.lock:
+            self.endpoint_api.create(config)
+
+# ################################################################################################################################
+
+    def delete_endpoint(self, endpoint_id:'int') -> 'None':
+        with self.lock:
+            self.endpoint_api.delete(endpoint_id)
+
+# ################################################################################################################################
+
+    def edit_endpoint(self, config:'stranydict') -> 'None':
+        with self.lock:
+            self.endpoint_api.delete(config['id'])
+            self.endpoint_api.create(config)
 
 # ################################################################################################################################
 
@@ -524,13 +522,6 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def _get_endpoint_by_id(self, endpoint_id:'int') -> 'Endpoint':
-        """ Returns an endpoint by ID, must be called with self.lock held.
-        """
-        return self.endpoints[endpoint_id]
-
-# ################################################################################################################################
-
     def get_sub_key_to_topic_name_dict(self, sub_key_list:'strlist') -> 'strstrdict':
         out = {} # type: strstrdict
         with self.lock:
@@ -558,72 +549,6 @@ class PubSub:
             for sub_key in sk_list:
                 out[sub_key] = self._get_topic_by_sub_key(sub_key)
         return out
-
-# ################################################################################################################################
-
-    def _create_endpoint(self, config:'anydict') -> 'None':
-        self.endpoints[config['id']] = Endpoint(config)
-
-        if config['security_id']:
-            self.sec_id_to_endpoint_id[config['security_id']] = config['id']
-
-        if config.get('ws_channel_id'):
-            self.ws_channel_id_to_endpoint_id[config['ws_channel_id']] = config['id']
-
-        if config.get('service_id'):
-            self.service_id_to_endpoint_id[config['service_id']] = config['id']
-
-# ################################################################################################################################
-
-    def create_endpoint(self, config:'anydict') -> 'None':
-        with self.lock:
-            self._create_endpoint(config)
-
-# ################################################################################################################################
-
-    def _delete_endpoint(self, endpoint_id:'int') -> 'None':
-        del self.endpoints[endpoint_id]
-
-        sec_id = None
-        ws_chan_id = None
-        service_id = None
-
-        for key, value in self.sec_id_to_endpoint_id.items():
-            if value == endpoint_id:
-                sec_id = key
-                break
-
-        for key, value in self.ws_channel_id_to_endpoint_id.items():
-            if value == endpoint_id:
-                ws_chan_id = key
-                break
-
-        for key, value in self.service_id_to_endpoint_id.items():
-            if value == endpoint_id:
-                service_id = key
-                break
-
-        if sec_id:
-            del self.sec_id_to_endpoint_id[sec_id]
-
-        if ws_chan_id:
-            del self.ws_channel_id_to_endpoint_id[ws_chan_id]
-
-        if service_id:
-            del self.service_id_to_endpoint_id[service_id]
-
-# ################################################################################################################################
-
-    def delete_endpoint(self, endpoint_id:'int') -> 'None':
-        with self.lock:
-            self._delete_endpoint(endpoint_id)
-
-# ################################################################################################################################
-
-    def edit_endpoint(self, config:'stranydict') -> 'None':
-        with self.lock:
-            self._delete_endpoint(config['id'])
-            self._create_endpoint(config)
 
 # ################################################################################################################################
 
@@ -887,77 +812,26 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def _is_allowed(
-        self,
-        target,        # type: str
-        name,          # type: str
-        is_pub,        # type: bool
-        security_id,   # type: int
-        ws_channel_id, # type: int
-        endpoint_id=0, # type: int
-        _pub_role=_pub_role, # type: anytuple
-        _sub_role=_sub_role  # type: anytuple
-    ) -> 'str | bool':
-        """ An internal function that decides whether an endpoint, a security definition,
-        or a WSX channel are allowed to publish or subscribe to topics.
-        """
-
-        if not endpoint_id:
-
-            if not(security_id or ws_channel_id):
-                raise ValueError(
-                    'Either security_id or ws_channel_id must be given on input instead of `{}` `{}`'.format(
-                    security_id, ws_channel_id))
-
-            if security_id:
-                source, id = self.sec_id_to_endpoint_id, security_id
-            else:
-                source, id = self.ws_channel_id_to_endpoint_id, ws_channel_id
-
-            endpoint_id = source[id]
-
-        # One way or another, we have an endpoint object now ..
-        endpoint = self.endpoints[endpoint_id]
-
-        # .. make sure this endpoint may publish or subscribe, depending on what is needed.
-        if is_pub:
-            if not endpoint.role in _pub_role:
-                return False
-        else:
-            if not endpoint.role in _sub_role:
-                return False
-
-        # Alright, this endpoint has the correct role, but are there are any matching patterns for this topic?
-        for orig, matcher in getattr(endpoint, target):
-            if matcher.match(name):
-                return orig
-        else:
-            return False
-
-# ################################################################################################################################
-
     def is_allowed_pub_topic(self, name:'str', security_id:'int'=0, ws_channel_id:'int'=0) -> 'str | bool':
-        return self._is_allowed('pub_topic_patterns', name, True, security_id, ws_channel_id)
+        return self.endpoint_api.is_allowed_pub_topic(
+            name=name,
+            security_id=security_id,
+            ws_channel_id=ws_channel_id
+        )
 
 # ################################################################################################################################
 
     def is_allowed_pub_topic_by_endpoint_id(self, name:'str', endpoint_id:'int') -> 'str | bool':
-        return self._is_allowed(
-            target='pub_topic_patterns',
+        return self.endpoint_api.is_allowed_pub_topic_by_endpoint_id(
             name=name,
-            is_pub=True,
-            security_id=0,
-            ws_channel_id=0,
             endpoint_id=endpoint_id
         )
 
 # ################################################################################################################################
 
     def is_allowed_sub_topic(self, name:'str', security_id:'int'=0, ws_channel_id:'int'=0) -> 'str | bool':
-        return self._is_allowed(
-            target='sub_topic_patterns',
+        return self.endpoint_api.is_allowed_sub_topic(
             name=name,
-            is_pub=False,
             security_id=security_id,
             ws_channel_id=ws_channel_id
         )
@@ -965,12 +839,8 @@ class PubSub:
 # ################################################################################################################################
 
     def is_allowed_sub_topic_by_endpoint_id(self, name:'str', endpoint_id:'int') -> 'str | bool':
-        return self._is_allowed(
-            target='sub_topic_patterns',
+        return self.endpoint_api.is_allowed_sub_topic_by_endpoint_id(
             name=name,
-            is_pub=False,
-            security_id=0,
-            ws_channel_id=0,
             endpoint_id=endpoint_id
         )
 
@@ -1125,7 +995,7 @@ class PubSub:
         """
         sub = self._get_subscription_by_sub_key(config['sub_key'])
         config['endpoint_id'] = sub.endpoint_id
-        config['endpoint_name'] = self._get_endpoint_by_id(sub.endpoint_id)
+        config['endpoint_name'] = self.endpoint_api.get_by_id(sub.endpoint_id)
         self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
         endpoint_type = config['endpoint_type']
