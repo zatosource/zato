@@ -36,12 +36,12 @@ from zato.common.pubsub import skip_to_external
 from zato.common.typing_ import cast_, dict_, optional
 from zato.common.util.api import spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
-from zato.common.util.hook import HookTool
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
 from zato.server.pubsub.core.endpoint import EndpointAPI
 from zato.server.pubsub.core.trigger import NotifyPubSubTasksTrigger
-from zato.server.pubsub.model import HookCtx, inttopicdict, strsubdict, strtopicdict, Subscription, SubKeyServer, Topic
+from zato.server.pubsub.core.hook import HookAPI
+from zato.server.pubsub.model import inttopicdict, strsubdict, strtopicdict, Subscription, SubKeyServer, Topic
 from zato.server.pubsub.publisher import Publisher
 from zato.server.pubsub.sync import InRAMSync
 
@@ -68,17 +68,6 @@ if 0:
 logger = logging.getLogger('zato_pubsub.ps')
 logger_zato = logging.getLogger('zato')
 logger_overflow = logging.getLogger('zato_pubsub_overflow')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-hook_type_to_method = {
-    PUBSUB.HOOK_TYPE.BEFORE_PUBLISH: 'before_publish',
-    PUBSUB.HOOK_TYPE.BEFORE_DELIVERY: 'before_delivery',
-    PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE: 'on_outgoing_soap_invoke',
-    PUBSUB.HOOK_TYPE.ON_SUBSCRIBED: 'on_subscribed',
-    PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED: 'on_unsubscribed',
-}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -189,9 +178,6 @@ class PubSub:
         self.data_prefix_len = self.server.fs_server_config.pubsub.data_prefix_len # type: int
         self.data_prefix_short_len = self.server.fs_server_config.pubsub.data_prefix_short_len # type: int
 
-        # Manages access to service hooks
-        self.hook_tool = HookTool(self.server, HookCtx, hook_type_to_method, self.invoke_service)
-
         # Creates SQL sessions
         self.new_session_func = self.server.odb.session
 
@@ -202,6 +188,13 @@ class PubSub:
             marshal_api = self.server.marshal_api,
             service_invoke_func = self.invoke_service,
             new_session_func = self.new_session_func
+        )
+
+        # Manages hooks
+        self.hook_api = HookAPI(
+            lock = self.lock,
+            server = self.server,
+            invoke_service_func = self.invoke_service,
         )
 
         # This will trigger synchronization
@@ -700,44 +693,10 @@ class PubSub:
                             config['server_pid'] = self.server.server_startup_ipc.get_pubsub_pid()
                             config['server_name'] = self.server.name
                             self.set_sub_key_server(config)
-
-# ################################################################################################################################
-
-    def _set_topic_config_hook_data(self, config:'stranydict') -> 'None':
-
-        hook_service_id = config.get('hook_service_id')
-
-        if hook_service_id:
-
-            if not config['hook_service_name']:
-                config['hook_service_name'] = self.server.service_store.get_service_name_by_id(hook_service_id)
-
-            # Invoked when a new subscription to topic is created
-            config['on_subscribed_service_invoker'] = self.hook_tool.get_hook_service_invoker(
-                config['hook_service_name'], PUBSUB.HOOK_TYPE.ON_SUBSCRIBED)
-
-            # Invoked when an existing subscription to topic is deleted
-            config['on_unsubscribed_service_invoker'] = self.hook_tool.get_hook_service_invoker(
-                config['hook_service_name'], PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED)
-
-            # Invoked before messages are published
-            config['before_publish_hook_service_invoker'] = self.hook_tool.get_hook_service_invoker(
-                config['hook_service_name'], PUBSUB.HOOK_TYPE.BEFORE_PUBLISH)
-
-            # Invoked before messages are delivered
-            config['before_delivery_hook_service_invoker'] = self.hook_tool.get_hook_service_invoker(
-                config['hook_service_name'], PUBSUB.HOOK_TYPE.BEFORE_DELIVERY)
-
-            # Invoked for outgoing SOAP connections
-            config['on_outgoing_soap_invoke_invoker'] = self.hook_tool.get_hook_service_invoker(
-                config['hook_service_name'], PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE)
-        else:
-            config['hook_service_invoker'] = None
-
 # ################################################################################################################################
 
     def _create_topic_object(self, config:'stranydict') -> 'None':
-        self._set_topic_config_hook_data(config)
+        self.hook_api.set_topic_config_hook_data(config)
         config['meta_store_frequency'] = self.topic_meta_store_frequency
 
         topic = Topic(config, self.server.name, self.server.pid)
@@ -1497,7 +1456,7 @@ class PubSub:
             for topic in self.topics.values():
                 hook_service_id = topic.config.get('hook_service_id')
                 if hook_service_id in services_deployed:
-                    self._set_topic_config_hook_data(topic.config)
+                    self.hook_api.set_topic_config_hook_data(topic.config)
                     topic.set_hooks()
 
 # ################################################################################################################################
