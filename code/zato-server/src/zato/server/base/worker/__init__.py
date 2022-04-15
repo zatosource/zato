@@ -937,7 +937,7 @@ class WorkerStore(_WorkerStoreBase):
 
         self.pubsub.set_endpoint_impl_getter(PUBSUB.ENDPOINT_TYPE.REST.id, self.worker_config.out_plain_http.get_by_id)
 
-         # Not used by needed for API completeness
+        # Not used by needed for API completeness
         self.pubsub.set_endpoint_impl_getter(
             PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
             cast_('callable_', None),
