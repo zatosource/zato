@@ -39,6 +39,7 @@ from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
+from zato.server.pubsub.core.endpoint import EndpointAPI
 from zato.server.pubsub.model import HookCtx, strsubdict, sublist, Subscription, SubKeyServer, Topic
 from zato.server.pubsub.publisher import Publisher
 from zato.server.pubsub.sync import InRAMSync
@@ -55,7 +56,6 @@ if 0:
     from zato.distlock import Lock
     from zato.server.connection.web_socket import WebSocket
     from zato.server.base.parallel import ParallelServer
-    from zato.server.pubsub.core.endpoint import EndpointAPI
     from zato.server.pubsub.model import Endpoint, subnone, topiclist
     from zato.server.pubsub.delivery.task import msgiter
     from zato.server.pubsub.delivery.tool import PubSubTool
@@ -141,6 +141,9 @@ class PubSub:
 
         self.log_if_wsx_deliv_server_not_found = \
             self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found # type: bool
+
+        # Manages Endpoint objects
+        self.endpoint_api = EndpointAPI()
 
         # Topic name -> List of Subscription objects
         self.subscriptions_by_topic = {} # type: dict_[str, sublist]
@@ -468,6 +471,18 @@ class PubSub:
         with self.lock:
             self.endpoint_api.delete(config['id'])
             self.endpoint_api.create(config)
+
+# ################################################################################################################################
+
+    def get_endpoint_impl_getter(self, endpoint_type:'str') -> 'callable_':
+        with self.lock:
+            return self.endpoint_api.get_impl_getter(endpoint_type)
+
+# ################################################################################################################################
+
+    def set_endpoint_impl_getter(self, endpoint_type:'str', impl_getter:'callable_') -> 'None':
+        with self.lock:
+            return self.endpoint_api.set_impl_getter(endpoint_type, impl_getter)
 
 # ################################################################################################################################
 

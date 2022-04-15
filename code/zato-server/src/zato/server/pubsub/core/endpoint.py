@@ -14,7 +14,7 @@ from zato.server.pubsub.model import Endpoint
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anytuple, dict_, intdict, intnone
+    from zato.common.typing_ import anydict, anytuple, callable_, dict_, intdict, intnone, strcalldict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,7 +28,7 @@ _sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
 class EndpointAPI:
 
     endpoints:            'dict_[int, Endpoint]'
-    endpoint_impl_getter: 'anydict'
+    endpoint_impl_getter: 'strcalldict'
 
     sec_id_to_endpoint_id:        'intdict'
     service_id_to_endpoint_id:    'intdict'
@@ -231,6 +231,16 @@ class EndpointAPI:
             ws_channel_id=0,
             endpoint_id=endpoint_id
         )
+
+# ################################################################################################################################
+
+    def get_impl_getter(self, endpoint_type:'str') -> 'callable_':
+        return self.endpoint_impl_getter[endpoint_type]
+
+# ################################################################################################################################
+
+    def set_impl_getter(self, endpoint_type:'str', impl_getter:'callable_') -> 'None':
+        self.endpoint_impl_getter[endpoint_type] = impl_getter
 
 # ################################################################################################################################
 # ################################################################################################################################
