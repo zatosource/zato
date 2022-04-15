@@ -527,8 +527,12 @@ class DeliveryResultCtx:
 subnone    = optional[Subscription]
 sublist    = list_[Subscription]
 strsubdict = dict_[str, Subscription]
+
 topicnone  = optional[Topic]
 topiclist  = list_[Topic]
+
+strtopicdict = dict_[str, Topic]
+inttopicdict = dict_[int, Topic]
 
 # ################################################################################################################################
 # ################################################################################################################################
