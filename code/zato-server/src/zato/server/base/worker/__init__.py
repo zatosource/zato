@@ -94,6 +94,7 @@ from zato.zmq_.channel import MDPv01 as ChannelZMQMDPv01, Simple as ChannelZMQSi
 from zato.zmq_.outgoing import Simple as OutZMQSimple
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
@@ -934,8 +935,13 @@ class WorkerStore(_WorkerStoreBase):
         for value in self.worker_config.pubsub_topic.values():
             self.pubsub.create_topic_object(bunchify(value['config']))
 
-        self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.REST.id] = self.worker_config.out_plain_http.get_by_id
-        self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id] = None # Not used by needed for API completeness
+        self.pubsub.set_endpoint_impl_getter(PUBSUB.ENDPOINT_TYPE.REST.id, self.worker_config.out_plain_http.get_by_id)
+
+        # Not used by needed for API completeness
+        self.pubsub.set_endpoint_impl_getter(
+            PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
+            cast_('callable_', None),
+        )
 
 # ################################################################################################################################
 
