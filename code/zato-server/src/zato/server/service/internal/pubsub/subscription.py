@@ -31,7 +31,8 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import get_sa_model_columns, make_repr
 from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
 from zato.server.connection.web_socket import WebSocket
-from zato.server.pubsub import PubSub, Topic
+from zato.server.pubsub import PubSub
+from zato.server.pubsub.model import Topic
 from zato.server.service import Bool, Int, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.pubsub import common_sub_data
