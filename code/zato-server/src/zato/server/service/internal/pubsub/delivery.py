@@ -86,7 +86,7 @@ class DeliverMessage(AdminService):
         msg = self.request.input.msg # type: any_
 
         subscription = self.request.input.subscription # type: Subscription
-        endpoint_impl_getter = self.pubsub.endpoint_impl_getter[subscription.config['endpoint_type']] # type: callable_
+        endpoint_impl_getter = self.pubsub.get_endpoint_impl_getter(subscription.config['endpoint_type']) # type: callable_
 
         func = deliver_func[subscription.config['endpoint_type']] # type: callable_
         func(self, msg, subscription, endpoint_impl_getter)
