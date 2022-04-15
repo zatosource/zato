@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,7 +18,7 @@ from operator import attrgetter
 from traceback import format_exc
 
 # gevent
-from gevent import sleep, spawn
+from gevent import sleep
 from gevent.lock import RLock
 
 # Texttable
@@ -34,30 +34,36 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
 from zato.common.typing_ import cast_, dict_, optional
-from zato.common.util.api import new_cid, spawn_greenlet
+from zato.common.util.api import spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
-from zato.common.util.hook import HookTool
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
-from zato.server.pubsub.model import Endpoint, HookCtx, strsubdict, sublist, Subscription, SubKeyServer, Topic
+from zato.server.pubsub.core.endpoint import EndpointAPI
+from zato.server.pubsub.core.trigger import NotifyPubSubTasksTrigger
+from zato.server.pubsub.core.hook import HookAPI
+from zato.server.pubsub.core.topic import TopicAPI
+from zato.server.pubsub.model import inttopicdict, strsubdict, strtopicdict, Subscription, SubKeyServer
 from zato.server.pubsub.publisher import Publisher
 from zato.server.pubsub.sync import InRAMSync
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.model.wsx import WSXConnectorConfig
     from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, commondict, dictlist, intdict, \
-        intanydict, intlist, intnone, intset, list_, stranydict, strintdict, strstrdict, strlist, strlistdict, \
+        intlist, intnone, intset, list_, stranydict, strstrdict, strlist, strlistdict, \
         strlistempty, strtuple, type_
     from zato.distlock import Lock
     from zato.server.connection.web_socket import WebSocket
     from zato.server.base.parallel import ParallelServer
-    from zato.server.pubsub.model import subnone, topiclist
-    from zato.server.pubsub.delivery.task import msgiter, PubSubTool
+    from zato.server.pubsub.model import Endpoint, subnone, sublist, Topic, topiclist
+    from zato.server.pubsub.delivery.task import msgiter
+    from zato.server.pubsub.delivery.tool import PubSubTool
     from zato.server.service import Service
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger('zato_pubsub.ps')
@@ -65,15 +71,6 @@ logger_zato = logging.getLogger('zato')
 logger_overflow = logging.getLogger('zato_pubsub_overflow')
 
 # ################################################################################################################################
-
-hook_type_to_method = {
-    PUBSUB.HOOK_TYPE.BEFORE_PUBLISH: 'before_publish',
-    PUBSUB.HOOK_TYPE.BEFORE_DELIVERY: 'before_delivery',
-    PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE: 'on_outgoing_soap_invoke',
-    PUBSUB.HOOK_TYPE.ON_SUBSCRIBED: 'on_subscribed',
-    PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED: 'on_unsubscribed',
-}
-
 # ################################################################################################################################
 
 _service_read_messages_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-gd'
@@ -90,10 +87,6 @@ _end_srv_id = PUBSUB.ENDPOINT_TYPE.SERVICE.id
 _ps_default = PUBSUB.DEFAULT
 
 # ################################################################################################################################
-
-_pub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.PUBLISHER.id)
-_sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
-
 # ################################################################################################################################
 
 default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
@@ -110,6 +103,9 @@ class MsgConst:
 
 class PubSub:
 
+    endpoint_api: 'EndpointAPI'
+    notify_pub_sub_tasks_trigger: 'NotifyPubSubTasksTrigger'
+
     def __init__(
         self,
         cluster_id,         # type: int
@@ -125,18 +121,23 @@ class PubSub:
         self.broker_client = broker_client
         self.sync_max_iters = sync_max_iters
         self.lock = RLock()
-        self.keep_running = True
         self.sk_server_table_columns = self.server.fs_server_config.pubsub.get('sk_server_table_columns') or \
             default_sk_server_table_columns # type: anytuple
 
         # This is a pub/sub tool for delivery of Zato services within this server
         self.service_pubsub_tool = None # type: optional[PubSubTool]
 
+        self.has_meta_topic = self.server.fs_server_config.pubsub_meta_topic.enabled
+        self.topic_meta_store_frequency = self.server.fs_server_config.pubsub_meta_topic.store_frequency
+
         self.log_if_deliv_server_not_found = \
             self.server.fs_server_config.pubsub.log_if_deliv_server_not_found # type: bool
 
         self.log_if_wsx_deliv_server_not_found = \
             self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found # type: bool
+
+        # Manages Endpoint objects
+        self.endpoint_api = EndpointAPI()
 
         # Topic name -> List of Subscription objects
         self.subscriptions_by_topic = {} # type: dict_[str, sublist]
@@ -147,27 +148,6 @@ class PubSub:
         # Sub key -> SubKeyServer server/PID handling it
         self.sub_key_servers = {} # type: dict_[str, SubKeyServer]
 
-        # Endpoint ID -> Endpoint object
-        self.endpoints = {} # type: dict_[int, Endpoint]
-
-        # Topic ID -> Topic object
-        self.topics = cast_('inttopicdict', {})
-
-        # Sec def ID -> Endpoint ID
-        self.sec_id_to_endpoint_id = {} # type: intdict
-
-        # Sec def ID -> Sub key (for single-sub key REST clients)
-        self.sec_id_to_single_sub_key = {} # type: intdict
-
-        # WS chan def ID -> Endpoint ID
-        self.ws_channel_id_to_endpoint_id = {} # type: intdict
-
-        # Service ID -> Endpoint ID
-        self.service_id_to_endpoint_id = {} # type: intdict
-
-        # Topic name -> Topic ID
-        self.topic_name_to_id = {} # type: strintdict
-
         # Sub key -> PubSubTool object
         self.pubsub_tool_by_sub_key = {} # type: dict_[str, PubSubTool]
 
@@ -177,19 +157,11 @@ class PubSub:
         # A backlog of messages that have at least one subscription, i.e. this is what delivery servers use.
         self.sync_backlog = InRAMSync(self)
 
-        # Getter methods for each endpoint type that return actual endpoints,
-        # e.g. REST outgoing connections. Values are set by worker store.
-        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE()) # type: anydict
-
         # How many messages have been published through this server, regardless of which topic they were for
         self.msg_pub_counter = 0
 
         # How many messages a given endpoint published, topic_id -> its message counter.
         self.endpoint_msg_counter = {} # type: intdict
-
-        # How often to update metadata about topics and endpoints, if at all
-        self.has_meta_topic = self.server.fs_server_config.pubsub_meta_topic.enabled # type: bool
-        self.topic_meta_store_frequency = self.server.fs_server_config.pubsub_meta_topic.store_frequency # type: int
 
         self.has_meta_endpoint = self.server.fs_server_config.pubsub_meta_endpoint_pub.enabled # type: bool
         self.endpoint_meta_store_frequency = self.server.fs_server_config.pubsub_meta_endpoint_pub.store_frequency # type: int
@@ -199,9 +171,6 @@ class PubSub:
         # How many bytes to use for look up purposes when conducting message searches
         self.data_prefix_len = self.server.fs_server_config.pubsub.data_prefix_len # type: int
         self.data_prefix_short_len = self.server.fs_server_config.pubsub.data_prefix_short_len # type: int
-
-        # Manages access to service hooks
-        self.hook_tool = HookTool(self.server, HookCtx, hook_type_to_method, self.invoke_service)
 
         # Creates SQL sessions
         self.new_session_func = self.server.odb.session
@@ -215,8 +184,37 @@ class PubSub:
             new_session_func = self.new_session_func
         )
 
+        # Manages hooks
+        self.hook_api = HookAPI(
+            lock = self.lock,
+            server = self.server,
+            invoke_service_func = self.invoke_service,
+        )
+
+        # Manages topics
+        self.topic_api = TopicAPI(
+            hook_api = self.hook_api,
+            server_name = self.server.name,
+            server_pid = self.server.pid,
+            topic_meta_store_frequency = self.topic_meta_store_frequency,
+            subscriptions_by_topic = self.subscriptions_by_topic,
+            is_allowed_sub_topic_by_endpoint_id_func = self.is_allowed_sub_topic_by_endpoint_id,
+        )
+
+        # This will trigger synchronization
+        self.notify_pub_sub_tasks_trigger = NotifyPubSubTasksTrigger(
+            lock = self.lock,
+            topics = self.topic_api.get_topics(),
+            sync_max_iters = self.sync_max_iters,
+            invoke_service_func = self.invoke_service,
+            set_sync_has_msg_func = self._set_sync_has_msg,
+            get_subscriptions_by_topic_func = self.get_subscriptions_by_topic,
+            get_delivery_server_by_sub_key_func = self.get_delivery_server_by_sub_key,
+            sync_backlog_get_delete_messages_by_sub_keys_func = self.sync_backlog.get_delete_messages_by_sub_keys
+        )
+
         if spawn_trigger_notify:
-            _ = spawn_greenlet(self.trigger_notify_pubsub_tasks)
+            _ = spawn_greenlet(self.notify_pub_sub_tasks_trigger.run)
 
 # ################################################################################################################################
 
@@ -411,76 +409,86 @@ class PubSub:
 
     def has_topic_by_name(self, topic_name:'str') -> 'bool':
         with self.lock:
-            try:
-                _ = self._get_topic_by_name(topic_name)
-            except KeyError:
-                return False
-            else:
-                return True
+            return self.topic_api.has_topic_by_name(topic_name)
 
 # ################################################################################################################################
 
     def has_topic_by_id(self, topic_id:'int') -> 'bool':
         with self.lock:
-            try:
-                self.topics[topic_id]
-            except KeyError:
-                return False
-            else:
-                return True
+            return self.topic_api.has_topic_by_id(topic_id)
 
 # ################################################################################################################################
 
     def get_endpoint_by_id(self, endpoint_id:'int') -> 'Endpoint':
         with self.lock:
-            return self.endpoints[endpoint_id]
+            return self.endpoint_api.get_by_id(endpoint_id)
 
 # ################################################################################################################################
 
     def get_endpoint_by_name(self, endpoint_name:'str') -> 'Endpoint':
         with self.lock:
-            for endpoint in self.endpoints.values():
-                if endpoint.name == endpoint_name:
-                    return endpoint
-            else:
-                raise KeyError('Could not find endpoint by name `{}` among `{}`'.format(endpoint_name, self.endpoints))
-
-# ################################################################################################################################
-
-    def get_endpoint_id_by_sec_id(self, sec_id:'int') -> 'int':
-        with self.lock:
-            return self.sec_id_to_endpoint_id[sec_id]
-
-# ################################################################################################################################
-
-    def get_endpoint_id_by_ws_channel_id(self, ws_channel_id:'int') -> 'intnone':
-        with self.lock:
-            endpoint_id = self.ws_channel_id_to_endpoint_id.get(ws_channel_id)
-            return endpoint_id
+            return self.endpoint_api.get_by_name(endpoint_name)
 
 # ################################################################################################################################
 
     def get_endpoint_by_ws_channel_id(self, ws_channel_id:'int') -> 'Endpoint':
         with self.lock:
-            endpoint_id = self.ws_channel_id_to_endpoint_id[ws_channel_id]
-            return self.endpoints[endpoint_id]
+            return self.endpoint_api.get_by_ws_channel_id(ws_channel_id)
+
+# ################################################################################################################################
+
+    def get_endpoint_id_by_sec_id(self, sec_id:'int') -> 'int':
+        with self.lock:
+            return self.endpoint_api.get_id_by_sec_id(sec_id)
+
+# ################################################################################################################################
+
+    def get_endpoint_id_by_ws_channel_id(self, ws_channel_id:'int') -> 'intnone':
+        with self.lock:
+            return self.endpoint_api.get_id_by_ws_channel_id(ws_channel_id)
 
 # ################################################################################################################################
 
     def get_endpoint_id_by_service_id(self, service_id:'int') -> 'int':
         with self.lock:
-            return self.service_id_to_endpoint_id[service_id]
+            return self.endpoint_api.get_id_by_service_id(service_id)
 
 # ################################################################################################################################
 
-    def _get_topic_id_by_name(self, topic_name:'str') -> 'int':
-        return self.topic_name_to_id[topic_name]
+    def create_endpoint(self, config:'anydict') -> 'None':
+        with self.lock:
+            self.endpoint_api.create(config)
+
+# ################################################################################################################################
+
+    def delete_endpoint(self, endpoint_id:'int') -> 'None':
+        with self.lock:
+            self.endpoint_api.delete(endpoint_id)
+
+# ################################################################################################################################
+
+    def edit_endpoint(self, config:'stranydict') -> 'None':
+        with self.lock:
+            self.endpoint_api.delete(config['id'])
+            self.endpoint_api.create(config)
+
+# ################################################################################################################################
+
+    def get_endpoint_impl_getter(self, endpoint_type:'str') -> 'callable_':
+        with self.lock:
+            return self.endpoint_api.get_impl_getter(endpoint_type)
+
+# ################################################################################################################################
+
+    def set_endpoint_impl_getter(self, endpoint_type:'str', impl_getter:'callable_') -> 'None':
+        with self.lock:
+            return self.endpoint_api.set_impl_getter(endpoint_type, impl_getter)
 
 # ################################################################################################################################
 
     def get_topic_id_by_name(self, topic_name:'str') -> 'int':
         with self.lock:
-            return self._get_topic_id_by_name(topic_name)
+            return self.topic_api.get_topic_id_by_name(topic_name)
 
 # ################################################################################################################################
 
@@ -488,46 +496,26 @@ class PubSub:
         """ Returns of non-GD messages for a given topic by its name.
         """
         with self.lock:
-            return self.sync_backlog.get_topic_depth(self._get_topic_id_by_name(topic_name))
-
-# ################################################################################################################################
-
-    def _get_topic_by_name(self, topic_name:'str') -> 'Topic':
-        """ Low-level implementation of self.get_topic_by_name.
-        """
-        return self.topics[self._get_topic_id_by_name(topic_name)]
+            topic_id = self.topic_api.get_topic_id_by_name(topic_name)
+            return self.sync_backlog.get_topic_depth(topic_id)
 
 # ################################################################################################################################
 
     def get_topic_by_name(self, topic_name:'str') -> 'Topic':
         with self.lock:
-            return self._get_topic_by_name(topic_name)
-
-# ################################################################################################################################
-
-    def _get_topic_by_id(self, topic_id:'int') -> 'Topic':
-        """ Low-level implementation of self.get_topic_by_id, must be called with self.lock held.
-        """
-        return self.topics[topic_id]
+            return self.topic_api.get_topic_by_name(topic_name)
 
 # ################################################################################################################################
 
     def get_topic_by_id(self, topic_id:'int') -> 'Topic':
         with self.lock:
-            return self._get_topic_by_id(topic_id)
+            return self.topic_api.get_topic_by_id(topic_id)
 
 # ################################################################################################################################
 
     def get_topic_name_by_sub_key(self, sub_key:'str') -> 'str':
         with self.lock:
             return self._get_subscription_by_sub_key(sub_key).topic_name
-
-# ################################################################################################################################
-
-    def _get_endpoint_by_id(self, endpoint_id:'int') -> 'Endpoint':
-        """ Returns an endpoint by ID, must be called with self.lock held.
-        """
-        return self.endpoints[endpoint_id]
 
 # ################################################################################################################################
 
@@ -542,7 +530,8 @@ class PubSub:
 # ################################################################################################################################
 
     def _get_topic_by_sub_key(self, sub_key:'str') -> 'Topic':
-        return self._get_topic_by_name(self._get_subscription_by_sub_key(sub_key).topic_name)
+        sub = self._get_subscription_by_sub_key(sub_key)
+        return self.topic_api.get_topic_by_name(sub.topic_name)
 
 # ################################################################################################################################
 
@@ -552,78 +541,12 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def get_topic_list_by_sub_key_list(self, sk_list:'strlist') -> 'strtopicdict': # type: ignore [valid-type]
+    def get_topic_list_by_sub_key_list(self, sk_list:'strlist') -> 'strtopicdict':
         out = cast_('strtopicdict', {})
         with self.lock:
             for sub_key in sk_list:
                 out[sub_key] = self._get_topic_by_sub_key(sub_key)
         return out
-
-# ################################################################################################################################
-
-    def _create_endpoint(self, config:'anydict') -> 'None':
-        self.endpoints[config['id']] = Endpoint(config)
-
-        if config['security_id']:
-            self.sec_id_to_endpoint_id[config['security_id']] = config['id']
-
-        if config.get('ws_channel_id'):
-            self.ws_channel_id_to_endpoint_id[config['ws_channel_id']] = config['id']
-
-        if config.get('service_id'):
-            self.service_id_to_endpoint_id[config['service_id']] = config['id']
-
-# ################################################################################################################################
-
-    def create_endpoint(self, config:'anydict') -> 'None':
-        with self.lock:
-            self._create_endpoint(config)
-
-# ################################################################################################################################
-
-    def _delete_endpoint(self, endpoint_id:'int') -> 'None':
-        del self.endpoints[endpoint_id]
-
-        sec_id = None
-        ws_chan_id = None
-        service_id = None
-
-        for key, value in self.sec_id_to_endpoint_id.items():
-            if value == endpoint_id:
-                sec_id = key
-                break
-
-        for key, value in self.ws_channel_id_to_endpoint_id.items():
-            if value == endpoint_id:
-                ws_chan_id = key
-                break
-
-        for key, value in self.service_id_to_endpoint_id.items():
-            if value == endpoint_id:
-                service_id = key
-                break
-
-        if sec_id:
-            del self.sec_id_to_endpoint_id[sec_id]
-
-        if ws_chan_id:
-            del self.ws_channel_id_to_endpoint_id[ws_chan_id]
-
-        if service_id:
-            del self.service_id_to_endpoint_id[service_id]
-
-# ################################################################################################################################
-
-    def delete_endpoint(self, endpoint_id:'int') -> 'None':
-        with self.lock:
-            self._delete_endpoint(endpoint_id)
-
-# ################################################################################################################################
-
-    def edit_endpoint(self, config:'stranydict') -> 'None':
-        with self.lock:
-            self._delete_endpoint(config['id'])
-            self._create_endpoint(config)
 
 # ################################################################################################################################
 
@@ -750,55 +673,9 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def _set_topic_config_hook_data(self, config:'stranydict') -> 'None':
-
-        hook_service_id = config.get('hook_service_id')
-
-        if hook_service_id:
-
-            if not config['hook_service_name']:
-                config['hook_service_name'] = self.server.service_store.get_service_name_by_id(hook_service_id)
-
-            # Invoked when a new subscription to topic is created
-            config['on_subscribed_service_invoker'] = self.hook_tool.get_hook_service_invoker(
-                config['hook_service_name'], PUBSUB.HOOK_TYPE.ON_SUBSCRIBED)
-
-            # Invoked when an existing subscription to topic is deleted
-            config['on_unsubscribed_service_invoker'] = self.hook_tool.get_hook_service_invoker(
-                config['hook_service_name'], PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED)
-
-            # Invoked before messages are published
-            config['before_publish_hook_service_invoker'] = self.hook_tool.get_hook_service_invoker(
-                config['hook_service_name'], PUBSUB.HOOK_TYPE.BEFORE_PUBLISH)
-
-            # Invoked before messages are delivered
-            config['before_delivery_hook_service_invoker'] = self.hook_tool.get_hook_service_invoker(
-                config['hook_service_name'], PUBSUB.HOOK_TYPE.BEFORE_DELIVERY)
-
-            # Invoked for outgoing SOAP connections
-            config['on_outgoing_soap_invoke_invoker'] = self.hook_tool.get_hook_service_invoker(
-                config['hook_service_name'], PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE)
-        else:
-            config['hook_service_invoker'] = None
-
-# ################################################################################################################################
-
-    def _create_topic_object(self, config:'stranydict') -> 'None':
-        self._set_topic_config_hook_data(config)
-        config['meta_store_frequency'] = self.topic_meta_store_frequency
-
-        topic = Topic(config, self.server.name, self.server.pid)
-        self.topics[config['id']] = topic
-        self.topic_name_to_id[config['name']] = config['id']
-
-        logger.info('Created topic object `%s` (id:%s) on server `%s` (pid:%s)', topic.name, topic.id,
-            topic.server_name, topic.server_pid)
-
-# ################################################################################################################################
-
     def create_topic_object(self, config:'anydict') -> 'None':
         with self.lock:
-            self._create_topic_object(config)
+            self.topic_api.create_topic_object(config)
 
 # ################################################################################################################################
 
@@ -818,7 +695,7 @@ class PubSub:
             # We have it, good
             with self.lock:
                 try:
-                    _ = self._get_topic_by_name(topic_name)
+                    _ = self.topic_api.get_topic_by_name(topic_name)
                 except KeyError:
                     pass # No such topic
                 else:
@@ -833,22 +710,11 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def _delete_topic(self, topic_id:'int', topic_name:'str') -> 'anylist':
-        del self.topic_name_to_id[topic_name]
-        subscriptions_by_topic = self.subscriptions_by_topic.pop(topic_name, [])
-        del self.topics[topic_id]
-
-        logger.info('Deleted topic object `%s` (%s), subs:`%s`',
-            topic_name, topic_id, [elem.sub_key for elem in subscriptions_by_topic])
-
-        return subscriptions_by_topic
-
-# ################################################################################################################################
-
     def delete_topic(self, topic_id:'int') -> 'None':
         with self.lock:
-            topic_name = self.topics[topic_id].name
-            subscriptions_by_topic = self._delete_topic(topic_id, topic_name) # type: sublist
+            topic = self.topic_api.get_topic_by_id(topic_id)
+            topic_name = topic.name
+            subscriptions_by_topic = self.topic_api.delete_topic(topic_id, topic_name) # type: sublist
 
             for sub in subscriptions_by_topic:
                 _ = self._delete_subscription_by_sub_key(sub.sub_key, ignore_missing=True)
@@ -858,8 +724,8 @@ class PubSub:
     def edit_topic(self, del_name:'str', config:'anydict') -> 'None':
         with self.lock:
             subscriptions_by_topic = self.subscriptions_by_topic.pop(del_name, [])
-            _ = self._delete_topic(config['id'], del_name)
-            self._create_topic_object(config)
+            _ = self.topic_api.delete_topic(config['id'], del_name)
+            self.topic_api.create_topic_object(config)
             self.subscriptions_by_topic[config['name']] = subscriptions_by_topic
 
 # ################################################################################################################################
@@ -887,77 +753,26 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def _is_allowed(
-        self,
-        target,        # type: str
-        name,          # type: str
-        is_pub,        # type: bool
-        security_id,   # type: int
-        ws_channel_id, # type: int
-        endpoint_id=0, # type: int
-        _pub_role=_pub_role, # type: anytuple
-        _sub_role=_sub_role  # type: anytuple
-    ) -> 'str | bool':
-        """ An internal function that decides whether an endpoint, a security definition,
-        or a WSX channel are allowed to publish or subscribe to topics.
-        """
-
-        if not endpoint_id:
-
-            if not(security_id or ws_channel_id):
-                raise ValueError(
-                    'Either security_id or ws_channel_id must be given on input instead of `{}` `{}`'.format(
-                    security_id, ws_channel_id))
-
-            if security_id:
-                source, id = self.sec_id_to_endpoint_id, security_id
-            else:
-                source, id = self.ws_channel_id_to_endpoint_id, ws_channel_id
-
-            endpoint_id = source[id]
-
-        # One way or another, we have an endpoint object now ..
-        endpoint = self.endpoints[endpoint_id]
-
-        # .. make sure this endpoint may publish or subscribe, depending on what is needed.
-        if is_pub:
-            if not endpoint.role in _pub_role:
-                return False
-        else:
-            if not endpoint.role in _sub_role:
-                return False
-
-        # Alright, this endpoint has the correct role, but are there are any matching patterns for this topic?
-        for orig, matcher in getattr(endpoint, target):
-            if matcher.match(name):
-                return orig
-        else:
-            return False
-
-# ################################################################################################################################
-
     def is_allowed_pub_topic(self, name:'str', security_id:'int'=0, ws_channel_id:'int'=0) -> 'str | bool':
-        return self._is_allowed('pub_topic_patterns', name, True, security_id, ws_channel_id)
+        return self.endpoint_api.is_allowed_pub_topic(
+            name=name,
+            security_id=security_id,
+            ws_channel_id=ws_channel_id
+        )
 
 # ################################################################################################################################
 
     def is_allowed_pub_topic_by_endpoint_id(self, name:'str', endpoint_id:'int') -> 'str | bool':
-        return self._is_allowed(
-            target='pub_topic_patterns',
+        return self.endpoint_api.is_allowed_pub_topic_by_endpoint_id(
             name=name,
-            is_pub=True,
-            security_id=0,
-            ws_channel_id=0,
             endpoint_id=endpoint_id
         )
 
 # ################################################################################################################################
 
     def is_allowed_sub_topic(self, name:'str', security_id:'int'=0, ws_channel_id:'int'=0) -> 'str | bool':
-        return self._is_allowed(
-            target='sub_topic_patterns',
+        return self.endpoint_api.is_allowed_sub_topic(
             name=name,
-            is_pub=False,
             security_id=security_id,
             ws_channel_id=ws_channel_id
         )
@@ -965,35 +780,26 @@ class PubSub:
 # ################################################################################################################################
 
     def is_allowed_sub_topic_by_endpoint_id(self, name:'str', endpoint_id:'int') -> 'str | bool':
-        return self._is_allowed(
-            target='sub_topic_patterns',
+        return self.endpoint_api.is_allowed_sub_topic_by_endpoint_id(
             name=name,
-            is_pub=False,
-            security_id=0,
-            ws_channel_id=0,
             endpoint_id=endpoint_id
         )
 
 # ################################################################################################################################
 
-    def get_topics(self) -> 'inttopicdict': # type: ignore [valid-type]
+    def get_topics(self) -> 'inttopicdict':
         """ Returns all topics in existence.
         """
         with self.lock:
-            return self.topics
+            return self.topic_api.get_topics()
 
 # ################################################################################################################################
 
     def get_sub_topics_for_endpoint(self, endpoint_id:'int') -> 'topiclist':
         """ Returns all topics to which endpoint_id can subscribe.
         """
-        out = [] # type: topiclist
         with self.lock:
-            for topic in self.topics.values():
-                if self.is_allowed_sub_topic_by_endpoint_id(topic.name, endpoint_id):
-                    out.append(topic)
-
-        return out
+            return self.topic_api.get_sub_topics_for_endpoint(endpoint_id)
 
 # ################################################################################################################################
 
@@ -1125,7 +931,7 @@ class PubSub:
         """
         sub = self._get_subscription_by_sub_key(config['sub_key'])
         config['endpoint_id'] = sub.endpoint_id
-        config['endpoint_name'] = self._get_endpoint_by_id(sub.endpoint_id)
+        config['endpoint_name'] = self.endpoint_api.get_by_id(sub.endpoint_id)
         self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
         endpoint_type = config['endpoint_type']
@@ -1390,8 +1196,8 @@ class PubSub:
         with self.lock:
 
             # Store the non-GD messages in backlog ..
-            self.sync_backlog.add_messages(cid, topic_id, topic_name, self.topics[topic_id].max_depth_non_gd,
-                sub_keys, non_gd_msg_list)
+            topic = self.topic_api.get_topic_by_id(topic_id)
+            self.sync_backlog.add_messages(cid, topic_id, topic_name, topic.max_depth_non_gd, sub_keys, non_gd_msg_list)
 
             # .. and set a flag to signal that there are some available.
             self._set_sync_has_msg(topic_id, False, True, 'PubSub.store_in_ram ({})'.format(error_source))
@@ -1406,7 +1212,7 @@ class PubSub:
             for topic_name, sub_keys in topic_sub_keys.items():
 
                 # We receive topic_names on input but in-RAM backlog requires topic IDs.
-                topic_id = self.topic_name_to_id[topic_name]
+                topic_id = self.topic_api.get_topic_id_by_name(topic_name)
 
                 # Delete subscriptions, and any related messages, from RAM
                 self.sync_backlog.unsubscribe(topic_id, topic_name, sub_keys)
@@ -1496,7 +1302,8 @@ class PubSub:
         with self.lock:
             sub = self.get_subscription_by_sub_key(sub_key)
             if sub:
-                return self._get_topic_by_name(sub.topic_name).before_delivery_hook_service_invoker
+                topic = self.topic_api.get_topic_by_name(sub.topic_name)
+                return topic.before_delivery_hook_service_invoker
 
 # ################################################################################################################################
 
@@ -1506,7 +1313,8 @@ class PubSub:
         with self.lock:
             sub = self.get_subscription_by_sub_key(sub_key)
             if sub:
-                return self._get_topic_by_name(sub.topic_name).on_subscribed_service_invoker
+                topic = self.topic_api.get_topic_by_name(sub.topic_name)
+                return topic.on_subscribed_service_invoker
 
 # ################################################################################################################################
 
@@ -1516,7 +1324,8 @@ class PubSub:
         with self.lock:
             sub = sub or self.get_subscription_by_sub_key(sub_key)
             if sub:
-                return self._get_topic_by_name(sub.topic_name).on_unsubscribed_service_invoker
+                topic = self.topic_api.get_topic_by_name(sub.topic_name)
+                return topic.on_unsubscribed_service_invoker
 
 # ################################################################################################################################
 
@@ -1527,7 +1336,8 @@ class PubSub:
         with self.lock:
             sub = self.get_subscription_by_sub_key(sub_key)
             if sub:
-                return self._get_topic_by_name(sub.topic_name).on_outgoing_soap_invoke_invoker
+                topic = self.topic_api.get_topic_by_name(sub.topic_name)
+                return topic.on_outgoing_soap_invoke_invoker
 
 # ################################################################################################################################
 
@@ -1545,7 +1355,8 @@ class PubSub:
         each one to a specific key in messages dict.
         """
         for msg in batch:
-            response = hook(self.topics[topic_id], msg)
+            topic = self.topic_api.get_topic_by_id(topic_id)
+            response = hook(topic, msg)
             hook_action = response.get('hook_action', _deliver) # type: str
 
             if hook_action not in actions:
@@ -1577,7 +1388,8 @@ class PubSub:
         sub=None    # type: subnone
     ) -> 'any_':
         sub = sub if sub else self._get_subscription_by_sub_key(sub_key)
-        return hook(topic=self._get_topic_by_id(topic_id), sub=sub)
+        topic = self.topic_api.get_topic_by_id(topic_id)
+        return hook(topic=topic, sub=sub)
 
 # ################################################################################################################################
 
@@ -1596,10 +1408,11 @@ class PubSub:
         and updates hooks that any of these services possibly implements.
         """
         with self.lock:
-            for topic in self.topics.values():
+            topics = self.topic_api.get_topics()
+            for topic in topics.values():
                 hook_service_id = topic.config.get('hook_service_id')
                 if hook_service_id in services_deployed:
-                    self._set_topic_config_hook_data(topic.config)
+                    self.hook_api.set_topic_config_hook_data(topic.config)
                     topic.set_hooks()
 
 # ################################################################################################################################
@@ -1646,7 +1459,7 @@ class PubSub:
         in the main loop's next iteration.
         """
         # Get the topic object
-        topic = self.topics[topic_id] # type: Topic
+        topic = self.topic_api.get_topic_by_id(topic_id) # type: Topic
 
         # Store information about what we are about to do
         logger.info('Will resubmit GD messages after sync error; topic:`%s`, src:`%s`', topic.name, source)
@@ -1680,7 +1493,8 @@ class PubSub:
         """ Updates a given topic's flags indicating that a message has been published since the last sync.
         Must be called with self.lock held.
         """
-        topic = self.topics[topic_id] # type: Topic
+        topic = self.topic_api.get_topic_by_id(topic_id) # type: Topic
+
         if is_gd:
             topic.sync_has_gd_msg = value
             topic.gd_pub_time_max = gd_pub_time_max
@@ -1701,163 +1515,11 @@ class PubSub:
             self._set_sync_has_msg(topic_id, is_gd, value, source, gd_pub_time_max)
 
 # ################################################################################################################################
-
-    def trigger_notify_pubsub_tasks(self) -> 'any_':
-        """ A background greenlet which periodically lets delivery tasks know that there are perhaps
-        new GD messages for the topic that this class represents.
-        """
-
-        # Local aliases
-
-        _current_iter = 0
-        _new_cid      = new_cid
-        _spawn        = cast_('callable_', spawn)
-        _sleep        = cast_('callable_', sleep)
-        _self_lock    = self.lock
-        _self_topics  = self.topics
-
-        _logger_info      = logger.info
-        _logger_warn      = logger.warning
-        _logger_zato_warn = logger_zato.warning
-
-        _self_invoke_service   = self.invoke_service
-        _self_set_sync_has_msg = self._set_sync_has_msg
-
-        _self_get_subscriptions_by_topic     = self.get_subscriptions_by_topic
-        _self_get_delivery_server_by_sub_key = self.get_delivery_server_by_sub_key
-
-        _sync_backlog_get_delete_messages_by_sub_keys = self.sync_backlog.get_delete_messages_by_sub_keys
-
-# ################################################################################################################################
-
-        def _cmp_non_gd_msg(elem:'anydict') -> 'float':
-            return elem['pub_time']
-
-# ################################################################################################################################
-
-        # Loop forever or until stopped
-        while self.keep_running:
-
-            # Optionally, we may have a limit on how many iterations this loop should last
-            # and we need to check if we have reached it.
-            if self.sync_max_iters:
-                if _current_iter >= self.sync_max_iters:
-                    self.keep_running = False
-
-            # This may be handy for logging purposes, even if there is no max. for the loop iters
-            _current_iter += 1
-
-            # Sleep for a while before continuing - the call to sleep is here because this while loop is quite long
-            # so it would be inconvenient to have it down below.
-            _sleep(0.01)
-
-            # Blocks other pub/sub processes for a moment
-            with _self_lock:
-
-                # Will map a few temporary objects down below
-                topic_id_dict = {} # type: intanydict
-
-                # Get all topics ..
-                for _topic in _self_topics.values(): # type: Topic
-
-                    # Does the topic require task synchronization now?
-                    if not _topic.needs_task_sync():
-                        continue
-                    else:
-                        _topic.update_task_sync_time()
-
-                    # OK, the time has come for this topic to sync its state with subscribers
-                    # but still skip it if we know that there have been no messages published to it since the last time.
-                    if not (_topic.sync_has_gd_msg or _topic.sync_has_non_gd_msg):
-                        continue
-
-                    # There are some messages, let's see if there are subscribers ..
-                    subs = [] # type: sublist
-                    _subs = _self_get_subscriptions_by_topic(_topic.name)
-
-                    # Filter out subscriptions for whom we have no subscription servers
-                    for _sub in _subs:
-                        if _self_get_delivery_server_by_sub_key(_sub.sub_key):
-                            subs.append(_sub)
-
-                    # .. if there are any subscriptions at all, we store that information for later use.
-                    if subs:
-                        topic_id_dict[_topic.id] = (_topic.name, subs)
-
-                # OK, if we had any subscriptions for at least one topic and there are any messages waiting,
-                # we can continue.
-                try:
-
-                    for topic_id in topic_id_dict:
-
-                        topic = _self_topics[topic_id]
-
-                        # .. get the temporary metadata object stored earlier ..
-                        topic_name, subs = topic_id_dict[topic_id]
-
-                        cid = _new_cid()
-                        _logger_info('Triggering sync for `%s` len_s:%d gd:%d ngd:%d cid:%s',
-                            topic_name, len(subs), topic.sync_has_gd_msg, topic.sync_has_non_gd_msg, cid)
-
-                        # Build a list of sub_keys for whom we know what their delivery server is which will
-                        # allow us to send messages only to tasks that are known to be up.
-                        sub_keys = [item.sub_key for item in subs]
-
-                        # Continue only if there are actually any sub_keys left = any tasks up and running ..
-                        if sub_keys:
-
-                            non_gd_msg_list = _sync_backlog_get_delete_messages_by_sub_keys(topic_id, sub_keys)
-
-                            # .. also, continue only if there are still messages for the ones that are up ..
-                            if topic.sync_has_gd_msg or topic.sync_has_non_gd_msg:
-
-                                # Note that we may have both GD and non-GD messages on input
-                                # and we need to have a max that takes both into account.
-                                max_gd = 0
-                                max_non_gd = 0
-
-                                # If there are any non-GD messages, get their max. pub time
-                                if non_gd_msg_list:
-                                    non_gd_msg_list = sorted(non_gd_msg_list, key=_cmp_non_gd_msg)
-                                    max_non_gd = non_gd_msg_list[-1]['pub_time']
-
-                                # This will be always available, even if with a value of 0.0
-                                max_gd = topic.gd_pub_time_max
-
-                                # Now, we can build a max. pub time that takes GD and non-GD into account.
-                                pub_time_max = max(max_gd, max_non_gd)
-
-                                non_gd_msg_list_msg_id_list = [elem['pub_msg_id'] for elem in non_gd_msg_list]
-
-                                _logger_info('Forwarding messages to a task for `%s` ngd-list:%s (sk_list:%s) cid:%s',
-                                    topic_name, non_gd_msg_list_msg_id_list, sub_keys, cid)
-
-                                # .. and notify all the tasks in background.
-                                _ = _spawn(_self_invoke_service, 'zato.pubsub.after-publish', {
-                                    'cid': cid,
-                                    'topic_id':topic_id,
-                                    'topic_name':topic_name,
-                                    'subscriptions': subs,
-                                    'non_gd_msg_list': non_gd_msg_list,
-                                    'has_gd_msg_list': topic.sync_has_gd_msg,
-                                    'is_bg_call': True, # This is a background call, i.e. issued by this trigger,
-                                    'pub_time_max': pub_time_max, # Last time either a non-GD or GD message was received
-                                })
-
-                        # OK, we can now reset message flags for the topic
-                        _self_set_sync_has_msg(topic_id, True, False, 'PubSub.loop')
-                        _self_set_sync_has_msg(topic_id, False, False, 'PubSub.loop')
-
-                except Exception:
-                    e_formatted = format_exc()
-                    _logger_zato_warn(e_formatted)
-                    _logger_warn(e_formatted)
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 # Public API methods
 
+# ################################################################################################################################
 # ################################################################################################################################
 
     def _find_wsx_environ(self, service:'Service') -> 'stranydict':
@@ -2274,8 +1936,6 @@ class PubSub:
 # ################################################################################################################################
 
 sksnone      = optional[SubKeyServer]
-strtopicdict = dict_[str, Topic]
-inttopicdict = dict_[int, Topic]
 
 # ################################################################################################################################
 # ################################################################################################################################

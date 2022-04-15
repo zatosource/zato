@@ -32,6 +32,7 @@ from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
 from zato.common.marshal_.api import ModelValidationError
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
+from zato.common.typing_ import cast_
 from zato.common.util.exception import pretty_format_exception
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
@@ -40,11 +41,13 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anytuple, callable_, dictnone, stranydict, strlist, strstrdict
+    from zato.broker.client import BrokerClient
+    from zato.common.typing_ import any_, anydict, anytuple, callable_, dictnone, stranydict, strlist, strstrdict
     from zato.server.service import Service
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from zato.server.connection.http_soap.url_data import URLData
+    BrokerClient = BrokerClient
     ParallelServer = ParallelServer
     Service = Service
     URLData = URLData
@@ -53,7 +56,7 @@ if 0:
 
 logger = logging.getLogger(__name__)
 _has_debug = logger.isEnabledFor(logging.DEBUG)
-split_re=regex_compile('........?').findall
+split_re = regex_compile('........?').findall # type: ignore
 
 # ################################################################################################################################
 
@@ -117,7 +120,7 @@ def client_json_error(cid:'str', details:'any_') -> 'str':
     # This may be a tuple of arguments to an exception object
     if isinstance(details, tuple):
         exc_details = []
-        for item in details:
+        for item in details: # type: ignore
             if isinstance(item, bytes):
                 item = item.decode('utf8')
             exc_details.append(item)
@@ -239,7 +242,10 @@ class RequestDispatcher:
         # This gives us the URL info and security data - but note that here
         # we still haven't validated credentials, only matched the URL.
         # Credentials are checked in a call to self.url_data.check_security
-        url_match, channel_item = self.url_data.match(path_info, http_method, http_accept)
+        url_match, channel_item = self.url_data.match(path_info, http_method, http_accept) # type: ignore
+
+        url_match = cast_('str', url_match)
+        channel_item = cast_('anydict', channel_item)
 
         if _has_debug and channel_item:
             logger.debug('url_match:`%r`, channel_item:`%r`', url_match, sorted(channel_item.items()))
@@ -435,7 +441,7 @@ class RequestDispatcher:
                             response = e.args if self.return_tracebacks else self.default_error_message
 
                 _exc = stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
-                    add_summary=True, source_lines=20) if stack_format else _format_exc
+                    add_summary=True, source_lines=20) if stack_format else _format_exc # type: str
 
                 # TODO: This should be configurable. Some people may want such
                 # things to be on DEBUG whereas for others ERROR will make most sense
@@ -525,19 +531,19 @@ class RequestHandler:
 
 # ################################################################################################################################
 
-    def _get_flattened(self, params:'str') -> 'strstrdict':
+    def _get_flattened(self, params:'str') -> 'anydict':
         """ Returns a QueryDict of parameters with single-element lists unwrapped to point to the sole element directly.
         """
+        out = {} # type: anydict
+
         if params:
             query_params = QueryDict(params, encoding='utf-8')
-            out = {}
+
             for key, value in query_params.lists():
                 if len(value) > 1:
                     out[key] = value
                 else:
                     out[key] = value[0]
-        else:
-            out = {}
 
         return out
 
@@ -608,7 +614,7 @@ class RequestHandler:
             query_string = str(sorted(channel_params.items()))
             data = '%s%s%s%s' % (wsgi_environ['REQUEST_METHOD'], wsgi_environ['PATH_INFO'], query_string, raw_request)
             hash_value = sha256(data.encode('utf8')).hexdigest()
-            hash_value = '-'.join(split_re(hash_value))
+            hash_value = '-'.join(split_re(hash_value)) # type: ignore
 
         # No matter if hash value is default or from service, always prefix it with channel's type and ID
         cache_key = 'http-channel-%s-%s' % (channel_item['id'], hash_value)
@@ -677,7 +683,8 @@ class RequestHandler:
 
         # No cache for this channel or no cached response, invoke the service then.
         response = service.update_handle(self._set_response_data, service, raw_request,
-            CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server, worker_store.broker_client,
+            CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server,
+            cast_('BrokerClient', worker_store.broker_client),
             worker_store, cid, simple_io_config, wsgi_environ=wsgi_environ,
             url_match=url_match, channel_item=channel_item, channel_params=channel_params,
             merge_channel_params=channel_item.merge_url_params_req,

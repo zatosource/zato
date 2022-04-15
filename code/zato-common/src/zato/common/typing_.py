@@ -104,6 +104,7 @@ iterator_     = iterator_
 noreturn      = noreturn
 set_          = set_
 stranydict    = dict_[str, any_]
+strcalldict   = dict_[str, callable_]
 strdict       = stranydict
 strbytes      = union_[str_, bytes]
 strlistdict   = dict_[str, anylist]
