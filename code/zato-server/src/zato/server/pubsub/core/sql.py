@@ -34,7 +34,7 @@ class SQLAPI:
         self,
         cluster_id,       # type: int
         new_session_func, # type: callable_
-    ) -> None:
+    ) -> 'None':
         self.cluster_id = cluster_id
         self.new_session_func = new_session_func
 
