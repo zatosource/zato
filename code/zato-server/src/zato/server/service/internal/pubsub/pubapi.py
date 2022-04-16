@@ -67,7 +67,7 @@ class _PubSubService(Service):
         # or self.invoke_async, so there will never by any credentials in HTTP headers (there is no HTTP request after all),
         # and we can run as an internal endpoint in this situation.
         if self.channel.type in _invoke_channels:
-            return self.server.default_internal_pubsub_endpoint_id
+            return self.server.get_default_internal_pubsub_endpoint_id()
 
         auth = self.wsgi_environ.get('HTTP_AUTHORIZATION')
         if not auth:
@@ -312,7 +312,7 @@ class SubscribeService(_PubSubService):
             # in such a case we want to let the call succeed - this lets other services use self.invoke in
             # order to unsubscribe.
             if sub.endpoint_id != endpoint_id:
-                if endpoint_id != self.server.default_internal_pubsub_endpoint_id:
+                if endpoint_id != self.server.get_default_internal_pubsub_endpoint_id():
                     sub_endpoint = self.pubsub.get_endpoint_by_id(sub.endpoint_id)
                     self_endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
                     self.logger.warning('Endpoint `%s` cannot unsubscribe sk:`%s` (%s) created by `%s`',
