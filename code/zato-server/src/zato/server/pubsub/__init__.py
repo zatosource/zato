@@ -28,9 +28,6 @@ from texttable import Texttable
 from zato.common.api import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import WebSocketClientPubSubKeys
-from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
-    get_delivery_server_for_sub_key, get_sql_messages_by_msg_id_list as _get_sql_messages_by_msg_id_list, \
-    get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
 from zato.common.typing_ import cast_, dict_, optional
@@ -41,6 +38,7 @@ from zato.common.util.wsx import find_wsx_environ
 from zato.server.pubsub.core.endpoint import EndpointAPI
 from zato.server.pubsub.core.trigger import NotifyPubSubTasksTrigger
 from zato.server.pubsub.core.hook import HookAPI
+from zato.server.pubsub.core.sql import SQLAPI
 from zato.server.pubsub.core.topic import TopicAPI
 from zato.server.pubsub.model import inttopicdict, strsubdict, strtopicdict, Subscription, SubKeyServer
 from zato.server.pubsub.publisher import Publisher
@@ -50,10 +48,9 @@ from zato.server.pubsub.sync import InRAMSync
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.orm.session import Session as SASession
     from zato.common.model.wsx import WSXConnectorConfig
     from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, commondict, dictlist, intdict, \
-        intlist, intnone, intset, list_, stranydict, strstrdict, strlist, strlistdict, \
+        intlist, intnone, list_, stranydict, strstrdict, strlist, strlistdict, \
         strlistempty, strtuple, type_
     from zato.distlock import Lock
     from zato.server.connection.web_socket import WebSocket
@@ -200,6 +197,9 @@ class PubSub:
             subscriptions_by_topic = self.subscriptions_by_topic,
             is_allowed_sub_topic_by_endpoint_id_func = self.is_allowed_sub_topic_by_endpoint_id,
         )
+
+        # Provides access to SQL queries
+        self.sql_api = SQLAPI(self.cluster_id, self.new_session_func)
 
         # This will trigger synchronization
         self.notify_pub_sub_tasks_trigger = NotifyPubSubTasksTrigger(
@@ -1041,8 +1041,7 @@ class PubSub:
         """ Adds to self.sub_key_servers information from ODB about which server handles input sub_key.
         Must be called with self.lock held.
         """
-        with closing(self.new_session_func()) as session:
-            data = get_delivery_server_for_sub_key(session, self.server.cluster_id, sub_key, is_wsx)
+        data = self.sql_api.get_delivery_server_for_sub_key(sub_key, is_wsx)
 
         if not data:
             if self.log_if_deliv_server_not_found:
@@ -1114,64 +1113,27 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def get_sql_messages_by_sub_key(
-        self,
-        session,      # type: any_
-        sub_key_list, # type: strlist
-        last_sql_run, # type: float
-        pub_time_max, # type: float
-        ignore_list   # type: intset
-    ) -> 'anytuple':
+    def get_sql_messages_by_sub_key(self, *args:'any_', **kwargs:'any_') -> 'anytuple':
         """ Returns all SQL messages queued up for all keys from sub_key_list.
         """
-        if not session:
-            session = self.new_session_func()
-            needs_close = True
-        else:
-            needs_close = False
-
-        try:
-            return _get_sql_messages_by_sub_key(session, self.server.cluster_id, sub_key_list,
-                last_sql_run, pub_time_max, ignore_list)
-        finally:
-            if needs_close:
-                session.close()
+        return self.sql_api.get_sql_messages_by_sub_key(*args, **kwargs)
 
 # ################################################################################################################################
 
-    def get_initial_sql_msg_ids_by_sub_key(
-        self,
-        session:'SASession',
-        sub_key:'str',
-        pub_time_max:'float'
-    ) -> 'anytuple':
-        return _get_sql_msg_ids_by_sub_key(session, self.server.cluster_id, sub_key, 0.0, pub_time_max).\
-               all()
+    def get_initial_sql_msg_ids_by_sub_key(self, *args:'any_', **kwargs:'any_') -> 'anytuple':
+        return self.sql_api.get_initial_sql_msg_ids_by_sub_key(*args, **kwargs)
 
 # ################################################################################################################################
 
-    def get_sql_messages_by_msg_id_list(
-        self,
-        session,      # type: any_
-        sub_key,      # type: str
-        pub_time_max, # type: float
-        msg_id_list   # type: strlist
-    ) -> 'anytuple':
-        return _get_sql_messages_by_msg_id_list(session, self.server.cluster_id, sub_key, pub_time_max, msg_id_list).\
-               all()
+    def get_sql_messages_by_msg_id_list(self, *args:'any_', **kwargs:'any_') -> 'anytuple':
+        return self.sql_api.get_sql_messages_by_msg_id_list(*args, **kwargs)
 
 # ################################################################################################################################
 
-    def confirm_pubsub_msg_delivered(
-        self,
-        sub_key,                  # type: str
-        delivered_pub_msg_id_list # type: strlist
-    ) -> 'None':
+    def confirm_pubsub_msg_delivered(self, *args:'any_', **kwargs:'any_') -> 'None':
         """ Sets in SQL delivery status of a given message to True.
         """
-        with closing(self.new_session_func()) as session:
-            _confirm_pubsub_msg_delivered(session, self.server.cluster_id, sub_key, delivered_pub_msg_id_list, utcnow_as_ms())
-            session.commit()
+        self.sql_api.confirm_pubsub_msg_delivered(*args, **kwargs)
 
 # ################################################################################################################################
 
