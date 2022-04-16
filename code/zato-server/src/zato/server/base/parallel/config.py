@@ -542,7 +542,8 @@ class ConfigLoader:
         self.odb.on_deployment_finished()
 
         # Populate default pub/sub endpoint data
-        self.default_internal_pubsub_endpoint_id = self.odb.get_default_internal_pubsub_endpoint().id
+        default_internal_pubsub_endpoint = self.odb.get_default_internal_pubsub_endpoint()
+        self.default_internal_pubsub_endpoint_id = default_internal_pubsub_endpoint.id
 
         # Default content type
         self.json_content_type = self.fs_server_config.content_type.json
