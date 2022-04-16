@@ -278,6 +278,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def get_default_internal_pubsub_endpoint_id(self) -> 'int':
+
+        # This value defaults to 0 and we populate it with the real value in self._after_init_accepted.
+        return self.default_internal_pubsub_endpoint_id
+
+# ################################################################################################################################
+
     def deploy_missing_services(self, locally_deployed:'anylist') -> 'None':
         """ Deploys services that exist on other servers but not on ours.
         """
