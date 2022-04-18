@@ -38,10 +38,6 @@ _opts_odb_port = 'Operational database port'
 _opts_odb_user = 'Operational database user'
 _opts_odb_schema = 'Operational database schema'
 _opts_odb_db_name = 'Operational database name'
-_opts_broker_host = 'Broker host (unused)'
-_opts_broker_port = 'Broker port (unused)'
-_opts_kvdb_host = 'Key/value DB host (unused)'
-_opts_kvdb_port = 'Key/value DB port (unused)'
 
 # ################################################################################################################################
 
@@ -62,13 +58,13 @@ default_common_name = 'localhost'
 # ################################################################################################################################
 
 common_odb_opts = [
-    {'name':'--odb_type', 'help':_opts_odb_type, 'choices':SUPPORTED_DB_TYPES, 'default':'sqlite'}, # noqa
-    {'name':'--odb_host', 'help':_opts_odb_host},
-    {'name':'--odb_port', 'help':_opts_odb_port},
-    {'name':'--odb_user', 'help':_opts_odb_user},
-    {'name':'--odb_db_name', 'help':_opts_odb_db_name},
-    {'name':'--postgresql_schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
-    {'name':'--odb_password', 'help':'ODB database password', 'default':''},
+    {'name':'--odb-type', 'help':_opts_odb_type, 'choices':SUPPORTED_DB_TYPES, 'default':'sqlite'}, # noqa
+    {'name':'--odb-host', 'help':_opts_odb_host},
+    {'name':'--odb-port', 'help':_opts_odb_port},
+    {'name':'--odb-user', 'help':_opts_odb_user},
+    {'name':'--odb-db-name', 'help':_opts_odb_db_name},
+    {'name':'--postgresql-schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
+    {'name':'--odb-password', 'help':'ODB database password', 'default':''},
 ]
 
 common_ca_create_opts = [
@@ -83,12 +79,6 @@ common_totp_opts = [
     {'name': 'username', 'help': 'Username to reset the TOTP secret key of'},
     {'name': '--key', 'help': 'Key to use'},
     {'name': '--key-label', 'help': 'Label to apply to the key'},
-]
-
-kvdb_opts = [
-    {'name':'--kvdb_host', 'help':_opts_kvdb_host},
-    {'name':'--kvdb_port', 'help':_opts_kvdb_port},
-    {'name':'--kvdb_password', 'help':'Key/value database password'},
 ]
 
 # ################################################################################################################################
