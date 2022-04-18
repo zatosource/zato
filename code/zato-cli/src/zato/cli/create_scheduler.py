@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from copy import deepcopy
 
-from zato.cli import common_odb_opts, is_arg_given, kvdb_opts, sql_conf_contents, ZatoCommand
+from zato.cli import common_odb_opts, is_arg_given, sql_conf_contents, ZatoCommand
 from zato.common.api import SCHEDULER
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.crypto.const import well_known_data
@@ -77,23 +77,23 @@ class Create(ZatoCommand):
     needs_empty_dir = True
 
     # Redis options are no longer used by they are kept here for pre-3.2 backward compatibility
-    opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
+    opts = deepcopy(common_odb_opts)
 
-    opts.append({'name':'--pub_key_path', 'help':'Path to scheduler\'s public key in PEM'})
-    opts.append({'name':'--priv_key_path', 'help':'Path to scheduler\'s private key in PEM'})
-    opts.append({'name':'--cert_path', 'help':'Path to the admin\'s certificate in PEM'})
-    opts.append({'name':'--ca_certs_path', 'help':'Path to a bundle of CA certificates to be trusted'})
-    opts.append({'name':'--cluster_name', 'help':'Name of the cluster this scheduler will belong to'})
-    opts.append({'name':'--cluster_id', 'help':'ID of the cluster this scheduler will belong to'})
-    opts.append({'name':'--secret_key', 'help':'Scheduler\'s secret crypto key'})
+    opts.append({'name':'--pub-key-path', 'help':'Path to scheduler\'s public key in PEM'})
+    opts.append({'name':'--priv-key-path', 'help':'Path to scheduler\'s private key in PEM'})
+    opts.append({'name':'--cert-path', 'help':'Path to the admin\'s certificate in PEM'})
+    opts.append({'name':'--ca-certs-path', 'help':'Path to a bundle of CA certificates to be trusted'})
+    opts.append({'name':'--cluster-name', 'help':'Name of the cluster this scheduler will belong to'})
+    opts.append({'name':'--cluster-id', 'help':'ID of the cluster this scheduler will belong to'})
+    opts.append({'name':'--secret-key', 'help':'Scheduler\'s secret crypto key'})
 
-    opts.append({'name':'--server_path', 'help':'Local path to a Zato server'})
-    opts.append({'name':'--server_host', 'help':'Remote host of a Zato server'})
-    opts.append({'name':'--server_port', 'help':'Remote TCP port of a Zato server'})
-    opts.append({'name':'--server_username', 'help':'Username to connect to a remote server with'})
-    opts.append({'name':'--server_password', 'help':'Password to connect to a remote server with'})
+    opts.append({'name':'--server-path', 'help':'Local path to a Zato server'})
+    opts.append({'name':'--server-host', 'help':'Remote host of a Zato server'})
+    opts.append({'name':'--server-port', 'help':'Remote TCP port of a Zato server'})
+    opts.append({'name':'--server-username', 'help':'Username to connect to a remote server with'})
+    opts.append({'name':'--server-password', 'help':'Password to connect to a remote server with'})
 
-    opts.append({'name':'--initial_sleep_time', 'help':'How many seconds to sleep initially when the scheduler starts'})
+    opts.append({'name':'--initial-sleep-time', 'help':'How many seconds to sleep initially when the scheduler starts'})
 
 # ################################################################################################################################
 
