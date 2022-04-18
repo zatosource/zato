@@ -12,7 +12,7 @@ import sys
 from copy import deepcopy
 
 # Zato
-from zato.cli import common_odb_opts, kvdb_opts, ZatoCommand
+from zato.cli import common_odb_opts, ZatoCommand
 from zato.common.util.platform_ import is_windows, is_non_windows
 from zato.common.util.open_ import open_w
 
@@ -250,11 +250,11 @@ class Create(ZatoCommand):
     """ Quickly creates a working cluster
     """
     needs_empty_dir = True
-    opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
-    opts.append({'name':'--cluster_name', 'help':'Name to be given to the new cluster'})
-    opts.append({'name':'--servers', 'help':'How many servers to create', 'default':1})
-    opts.append({'name':'--secret_key', 'help':'Main secret key the server(s) will use'})
-    opts.append({'name':'--jwt_secret_key', 'help':'Secret key for JWT (JSON Web Tokens)'})
+    opts = deepcopy(common_odb_opts)
+    opts.append({'name':'--cluster-name', 'help':'Name to be given to the new cluster'})
+    opts.append({'name':'--servers', 'help':'How many servers to create', 'default':1}) # type: ignore
+    opts.append({'name':'--secret-key', 'help':'Main secret key the server(s) will use'})
+    opts.append({'name':'--jwt-secret-key', 'help':'Secret key for JWT (JSON Web Tokens)'})
 
     def _bunch_from_args(self, args, cluster_name):
 
