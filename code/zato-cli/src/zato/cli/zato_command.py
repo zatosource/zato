@@ -267,7 +267,7 @@ class CommandStore:
         create_cluster.set_defaults(command='create_cluster')
         self.add_opts(create_cluster, create_cluster_mod.Create.opts)
 
-        create_lb = create_subs.add_parser('load_balancer', description=create_lb_mod.Create.__doc__, parents=[base_parser])
+        create_lb = create_subs.add_parser('load-balancer', description=create_lb_mod.Create.__doc__, parents=[base_parser])
         create_lb.add_argument('path', help='Path to an empty directory to install the load-balancer in')
         create_lb.set_defaults(command='create_lb')
         self.add_opts(create_lb, create_lb_mod.Create.opts)
@@ -282,7 +282,7 @@ class CommandStore:
         create_scheduler.set_defaults(command='create_scheduler')
         self.add_opts(create_scheduler, create_scheduler_mod.Create.opts)
 
-        create_key = create_subs.add_parser('secret_key', description=crypto_mod.CreateSecretKey.__doc__, parents=[base_parser])
+        create_key = create_subs.add_parser('secret-key', description=crypto_mod.CreateSecretKey.__doc__, parents=[base_parser])
         create_key.set_defaults(command='create_secret_key')
         self.add_opts(create_key, crypto_mod.CreateSecretKey.opts)
 
@@ -297,7 +297,7 @@ class CommandStore:
         self.add_opts(create_user, web_admin_auth_mod.CreateUser.opts)
 
         create_web_admin = create_subs.add_parser(
-            'web_admin', description=create_web_admin_mod.Create.__doc__, parents=[base_parser])
+            'web-admin', description=create_web_admin_mod.Create.__doc__, parents=[base_parser])
         create_web_admin.add_argument('path', help='Path to an empty directory to install a new web admin in')
         create_web_admin.set_defaults(command='create_web_admin')
         self.add_opts(create_web_admin, create_web_admin_mod.Create.opts)
