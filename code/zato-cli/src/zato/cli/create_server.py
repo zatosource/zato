@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from copy import deepcopy
 
 # Zato
-from zato.cli import common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
+from zato.cli import common_odb_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import CONTENT_TYPE, default_internal_modules, SCHEDULER, SSO as CommonSSO
 from zato.common.simpleio_ import simple_io_conf_contents
 from zato.common.util import as_bool
@@ -634,17 +634,16 @@ class Create(ZatoCommand):
     needs_empty_dir = True
 
     opts = deepcopy(common_odb_opts)
-    opts.extend(kvdb_opts)
 
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':'Server\'s name'})
-    opts.append({'name':'--pub_key_path', 'help':'Path to the server\'s public key in PEM'})
-    opts.append({'name':'--priv_key_path', 'help':'Path to the server\'s private key in PEM'})
-    opts.append({'name':'--cert_path', 'help':'Path to the server\'s certificate in PEM'})
-    opts.append({'name':'--ca_certs_path', 'help':'Path to list of PEM certificates the server will trust'})
-    opts.append({'name':'--secret_key', 'help':'Server\'s secret key (must be the same for all servers)'})
-    opts.append({'name':'--jwt_secret', 'help':'Server\'s JWT secret (must be the same for all servers)'})
-    opts.append({'name':'--http_port', 'help':'Server\'s HTTP port'})
+    opts.append({'name':'--pub-key-path', 'help':'Path to the server\'s public key in PEM'})
+    opts.append({'name':'--priv-key-path', 'help':'Path to the server\'s private key in PEM'})
+    opts.append({'name':'--cert-path', 'help':'Path to the server\'s certificate in PEM'})
+    opts.append({'name':'--ca-certs-path', 'help':'Path to list of PEM certificates the server will trust'})
+    opts.append({'name':'--secret-key', 'help':'Server\'s secret key (must be the same for all servers)'})
+    opts.append({'name':'--jwt-secret', 'help':'Server\'s JWT secret (must be the same for all servers)'})
+    opts.append({'name':'--http-port', 'help':'Server\'s HTTP port'})
 
 # ################################################################################################################################
 
