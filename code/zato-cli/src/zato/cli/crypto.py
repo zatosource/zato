@@ -109,7 +109,7 @@ class Decrypt(ManageCommand):
 
         # .. otherwise, we use the key we were given on input
         else:
-            cm = CryptoManager(secret_key=args.secret_key)
+            cm = CryptoManager(secret_key=args.secret_key or '')
             out = cm.decrypt(args.data)
             self.logger.info(out)
 
