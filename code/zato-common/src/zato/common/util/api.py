@@ -109,7 +109,7 @@ from zato.common.exception import ZatoException
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
 from zato.common.json_internal import dumps, loads
-from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Service
+from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
@@ -1407,9 +1407,22 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted) -> 'any
     session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
 
     with closing(session) as session:
-        cluster = session.query(Cluster).\
-            filter(Cluster.id == 1).\
-            one()
+
+        # This will exist if config is read from server.conf,
+        # otherwise, it means that it is based on scheduler.conf.
+        token = config.get('main', {}).get('token')
+
+        # This is server.conf ..
+        if token:
+            cluster = session.query(Server).\
+                filter(Server.token == config.main.token).\
+                one().cluster
+
+        # .. this will be scheduler.conf.
+        else:
+            cluster = session.query(Cluster).\
+                filter(Cluster.id == config.cluster.id).\
+                one()
 
         channel = session.query(HTTPSOAP).\
             filter(HTTPSOAP.cluster_id == cluster.id).\
