@@ -119,18 +119,19 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _get_cluster_id_by_name(self, args, cluster_name):
+    def _get_cluster_id(self, args):
         engine = self._get_engine(args)
         session = self._get_session(engine)
 
-        cluster_id = session.query(Cluster.id).\
-            filter(Cluster.name==cluster_name).\
-            first()
+        cluster_id_list = session.query(Cluster.id).\
+            all()
 
-        if not cluster_id:
-            raise Exception('No such cluster name `{}`'.format(cluster_name))
+        if not cluster_id_list:
+            raise Exception('No cluster found in `{}`'.format(args))
         else:
-            return cluster_id[0]
+
+            cluster_id_list.sort()
+            return cluster_id_list[0][0]
 
 # ################################################################################################################################
 
@@ -189,7 +190,7 @@ class Create(ZatoCommand):
             odb_engine = 'postgresql+pg8000'
 
         # There will be always one cluster in the database.
-        cluster_id = 1
+        cluster_id = self._get_cluster_id(args)
 
         # We need to have a reference to it before we encrypt it later on.
         odb_password = args.odb_password or ''
