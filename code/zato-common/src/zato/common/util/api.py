@@ -1401,15 +1401,28 @@ def get_odb_session_from_server_dir(server_dir):
 
 # ################################################################################################################################
 
-def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted):
+def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted) -> 'any_':
     """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
     """
     session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
 
     with closing(session) as session:
-        cluster = session.query(Server).\
-            filter(Server.token == config.main.token).\
-            one().cluster
+
+        # This will exist if config is read from server.conf,
+        # otherwise, it means that it is based on scheduler.conf.
+        token = config.get('main', {}).get('token')
+
+        # This is server.conf ..
+        if token:
+            cluster = session.query(Server).\
+                filter(Server.token == config.main.token).\
+                one().cluster
+
+        # .. this will be scheduler.conf.
+        else:
+            cluster = session.query(Cluster).\
+                filter(Cluster.id == config.cluster.id).\
+                one()
 
         channel = session.query(HTTPSOAP).\
             filter(HTTPSOAP.cluster_id == cluster.id).\
@@ -1425,7 +1438,8 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted):
             if security:
                 password = security.password.replace(SECRETS.PREFIX, '')
                 if password.startswith(SECRETS.EncryptedMarker):
-                    password = cm.decrypt(password)
+                    if cm:
+                        password = cm.decrypt(password)
                 return (security.username, password)
 
 # ################################################################################################################################
