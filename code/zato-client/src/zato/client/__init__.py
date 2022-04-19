@@ -478,6 +478,7 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
     server_url = server_url.replace('0.0.0.0', '127.0.0.1')
 
     client_auth = client_auth_func(config, repo_location, crypto_manager, False)
+
     client = ZatoClient('http://{}'.format(server_url), '/zato/admin/invoke', client_auth, max_response_repr=15000)
     session = get_odb_session_from_server_config(config, None, False)
 
