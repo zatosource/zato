@@ -109,7 +109,7 @@ from zato.common.exception import ZatoException
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
 from zato.common.json_internal import dumps, loads
-from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
+from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Service
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
@@ -1401,15 +1401,15 @@ def get_odb_session_from_server_dir(server_dir):
 
 # ################################################################################################################################
 
-def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted):
+def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted) -> 'any_':
     """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
     """
     session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
 
     with closing(session) as session:
-        cluster = session.query(Server).\
-            filter(Server.token == config.main.token).\
-            one().cluster
+        cluster = session.query(Cluster).\
+            filter(Cluster.id == 1).\
+            one()
 
         channel = session.query(HTTPSOAP).\
             filter(HTTPSOAP.cluster_id == cluster.id).\
@@ -1425,7 +1425,8 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted):
             if security:
                 password = security.password.replace(SECRETS.PREFIX, '')
                 if password.startswith(SECRETS.EncryptedMarker):
-                    password = cm.decrypt(password)
+                    if cm:
+                        password = cm.decrypt(password)
                 return (security.username, password)
 
 # ################################################################################################################################
