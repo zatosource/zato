@@ -450,6 +450,11 @@ class ZatoClient(AnyServiceInvoker):
 
 # ################################################################################################################################
 
+def get_client_from_credentials(server_url:'str', client_auth:'tuple') -> 'ZatoClient':
+    return ZatoClient('http://{}'.format(server_url), '/zato/admin/invoke', client_auth, max_response_repr=15000)
+
+# ################################################################################################################################
+
 def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, server_url=None, stdin_data=None):
     """ Returns a Zato client built out of data found in a given server's config files.
     """

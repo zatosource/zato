@@ -106,6 +106,12 @@ class Config:
             config.main.odb.password = config.crypto_manager.decrypt(config.main.odb.password)
             config.main.odb.pool_size = config.main.odb.pool_size
 
+        # Decrypt the password used to invoke servers
+        server_password = config.main.server.server_password or ''
+        if server_password and server_password.startswith('gA'):
+            server_password = config.crypto_manager.decrypt(server_password)
+            config.main.server.server_password = server_password
+
         sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
 
         odb.pool = sql_pool_store[ZATO_ODB_POOL_NAME].pool
