@@ -31,7 +31,14 @@ def _set_up_zato_client_by_remote_details(
     server_username: 'str',
     server_password: 'str'
     ) -> 'None':
-    pass
+
+    # Zato
+    from zato.client import get_client_from_credentials
+
+    server_url = f'{server_host}:{server_port}'
+    client_auth = (server_username, server_password)
+
+    return get_client_from_credentials(server_url, client_auth)
 
 # ################################################################################################################################
 

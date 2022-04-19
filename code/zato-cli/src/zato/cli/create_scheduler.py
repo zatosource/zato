@@ -10,6 +10,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from copy import deepcopy
 
+# Bunch
+from bunch import Bunch
+
+# Zato
 from zato.cli import common_odb_opts, is_arg_given, sql_conf_contents, ZatoCommand
 from zato.common.api import SCHEDULER
 from zato.common.crypto.api import SchedulerCryptoManager
@@ -19,14 +23,22 @@ from zato.common.scheduler import startup_jobs
 from zato.common.util.open_ import open_w
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from argparse import Namespace
+    from zato.common.typing_ import any_, anydict
+    Namespace = Namespace
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 config_template = """[bind]
 host=0.0.0.0
 port=31530
 
 [cluster]
-id={cluster_id}
-name={cluster_name}
+id=1
 stats_enabled=True
 
 [server]
@@ -70,6 +82,7 @@ user1={user1_password}
 """
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Create(ZatoCommand):
     """ Creates a new scheduler instance.
@@ -90,8 +103,6 @@ class Create(ZatoCommand):
     opts.append({'name':'--server-path', 'help':'Local path to a Zato server'})
     opts.append({'name':'--server-host', 'help':'Remote host of a Zato server'})
     opts.append({'name':'--server-port', 'help':'Remote TCP port of a Zato server'})
-    opts.append({'name':'--server-username', 'help':'Username to connect to a remote server with'})
-    opts.append({'name':'--server-password', 'help':'Password to connect to a remote server with'})
 
     opts.append({'name':'--initial-sleep-time', 'help':'How many seconds to sleep initially when the scheduler starts'})
 
@@ -108,26 +119,51 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _get_cluster_id_by_name(self, args, cluster_name):
+    def _get_cluster_id(self, args):
         engine = self._get_engine(args)
         session = self._get_session(engine)
 
-        cluster_id = session.query(Cluster.id).\
-            filter(Cluster.name==cluster_name).\
-            first()
+        cluster_id_list = session.query(Cluster.id).\
+            all()
 
-        if not cluster_id:
-            raise Exception('No such cluster name `{}`'.format(cluster_name))
+        if not cluster_id_list:
+            raise Exception('No cluster found in `{}`'.format(args))
         else:
-            return cluster_id[0]
+
+            cluster_id_list.sort()
+            return cluster_id_list[0][0]
 
 # ################################################################################################################################
 
-    def execute(self, args, show_output=True, needs_created_flag=False):
+    def _get_server_admin_invoke_credentials(self, cm:'SchedulerCryptoManager', odb_config:'anydict') -> 'any_':
+
+        # Zato
+        from zato.common.util.api import get_server_client_auth
+
+        _config = Bunch()
+
+        _config_odb = Bunch()
+        _config.odb = _config_odb
+
+        _config_odb.engine = odb_config['odb_engine']
+        _config_odb.username = odb_config['odb_username']
+        _config_odb.password = odb_config['odb_password']
+        _config_odb.host = odb_config['odb_host']
+        _config_odb.port = odb_config['odb_port']
+        _config_odb.db_name = odb_config['odb_db_name']
+
+        server_username, server_password = get_server_client_auth(_config, None, cm, True)
+
+        return server_username, server_password
+
+# ################################################################################################################################
+
+    def execute(self, args:'Namespace', show_output:'bool'=True, needs_created_flag:'bool'=False):
 
         # Zato
         from zato.common.util.logging_ import get_logging_conf_contents
 
+        # Navigate to the directory that the component will be created in.
         os.chdir(self.target_dir)
 
         repo_dir = os.path.join(self.target_dir, 'config', 'repo')
@@ -153,21 +189,24 @@ class Create(ZatoCommand):
         if odb_engine.startswith('postgresql'):
             odb_engine = 'postgresql+pg8000'
 
-        if args.cluster_id:
-            cluster_id = args.cluster_id
-        else:
-            cluster_id = self._get_cluster_id_by_name(args, args.cluster_name)
+        # There will be always one cluster in the database.
+        cluster_id = self._get_cluster_id(args)
 
+        # We need to have a reference to it before we encrypt it later on.
         odb_password = args.odb_password or ''
-
         odb_password = odb_password.encode('utf8')
         odb_password = cm.encrypt(odb_password)
         odb_password = odb_password.decode('utf8')
 
-        kvdb_password = args.kvdb_password or ''
-        kvdb_password = kvdb_password.encode('utf8')
-        kvdb_password = cm.encrypt(kvdb_password)
-        kvdb_password = kvdb_password.decode('utf8')
+        # Collect ODB configuration in one place as it will be reusable further below.
+        odb_config = {
+            'odb_engine': odb_engine,
+            'odb_password': odb_password,
+            'odb_db_name': args.odb_db_name or args.sqlite_path,
+            'odb_host': args.odb_host or '',
+            'odb_port': args.odb_port or '',
+            'odb_username': args.odb_user or '',
+        }
 
         user1_password = cm.generate_password()
         user1_password = cm.encrypt(user1_password)
@@ -177,12 +216,12 @@ class Create(ZatoCommand):
         zato_well_known_data = cm.encrypt(zato_well_known_data)
         zato_well_known_data = zato_well_known_data.decode('utf8')
 
-        server_path     = self.get_arg('server_path')
-        server_host     = self.get_arg('server_host', '127.0.0.1')
-        server_port     = self.get_arg('server_port', 17010)
-        server_username = self.get_arg('server_username', '')
+        server_path = self.get_arg('server_path') or ''
+        server_host = self.get_arg('server_host', '127.0.0.1')
+        server_port = self.get_arg('server_port', 17010)
 
-        server_password = self.get_arg('server_password')
+        server_username, server_password = self._get_server_admin_invoke_credentials(cm, odb_config)
+
         server_password = server_password.encode('utf8')
         server_password = cm.encrypt(server_password)
         server_password = server_password.decode('utf8')
@@ -196,18 +235,8 @@ class Create(ZatoCommand):
         use_tls = is_arg_given(args, 'priv_key_path')
 
         config = {
-            'odb_db_name': args.odb_db_name or args.sqlite_path,
-            'odb_engine': odb_engine,
-            'odb_host': args.odb_host or '',
-            'odb_port': args.odb_port or '',
-            'odb_password': odb_password,
-            'odb_username': args.odb_user or '',
-            'broker_host': args.kvdb_host,
-            'broker_port': args.kvdb_port,
-            'broker_password': kvdb_password,
             'user1_password': user1_password,
             'cluster_id': cluster_id,
-            'cluster_name': args.cluster_name,
             'secret_key1': secret_key,
             'well_known_data': zato_well_known_data,
             'use_tls': 'true' if use_tls else 'false',
@@ -218,6 +247,8 @@ class Create(ZatoCommand):
             'server_password': server_password,
             'initial_sleep_time': initial_sleep_time,
         }
+
+        config.update(odb_config)
 
         logging_conf_contents = get_logging_conf_contents()
 
@@ -242,4 +273,5 @@ class Create(ZatoCommand):
         if needs_created_flag:
             return True
 
+# ################################################################################################################################
 # ################################################################################################################################
