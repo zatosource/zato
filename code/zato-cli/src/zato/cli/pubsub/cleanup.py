@@ -83,9 +83,9 @@ if __name__ == '__main__':
     args.store_config = False
     args.path = environ['ZATO_SCHEDULER_BASE_DIR']
 
-    while True:
-        command = Cleanup(args)
-        command.run(args, needs_sys_exit=False)
+    # while True:
+    command = Cleanup(args)
+    command.run(args, needs_sys_exit=False)
 
 # ################################################################################################################################
 # ################################################################################################################################
