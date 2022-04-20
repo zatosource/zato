@@ -1420,8 +1420,10 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted) -> 'any
 
         # .. this will be scheduler.conf.
         else:
+            cluster_id = config.get('cluster', {}).get('id')
+            cluster_id = cluster_id or 1
             cluster = session.query(Cluster).\
-                filter(Cluster.id == config.cluster.id).\
+                filter(Cluster.id == cluster_id).\
                 one()
 
         channel = session.query(HTTPSOAP).\
