@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -101,6 +101,7 @@ def populate_services_from_apispec(client, logger):
 
     # Services belonging here may not have all the CRUD methods and it is expected that they do not
     allow_incomplete_methods = [
+        'zato.outgoing.redis',
         'zato.security',
         'zato.security.rbac.client-role'
     ]
@@ -383,6 +384,10 @@ SERVICES = [
                 'dependent_field': 'name',
             },
         },
+    ),
+    ServiceInfo(
+        name='outconn_redis',
+        prefix='zato.outgoing.redis',
     ),
     ServiceInfo(
         name='query_cassandra',
