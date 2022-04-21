@@ -25,6 +25,13 @@ if 0:
     ConfigObj = ConfigObj
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class ModuleCtx:
+    StaticID = 12345
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 def get_config_object(repo_location, conf_file):
     # type: (str) -> dict
@@ -61,6 +68,7 @@ class GetList(AdminService):
         output_optional = AsIs('id'), 'is_active', 'name', 'host', Int('port'), 'db', Bool('use_redis_sentinels'), \
             AsIs('redis_sentinels'), 'redis_sentinels_master'
         default_value = None
+        response_elem = None
 
 # ################################################################################################################################
 
@@ -71,7 +79,7 @@ class GetList(AdminService):
 
         # For now, we only return one item containing data read from server.conf
         item = {
-            'id': 123456,
+            'id': ModuleCtx.StaticID,
             'name': 'default',
             'is_active': True,
         }
@@ -115,7 +123,8 @@ class Edit(AdminService):
     class SimpleIO:
         input_optional = AsIs('id'), 'name', Bool('use_redis_sentinels')
         input_required = 'host', 'port', 'db', 'redis_sentinels', 'redis_sentinels_master'
-        output_optional = 'name'
+        output_required = 'id', 'name'
+        response_elem = None
 
     def handle(self):
 
@@ -143,7 +152,8 @@ class Edit(AdminService):
         # .. and rebuild the Redis connection object.
         self.server.kvdb.reconfigure(self.server.fs_server_config.kvdb)
 
-        # Our callers expect it
+        # Our callers expect these two
+        self.response.payload.id = ModuleCtx.StaticID
         self.response.payload.name = self.request.input.name
 
 # ################################################################################################################################
@@ -163,7 +173,7 @@ class ChangePassword(ChangePasswordBase):
         input = self.request.input
 
         # Encryption requires bytes
-        password = input.password1.encode('utf8')
+        password = (input.password1 or '').encode('utf8')
 
         # Now, encrypt the input password
         password = self.crypto.encrypt(password)
