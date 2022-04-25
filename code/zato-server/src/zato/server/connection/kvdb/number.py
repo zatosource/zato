@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -19,6 +19,12 @@ import numpy as np
 from zato.common.api import StatsKey
 from zato.common.typing_ import dataclass
 from zato.server.connection.kvdb.core import BaseRepo
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, callable_, callnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,8 +63,16 @@ class IntData:
 class NumberRepo(BaseRepo):
     """ Stores integer counters for string labels.
     """
-    def __init__(self, name, data_path, sync_threshold=120_000, sync_interval=120_000, max_value=max_value, allow_negative=True):
-        # type: (str, int, int, int, int) -> None
+    def __init__(
+        self,
+        name,      # type: str
+        data_path, # type: str
+        sync_threshold=120_000, # type: int
+        sync_interval=120_000,  # type: int
+        max_value=max_value,    # type: int
+        allow_negative=True     # type: bool
+    ) -> 'None':
+
         super().__init__(name, data_path, sync_threshold, sync_interval)
 
         # We will never allow for a value to be greater than that
@@ -75,7 +89,16 @@ class NumberRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def _change_value(self, value_op, cmp_op, value_limit, key, change_by, value_limit_condition=None, default_value=0):
+    def _change_value(
+        self,
+        value_op,    # type: callable_
+        cmp_op,      # type: callable_
+        value_limit, # type: int
+        key,
+        change_by,
+        value_limit_condition=None, # type: callnone
+        default_value=0
+    ):
         # type: (object, object, int, str, int, object) -> int
 
         # Get current value ..
