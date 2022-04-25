@@ -10,6 +10,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from logging import getLogger
 
+# gevent
+from gevent.lock import RLock
+
 # orjson
 from orjson import dumps as json_dumps
 
@@ -25,7 +28,7 @@ from zato.common.ext.dataclasses import dataclass
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strnone
+    from zato.common.typing_ import any_, anylist, stranydict, strnone
     from zato.server.connection.kvdb.list_ import ListRepo
     from zato.server.connection.kvdb.number import NumberRepo
     from zato.server.connection.kvdb.object_ import ObjectRepo
@@ -71,6 +74,12 @@ class BaseRepo(InRAMStore):
     ) -> 'None':
 
         super().__init__(sync_threshold, sync_interval)
+
+        # In-RAM database of objects
+        self.in_ram_store = {}
+
+        # Used to synchronise updates
+        self.lock = RLock()
 
         # Our user-visible name
         self.name = name
@@ -121,13 +130,6 @@ class BaseRepo(InRAMStore):
     def get(self, *args:'any_', **kwargs:'any_'):
         with self.update_lock:
             return self._get(*args, **kwargs)
-
-# ################################################################################################################################
-
-    def get_many(self, *args:'any_', **kwargs:'any_'):
-        # type: (object, object) -> dict
-        with self.update_lock:
-            return self._get_many(*args, **kwargs)
 
 # ################################################################################################################################
 
@@ -182,17 +184,17 @@ class BaseRepo(InRAMStore):
 # ################################################################################################################################
 
     def _loads(self, data:'bytes') -> 'None':
-        print(111, data)
-        data = json_loads(data) # type: dict
-        if data:
+
+        data_ = json_loads(data) # type: dict
+        if data_:
 
             # We may have already some pre-defined keys in RAM that we only need to update ..
             if self.in_ram_store:
-                for key, value in data.items():
+                for key, value in data_.items():
                     self.in_ram_store[key].update(value)
 
             # .. otherwise, we load all the data as is because we assume know there are no keys in RAM yet.
-            self.in_ram_store.update(data)
+            self.in_ram_store.update(data_)
 
 # ################################################################################################################################
 
@@ -245,7 +247,9 @@ class KVDB:
     """ Manages KVDB repositories.
     """
     def __init__(self):
-        self.repo = {} # Maps str -> repository objects
+
+        # Maps str -> repository objects
+        self.repo = {} # type: stranydict
 
 # ################################################################################################################################
 
@@ -284,7 +288,7 @@ class KVDB:
     def internal_create_object_repo(
         self,
         repo_name,     # type: str
-        data_path=None # type: strnone
+        data_path=''   # type: str
     ) -> 'ObjectRepo':
 
         # Zato
@@ -295,7 +299,7 @@ class KVDB:
 
 # ################################################################################################################################
 
-    def get(self, repo_name:'str') -> 'ListRepo':
+    def get(self, repo_name:'str') -> 'any_':
         return self.repo.get(repo_name)
 
 # ################################################################################################################################
@@ -312,7 +316,7 @@ class KVDB:
 
 # ################################################################################################################################
 
-    def get_list(self, repo_name:'str', cur_page:'int'=1, page_size:'int'=50) -> 'None':
+    def get_list(self, repo_name:'str', cur_page:'int'=1, page_size:'int'=50) -> 'anylist':
         repo = self.repo[repo_name] # type: ListRepo
         return repo.get_list(cur_page, page_size)
 
