@@ -185,16 +185,20 @@ class BaseRepo(InRAMStore):
 
     def _loads(self, data:'bytes') -> 'None':
 
-        data_ = json_loads(data) # type: dict
-        if data_:
+        try:
+            data_ = json_loads(data) # type: dict
+        except Exception as e:
+            logger.info('KVDB load error (%s -> %s) -> %s', self.name, self.data_path, e)
+        else:
+            if data_:
 
-            # We may have already some pre-defined keys in RAM that we only need to update ..
-            if self.in_ram_store:
-                for key, value in data_.items():
-                    self.in_ram_store[key].update(value)
+                # We may have already some pre-defined keys in RAM that we only need to update ..
+                if self.in_ram_store:
+                    for key, value in data_.items():
+                        self.in_ram_store[key].update(value)
 
-            # .. otherwise, we load all the data as is because we assume know there are no keys in RAM yet.
-            self.in_ram_store.update(data_)
+                # .. otherwise, we load all the data as is because we assume know there are no keys in RAM yet.
+                self.in_ram_store.update(data_)
 
 # ################################################################################################################################
 
