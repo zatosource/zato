@@ -24,7 +24,7 @@ run-tests:
 	$(MAKE) pubsub-tests
 	$(MAKE) wsx-tests
 	$(MAKE) kvdb-tests
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/test_sio.py -s
+	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/test_sio_*.py -s
 	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/file_transfer/test_*.py -s
 	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/apispec/test_*.py -s
 	$(Zato_Python_Dir)/py        $(CURDIR)/test/zato/commands_/test_*.py
