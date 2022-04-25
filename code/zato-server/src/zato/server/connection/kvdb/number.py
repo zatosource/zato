@@ -24,7 +24,7 @@ from zato.server.connection.kvdb.core import BaseRepo
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, callable_, callnone
+    from zato.common.typing_ import any_, anydict, callable_, callnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,8 +84,9 @@ class NumberRepo(BaseRepo):
         # Main in-RAM database of objects
         self.in_ram_store = {
             _stats_key_current_value: {},
-        }
-        self.current_value = self.in_ram_store[_stats_key_current_value] # type: dict
+        } # type: anydict
+
+        self.current_value = self.in_ram_store[_stats_key_current_value] # type: anydict
 
 # ################################################################################################################################
 
@@ -94,15 +95,14 @@ class NumberRepo(BaseRepo):
         value_op,    # type: callable_
         cmp_op,      # type: callable_
         value_limit, # type: int
-        key,
-        change_by,
+        key,         # type: any_
+        change_by,   # type: int
         value_limit_condition=None, # type: callnone
-        default_value=0
-    ):
-        # type: (object, object, int, str, int, object) -> int
+        default_value=0 # type: int
+    ) -> 'int':
 
         # Get current value ..
-        current_data = self.current_value.get(key)
+        current_data = self.current_value.get(key) # type: any_
 
         # .. or set a default to 0, if nothing is found ..
         if not current_data:
@@ -155,14 +155,12 @@ class NumberRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def _is_negative_allowed(self):
-        # type: (int) -> bool
+    def _is_negative_allowed(self) -> 'bool':
         return self.allow_negative
 
 # ################################################################################################################################
 
-    def _incr(self, key, change_by=1):
-        # type: (str, int) -> int
+    def _incr(self, key:'str', change_by:'int'=1) -> 'int':
 
         value_op = op_add
         cmp_op   = op_gt
@@ -172,8 +170,7 @@ class NumberRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def _decr(self, key, change_by=1):
-        # type: (str, int) -> int
+    def _decr(self, key:'str', change_by:'int'=1) -> 'int':
 
         value_op = op_sub
         cmp_op   = op_lt
@@ -183,14 +180,12 @@ class NumberRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def _get(self, key):
-        # type: (str) -> dict
-        return self.current_value.get(key)
+    def _get(self, key:'str') -> 'anydict':
+        return self.current_value.get(key) # type: ignore
 
 # ################################################################################################################################
 
-    def _remove_all(self):
-        # type: () -> None
+    def _remove_all(self) -> 'None':
         self.current_value.clear()
 
 # ################################################################################################################################
@@ -224,7 +219,7 @@ class NumberRepo(BaseRepo):
             # is used in computations but when it comes to JSON serialisation it really
             # needs to be a float rather than np.float64. That is why here we turn float64 into a real float.
             uses_numpy = new_mean.__class__ is np.float64
-            new_mean = new_mean.item() if uses_numpy else new_mean
+            new_mean = new_mean.item() if uses_numpy else new_mean # type: ignore
 
             per_key_dict[_stats_key_per_key_last_duration] = current_duration
             per_key_dict[_stats_key_per_key_min]  = new_min
