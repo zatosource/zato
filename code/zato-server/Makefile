@@ -15,11 +15,16 @@ wsx-tests:
 	echo "Running WSX tests in $(Zato_Package_Name)"
 	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/wsx/test_*.py -s
 
+kvdb-tests:
+	echo "Running KVDB tests in $(Zato_Package_Name)"
+	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/kvdb/test_*.py -s
+
 run-tests:
 	echo "Running tests in $(Zato_Package_Name)"
 	$(MAKE) pubsub-tests
 	$(MAKE) wsx-tests
-	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/test_*.py -s
+	$(MAKE) kvdb-tests
+	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/test_sio.py -s
 	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/file_transfer/test_*.py -s
 	$(Zato_Python_Dir)/nosetests $(CURDIR)/test/zato/apispec/test_*.py -s
 	$(Zato_Python_Dir)/py        $(CURDIR)/test/zato/commands_/test_*.py
