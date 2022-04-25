@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -19,6 +19,12 @@ from zato.server.connection.kvdb.core import BaseRepo, ObjectCtx
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger('zato')
 
 # ################################################################################################################################
@@ -27,8 +33,14 @@ logger = getLogger('zato')
 class ListRepo(BaseRepo):
     """ Stores arbitrary objects, as a list, in RAM only, without backing persistent storage.
     """
-    def __init__(self, name='<ListRepo-name>', data_path='<ListRepo-data_path>', max_size=1000, page_size=50):
-        # type: (str, int, int) -> None
+    def __init__(
+        self,
+        name='<ListRepo-name>',           # type: str
+        data_path='<ListRepo-data_path>', # type: str
+        max_size=1000, # type: int
+        page_size=50   # type: int
+    ) -> 'None':
+
         super().__init__(name, data_path)
 
         # How many objects we will keep at most
@@ -45,8 +57,8 @@ class ListRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def _append(self, ctx):
-        # type: (ObjectCtx) -> ObjectCtx
+    def _append(self, ctx:'ObjectCtx') -> 'ObjectCtx':
+
         # Push new data ..
         self.in_ram_store.append(ctx)
 
@@ -60,8 +72,8 @@ class ListRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def _get(self, object_id):
-        # type: (str) -> object
+    def _get(self, object_id:'str') -> 'any_':
+
         for item in self.in_ram_store: # type: ObjectCtx
             if item.id == object_id:
                 return item
@@ -70,15 +82,14 @@ class ListRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def _get_list(self, cur_page=1, page_size=50):
-        # type: (int, int) -> dict
+    def _get_list(self, cur_page:'int'=1, page_size:'int'=50) -> 'dict':
         search_results = SearchResults.from_list(self.in_ram_store, cur_page, page_size)
         return search_results.to_dict()
 
 # ################################################################################################################################
 
-    def _delete(self, object_id):
-        # type: (str) -> object
+    def _delete(self, object_id:'str') -> 'any_':
+
         for item in self.in_ram_store: # type: ObjectCtx
             if item.id == object_id:
                 self.in_ram_store.remove(item)
@@ -86,14 +97,12 @@ class ListRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def _remove_all(self):
-        # type: () -> None
+    def _remove_all(self) -> 'None':
         self.in_ram_store[:] = []
 
 # ################################################################################################################################
 
-    def _get_size(self):
-        # type: () -> int
+    def _get_size(self) -> 'int':
         return len(self.in_ram_store)
 
 # ################################################################################################################################

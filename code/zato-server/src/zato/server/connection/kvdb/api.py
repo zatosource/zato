@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,7 +13,7 @@ from zato.server.connection.kvdb.number import IntData, NumberRepo
 
 # For flake8
 IntData = IntData
-KVDB = KVDB
+KVDB = KVDB # type: ignore
 ListRepo = ListRepo
 NumberRepo = NumberRepo
 ObjectCtx = ObjectCtx
