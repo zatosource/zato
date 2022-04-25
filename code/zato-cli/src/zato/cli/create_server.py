@@ -644,6 +644,8 @@ class Create(ZatoCommand):
     opts.append({'name':'--secret-key', 'help':'Server\'s secret key (must be the same for all servers)'})
     opts.append({'name':'--jwt-secret', 'help':'Server\'s JWT secret (must be the same for all servers)'})
     opts.append({'name':'--http-port', 'help':'Server\'s HTTP port'})
+    opts.append({'name':'--scheduler-host', 'help':"Host to invoke the cluster's scheduler on"})
+    opts.append({'name':'--scheduler-port', 'help':"Port for invoking the cluster's scheduler"})
 
 # ################################################################################################################################
 
