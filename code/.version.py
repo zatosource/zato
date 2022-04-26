@@ -39,4 +39,4 @@ release = json.loads(release)
 #with sh.pushd(release_info_dir):
 #    revision = sh.git('rev-parse', '--short', 'HEAD').strip()
 
-version = '{}.{}+rev.{}'.format(release['major'], release['minor'])
+version = '{}.{}+rev.nogit'.format(release['major'], release['minor'])
