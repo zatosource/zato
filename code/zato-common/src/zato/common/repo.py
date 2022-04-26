@@ -94,6 +94,8 @@ class BazaarRepoManager(_BaseRepoManager):
 class GitRepoManager(_BaseRepoManager):
     def ensure_repo_consistency(self):
 
+        return
+
         # Use sh for git commands
         import sh
 
