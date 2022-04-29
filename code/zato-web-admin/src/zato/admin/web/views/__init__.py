@@ -24,9 +24,6 @@ from django.http import HttpResponse, HttpResponseServerError
 # pytz
 from pytz import UTC
 
-# Python 2/3 compatibility
-from future.utils import iterkeys
-
 # Zato
 try:
     from zato.admin.settings import lb_agent_use_tls
@@ -74,7 +71,7 @@ def parse_response_data(response):
     """ Parses out data and metadata out an internal API call response.
     """
     meta = response.data.pop('_meta', None)
-    keys = list(iterkeys(response.data))
+    keys = list(response.data.keys())
     data = response.data[keys[0]]
     return data, meta
 
@@ -394,7 +391,7 @@ class Index(_BaseView):
         and that all the required parameters were given in GET request. cluster_id doesn't have to be in GET,
         'cluster' will suffice.
         """
-        input_elems = list(iterkeys(self.req.GET)) + list(iterkeys(self.req.zato.args))
+        input_elems = list(self.req.GET.keys()) + list(self.req.zato.args.keys())
 
         if not self.cluster_id:
             logger.info('Value missing; self.cluster_id `%s`', self.cluster_id)
@@ -542,7 +539,7 @@ class Index(_BaseView):
                     if output_repeated:
                         if response and isinstance(response.data, dict):
                             response.data.pop('_meta', None)
-                            keys = list(iterkeys(response.data))
+                            keys = list(response.data.keys())
                             if self.should_extract_top_level(keys):
                                 data = response.data[keys[0]]
                                 is_extracted = True
@@ -854,8 +851,7 @@ def get_http_channel_security_id(item):
 
 # ################################################################################################################################
 
-def invoke_action_handler(req, service_name, send_attrs):
-    # type: (str, tuple) -> object
+def invoke_action_handler(req, service_name:'str', send_attrs:'any_') -> 'any_':
 
     try:
         request = {

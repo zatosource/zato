@@ -1225,6 +1225,7 @@ class GENERIC:
             CHANNEL_FILE_TRANSFER = 'channel-file-transfer'
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
             CLOUD_DROPBOX = 'cloud-dropbox'
+            CLOUD_SALESFORCE = 'cloud-salesforce'
             DEF_KAFKA = 'def-kafka'
             OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
             OUTCONN_IM_SLACK = 'outconn-im-slack'
