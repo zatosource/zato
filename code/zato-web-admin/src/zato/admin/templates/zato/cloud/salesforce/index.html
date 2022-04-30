@@ -37,12 +37,12 @@
 
             {% comment %} 2 {% endcomment %}
             'pool_size',
-            '_audit_log',
             '_invoke',
 
             {% comment %} 3 {% endcomment %}
             '_edit',
             '_delete',
+            '_ping',
             'id',
 
             {% comment %} 4 {% endcomment %}
@@ -96,10 +96,10 @@
 
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Pool size</a></th>
-                        <th>Message log</th>
                         <th></th>
 
                         {% comment %} 3 {% endcomment %}
+                        <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -134,15 +134,13 @@
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.pool_size }}</td>
                         <td>
-                            <a href="{% url "audit-log" "outconn-salesforce" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label=Salesforce&nbsp;cloud&nbsp;connection">View</a>
-                        </td>
-                        <td>
                             <a href="{% url "cloud-salesforce-invoke" item.id item.max_wait_time item.name item.name|slugify %}?cluster={{ cluster_id }}">Invoke</a>
                         </td>
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.cloud.salesforce.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.salesforce.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
                         {% comment %} 4 {% endcomment %}
