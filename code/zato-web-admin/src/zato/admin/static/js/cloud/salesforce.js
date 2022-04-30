@@ -19,14 +19,12 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms([
         'name',
+        'api_version',
         'address',
-        'pool_size',
-        'timeout',
-        'max_msg_size',
-        'read_buffer_size',
-        'recv_timeout',
-        'start_seq',
-        'end_seq',
+        'username',
+        'password',
+        'consumer_key',
+        'consumer_secret',
     ]);
 })
 
@@ -75,16 +73,7 @@ $.fn.zato.cloud.salesforce.data_table.new_row = function(item, data, include_tr)
 
     // 4
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
-
-    // 5
-    row += String.format("<td class='ignore'>{0}</td>", item.is_audit_log_sent_active);
-    row += String.format("<td class='ignore'>{0}</td>", item.is_audit_log_received_active);
-    row += String.format("<td class='ignore'>{0}</td>", item.max_len_messages_sent);
-
-    // 6
-    row += String.format("<td class='ignore'>{0}</td>", item.max_len_messages_received);
-    row += String.format("<td class='ignore'>{0}</td>", item.max_bytes_per_message_sent);
-    row += String.format("<td class='ignore'>{0}</td>", item.max_bytes_per_message_received);
+    row += String.format("<td class='ignore'>{0}</td>", item.username);
 
     if(include_tr) {
         row += '</tr>';

@@ -47,16 +47,8 @@
 
             {% comment %} 4 {% endcomment %}
             'is_active',
+            'username',
 
-            {% comment %} 5 {% endcomment %}
-            'is_audit_log_sent_active',
-            'is_audit_log_received_active',
-            'max_len_messages_sent',
-
-            {% comment %} 6 {% endcomment %}
-            'max_len_messages_received',
-            'max_bytes_per_message_sent',
-            'max_bytes_per_message_received',
         ]
     }
     </script>
@@ -106,15 +98,6 @@
 
                         {% comment %} 4 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 5 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 6 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
                 </thead>
@@ -145,22 +128,13 @@
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore'>{{ item.is_active }}</td>
-
-                        {% comment %} 5 {% endcomment %}
-                        <td class='ignore'>{{ item.is_audit_log_sent_active }}</td>
-                        <td class='ignore'>{{ item.is_audit_log_received_active }}</td>
-                        <td class='ignore'>{{ item.max_len_messages_sent|default:"" }}</td>
-
-                        {% comment %} 6 {% endcomment %}
-                        <td class='ignore'>{{ item.max_len_messages_received|default:"" }}</td>
-                        <td class='ignore'>{{ item.max_bytes_per_message_sent|default:"" }}</td>
-                        <td class='ignore'>{{ item.max_bytes_per_message_received|default:"" }}</td>
+                        <td class='ignore'>{{ item.username }}</td>
 
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='22'>No results</td>
+                        <td colspan='13'>No results</td>
                     </tr>
                 {% endif %}
 
