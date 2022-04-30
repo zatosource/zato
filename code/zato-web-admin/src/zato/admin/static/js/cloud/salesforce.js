@@ -64,14 +64,13 @@ $.fn.zato.cloud.salesforce.data_table.new_row = function(item, data, include_tr)
 
     // 2
     row += String.format("<td>{0}</td>", item.pool_size);
-    row += String.format('<td><a href="/zato/audit-log/cloud-salesforce/{0}/?cluster={1}&amp;object_name={2}&amp;object_type_label={3}">View</a></td>',
-        item.id, cluster_id, item.name, 'Salesforce&nbsp;outgoing&nbsp;connection');
     row += String.format('<td><a href="/zato/cloud/salesforce/invoke/{0}/{1}/{2}/?cluster={3}">Invoke</a></td>',
         item.id, item.name, $.fn.zato.slugify(item.name), cluster_id);
 
     // 3
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cloud.salesforce.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.cloud.salesforce.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.ping({0});'>Ping</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
 
     // 4
