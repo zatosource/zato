@@ -36,7 +36,7 @@
             'address',
 
             {% comment %} 2 {% endcomment %}
-            'pool_size',
+            'username',
             '_invoke',
 
             {% comment %} 3 {% endcomment %}
@@ -87,7 +87,7 @@
                         <th><a href="#">Address</a></th>
 
                         {% comment %} 2 {% endcomment %}
-                        <th><a href="#">Pool size</a></th>
+                        <th><a href="#">Username</a></th>
                         <th></th>
 
                         {% comment %} 3 {% endcomment %}
@@ -115,7 +115,7 @@
                         <td>{{ item.address }}</td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td>{{ item.pool_size }}</td>
+                        <td>{{ item.username }}</td>
                         <td>
                             <a href="{% url "cloud-salesforce-invoke" item.id item.max_wait_time item.name item.name|slugify %}?cluster={{ cluster_id }}">Invoke</a>
                         </td>
