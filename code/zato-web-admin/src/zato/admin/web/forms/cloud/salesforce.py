@@ -11,28 +11,28 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import WithAuditLog
-from zato.common.api import HL7
+from zato.common.api import SALESFORCE
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_default = HL7.Default
+_default = SALESFORCE.Default
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class CreateForm(WithAuditLog):
+
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    should_log_messages = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+
+    api_version = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=_default.API_Version)
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    pool_size = forms.CharField(initial=_default.pool_size, widget=forms.TextInput(attrs={'style':'width:11%'}))
-    logging_level = forms.ChoiceField(widget=forms.Select())
-    max_wait_time = forms.CharField(initial=_default.max_wait_time, widget=forms.TextInput(attrs={'style':'width:25%'}))
-    max_msg_size = forms.CharField(initial=_default.max_msg_size, widget=forms.TextInput(attrs={'style':'width:30%'}))
-    read_buffer_size = forms.CharField(initial=_default.read_buffer_size, widget=forms.TextInput(attrs={'style':'width:15%'}))
-    start_seq = forms.CharField(initial=_default.start_seq, widget=forms.TextInput(attrs={'style':'width:35%'}))
-    end_seq = forms.CharField(initial=_default.end_seq, widget=forms.TextInput(attrs={'style':'width:26%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+
+    password = forms.CharField(strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
+    consumer_key = forms.CharField(strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
+    consumer_secret = forms.CharField(strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
 # ################################################################################################################################
 # ################################################################################################################################
