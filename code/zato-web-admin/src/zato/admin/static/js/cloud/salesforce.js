@@ -62,7 +62,7 @@ $.fn.zato.cloud.salesforce.data_table.new_row = function(item, data, include_tr)
 
     // 2
     row += String.format("<td>{0}</td>", item.username);
-    row += String.format('<td><a href="/zato/cloud/salesforce/invoke/{0}/{1}/{2}/?cluster={3}">Invoke</a></td>',
+    row += String.format('<!--<td><a href="/zato/cloud/salesforce/invoke/{0}/{1}/{2}/?cluster={3}">Invoke</a></td>-->',
         item.id, item.name, $.fn.zato.slugify(item.name), cluster_id);
 
     // 3

@@ -29,7 +29,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'username', 'api_version'
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'username', 'api_version', \
+            'consumer_key', 'consumer_secret'
         output_optional = generic_attrs
         output_repeated = True
 
@@ -48,7 +49,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_internal', 'address', 'username', 'api_version'
+        input_required = 'name', 'is_internal', 'address', 'username', 'api_version', \
+            'consumer_key', 'consumer_secret'
         input_optional = ('is_active', 'pool_size') + generic_attrs
         output_required = 'id', 'name'
 
@@ -62,7 +64,7 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outconn'] = False
         initial_input_dict['sec_use_rbac'] = False
         initial_input_dict['recv_timeout'] = 250
-        initial_input_dict['pool_size'] = 500
+        initial_input_dict['pool_size'] = 20
 
 # ################################################################################################################################
 
