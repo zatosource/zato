@@ -74,12 +74,12 @@ class SalesforceClient:
     @staticmethod
     def from_config(config:'stranydict') -> 'SalesforceClient':
         return SalesforceClient(
-            api_version = config[''],
-            address = config[''],
-            username = config[''],
-            password = config[''],
-            consumer_key = config[''],
-            consumer_secret = config[''],
+            api_version = config['api_version'],
+            address = config['address'],
+            username = config['username'],
+            password = config['password'],
+            consumer_key = config['consumer_key'],
+            consumer_secret = config['consumer_secret'],
         )
 
 # ################################################################################################################################

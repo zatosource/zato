@@ -12,6 +12,7 @@ from bunch import Bunch
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC, LDAP
 from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
+from zato.common.const import SECRETS
 from zato.common.util.api import as_bool, parse_simple_type
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.generic.connection import GenericConnection
@@ -87,6 +88,15 @@ class Generic(WorkerImpl):
         raise_exc:'bool'=True,
         is_starting:'bool'=False
     ) -> 'None':
+
+        # It is possible that some of the input keys point to secrets
+        # and other data that will be encrypted. In such a case,
+        # decrypt them all here upfront.
+        for key, value in msg.items():
+            if isinstance(value, str):
+                if value.startswith(SECRETS.EncryptedMarker):
+                    value = self.server.decrypt(value)
+                    msg[key] = value
 
         # This roundtrip is needed to re-format msg in the format the underlying .from_bunch expects
         # in case this is a broker message rather than a startup one.

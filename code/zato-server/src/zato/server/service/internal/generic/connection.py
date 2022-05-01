@@ -73,6 +73,11 @@ extra_secret_keys = (
     'consumer_secret',
 )
 
+# Note that this is a set, unlike extra_secret_keys, because we do not make it part of SIO.
+extra_simple_type = {
+    'is_active',
+}
+
 # ################################################################################################################################
 
 class _CreateEditSIO(AdminSIO):
@@ -107,12 +112,19 @@ class _CreateEdit(_BaseService):
             raw_request = loads(raw_request)
 
         for key, value in raw_request.items():
-            if key not in data:
 
+            if key not in data:
                 value = parse_simple_type(value)
                 value = self._sio.eval_(key, value, self.server.encrypt)
 
-                data[key] = value
+            if key in extra_secret_keys:
+                value = self.crypto.encrypt(value)
+                value = value.decode('utf8')
+
+            if key in extra_simple_type:
+                value = parse_simple_type(value)
+
+            data[key] = value
 
         conn = GenericConnection.from_dict(data)
 

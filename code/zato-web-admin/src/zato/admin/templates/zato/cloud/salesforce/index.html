@@ -37,7 +37,7 @@
 
             {% comment %} 2 {% endcomment %}
             'username',
-            '_invoke',
+            // '_invoke',
 
             {% comment %} 3 {% endcomment %}
             '_edit',
@@ -88,7 +88,7 @@
 
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Username</a></th>
-                        <th></th>
+                        <!-- <th></th> -->
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -116,9 +116,12 @@
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.username }}</td>
+
+                        <!--
                         <td>
                             <a href="{% url "cloud-salesforce-invoke" item.id item.max_wait_time item.name item.name|slugify %}?cluster={{ cluster_id }}">Invoke</a>
                         </td>
+                        -->
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.cloud.salesforce.edit('{{ item.id }}')">Edit</a></td>
