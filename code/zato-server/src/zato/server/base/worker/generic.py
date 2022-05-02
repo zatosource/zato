@@ -110,7 +110,12 @@ class Generic(WorkerImpl):
         # Normalize the contents of the configuration message
         self.generic_normalize_config(item_dict)
 
-        config_attr = self.generic_conn_api[item.type_]
+        config_attr = self.generic_conn_api.get(item.type_)
+
+        if not config_attr:
+            self.logger.info('No config attr found for generic connection `%s`', item.type_)
+            return
+
         wrapper = self._generic_conn_handler[item.type_]
 
         msg_name = msg['name'] # type: str
