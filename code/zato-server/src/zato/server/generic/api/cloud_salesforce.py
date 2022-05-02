@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,6 +11,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
+from zato.common.typing_ import cast_
 from zato.server.connection.salesforce import SalesforceClient
 from zato.server.connection.queue import Wrapper
 
@@ -37,6 +38,7 @@ class _SalesforceClient:
         # Forward invocations to the underlying client
         self.get = self.impl.get
         self.post = self.impl.post
+        self.ping = self.impl.ping
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,6 +60,13 @@ class CloudSalesforceWrapper(Wrapper):
         except Exception:
             logger.warning('Caught an exception while adding a Salesforce client (%s); e:`%s`',
                 self.config['name'], format_exc())
+
+# ################################################################################################################################
+
+    def ping(self):
+        with self.client() as client:
+            client = cast_('_SalesforceClient', client)
+            client.ping()
 
 # ################################################################################################################################
 
