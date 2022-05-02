@@ -24,7 +24,7 @@ if 0:
 class ModuleCtx:
 
     PathLogin = '/services/oauth2/token'
-    PathPing = '/services/data/v{api_version}/'
+    PathBase = '/services/data/v{api_version}'
 
     MethodGet = 'get'
     MethodPost = 'post'
@@ -94,24 +94,18 @@ class SalesforceClient:
         method=ModuleCtx.MethodGet,  # type: str
     ) -> 'anydict':
 
-        # Build a full URL now for the upcoming request.
-        url = self.address + path
+        # Build a full URL now for the incoming request.
+        if path != ModuleCtx.PathLogin:
+            path_prefix = ModuleCtx.PathBase.format(api_version=self.api_version)
+        else:
+            path_prefix = ''
+
+        url = self.address + path_prefix + path
 
         # Invoke Salesforce now ..
         func = method_map[method]
 
-        '''
-        print()
-        print('QQQ-1', func)
-        print('QQQ-2', url)
-        print('QQQ-3', data)
-        '''
-
         response = func(url, data=data, headers=headers, params=params)
-
-        print(111, response)
-        print(222, response.text)
-        print()
 
         # .. convert the response to JSON ..
         response_json = response.json()
@@ -221,7 +215,7 @@ class SalesforceClient:
         """ Sends a ping-like request to Salesforce.
         """
         return self._send_request(
-            path=ModuleCtx.PathPing,
+            path=ModuleCtx.PathBase.format(api_version=self.api_version),
             method=ModuleCtx.MethodGet
         )
 
