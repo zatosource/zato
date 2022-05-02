@@ -12,6 +12,7 @@ from bunch import Bunch
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC, LDAP
 from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
+from zato.common.const import SECRETS
 from zato.common.util.api import as_bool, parse_simple_type
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.generic.connection import GenericConnection
@@ -27,6 +28,7 @@ if 0:
 # ################################################################################################################################
 
 _channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
+_secret_prefixes = (SECRETS.EncryptedMarker, SECRETS.PREFIX)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,10 +110,24 @@ class Generic(WorkerImpl):
         # Normalize the contents of the configuration message
         self.generic_normalize_config(item_dict)
 
-        config_attr = self.generic_conn_api[item.type_]
+        config_attr = self.generic_conn_api.get(item.type_)
+
+        if not config_attr:
+            self.logger.info('No config attr found for generic connection `%s`', item.type_)
+            return
+
         wrapper = self._generic_conn_handler[item.type_]
 
         msg_name = msg['name'] # type: str
+
+        # It is possible that some of the input keys point to secrets
+        # and other data that will be encrypted. In such a case,
+        # decrypt them all here upfront.
+        for key, value in item_dict.items():
+            if isinstance(value, str):
+                if value.startswith(_secret_prefixes):
+                    value = self.server.decrypt(value)
+                    item_dict[key] = value
 
         config_attr[msg_name] = item_dict
         config_attr[msg_name].conn = wrapper(item_dict, self.server)

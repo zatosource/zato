@@ -1225,6 +1225,7 @@ class GENERIC:
             CHANNEL_FILE_TRANSFER = 'channel-file-transfer'
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
             CLOUD_DROPBOX = 'cloud-dropbox'
+            CLOUD_SALESFORCE = 'cloud-salesforce'
             DEF_KAFKA = 'def-kafka'
             OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
             OUTCONN_IM_SLACK = 'outconn-im-slack'
@@ -1482,6 +1483,14 @@ class FILE_TRANSFER:
     class SOURCE_TYPE_IMPL:
         LOCAL_INOTIFY  = 'local-inotify'
         LOCAL_SNAPSHOT = 'local-snapshot'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SALESFORCE:
+
+    class Default:
+        API_Version = '54.0'
 
 # ################################################################################################################################
 # ################################################################################################################################
