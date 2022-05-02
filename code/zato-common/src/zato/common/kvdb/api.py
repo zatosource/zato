@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -22,6 +22,7 @@ from past.builtins import basestring
 
 # Zato
 from zato.common.api import KVDB as _KVDB, NONCE_STORE
+from zato.common.const import SECRETS
 from zato.common.util import spawn_greenlet
 from zato.common.util.kvdb import has_redis_sentinels
 
@@ -125,10 +126,10 @@ class KVDB:
                 config['db'] = int(self.config.db)
 
         if self.config.get('password'):
-            # Heuristics - gA is a prefix of encrypted secrets so there is a chance
+            # Heuristics - gAAA is a prefix of encrypted secrets so there is a chance
             # we need to decrypt it. If the decryption fails, this is fine, we need
             # assume in such a case that it was an actual password starting with this prefix.
-            if self.config.password.startswith('gA'):
+            if self.config.password.startswith(SECRETS.EncryptedMarker):
                 try:
                     config['password'] = self.decrypt_func(self.config.password)
                 except InvalidToken:
