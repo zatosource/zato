@@ -26,8 +26,9 @@ from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import json_rpc as channel_json_rpc
 from zato.admin.web.views.channel import web_socket as channel_web_socket
 from zato.admin.web.views.channel import zmq as channel_zmq
-from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
 from zato.admin.web.views.cloud import dropbox as cloud_dropbox
+from zato.admin.web.views.cloud import salesforce as cloud_salesforce
+from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
 from zato.admin.web.views import config_file
 from zato.admin.web.views.definition import amqp_ as def_amqp
 from zato.admin.web.views.definition import cassandra as def_cassandra
@@ -1297,6 +1298,29 @@ urlpatterns += [
         login_required(cloud_dropbox.ping), name='cloud-dropbox-ping'),
     url(r'^zato/cloud/dropbox/change-password/$',
         login_required(cloud_dropbox.change_password), name='cloud-dropbox-change-password'),
+    ]
+
+urlpatterns += [
+
+    # .. Salesforce
+
+    url(r'^zato/cloud/salesforce/$',
+        login_required(cloud_salesforce.Index()), name=cloud_salesforce.Index.url_name),
+    url(r'^zato/cloud/salesforce/create/$',
+        login_required(cloud_salesforce.Create()), name=cloud_salesforce.Create.url_name),
+    url(r'^zato/cloud/salesforce/edit/$',
+        login_required(cloud_salesforce.Edit()), name=cloud_salesforce.Edit.url_name),
+    url(r'^zato/cloud/salesforce/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_salesforce.Delete()), name=cloud_salesforce.Delete.url_name),
+    url(r'^zato/cloud/salesforce/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_salesforce.ping), name='cloud-dropbox-ping'),
+
+    url(r'^zato/cloud/salesforce/invoke/action/(?P<conn_name>.*)/$',
+        login_required(cloud_salesforce.invoke_action), name='cloud-salesforce-invoke-action'),
+
+    url(r'^zato/cloud/salesforce/invoke/(?P<conn_id>.*)/(?P<max_wait_time>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
+        login_required(cloud_salesforce.invoke), name='cloud-salesforce-invoke'),
+
     ]
 
 # ################################################################################################################################

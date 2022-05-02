@@ -30,8 +30,8 @@ flake8:
 
 type-check:
 	echo "Running type checks ($(Zato_Package_Name))"
-	$(MAKE) mypy
-	$(MAKE) pyright
+	# $(MAKE) mypy
+	# $(MAKE) pyright
 
 static-check:
 	echo "Running static checks in $(Zato_Package_Name)"
