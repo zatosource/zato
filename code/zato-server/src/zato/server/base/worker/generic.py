@@ -28,6 +28,7 @@ if 0:
 # ################################################################################################################################
 
 _channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
+_secret_prefixes = (SECRETS.EncryptedMarker, SECRETS.PREFIX)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,15 +90,6 @@ class Generic(WorkerImpl):
         is_starting:'bool'=False
     ) -> 'None':
 
-        # It is possible that some of the input keys point to secrets
-        # and other data that will be encrypted. In such a case,
-        # decrypt them all here upfront.
-        for key, value in msg.items():
-            if isinstance(value, str):
-                if value.startswith(SECRETS.EncryptedMarker):
-                    value = self.server.decrypt(value)
-                    msg[key] = value
-
         # This roundtrip is needed to re-format msg in the format the underlying .from_bunch expects
         # in case this is a broker message rather than a startup one.
         if needs_roundtrip:
@@ -122,6 +114,15 @@ class Generic(WorkerImpl):
         wrapper = self._generic_conn_handler[item.type_]
 
         msg_name = msg['name'] # type: str
+
+        # It is possible that some of the input keys point to secrets
+        # and other data that will be encrypted. In such a case,
+        # decrypt them all here upfront.
+        for key, value in item_dict.items():
+            if isinstance(value, str):
+                if value.startswith(_secret_prefixes):
+                    value = self.server.decrypt(value)
+                    item_dict[key] = value
 
         config_attr[msg_name] = item_dict
         config_attr[msg_name].conn = wrapper(item_dict, self.server)

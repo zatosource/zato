@@ -79,13 +79,13 @@ from zato.server.file_transfer.api import FileTransferAPI
 from zato.server.generic.api.channel_file_transfer import ChannelFileTransferWrapper
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.cloud_dropbox import CloudDropbox
+from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
 from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
 from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
 from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
-from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
 from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 from zato.server.pubsub import PubSub
 from zato.server.pubsub.delivery.tool import PubSubTool
@@ -277,7 +277,7 @@ class WorkerStore(_WorkerStoreBase):
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.channel_file_transfer,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: self.cloud_dropbox,
-            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: self.cloud_dropbox,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: self.cloud_salesforce,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.outconn_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: self.outconn_im_slack,
