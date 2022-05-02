@@ -772,7 +772,7 @@ class Service:
         data_format,   # type: str
         transport,     # type: str
         server,        # type: ParallelServer
-        broker_client, # type: BrokerClient
+        broker_client, # type: BrokerClient | None
         worker_store,  # type: WorkerStore
         cid,           # type: str
         simple_io_config, # type: anydict
