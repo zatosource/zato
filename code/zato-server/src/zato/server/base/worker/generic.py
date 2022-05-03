@@ -112,7 +112,7 @@ class Generic(WorkerImpl):
 
         config_attr = self.generic_conn_api.get(item.type_)
 
-        if not config_attr:
+        if config_attr is None:
             self.logger.info('No config attr found for generic connection `%s`', item.type_)
             return
 
@@ -211,7 +211,8 @@ class Generic(WorkerImpl):
     ) -> 'None':
 
         func = self._get_generic_impl_func(msg)
-        func(msg)
+        if func:
+            func(msg)
 
     on_broker_msg_GENERIC_CONNECTION_EDIT            = on_broker_msg_GENERIC_CONNECTION_CREATE
     on_broker_msg_GENERIC_CONNECTION_DELETE          = on_broker_msg_GENERIC_CONNECTION_CREATE
