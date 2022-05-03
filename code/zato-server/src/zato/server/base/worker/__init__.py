@@ -1269,8 +1269,18 @@ class WorkerStore(_WorkerStoreBase):
         Required because some connection types (e.g. SFTP) are not managed via GenericConnection objects,
         for instance, in the case of SFTP, it uses subprocesses and a different management API.
         """
-        func_map = self.generic_impl_func_map[msg['type_']]
-        return func_map[msg['action']]
+        conn_type = msg['type_']
+        msg_action = msg['action']
+        func_map = self.generic_impl_func_map[conn_type]
+        impl_func = func_map.get(msg_action)
+        if impl_func:
+            return impl_func
+        else:
+            # Ignore missing CHANGE_PASSWORD handlers because they will rarely exist across generic connection types.
+            if msg_action == BROKER_MSG_GENERIC.CONNECTION_CHANGE_PASSWORD.value:
+                pass
+            else:
+                raise Exception('No impl_func found for action `%s` -> %s', msg_action, conn_type)
 
 # ################################################################################################################################
 
