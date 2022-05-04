@@ -367,8 +367,6 @@ class Create(ZatoCommand):
 
         total_steps = total_non_servers_steps + servers
         admin_invoke_password = 'admin.invoke.' + uuid4().hex
-        broker_host = '127.0.0.1'
-        broker_port = 6379
         lb_host = '127.0.0.1'
         lb_port = 11223
         lb_agent_port = 20151
@@ -432,8 +430,6 @@ class Create(ZatoCommand):
         # 3) ODB initial data
         #
         create_cluster_args = self._bunch_from_args(args, cluster_name)
-        create_cluster_args.broker_host = broker_host
-        create_cluster_args.broker_port = broker_port
         create_cluster_args.lb_host = lb_host
         create_cluster_args.lb_port = lb_port
         create_cluster_args.lb_agent_port = lb_agent_port

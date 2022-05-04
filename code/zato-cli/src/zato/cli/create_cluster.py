@@ -91,7 +91,7 @@ class Create(ZatoCommand):
 
             for name in(
                   'odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name',
-                  'broker_host', 'broker_port', 'lb_host', 'lb_port', 'lb_agent_port'):
+                  'lb_host', 'lb_port', 'lb_agent_port'):
                 setattr(cluster, name, getattr(args, name))
             session.add(cluster)
 
