@@ -802,66 +802,6 @@ def pre_process_server(sys_argv, opts_idx, opts):
 
 # ################################################################################################################################
 
-def _append_redis_options(argv_list):
-    # type: (list) -> None
-
-    # These are required in 3.2 because the SQL model expects it
-    # so we need to use some well-known invalid values.
-    argv_list.append('--broker_host')
-    argv_list.append('<invalid-broker-host>')
-
-    argv_list.append('--broker_port')
-    argv_list.append('12345')
-
-# ################################################################################################################################
-
-def pre_process_cluster(sys_argv, opts_idx, opts):
-    # type: (list, int, list) -> None
-
-    #
-    # This is pre-3.2
-    # 'zato0', 'create1', 'cluster2', 'lb_host3', 'lb_port4', 'lb_agent_port5', 'broker_host6', 'broker_port7', 'cluster_name8'
-    #
-    len_pre_32 = 9
-
-    #
-    # This is 3.2
-    # 'zato0', 'create1', 'cluster2', 'cluster_name8'
-    #
-
-    # We are turning pre-3.2 options into 3.2 ones.
-    if len(sys_argv[:opts_idx]) == len_pre_32:
-
-        # New arguments to produce
-        new_argv = []
-
-        new_argv.append(sys_argv[0]) # zato0
-        new_argv.append(sys_argv[1]) # create1
-        new_argv.append(sys_argv[2]) # cluster2
-        new_argv.append(sys_argv[8]) # cluster_name8
-
-        new_argv.append('--lb_host') # lb_host3
-        new_argv.append(sys_argv[3])
-
-        new_argv.append('--lb_port') # lb_port4
-        new_argv.append(sys_argv[4])
-
-        new_argv.append('--lb_agent_port') # lb_agent_port5
-        new_argv.append(sys_argv[5])
-
-        _append_redis_options(new_argv)
-
-        new_argv.extend(opts)
-
-        # We are ready to replace sys.argv now
-        sys_argv[:] = new_argv
-
-    # We still need to append pre-3.2 Redis options as they are required by other layers.
-    else:
-        _append_redis_options(sys_argv)
-
-# ################################################################################################################################
-
 def pre_process_sys_argv(sys_argv):
     # type: (list) -> None
 
@@ -923,11 +863,7 @@ def pre_process_sys_argv(sys_argv):
             # This is for later use, when we construct a new sys_argv
             opts = sys_argv[opts_idx:]
 
-            if 'cluster' in sys_argv:
-                pre_process_cluster(sys_argv, opts_idx, opts)
-                return
-
-            elif 'server' in sys_argv:
+            if 'server' in sys_argv:
                 pre_process_server(sys_argv, opts_idx, opts)
                 return
 
