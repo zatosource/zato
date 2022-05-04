@@ -14,6 +14,13 @@ from base import BaseTest
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.model import SSOPasswordReset, SSOUser
 from zato.common.test.config import TestConfig
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,7 +59,8 @@ class FlowPRTTestCase(BaseTest):
         prt_info = self.get_random_prt_info(odb_session)
 
         # .. make it easier to access the information received ..
-        prt_info = prt_info._asdict() # type: dict
+        prt_info = prt_info._asdict() # type: ignore
+        prt_info = cast_('stranydict', prt_info)
 
         # .. extract the details ..
         user_id = prt_info['user_id']
