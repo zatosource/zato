@@ -23,6 +23,7 @@ from zato.common import GENERIC, SMTPMessage
 from zato.common.api import SSO as CommonSSO
 from zato.common.json_internal import json_dumps
 from zato.common.odb.model import SSOPasswordReset as FlowPRTModel
+from zato.common.typing_ import cast_
 from zato.sso import const, Default, status_code, ValidationError
 from zato.sso.common import SSOCtx
 from zato.sso.model import PasswordResetNotifCtx
@@ -238,7 +239,7 @@ class PasswordResetAPI:
             # .. now, check if the user is still allowed to access the system;
             # we make an assuption that it is true (the user is still allowed),
             # which is why we conduct this check under the same SQL session ..
-            self.user_checker.check(sso_ctx, user_info)
+            self.user_checker.check(sso_ctx, user_info, check_if_password_expired=False)
 
             # .. if we are here, it means that the user checks above succeeded,
             # which means that we can modify the state to indicate that the token
@@ -264,6 +265,7 @@ class PasswordResetAPI:
         # Now, outside the SQL block, encrypt the reset key to be returned it to the caller
         # so that the user can provide it in the subsequent call to reset the password.
         reset_key = self.server.encrypt(user_info.reset_key, prefix='')
+        reset_key = cast_('str', reset_key)
 
         return AccessTokenCtx(
             user=user_info._asdict(),
