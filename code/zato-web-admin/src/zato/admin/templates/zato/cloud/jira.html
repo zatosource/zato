@@ -37,7 +37,6 @@
 
             {% comment %} 2 {% endcomment %}
             'username',
-            // '_invoke',
 
             {% comment %} 3 {% endcomment %}
             '_edit',
@@ -116,12 +115,6 @@
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.username }}</td>
-
-                        <!--
-                        <td>
-                            <a href="{% url "cloud-jira-invoke" item.id item.max_wait_time item.name item.name|slugify %}?cluster={{ cluster_id }}">Invoke</a>
-                        </td>
-                        -->
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.cloud.jira.edit('{{ item.id }}')">Edit</a></td>

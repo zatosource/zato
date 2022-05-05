@@ -57,7 +57,7 @@ class _CreateEdit(CreateEdit):
 # ################################################################################################################################
 
     def populate_initial_input_dict(self, initial_input_dict):
-        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE
+        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CLOUD_JIRA
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outgoing'] = True
