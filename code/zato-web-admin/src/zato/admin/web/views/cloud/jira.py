@@ -22,7 +22,7 @@ from zato.common.model.jira import JiraConfigObject
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'cloud-jira'
-    template = 'zato/cloud/jira/index.html'
+    template = 'zato/cloud/jira.html'
     service_name = 'zato.generic.connection.get-list'
     output_class = JiraConfigObject
     paginate = True
@@ -95,28 +95,6 @@ class Delete(_Delete):
     service_name = 'zato.generic.connection.delete'
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('GET')
-def invoke(req, conn_id, max_wait_time, conn_name, conn_slug):
-
-    return_data = {
-        'conn_id': conn_id,
-        'conn_name': conn_name,
-        'conn_slug': conn_slug,
-        'conn_type': GENERIC.CONNECTION.TYPE.CLOUD_JIRA,
-        'timeout': max_wait_time,
-        'cluster_id': req.zato.cluster_id,
-    }
-
-    return TemplateResponse(req, 'zato/cloud/jira/invoke.html', return_data)
-
-# ################################################################################################################################
-
-@method_allowed('POST')
-def invoke_action(req, conn_name):
-    return invoke_action_handler(req, 'zato.generic.connection.invoke', ('conn_name', 'conn_type', 'request_data', 'timeout'))
-
 # ################################################################################################################################
 
 @method_allowed('POST')
