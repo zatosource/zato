@@ -1338,13 +1338,6 @@ urlpatterns += [
         login_required(cloud_jira.Delete()), name=cloud_jira.Delete.url_name),
     url(r'^zato/cloud/jira/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cloud_jira.ping), name='cloud-dropbox-ping'),
-
-    url(r'^zato/cloud/jira/invoke/action/(?P<conn_name>.*)/$',
-        login_required(cloud_jira.invoke_action), name='cloud-jira-invoke-action'),
-
-    url(r'^zato/cloud/jira/invoke/(?P<conn_id>.*)/(?P<max_wait_time>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
-        login_required(cloud_jira.invoke), name='cloud-jira-invoke'),
-
     ]
 
 # ################################################################################################################################
