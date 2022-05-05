@@ -12,7 +12,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.typing_ import cast_
-from zato.server.connection.salesforce import SalesforceClient
+from zato.server.connection.jira_ import JiraClient
 from zato.server.connection.queue import Wrapper
 
 # ################################################################################################################################
@@ -33,12 +33,10 @@ class _JiraClient:
     def __init__(self, config:'stranydict') -> 'None':
 
         # The actual connection object
-        self.impl = SalesforceClient.from_config(config)
+        self.impl = JiraClient.from_config(config)
 
         # Forward invocations to the underlying client
-        self.get = self.impl.get
-        self.post = self.impl.post
-        self.ping = self.impl.ping
+        self.ping = self.impl.conn.health_check
 
 # ################################################################################################################################
 # ################################################################################################################################
