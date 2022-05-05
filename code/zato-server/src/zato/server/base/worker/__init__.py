@@ -79,6 +79,7 @@ from zato.server.file_transfer.api import FileTransferAPI
 from zato.server.generic.api.channel_file_transfer import ChannelFileTransferWrapper
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.cloud_dropbox import CloudDropbox
+from zato.server.generic.api.cloud_jira import CloudJiraWrapper
 from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
 from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
@@ -207,6 +208,9 @@ class WorkerStore(_WorkerStoreBase):
         # Generic connections - Cloud - Dropbox
         self.cloud_dropbox = {}
 
+        # Generic connections - Cloud - Jira
+        self.cloud_jira = {}
+
         # Generic connections - Cloud - Salesforce
         self.cloud_salesforce = {}
 
@@ -277,6 +281,7 @@ class WorkerStore(_WorkerStoreBase):
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.channel_file_transfer,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: self.cloud_dropbox,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: self.cloud_jira,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: self.cloud_salesforce,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.outconn_hl7_mllp,
@@ -291,6 +296,7 @@ class WorkerStore(_WorkerStoreBase):
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: ChannelFileTransferWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: CloudDropbox,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: CloudJiraWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: CloudSalesforceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: DefKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: OutconnHL7MLLPWrapper,
@@ -1168,6 +1174,7 @@ class WorkerStore(_WorkerStoreBase):
         channel_hl7_mllp_map = self.generic_impl_func_map.setdefault(
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, {})
         cloud_dropbox_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX, {})
+        cloud_jira_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA, {})
         cloud_salesforce_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE, {})
         def_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA, {})
         outconn_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP, {})
@@ -1183,6 +1190,7 @@ class WorkerStore(_WorkerStoreBase):
             channel_file_transfer_map,
             channel_hl7_mllp_map,
             cloud_dropbox_map,
+            cloud_jira_map,
             cloud_salesforce_map,
             def_kafka_map,
             outconn_hl7_mllp_map,
