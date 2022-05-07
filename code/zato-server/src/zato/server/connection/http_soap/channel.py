@@ -22,8 +22,8 @@ from django.http import QueryDict
 from regex import compile as regex_compile
 
 # Zato
-from zato.common.api import CHANNEL, DATA_FORMAT, HL7, HTTP_SOAP, MISC, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
-     URL_PARAMS_PRIORITY, ZATO_NONE
+from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, HTTP_SOAP, MISC, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, \
+    TRACE1, URL_PARAMS_PRIORITY, ZATO_NONE
 from zato.common.audit_log import DataReceived, DataSent
 from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES
@@ -439,6 +439,11 @@ class RequestDispatcher:
                             response = pretty_format_exception(e, cid)
                         else:
                             response = e.args if self.return_tracebacks else self.default_error_message
+
+                # Check whether this was a JSON-based channel, in which case our response should
+                # have a JSON data format on ouput too.
+                if channel_item['data_format'] == DATA_FORMAT.JSON:
+                    wsgi_environ['zato.http.response.headers']['Content-Type'] = CONTENT_TYPE['JSON']
 
                 _exc = stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
                     add_summary=True, source_lines=20) if stack_format else _format_exc # type: str
