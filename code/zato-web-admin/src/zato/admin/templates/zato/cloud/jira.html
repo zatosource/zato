@@ -37,8 +37,11 @@
 
             {% comment %} 2 {% endcomment %}
             'username',
+            'api_version',
+            '_is_cloud',
 
             {% comment %} 3 {% endcomment %}
+            '_change_token',
             '_edit',
             '_delete',
             '_ping',
@@ -46,7 +49,7 @@
 
             {% comment %} 4 {% endcomment %}
             'is_active',
-            'username',
+            'is_cloud',
 
         ]
     }
@@ -87,7 +90,8 @@
 
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Username</a></th>
-                        <!-- <th></th> -->
+                        <th>API version</th>
+                        <th>Cloud edition</th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -115,6 +119,8 @@
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.username }}</td>
+                        <td>{{ item.api_version }}</td>
+                        <td>{{ item.is_cloud|yesno:'Yes,No' }}</td>
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.cloud.jira.edit('{{ item.id }}')">Edit</a></td>
@@ -124,7 +130,7 @@
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.username }}</td>
+                        <td class='ignore'>{{ item.is_cloud }}</td>
 
                     </tr>
                 {% endfor %}
@@ -163,6 +169,13 @@
                                 |
 
                                 <label>
+                                Cloud edition
+                                {{ create_form.is_cloud }}
+                                </label>
+
+                                |
+
+                                <label>
                                 API version
                                 {{ create_form.api_version }}
                                 </label>
@@ -186,36 +199,6 @@
                             </td>
                             <td>
                                 {{ create_form.username }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <label for="id_password">
-                                Password
-                                </label>
-                            </td>
-                            <td>
-                                {{ create_form.password }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <label for="id_consumer_key">
-                                Consumer key
-                                </label>
-                            </td>
-                            <td>
-                                {{ create_form.consumer_key }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <label for="id_consumer_secret">
-                                Consumer secret
-                                </label>
-                            </td>
-                            <td>
-                                {{ create_form.consumer_secret }}
                             </td>
                         </tr>
                         <tr>
@@ -253,6 +236,13 @@
                                 |
 
                                 <label>
+                                Cloud edition
+                                {{ edit_form.is_cloud }}
+                                </label>
+
+                                |
+
+                                <label>
                                 API version
                                 {{ edit_form.api_version }}
                                 </label>
@@ -276,36 +266,6 @@
                             </td>
                             <td>
                                 {{ edit_form.username }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <label for="id_password">
-                                Password
-                                </label>
-                            </td>
-                            <td>
-                                {{ edit_form.password }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <label for="id_consumer_key">
-                                Consumer key
-                                </label>
-                            </td>
-                            <td>
-                                {{ edit_form.consumer_key }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <label for="id_consumer_secret">
-                                Consumer secret
-                                </label>
-                            </td>
-                            <td>
-                                {{ edit_form.consumer_secret }}
                             </td>
                         </tr>
                         <tr>
