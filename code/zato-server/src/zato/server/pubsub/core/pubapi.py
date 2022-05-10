@@ -125,7 +125,8 @@ class PubAPI:
             if wsx_environ:
                 wsx_config = wsx_environ['ws_channel_config'] # type: WSXConnectorConfig
                 ws_channel_id = wsx_config.id
-                endpoint_id = self.endpoint_api.get_by_ws_channel_id(ws_channel_id)
+                endpoint = self.endpoint_api.get_by_ws_channel_id(ws_channel_id)
+                endpoint_id = endpoint.id
 
         # Otherwise, use various default data.
         if not endpoint_id:
