@@ -6,13 +6,11 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Django
-from django.template.response import TemplateResponse
-
 # Zato
+from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.cloud.jira import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed, \
-    ping_connection
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
+    method_allowed, ping_connection
 from zato.common.api import GENERIC, generic_attrs
 from zato.common.model.jira import JiraConfigObject
 
@@ -39,6 +37,7 @@ class Index(_Index):
         return {
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
+            'change_password_form': ChangePasswordForm()
         }
 
 # ################################################################################################################################
@@ -92,6 +91,12 @@ class Delete(_Delete):
     service_name = 'zato.generic.connection.delete'
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def change_password(req):
+    return _change_password(req, 'zato.generic.connection.change-password', success_msg='API token updated')
+
 # ################################################################################################################################
 
 @method_allowed('POST')

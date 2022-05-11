@@ -41,13 +41,13 @@
             '_is_cloud',
 
             {% comment %} 3 {% endcomment %}
-            '_change_token',
+            '_change_api_token',
             '_edit',
             '_delete',
             '_ping',
-            'id',
 
             {% comment %} 4 {% endcomment %}
+            'id',
             'is_active',
             'is_cloud',
 
@@ -97,9 +97,10 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
+                        <th>&nbsp;</th>
 
                         {% comment %} 4 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -123,12 +124,13 @@
                         <td>{{ item.is_cloud|yesno:'Yes,No' }}</td>
 
                         {% comment %} 3 {% endcomment %}
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change API token')">Change API token</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.jira.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.jira.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
-                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
                         {% comment %} 4 {% endcomment %}
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_cloud }}</td>
 
@@ -136,7 +138,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='13'>No results</td>
+                        <td colspan='15'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -280,7 +282,38 @@
                 </form>
             </div>
         </div>
-    {% endif %}
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "cloud-jira-change-password" %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:19%">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">API token</td>
+                            <td>{{ change_password_form.password1 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Confirm API token</td>
+                            <td>{{ change_password_form.password2 }}
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+        {% endif %}
 
 
 {% endif %}{% comment %}not zato_clusters{% endcomment %}

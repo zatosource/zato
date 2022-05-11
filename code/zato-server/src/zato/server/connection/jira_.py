@@ -18,7 +18,7 @@ class JiraClient:
     api_version: 'str'
     address: 'str'
     username: 'str'
-    api_token: 'str'
+    token: 'str'
     is_cloud: 'bool'
     conn: 'AtlassianJiraClient'
 
@@ -28,20 +28,20 @@ class JiraClient:
         api_version, # type: str
         address, # type: str
         username, # type: str
-        api_token, # type: str
+        token, # type: str
         is_cloud, # type: bool
     ) -> 'None':
 
         self.api_version = api_version
         self.address = address
         self.username = username
-        self.api_token = api_token
+        self.token = token
         self.is_cloud = is_cloud
 
         self.conn = AtlassianJiraClient(
             url = self.address,
             username = self.username,
-            api_token = self.api_token,
+            token = self.token,
             api_version = self.api_version,
             cloud = self.is_cloud,
         )
@@ -54,7 +54,7 @@ class JiraClient:
             api_version = config['api_version'],
             address = config['address'],
             username = config['username'],
-            api_token = config['api_token'],
+            token = config['secret'],
             is_cloud = config['is_cloud'],
         )
 
