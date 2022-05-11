@@ -1338,6 +1338,8 @@ urlpatterns += [
         login_required(cloud_jira.Delete()), name=cloud_jira.Delete.url_name),
     url(r'^zato/cloud/jira/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cloud_jira.ping), name='cloud-dropbox-ping'),
+    url(r'^zato/cloud/jira/change-password/$',
+        login_required(cloud_jira.change_password), name='cloud-jira-change-password'),
     ]
 
 # ################################################################################################################################

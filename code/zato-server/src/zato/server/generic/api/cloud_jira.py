@@ -35,8 +35,9 @@ class _JiraClient:
         # The actual connection object
         self.impl = JiraClient.from_config(config)
 
-        # Forward invocations to the underlying client
-        self.ping = self.impl.conn.health_check
+    def ping(self):
+        result = self.impl.conn.request(path='/rest/auth/latest/session')
+        result
 
 # ################################################################################################################################
 # ################################################################################################################################
