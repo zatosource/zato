@@ -13,37 +13,36 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class JiraClient:
+class JiraClient(AtlassianJiraClient):
 
-    api_version: 'str'
-    address: 'str'
-    username: 'str'
-    token: 'str'
-    is_cloud: 'bool'
-    conn: 'AtlassianJiraClient'
+    zato_api_version: 'str'
+    zato_address: 'str'
+    zato_username: 'str'
+    zato_token: 'str'
+    zato_is_cloud: 'bool'
 
     def __init__(
         self,
         *,
-        api_version, # type: str
-        address, # type: str
-        username, # type: str
-        token, # type: str
-        is_cloud, # type: bool
+        zato_api_version, # type: str
+        zato_address, # type: str
+        zato_username, # type: str
+        zato_token, # type: str
+        zato_is_cloud, # type: bool
     ) -> 'None':
 
-        self.api_version = api_version
-        self.address = address
-        self.username = username
-        self.token = token
-        self.is_cloud = is_cloud
+        self.zato_api_version = zato_api_version
+        self.zato_address = zato_address
+        self.zato_username = zato_username
+        self.zato_token = zato_token
+        self.zato_is_cloud = zato_is_cloud
 
-        self.conn = AtlassianJiraClient(
-            url = self.address,
-            username = self.username,
-            token = self.token,
-            api_version = self.api_version,
-            cloud = self.is_cloud,
+        super().__init__(
+            url = self.zato_address,
+            username = self.zato_username,
+            token = self.zato_token,
+            api_version = self.zato_api_version,
+            cloud = self.zato_is_cloud,
         )
 
 # ################################################################################################################################
@@ -51,11 +50,11 @@ class JiraClient:
     @staticmethod
     def from_config(config:'stranydict') -> 'JiraClient':
         return JiraClient(
-            api_version = config['api_version'],
-            address = config['address'],
-            username = config['username'],
-            token = config['secret'],
-            is_cloud = config['is_cloud'],
+            zato_api_version = config['api_version'],
+            zato_address = config['address'],
+            zato_username = config['username'],
+            zato_token = config['secret'],
+            zato_is_cloud = config['is_cloud'],
         )
 
 # ################################################################################################################################
