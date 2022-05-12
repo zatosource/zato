@@ -36,8 +36,7 @@ class _JiraClient:
         self.impl = JiraClient.from_config(config)
 
     def ping(self):
-        result = self.impl.conn.request(path='/rest/auth/latest/session')
-        result
+        _ = self.impl.conn.request()
 
 # ################################################################################################################################
 # ################################################################################################################################
