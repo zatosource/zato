@@ -158,9 +158,6 @@ class PubAPI:
             # so we need to make it filesystem-safe.
             topic_name = PUBSUB.TOPIC_PATTERN.TO_SERVICE.format(fs_safe_name(name))
 
-            # For type hints
-            endpoint_id = cast_('int', endpoint_id)
-
             # We continue only if the publisher is allowed to publish messages to that service.
             if not self.pubsub.is_allowed_pub_topic_by_endpoint_id(topic_name, endpoint_id):
                 msg = 'No pub pattern matched service `{}` and endpoint `{}` (#1)'.format(
