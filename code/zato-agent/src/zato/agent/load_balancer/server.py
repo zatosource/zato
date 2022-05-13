@@ -158,7 +158,7 @@ class BaseLoadBalancerAgent:
         has already been validated.
         """
         f = open_w(self.config_path)
-        f.write(config_string.encode('utf8'))
+        f.write(config_string)
         f.close()
 
         self.config = self._read_config()
