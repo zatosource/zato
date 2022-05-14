@@ -40,7 +40,7 @@ class JiraClient(AtlassianJiraClient):
         super().__init__(
             url = self.zato_address,
             username = self.zato_username,
-            token = self.zato_token,
+            password = self.zato_token,
             api_version = self.zato_api_version,
             cloud = self.zato_is_cloud,
         )
