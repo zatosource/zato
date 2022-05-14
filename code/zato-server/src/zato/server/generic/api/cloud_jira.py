@@ -31,12 +31,16 @@ logger = getLogger(__name__)
 
 class _JiraClient(JiraClient):
     def __init__(self, config:'stranydict') -> 'None':
-
-        # The actual connection object
-        self.impl = JiraClient.from_config(config)
+        super().__init__(
+            zato_api_version = config['api_version'],
+            zato_address = config['address'],
+            zato_username = config['username'],
+            zato_token = config['secret'],
+            zato_is_cloud = config['is_cloud'],
+        )
 
     def ping(self):
-        _ = self.impl.conn.request()
+        return self.request()
 
 # ################################################################################################################################
 # ################################################################################################################################
