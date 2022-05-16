@@ -18,6 +18,7 @@ from zato.common.broker_message import GENERIC
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
+from zato.common.typing_ import cast_
 from zato.common.util.api import parse_simple_type
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import Bool, Int
@@ -78,6 +79,11 @@ extra_simple_type = {
     'is_active',
 }
 
+# This key should be left as they are given on input, without trying to parse them into non-string types.
+skip_simple_type = {
+    'api_version',
+}
+
 # ################################################################################################################################
 
 class _CreateEditSIO(AdminSIO):
@@ -114,7 +120,8 @@ class _CreateEdit(_BaseService):
         for key, value in raw_request.items():
 
             if key not in data:
-                value = parse_simple_type(value)
+                if key not in skip_simple_type:
+                    value = parse_simple_type(value)
                 value = self._sio.eval_(key, value, self.server.encrypt)
 
             if key in extra_secret_keys:
@@ -128,17 +135,23 @@ class _CreateEdit(_BaseService):
 
         conn = GenericConnection.from_dict(data)
 
-        # Make sure not to overwrite the seceret in Edit
-        if not self.is_edit:
-            conn.secret = self.server.encrypt('auto.generated.{}'.format(self.crypto.generate_secret()))
-        conn_dict = conn.to_sql_dict()
-
         with closing(self.server.odb.session()) as session:
 
+            # If this is the edit action, we need to find our instance in the database
+            # and we need to make sure that we publish its encrypted secret for other layers ..
             if self.is_edit:
                 model = self._get_instance_by_id(session, ModelGenericConn, data.id)
+                conn.secret = model.secret
+
+            # .. but if it is the create action, we need to create a new instance
+            # .. and ensure that its secret is auto-generated.
             else:
                 model = self._new_zato_instance_with_cluster(ModelGenericConn)
+                secret = self.server.encrypt('auto.generated.{}'.format(self.crypto.generate_secret()))
+                secret = cast_('str', secret)
+                conn.secret = secret
+
+            conn_dict = conn.to_sql_dict()
 
             # This will be needed in case this is a rename
             old_name = model.name
