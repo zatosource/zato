@@ -1225,6 +1225,7 @@ class GENERIC:
             CHANNEL_FILE_TRANSFER = 'channel-file-transfer'
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
             CLOUD_DROPBOX = 'cloud-dropbox'
+            CLOUD_JIRA = 'cloud-jira'
             CLOUD_SALESFORCE = 'cloud-salesforce'
             DEF_KAFKA = 'def-kafka'
             OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
@@ -1490,7 +1491,16 @@ class FILE_TRANSFER:
 class SALESFORCE:
 
     class Default:
+        Address = 'https://example.my.salesforce.com'
         API_Version = '54.0'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class JIRA:
+
+    class Default:
+        Address = 'https://example.atlassian.net'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1636,6 +1646,10 @@ class StatsKey:
 # ################################################################################################################################
 
 class SSO:
+
+    class Default:
+        RESTPrefix = '/zato/sso'
+
     class EmailTemplate:
         SignupConfirm = 'signup-confirm.txt'
         SignupWelcome = 'signup-welcome.txt'

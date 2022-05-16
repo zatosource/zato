@@ -42,7 +42,7 @@ class GenericConnection:
 
         self.username = None
         self.username_type = None
-        self.secret = None
+        self.secret = ''
         self.secret_type = None
 
         self.sec_use_rbac = False
