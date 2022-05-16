@@ -1646,6 +1646,10 @@ class StatsKey:
 # ################################################################################################################################
 
 class SSO:
+
+    class Default:
+        RESTPrefix = '/zato/sso'
+
     class EmailTemplate:
         SignupConfirm = 'signup-confirm.txt'
         SignupWelcome = 'signup-welcome.txt'
