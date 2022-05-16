@@ -23,7 +23,7 @@ from regex import compile as regex_compile
 
 # Zato
 from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, HTTP_SOAP, MISC, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, \
-    TRACE1, URL_PARAMS_PRIORITY, ZATO_NONE
+    SSO, TRACE1, URL_PARAMS_PRIORITY, ZATO_NONE
 from zato.common.audit_log import DataReceived, DataSent
 from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES
@@ -399,7 +399,10 @@ class RequestDispatcher:
                         if channel_item['name'] == MISC.DefaultAdminInvokeChannel:
                             response = e.msg
                         else:
-                            response = e.msg if e.needs_msg else 'Invalid input'
+                            # Note that SSO channels do not return details
+                            url_path = channel_item['url_path'] # type: str
+                            needs_msg = e.needs_msg and (not url_path.startswith(SSO.Default.RESTPrefix))
+                            response = e.msg if needs_msg else 'Invalid input'
 
                     elif isinstance(e, NotFound):
                         status = _status_not_found
