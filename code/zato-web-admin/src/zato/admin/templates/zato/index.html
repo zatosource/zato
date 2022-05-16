@@ -214,6 +214,12 @@
                 <li><span class="like-a">Cloud &darr;</span>
                     <ul>
                         <li>
+                            <span class="like-a">Atlassian &rarr;</span>
+                            <ul>
+                                <li><a href="{% url "cloud-jira" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-jira">Jira</a></li>
+                            </ul>
+                        </li>
+                        <li>
                             <span class="like-a">AWS &rarr;</span>
                             <ul>
                                 <li class='wide'><a href="{% url "cloud-aws-s3" %}?cluster={{ cluster_id|default:'' }}">S3</a></li>

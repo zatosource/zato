@@ -27,6 +27,7 @@ from zato.admin.web.views.channel import json_rpc as channel_json_rpc
 from zato.admin.web.views.channel import web_socket as channel_web_socket
 from zato.admin.web.views.channel import zmq as channel_zmq
 from zato.admin.web.views.cloud import dropbox as cloud_dropbox
+from zato.admin.web.views.cloud import jira as cloud_jira
 from zato.admin.web.views.cloud import salesforce as cloud_salesforce
 from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
 from zato.admin.web.views import config_file
@@ -1321,6 +1322,24 @@ urlpatterns += [
     url(r'^zato/cloud/salesforce/invoke/(?P<conn_id>.*)/(?P<max_wait_time>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
         login_required(cloud_salesforce.invoke), name='cloud-salesforce-invoke'),
 
+    ]
+
+urlpatterns += [
+
+    # .. Jira
+
+    url(r'^zato/cloud/jira/$',
+        login_required(cloud_jira.Index()), name=cloud_jira.Index.url_name),
+    url(r'^zato/cloud/jira/create/$',
+        login_required(cloud_jira.Create()), name=cloud_jira.Create.url_name),
+    url(r'^zato/cloud/jira/edit/$',
+        login_required(cloud_jira.Edit()), name=cloud_jira.Edit.url_name),
+    url(r'^zato/cloud/jira/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_jira.Delete()), name=cloud_jira.Delete.url_name),
+    url(r'^zato/cloud/jira/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_jira.ping), name='cloud-dropbox-ping'),
+    url(r'^zato/cloud/jira/change-password/$',
+        login_required(cloud_jira.change_password), name='cloud-jira-change-password'),
     ]
 
 # ################################################################################################################################
