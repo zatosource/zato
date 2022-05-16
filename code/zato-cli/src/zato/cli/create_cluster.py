@@ -11,6 +11,7 @@ from copy import deepcopy
 
 # Zato
 from zato.cli import common_odb_opts, is_arg_given, ZatoCommand
+from zato.common.api import SSO
 
 # ################################################################################################################################
 
@@ -885,40 +886,42 @@ class Create(ZatoCommand):
         from zato.common.api import DATA_FORMAT
         from zato.common.odb.model import HTTPSOAP, Service
 
+        prefix = SSO.Default.RESTPrefix
+
         data = [
 
             # Users
-            ['zato.sso.user.create', 'zato.server.service.internal.sso.user.Create', '/zato/sso/user/create'],
-            ['zato.sso.user.signup', 'zato.server.service.internal.sso.user.Signup', '/zato/sso/user/signup'],
-            ['zato.sso.user.approve', 'zato.server.service.internal.sso.user.Approve', '/zato/sso/user/approve'],
-            ['zato.sso.user.reject', 'zato.server.service.internal.sso.user.Reject', '/zato/sso/user/reject'],
-            ['zato.sso.user.login', 'zato.server.service.internal.sso.user.Login', '/zato/sso/user/login'],
-            ['zato.sso.user.logout', 'zato.server.service.internal.sso.user.Logout', '/zato/sso/user/logout'],
-            ['zato.sso.user.user', 'zato.server.service.internal.sso.user.User', '/zato/sso/user'],
-            ['zato.sso.user.password', 'zato.server.service.internal.sso.user.Password', '/zato/sso/user/password'],
-            ['zato.sso.user.search', 'zato.server.service.internal.sso.user.Search', '/zato/sso/user/search'],
-            ['zato.sso.user.totp', 'zato.server.service.internal.sso.user.TOTP', '/zato/sso/user/totp'],
-            ['zato.sso.user.lock', 'zato.server.service.internal.sso.user.Lock', '/zato/sso/user/lock'],
+            ['zato.sso.user.create', 'zato.server.service.internal.sso.user.Create', f'{prefix}/user/create'],
+            ['zato.sso.user.signup', 'zato.server.service.internal.sso.user.Signup', f'{prefix}/user/signup'],
+            ['zato.sso.user.approve', 'zato.server.service.internal.sso.user.Approve', f'{prefix}/user/approve'],
+            ['zato.sso.user.reject', 'zato.server.service.internal.sso.user.Reject', f'{prefix}/user/reject'],
+            ['zato.sso.user.login', 'zato.server.service.internal.sso.user.Login', f'{prefix}/user/login'],
+            ['zato.sso.user.logout', 'zato.server.service.internal.sso.user.Logout', f'{prefix}/user/logout'],
+            ['zato.sso.user.user', 'zato.server.service.internal.sso.user.User', f'{prefix}/user'],
+            ['zato.sso.user.password', 'zato.server.service.internal.sso.user.Password', f'{prefix}/user/password'],
+            ['zato.sso.user.search', 'zato.server.service.internal.sso.user.Search', f'{prefix}/user/search'],
+            ['zato.sso.user.totp', 'zato.server.service.internal.sso.user.TOTP', f'{prefix}/user/totp'],
+            ['zato.sso.user.lock', 'zato.server.service.internal.sso.user.Lock', f'{prefix}/user/lock'],
 
             # Linked accounts
-            ['zato.sso.user.linked-auth', 'zato.server.service.internal.sso.user.LinkedAuth', '/zato/sso/user/linked'],
+            ['zato.sso.user.linked-auth', 'zato.server.service.internal.sso.user.LinkedAuth', f'{prefix}/user/linked'],
 
             # User sessions
-            ['zato.sso.session.session', 'zato.server.service.internal.sso.session.Session', '/zato/sso/user/session'],
-            ['zato.sso.session.session-list', 'zato.server.service.internal.sso.session.SessionList', '/zato/sso/user/session/list'],
+            ['zato.sso.session.session', 'zato.server.service.internal.sso.session.Session', f'{prefix}/user/session'],
+            ['zato.sso.session.session-list', 'zato.server.service.internal.sso.session.SessionList', f'{prefix}/user/session/list'],
 
             # User attributes
-            ['zato.sso.user-attr.user-attr', 'zato.server.service.internal.sso.user_attr.UserAttr', '/zato/sso/user/attr'],
-            ['zato.sso.user-attr.user-attr-exists', 'zato.server.service.internal.sso.user_attr.UserAttrExists', '/zato/sso/user/attr/exists'],
-            ['zato.sso.user-attr.user-attr-names', 'zato.server.service.internal.sso.user_attr.UserAttrNames', '/zato/sso/user/attr/names'],
+            ['zato.sso.user-attr.user-attr', 'zato.server.service.internal.sso.user_attr.UserAttr', f'{prefix}/user/attr'],
+            ['zato.sso.user-attr.user-attr-exists', 'zato.server.service.internal.sso.user_attr.UserAttrExists', f'{prefix}/user/attr/exists'],
+            ['zato.sso.user-attr.user-attr-names', 'zato.server.service.internal.sso.user_attr.UserAttrNames', f'{prefix}/user/attr/names'],
 
             # Session attributes
-            ['zato.sso.session-attr.session-attr', 'zato.server.service.internal.sso.session_attr.SessionAttr', '/zato/sso/session/attr'],
-            ['zato.sso.session-attr.session-attr-exists', 'zato.server.service.internal.sso.session_attr.SessionAttrExists', '/zato/sso/session/attr/exists'],
-            ['zato.sso.session-attr.session-attr-names', 'zato.server.service.internal.sso.session_attr.SessionAttrNames', '/zato/sso/session/attr/names'],
+            ['zato.sso.session-attr.session-attr', 'zato.server.service.internal.sso.session_attr.SessionAttr', f'{prefix}/session/attr'],
+            ['zato.sso.session-attr.session-attr-exists', 'zato.server.service.internal.sso.session_attr.SessionAttrExists', f'{prefix}/session/attr/exists'],
+            ['zato.sso.session-attr.session-attr-names', 'zato.server.service.internal.sso.session_attr.SessionAttrNames', f'{prefix}/session/attr/names'],
 
             # Password reset
-            ['zato.sso.password-reset.password-reset', 'zato.server.service.internal.sso.password_reset.PasswordReset', '/zato/sso/password/reset'],
+            ['zato.sso.password-reset.password-reset', 'zato.server.service.internal.sso.password_reset.PasswordReset', f'{prefix}/password/reset'],
         ]
 
         for name, impl_name, url_path in data:
