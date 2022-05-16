@@ -27,7 +27,7 @@ class CreateForm(WithAuditLog):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     is_cloud = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    api_version = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    api_version = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=_default.API_Version)
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Address)
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
