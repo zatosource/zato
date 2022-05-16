@@ -334,11 +334,12 @@ class AWS:
 class Cloud:
     """ A container for cloud-related connections a service can establish.
     """
-    __slots__ = 'aws', 'dropbox', 'salesforce'
+    __slots__ = 'aws', 'dropbox', 'salesforce', 'jira'
 
     aws: 'AWS'
     dropbox: 'stranydict'
     salesforce: 'stranydict'
+    jira: 'stranydict'
 
     def __init__(self) -> 'None':
         self.aws = AWS()
