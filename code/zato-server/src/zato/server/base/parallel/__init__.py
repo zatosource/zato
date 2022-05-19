@@ -939,13 +939,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         if is_posix:
             spawn_greenlet(self.ipc_api.run)
-
             connector_config_ipc = cast_('ConnectorConfigIPC', self.connector_config_ipc)
-            events_config = cast_('anydict', connector_config_ipc.get_config(ZatoEventsIPC.ipc_config_name, as_dict=True))
-            events_tcp_port = events_config['port']
 
-            # Statistics
-            self._run_stats_client(events_tcp_port)
+            if self.component_enabled['stats']:
+
+                # Statistics
+                events_config = cast_('anydict', connector_config_ipc.get_config(ZatoEventsIPC.ipc_config_name, as_dict=True))
+                events_tcp_port = events_config['port']
+                self._run_stats_client(events_tcp_port)
 
         # Invoke startup callables
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
@@ -1029,12 +1030,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             'sync_interval': EventsDefault.sync_interval,
         }
 
-        # Zato events connector always starts
-        self.connector_events.start_zato_events_connector(ipc_tcp_start_port, extra_options_kwargs=extra_options_kwargs)
+        if self.component_enabled['stats']:
+            self.connector_events.start_zato_events_connector(ipc_tcp_start_port, extra_options_kwargs=extra_options_kwargs)
 
-        # Wait until the events connector started - this will let other parts
-        # of the server assume that it is always available.
-        wait_until_port_taken(self.connector_events.ipc_tcp_port, timeout=5)
+            # Wait until the events connector started - this will let other parts
+            # of the server assume that it is always available.
+            wait_until_port_taken(self.connector_events.ipc_tcp_port, timeout=5)
 
 # ################################################################################################################################
 
