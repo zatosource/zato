@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from collections import namedtuple
 
 # Zato
@@ -30,6 +31,8 @@ if typing.TYPE_CHECKING:
     Logger = Logger
 
 # ################################################################################################################################
+
+zato_enmasse_env = 'ZatoEnmasseEnv.'
 
 DEFAULT_COLS_WIDTH = '15,100'
 ZATO_NO_SECURITY = 'zato-no-security'
@@ -699,6 +702,17 @@ class ObjectImporter:
 # ################################################################################################################################
 
     def _import(self, item_type, attrs, is_edit):
+
+        # First, resolve values pointing to environment variables
+        for key, orig_value in attrs.items():
+            if isinstance(orig_value, str) and orig_value.startswith(zato_enmasse_env):
+                value = orig_value.split(zato_enmasse_env)
+                value = value[1]
+                if not value:
+                    raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
+                else:
+                    value = os.environ.get(value)
+                attrs[key] = value
 
         attrs_dict = dict(attrs)
 
