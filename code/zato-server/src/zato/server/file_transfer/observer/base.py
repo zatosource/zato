@@ -192,21 +192,39 @@ class BaseObserver:
 
                     if idx == 1 or (idx % log_every == 0):
                         logger.info('%s transfer path `%s` is not a directory (%s) (c:%s d:%s t:%s)',
-                            self.observer_type_name_title, self.name, idx, utcnow() - start, self.observer_type_impl)
+                            self.observer_type_name_title,
+                            path,
+                            self.name,
+                            idx,
+                            utcnow() - start,
+                            self.observer_type_impl
+                        )
             else:
                 # Indicate that there was an erorr with path
                 error_found = True
 
                 if idx == 1 or (idx % log_every == 0):
                     logger.info('%s transfer path `%r` does not exist (%s) (c:%s d:%s t:%s)',
-                        self.observer_type_name_title, path, self.name, idx, utcnow() - start, self.observer_type_impl)
+                        self.observer_type_name_title,
+                        path,
+                        self.name,
+                        idx,
+                        utcnow() - start,
+                        self.observer_type_impl
+                    )
 
             if is_ok:
 
                 # Log only if had an error previously, otherwise it would emit too much to logs ..
                 if error_found:
                     logger.info('%s file transfer path `%s` found successfully (%s) (c:%s d:%s t:%s)',
-                        self.observer_type_name_title, path, self.name, idx, utcnow() - start, self.observer_type_impl)
+                        self.observer_type_name_title,
+                        path,
+                        self.name,
+                        idx,
+                        utcnow() - start,
+                        self.observer_type_impl
+                    )
 
                 # .. and start the observer now.
                 self.start(observer_start_args)
