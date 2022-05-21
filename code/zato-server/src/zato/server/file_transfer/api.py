@@ -617,7 +617,7 @@ class FileTransferAPI:
         """
 
         # By default, we have no result
-        relative_dir = '<no-relative-dir>'
+        relative_dir = FILE_TRANSFER.DEFAULT.RelativeDir
 
         try:
             server_base_dir = PurePath(self.server.base_dir)
