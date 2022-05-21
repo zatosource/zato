@@ -216,7 +216,7 @@ class Generic(WorkerImpl):
 
     on_broker_msg_GENERIC_CONNECTION_EDIT            = on_broker_msg_GENERIC_CONNECTION_CREATE
     on_broker_msg_GENERIC_CONNECTION_DELETE          = on_broker_msg_GENERIC_CONNECTION_CREATE
-    on_broker_msg_GENERIC_CONNECTION_CHANGE_PASSWORD = on_broker_msg_GENERIC_CONNECTION_CREATE
+    on_broker_msg_GENERIC_CONNECTION_CHANGE_PASSWORD = _change_password_generic_connection
 
 # ################################################################################################################################
 
