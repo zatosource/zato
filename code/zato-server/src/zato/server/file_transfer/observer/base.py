@@ -20,6 +20,7 @@ from watchdog.events import FileCreatedEvent, FileModifiedEvent
 # Zato
 from zato.common.api import FILE_TRANSFER
 from zato.common.util.api import spawn_greenlet
+from zato.common.util.file_transfer import path_string_list_to_list
 from zato.server.file_transfer.snapshot import default_interval, DirSnapshotDiff
 
 # ################################################################################################################################
@@ -77,7 +78,7 @@ class BaseObserver:
     def set_up(self, event_handler, path_list, recursive):
         # type: (object, list, bool) -> None
         self.event_handler = event_handler
-        self.path_list = path_list
+        self.path_list = path_string_list_to_list('.', path_list)
         self.is_recursive = recursive
 
 # ################################################################################################################################
