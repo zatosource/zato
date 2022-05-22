@@ -83,7 +83,7 @@ if 0:
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
-    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, strbytes, strnone
+    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, strbytes, strlist, strnone
     from zato.server.connection.cache import Cache
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.ext.zunicorn.arbiter import Arbiter
@@ -141,7 +141,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
         self.repo_location = ''
-        self.user_conf_location = ''
+        self.user_conf_location = []
         self.user_conf_location_extra = set()
         self.soap11_content_type = ''
         self.soap12_content_type = ''
@@ -619,8 +619,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def _read_user_config_from_directory(self, dir_name:'str') -> 'None':
 
+        # We assume that it will be always one of these file name suffixes
+        suffixes_supported = ('.ini', '.conf')
+
         # User-config from ./config/repo/user-config
         for file_name in os.listdir(dir_name):
+
+            # Reject files with suffixes that we do not recognize
+            if not file_name.lower().endswith(suffixes_supported):
+                continue
 
             user_conf_full_path = os.path.join(dir_name, file_name)
             user_config_name = get_user_config_name(file_name)
@@ -638,11 +645,35 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def read_user_config(self):
 
         # Reads config files from the default directory
-        self._read_user_config_from_directory(self.user_conf_location)
+        for dir_name in self.user_conf_location:
+            self._read_user_config_from_directory(dir_name)
 
         # Reads config files from extra directories pointed to by ZATO_USER_CONF_DIR
         for dir_name in self.user_conf_location_extra:
             self._read_user_config_from_directory(dir_name)
+
+# ################################################################################################################################
+
+    def set_up_user_config_location(self) -> 'strlist':
+
+        # Result to produce
+        out = []
+
+        # These are the values as given in the config file ..
+        orig_user_conf_location = self.pickup_config.get('user_conf', {}).get('pickup_from', '') # type: str
+        orig_user_conf_location = orig_user_conf_location.split(':')
+        orig_user_conf_location = [elem.strip() for elem in orig_user_conf_location]
+
+        # .. which we now potentially need to turn into absolute paths ..
+        # .. with any relative ones assumed to be provided in reference to the server's repo location ..
+        for path in orig_user_conf_location:
+            if os.path.isabs(path):
+                out.append(path)
+            else:
+                full_path = os.path.join(self.base_dir, path)
+                out.append(full_path)
+
+        return out
 
 # ################################################################################################################################
 

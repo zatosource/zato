@@ -337,15 +337,15 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.host = zato_gunicorn_app.zato_host
     server.port = zato_gunicorn_app.zato_port
     server.repo_location = repo_location
-    server.user_conf_location = os.path.join(server.repo_location, 'user-conf')
+    server.pickup_config = pickup_config
     server.base_dir = base_dir
+    server.user_conf_location = server.set_up_user_config_location()
     server.logs_dir = os.path.join(server.base_dir, 'logs')
     server.tls_dir = os.path.join(server.base_dir, 'config', 'repo', 'tls')
     server.static_dir = os.path.join(server.base_dir, 'config', 'repo', 'static')
     server.json_schema_dir = os.path.join(server.base_dir, 'config', 'repo', 'schema', 'json')
     server.fs_server_config = server_config
     server.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
-    server.pickup_config = pickup_config
     server.logging_config = logging_config
     server.logging_conf_path = logging_conf_path
     server.sio_config = sio_config
