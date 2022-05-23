@@ -31,7 +31,10 @@ class JiraClient(AtlassianJiraClient):
         zato_is_cloud, # type: bool
     ) -> 'None':
 
-        self.zato_api_version = zato_api_version
+        # We need to make sure that the API version is a string
+        # because this is what the underlying Jira API requires.
+        self.zato_api_version = str(zato_api_version)
+
         self.zato_address = zato_address
         self.zato_username = zato_username
         self.zato_token = zato_token
