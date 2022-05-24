@@ -411,9 +411,11 @@ class OutconnWSXWrapper(Wrapper):
                 except Exception:
                     logger.warning('Could not invoke CLOSE service `%s`, e:`%s`', self.config['on_close_service_name'], format_exc())
 
-            if self.config['has_auto_reconnect']:
+            has_auto_reconnect = self.config.get('has_auto_reconnect', True)
+
+            if has_auto_reconnect:
                 logger.info('WebSocket `%s` will reconnect to `%s` (hac:%d)',
-                    self.config['name'], self.config['address'], self.config['has_auto_reconnect'])
+                    self.config['name'], self.config['address'], has_auto_reconnect)
                 try:
                     self.server.api_worker_store_reconnect_generic(self.config['id'])
                 except Exception:
