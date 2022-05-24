@@ -222,7 +222,7 @@ class SearchForm(forms.Form):
             initial.update({'cluster':clusters[0].id})
             self.zato_auto_submit = True
         else:
-            initial = None
+            initial = {'query': data.get('query', '')}
             self.zato_auto_submit = False
 
         super(SearchForm, self).__init__(initial)

@@ -411,7 +411,7 @@ class Clear(AdminService):
     """
     class SimpleIO:
         input_required = 'id'
-        input_required = 'cluster_id'
+        input_optional = 'cluster_id'
 
     def handle(self) -> 'None':
 
