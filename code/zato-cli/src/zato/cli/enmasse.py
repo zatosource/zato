@@ -758,7 +758,7 @@ class ObjectImporter:
 
         # If this is a generic connection and it has a secret set (e.g. MongoDB password),
         # we need to explicitly set it for the connection we are editing.
-        if is_edit and item_type == 'zato_generic_connection' and attrs_dict.get('secret'):
+        if item_type == 'zato_generic_connection' and attrs_dict.get('secret'):
             self._set_generic_connection_secret(attrs_dict['name'], attrs_dict['type_'], attrs_dict['secret'])
 
         # We'll see how expensive this call is. Seems to be but let's see in practice if it's a burden.
