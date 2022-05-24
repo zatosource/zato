@@ -928,12 +928,8 @@ PUBSUB.SUBSCRIBE_CLASS = _PUBSUB_SUBSCRIBE_CLASS
 # ################################################################################################################################
 
 skip_endpoint_types = (
-
     PUBSUB.ENDPOINT_TYPE.INTERNAL.id,
     PUBSUB.ENDPOINT_TYPE.SERVICE.id,
-
-    # This will never be available externally because WSX clients need to use APIs to subscribe
-    PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
 )
 
 # ################################################################################################################################
