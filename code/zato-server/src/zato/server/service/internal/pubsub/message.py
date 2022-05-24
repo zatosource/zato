@@ -169,7 +169,7 @@ class TopicDeleteGD(AdminService):
             session.delete(ps_msg)
             session.commit()
 
-        self.logger.info('GD topic message deleted `%s` (%s)', self.request.input.msg_id)
+        self.logger.info('GD topic message deleted `%s` (%s)', self.request.input.msg_id, ps_msg.data_prefix_short)
 
 # ################################################################################################################################
 
