@@ -222,7 +222,7 @@ class ZatoWSXClient(_BaseWSXClient):
 
             for topic_name in subscription_list:
                 try:
-                    self.invoke_subscribe_service(topic_name)
+                    self._zato_client.subscribe(topic_name)
                 except Exception:
                     logger.warning('Could not subscribe WSX outconn to `%s`, e:`%s`', self.config['name'], format_exc())
 
