@@ -617,13 +617,22 @@ class Client:
 
 # ################################################################################################################################
 
-    def subscribe(self, topic_name:'str') -> 'None':
+    def invoke_service(self, service_name:'str', request:'any_') -> 'any_':
         return self.invoke({
-            'service':'zato.pubsub.pubapi.subscribe-wsx',
-            'request': {
-                'topic_name': topic_name
-            }
+            'service':service_name,
+            'request': request
         })
+
+# ################################################################################################################################
+
+    def subscribe(self, topic_name:'str') -> 'None':
+
+        service_name = 'zato.pubsub.pubapi.subscribe-wsx'
+        request = {
+            'topic_name': topic_name
+        }
+
+        return self.invoke_service(service_name, request)
 
 # ################################################################################################################################
 # ################################################################################################################################
