@@ -1151,8 +1151,8 @@ class WebSocket(_WebSocket):
             hook = self.get_on_pubsub_hook()
             if not hook:
                 log_msg = 'Ignoring pub/sub response, on_pubsub_response hook not implemented for `%s`, conn:`%s`, msg:`%s`'
-                logger.warning(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
-                logger_zato.warning(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
+                logger.info(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
+                logger_zato.info(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
             else:
                 request = self._get_hook_request()
                 request['msg'] = msg
