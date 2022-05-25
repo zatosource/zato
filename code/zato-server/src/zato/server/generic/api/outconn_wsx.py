@@ -278,8 +278,10 @@ class WSXClient:
         self.impl = _impl_class(self.config, self.on_connected_cb, self.on_message_cb, self.on_close_cb, self.config['address'])
 
         self.send = self.impl.send
+
         if _impl_class is ZatoWSXClient:
             self.invoke = self.send
+            self.invoke_service = self.impl._zato_client.invoke_service # type: ignore
 
         self.impl.connect()
         self.impl.run_forever()
