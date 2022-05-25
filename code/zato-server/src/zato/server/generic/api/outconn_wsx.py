@@ -317,10 +317,10 @@ class OutconnWSXWrapper(Wrapper):
 
     def _resolve_config_ids(self, config:'stranydict', server:'ParallelServer') -> 'None':
 
-        on_connect_service_id   = config.get('on_connect_service_id')   # type: int
-        on_message_service_id   = config.get('on_message_service_id')   # type: int
-        on_close_service_id     = config.get('on_close_service_id')     # type: int
-        on_subscribe_service_id = config.get('on_subscribe_service_id') # type: int
+        on_connect_service_id   = config.get('on_connect_service_id', 0)   # type: int
+        on_message_service_id   = config.get('on_message_service_id', 0)   # type: int
+        on_close_service_id     = config.get('on_close_service_id', 0)     # type: int
+        on_subscribe_service_id = config.get('on_subscribe_service_id', 0) # type: int
 
         if on_connect_service_id:
             config['on_connect_service_name'] = server.api_service_store_get_service_name_by_id(on_connect_service_id)
