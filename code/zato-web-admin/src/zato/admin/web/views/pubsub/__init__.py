@@ -35,15 +35,15 @@ def get_client_html(item, security_id, cluster_id):
     client = ''
     path_name = ''
 
-    if security_id:
-        path_name = 'security-basic-auth'
-        name = item.sec_name
-        protocol = 'HTTP'
-
-    elif item.ws_channel_id:
+    if item.ws_channel_id:
         path_name = 'channel-web-socket'
         name = item.ws_channel_name
         protocol = 'WebSockets'
+
+    elif security_id:
+        path_name = 'security-basic-auth'
+        name = item.sec_name
+        protocol = 'HTTP'
 
     elif getattr(item, 'service_id', None):
         path_name = 'service'
