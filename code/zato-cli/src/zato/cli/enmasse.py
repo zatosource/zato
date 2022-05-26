@@ -12,6 +12,7 @@ from collections import namedtuple
 
 # Zato
 from zato.cli import ManageCommand
+from zato.common.api import GENERIC as COMMON_GENERIC
 
 # ################################################################################################################################
 
@@ -701,6 +702,21 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
+    def _needs_change_password(self, item_type, attrs, is_edit):
+
+        # By default, assume that we do need to change a given password.
+        out = True
+
+        if is_edit and item_type == 'rbac_role_permission':
+            out = False
+
+        if item_type == 'zato_generic_connection' and attrs.get('type_') == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX:
+            out = False
+
+        return out
+
+# ################################################################################################################################
+
     def _import(self, item_type, attrs, is_edit):
 
         # First, resolve values pointing to environment variables
@@ -739,7 +755,7 @@ class ObjectImporter:
 
         response = self._import_object(item_type, attrs, is_edit)
         if response.ok:
-            if not (item_type == 'rbac_role_permission' and is_edit):
+            if self._needs_change_password(item_type, attrs, is_edit):
                 object_id = response.data['id']
                 response = self._maybe_change_password(object_id, item_type, attrs)
 
@@ -759,7 +775,8 @@ class ObjectImporter:
         # If this is a generic connection and it has a secret set (e.g. MongoDB password),
         # we need to explicitly set it for the connection we are editing.
         if item_type == 'zato_generic_connection' and attrs_dict.get('secret'):
-            self._set_generic_connection_secret(attrs_dict['name'], attrs_dict['type_'], attrs_dict['secret'])
+            if self._needs_change_password(item_type, attrs, is_edit):
+                self._set_generic_connection_secret(attrs_dict['name'], attrs_dict['type_'], attrs_dict['secret'])
 
         # We'll see how expensive this call is. Seems to be but let's see in practice if it's a burden.
         self.object_mgr.get_objects_by_type(item_type)

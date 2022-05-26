@@ -178,6 +178,7 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def _change_password_generic_connection(self, msg:'stranydict') -> 'None':
+
         conn_dict, _ = self._find_conn_info(msg['id'])
 
         # Create a new message without live Python objects
