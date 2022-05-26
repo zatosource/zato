@@ -17,7 +17,7 @@ from gevent import sleep
 from ws4py.client.threadedclient import WebSocketClient
 
 # Zato
-from zato.common.api import WEB_SOCKET, ZATO_NONE
+from zato.common.api import GENERIC as COMMON_GENERIC, WEB_SOCKET, ZATO_NONE
 from zato.common.wsx_client import Client as ZatoWSXClientImpl, Config as _ZatoWSXConfigImpl
 from zato.common.util.api import new_cid
 from zato.server.connection.queue import Wrapper
@@ -419,7 +419,8 @@ class OutconnWSXWrapper(Wrapper):
                 logger.info('WebSocket `%s` will reconnect to `%s` (hac:%d)',
                     self.config['name'], self.config['address'], has_auto_reconnect)
                 try:
-                    self.server.api_worker_store_reconnect_generic(self.config['id'])
+                    if reason != COMMON_GENERIC.DeleteReasonBytes:
+                        self.server.api_worker_store_reconnect_generic(self.config['id'])
                 except Exception:
                     logger.warning('Could not reconnect WebSocket `%s` to `%s`, e:`%s`',
                         self.config['name'], self.config['address'], format_exc())
