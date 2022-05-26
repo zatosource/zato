@@ -1213,6 +1213,8 @@ class SERVER_STARTUP:
 
 class GENERIC:
     ATTR_NAME = 'opaque1'
+    DeleteReason = 'DeleteGenericConnection'
+    DeleteReasonBytes = DeleteReason.encode('utf8')
 
     class CONNECTION:
         class TYPE:
