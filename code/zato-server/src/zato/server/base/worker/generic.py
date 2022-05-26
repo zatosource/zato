@@ -69,7 +69,7 @@ class Generic(WorkerImpl):
 
             # Delete the connection object ..
             conn = conn_dict.conn
-            conn.delete()
+            conn.delete(reason=COMMON_GENERIC.DeleteReason)
 
             # .. and delete the connection from the configuration object.
             conn_name = conn_dict['name']

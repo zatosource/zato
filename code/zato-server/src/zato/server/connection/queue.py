@@ -330,7 +330,7 @@ class Wrapper:
 
 # ################################################################################################################################
 
-    def delete(self) -> 'None':
+    def delete(self, reason:'strnone'=None) -> 'None':
         """ Deletes all connections from queue and sets a flag that disallows this client to connect again.
         """
         with self.update_lock:
@@ -340,7 +340,7 @@ class Wrapper:
             self.client.keep_connecting = False
 
             # Actuall delete all connections
-            self.delete_queue_connections()
+            self.delete_queue_connections(reason)
 
             # In case the client was in the process of building a queue of connections,
             # wait until it has stopped doing it.
