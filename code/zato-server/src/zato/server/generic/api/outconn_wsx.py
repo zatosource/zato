@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from threading import current_thread
 from traceback import format_exc
 
 # gevent
@@ -162,8 +163,9 @@ class ZatoWSXClient(_BaseWSXClient):
         super(ZatoWSXClient, self).__init__(*args, **kwargs)
 
         self._zato_client_config = _ZatoWSXConfigImpl()
-        self._zato_client_config.client_name = 'WSX outconn - {} - {}'.format(
+        self._zato_client_config.client_name = 'WSX outconn - {}:{} - {}'.format(
             self.config['id'],
+            current_thread().name,
             self.config['name']
         )
         self._zato_client_config.client_id = 'wsx.out.{}'.format(new_cid(8))
