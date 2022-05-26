@@ -557,7 +557,7 @@ class CreateWSXSubscription(AdminService):
         async_msg = self.wsgi_environ['zato.request_ctx.async_msg']
 
         async_msg_wsgi_environ = async_msg.get('wsgi_environ', {})
-        unsub_on_wsx_close = async_msg_wsgi_environ.get('zato.request_ctx.pubsub.unsub_on_wsx_close', False)
+        unsub_on_wsx_close = async_msg_wsgi_environ.get('zato.request_ctx.pubsub.unsub_on_wsx_close', True)
 
         # This will exist if we are being invoked directly ..
         environ = async_msg.get('environ')
