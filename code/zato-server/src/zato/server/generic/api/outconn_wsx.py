@@ -162,7 +162,10 @@ class ZatoWSXClient(_BaseWSXClient):
         super(ZatoWSXClient, self).__init__(*args, **kwargs)
 
         self._zato_client_config = _ZatoWSXConfigImpl()
-        self._zato_client_config.client_name = 'WSX outconn - {}'.format(self.config['name'])
+        self._zato_client_config.client_name = 'WSX outconn - {} - {}'.format(
+            self.config['id'],
+            self.config['name']
+        )
         self._zato_client_config.client_id = 'wsx.out.{}'.format(new_cid(8))
         self._zato_client_config.address = self.config['address']
         self._zato_client_config.on_request_callback = self.on_message_cb
