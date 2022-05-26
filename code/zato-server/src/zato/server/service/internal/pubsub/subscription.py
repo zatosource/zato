@@ -556,7 +556,8 @@ class CreateWSXSubscription(AdminService):
         topic_name_list = set(self.request.input.topic_name_list)
         async_msg = self.wsgi_environ['zato.request_ctx.async_msg']
 
-        unsub_on_wsx_close = async_msg['wsgi_environ'].get('zato.request_ctx.pubsub.unsub_on_wsx_close')
+        async_msg_wsgi_environ = async_msg.get('wsgi_environ', {})
+        unsub_on_wsx_close = async_msg_wsgi_environ.get('zato.request_ctx.pubsub.unsub_on_wsx_close', False)
 
         # This will exist if we are being invoked directly ..
         environ = async_msg.get('environ')
@@ -604,10 +605,11 @@ class CreateWSXSubscription(AdminService):
                 'web_socket': environ['web_socket'],
             }
 
-            for name in 'wrap_one_msg_in_list', 'delivery_batch_size':
-                request[name] = self.request.input.get(name)
+            request['delivery_batch_size'] = self.request.input.get('delivery_batch_size')
+            request['delivery_batch_size'] = self.request.input.get('delivery_batch_size') or PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE
 
-            response = self.invoke('zato.pubsub.subscription.subscribe-websockets', request)['response']
+            response = self.invoke('zato.pubsub.subscription.subscribe-websockets', request)
+            response = response['response']
             responses[item] = response
 
         # There was only one topic on input ..
