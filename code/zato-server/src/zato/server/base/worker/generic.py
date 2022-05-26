@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from bunch import Bunch
 
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC, LDAP
+from zato.common.api import GENERIC as COMMON_GENERIC, LDAP, ZATO_NONE
 from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.const import SECRETS
 from zato.common.util.api import as_bool, parse_simple_type
@@ -148,9 +148,14 @@ class Generic(WorkerImpl):
             self._edit_file_transfer_channel(msg)
             return
 
-        # Find and store connection password/secret for later use
-        # if we do not have it already and we will if we are called from ChangePassword.
+        # If we do not have a secret on input, we need to look it up in the incoming message.
+        # If it is still not there, assume that we are going to reuse the same secret
+        # that we already have defined for the object
+
         if not secret:
+            secret = msg.get('secret', ZATO_NONE)
+
+        if secret == ZATO_NONE:
             conn_dict, _ = self._find_conn_info(msg['id'])
             secret = conn_dict['secret']
 
