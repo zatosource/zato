@@ -627,7 +627,7 @@ class Client:
 
     def subscribe(self, topic_name:'str') -> 'None':
 
-        service_name = 'zato.pubsub.pubapi.subscribe-wsx'
+        service_name = 'zato.pubsub.subscription.create-wsx-subscription'
         request = {
             'topic_name': topic_name
         }
