@@ -23,6 +23,8 @@ from zato.server.generic.connection import GenericConnection
 if 0:
     from logging import Logger
     from zato.common.typing_ import any_, callable_, stranydict, strnone, tuple_
+    from zato.server.connection.queue import Wrapper
+    Wrapper = Wrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
