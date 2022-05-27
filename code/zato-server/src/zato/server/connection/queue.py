@@ -19,6 +19,7 @@ from gevent.queue import Empty, Queue
 
 # Zato
 from zato.common.typing_ import cast_
+from zato.common.util.python_ import get_python_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -264,12 +265,15 @@ class Wrapper:
     """ Base class for queue-based connections wrappers.
     """
     has_delete_reasons = False
+    supports_reconnections = False
 
     def __init__(self, config:'stranydict', conn_type:'str', server:'ParallelServer') -> 'None':
         self.conn_type = conn_type
         self.config = config
         self.config['username_pretty'] = self.config['username'] or '(None)'
         self.server = server
+        self.python_id = get_python_id(self)
+        self.should_reconnect = True
 
         self.client = ConnectionQueue(
             self.config['pool_size'],
