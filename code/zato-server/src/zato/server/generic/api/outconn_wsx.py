@@ -316,6 +316,7 @@ class OutconnWSXWrapper(Wrapper):
     """ Wraps a queue of connections to WebSockets.
     """
     has_delete_reasons = True
+    supports_reconnections = True
 
     def __init__(self, config:'stranydict', server:'ParallelServer') -> 'None':
         config['parent'] = self
