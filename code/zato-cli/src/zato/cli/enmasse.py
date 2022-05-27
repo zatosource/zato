@@ -752,6 +752,7 @@ class ObjectImporter:
             attrs_dict.pop('parent_id', None)
 
         attrs.cluster_id = self.client.cluster_id
+        attrs.is_source_external = True
 
         response = self._import_object(item_type, attrs, is_edit)
         if response.ok:
