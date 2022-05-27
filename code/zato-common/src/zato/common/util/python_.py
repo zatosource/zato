@@ -1,22 +1,36 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import sys
+from threading import current_thread
 import traceback
 from logging import getLogger
+
+# Zato
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger('zato')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_python_id(item):
+
+    # Python-level ID contains all the core details about the object that requests this information and its current thread
+    _current_thread = current_thread()
+    _current_thread_ident = cast_('int', _current_thread.ident)
+    python_id = '{}.{}.{}'.format(hex(id(item)), _current_thread.name, hex(_current_thread_ident))
+
+    return python_id
 
 # ################################################################################################################################
 # ################################################################################################################################

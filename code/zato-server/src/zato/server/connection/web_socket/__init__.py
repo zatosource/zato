@@ -31,7 +31,6 @@ from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND
 from json import loads as stdlib_loads
 from logging import DEBUG, getLogger
 
-from threading import current_thread
 from traceback import format_exc
 from urllib.parse import urlparse
 
@@ -59,6 +58,7 @@ from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid
 from zato.common.util.hook import HookTool
+from zato.common.util.python_ import get_python_id
 from zato.common.util.wsx import cleanup_wsx_client, ContextHandler
 from zato.common.vault_ import VAULT
 from zato.server.connection.connector import Connector
@@ -291,13 +291,8 @@ class WebSocket(_WebSocket):
 
     def _init(self):
 
-        # Python-level ID contains all the core details, our own ID and that of the thread (greenlet) that creates us
-        _current_thread = current_thread()
-        _current_thread_ident = cast_('int', _current_thread.ident)
-        python_id = '{}.{}.{}'.format(hex(id(self)), _current_thread.name, hex(_current_thread_ident))
-
         # Assign core attributes to this object before calling parent class
-        self.python_id = python_id
+        self.python_id = get_python_id(self)
 
         # Must be set here and then to True later on because our parent class may already want
         # to accept connections, and we need to postpone their processing until we are initialized fully.
