@@ -576,18 +576,18 @@ class Client:
 
 # ################################################################################################################################
 
-    def run(self, max_wait:'int'=20) -> 'None':
+    def run(self, max_wait:'int'=999_999_999) -> 'None':
 
         # Actually try to connect ..
-        self._run()
+        self._run(max_wait)
 
         # .. wait for the connection for that much time ..
         now = utcnow()
         until = now + timedelta(seconds=max_wait)
 
-        # .. do wait and return if max. wait time is exceeded ..
+        # .. wait and return if max. wait time is exceeded ..
         while not self.is_connected:
-            sleep(0.01)
+            sleep(0.1)
             now = utcnow()
             if now >= until:
                 return
