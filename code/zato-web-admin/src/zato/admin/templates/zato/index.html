@@ -240,13 +240,14 @@
 
                 <li><a href="{% url "scheduler" %}?cluster={{ cluster_id|default:'' }}">Scheduler</a></li>
 
+                {% if True|get_os_variable:"ZATO_HAS_CUSTOM_STATS" %}
                 <li><a href="#">Statistics &darr;</a>
                     <ul>
-                        <li class='wide'><a href="{% url "stats-service-usage" %}?cluster={{ cluster_id|default:'' }}">Service usage</a></li>
-                        {% if True|get_os_variable:"ZATO_HAS_CUSTOM_STATS" %}<li class='wide'><a href="{% url "stats-user" %}?cluster={{ cluster_id|default:'' }}">Custom</a></li>{% endif %}
+                        <!-- <li class='wide'><a href="{% url "stats-service-usage" %}?cluster={{ cluster_id|default:'' }}">Service usage</a></li> -->
+                        <li class='wide'><a href="{% url "stats-user" %}?cluster={{ cluster_id|default:'' }}">Custom</a></li>
                     </ul>
-
                 </li>
+                {% endif %}
 
                 <!-- <li><a href="{% url "config-file" %}?cluster={{ cluster_id|default:'' }}">Config files</a></li> -->
 
