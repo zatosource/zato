@@ -321,7 +321,7 @@ class OutconnWSXWrapper(Wrapper):
     def __init__(self, config:'stranydict', server:'ParallelServer') -> 'None':
         config['parent'] = self
         self._resolve_config_ids(config, server)
-        super(OutconnWSXWrapper, self).__init__(config, 'outgoing WebSocket', server)
+        super(OutconnWSXWrapper, self).__init__(config, COMMON_GENERIC.ConnName.OutconnWSX, server)
 
 # ################################################################################################################################
 
