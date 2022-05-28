@@ -314,7 +314,12 @@ class _WebSocketClientImpl(WebSocketClient):
         """ Overloaded from the parent class.
         """
         if not self.stream:
-            logger.info('Could not send message without self.stream (%s)', self.config)
+            logger.info('Could not send message without self.stream -> %s -> %s (%s -> %s) ',
+                self.config.client_name,
+                self.config.address,
+                self.config.username,
+                self.config.client_id,
+            )
             return
 
         message_sender = self.stream.binary_message if binary else self.stream.text_message

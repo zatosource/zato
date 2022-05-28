@@ -1216,6 +1216,9 @@ class GENERIC:
     DeleteReason = 'DeleteGenericConnection'
     DeleteReasonBytes = DeleteReason.encode('utf8')
 
+    class ConnName:
+        OutconnWSX = 'outgoing WebSocket'
+
     class CONNECTION:
         class TYPE:
             CHANNEL_FILE_TRANSFER = 'channel-file-transfer'

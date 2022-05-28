@@ -40,6 +40,7 @@ class WSXOutconnBaseCase(CommandLineTestCase):
     ) -> 'stranydict':
 
         config = {}
+        config['id'] = 1
         config['name'] = name
         config['username'] = username
         config['secret'] = secret
