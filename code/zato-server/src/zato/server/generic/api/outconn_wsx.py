@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from threading import current_thread
 from traceback import format_exc
 
 # gevent
@@ -17,7 +18,7 @@ from gevent import sleep
 from ws4py.client.threadedclient import WebSocketClient
 
 # Zato
-from zato.common.api import WEB_SOCKET, ZATO_NONE
+from zato.common.api import GENERIC as COMMON_GENERIC, WEB_SOCKET, ZATO_NONE
 from zato.common.wsx_client import Client as ZatoWSXClientImpl, Config as _ZatoWSXConfigImpl
 from zato.common.util.api import new_cid
 from zato.server.connection.queue import Wrapper
@@ -162,7 +163,11 @@ class ZatoWSXClient(_BaseWSXClient):
         super(ZatoWSXClient, self).__init__(*args, **kwargs)
 
         self._zato_client_config = _ZatoWSXConfigImpl()
-        self._zato_client_config.client_name = 'WSX outconn - {}'.format(self.config['name'])
+        self._zato_client_config.client_name = 'WSX outconn - {}:{} - {}'.format(
+            self.config['id'],
+            current_thread().name,
+            self.config['name']
+        )
         self._zato_client_config.client_id = 'wsx.out.{}'.format(new_cid(8))
         self._zato_client_config.address = self.config['address']
         self._zato_client_config.on_request_callback = self.on_message_cb
@@ -310,10 +315,13 @@ class WSXClient:
 class OutconnWSXWrapper(Wrapper):
     """ Wraps a queue of connections to WebSockets.
     """
+    has_delete_reasons = True
+    supports_reconnections = True
+
     def __init__(self, config:'stranydict', server:'ParallelServer') -> 'None':
         config['parent'] = self
         self._resolve_config_ids(config, server)
-        super(OutconnWSXWrapper, self).__init__(config, 'outgoing WebSocket', server)
+        super(OutconnWSXWrapper, self).__init__(config, COMMON_GENERIC.ConnName.OutconnWSX, server)
 
 # ################################################################################################################################
 
@@ -419,7 +427,8 @@ class OutconnWSXWrapper(Wrapper):
                 logger.info('WebSocket `%s` will reconnect to `%s` (hac:%d)',
                     self.config['name'], self.config['address'], has_auto_reconnect)
                 try:
-                    self.server.api_worker_store_reconnect_generic(self.config['id'])
+                    if reason != COMMON_GENERIC.DeleteReasonBytes:
+                        self.server.api_worker_store_reconnect_generic(self.config['id'])
                 except Exception:
                     logger.warning('Could not reconnect WebSocket `%s` to `%s`, e:`%s`',
                         self.config['name'], self.config['address'], format_exc())

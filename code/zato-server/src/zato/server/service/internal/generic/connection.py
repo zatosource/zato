@@ -13,7 +13,7 @@ from datetime import datetime
 from traceback import format_exc
 
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs
+from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs, ZATO_NONE
 from zato.common.broker_message import GENERIC
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
@@ -113,6 +113,18 @@ class _CreateEdit(_BaseService):
 
         data = deepcopy(self.request.input)
 
+        # Build a reusable flag indicating that a secret was sent on input.
+        secret = data.get('secret', ZATO_NONE)
+        if secret == ZATO_NONE:
+            has_input_secret  = False
+            input_secret = ''
+        else:
+            has_input_secret = True
+            input_secret = secret
+            if input_secret:
+                input_secret = self.crypto.encrypt(input_secret)
+                input_secret = input_secret.decode('utf8')
+
         raw_request = self.request.raw_request
         if isinstance(raw_request, basestring):
             raw_request = loads(raw_request)
@@ -141,7 +153,16 @@ class _CreateEdit(_BaseService):
             # and we need to make sure that we publish its encrypted secret for other layers ..
             if self.is_edit:
                 model = self._get_instance_by_id(session, ModelGenericConn, data.id)
-                conn.secret = model.secret
+
+                # Use the secret that was given on input because it may be a new one.
+                # Otherwise, if no secret is given on input, it means that we are not changing it
+                # so we can reuse the same secret that the model already uses.
+                if has_input_secret:
+                    secret = input_secret
+                else:
+                    secret = model.secret
+
+                conn.secret = secret
 
             # .. but if it is the create action, we need to create a new instance
             # .. and ensure that its secret is auto-generated.
@@ -157,8 +178,11 @@ class _CreateEdit(_BaseService):
             old_name = model.name
 
             for key, value in sorted(conn_dict.items()):
-                if key == 'secret':
+
+                # Do not set the field unless a secret was sent on input.
+                if key == 'secret' and not (has_input_secret):
                     continue
+
                 setattr(model, key, value)
 
             hook_func = hook.get(data.type_)

@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from bunch import Bunch
 
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC, LDAP
+from zato.common.api import GENERIC as COMMON_GENERIC, LDAP, ZATO_NONE
 from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.const import SECRETS
 from zato.common.util.api import as_bool, parse_simple_type
@@ -23,6 +23,8 @@ from zato.server.generic.connection import GenericConnection
 if 0:
     from logging import Logger
     from zato.common.typing_ import any_, callable_, stranydict, strnone, tuple_
+    from zato.server.connection.queue import Wrapper
+    Wrapper = Wrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,8 +70,13 @@ class Generic(WorkerImpl):
         else:
 
             # Delete the connection object ..
-            conn = conn_dict.conn
-            conn.delete()
+            conn = conn_dict.conn # type: Wrapper
+
+            # .. provide the reason code if the connection type supports it ..
+            if conn.has_delete_reasons:
+                conn.delete(reason=COMMON_GENERIC.DeleteReason)
+            else:
+                conn.delete()
 
             # .. and delete the connection from the configuration object.
             conn_name = conn_dict['name']
@@ -148,9 +155,14 @@ class Generic(WorkerImpl):
             self._edit_file_transfer_channel(msg)
             return
 
-        # Find and store connection password/secret for later use
-        # if we do not have it already and we will if we are called from ChangePassword.
+        # If we do not have a secret on input, we need to look it up in the incoming message.
+        # If it is still not there, assume that we are going to reuse the same secret
+        # that we already have defined for the object
+
         if not secret:
+            secret = msg.get('secret', ZATO_NONE)
+
+        if secret == ZATO_NONE:
             conn_dict, _ = self._find_conn_info(msg['id'])
             secret = conn_dict['secret']
 
@@ -173,6 +185,7 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def _change_password_generic_connection(self, msg:'stranydict') -> 'None':
+
         conn_dict, _ = self._find_conn_info(msg['id'])
 
         # Create a new message without live Python objects
@@ -189,6 +202,9 @@ class Generic(WorkerImpl):
 
     def reconnect_generic(self, conn_id:'int') -> 'None':
         found_conn_dict, _ = self._find_conn_info(conn_id)
+
+        if not found_conn_dict:
+            return
 
         edit_msg = Bunch()
         edit_msg['action'] = GENERIC_BROKER_MSG.CONNECTION_EDIT.value
