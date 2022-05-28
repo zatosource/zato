@@ -18,7 +18,9 @@ from gevent.lock import RLock
 from gevent.queue import Empty, Queue
 
 # Zato
+from zato.common.api import GENERIC as COMMON_GENERIC
 from zato.common.typing_ import cast_
+from zato.common.util.python_ import get_python_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,6 +34,11 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_outconn_wsx = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -85,6 +92,7 @@ class ConnectionQueue:
     queue: 'Queue'
     queue_build_cap: 'int'
     queue_max_size: 'int'
+    conn_id: 'int'
     conn_name: 'str'
     conn_type: 'str'
     address: 'str'
@@ -102,8 +110,10 @@ class ConnectionQueue:
 
     def __init__(
         self,
+        server: 'ParallelServer',
         pool_size:'int',
         queue_build_cap:'int',
+        conn_id:'int',
         conn_name:'str',
         conn_type:'str',
         address:'str',
@@ -112,9 +122,11 @@ class ConnectionQueue:
         max_attempts:'int' = 1234567890
     ) -> 'None':
 
+        self.server = server
         self.queue = Queue(pool_size)
         self.queue_max_size = cast_('int', self.queue.maxsize) # Force static typing as we know that it will not be None
         self.queue_build_cap = queue_build_cap
+        self.conn_id = conn_id
         self.conn_name = conn_name
         self.conn_type = conn_type
         self.address = address
@@ -145,8 +157,46 @@ class ConnectionQueue:
                 msg = 'Added `%s` client to `%s` (%s)'
                 log_func = self.logger.info
 
-            log_func(msg, self.conn_name, self.address, self.conn_type)
+            if self.connection_exists():
+                log_func(msg, self.conn_name, self.address, self.conn_type)
+
             return is_accepted
+
+# ################################################################################################################################
+
+    def connection_exists(self) -> 'bool':
+
+        # Right now, we check only whether WSX outgoing connections exist
+        # and assume that all the other ones always do.
+
+        if self.conn_type != COMMON_GENERIC.ConnName.OutconnWSX:
+            return True
+
+        # This may be None during tests ..
+        elif not self.server:
+            return True
+
+        # .. same as above ..
+        elif not getattr(self.server, 'worker_store', None):
+            return True
+
+        else:
+            for _ignored_conn_type, value in self.server.worker_store.generic_conn_api.items():
+                for _ignored_conn_name, conn_dict in value.items():
+                    if conn_dict['id'] == self.conn_id:
+                        return True
+
+            # By default, assume that there is no such WSX outconn
+            return False
+
+# ################################################################################################################################
+
+    def should_keep_connecting(self):
+        _connection_exists = self.connection_exists()
+        _keep_connecting_flag_is_set = self.keep_connecting
+        _queue_is_not_full = not self.queue.full()
+
+        return _connection_exists and _keep_connecting_flag_is_set and _queue_is_not_full
 
 # ################################################################################################################################
 
@@ -162,7 +212,7 @@ class ConnectionQueue:
             num_attempts = 0
             self.is_building_conn_queue = True
 
-            while self.keep_connecting and not self.queue.full():
+            while self.should_keep_connecting():
 
                 # If we have reached the limits of attempts ..
                 if num_attempts >= self.max_attempts:
@@ -205,7 +255,7 @@ class ConnectionQueue:
                     start = datetime.utcnow()
                     build_until = start + timedelta(seconds=self.queue_build_cap)
 
-            if self.keep_connecting:
+            if self.keep_connecting and self.connection_exists():
                 self.logger.info('Obtained %d %s client%sto `%s` for `%s`', self.queue.maxsize, self.conn_type, suffix,
                     self.address, self.conn_name)
             else:
@@ -263,15 +313,22 @@ class ConnectionQueue:
 class Wrapper:
     """ Base class for queue-based connections wrappers.
     """
+    has_delete_reasons = False
+    supports_reconnections = False
+
     def __init__(self, config:'stranydict', conn_type:'str', server:'ParallelServer') -> 'None':
         self.conn_type = conn_type
         self.config = config
         self.config['username_pretty'] = self.config['username'] or '(None)'
         self.server = server
+        self.python_id = get_python_id(self)
+        self.should_reconnect = True
 
         self.client = ConnectionQueue(
+            server,
             self.config['pool_size'],
             self.config['queue_build_cap'],
+            self.config['id'],
             self.config['name'],
             self.conn_type,
             self.config['auth_url'],
@@ -330,7 +387,7 @@ class Wrapper:
 
 # ################################################################################################################################
 
-    def delete(self) -> 'None':
+    def delete(self, reason:'strnone'=None) -> 'None':
         """ Deletes all connections from queue and sets a flag that disallows this client to connect again.
         """
         with self.update_lock:
@@ -340,15 +397,18 @@ class Wrapper:
             self.client.keep_connecting = False
 
             # Actuall delete all connections
-            self.delete_queue_connections()
+            self.delete_queue_connections(reason)
 
             # In case the client was in the process of building a queue of connections,
             # wait until it has stopped doing it.
             if self.client.is_building_conn_queue:
                 while not self.client.queue_building_stopped:
                     sleep(1)
-                    self.logger.info('Waiting for queue building stopped flag `%s` (%s %s)',
-                        self.client.address, self.client.conn_type, self.client.conn_name)
+                    if not self.client.connection_exists():
+                        return
+                    else:
+                        self.logger.info('Waiting for queue building stopped flag `%s` (%s %s)',
+                            self.client.address, self.client.conn_type, self.client.conn_name)
 
             # Reset flags that will allow this client to reconnect in the future
             self.delete_requested = False

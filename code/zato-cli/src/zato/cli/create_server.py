@@ -205,7 +205,7 @@ custom_auth_list_service=
 [[auth_type_hook]]
 
 [component_enabled]
-stats=True
+stats=False
 slow_response=True
 cassandra=True
 email=True
