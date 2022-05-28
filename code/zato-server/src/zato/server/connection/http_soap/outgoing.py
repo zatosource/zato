@@ -484,8 +484,15 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
         self.address = '{}{}'.format(self.config['address_host'], self.config['address_url_path'])
         self.conn_type = 'Suds SOAP'
         self.client = ConnectionQueue(
-            self.config['pool_size'], self.config['queue_build_cap'], self.config['name'], self.conn_type, self.address,
-            self.add_client)
+            None,
+            self.config['pool_size'],
+            self.config['queue_build_cap'],
+            self.config['id'],
+            self.config['name'],
+            self.conn_type,
+            self.address,
+            self.add_client
+        )
 
 # ################################################################################################################################
 
