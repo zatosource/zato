@@ -48,7 +48,15 @@ class OdooWrapper:
 
         self.url = '{protocol}://{user}:******@{host}:{port}/{database}'.format(**self.config)
         self.client = ConnectionQueue(
-            self.config.pool_size, self.config.queue_build_cap, self.config.name, 'Odoo', self.url, self.add_client)
+            self.server,
+            self.config.pool_size,
+            self.config.queue_build_cap,
+            self.config.id,
+            self.config.name,
+            'Odoo',
+            self.url,
+            self.add_client
+        )
 
         self.update_lock = RLock()
         self.logger = getLogger(self.__class__.__name__)

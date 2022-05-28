@@ -203,6 +203,9 @@ class Generic(WorkerImpl):
     def reconnect_generic(self, conn_id:'int') -> 'None':
         found_conn_dict, _ = self._find_conn_info(conn_id)
 
+        if not found_conn_dict:
+            return
+
         edit_msg = Bunch()
         edit_msg['action'] = GENERIC_BROKER_MSG.CONNECTION_EDIT.value
 
