@@ -155,7 +155,7 @@ class _GetStatsTable(AdminService):
 
     def handle(self):
 
-        table = self.server.stats_client.get_table()
+        table = None # self.server.stats_client.get_table()
         if table:
             self.response.payload = table
 
