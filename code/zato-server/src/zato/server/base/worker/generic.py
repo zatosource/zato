@@ -70,7 +70,7 @@ class Generic(WorkerImpl):
         else:
 
             # Delete the connection object ..
-            conn = conn_dict.conn
+            conn = conn_dict.conn # type: Wrapper
 
             # .. provide the reason code if the connection type supports it ..
             if conn.has_delete_reasons:
