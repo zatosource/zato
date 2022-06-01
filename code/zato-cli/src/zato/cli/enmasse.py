@@ -1484,6 +1484,7 @@ class Enmasse(ManageCommand):
         {'name':'--exit-on-missing-file', 'help':'If input file exists, exit with status code 0', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Force replacing objects already existing in ODB during import', 'action':'store_true'},
         {'name':'--input', 'help':'Path to input file with objects to import'},
+        {'name':'--env-file', 'help':'Path to an .ini file with environment variables'},
         {'name':'--rbac-sleep', 'help':'How many seconds to sleep for after creating an RBAC object', 'default':'1'},
         {'name':'--cols-width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH), 'action':'store_true'},
     ]
@@ -1518,6 +1519,25 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
+    def get_file_path(self, arg_name:'str', exit_if_missing:'bool') -> 'str':
+
+        arg_param = getattr(self.args, arg_name, None) or ''
+        arg_path = os.path.join(self.curdir, arg_param)
+
+        if not os.path.exists(arg_path):
+            if exit_if_missing:
+
+                # Zato
+                import sys
+
+                sys.exit()
+        else:
+            arg_path = os.path.abspath(arg_path)
+
+        return arg_path
+
+# ################################################################################################################################
+
     def _on_server(self, args):
 
         # stdlib
@@ -1538,12 +1558,20 @@ class Enmasse(ManageCommand):
         self.json = {}
         has_import = getattr(args, 'import')
 
+        # Initialize environment variables
+        env_path = self.get_file_path('env_file', False)
+        if os.path.exists(env_path):
+
+            # Zato
+            from zato.common.ext.configobj_ import ConfigObj
+
+            env_config = ConfigObj(env_path)
+            env = env_config.get('env') or {}
+            for key, value in env.items(): # type: ignore
+                os.environ[key] = value
+
         if args.export_local or has_import:
-            args_input = self.args.input or ''
-            input_path = os.path.join(self.curdir, args_input)
-            if not os.path.exists(input_path):
-                if self.args.exit_on_missing_file:
-                    sys.exit()
+            input_path = self.get_file_path('input', self.args.exit_on_missing_file)
 
         #: The output serialization format. Not used for input.
         self.codec = self.CODEC_BY_EXTENSION[args.dump_format]()
