@@ -111,6 +111,11 @@ class Model:
     def to_json(self, default=None, impl_extra=0):
         return dumps(self, default=default, option=impl_extra)
 
+    def clone(self) -> 'any_':
+        data = self.to_dict()
+        out = self.__class__._zato_from_dict(None, data)
+        return out
+
 # ################################################################################################################################
 # ################################################################################################################################
 

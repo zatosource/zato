@@ -47,12 +47,16 @@ import os
 import re
 import sys
 
+from logging import getLogger
+
 from ast import literal_eval
 from codecs import BOM_UTF8, BOM_UTF16, BOM_UTF16_BE, BOM_UTF16_LE
 from collections import OrderedDict
 
 import six
 __version__ = '5.0.6'
+
+logger = getLogger('zato')
 
 # imported lazily to avoid startup performance hit if it isn't used
 compiler = None
@@ -1227,6 +1231,7 @@ class ConfigObj(Section):
         # init the superclass
         Section.__init__(self, self, 0, self)
 
+        self.zato_file_name = infile
         infile = infile or []
 
         _options = {'configspec': configspec,
@@ -1684,7 +1689,8 @@ class ConfigObj(Section):
                             try:
                                 value = os.environ[env_key_name]
                             except KeyError:
-                                raise KeyError('Environment variable `{}` not found, config key `{}`'.format(env_key_name, key))
+                                logger.warning('Environment variable `%s` not found, config key `%s` (%s)',
+                                    env_key_name, key, self.zato_file_name)
 
                     # .. this may be a value to decrypt with a secret key (note that it is an if, not elif,
                     # to make it possible for environment variables to point to secrets.conf).
