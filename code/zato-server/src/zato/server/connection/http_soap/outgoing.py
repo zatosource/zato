@@ -456,7 +456,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
     def options(self, cid:'str', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
         return self.http_request('OPTIONS', cid, '', params, *args, **kwargs)
 
-    def post(self, cid:'str', data:'str'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
+    def post(self, cid:'str', data:'any_'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
         return self.http_request('POST', cid, data, params, *args, **kwargs)
 
     send = post
