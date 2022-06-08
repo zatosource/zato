@@ -179,7 +179,8 @@ class Generic(WorkerImpl):
         conn_dict, _ = self._find_conn_info(conn_id)
 
         self.logger.info('About to ping generic connection `%s` (%s)', conn_dict.name, conn_dict.type_)
-        conn_dict.conn.ping()
+        conn = conn_dict['conn']
+        conn.ping()
         self.logger.info('Generic connection `%s` pinged successfully (%s)', conn_dict.name, conn_dict.type_)
 
 # ################################################################################################################################
