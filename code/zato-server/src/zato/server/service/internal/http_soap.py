@@ -226,7 +226,7 @@ class Create(_CreateEdit):
             'is_audit_log_sent_active', 'is_audit_log_received_active', \
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
-            'is_active', 'transport', 'is_internal', 'cluster_id'
+            'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify'
         output_required = 'id', 'name'
         output_optional = 'url_path'
 
@@ -384,7 +384,7 @@ class Edit(_CreateEdit):
             'is_audit_log_sent_active', 'is_audit_log_received_active', \
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
-            'cluster_id', 'is_active', 'transport'
+            'cluster_id', 'is_active', 'transport', 'tls_verify'
         output_optional = 'id', 'name'
 
     def handle(self):
