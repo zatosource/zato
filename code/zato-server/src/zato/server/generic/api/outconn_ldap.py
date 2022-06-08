@@ -85,6 +85,9 @@ class LDAPClient:
         # If we are here it means that ping succeeded so we can assume the connection's configuration is good
         self.is_connected = True
 
+        # Assign the connection object to our configuration so that upper layers can use it
+        self.config['conn'] = self
+
 # ################################################################################################################################
 
     def get_conn_config(self):
