@@ -808,12 +808,13 @@ class ObjectImporter:
                     connection = item.get('connection')
                     transport = item.get('transport')
 
-                    item = find_first(self.object_mgr.objects.http_soap,
+                    existing = find_first(self.object_mgr.objects.http_soap,
                         lambda item: connection == item.connection and \
                                      transport == item.transport and \
                                      name == item.name)
-                    if item is not None:
-                        self.add_warning(results, item_type, item, item)
+                    if existing is not None:
+                        self.add_warning(results, item_type, item, existing)
+
                 else:
                     existing = self.object_mgr.find(item_type, {'name': name})
                     if existing is not None:
