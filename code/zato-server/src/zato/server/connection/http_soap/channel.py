@@ -30,7 +30,7 @@ from zato.common.exception import HTTP_RESPONSES
 from zato.common.hl7 import HL7Exception
 from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
-from zato.common.marshal_.api import ModelValidationError
+from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.typing_ import cast_
 from zato.common.util.exception import pretty_format_exception
@@ -743,7 +743,10 @@ class RequestHandler:
                     response.payload = dumps(response.payload)
                 else:
                     if response.payload:
-                        value = response.payload.getvalue() # type: ignore
+                        if isinstance(response.payload, Model):
+                            value = response.payload.to_json()
+                        else:
+                            value = response.payload.getvalue() # type: ignore
                     else:
                         value = ''
                     response.payload = value
