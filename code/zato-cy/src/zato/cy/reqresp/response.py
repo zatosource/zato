@@ -163,6 +163,13 @@ class Response:
                                 self._payload = value.to_dict()
                             else:
                                 self._payload = value
+
+                        elif hasattr(value, 'to_dict'):
+                            self._payload = value.to_dict()
+
+                        elif hasattr(value, 'to_json'):
+                            self._payload = value.to_json()
+
                         else:
                             # .. someone assigned to self.response.payload an object that needs
                             # serialisation but we do not know how to do it.

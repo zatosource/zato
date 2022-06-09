@@ -702,9 +702,18 @@ class Service:
     def set_response_data(self, service:'Service', **kwargs:'any_') -> 'any_':
         response = service.response.payload
         if not isinstance(response, _response_raw_types):
-            response = response.getvalue(serialize=kwargs.get('serialize'))
-            if kwargs.get('as_bunch'):
-                response = bunchify(response)
+
+            if hasattr(response, 'getvalue'):
+                response = response.getvalue(serialize=kwargs.get('serialize'))
+                if kwargs.get('as_bunch'):
+                    response = bunchify(response)
+
+            elif hasattr(response, 'to_dict'):
+                response = response.to_dict()
+
+            elif hasattr(response, 'to_json'):
+                response = response.to_json()
+
             service.response.payload = response
 
         return response
@@ -783,6 +792,8 @@ class Service:
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
         channel_item = wsgi_environ.get('zato.channel_item', {})
+
+        zato_response_headers_container = kwargs.get('zato_response_headers_container')
 
         # Here's an edge case. If a SOAP request has a single child in Body and this child is an empty element
         # (though possibly with attributes), checking for 'not payload' alone won't suffice - this evaluates
@@ -883,6 +894,8 @@ class Service:
                 exc_formatted = format_exc()
             finally:
                 try:
+
+                    # This obtains the response
                     response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
                     # If this was fan-out/fan-in we need to always notify our callbacks no matter the result
@@ -904,6 +917,13 @@ class Service:
 
                         spawn_greenlet(func, service, payload, exc_data)
 
+                    # It is possible that, on behalf of our caller (e.g. pub.zato.service.service-invoker),
+                    # we also need to populate a dictionary of headers that were produced by the service
+                    # that we are invoking.
+                    if zato_response_headers_container is not None:
+                        if service.response.headers:
+                            zato_response_headers_container.update(service.response.headers)
+
                 except Exception as resp_e:
 
                     if e:
@@ -922,6 +942,11 @@ class Service:
             response = service.response
             response.payload = ''
             response.status_code = BAD_REQUEST
+
+        # If we are told always to skip response elements, this is where we make use of it.
+        _zato_needs_response_wrapper = getattr(service.__class__, '_zato_needs_response_wrapper', None)
+        if _zato_needs_response_wrapper is False:
+            kwargs['skip_response_elem'] = True
 
         if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
 
@@ -1033,25 +1058,25 @@ class Service:
 
 # ################################################################################################################################
 
-    def invoke(self, name:'str', *args:'any_', **kwargs:'any_') -> 'any_':
+    def invoke(self, zato_name:'any_', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service synchronously by its name.
         """
-        # The 'name' parameter is actually a service class,
+        # The 'zato_name' parameter is actually a service class,
         # not its name, and we need to extract the name ourselves.
-        if isclass(name) and issubclass(name, Service): # type: Service
-            name = name.get_name()
+        if isclass(zato_name) and issubclass(zato_name, Service): # type: Service
+            zato_name = zato_name.get_name()
 
         if self.component_enabled_target_matcher:
-            name, target = self.extract_target(name) # type: ignore
+            zato_name, target = self.extract_target(zato_name) # type: ignore
             kwargs['target'] = target
 
         if self._enforce_service_invokes and self.invokes:
-            if name not in self.invokes:
-                msg = 'Could not invoke `{}` which is not in `{}`'.format(name, self.invokes)
+            if zato_name not in self.invokes:
+                msg = 'Could not invoke `{}` which is not in `{}`'.format(zato_name, self.invokes)
                 self.logger.warning(msg)
                 raise ValueError(msg)
 
-        return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[name], *args, **kwargs)
+        return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[zato_name], *args, **kwargs)
 
 # ################################################################################################################################
 

@@ -487,7 +487,9 @@ $.fn.zato.data_table._on_submit_complete = function(data, status) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table._on_submit = function(form, callback) {
-    $.fn.zato.post(form.attr('action'), callback, form.serialize());
+    let serialized = form.serialize();
+    console.log('Serialized -> '+ serialized);
+    $.fn.zato.post(form.attr('action'), callback, serialized);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

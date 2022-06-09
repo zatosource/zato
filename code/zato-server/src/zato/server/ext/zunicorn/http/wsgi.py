@@ -176,8 +176,12 @@ class Response:
         self_headers_append = self.headers.append
 
         for name, value in headers:
+
             if not isinstance(name, string_types):
-                raise TypeError('%r is not a string' % name)
+                name = str(name)
+
+            if not isinstance(value, string_types):
+                value = str(value)
 
             if HEADER_RE.search(name):
                 raise InvalidHeaderName('%r' % name)

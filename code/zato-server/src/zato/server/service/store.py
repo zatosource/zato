@@ -431,6 +431,30 @@ class ServiceStore:
         except AttributeError:
             class_.invokes = []
 
+        # If the class does not have a SimpleIO attribute
+        # but it does have input or output declared
+        # then we add a SimpleIO wrapper ourselves.
+        if not hasattr(class_, 'SimpleIO'):
+
+            _direct_sio_input  = getattr(class_, 'input', None)
+            _direct_sio_output = getattr(class_, 'output', None)
+
+            if _direct_sio_input or _direct_sio_output:
+
+                # If I/O is declared directly, it means that we do not need response wrappers
+                class_._zato_needs_response_wrapper = False
+
+                class _Class_SimpleIO:
+                    pass
+
+                if _direct_sio_input:
+                    _Class_SimpleIO.input = _direct_sio_input
+
+                if _direct_sio_output:
+                    _Class_SimpleIO.output = _direct_sio_output
+
+                class_.SimpleIO = _Class_SimpleIO
+
         try:
             class_.SimpleIO # type: ignore
             class_.has_sio = True
