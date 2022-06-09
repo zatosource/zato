@@ -1053,25 +1053,25 @@ class Service:
 
 # ################################################################################################################################
 
-    def invoke(self, name:'str', *args:'any_', **kwargs:'any_') -> 'any_':
+    def invoke(self, zato_name:'any_', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service synchronously by its name.
         """
-        # The 'name' parameter is actually a service class,
+        # The 'zato_name' parameter is actually a service class,
         # not its name, and we need to extract the name ourselves.
-        if isclass(name) and issubclass(name, Service): # type: Service
-            name = name.get_name()
+        if isclass(zato_name) and issubclass(zato_name, Service): # type: Service
+            zato_name = zato_name.get_name()
 
         if self.component_enabled_target_matcher:
-            name, target = self.extract_target(name) # type: ignore
+            zato_name, target = self.extract_target(zato_name) # type: ignore
             kwargs['target'] = target
 
         if self._enforce_service_invokes and self.invokes:
-            if name not in self.invokes:
-                msg = 'Could not invoke `{}` which is not in `{}`'.format(name, self.invokes)
+            if zato_name not in self.invokes:
+                msg = 'Could not invoke `{}` which is not in `{}`'.format(zato_name, self.invokes)
                 self.logger.warning(msg)
                 raise ValueError(msg)
 
-        return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[name], *args, **kwargs)
+        return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[zato_name], *args, **kwargs)
 
 # ################################################################################################################################
 

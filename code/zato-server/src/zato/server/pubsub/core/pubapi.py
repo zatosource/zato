@@ -188,7 +188,18 @@ class PubAPI:
                 'target_service_name': name
             }
 
-        data = kwargs.get('data') or ''
+        # Data may be either in keyword arguments ..
+        if 'data' in kwargs:
+            data = kwargs['data'] or ''
+
+        # .. or it may be provided inline among positional arguments ..
+        elif args:
+            data = args[0] or ''
+
+        # .. otherwise, we assume that the data should be an empty string.
+        else:
+            data = ''
+
         data_list = kwargs.get('data_list') or []
         msg_id = kwargs.get('msg_id') or ''
         priority = kwargs.get('priority')
