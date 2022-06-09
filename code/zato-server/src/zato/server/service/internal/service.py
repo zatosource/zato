@@ -663,8 +663,16 @@ class ServiceInvoker(AdminService):
             else:
                 payload = self._extract_payload_from_request()
 
+            # A dictionary of headers that the target service may want to produce
+            zato_response_headers_container = {}
+
             # Invoke the service now
-            response = self.invoke(service_name, payload, wsgi_environ={'HTTP_METHOD':self.request.http.method})
+            response = self.invoke(
+                service_name,
+                payload,
+                wsgi_environ={'HTTP_METHOD':self.request.http.method},
+                zato_response_headers_container=zato_response_headers_container
+                )
 
             # All internal services wrap their responses in top-level elements that we need to shed here ..
             if is_internal and response:
@@ -677,6 +685,7 @@ class ServiceInvoker(AdminService):
             # Assign response to outgoing payload
             self.response.payload = dumps(response)
             self.response.data_format = 'application/json'
+            self.response.headers.update(zato_response_headers_container)
 
         # No such service as given on input
         else:
