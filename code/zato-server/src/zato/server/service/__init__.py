@@ -943,6 +943,11 @@ class Service:
             response.payload = ''
             response.status_code = BAD_REQUEST
 
+        # If we are told always to skip response elements, this is where we make use of it.
+        _zato_needs_response_wrapper = getattr(service.__class__, '_zato_needs_response_wrapper', None)
+        if _zato_needs_response_wrapper is False:
+            kwargs['skip_response_elem'] = True
+
         if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
 
             # If if has .keys, it means it is a dict.
