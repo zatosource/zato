@@ -381,7 +381,7 @@ class SchedulerFacade:
     def onetime(
         self,
         invoking_service, # type: Service
-        target_service,   # type: type[Service]
+        target_service,   # type: any_
         name='',          # type: str
         *,
         prefix='',        # type: str
