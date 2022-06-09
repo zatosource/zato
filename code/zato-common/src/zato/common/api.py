@@ -19,6 +19,7 @@ from bunch import Bunch
 
 if 0:
     from zato.common.ext.imbox import Imbox
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 
@@ -1786,6 +1787,19 @@ class StatsElem:
 # ################################################################################################################################
 
 class SMTPMessage:
+
+    from_: 'any_'
+    to: 'any_'
+    subject: 'any_'
+    body: 'any_'
+    attachments: 'any_'
+    cc: 'any_'
+    bcc: 'any_'
+    is_html: 'any_'
+    headers: 'any_'
+    charset: 'any_'
+    is_rfc2231: 'any_'
+
     def __init__(self, from_=None, to=None, subject='', body='', attachments=None, cc=None, bcc=None, is_html=False, headers=None,
             charset='utf8', is_rfc2231=True):
         self.from_ = from_
