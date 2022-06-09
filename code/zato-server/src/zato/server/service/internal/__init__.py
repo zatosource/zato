@@ -284,7 +284,7 @@ class ChangePasswordBase(AdminService):
                     raise Exception('Could not find instance with id:`{}` and name:`{}` ({})'.format(
                         instance_id, instance_name, class_))
 
-                auth_func(instance, password1)
+                auth_func(instance, password1_decrypted)
 
                 session.add(instance)
                 session.commit()
