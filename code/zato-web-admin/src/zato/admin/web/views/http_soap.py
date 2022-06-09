@@ -100,15 +100,24 @@ def _get_edit_create_message(params, prefix=''):
         'rate_limit_def': params.get(prefix + 'rate_limit_def'),
         'rate_limit_check_parent_def': params.get(prefix + 'rate_limit_check_parent_def'),
 
-        'is_audit_log_sent_active': params.get(prefix + 'is_audit_log_sent_active') or False,
-        'is_audit_log_received_active': params.get(prefix + 'is_audit_log_received_active') or False,
-
         'max_len_messages_sent': params.get(prefix + 'max_len_messages_sent') or _max_len_messages,
         'max_len_messages_received': params.get(prefix + 'max_len_messages_received') or _max_len_messages,
 
         'max_bytes_per_message_sent': params.get(prefix + 'max_bytes_per_message_sent') or _max_data_stored_per_message,
         'max_bytes_per_message_received': params.get(prefix + 'max_bytes_per_message_received') or _max_data_stored_per_message,
     }
+
+    # If these fields exist, no matter what their values are, perhaps empty,
+    # it means that they are on (True). Otherwise, the values are set to False,
+    # again, the mere fact that they do not exist means that.
+    field_is_audit_log_received_active = prefix + 'is_audit_log_received_active'
+    field_is_audit_log_sent_active = prefix + 'is_audit_log_sent_active'
+
+    is_audit_log_received_active = field_is_audit_log_received_active in params
+    is_audit_log_sent_active = field_is_audit_log_sent_active in params
+
+    message['is_audit_log_received_active'] = is_audit_log_received_active
+    message['is_audit_log_sent_active'] = is_audit_log_sent_active
 
     return message
 
@@ -281,7 +290,8 @@ def create(req):
 @method_allowed('POST')
 def edit(req):
     try:
-        response = req.zato.client.invoke('zato.http-soap.edit', _get_edit_create_message(req.POST, 'edit-'))
+        edit_create_request = _get_edit_create_message(req.POST, 'edit-')
+        response = req.zato.client.invoke('zato.http-soap.edit', edit_create_request)
         if response.has_data:
             return _edit_create_response(req, response.data.id, 'updated',
                 req.POST['transport'], req.POST['connection'], req.POST['edit-name'])
