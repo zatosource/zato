@@ -1650,7 +1650,8 @@ def spawn_greenlet(callable, *args, **kwargs):
 
         if g.exception:
             type_, value, traceback = g.exc_info
-            raise_(type_(value, str(g.exception)), None, traceback)
+            exc_type = Exception(value, str(g.exception))
+            raise_(exc_type, None, traceback)
 
     except Timeout:
         pass # Timeout = good = no errors
