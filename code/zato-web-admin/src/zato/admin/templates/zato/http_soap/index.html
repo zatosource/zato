@@ -410,8 +410,8 @@
                         {% endifequal %}
 
                         <!-- 36 -->
-                        <td class='ignore'>{{ item.is_audit_log_sent_active }}</td>
-                        <td class='ignore'>{{ item.is_audit_log_received_active }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_sent_active|default:"" }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_received_active|default:"" }}</td>
                         <td class='ignore'>{{ item.max_len_messages_sent|default:audit_max_len_messages }}</td>
 
                         <!-- 37 -->
