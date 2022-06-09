@@ -56,6 +56,7 @@ class GetList(AdminService):
     def handle(self):
 
         _needs_internal = self.request.input.get('needs_internal') != ''
+        _internal = {'admin.invoke'}
 
         if _needs_internal:
             needs_internal = True if self.request.input.get('needs_internal') is True else False
@@ -88,7 +89,7 @@ class GetList(AdminService):
 
                 for definition in func(*args):
 
-                    if definition.name.startswith('zato') or definition.name in('admin.invoke', 'pubapi'):
+                    if definition.name.startswith('zato') or definition.name in _internal:
                         if not needs_internal:
                             continue
 
