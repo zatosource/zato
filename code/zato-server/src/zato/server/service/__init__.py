@@ -702,9 +702,18 @@ class Service:
     def set_response_data(self, service:'Service', **kwargs:'any_') -> 'any_':
         response = service.response.payload
         if not isinstance(response, _response_raw_types):
-            response = response.getvalue(serialize=kwargs.get('serialize'))
-            if kwargs.get('as_bunch'):
-                response = bunchify(response)
+
+            if hasattr(response, 'getvalue'):
+                response = response.getvalue(serialize=kwargs.get('serialize'))
+                if kwargs.get('as_bunch'):
+                    response = bunchify(response)
+
+            elif hasattr(response, 'to_dict'):
+                response = response.to_dict()
+
+            elif hasattr(response, 'to_json'):
+                response = response.to_json()
+
             service.response.payload = response
 
         return response
@@ -783,6 +792,8 @@ class Service:
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
         channel_item = wsgi_environ.get('zato.channel_item', {})
+
+        zato_response_headers_container = kwargs.get('zato_response_headers_container')
 
         # Here's an edge case. If a SOAP request has a single child in Body and this child is an empty element
         # (though possibly with attributes), checking for 'not payload' alone won't suffice - this evaluates
@@ -883,6 +894,8 @@ class Service:
                 exc_formatted = format_exc()
             finally:
                 try:
+
+                    # This obtains the response
                     response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
                     # If this was fan-out/fan-in we need to always notify our callbacks no matter the result
@@ -903,6 +916,13 @@ class Service:
                             payload = service.response.payload
 
                         spawn_greenlet(func, service, payload, exc_data)
+
+                    # It is possible that, on behalf of our caller (e.g. pub.zato.service.service-invoker),
+                    # we also need to populate a dictionary of headers that were produced by the service
+                    # that we are invoking.
+                    if zato_response_headers_container is not None:
+                        if service.response.headers:
+                            zato_response_headers_container.update(service.response.headers)
 
                 except Exception as resp_e:
 
