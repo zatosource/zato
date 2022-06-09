@@ -286,8 +286,10 @@ class Create(AdminService):
 
         # .. we could not find anything to deploy in the file.
         else:
-            msg = 'No services nor models were deployed from module `%s`'
-            self.logger.warning(msg, payload_name)
+            # Log only if payload does not point to our own store.py module.
+            if payload_name != 'store.py':
+                msg = 'No services nor models were deployed from module `%s`'
+                self.logger.warning(msg, payload_name)
 
 # ################################################################################################################################
 
