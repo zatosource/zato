@@ -3,12 +3,11 @@
 # atlassian-python-api
 from atlassian import Jira as AtlassianJiraClient
 
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict
+    from zato.common.typing_ import stranydict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,6 +58,55 @@ class JiraClient(AtlassianJiraClient):
             zato_token = config['secret'],
             zato_is_cloud = config['is_cloud'],
         )
+
+# ################################################################################################################################
+
+    def append_to_field(self, key:'str', field_id:'str', value:'str') -> 'strlist':
+
+        # Get the current values ..
+        value_list = self.issue_field_value(key, field_id)
+
+        # .. make sure it is always a list ..
+        value_list = value_list or []
+
+        # .. remove any potential duplicates ..
+        value_list = set(value_list)
+
+        # .. actually add the new value ..
+        value_list.add(value)
+
+        # .. ensure the list of values is always sorted to make it easier
+        # .. to browse it in Jira ..
+        value_list = sorted(value_list)
+
+        # .. update the ticket with a new list ..
+        self.update_issue_field(key, {
+            field_id: value_list
+        })
+
+        return value_list
+
+# ################################################################################################################################
+
+    def append_and_transition_if_field_complete(
+        self,
+        *,
+        key, # type: str
+        field_id, # type: str
+        value, # type: str
+        transition_to, # type: str
+        complete_list # type: strlist
+    ) -> 'None':
+
+        # This will modify the ticket and return the current value of the field's list ..
+        current_list = self.append_to_field(key, field_id, value)
+
+        # .. now, compare it to what the complete list looks like ..
+        if current_list == complete_list:
+
+            # .. if we are here, it means that we must have append the final item
+            # .. in the list above, in which case we can make the transition.
+            self.set_issue_status(key, transition_to)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -1572,7 +1572,8 @@ class Enmasse(ManageCommand):
                 os.environ[key] = value
 
         if args.export_local or has_import:
-            input_path = self.get_file_path('input', self.args.exit_on_missing_file)
+            exit_on_missing_file = hasattr(self.args, 'exit_on_missing_file')
+            input_path = self.get_file_path('input', exit_on_missing_file)
 
         #: The output serialization format. Not used for input.
         self.codec = self.CODEC_BY_EXTENSION[args.dump_format]()
