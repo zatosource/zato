@@ -34,12 +34,15 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def build_field_list(model:'Model', api_spec_info:'any_') -> 'anylist':
+def build_field_list(model:'Model | str', api_spec_info:'any_') -> 'anylist':
 
     # Response to produce
-    out = []
+    out = [] # type: anylist
 
     # All the fields of this dataclass
+    if isinstance(model, str):
+        return out
+
     python_field_list = model.zato_get_fields()
 
     for _, field in sorted(python_field_list.items()): # type: (str, Field)
