@@ -547,6 +547,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def add_wsx_gateway_service_allowed(self) -> 'None':
+        wsx_gateway_service_allowed = os.environ.get('Zato_WSX_Gateway_Service_Allowed', '')
+        if wsx_gateway_service_allowed:
+            wsx_gateway_service_allowed = wsx_gateway_service_allowed.split(',')
+            wsx_gateway_service_allowed = [elem.strip() for elem in wsx_gateway_service_allowed]
+            self.fs_server_config.pubsub.wsx_gateway_service_allowed.extend(wsx_gateway_service_allowed)
+
+# ################################################################################################################################
+
     def _after_init_common(self, server:'ParallelServer') -> 'anyset':
         """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
         """
@@ -596,6 +605,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Look up pickup configuration among environment variables
         # and add anything found to self.pickup_config.
         self.add_pickup_conf_from_env_variables()
+
+        # Append additional services that can be invoked through WebSocket gateways.
+        self.add_wsx_gateway_service_allowed()
 
         # Service sources from user-defined hot-deployment configuration
         for key, value in self.pickup_config.items():
