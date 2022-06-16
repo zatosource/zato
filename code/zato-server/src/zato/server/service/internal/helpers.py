@@ -348,12 +348,16 @@ class WebSocketsPubSubGateway(Service):
     def handle(self) -> 'None':
 
         # Make sure this is one of allowed services that we are to invoke
-        if self.request.input.service not in self.server.fs_server_config.pubsub.wsx_gateway_service_allowed:
+        service = self.request.input.service
+        allowed = self.server.fs_server_config.pubsub.wsx_gateway_service_allowed
+
+        if service not in allowed:
+            self.logger.warn('Service `%s` not among `%s`', service, allowed)
             raise Forbidden(self.cid)
 
         # All good, we can invoke this service
         else:
-            self.response.payload = self.invoke(self.request.input.service, self.request.input.request,
+            self.response.payload = self.invoke(service, self.request.input.request,
                 wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################
