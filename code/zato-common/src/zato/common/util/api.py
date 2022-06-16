@@ -1881,6 +1881,23 @@ def wait_for_dict_key(_dict:'anydict', key:'any_', timeout:'int'=30, interval:'f
 
 # ################################################################################################################################
 
+def wait_for_file(full_path:'str', timeout:'int'=30, interval:'float'=0.01) -> 'any_':
+
+    def _predicate_wait_for_file(*_ignored_args, **_ignored_kwargs):
+
+        file_exists = os.path.exists(full_path)
+
+        # If the file already exists, wait a little longer to make sure
+        # that everything that needs to be saved in there is actually saved.
+        if file_exists:
+            sleep(0.2)
+
+        return file_exists
+
+    return wait_for_predicate(_predicate_wait_for_file, timeout, interval, log_msg_details=f'path -> `{full_path}`')
+
+# ################################################################################################################################
+
 def hex_sequence_to_bytes(elems):
     # type: (str) -> bytes
 
