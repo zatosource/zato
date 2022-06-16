@@ -199,7 +199,7 @@ class DeliveryTask:
             len_out = len(out)
         else:
             out = []
-            for msg in self.delivery_list: # type: Message
+            for msg in self.delivery_list:
                 if msg.has_gd is has_gd:
                     out.append(msg)
             len_out = len(out)
@@ -244,7 +244,7 @@ class DeliveryTask:
     def get_message(self, msg_id:'str') -> 'Message':
         """ Returns a particular message enqueued by this delivery task.
         """
-        for msg in self.delivery_list: # type: Message
+        for msg in self.delivery_list:
             if msg.pub_msg_id == msg_id:
                 return msg
 
@@ -478,7 +478,7 @@ class DeliveryTask:
     def _log_warnings_from_delivery_task(self, result:'DeliveryResultCtx', len_exception_list:'int') -> 'None':
 
         # .. log all exceptions reported by the delivery task ..
-        for idx, e in enumerate(result.exception_list, 1): # type: (int, Exception)
+        for idx, e in enumerate(result.exception_list, 1):
 
             msg_logger = deliv_exc_msg.format(
                 idx, len_exception_list, result.delivery_iter, self.topic_name, self.sub_key,

@@ -45,7 +45,7 @@ def build_field_list(model:'Model | str', api_spec_info:'any_') -> 'anylist':
 
     python_field_list = model.zato_get_fields()
 
-    for _, field in sorted(python_field_list.items()): # type: (str, Field)
+    for _, field in sorted(python_field_list.items()):
 
         # Parameter details object
         info = FieldInfo.from_python_field(model, field, api_spec_info)
@@ -130,7 +130,7 @@ class ServiceInfo:
                 spec_info.response_elem = getattr(sio, 'response_elem', '')
 
                 # This is where input and output are assigned based on a service's models ..
-                for sio_attr_name in ('input', 'output'): # type: str
+                for sio_attr_name in ('input', 'output'):
                     model = getattr(sio.user_declaration, sio_attr_name, None) # type: optional[Model]
                     if model:
                         spec_info.field_list[sio_attr_name] = build_field_list(model, api_spec_info)
