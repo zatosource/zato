@@ -77,7 +77,7 @@ class DocstringParser:
 
         segments = self.extract_segments(doc)
 
-        for segment in segments: # type: _DocstringSegment
+        for segment in segments:
 
             # The very first summary found will set the whole docstring's summary
             if segment.summary:
@@ -194,7 +194,7 @@ class DocstringParser:
         # then we do not want to immediately yield to our caller.
         in_first_line = True
 
-        for idx, line in enumerate(lines): # type: (int, str)
+        for idx, line in enumerate(lines):
 
             line_stripped = line.strip()
             if line_stripped.startswith(tag_indicator):
@@ -263,7 +263,7 @@ class DocstringParser:
 
         segments = self.extract_segments(doc)
 
-        for segment in segments: # type: _DocstringSegment
+        for segment in segments:
 
             # The very first summary found will set the whole docstring's summary
             if segment.summary:
@@ -294,7 +294,7 @@ class DocstringParser:
         lines = [] # type: strlist
 
         # Strip leading whitespace but only from lines containing element names
-        for line in doc.splitlines(): # type: str
+        for line in doc.splitlines():
             orig_line = line
             line = line.lstrip()
             if line.startswith(new_elem_marker):
@@ -401,7 +401,7 @@ class DocstringParser:
         out = {}
         current_elem = None
 
-        for line in lines: # type: str
+        for line in lines:
             if line.startswith(new_elem_marker):
 
                 # We will need it later below
@@ -434,7 +434,7 @@ class DocstringParser:
             # but only to elements that are not the last in the list because they end a sentence.
             new_value = []
             len_value = len(value)
-            for idx, elem in enumerate(value, 1): # type: (int, str)
+            for idx, elem in enumerate(value, 1):
                 if idx != len_value and not elem.endswith('\n'):
                     elem += ' '
                 new_value.append(elem)
