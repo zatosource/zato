@@ -61,7 +61,13 @@ class JiraClient(AtlassianJiraClient):
 
 # ################################################################################################################################
 
-    def append_to_field(self, key:'str', field_id:'str', value:'str') -> 'strlist':
+    def append_to_field(
+        self,
+        *,
+        key, # type: str
+        field_id, # type: str
+        value, # type: str
+    ) -> 'strlist':
 
         # Get the current values ..
         value_list = self.issue_field_value(key, field_id)
@@ -99,7 +105,11 @@ class JiraClient(AtlassianJiraClient):
     ) -> 'None':
 
         # This will modify the ticket and return the current value of the field's list ..
-        current_list = self.append_to_field(key, field_id, value)
+        current_list = self.append_to_field(
+            key=key,
+            field_id=field_id,
+            value=value
+        )
 
         # .. now, compare it to what the complete list looks like ..
         if current_list == complete_list:
