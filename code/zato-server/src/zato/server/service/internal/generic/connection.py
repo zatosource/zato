@@ -168,7 +168,8 @@ class _CreateEdit(_BaseService):
             # .. and ensure that its secret is auto-generated.
             else:
                 model = self._new_zato_instance_with_cluster(ModelGenericConn)
-                secret = self.server.encrypt('auto.generated.{}'.format(self.crypto.generate_secret()))
+                secret = self.crypto.generate_secret().decode('utf8')
+                secret = self.server.encrypt('auto.generated.{}'.format(secret))
                 secret = cast_('str', secret)
                 conn.secret = secret
 
