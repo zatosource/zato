@@ -519,6 +519,7 @@ class ServiceStore:
                 class_.kvdb = service_store.server.worker_store.kvdb # type: ignore
                 class_.pubsub = service_store.server.worker_store.pubsub
                 class_.cloud.aws.s3 = service_store.server.worker_store.worker_config.cloud_aws_s3
+                class_.cloud.confluence = service_store.server.worker_store.cloud_confluence
                 class_.cloud.dropbox = service_store.server.worker_store.cloud_dropbox
                 class_.cloud.jira = service_store.server.worker_store.cloud_jira
                 class_.cloud.salesforce = service_store.server.worker_store.cloud_salesforce
