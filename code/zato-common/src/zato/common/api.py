@@ -1224,6 +1224,7 @@ class GENERIC:
         class TYPE:
             CHANNEL_FILE_TRANSFER = 'channel-file-transfer'
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
+            CLOUD_CONFLUENCE = 'cloud-confluence'
             CLOUD_DROPBOX = 'cloud-dropbox'
             CLOUD_JIRA = 'cloud-jira'
             CLOUD_SALESFORCE = 'cloud-salesforce'
@@ -1498,7 +1499,7 @@ class SALESFORCE:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class JIRA:
+class Atlassian:
 
     class Default:
         Address = 'https://example.atlassian.net'
