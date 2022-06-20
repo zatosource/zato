@@ -216,6 +216,7 @@
                         <li>
                             <span class="like-a">Atlassian &rarr;</span>
                             <ul>
+                                <li><a href="{% url "cloud-confluence" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-confluence">Confluence</a></li>
                                 <li><a href="{% url "cloud-jira" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-jira">Jira</a></li>
                             </ul>
                         </li>
