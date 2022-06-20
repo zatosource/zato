@@ -21,6 +21,7 @@ from yaml import dump as yaml_dump, Dumper as YAMLDumper
 # Zato
 from zato.common.api import URL_TYPE
 from zato.common.marshal_.api import Model
+from zato.common.typing_ import cast_
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.import_ import import_string
 from zato.server.apispec.parser.service import build_field_list
@@ -110,7 +111,8 @@ class OpenAPIGenerator:
         elems_required_names = [elem.name for elem in sio_elems if elem.is_required]
 
         # Go through each SIO element to build an OpenAPI property for it ..
-        for info in sio_elems: # type: FieldInfo
+        for info in sio_elems:
+            info = cast_('FieldInfo', info)
 
             # .. this key will always exist ..
             property_map = {
@@ -299,7 +301,7 @@ class OpenAPIGenerator:
                     if group_names:
 
                         # Populate details of path parameters
-                        for channel_param_name in sorted(group_names): # type: str
+                        for channel_param_name in sorted(group_names):
                             channel_params.append({
                                 'name': channel_param_name,
                                 'description': '',
