@@ -284,6 +284,7 @@ class WorkerStore(_WorkerStoreBase):
         self.generic_conn_api = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.channel_file_transfer,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: self.cloud_confluence,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: self.cloud_dropbox,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: self.cloud_jira,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: self.cloud_salesforce,
@@ -1178,6 +1179,7 @@ class WorkerStore(_WorkerStoreBase):
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER, {})
         channel_hl7_mllp_map = self.generic_impl_func_map.setdefault(
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, {})
+        cloud_confluence_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE, {})
         cloud_dropbox_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX, {})
         cloud_jira_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA, {})
         cloud_salesforce_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE, {})
@@ -1194,6 +1196,7 @@ class WorkerStore(_WorkerStoreBase):
         regular_maps = [
             channel_file_transfer_map,
             channel_hl7_mllp_map,
+            cloud_confluence_map,
             cloud_dropbox_map,
             cloud_jira_map,
             cloud_salesforce_map,

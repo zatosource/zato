@@ -9,14 +9,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 # ################################################################################################################################
 
-class JiraConfigObject:
+class AtlassianConfigObject:
     def __init__(self):
         self._config_attrs = []
-        self.id   = None      # type: int
-        self.name = None      # type: str
-        self.is_active = None # type: bool
-        self.api_version = None  # type: str
-        self.username = None # type: str
+        self.id   = -1         # type: int
+        self.name = ''         # type: str
+        self.is_active = True  # type: bool
+        self.api_version = ''  # type: str
+        self.username = ''     # type: str
 
 # ################################################################################################################################
 # ################################################################################################################################
