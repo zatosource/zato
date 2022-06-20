@@ -78,6 +78,7 @@ from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGev
 from zato.server.file_transfer.api import FileTransferAPI
 from zato.server.generic.api.channel_file_transfer import ChannelFileTransferWrapper
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
+from zato.server.generic.api.cloud_confluence import CloudConfluenceWrapper
 from zato.server.generic.api.cloud_dropbox import CloudDropbox
 from zato.server.generic.api.cloud_jira import CloudJiraWrapper
 from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
@@ -205,6 +206,9 @@ class WorkerStore(_WorkerStoreBase):
         # Generic connections - HL7 MLLP channels
         self.channel_hl7_mllp = {}
 
+        # Generic connections - Cloud - Confluence
+        self.cloud_confluence = {}
+
         # Generic connections - Cloud - Dropbox
         self.cloud_dropbox = {}
 
@@ -295,6 +299,7 @@ class WorkerStore(_WorkerStoreBase):
         self._generic_conn_handler = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: ChannelFileTransferWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: CloudConfluenceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: CloudDropbox,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: CloudJiraWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: CloudSalesforceWrapper,
