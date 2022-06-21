@@ -111,8 +111,9 @@ class JiraClient(AtlassianJiraClient):
             value=value
         )
 
-        # .. now, compare it to what the complete list looks like ..
-        if current_list == complete_list:
+        # .. now, compare it to what the complete list looks like, ..
+        # .. note that the lists need to be sorted to make sure they are the same.
+        if sorted(current_list) == sorted(complete_list):
 
             # .. if we are here, it means that we must have append the final item
             # .. in the list above, in which case we can make the transition.
