@@ -62,6 +62,32 @@ class CreateDefinition(ServerAwareCommand):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ChangePassword(ServerAwareCommand):
+    """ Changes a Basic Auth definition's password.
+    """
+    allow_empty_secrets = True # type: ignore
+
+    opts = [
+        {'name':'--name', 'help':'Name of the definition to create', 'required':False,},
+        {'name':'--password', 'help':'Password for the definition to use', 'required':False},
+        {'name':'--path', 'help':'Path to a Zato server', 'required':True},
+    ]
+
+    def execute(self, args:'Namespace'):
+
+        name = getattr(args, 'name', None)
+        password = getattr(args, 'password', None)
+
+        name = name or 'auto.basic-auth.name.' + fs_safe_now()
+        password = password or 'auto.basic-auth.password.' + uuid4().hex
+
+        # Use a reusable object to create a new definition and set its password
+        manager = BasicAuthManager(self, name, is_active=True, username='', realm='', password=password)
+        _ = manager.change_password(needs_stdout=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class DeleteDefinition(ServerAwareCommand):
     """ Deletes a Basic Auth definition.
     """
