@@ -225,6 +225,16 @@ class CommandStore:
         self.add_opts(cache_delete, cache_mod.CacheDelete.opts)
 
         #
+        # change-password
+        #
+        change_password = subs.add_parser(
+            'change-password',
+            description="Changes a security definition's password",
+            parents=[base_parser])
+        change_password.set_defaults(command='change_password')
+        self.add_opts(change_password, sec_basic_auth_mod.ChangePassword.opts)
+
+        #
         # check-config
         #
         check_config = subs.add_parser(
