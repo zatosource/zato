@@ -334,7 +334,7 @@ class Create(AdminService):
 
             # Log a warning but only if it is not about a compiled bytecode file.
             if not dp.payload_name.endswith('.pyc'):
-                self.logger.warning(
+                self.logger.info(
                     'Ignoring package id:`%s`, payload_name:`%s`, not a Python file nor an archive', dp.id, dp.payload_name)
 
 # ################################################################################################################################
