@@ -181,17 +181,28 @@ class _AuthManager:
         if needs_stdout:
             self.command._log_response(create_response, needs_stdout=needs_stdout)
 
-        # API request to send to create a new definition
-        change_password_request = {
-            'name': self.name,
-            'password1': self.password,
-            'password2': self.password,
-        }
-
         # Change the newly created definition's password
-        self.command._invoke_service_and_log_response(self.change_password_service, change_password_request, needs_stdout=False)
+        self._change_password(self.name, self.password, False)
 
         return create_response
+
+# ################################################################################################################################
+
+    def _change_password(self, name:'str', password:'str', needs_stdout:'bool'=False) -> 'stranydict':
+
+        # API request to send to create a new definition
+        change_password_request = {
+            'name': name,
+            'password1': password,
+            'password2': password,
+        }
+
+        # Change the password
+        self.command._invoke_service_and_log_response(
+            self.change_password_service,
+            change_password_request,
+            needs_stdout=needs_stdout
+        )
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -230,6 +241,11 @@ class BasicAuthManager(_AuthManager):
         }
 
         return self._create(create_request, needs_stdout)
+
+# ################################################################################################################################
+
+    def change_password(self, needs_stdout:'bool'=False) -> 'stranydict':
+        return self._change_password(self.name, self.password, needs_stdout)
 
 # ################################################################################################################################
 # ################################################################################################################################

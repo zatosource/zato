@@ -125,6 +125,7 @@ command_imports = (
     ('cache_delete', 'zato.cli.cache.CacheDelete'),
     ('cache_get', 'zato.cli.cache.CacheGet'),
     ('cache_set', 'zato.cli.cache.CacheSet'),
+    ('change_password', 'zato.cli.security.basic_auth.ChangePassword'),
     ('check_config', 'zato.cli.check_config.CheckConfig'),
     ('component_version', 'zato.cli.component_version.ComponentVersion'),
     ('create_api_key', 'zato.cli.security.api_key.CreateDefinition'),
