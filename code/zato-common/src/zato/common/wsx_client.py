@@ -622,11 +622,11 @@ class Client:
 
 # ################################################################################################################################
 
-    def invoke_service(self, service_name:'str', request:'any_') -> 'any_':
+    def invoke_service(self, service_name:'str', request:'any_', timeout:'int'=Default.ResponseWaitTime) -> 'any_':
         return self.invoke({
             'service':service_name,
             'request': request
-        })
+        }, timeout=timeout)
 
 # ################################################################################################################################
 
