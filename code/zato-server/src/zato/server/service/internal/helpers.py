@@ -351,8 +351,8 @@ class WebSocketsPubSubGateway(Service):
         service = self.request.input.service
         allowed = self.server.fs_server_config.pubsub.wsx_gateway_service_allowed
 
-        if service not in allowed:
-            self.logger.warn('Service `%s` not among `%s`', service, allowed)
+        if allowed and (service not in allowed):
+            self.logger.warn('Service `%s` not among `%s` (wsx_gateway_service_allowed)', service, allowed)
             raise Forbidden(self.cid)
 
         # All good, we can invoke this service
