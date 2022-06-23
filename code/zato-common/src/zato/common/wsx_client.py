@@ -12,6 +12,7 @@ import socket
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http.client import OK
+from json import dumps as json_dumps
 from logging import getLogger
 from traceback import format_exc
 from types import GeneratorType
@@ -21,9 +22,6 @@ from gevent import sleep, spawn
 
 # pysimdjson
 from simdjson import Parser as SIMDJSONParser
-
-# ujson
-from ujson import dumps as json_dumps
 
 # ws4py
 from ws4py.client.geventclient import WebSocketClient
