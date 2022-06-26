@@ -111,7 +111,7 @@ class TimeUtil:
     def _time_from(self, value, delta, format, needs_format):
 
         value = arrow.get(value)
-        value_from = date + timedelta(**delta)
+        value_from = value + timedelta(**delta)
 
         if needs_format:
             return value_from.format(format)
