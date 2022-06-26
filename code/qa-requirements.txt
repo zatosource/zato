@@ -4,7 +4,7 @@ playwright
 pylint
 pyright
 requests-openapi
-selenium
+selenium==4.2.0
 selenium-wire
 types-markdown
 types-pyyaml
