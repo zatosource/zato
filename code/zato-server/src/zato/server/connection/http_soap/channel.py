@@ -281,7 +281,7 @@ class RequestDispatcher:
 
                 # Extract the form (POST) data in case we expect it and the content type indicates it will exist.
                 if channel_item['data_format'] == ModuleCtx.SIO_FORM_DATA:
-                    if wsgi_environ['CONTENT_TYPE'].startswith(ModuleCtx.Form_Data_Content_Type):
+                    if wsgi_environ.get('CONTENT_TYPE', '').startswith(ModuleCtx.Form_Data_Content_Type):
                         post_data = util_get_form_data(wsgi_environ)
 
                 match_target = channel_item['match_target']
