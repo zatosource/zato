@@ -423,9 +423,7 @@ class ConfigLoader:
         object_name,            # type: str
         config_store_name='',   # type: str
         config_=None, # type: anydictnone
-    ):
-        # type: (str, str, str, dict) -> bool
-
+    ) -> 'bool':
         if not config_:
             config_dict = self.config[config_store_name].get(object_name) # type: ConfigDict
             config = config_dict['config'] # type: anydict
