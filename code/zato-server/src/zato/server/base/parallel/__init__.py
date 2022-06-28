@@ -697,8 +697,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _run_stats_client(self, events_tcp_port) -> 'None':
-        # type: (int) -> None
+    def _run_stats_client(self, events_tcp_port:'int') -> 'None':
         self.stats_client.init('127.0.0.1', events_tcp_port)
         self.stats_client.run()
 
