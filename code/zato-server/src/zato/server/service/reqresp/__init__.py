@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 import logging
-from cgi import FieldStorage
 from copy import deepcopy
-from io import BytesIO
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -24,6 +22,7 @@ from zato.common.api import simple_types
 from zato.common.marshal_.api import Model
 from zato.common.json_internal import loads
 from zato.common.util.api import make_repr
+from zato.common.util.http import get_form_data as util_get_form_data
 
 # Zato - Cython
 from zato.simpleio import ServiceInput
@@ -119,25 +118,8 @@ class HTTPRequestData:
         self.params.update(wsgi_environ.get('zato.http.path_params', {}))
         self.user_agent = wsgi_environ.get('HTTP_USER_AGENT')
 
-    def get_form_data(self):
-        # type: () -> FieldStorage
-
-        # This is the form data uploaded to the service
-        data = self._wsgi_environ['zato.http.raw_request'] # type: str
-
-        # Create a buffer to hold the form data and write the form to it
-        buff = BytesIO()
-        buff.write(data)
-        buff.seek(0)
-
-        # Output to return
-        form = FieldStorage(fp=buff, environ=self._wsgi_environ, keep_blank_values=True)
-
-        # Clean up
-        buff.close()
-
-        # Return the parsed form data
-        return form
+    def get_form_data(self) -> 'stranydict':
+        return util_get_form_data(self._wsgi_environ)
 
     def __repr__(self):
         return make_repr(self)

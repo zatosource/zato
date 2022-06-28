@@ -294,7 +294,7 @@ class Create(AdminService):
             # Log only if payload does not point to our own store.py module.
             if payload_name != 'store.py':
                 msg = 'No services nor models were deployed from module `%s`'
-                self.logger.warning(msg, payload_name)
+                self.logger.info(msg, payload_name)
 
 # ################################################################################################################################
 
