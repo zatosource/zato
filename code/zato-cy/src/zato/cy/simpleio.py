@@ -92,6 +92,7 @@ DATA_FORMAT_CSV:cy.unicode  = DATA_FORMAT.CSV
 DATA_FORMAT_DICT:cy.unicode = DATA_FORMAT.DICT
 DATA_FORMAT_JSON:cy.unicode = DATA_FORMAT.JSON
 DATA_FORMAT_POST:cy.unicode = DATA_FORMAT.POST
+DATA_FORMAT_FORM:cy.unicode = DATA_FORMAT.FORM_DATA
 
 # ################################################################################################################################
 
@@ -2159,7 +2160,7 @@ class CySimpleIO:
         elif data_format == DATA_FORMAT_CSV:
             return self._get_output_csv(data)
 
-        elif data_format == DATA_FORMAT_DICT:
+        elif data_format in (DATA_FORMAT_DICT, DATA_FORMAT_FORM):
             out = self._convert_to_dicts(data, DATA_FORMAT_DICT)
             return out
 
