@@ -73,7 +73,8 @@ class Generic(WorkerImpl):
             conn = conn_dict.conn # type: Wrapper
 
             # .. provide the reason code if the connection type supports it ..
-            if conn.has_delete_reasons:
+            has_delete_reasons = getattr(conn, 'has_delete_reasons', None)
+            if has_delete_reasons:
                 conn.delete(reason=COMMON_GENERIC.DeleteReason)
             else:
                 conn.delete()
