@@ -341,6 +341,7 @@ class Attrs(type):
 class DATA_FORMAT(Attrs):
     CSV = 'csv'
     DICT = 'dict'
+    FORM_DATA = 'form'
     HL7  = 'hl7'
     JSON = 'json'
     POST = 'post'
@@ -1576,6 +1577,7 @@ class HL7:
 class SIMPLE_IO:
 
     class FORMAT(Attrs):
+        FORM_DATA = DATA_FORMAT.FORM_DATA
         JSON = DATA_FORMAT.JSON
 
     COMMON_FORMAT = OrderedDict()
@@ -1584,6 +1586,7 @@ class SIMPLE_IO:
     HTTP_SOAP_FORMAT = OrderedDict()
     HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
     HTTP_SOAP_FORMAT[HL7.Const.Version.v2.id] = HL7.Const.Version.v2.name
+    HTTP_SOAP_FORMAT[DATA_FORMAT.FORM_DATA] = 'Form data'
 
 # ################################################################################################################################
 # ################################################################################################################################
