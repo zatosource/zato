@@ -34,6 +34,8 @@ from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.typing_ import cast_
 from zato.common.util.exception import pretty_format_exception
+from zato.common.util.http import get_form_data as util_get_form_data
+from zato.cy.reqresp.payload import SimpleIOPayload as CySimpleIOPayload
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
 from zato.server.service.internal import AdminService
@@ -106,7 +108,9 @@ class ModuleCtx:
     Rate_Limit_SSO_User = RATE_LIMIT.OBJECT_TYPE.SSO_USER
     Exception_Separator = '*' * 80
     SIO_JSON = SIMPLE_IO.FORMAT.JSON
-    Dict_Like = (DATA_FORMAT.JSON, DATA_FORMAT.DICT)
+    SIO_FORM_DATA = SIMPLE_IO.FORMAT.FORM_DATA
+    Dict_Like = {DATA_FORMAT.JSON, DATA_FORMAT.DICT, DATA_FORMAT.FORM_DATA}
+    Form_Data_Content_Type = ('application/x-www-form-urlencoded', 'multipart/form-data')
 
 # ################################################################################################################################
 
@@ -269,23 +273,21 @@ class RequestDispatcher:
 
                 # Raise 404 if the channel is inactive
                 if not channel_item['is_active']:
-                    logger.warning('url_data:`%s` is not active, raising NotFound', sorted(url_match.items()))
+                    logger.warning('url_data:`%s` is not active, raising NotFound', url_match)
                     raise NotFound(cid, 'Channel inactive')
 
-                # We need to read security info here so we know if POST needs to be
-                # parsed. If so, we do it here and reuse it in other places
-                # so it doesn't have to be parsed two or more times.
+                # Assume we have no form (POST) data by default.
                 post_data = {}
+
+                # Extract the form (POST) data in case we expect it and the content type indicates it will exist.
+                if channel_item['data_format'] == ModuleCtx.SIO_FORM_DATA:
+                    if wsgi_environ['CONTENT_TYPE'].startswith(ModuleCtx.Form_Data_Content_Type):
+                        post_data = util_get_form_data(wsgi_environ)
 
                 match_target = channel_item['match_target']
                 sec = self.url_data.url_sec[match_target]
 
                 if sec.sec_def != ZATO_NONE or sec.sec_use_rbac is True:
-
-                    if sec.sec_def != ZATO_NONE:
-
-                        if sec.sec_def.sec_type == SEC_DEF_TYPE.OAUTH:
-                            post_data.update(QueryDict(payload, encoding='utf-8'))
 
                     # Will raise an exception on any security violation
                     auth_result = self.url_data.check_security(
@@ -373,8 +375,17 @@ class RequestDispatcher:
                     # .. and store it in the audit log.
                     self.server.audit_log.store_data_sent(data_event)
 
-                # Finally, return payload to the client
-                return response.payload
+                # Finally, return payload to the client, potentially deserializing it from CySimpleIO first.
+                if isinstance(response.payload, CySimpleIOPayload):
+                    payload = response.payload.getvalue()
+                    if isinstance(payload, dict):
+                        if 'response' in payload:
+                            payload = payload['response']
+                            payload = dumps(payload)
+                else:
+                    payload = response.payload
+
+                return payload
 
             except Exception as e:
                 _format_exc = format_exc()
@@ -689,6 +700,10 @@ class RequestHandler:
         # Add any path params matched to WSGI environment so it can be easily accessible later on
         wsgi_environ['zato.http.path_params'] = url_match
 
+        # If this is a POST / form submission then it becomes our payload
+        if channel_item['data_format'] == ModuleCtx.SIO_FORM_DATA:
+            wsgi_environ['zato.request.payload'] = post_data
+
         # No cache for this channel or no cached response, invoke the service then.
         response = service.update_handle(self._set_response_data, service, raw_request,
             CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server,
@@ -703,6 +718,8 @@ class RequestHandler:
             self.set_response_in_cache(channel_item, cache_key, response)
 
         # Having used the cache or not, we can return the response now
+        response
+        response
         return response
 
 # ################################################################################################################################
@@ -710,7 +727,7 @@ class RequestHandler:
     def _needs_admin_response(
         self,
         service_instance:'Service',
-        service_invoker_name:'str'=ServiceConst.ServiceInvokerName # type: str
+        service_invoker_name:'str'=ServiceConst.ServiceInvokerName
         ) -> 'bool':
         return isinstance(service_instance, AdminService) and service_instance.name != service_invoker_name
 
@@ -728,7 +745,7 @@ class RequestHandler:
         """
 
         if self._needs_admin_response(service_instance):
-            if data_format == ModuleCtx.SIO_JSON:
+            if data_format in {ModuleCtx.SIO_JSON, ModuleCtx.SIO_FORM_DATA}:
                 zato_env = {'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}}
                 if response.payload and (not isinstance(response.payload, str)):
                     payload = response.payload.getvalue(False)
