@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from copy import deepcopy
 from datetime import datetime
 from http.client import OK
@@ -111,10 +112,13 @@ class BaseHTTPSOAPWrapper:
     ) -> 'Response':
 
         json = kwargs.pop('json', None)
-
         cert = self.config['tls_key_cert_full_path'] if self.config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT else None
-        tls_verify = self.config.get('tls_verify', True)
-        tls_verify = tls_verify if isinstance(tls_verify, bool) else tls_verify.encode('utf-8')
+
+        if 'ZATO_SKIP_TLS_VERIFY' in os.environ:
+            tls_verify = False
+        else:
+            tls_verify = self.config.get('tls_verify', True)
+            tls_verify = tls_verify if isinstance(tls_verify, bool) else tls_verify.encode('utf-8')
 
         try:
 
