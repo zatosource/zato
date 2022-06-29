@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from logging import getLogger
@@ -23,9 +21,17 @@ from sqlalchemy.pool.dbapi_proxy import _DBProxy
 from zato.common.api import MS_SQL
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 def get_queue_pool(pool_kwargs):
@@ -39,8 +45,7 @@ def get_queue_pool(pool_kwargs):
 class SimpleSession:
     """ A simple object simulating SQLAlchemy sessions.
     """
-    def __init__(self, api):
-        # type: (MSSQLDirectAPI)
+    def __init__(self, api:'MSSQLDirectAPI') -> 'None':
         self.api = api
 
     def __call__(self):
@@ -63,13 +68,22 @@ class MSSQLDirectAPI:
     name = MS_SQL.ZATO_DIRECT
     ping_query = 'SELECT 1'
 
-    def __init__(self, name, pool_size, connect_kwargs):
-        # type: (str, int, dict) -> None
+    def __init__(
+        self,
+        name,      # type: str
+        pool_size, # type: int
+        connect_kwargs, # type: stranydict
+        extra           # type: stranydict
+    ) -> 'None':
+
+        # Max. overflow is user-configurable
+        max_overflow = extra.get('max_overflow', 0)
+
         self._name = name
         self._connect_kwargs = connect_kwargs
         self._pool_kwargs = {
             'pool_size': pool_size,
-            'max_overflow': 0,
+            'max_overflow': max_overflow,
 
             # This is a pool-level checkout timeout, not an SQL query-level one
             # so we do not need to make it configurable
