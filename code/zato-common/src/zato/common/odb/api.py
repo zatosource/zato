@@ -307,7 +307,7 @@ class SQLConnectionPool:
                 if value is not NotGiven:
                     connect_kwargs[name] = value
 
-            return MSSQLDirectAPI(config['name'], config['pool_size'], connect_kwargs)
+            return MSSQLDirectAPI(config['name'], config['pool_size'], connect_kwargs, extra)
 
 # ################################################################################################################################
 
