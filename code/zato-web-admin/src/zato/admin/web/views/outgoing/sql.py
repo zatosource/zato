@@ -46,7 +46,7 @@ def _edit_create_response(verb, id, name, engine_display_name, cluster_id):
     """ A common function for producing return data for create and edit actions.
     """
     return_data = {'id': id,
-                   'message': 'Successfully {} outgoing SQL connection `{}`'.format(verb, name.encode('utf-8')),
+                   'message': 'Successfully {} outgoing SQL connection `{}`'.format(verb, name),
                    'engine_display_name': engine_display_name,
                    'cluster_id': cluster_id,
                 }
