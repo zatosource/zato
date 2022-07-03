@@ -12,8 +12,7 @@ from unittest import main, TestCase
 # Zato
 from zato.common.ext.dataclasses import dataclass, field
 from zato.common.marshal_.api import MarshalAPI, Model
-from zato.common.marshal_.simpleio import DataClassSimpleIO
-from zato.common.test import BaseSIOTestCase, rand_int, rand_string
+from zato.common.test import rand_int, rand_string
 from zato.common.test.marshall_ import CreateUserRequest, Role, TestService, User
 from zato.common.typing_ import cast_, list_field, strlistnone
 
