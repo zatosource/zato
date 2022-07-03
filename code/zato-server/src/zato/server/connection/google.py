@@ -51,23 +51,23 @@ class GoogleClient:
     api_version: 'str'
     user: 'str'
     scopes: 'anylist' = list_field()
-    service_file_path: 'str'
+    service_file_dict: 'str'
     dir_map: 'stranydict'
 
-    def __init__(self, api_name: 'str', api_version: 'str', user:'str', scopes: 'anylist', service_file_path:'str') -> 'None':
+    def __init__(self, api_name: 'str', api_version: 'str', user:'str', scopes: 'anylist', service_file_dict:'str') -> 'None':
         self.api_name = api_name
         self.api_version = api_version
         self.user = user
         self.scopes = scopes
-        self.service_file_path = service_file_path
+        self.service_file_dict = service_file_dict
 
         # This is a mapping of remote directories already created to their Google Drive IDs
-        self.dir_map = {}
+        self._dir_map = {}
 
 # ################################################################################################################################
 
     def connect(self) -> 'any_':
-        credentials = ServiceAccountCredentials.from_json_keyfile_name(self.service_file_path, scopes=self.scopes)
+        credentials = ServiceAccountCredentials.from_json_keyfile_dict(self.service_file_dict, scopes=self.scopes)
         credentials = credentials.create_delegated(self.user)
         http = credentials.authorize(httplib2.Http())
         self.conn = discovery.build(self.api_name, self.api_version, http=http)
@@ -76,7 +76,7 @@ class GoogleClient:
 # ################################################################################################################################
 
     def reset(self) -> 'None':
-        self.dir_map.clear()
+        self._dir_map.clear()
 
 # ################################################################################################################################
 
@@ -185,12 +185,12 @@ class GoogleClient:
                     # If we do not have such a directory cached yet, it means that we need
                     # to create it and assign it to our current part. There will be always
                     # a parent to assign the directory to because we started with the top-level element.
-                    if current_path_str not in self.dir_map:
-                        parent_id = self.dir_map[current_parent_path_str]
+                    if current_path_str not in self._dir_map:
+                        parent_id = self._dir_map[current_parent_path_str]
                         dir_id = self.create_remote_directory(part, parent_id=parent_id)
-                        self.dir_map[current_path_str] = dir_id
+                        self._dir_map[current_path_str] = dir_id
                         logger.info('Caching directory %s -> %s', current_path_str, dir_id)
-                        logger.info('Current cache: %s', self.dir_map)
+                        logger.info('Current cache: %s', self._dir_map)
 
                     # Iterate down the list of parts
                     current_parent = part
@@ -205,7 +205,7 @@ class GoogleClient:
     ) -> 'str':
 
         # Log information about what we are about to do
-        logger.info('About to sync `%s` to Google Drive (%s -> %s)', local_path, self.user, self.service_file_path)
+        logger.info('About to sync `%s` to Google Drive (%s)', local_path, self.user)
 
         # Each directory contains a timestamp in case we need to recreate it
         root_suffix = fs_safe_now()
@@ -225,7 +225,7 @@ class GoogleClient:
         root_dir_id = self.create_remote_directory(new_dir_root_str, parent_id=parent_directory_id)
 
         # Assign it to the mapping of directories to their IDs for later use
-        self.dir_map[new_dir_root_str] = root_dir_id
+        self._dir_map[new_dir_root_str] = root_dir_id
 
         # Walk down a tree of directories and files. Note that directories will always be visited first
         # and that all the names are sorted alphabetically.
@@ -256,7 +256,7 @@ class GoogleClient:
                 file_parent_str = os.path.normpath(file_parent_str)
 
                 # We can be certain that it exists because, again, directories are visited first.
-                parent_id = self.dir_map[file_parent_str]
+                parent_id = self._dir_map[file_parent_str]
 
                 # Now we can upload the file
                 item_full_path = item.absolute().as_posix()
