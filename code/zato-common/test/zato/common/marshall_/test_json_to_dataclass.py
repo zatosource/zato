@@ -207,22 +207,6 @@ class JSONToDataclassTestCase(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SIOAttachTestCase(BaseSIOTestCase):
-
-    def test_attach_sio(self):
-
-        from zato.server.service import Service
-
-        class MyService(Service):
-            class SimpleIO:
-                input = CreateUserRequest
-
-        DataClassSimpleIO.attach_sio(None, self.get_server_config(), MyService)
-        self.assertIsInstance(MyService._sio, DataClassSimpleIO)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 if __name__ == '__main__':
     main()
 
