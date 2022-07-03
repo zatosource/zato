@@ -58,6 +58,9 @@ https://github.com/dsuch/paodate/archive/master.zip#egg=paodate
 https://github.com/salmito/simple-rbac/archive/master.zip#egg=simple-rbac
 geventhttpclient==1.4.4
 globre==0.1.5
+google-api-python-client==2.52.0
+google-auth-httplib2==0.1.0
+google-auth-oauthlib==0.5.2
 humanize==3.0.1
 hvac==0.7.2
 idna==3.3
