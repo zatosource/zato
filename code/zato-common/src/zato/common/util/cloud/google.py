@@ -31,6 +31,7 @@ def get_api_list() -> 'list_[GoogleAPIDescription]':
 
     # Zato
     from zato.common.model.google import GoogleAPIDescription
+    from zato.common.typing_ import cast_
     from zato.common.util.open_ import open_r
 
     # Response to produce
@@ -38,6 +39,10 @@ def get_api_list() -> 'list_[GoogleAPIDescription]':
 
     # A reusable parser
     parser = SIMDJSONParser()
+
+    # A cache to make it easier to find out which APIs
+    # have only non-GA APIs.
+    version_cache = {}
 
     # .. build a full path to the schema ..
     full_path = os.path.join(root_dir, 'index.json')
@@ -63,8 +68,23 @@ def get_api_list() -> 'list_[GoogleAPIDescription]':
             desc.name = api_name
             desc.title = api_title
             desc.version = api_version
+            desc.title_full = '{} ({})'.format(desc.title, desc.version)
+
+            api_version_entry = version_cache.setdefault(desc.name, []) # type: list
+            api_version_entry.append(desc)
 
             out.append(desc)
+
+    # Go through each API in the cache ..
+    for desc_list in version_cache.values():
+
+        # .. if the list of descriptions contains more than one
+        # .. we need to remove all the non-GA ones from the output list ..
+        if len(desc_list) > 1:
+            for item in desc_list:
+                item = cast_('GoogleAPIDescription', item)
+                if ('alpha' in item.version) or ('beta' in item.version):
+                    out.remove(item)
 
     out.sort(key=itemgetter('title'))
 
