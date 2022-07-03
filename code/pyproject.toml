@@ -1,6 +1,6 @@
 [tool.pyright]
 pythonVersion = "3.8"
-typeCheckingMode = "off" # "basic"
+typeCheckingMode = "basic"
 
 #
 # This is level 1

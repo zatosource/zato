@@ -26,7 +26,7 @@ from zato.common.util.time_ import utcnow_as_ms
 if 0:
     from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SQLSession
-    from zato.common.typing_ import any_, anylist, anytuple, callable_, commondict, intnone, optional, stranydict, \
+    from zato.common.typing_ import any_, anylist, anytuple, callable_, commondict, optional, stranydict, \
         strlist, strlistempty, strnone, strorfloat, strtuple, tupnone
     from zato.server.connection.http_soap.outgoing import SudsSOAPWrapper
     from zato.server.pubsub.model import Topic
@@ -149,7 +149,7 @@ class PubSubMessage:
     data_prefix:       'str'
     data_prefix_short: 'str'
     mime_type:         'str'
-    priority:          'intnone'
+    priority:          'int'
     expiration:        'int'
     expiration_time:   'float'
     has_gd:            'bool'
@@ -434,7 +434,6 @@ def ensure_subs_exist(
             sorted(elem['sub_key']    for elem in out), # type: ignore
             sorted(elem['pub_msg_id'] for elem in gd_msg_list)
         )
-        to_remove
 
     # .. and return the result to our caller.
     return out
