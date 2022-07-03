@@ -44,6 +44,22 @@ class ToJSONTestCase(BaseSIOTestCase):
         self.assertDictEqual(deserialized, {'user_name': user_name})
 
 # ################################################################################################################################
+
+    def test_serialize_bson_mongodb_object_id(self):
+
+        # Test data
+        user_name = '123456789012345678901234' # ObjectId expects input in this format
+        user_name_object_id = ObjectId(user_name)
+
+        user = User()
+        user.user_name = user_name_object_id # type: ignore
+
+        serialized = user.to_json()
+        deserialized = loads(serialized)
+
+        self.assertDictEqual(deserialized, {'user_name': user_name})
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':

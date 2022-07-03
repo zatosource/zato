@@ -19,6 +19,9 @@ except ImportError:
         pass
     _ListBaseClass = _Sentinel
 
+# BSON (MongoDB)
+from bson import ObjectId
+
 # orjson
 from orjson import dumps
 
@@ -108,8 +111,17 @@ class Model:
     def to_dict(self):
         return asdict(self)
 
+    def _json_default_serializer(self, value):
+
+        # Serialize BSON / MongoDB objects
+        if isinstance(value, ObjectId):
+            return str(value)
+
+        # We do not know how to serialize it
+        return value
+
     def to_json(self, default=None, impl_extra=0):
-        return dumps(self, default=default, option=impl_extra)
+        return dumps(self, default=default or self._json_default_serializer, option=impl_extra)
 
     def clone(self) -> 'any_':
         data = self.to_dict()
