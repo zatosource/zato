@@ -24,7 +24,7 @@ class UtilCloudGoogleTestCase(TestCase):
 
         # We do not know how many APIs we are going to receive as this is outside our control.
         # But we do know there will be hundreds of them.
-        min_api_list_len = 250
+        min_api_list_len = 200
         actual_api_list_len = len(api_list)
 
         # Make sure we have at least that many results
@@ -35,7 +35,6 @@ class UtilCloudGoogleTestCase(TestCase):
         api_version = 'v3'
 
         for item in api_list:
-            print(item.title, item.version)
             if item.title == api_title and item.version == api_version:
                 self.assertEqual(item.name, 'drive')
                 self.assertEqual(item.id, 'drive:v3')
