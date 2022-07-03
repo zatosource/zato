@@ -30,13 +30,13 @@ reportImplicitStringConcatenation = "error"
 # This is level 2
 #
 #reportMissingImports       = "error"
-#reportGeneralTypeIssues    = "error"
-#reportOptionalMemberAccess = "error"
+reportGeneralTypeIssues    = "error"
+reportOptionalMemberAccess = "error"
 
 #
 # This is level 3
 #
-#reportMissingParameterType = "error"
+reportMissingParameterType = "error"
 
 #
 # This is level 4, needed before reportUnknownMemberType
