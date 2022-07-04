@@ -359,16 +359,11 @@ class Client:
     """ A WebSocket client that knows how to invoke Zato services.
     """
     max_connect_attempts: 'int'
+    conn: '_WebSocketClientImpl'
 
     def __init__(self, config:'Config') -> 'None':
         self.config = config
-        self.conn = _WebSocketClientImpl(
-            self.config,
-            self.on_connected,
-            self.on_message,
-            self.on_error,
-            self.on_closed,
-        )
+        self.conn = self.create_conn(self.config)
         self.keep_running = True
         self.is_authenticated = False
         self.is_connected = False
@@ -380,7 +375,7 @@ class Client:
         self.max_connect_attempts = self.config.max_connect_attempts
         self._json_parser = SIMDJSONParser()
         self._marshal_api = MarshalAPI()
-        self.logger = getLogger(__name__)
+        self.logger = getLogger('zato_web_socket')
 
         # Keyed by IDs of requests sent from this client to Zato
         self.requests_sent = {}
@@ -394,6 +389,16 @@ class Client:
         # Log information that we are about to become available
         self.logger.info('Starting WSX client: %s -> name:`%s`; id:`%s`; u:`%s`',
             self.config.address, self.config.client_name, self.config.client_id, self.config.username)
+
+    def create_conn(self, config:'Config') -> '_WebSocketClientImpl':
+        conn = _WebSocketClientImpl(
+            config,
+            self.on_connected,
+            self.on_message,
+            self.on_error,
+            self.on_closed,
+        )
+        return conn
 
 # ################################################################################################################################
 
@@ -518,9 +523,9 @@ class Client:
         needs_connect = True
         start = now = datetime.utcnow()
 
-        # In the first few seconds, do not warn about socket errors in case
+        # Initially, do not warn about socket errors in case
         # the other end is intrinsically slow to connect to.
-        warn_from = start + timedelta(seconds=3)
+        warn_from = start + timedelta(seconds=30)
         use_warn = False
 
         # Wait for max_wait seconds until we have the connection
@@ -544,12 +549,25 @@ class Client:
             num_connect_attempts += 1
 
             try:
-                if self.conn.sock:
-                    self.conn.connect()
-                else:
-                    raise ValueError('No WSX connection to {} after {}'.format(self.config.address, now - start))
-            except Exception as e:
 
+                # The underlying TCP socket may have been deleted ..
+                if not self.conn.sock:
+
+                    # .. and we need to recreate it .
+                    self.conn = self.create_conn(self.config)
+
+                # If we are here, it means that we likely have a TCP socket to use ..
+                try:
+                    self.conn.connect()
+
+                # .. however, we still need to catch the broken pipe error
+                # .. and, in such a case, forcibly close the connection
+                # .. to let it be opened in the next iteration of this loop.
+                except BrokenPipeError:
+                    self.conn.close_connection()
+                    raise
+
+            except Exception as e:
                 if use_warn:
                     log_func = self.logger.warning
                 else:
@@ -557,14 +575,14 @@ class Client:
                         log_func = self.logger.warning
                         use_warn = True
                     else:
-                        log_func = self.logger.debug
+                        log_func = self.logger.info
 
                 log_func('Exception caught in iter %s/%s `%s` while connecting to WSX `%s (%s)`',
                     num_connect_attempts,
                     self.max_connect_attempts,
                     e,
                     self.config.address,
-                    format_exc()
+                    self.conn.sock
                 )
                 sleep(_sleep_time)
                 now = utcnow()
