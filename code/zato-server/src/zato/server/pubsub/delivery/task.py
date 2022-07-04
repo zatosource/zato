@@ -514,7 +514,7 @@ class DeliveryTask:
         logger.warning(sleep_msg)
         logger_zato.warning(sleep_msg)
 
-        sleep(sleep_time)
+        sleep(sleep_time) # pyright: ignore[reportGeneralTypeIssues]
 
 # ################################################################################################################################
 
@@ -603,7 +603,7 @@ class DeliveryTask:
 
                         # Sleep for a moment because we have just run out of all messages.
                         elif result.reason_code == ReasonCode.No_Msg:
-                            sleep(default_sleep_time)
+                            sleep(default_sleep_time) # pyright: ignore[reportGeneralTypeIssues]
 
                         # Otherwise, sleep for a longer time because our endpoint must have returned an error.
                         # After this sleep, self.run_delivery will again attempt to deliver all messages
@@ -634,7 +634,7 @@ class DeliveryTask:
                 else:
 
                     # .. thus, we can wait until one arrives.
-                    sleep(default_sleep_time)
+                    sleep(default_sleep_time) # pyright: ignore[reportGeneralTypeIssues]
 
         except Exception:
             error_msg = 'Exception in delivery task for sub_key:`%s`, e:`%s`'

@@ -26,12 +26,16 @@ from requests.adapters import HTTPAdapter
 from requests.exceptions import Timeout as RequestsTimeout
 from requests.sessions import Session as RequestsSession
 
+# requests-toolbelt
+from requests_toolbelt import MultipartEncoder
+
 # Zato
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE
 from zato.common.exception import Inactive, TimeoutException
 from zato.common.json_internal import dumps, loads
 from zato.common.marshal_.api import Model
 from zato.common.util.api import get_component_name
+from zato.common.util.open_ import open_rb
 from zato.server.connection.queue import ConnectionQueue
 
 # ################################################################################################################################
@@ -470,6 +474,44 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
     def patch(self, cid:'str', data:'str'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
         return self.http_request('PATCH', cid, data, params, *args, **kwargs)
+
+    def upload(
+        self,
+        cid,  # type: str
+        item, # type: str
+        field_name = 'data',      # type: str
+        mime_type  = 'text/plain' # type: str
+    ) -> 'Response':
+
+        # Make sure such a file exists
+        if not os.path.exists(item):
+            raise Exception('File to upload not found -> `%s`', item)
+
+        # Ensure that the path actually is a file
+        if not os.path.isfile(item):
+            raise Exception('Path is not a file -> `%s`', item)
+
+        # Extract the file
+        file_name = os.path.basename(item)
+
+        # At this point, we have collected everything needed to upload the file and we can proceed
+        with open_rb(item) as file_to_upload:
+
+            # Build a list of fields to be encoded as a multi-part upload
+            fields = {
+                field_name: (file_name, file_to_upload, mime_type)
+            }
+
+            # .. this is  the object that builds a multi-part message out of the file ..
+            encoder = MultipartEncoder(fields=fields)
+
+            # .. build user headers based on what the encoder produced ..
+            headers = {
+                'Content-Type': encoder.content_type
+            }
+
+            # .. now, we can invoke the remote endpoint with our file on input.
+            return self.post(cid, data=encoder, headers=headers)
 
 # ################################################################################################################################
 # ################################################################################################################################
