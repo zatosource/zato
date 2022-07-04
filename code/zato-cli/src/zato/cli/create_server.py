@@ -133,7 +133,7 @@ startup_callable=
 return_json_schema_errors=False
 sftp_genkey_command=dropbearkey
 posix_ipc_skip_platform=darwin
-service_invoker_allow_internal=
+service_invoker_allow_internal="pub.zato.ping", "/zato/api/invoke/{{service_name}}"
 
 [events]
 fs_data_path = {{events_fs_data_path}}
@@ -219,7 +219,7 @@ patterns=True
 target_matcher=False
 invoke_matcher=False
 sms=True
-sso=False
+sso=True
 
 [pubsub]
 wsx_gateway_service_allowed=
