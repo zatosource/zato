@@ -286,7 +286,7 @@ class ConnectionQueue:
         """
         with self.lock:
             if self.queue.full():
-                logger.info('Queue already full (c:%d) (%s %s)', count, self.address, self.conn_name)
+                logger.info('Queue fully prepared -> c:%d (%s %s)', count, self.address, self.conn_name)
                 return
             self._spawn_add_client_func_no_lock(count)
 
