@@ -120,7 +120,7 @@ class Index(_Index):
             # Otherwise, it is a dictionary and we need to process each of its values.
             # The initial keys in the container (self.items) will be set but a view's
             # before_invoke_admin_service method.
-            for key, value_list in item_list.items():
+            for key, value_list in (item_list or {}).items():
                 container = self.items.get(key, [])
                 self._handle_single_item_list(container, value_list)
 
