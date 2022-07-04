@@ -117,7 +117,7 @@ class OpenAPIGenerator:
             # .. this key will always exist ..
             property_map = {
                 'description': info.description
-            }
+            } # type: stranydict
 
             # .. for nested models, ref will exist ..
             if info.ref:

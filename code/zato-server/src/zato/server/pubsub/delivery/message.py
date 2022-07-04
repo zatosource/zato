@@ -76,7 +76,7 @@ class Message(PubSubMessage):
         # If we received an external publication time from a publisher,
         # this has priority over the time that we established ourselves (which is checked below)
         elif self.ext_pub_time and other.ext_pub_time:
-            return self.ext_pub_time < other.ext_pub_time
+            return cast_('float', self.ext_pub_time) < cast_('float', other.ext_pub_time)
 
         # Finally, we need to compare the publication times as assigned
         # by ourselves. At this point no two messages are to have the same
@@ -99,7 +99,7 @@ class Message(PubSubMessage):
         self.pub_time_iso = cast_('str', datetime_from_ms(self.pub_time * 1000))
 
         if self.ext_pub_time:
-            self.ext_pub_time_iso = cast_('str', datetime_from_ms(self.ext_pub_time * 1000))
+            self.ext_pub_time_iso = cast_('str', datetime_from_ms(cast_('float', self.ext_pub_time) * 1000))
 
         if self.expiration_time:
             self.expiration_time_iso = cast_('str', datetime_from_ms(self.expiration_time * 1000))
