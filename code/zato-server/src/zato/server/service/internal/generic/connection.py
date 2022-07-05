@@ -145,6 +145,12 @@ class _CreateEdit(_BaseService):
 
             data[key] = value
 
+        # If the is_active flag does exist but it is None, it should be treated as though it was set to False,
+        # which is needed because None would be treated as NULL by the SQL database.
+        if 'is_active' in data:
+            if data['is_active'] is None:
+                data['is_active'] = False
+
         conn = GenericConnection.from_dict(data)
 
         with closing(self.server.odb.session()) as session:
