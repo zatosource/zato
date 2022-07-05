@@ -1495,6 +1495,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def api_worker_store_reconnect_generic(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.worker_store.reconnect_generic(*args, **kwargs)
 
+    def is_active_outconn_wsx(self, conn_id:'str') -> 'bool':
+        is_active = self.worker_store.is_active_generic_conn(conn_id)
+        return is_active
+
 # ################################################################################################################################
 # ################################################################################################################################
 

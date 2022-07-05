@@ -62,6 +62,27 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
+    def get_conn_dict_by_id(self, conn_id:'int') -> 'dict | None':
+        conn_dict, _ = self._find_conn_info(conn_id)
+        return conn_dict
+
+# ################################################################################################################################
+
+    def is_active_generic_conn(self, conn_id:'int') -> 'bool':
+
+        # Try to find such a connection ..
+        conn_dict = self.get_conn_dict_by_id(conn_id)
+
+        # .. if it exists, we can check if it is active ..
+        if conn_dict:
+            return conn_dict['is_active']
+
+        # .. otherwise, assume that it is not.
+        else:
+            return False
+
+# ################################################################################################################################
+
     def _delete_generic_connection(self, msg:'stranydict') -> 'None':
 
         conn_dict, conn_value = self._find_conn_info(msg['id'])
