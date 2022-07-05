@@ -273,7 +273,7 @@ class Create(_CreateEdit):
                 filter(Service.name==input.service).first()
 
             if input.connection == CONNECTION.CHANNEL and not service:
-                msg = 'Service `{}` does not exist on this cluster'.format(input.service)
+                msg = 'Service `{}` does not exist in this cluster'.format(input.service)
                 self.logger.error(msg)
                 raise Exception(msg)
 
@@ -439,7 +439,7 @@ class Edit(_CreateEdit):
                 filter(Service.name==input.service).first()
 
             if input.connection == CONNECTION.CHANNEL and not service:
-                msg = 'Service `{}` does not exist on this cluster'.format(input.service)
+                msg = 'Service `{}` does not exist in this cluster'.format(input.service)
                 self.logger.error(msg)
                 raise Exception(msg)
 

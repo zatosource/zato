@@ -87,7 +87,7 @@ class Create(AdminService):
                 filter(ModelService.name==input.service).first()
 
             if not service:
-                msg = 'Service `{}` does not exist on this cluster'.format(input.service)
+                msg = 'Service `{}` does not exist in this cluster'.format(input.service)
                 self.logger.error(msg)
                 raise Exception(msg)
 
@@ -153,7 +153,7 @@ class Edit(AdminService):
                 filter(ModelService.name==input.service).first()
 
             if not service:
-                msg = 'Service `{}` does not exist on this cluster'.format(input.service)
+                msg = 'Service `{}` does not exist in this cluster'.format(input.service)
                 raise Exception(msg)
 
             try:

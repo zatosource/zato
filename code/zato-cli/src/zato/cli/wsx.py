@@ -218,6 +218,41 @@ class CreateOutconn(ServerAwareCommand):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class DeleteOutconn(ServerAwareCommand):
+    """ Deletes a WebSocket outgoing connection.
+    """
+    opts = [
+        {'name':'--id', 'help':'ID of the outgoing connection to delete', 'required':False,},
+        {'name':'--name', 'help':'Name of the outgoing connection to delete', 'required':False,},
+        {'name':'--path', 'help':'Path to a Zato server', 'required':True},
+    ]
+
+    def execute(self, args:'Namespace'):
+
+        id = getattr(args, 'id', None)
+        name = getattr(args, 'name', None)
+
+        # Make sure we have input data to delete the outgoing connection by
+        if not (id or name):
+            msg = 'Cannot continue. To delete a WebSocket outgoing connection, either --id or --name is required on input.'
+            self.logger.warn(msg)
+            sys.exit(self.SYS_ERROR.INVALID_INPUT)
+
+        # API service to invoke
+        service = 'zato.generic.connection.delete'
+
+        # API request to send
+        request = {
+            'id': id,
+            'name': name,
+            'should_raise_if_missing': False
+        }
+
+        self._invoke_service_and_log_response(service, request)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
 
     # stdlib
