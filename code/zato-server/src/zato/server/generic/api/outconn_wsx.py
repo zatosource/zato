@@ -445,11 +445,18 @@ class OutconnWSXWrapper(Wrapper):
 
     def on_close_cb(self, code:'int', reason:'strnone'=None) -> 'None':
 
+        # We need to special-case the situation when it is us who deleted the outgoing connection.
+        reason_is_not_delete = reason != COMMON_GENERIC.DeleteReasonBytes
+
         # Ignore events we generated ourselves, e.g. when someone edits a connection in web-admin
         # this will result in deleting and rerecreating a connection which implicitly calls this callback.
         if self._should_handle_close_cb(code, reason):
 
-            logger.info('Remote server closed connection to WebSocket `%s`, c:`%s`, r:`%s`', self.config['name'], code, reason)
+            # If reason is something else than our deleting the connection, we can log this message
+            # to indicate that it must have been the remote server that did it.
+            if reason_is_not_delete:
+                logger.info('Remote server closed connection to WebSocket `%s`, c:`%s`, r:`%s`',
+                    self.config['name'], code, reason)
 
             if self.config.get('on_close_service_name'):
 
@@ -463,11 +470,18 @@ class OutconnWSXWrapper(Wrapper):
             has_auto_reconnect = self.config.get('has_auto_reconnect', True)
 
             if has_auto_reconnect:
-                logger.info('WebSocket `%s` will reconnect to `%s` (hac:%d)',
-                    self.config['name'], self.config['address'], has_auto_reconnect)
                 try:
-                    if reason != COMMON_GENERIC.DeleteReasonBytes:
+
+                    # Reconnect only if it was not us who deleted the connection ..
+                    if reason_is_not_delete:
+
+                        # .. log what we are about to do ..
+                        logger.info('WebSocket `%s` will reconnect to `%s` (hac:%d)',
+                            self.config['name'], self.config['address'], has_auto_reconnect)
+
+                        # .. and do reconnect now.
                         self.server.api_worker_store_reconnect_generic(self.config['id'])
+
                 except Exception:
                     logger.warning('Could not reconnect WebSocket `%s` to `%s`, e:`%s`',
                         self.config['name'], self.config['address'], format_exc())
