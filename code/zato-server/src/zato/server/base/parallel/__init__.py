@@ -1499,6 +1499,16 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         is_active = self.worker_store.is_active_generic_conn(conn_id)
         return is_active
 
+    def on_wsx_outconn_stopped_running(self, conn_id:'str') -> 'None':
+        """ This does not do anything by default but tests can overwrite it with custom functionality.
+        """
+        logger.warn('QQQ-1 -> on_wsx_outconn_stopped_running')
+
+    def on_wsx_outconn_connected(self, conn_id:'str') -> 'None':
+        """ This does not do anything by default but tests can overwrite it with custom functionality.
+        """
+        logger.warn('QQQ-2 -> on_wsx_outconn_connected')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
