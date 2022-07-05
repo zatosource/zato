@@ -48,14 +48,21 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _find_conn_info(self, item_id:'int') -> 'tuple_':
+    def _find_conn_info(self, item_id:'int', item_name:'str'='') -> 'tuple_':
+
+        if item_id:
+            search_key = 'id'
+            search_value = item_id
+        else:
+            search_key = 'name'
+            search_value = item_name
 
         found_conn_dict = None
         found_name = None
 
         for _ignored_conn_type, value in self.generic_conn_api.items():
             for _ignored_conn_name, conn_dict in value.items():
-                if conn_dict['id'] == item_id:
+                if conn_dict[search_key] == search_value:
                     return conn_dict, value
 
         return found_conn_dict, found_name
@@ -85,7 +92,7 @@ class Generic(WorkerImpl):
 
     def _delete_generic_connection(self, msg:'stranydict') -> 'None':
 
-        conn_dict, conn_value = self._find_conn_info(msg['id'])
+        conn_dict, conn_value = self._find_conn_info(msg['id'], msg['name'])
         if not conn_dict:
             raise Exception('Could not find configuration matching input message `{}`'.format(msg))
         else:
