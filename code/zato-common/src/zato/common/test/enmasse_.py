@@ -6,10 +6,31 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-ZZ z z-- =z- z- -z-z z--zzzz
+# stdlib
+from logging import basicConfig, getLogger, WARN
+from traceback import format_exc
+
+from unittest import TestCase
 
 # sh
 from sh import ErrorReturnCode
+
+# Zato
+from zato.common.test.config import TestConfig
+from zato.common.util.cli import get_zato_sh_command
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+basicConfig(level=WARN, format='%(asctime)s - %(message)s')
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from sh import RunningCommand
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
