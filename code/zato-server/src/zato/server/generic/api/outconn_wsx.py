@@ -324,7 +324,6 @@ class WSXClient:
 class OutconnWSXWrapper(Wrapper):
     """ Wraps a queue of connections to WebSockets.
     """
-    has_stop_running = True
     has_delete_reasons = True
     supports_reconnections = True
 
