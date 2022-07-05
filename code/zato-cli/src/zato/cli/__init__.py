@@ -147,6 +147,7 @@ command_imports = (
     ('delete_basic_auth', 'zato.cli.security.basic_auth.DeleteDefinition'),
     ('delete_rest_channel', 'zato.cli.rest.channel.DeleteChannel'),
     ('delete_wsx_channel', 'zato.cli.wsx.DeleteChannel'),
+    ('delete_wsx_outconn', 'zato.cli.wsx.DeleteOutconn'),
     ('decrypt', 'zato.cli.crypto.Decrypt'),
     ('encrypt', 'zato.cli.crypto.Encrypt'),
     ('enmasse', 'zato.cli.enmasse.Enmasse'),
