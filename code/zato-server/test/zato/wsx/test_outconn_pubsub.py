@@ -42,6 +42,11 @@ class TestServer:
 
 # ################################################################################################################################
 
+    def is_active_outconn_wsx(self, _ignored_conn_id:'str') -> 'bool':
+        return True
+
+# ################################################################################################################################
+
     def api_service_store_get_service_name_by_id(self, service_id:'int') -> 'str':
         self.ctx.append({
             'api_service_store_get_service_name_by_id':service_id
