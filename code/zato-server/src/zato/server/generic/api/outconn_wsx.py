@@ -170,6 +170,8 @@ class ZatoWSXClient(_BaseWSXClient):
         )
 
         self._zato_client_config.check_is_active_func = self.check_is_active
+        self._zato_client_config.on_outconn_stopped_running_func = self.on_outconn_stopped_running
+        self._zato_client_config.on_outconn_connected_func = self.on_outconn_connected
         self._zato_client_config.client_id = 'wsx.out.{}'.format(new_cid(8))
         self._zato_client_config.address = self.config['address']
         self._zato_client_config.on_request_callback = self.on_message_cb
@@ -206,6 +208,18 @@ class ZatoWSXClient(_BaseWSXClient):
         parent = self.config['parent'] # type: OutconnWSXWrapper
         is_active = parent.check_is_active()
         return is_active
+
+# ################################################################################################################################
+
+    def on_outconn_stopped_running(self):
+        parent = self.config['parent'] # type: OutconnWSXWrapper
+        parent.on_outconn_stopped_running()
+
+# ################################################################################################################################
+
+    def on_outconn_connected(self):
+        parent = self.config['parent'] # type: OutconnWSXWrapper
+        parent.on_outconn_connected()
 
 # ################################################################################################################################
 
@@ -337,6 +351,16 @@ class OutconnWSXWrapper(Wrapper):
     def check_is_active(self) -> 'bool':
         is_active = self.server.is_active_outconn_wsx(self.config['id'])
         return is_active
+
+# ################################################################################################################################
+
+    def on_outconn_stopped_running(self) -> 'bool':
+        self.server.on_wsx_outconn_stopped_running(self.config['id'])
+
+# ################################################################################################################################
+
+    def on_outconn_connected(self) -> 'bool':
+        self.server.on_wsx_outconn_connected(self.config['id'])
 
 # ################################################################################################################################
 
