@@ -31,10 +31,28 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+channel_template = """
+
+web_socket:
+
+  - name: test.channel.WSXOutconnReconnectTestCase.{test_suffix}
+    is_active: true
+    is_internal: false
+    service: helpers.web-sockets-pub-sub-gateway
+    address: ws://localhost:22099/test
+    sec_def: zato-no-security
+    data_format: json
+    new_token_wait_time: 30
+    ping_interval: 90
+    pings_missed_threshold: 5
+    token_ttl: 3600
+"""
+
 outconn_template = """
 
 zato_generic_connection:
-    - address: ws://localhost:22099
+    - name: test.outconn.WSXOutconnReconnectTestCase.{test_suffix}
+      address: ws://localhost:22099/test
       cache_expiry: 0
       has_auto_reconnect: true
       is_active: true
@@ -42,42 +60,11 @@ zato_generic_connection:
       is_internal: false
       is_outconn: false
       is_zato: true
-      name: test.outconn.WSXOutconnReconnectTestCase.{test_suffix}
       pool_size: 1
       sec_use_rbac: false
       security_def: ZATO_NONE
       subscription_list:
       type_: outconn-wsx
-"""
-
-channel_template = """
-
-channel_plain_http:
-
-  - connection: channel
-    is_active: true
-    is_internal: false
-    merge_url_params_req: true
-    name: /test/enmasse1/{test_suffix}
-    params_pri: channel-params-over-msg
-    sec_def: zato-no-security
-    service: pub.zato.ping
-    service_name: pub.zato.ping
-    transport: plain_http
-    url_path: /test/enmasse1/{test_suffix}
-
-  - connection: channel
-    is_active: true
-    is_internal: false
-    merge_url_params_req: true
-    name: /test/enmasse2/{test_suffix}
-    params_pri: channel-params-over-msg
-    sec_def: zato-no-security
-    service: pub.zato.ping
-    service_name: pub.zato.ping
-    transport: plain_http
-    url_path: /test/enmasse2/{test_suffix}
-
 """
 
 # ################################################################################################################################
@@ -160,14 +147,14 @@ class WSXOutconnReconnectTestCase(BaseEnmasseTestCase):
             self.invoke_enmasse(outconn_config_file)
 
             # .. now, delete the channel ..
-            self._delete_channel(test_suffix)
+            # self._delete_channel(test_suffix)
 
             # .. create the channel back ..
-            self.invoke_enmasse(channel_config_file)
+            # self.invoke_enmasse(channel_config_file)
 
             # .. wait a few seconds to make sure that the outgoing connection
             # .. has enough time to reconnect ..
-            sleep(6)
+            # sleep(6)
 
             # .. and confirm that it did.
 
@@ -175,8 +162,9 @@ class WSXOutconnReconnectTestCase(BaseEnmasseTestCase):
             self.fail('Caught an exception -> {}'.format(format_exc()))
 
         finally:
-            self._delete_channel(test_suffix)
-            self._delete_outconn(test_suffix)
+            # self._delete_channel(test_suffix)
+            # self._delete_outconn(test_suffix)
+            pass
 
 # ################################################################################################################################
 # ################################################################################################################################
