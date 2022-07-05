@@ -79,7 +79,7 @@ class Create(AdminService):
                 first()
 
             if not service:
-                msg = 'Service `{}` does not exist on this cluster'.format(input.service)
+                msg = 'Service `{}` does not exist in this cluster'.format(input.service)
                 raise Exception(msg)
 
             try:
@@ -152,7 +152,7 @@ class Edit(AdminService):
                 first()
 
             if not service:
-                msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
+                msg = 'Service [{0}] does not exist in this cluster'.format(input.service)
                 raise Exception(msg)
 
             try:
