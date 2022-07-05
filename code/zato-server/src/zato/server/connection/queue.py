@@ -316,7 +316,6 @@ class ConnectionQueue:
 class Wrapper:
     """ Base class for queue-based connections wrappers.
     """
-    has_stop_running = False
     has_delete_reasons = False
     supports_reconnections = False
 
@@ -363,11 +362,6 @@ class Wrapper:
             else:
                 logger.info('Skipped building an inactive connection queue for `%s` (%s)',
                     self.client.conn_name, self.client.conn_type)
-
-                # Make sure that underlying clients (such as WSX) do no longer attempt to connect
-                # in case we have become inactive before they established their connections.
-                if self.has_stop_running:
-                    self.delete()
 
     # Not all connection types will be queue-based
     build_wrapper = build_queue
