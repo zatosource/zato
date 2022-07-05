@@ -89,8 +89,6 @@ zato_generic_connection:
 
 class EnmasseTestCase(BaseEnmasseTestCase):
 
-# ################################################################################################################################
-
     def _cleanup(self, test_suffix:'str') -> 'None':
 
         # A shortcut
@@ -127,10 +125,10 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
         try:
             # Invoke enmasse to create objects ..
-            self._invoke_command(config_path)
+            self.invoke_enmasse(config_path)
 
             # .. now invoke it again to edit them in place.
-            self._invoke_command(config_path)
+            self.invoke_enmasse(config_path)
 
         except ErrorReturnCode as e:
             stdout = e.stdout # type: bytes
@@ -162,7 +160,7 @@ class EnmasseTestCase(BaseEnmasseTestCase):
         f.close()
 
         # Invoke enmasse to create objects (which will fail because the service used above does not exist)
-        out = self._invoke_command(config_path, require_ok=False)
+        out = self.invoke_enmasse(config_path, require_ok=False)
 
         stdout = out.stdout # type: any_
         stdout = stdout.decode('utf8')

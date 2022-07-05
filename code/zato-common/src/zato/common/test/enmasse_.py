@@ -58,7 +58,7 @@ class BaseEnmasseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def _invoke_command(self, config_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
+    def invoke_enmasse(self, config_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
 
         # A shortcut
         command = get_zato_sh_command()
