@@ -33,7 +33,7 @@ class WSXOutconnConnectTestCase(WSXOutconnBaseCase):
                 ctx.wsx_channel_address
             )
 
-            wrapper = OutconnWSXWrapper(config, None) # type: ignore
+            wrapper = OutconnWSXWrapper(config, self._get_test_server()) # type: ignore
             wrapper.build_queue()
 
             # Confirm that the client is connected
@@ -58,7 +58,7 @@ class WSXOutconnConnectTestCase(WSXOutconnBaseCase):
                 password
             )
 
-            wrapper = OutconnWSXWrapper(config, None) # type: ignore
+            wrapper = OutconnWSXWrapper(config, self._get_test_server()) # type: ignore
             wrapper.build_queue()
 
             # Confirm that the client is connected
@@ -85,7 +85,7 @@ class WSXOutconnConnectTestCase(WSXOutconnBaseCase):
                 queue_build_cap=1
             )
 
-            wrapper = OutconnWSXWrapper(config, None) # type: ignore
+            wrapper = OutconnWSXWrapper(config, self._get_test_server()) # type: ignore
             wrapper.build_queue()
             wrapper.delete_queue_connections()
 

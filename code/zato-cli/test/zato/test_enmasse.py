@@ -134,6 +134,26 @@ class EnmasseTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def _cleanup(self, test_suffix:'str') -> 'None':
+
+        # A shortcut
+        command = get_zato_sh_command()
+
+        # Build the name of the connection to delete
+        conn_name = f'test.enmasse.{test_suffix}'
+
+        # Invoke the delete command ..
+        out = command(
+            'delete-wsx-outconn',
+            '--path', TestConfig.server_location,
+            '--name', conn_name
+        )
+
+        # .. and make sure there was no error in stdout/stderr ..
+        self._assert_command_line_result(out)
+
+# ################################################################################################################################
+
     def test_enmasse_ok(self) -> 'None':
 
         tmp_dir = gettempdir()
@@ -162,6 +182,9 @@ class EnmasseTestCase(TestCase):
 
             self._warn_on_error(stdout, stderr)
             self.fail('Caught an exception while invoking enmasse')
+
+        finally:
+            self._cleanup(test_suffix)
 
 # ################################################################################################################################
 
