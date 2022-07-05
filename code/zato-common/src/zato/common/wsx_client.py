@@ -90,6 +90,9 @@ class Config:
     wait_time: 'int' = Default.ResponseWaitTime
     max_connect_attempts: 'int' = Default.MaxConnectAttempts
 
+    # This is a method that will tell the client whether its parent connection definition is still active.
+    check_is_active_func: 'callable_'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -525,13 +528,22 @@ class Client:
 
         # Initially, do not warn about socket errors in case
         # the other end is intrinsically slow to connect to.
-        warn_from = start + timedelta(seconds=30)
+        warn_from = start + timedelta(hours=24)
         use_warn = False
 
         # Wait for max_wait seconds until we have the connection
         until = now + timedelta(seconds=max_wait)
 
         while self.keep_running and needs_connect and now < until:
+
+            # Check whether our connection definition is still active ..
+            is_active = self.config.check_is_active_func()
+
+            # .. if it is not, we can break out of the loop.
+            if not is_active:
+                self.logger.info('Skipped building an inactive WSX connection -> %s', self.config.client_name)
+                self.keep_running = False
+                break
 
             # Check if we have already run out of attempts.
             if num_connect_attempts >= self.max_connect_attempts:
@@ -582,7 +594,7 @@ class Client:
                     self.max_connect_attempts,
                     e,
                     self.config.address,
-                    self.conn.sock
+                    self.conn.sock,
                 )
                 sleep(_sleep_time)
                 now = utcnow()
