@@ -12,9 +12,6 @@ from traceback import format_exc
 
 from unittest import TestCase
 
-# sh
-from sh import ErrorReturnCode
-
 # Zato
 from zato.common.test.config import TestConfig
 from zato.common.util.cli import get_zato_sh_command
@@ -36,8 +33,6 @@ if 0:
 # ################################################################################################################################
 
 class BaseEnmasseTestCase(TestCase):
-
-# ################################################################################################################################
 
     def _warn_on_error(self, stdout:'any_', stderr:'any_') -> 'None':
         logger.warning(format_exc())
