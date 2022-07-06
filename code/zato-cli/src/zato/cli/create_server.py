@@ -133,7 +133,7 @@ startup_callable=
 return_json_schema_errors=False
 sftp_genkey_command=dropbearkey
 posix_ipc_skip_platform=darwin
-service_invoker_allow_internal="pub.zato.ping", "/zato/api/invoke/{{service_name}}"
+service_invoker_allow_internal="pub.zato.ping", "/zato/api/invoke/service_name"
 
 [events]
 fs_data_path = {{events_fs_data_path}}
@@ -792,8 +792,9 @@ class Create(ZatoCommand):
 
             server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
             server_conf = open_w(server_conf_loc)
-            server_conf.write(
-                server_conf_template.format(
+
+            # Substate the variables ..
+            server_conf_data = server_conf_template.format(
                     port=getattr(args, 'http_port', None) or default_http_port,
                     gunicorn_workers=1,
                     odb_db_name=args.odb_db_name or args.sqlite_path,
@@ -812,7 +813,13 @@ class Create(ZatoCommand):
                     scheduler_host=self.get_arg('scheduler_host', SCHEDULER.DefaultHost),
                     scheduler_port=self.get_arg('scheduler_port', SCHEDULER.DefaultPort),
                     scheduler_use_tls=scheduler_use_tls
-                ))
+                )
+
+            # .. and special-case this one as it contains the {} characters
+            # .. which makes it more complex to substitute them.
+            server_conf_data = server_conf_data.replace('/zato/api/invoke/service_name', '/zato/api/invoke/{service_name}')
+
+            server_conf.write(server_conf_data)
             server_conf.close()
 
             pickup_conf_loc = os.path.join(self.target_dir, 'config/repo/pickup.conf')
