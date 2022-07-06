@@ -40,6 +40,7 @@ from bunch import Bunch, bunchify
 # gevent
 from gevent import sleep, socket, spawn
 from gevent.lock import RLock
+from gevent.pywsgi import WSGIServer as _Gevent_WSGIServer
 
 # pysimdjson
 from simdjson import Parser as SIMDJSONParser
@@ -47,7 +48,7 @@ from simdjson import Parser as SIMDJSONParser
 # ws4py
 from ws4py.exc import HandshakeError
 from ws4py.websocket import WebSocket as _WebSocket
-from ws4py.server.geventserver import WSGIServer, WebSocketWSGIHandler
+from ws4py.server.geventserver import GEventWebSocketPool, WebSocketWSGIHandler
 from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 # Zato
@@ -642,7 +643,7 @@ class WebSocket(_WebSocket):
         """ Parses an incoming message into a Bunch object.
         """
         # Parse JSON into a dictionary
-        parsed = self._json_parser.parse(data)
+        parsed = self._json_parser.parse(data) # type: any_
         parsed = parsed.as_dict()
 
         # Create a request message
@@ -1485,7 +1486,7 @@ class WebSocket(_WebSocket):
 
         # Pretend it's an actual response from the client,
         # we cannot use in_reply_to because pong messages are 1:1 copies of ping ones.
-        data = self._json_parser.parse(msg.data)
+        data = self._json_parser.parse(msg.data) # type: any_
         msg_id = data['meta']['id']
         self.responses_received[msg_id] = True
 
@@ -1695,7 +1696,24 @@ class WSXWSGIHandler(WebSocketWSGIHandler):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class WebSocketServer(WSGIServer):
+class WSXGEventWebSocketPool(GEventWebSocketPool):
+    """ Overrides self.clear in order to use __self__ instead of im_self (Python 3).
+    """
+    def clear(self):
+        for greenlet in list(self):
+            try:
+                websocket = greenlet._run.__self__
+                if websocket:
+                    websocket.close(1001, 'Server is shutting down')
+            except Exception as e:
+                logger.info('WSX pool clear exception (info) -> %s', e)
+            finally:
+                self.discard(greenlet)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WebSocketServer(_Gevent_WSGIServer):
     """ A WebSocket server exposing Zato services to client applications.
     """
     handler_class = WSXWSGIHandler
@@ -1721,6 +1739,8 @@ class WebSocketServer(WSGIServer):
 
         super(WebSocketServer, self).__init__((config.host, config.port), WebSocketContainer(config, handler_cls=WebSocket))
 
+        self.pool = WSXGEventWebSocketPool()
+
 # ################################################################################################################################
 
     def stop(self, *args:'any_', **kwargs:'any_') -> 'None':
@@ -1728,6 +1748,7 @@ class WebSocketServer(WSGIServer):
         """
         # self.socket will exist only if we have previously successfully
         # bound to an address. Otherwise, there will be no such attribute.
+        self.pool.clear()
         if hasattr(self, 'socket'):
             self.socket.shutdown(2) # SHUT_RDWR has value of 2 in 'man 2 shutdown'
         super(WebSocketServer, self).stop(*args, **kwargs)

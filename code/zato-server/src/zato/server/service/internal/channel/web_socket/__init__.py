@@ -266,7 +266,7 @@ class _BaseAPICommand(_BaseCommand):
 # ################################################################################################################################
 
 class _BaseServerCommand(_BaseCommand):
-    func_name = None
+    func_name = '<overridden-by-subclasses>'
 
     def _get_server_response(self, func, pub_client_id):
         raise NotImplementedError('Must be implemented in subclasses')
