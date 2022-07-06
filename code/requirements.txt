@@ -20,7 +20,7 @@ configparser==3.7.1
 convertdate==2.0.3.1
 coverage==3.7.1
 crontab==0.22.9
-cryptography==36.0.0
+cryptography==37.0.4
 Cython==3.0a6
 dacite==1.6.0
 dataclasses-jsonschema==2.15.0
