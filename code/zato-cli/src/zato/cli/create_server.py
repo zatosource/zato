@@ -843,8 +843,8 @@ class Create(ZatoCommand):
                 os.symlink(user_conf_src, user_conf_dest)
 
             # There will be multiple keys in future releases to allow for key rotation
-            key1 = args.secret_key or Fernet.generate_key()
-            fernet1 = Fernet(key1)
+            secret_key = args.secret_key or Fernet.generate_key()
+            fernet1 = Fernet(secret_key)
 
             secrets_conf_loc = os.path.join(self.target_dir, 'config/repo/secrets.conf')
             secrets_conf = open_w(secrets_conf_loc)
@@ -862,8 +862,8 @@ class Create(ZatoCommand):
             zato_well_known_data = fernet1.encrypt(well_known_data.encode('utf8'))
             zato_well_known_data = zato_well_known_data.decode('utf8')
 
-            if isinstance(key1, (bytes, bytearray)):
-                key1 = key1.decode('utf8')
+            if isinstance(secret_key, (bytes, bytearray)):
+                secret_key = secret_key.decode('utf8')
 
             zato_main_token = fernet1.encrypt(self.token)
             zato_main_token = zato_main_token.decode('utf8')
@@ -881,7 +881,7 @@ class Create(ZatoCommand):
                 zato_misc_jwt_secret = zato_misc_jwt_secret.decode('utf8')
 
             secrets_conf.write(secrets_conf_template.format(
-                keys_key1=key1,
+                keys_key1=secret_key,
                 zato_well_known_data=zato_well_known_data,
                 zato_kvdb_password=kvdb_password,
                 zato_main_token=zato_main_token,
