@@ -89,6 +89,7 @@ class ConnectionQueue:
     assuming any connection is still available.
     """
 
+    is_active: 'bool'
     queue: 'Queue'
     queue_build_cap: 'int'
     queue_max_size: 'int'
@@ -111,6 +112,7 @@ class ConnectionQueue:
     def __init__(
         self,
         server: 'ParallelServer',
+        is_active: 'bool',
         pool_size:'int',
         queue_build_cap:'int',
         conn_id:'int',
@@ -122,6 +124,7 @@ class ConnectionQueue:
         max_attempts:'int' = 1234567890
     ) -> 'None':
 
+        self.is_active = is_active
         self.server = server
         self.queue = Queue(pool_size)
         self.queue_max_size = cast_('int', self.queue.maxsize) # Force static typing as we know that it will not be None
@@ -286,7 +289,7 @@ class ConnectionQueue:
         """
         with self.lock:
             if self.queue.full():
-                logger.info('Queue already full (c:%d) (%s %s)', count, self.address, self.conn_name)
+                logger.info('Queue fully prepared -> c:%d (%s %s)', count, self.address, self.conn_name)
                 return
             self._spawn_add_client_func_no_lock(count)
 
@@ -326,6 +329,7 @@ class Wrapper:
 
         self.client = ConnectionQueue(
             server,
+            self.config['is_active'],
             self.config['pool_size'],
             self.config['queue_build_cap'],
             self.config['id'],

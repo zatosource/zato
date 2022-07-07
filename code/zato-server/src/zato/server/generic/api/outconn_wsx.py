@@ -168,6 +168,8 @@ class ZatoWSXClient(_BaseWSXClient):
             current_thread().name,
             self.config['name']
         )
+
+        self._zato_client_config.check_is_active_func = self.check_is_active
         self._zato_client_config.client_id = 'wsx.out.{}'.format(new_cid(8))
         self._zato_client_config.address = self.config['address']
         self._zato_client_config.on_request_callback = self.on_message_cb
@@ -197,6 +199,13 @@ class ZatoWSXClient(_BaseWSXClient):
 
     def should_keep_running(self):
         return self._zato_client.keep_running
+
+# ################################################################################################################################
+
+    def check_is_active(self):
+        parent = self.config['parent'] # type: OutconnWSXWrapper
+        is_active = parent.check_is_active()
+        return is_active
 
 # ################################################################################################################################
 
@@ -322,6 +331,12 @@ class OutconnWSXWrapper(Wrapper):
         config['parent'] = self
         self._resolve_config_ids(config, server)
         super(OutconnWSXWrapper, self).__init__(config, COMMON_GENERIC.ConnName.OutconnWSX, server)
+
+# ################################################################################################################################
+
+    def check_is_active(self) -> 'bool':
+        is_active = self.server.is_active_outconn_wsx(self.config['id'])
+        return is_active
 
 # ################################################################################################################################
 

@@ -397,6 +397,15 @@ class CommandStore:
         self.add_opts(delete_wsx_channel, wsx_mod.DeleteChannel.opts)
 
         #
+        # delete-wsx-channel
+        #
+
+        delete_wsx_outconn = subs.add_parser('delete-wsx-outconn',
+            description=wsx_mod.DeleteOutconn.__doc__, parents=[base_parser])
+        delete_wsx_outconn.set_defaults(command='delete_wsx_outconn')
+        self.add_opts(delete_wsx_outconn, wsx_mod.CreateOutconn.opts)
+
+        #
         # encrypt
         #
 

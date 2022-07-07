@@ -117,6 +117,9 @@ class Model:
         if isinstance(value, ObjectId):
             return str(value)
 
+        elif isinstance(value, bytes):
+            return value.decode('utf8')
+
         # We do not know how to serialize it
         return value
 

@@ -77,7 +77,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         first()
 
     if not service:
-        msg = 'Service `{}` does not exist on this cluster'.format(service_name)
+        msg = 'Service `{}` does not exist in this cluster'.format(service_name)
         logger.error(msg)
         raise ZatoException(cid, msg)
 
