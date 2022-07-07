@@ -1,7 +1,5 @@
 html,
 body,
-div,
-span,
 applet,
 object,
 iframe,
@@ -12,8 +10,6 @@ h4,
 h5,
 h6,
 p,
-blockquote,
-pre,
 a,
 abbr,
 acronym,
@@ -28,7 +24,6 @@ font,
 img,
 ins,
 kbd,
-q,
 s,
 samp,
 small,
@@ -55,7 +50,8 @@ tfoot,
 thead,
 tr,
 th,
-td {
+td
+{
     margin: 0;
     padding: 0;
     border: 0;
@@ -94,18 +90,6 @@ th,
 td {
     text-align: left;
     font-weight: normal
-}
-
-blockquote:before,
-blockquote:after,
-q:before,
-q:after {
-    content: ""
-}
-
-blockquote,
-q {
-    quotes: "" ""
 }
 
 .sf-menu {
