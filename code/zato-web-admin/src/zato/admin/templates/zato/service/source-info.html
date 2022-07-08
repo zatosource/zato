@@ -19,7 +19,7 @@
     }
 
     .item-2 {
-        background-color:yellow;
+        background-color:#fff;
     }
 
     .item-3 {
@@ -30,8 +30,20 @@
     .editor-main-side-menu img {
         width: 27px;
         padding: 15px;
+        opacity: 35%;
     }
 
+    .editor-main-side-menu img:hover {
+        opacity: 100%;
+    }
+
+    .editor-main-side-menu a {
+        padding: 0px;
+    }
+
+    .editor-main-side-menu a:hover {
+        background-color: #dfdfdf;
+    }
 
 </style>
 
@@ -69,10 +81,14 @@
 
         <ul class="editor-main-side-menu">
             <li>
-                <img src="/static/gfx/editor/files.png" />
+                <a href="#">
+                    <img src="/static/gfx/editor/files.png" title="Browse files on server" />
+                </a>
             </li>
             <li>
-                <img src="/static/gfx/editor/files.png" />
+                <a href="#">
+                    <img src="/static/gfx/editor/play.png" title="Invoke the current service" />
+                </a>
             </li>
         </ul>
 
