@@ -9,7 +9,9 @@
     .container {
         display: grid;
         grid-template-rows: 120px 120px;
-        grid-template-columns: 2.9fr 1fr 0.06fr;
+        grid-template-columns: 3.9fr 1fr 0.06fr;
+        align-items: stretch;
+        height: 87vh;
     }
 
     #editor {
@@ -18,17 +20,19 @@
         border-bottom: 1px solid #ddd;
     }
 
-    .item-2 {
-        background-color:#fff;
+    #left-action-area {
+        height: 87vh;
+        background-color: #fff;
     }
 
-    .item-3 {
+    #left-side-menu {
+        height: 87vh;
         background-color:#dfdfdf;
         border-left: 1px solid #bbb;
     }
 
     .editor-main-side-menu img {
-        width: 27px;
+        width: 30px;
         padding: 15px;
         opacity: 35%;
     }
@@ -48,7 +52,7 @@
 </style>
 
 <div class="container">
-    <div class="item item-1">
+    <div class="item">
         <div id="editor">
             if __name__ == '__main__':
 
@@ -77,7 +81,7 @@
         </div>
     </div>
     <div class="item item-2">22</div>
-    <div class="item item-3">
+    <div id="left-side-menu" class="item">
 
         <ul class="editor-main-side-menu">
             <li>
@@ -88,6 +92,11 @@
             <li>
                 <a href="#">
                     <img src="/static/gfx/editor/play.png" title="Invoke the current service" />
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <img src="/static/gfx/editor/info.png" title="Details of the current service" />
                 </a>
             </li>
         </ul>
