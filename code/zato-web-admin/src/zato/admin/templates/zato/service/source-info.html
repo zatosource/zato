@@ -4,52 +4,80 @@
 
 {% block "content" %}
 
-
-
 <style type="text/css" media="screen">
+
+    .container {
+        display: grid;
+        grid-template-rows: 120px 120px;
+        grid-template-columns: 2.9fr 1fr 0.06fr;
+    }
 
     #editor {
         height: 87vh;
-        width: 60%;
         border-right: 1px solid #ddd;
         border-bottom: 1px solid #ddd;
     }
 
-    #editor-footer {
+    .item-2 {
         background-color:yellow;
     }
 
+    .item-3 {
+        background-color:#dfdfdf;
+        border-left: 1px solid #bbb;
+    }
+
+    .editor-main-side-menu img {
+        width: 27px;
+        padding: 15px;
+    }
+
+
 </style>
 
-<div id="editor">
-    if __name__ == '__main__':
+<div class="container">
+    <div class="item item-1">
+        <div id="editor">
+            if __name__ == '__main__':
 
-        env_key_name = 'ZATO_SERVER_BASE_DIR'
-        env_server_base_dir = os.environ.get(env_key_name)
+                env_key_name = 'ZATO_SERVER_BASE_DIR'
+                env_server_base_dir = os.environ.get(env_key_name)
 
-        if env_server_base_dir:
+                if env_server_base_dir:
 
 
-            server_base_dir = env_server_base_dir
-            cmd_line_options = {
-                'fg':True,
-                'sync_internal':True,
-                'secret_key':'',
-                'stderr_path':None,
-            }
-        else:
-            server_base_dir = sys.argv[1]
-            cmd_line_options = sys.argv[2]
-            cmd_line_options = parse_cmd_line_options(cmd_line_options)
+                    server_base_dir = env_server_base_dir
+                    cmd_line_options = {
+                        'fg':True,
+                        'sync_internal':True,
+                        'secret_key':'',
+                        'stderr_path':None,
+                    }
+                else:
+                    server_base_dir = sys.argv[1]
+                    cmd_line_options = sys.argv[2]
+                    cmd_line_options = parse_cmd_line_options(cmd_line_options)
 
-        if not os.path.isabs(server_base_dir):
-            server_base_dir = os.path.abspath(os.path.join(os.getcwd(), server_base_dir))
+                if not os.path.isabs(server_base_dir):
+                    server_base_dir = os.path.abspath(os.path.join(os.getcwd(), server_base_dir))
 
-        run(server_base_dir, options=cmd_line_options)
-</div>
-<div id="editor-footer">
-    Invoker
-</div>
+                run(server_base_dir, options=cmd_line_options)
+        </div>
+    </div>
+    <div class="item item-2">22</div>
+    <div class="item item-3">
+
+        <ul class="editor-main-side-menu">
+            <li>
+                <img src="/static/gfx/editor/files.png" />
+            </li>
+            <li>
+                <img src="/static/gfx/editor/files.png" />
+            </li>
+        </ul>
+
+    </div>
+  </div>
 
 <script src="/static/ace-builds/src/ace.js" type="text/javascript" charset="utf-8"></script>
 <script src="/static/ace-builds/src/ext-error_marker.js" type="text/javascript" charset="utf-8"></script>
