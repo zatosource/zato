@@ -350,8 +350,11 @@ class Create(ZatoCommand):
 
         random.seed()
 
+        # Make sure we always work with absolute paths
+        args_path = os.path.abspath(args.path)
+
         if args.odb_type == 'sqlite':
-            args.sqlite_path = os.path.abspath(os.path.join(args.path, 'zato.db'))
+            args.sqlite_path = os.path.join(args_path, 'zato.db')
 
         next_step = count(1)
         next_port = count(http_plain_server_port)
@@ -370,8 +373,6 @@ class Create(ZatoCommand):
         lb_host = '127.0.0.1'
         lb_port = 11223
         lb_agent_port = 20151
-
-        args_path = os.path.abspath(args.path)
 
         # This could've been set to True by user in the command-line so we'd want
         # to unset it so that individual commands quickstart invokes don't attempt
@@ -570,7 +571,7 @@ class Create(ZatoCommand):
         zato_bin = 'zato'
 
         # Visual Studio integration
-        vscode_dir = os.path.join(args.path, '.vscode')
+        vscode_dir = os.path.join(args_path, '.vscode')
         vscode_launch_json_path = os.path.join(vscode_dir, 'launch.json')
         vscode_settings_json_path = os.path.join(vscode_dir, 'settings.json')
 
