@@ -4,13 +4,9 @@
 
 {% block "content" %}
 
-<link rel="stylesheet" href="/static/gfx/font-awesome/font-awesome-4.7.0/css/font-awesome.min.css">
-
 <script type="text/javascript" src="/static/js/common.js"></script>
-
 <script>
     $.fn.zato.editor.toggle_action_area = function() {
-
 
         let css_property = "grid-template-columns";
         let default_size = "3.9fr 1fr 0.06fr";
@@ -32,6 +28,39 @@
 
         main_area_container.css(css_property, new_size);
     }
+
+    $.fn.zato.editor.switch_to_action_area = function(name) {
+        console.log("Name -> " + name);
+        if(name == "browser") {
+            $.fn.zato.editor.populate_browser_area();
+        }
+        else if(name == "invoker") {
+            $.fn.zato.editor.populate_invoker_area();
+        }
+        else if(name == "info") {
+            $.fn.zato.editor.populate_info_area();
+        }
+    }
+
+    $.fn.zato.editor.populate_browser_area = function() {
+        $("#header-left-link-1").text("New");
+        $("#header-left-link-2").text("Deploy");
+        $("#header-left-link-3").text("Deploy all");
+        $("#header-right-link-1").text("Push");
+        $("#header-status").text("4 files, 9 services");
+    }
+
+    $.fn.zato.editor.populate_invoker_area = function() {
+        $("#header-left-link-1").text("Clear");
+        $("#header-left-link-2").text("Previous");
+        $("#header-left-link-3").text("Next");
+        $("#header-right-link-1").text("OpenAPI");
+        $("#header-status").text("curl http://api:api@10.151.19.39:11223/zato/api/api.adapter.crm.customer.create -d '{\"customer_id\":\"123\"}'");
+    }
+
+    $.fn.zato.editor.populate_info_area = function() {
+    }
+
 </script>
 
 <style type="text/css" media="screen">
@@ -132,8 +161,9 @@
         padding: 9px;
     }
 
-    .file-system-listing td.header span.status {
-        opacity: 50%;
+    #header-status {
+        opacity: 70%;
+        font-size: 1.1em;
     }
 
     .file-system-listing td {
@@ -195,9 +225,9 @@
     <div id="action-area-container">
         <div id="action-area-header" data-is-expanded="false">
             <a href="javascript:$.fn.zato.editor.toggle_action_area()" class="img-button"><img src="/static/gfx/editor/resize.png" class="button" title="Resize this area" /></a>
-            <!-- <span class="header-text" title="Quickstart-1 10.191.781.88">Quickstart-1 10.191.781.88</span> -->
             <select>
-                <option>zato.ping.adapter.crm.customer.create</option>
+                <option>api.adapter.crm.customer.create</option>
+                <option>api.adapter.crm.customer.delete</option>
             </select>
         </div>
         <div id="left-action-area" class="item item-2">
@@ -205,22 +235,23 @@
                 <tr class="header">
                     <td colspan="2" class="header">
                         <div style="float:left">
-                            <a href="#">New</a>
+                            <a href="#" id="header-left-link-1">New</a>
                             |
-                            <a href="#">Deploy</a>
+                            <a href="#" id="header-left-link-2">Deploy</a>
                             |
-                            <a href="#">Deploy all</a>
+                            <a href="#" id="header-left-link-3">Deploy all</a>
                         </div>
                         <div style="width:100%; text-align:right;">
-                            <a href="#">Push</a>
+                            <a href="#" id="header-right-link-1">Push</a>
                         </div>
                     </td>
                 </tr>
                 <tr class="header">
                     <td colspan="2" class="header">
-                        <span class="status">
+                        <span id="header-status">
                             4 files, 9 services
                         </span>
+                        <a href="#">Copy</a>
                     </td>
                 </tr>
                 <tr>
@@ -246,17 +277,17 @@
 
         <ul class="left-side-buttons">
             <li>
-                <a href="#" class="img-button">
+                <a href="javascript:$.fn.zato.editor.switch_to_action_area('browser')" class="img-button">
                     <img src="/static/gfx/editor/files.png" class="button" title="Browse files on server" />
                 </a>
             </li>
             <li>
-                <a href="#" class="img-button">
+                <a href="javascript:$.fn.zato.editor.switch_to_action_area('invoker')" class="img-button">
                     <img src="/static/gfx/editor/play.png" class="button" title="Invoke the current service" />
                 </a>
             </li>
             <li>
-                <a href="#" class="img-button">
+                <a href="javascript:$.fn.zato.editor.switch_to_action_area('info')" class="img-button">
                     <img src="/static/gfx/editor/info.png" class="button" title="Details of the current service" />
                 </a>
             </li>
@@ -281,6 +312,8 @@
         fontSize: 17,
         cursorStyle: "ace"
     });
+
+    $.fn.zato.editor.populate_browser_area();
 
 </script>
 
