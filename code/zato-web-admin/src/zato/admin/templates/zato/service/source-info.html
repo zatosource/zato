@@ -9,8 +9,11 @@
     $.fn.zato.editor.toggle_action_area = function() {
 
         let css_property = "grid-template-columns";
-        let default_size = "3.9fr 1fr 0.06fr";
-        let expanded_size = "1.0fr 1fr 0.06fr";
+        // let default_size = "3.9fr 1fr 0.06fr";
+        // let expanded_size = "1.0fr 1fr 0.06fr";
+
+        let default_size = "1.0fr 1fr 0.06fr";
+        let expanded_size = "3.9fr 1fr 0.06fr";
 
         let main_area_container = $("#main-area-container");
         let elem_to_expand = $("#action-area-header");
@@ -68,7 +71,7 @@
     #main-area-container {
         display: grid;
         grid-template-rows: 87vh;
-        grid-template-columns: 3.9fr 1fr 0.06fr;
+        grid-template-columns: 1.0fr 1fr 0.06fr;
         align-items: stretch;
         height: 87vh;
     }
@@ -162,7 +165,6 @@
     }
 
     #header-status {
-        opacity: 70%;
         font-size: 1.1em;
     }
 
@@ -189,6 +191,22 @@
         text-decoration: none !important;
         font-family: monospace !important;
         font-size: 1.0em;
+    }
+
+    input.data-request {
+        width:100%;
+    }
+
+    input.data-request::placeholder {
+        color:#a6a6a6 !important
+    }
+
+    #data-response {
+        height: 58.5vh;
+    }
+
+    .dimmed {
+        opacity: 70%;
     }
 
 </style>
@@ -251,9 +269,48 @@
                         <span id="header-status">
                             4 files, 9 services
                         </span>
-                        <a href="#">Copy</a>
+                        <a href="#">Copy</a> |
+                        <a href="#">Edit</a>
                     </td>
                 </tr>
+
+                <tr colspan="2">
+                    <td>
+                        customer_id
+                        <br/>
+                        <input type="text" class="data-request" placeholder="customer_id"/>
+                    </td>
+                </tr>
+
+                <tr colspan="2">
+                    <td>
+                        account_id
+                        <br/>
+                        <input type="text" class="data-request" placeholder="account_id"/>
+                    </td>
+                </tr>
+
+                <tr colspan="2">
+                    <td>
+                        account_number
+                        <br/>
+                        <input type="text" class="data-request" placeholder="account_number"/>
+                    </td>
+                </tr>
+                <tr colspan="2">
+                    <td>
+                        <input type="button" value="Invoke" />
+                    </td>
+                </tr>
+                <tr colspan="2">
+                    <td>
+                        <br/>
+                        <span class="dimmed">Response 200 OK</span> <a href="#">Copy</a>
+                        <textarea id="data-response"></textarea>
+                    </td>
+                </tr>
+
+                <!--
                 <tr>
                     <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
                     <td class="item-name"><a href="#">demo_banking.py</a></td>
@@ -270,6 +327,7 @@
                     <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
                     <td class="item-name"><a href="#">demo_telco_security.py</a></td>
                 </tr>
+                -->
             </table>
         </div>
     </div>
