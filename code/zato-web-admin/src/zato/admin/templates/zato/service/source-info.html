@@ -4,9 +4,42 @@
 
 {% block "content" %}
 
+<script type="text/javascript" src="/static/js/common.js"></script>
+
+<script>
+    $.fn.zato.editor.toggle_action_area = function() {
+
+
+        let css_property = "grid-template-columns";
+        let default_size = "3.9fr 1fr 0.06fr";
+        let expanded_size = "1.0fr 1fr 0.06fr";
+
+        let main_area_container = $("#main-area-container");
+        let elem_to_expand = $("#action-area-header");
+
+        let is_expanded = elem_to_expand.attr("data-is-expanded");
+
+        if(is_expanded == "false") {
+            new_size = expanded_size;
+            elem_to_expand.attr("data-is-expanded", "true");
+        }
+        else {
+            new_size = default_size
+            elem_to_expand.attr("data-is-expanded", "false");
+        }
+
+        console.log(css_property);
+
+        main_area_container.css(css_property, new_size);
+
+        console.log(is_expanded);
+        console.log(new_size);
+    }
+</script>
+
 <style type="text/css" media="screen">
 
-    .container {
+    #main-area-container {
         display: grid;
         grid-template-rows: 87vh;
         grid-template-columns: 3.9fr 1fr 0.06fr;
@@ -87,7 +120,7 @@
 
 </style>
 
-<div class="container">
+<div id="main-area-container">
     <div class="item">
         <div id="editor">
             if __name__ == '__main__':
@@ -117,8 +150,8 @@
         </div>
     </div>
     <div id="action-area-container">
-        <div id="action-area-header">
-            <a href="#" class="img-button"><img src="/static/gfx/editor/resize.png" class="button" title="Resize this area" /></a>
+        <div id="action-area-header" data-is-expanded="false">
+            <a href="javascript:$.fn.zato.editor.toggle_action_area()" class="img-button"><img src="/static/gfx/editor/resize.png" class="button" title="Resize this area" /></a>
             <!-- <span class="header-text" title="Quickstart-1 10.191.781.88">Quickstart-1 10.191.781.88</span> -->
             <select>
                 <option>zato.ping.adapter.crm.customer.create</option>
