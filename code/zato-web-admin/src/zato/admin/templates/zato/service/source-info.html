@@ -132,14 +132,8 @@
         padding: 9px;
     }
 
-    .file-system-listing i.fa {
-        opacity: 30%;
-        padding-right: 8px;
-    }
-
-    .file-system-listing i.fa:hover {
-        opacity: 60%;
-        cursor: pointer;
+    .file-system-listing td.header span.status {
+        opacity: 50%;
     }
 
     .file-system-listing td {
@@ -151,11 +145,20 @@
         vertical-align: middle;
     }
 
+    .file-system-listing td.item-header {
+        width: 17px;
+    }
+
     .file-system-listing td.item-name {
         padding-top: 2px;
         padding-left: 5px;
-        font-family: monospace !important;
         color: #000;
+    }
+
+    .file-system-listing td.item-name a {
+        text-decoration: none !important;
+        font-family: monospace !important;
+        font-size: 1.0em;
     }
 
 </style>
@@ -201,26 +204,40 @@
             <table class="file-system-listing">
                 <tr class="header">
                     <td colspan="2" class="header">
-                        <i class="fa fa-file fa-lg" aria-hidden="true" title="New file"></i>
-                        <i class="fa fa-save fa-lg" aria-hidden="true" title="Save and deploy"></i>
-                        <i class="fa fa-paper-plane fa-lg" aria-hidden="true" title="Save and deploy all"></i>
+                        <div style="float:left">
+                            <a href="#">New</a>
+                            |
+                            <a href="#">Deploy</a>
+                            |
+                            <a href="#">Deploy all</a>
+                        </div>
+                        <div style="width:100%; text-align:right;">
+                            <a href="#">Push</a>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="header">
+                    <td colspan="2" class="header">
+                        <span class="status">
+                            6 files, 20 services
+                        </span>
                     </td>
                 </tr>
                 <tr>
-                    <td><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name">demo_banking.py</td>
+                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                    <td class="item-name"><a href="#">demo_banking.py</a></td>
                 </tr>
                 <tr>
-                    <td><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name">demo_healthcare.py</td>
+                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                    <td class="item-name"><a href="#">demo_healthcare.py</a></td>
                 </tr>
                 <tr>
-                    <td><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name">* <b>demo_telco_5g.py</b></td>
+                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
                 </tr>
                 <tr>
-                    <td><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name">demo_telco_security.py</td>
+                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                    <td class="item-name"><a href="#">demo_telco_security.py</a></td>
                 </tr>
             </table>
         </div>
