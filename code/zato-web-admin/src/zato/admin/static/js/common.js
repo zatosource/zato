@@ -84,6 +84,7 @@ $.namespace('zato.definition.cassandra');
 $.namespace('zato.definition.kafka');
 $.namespace('zato.definition.jms_wmq');
 $.namespace('zato.docs');
+$.namespace('zato.editor');
 $.namespace('zato.email');
 $.namespace('zato.email.imap');
 $.namespace('zato.email.smtp');
