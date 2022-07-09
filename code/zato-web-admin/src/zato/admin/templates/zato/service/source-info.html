@@ -54,9 +54,10 @@
     }
 
     $.fn.zato.editor.populate_invoker_area = function() {
-        $("#header-left-link-1").text("Clear");
+        $("#header-left-link-1").text("Deploy");
         $("#header-left-link-2").text("Previous");
         $("#header-left-link-3").text("Next");
+        $("#header-left-link-4").text("Clear");
         $("#header-right-link-1").text("OpenAPI");
         $("#header-status").text("curl http://api:api@10.151.19.39:11223/zato/api/api.adapter.crm.customer.create -d '{\"customer_id\":\"123\"}'");
     }
@@ -198,7 +199,12 @@
     }
 
     input.data-request::placeholder {
-        color:#a6a6a6 !important
+        color:#999 !important
+    }
+
+    td.data-input-field-name {
+        font-family: "Jost";
+        font-size: 0.86em;
     }
 
     #data-response {
@@ -259,6 +265,8 @@
                             <a href="#" id="header-left-link-2">Deploy</a>
                             |
                             <a href="#" id="header-left-link-3">Deploy all</a>
+                            |
+                            <a href="#" id="header-left-link-4"></a>
                         </div>
                         <div style="width:100%; text-align:right;">
                             <a href="#" id="header-right-link-1">Push</a>
@@ -267,7 +275,7 @@
                 </tr>
                 <tr class="header">
                     <td colspan="2" class="header">
-                        <span id="header-status">
+                        <span id="header-status" class="dimmed">
                             4 files, 9 services
                         </span>
                         <a href="#">Copy</a> |
@@ -276,7 +284,7 @@
                 </tr>
 
                 <tr colspan="2">
-                    <td title="This field is required">
+                    <td class="data-input-field-name" title="This field is required">
                         ⮞ customer_id
                         <br/>
                         <input type="text" class="data-request" placeholder="customer_id"/>
@@ -284,7 +292,7 @@
                 </tr>
 
                 <tr colspan="2">
-                    <td title="This field is optional">
+                    <td class="data-input-field-name" title="This field is optional">
                         ⮚ account_id
                         <br/>
                         <input type="text" class="data-request" placeholder="account_id"/>
@@ -292,7 +300,7 @@
                 </tr>
 
                 <tr colspan="2">
-                    <td title="This field is optional">
+                    <td class="data-input-field-name" title="This field is optional">
                         ⮚ account_number
                         <br/>
                         <input type="text" class="data-request" placeholder="account_number"/>
