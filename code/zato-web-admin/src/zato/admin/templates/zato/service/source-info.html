@@ -4,6 +4,8 @@
 
 {% block "content" %}
 
+<link rel="stylesheet" href="/static/gfx/font-awesome/font-awesome-4.7.0/css/font-awesome.min.css">
+
 <script type="text/javascript" src="/static/js/common.js"></script>
 
 <script>
@@ -113,6 +115,49 @@
         border-left: 1px solid #bbb;
     }
 
+    .file-system-listing img.fs-icon {
+        width: 16px
+    }
+
+    .file-system-listing {
+        width: 100%;
+    }
+
+    .file-system-listing tr.header {
+        background-color: #eee;
+    }
+
+    .file-system-listing td.header {
+        vertical-align: middle;
+        padding: 9px;
+    }
+
+    .file-system-listing i.fa {
+        opacity: 30%;
+        padding-right: 8px;
+    }
+
+    .file-system-listing i.fa:hover {
+        opacity: 60%;
+        cursor: pointer;
+    }
+
+    .file-system-listing td {
+        font-size: 0.73rem;
+        padding: 3px;
+        padding-left: 9px;
+        padding-top: 4px;
+        padding-bottom: 0px;
+        vertical-align: middle;
+    }
+
+    .file-system-listing td.item-name {
+        padding-top: 2px;
+        padding-left: 5px;
+        font-family: monospace !important;
+        color: #000;
+    }
+
 </style>
 
 <div id="main-area-container">
@@ -152,7 +197,33 @@
                 <option>zato.ping.adapter.crm.customer.create</option>
             </select>
         </div>
-        <div id="left-action-area" class="item item-2"></div>
+        <div id="left-action-area" class="item item-2">
+            <table class="file-system-listing">
+                <tr class="header">
+                    <td colspan="2" class="header">
+                        <i class="fa fa-file fa-lg" aria-hidden="true" title="New file"></i>
+                        <i class="fa fa-save fa-lg" aria-hidden="true" title="Save and deploy"></i>
+                        <i class="fa fa-paper-plane fa-lg" aria-hidden="true" title="Save and deploy all"></i>
+                    </td>
+                </tr>
+                <tr>
+                    <td><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                    <td class="item-name">demo_banking.py</td>
+                </tr>
+                <tr>
+                    <td><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                    <td class="item-name">demo_healthcare.py</td>
+                </tr>
+                <tr>
+                    <td><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                    <td class="item-name">* <b>demo_telco_5g.py</b></td>
+                </tr>
+                <tr>
+                    <td><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                    <td class="item-name">demo_telco_security.py</td>
+                </tr>
+            </table>
+        </div>
     </div>
     <div id="left-side-menu" class="item">
 
