@@ -99,6 +99,10 @@
         $.fn.zato.editor.clear_header_links("left")
         $.fn.zato.editor.clear_header_links("right")
 
+        // Make sure that we are only showing our own area now
+        $('.file-listing-tr').show();
+        $('.invoker-tr').hide();
+
         // Left-hand side links
         $.fn.zato.editor.add_header_left_link(1, "Deploy");
         $.fn.zato.editor.add_header_left_link(2, "Deploy all");
@@ -108,7 +112,7 @@
         $.fn.zato.editor.add_header_right_link(1, "Push", true);
 
         // One-line status bar
-        //$.fn.zato.editor.populate_header_status("4 files, 9 services");
+        $("#header-status").text("4 files, 9 services");
     }
 
     $.fn.zato.editor.populate_invoker_area = function() {
@@ -116,6 +120,10 @@
         // Clear anything that we may already have
         $.fn.zato.editor.clear_header_links("left")
         $.fn.zato.editor.clear_header_links("right")
+
+        // Make sure that we are only showing our own area now
+        $('.file-listing-tr').hide();
+        $('.invoker-tr').show();
 
         // Left-hand side links
         $.fn.zato.editor.add_header_left_link(1, "Deploy");
@@ -129,6 +137,11 @@
 
         // One-line status bar
         $("#header-status").text("curl http://api:api@10.151.19.39:11223/zato/api/api.adapter.crm.customer.create -d '{\"customer_id\":\"123\"}'");
+        /*
+        $("#header-status").text("curl http://api:api@10.151.19.39:11223/zato/api/api.adapter.crm.customer.create -d '{\"customer_id\":\"123\"}'");
+        $("<a href=\"#\">Edit</a>").insertAfter("#header-status");
+        $("<a class=\"header-sublink-first\" href=\"#\">Copy</a>").insertAfter("#header-status");
+        */
     }
 
     $.fn.zato.editor.populate_data_model_area = function() {
@@ -237,9 +250,21 @@
         font-size: 1.1em;
     }
 
+    #header-links-wrapper {
+        display: flex;
+    }
+
+    #header-links-left {
+        flex: 0 0 55%;
+    }
+
     #header-links-right {
-        width:100%;
+        flex: 1;
         text-align:right;
+    }
+
+    .header-sublink-first {
+        margin-left:6px;
     }
 
     .file-system-listing td {
@@ -332,19 +357,36 @@ if __name__ == '__main__':
             <table class="file-system-listing">
                 <tr class="header">
                     <td colspan="2" class="header">
-                        <div id="header-links-left"></div>
-                        <div id="header-links-right"></div>
+                        <div id="header-links-wrapper">
+                            <div id="header-links-left"></div>
+                            <div id="header-links-right"></div>
+                        </div>
                     </td>
                 </tr>
                 <tr class="header">
                     <td colspan="2" class="header">
                         <span id="header-status" class="dimmed"></span>
-                        <a href="#">Copy</a> |
-                        <a href="#">Edit</a>
                     </td>
                 </tr>
 
-                <tr colspan="2">
+                <tr class="file-listing-tr">
+                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                    <td class="item-name"><a href="#">demo_banking.py</a></td>
+                </tr>
+                <tr class="file-listing-tr">
+                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                    <td class="item-name"><a href="#">demo_healthcare.py</a></td>
+                </tr>
+                <tr class="file-listing-tr">
+                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
+                </tr>
+                <tr class="file-listing-tr">
+                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                    <td class="item-name"><a href="#">demo_telco_security.py</a></td>
+                </tr>
+
+                <tr colspan="2" class="invoker-tr">
                     <td class="data-input-field-name" title="This field is required">
                         ⮞ customer_id
                         <br/>
@@ -352,7 +394,7 @@ if __name__ == '__main__':
                     </td>
                 </tr>
 
-                <tr colspan="2">
+                <tr colspan="2" class="invoker-tr">
                     <td class="data-input-field-name" title="This field is optional">
                         ⮚ account_id
                         <br/>
@@ -360,44 +402,54 @@ if __name__ == '__main__':
                     </td>
                 </tr>
 
-                <tr colspan="2">
+                <tr colspan="2" class="invoker-tr">
                     <td class="data-input-field-name" title="This field is optional">
                         ⮚ account_number
                         <br/>
                         <input type="text" class="data-request" placeholder="account_number"/>
                     </td>
                 </tr>
-                <tr colspan="2">
+                <tr colspan="2" class="invoker-tr">
                     <td>
                         <input type="button" value="Invoke" />
                     </td>
                 </tr>
-                <tr colspan="2">
+                <tr colspan="2" class="invoker-tr">
                     <td>
                         <br/>
                         <span class="dimmed">Response 200 OK</span> <a href="#">Copy</a>
-                        <textarea id="data-response"></textarea>
+                        <textarea id="data-response">
+{
+    "RecordType": "MO",
+    "SystemIdentity": "ga",
+    "FileNum": "54",
+    "SwitchNum": "US",
+    "CallingNum": "12345567",
+    "CallingIMSI": "1234556700911",
+    "CalledNum": "77191972",
+    "CalledIMSI": "091716266251113",
+    "DateS": "20220311",
+    "TimeS": null,
+    "TimeType": 2,
+    "CallPeriod": 313,
+    "CallingCellID": null,
+    "CalledCellID": null,
+    "ServiceType": "S",
+    "Transfer": 1,
+    "IncomingTrunk": null,
+    "OutgoingTrunk": "3456",
+    "MSRN": "817296834",
+    "CalledNum2": null,
+    "FCIFlag": null,
+    "callrecTime": "2022-03-11T11:22:33.0000000Z",
+    "EventProcessedUtcTime": "2022-03-11T11:22:33.0000000Z",
+    "PartitionId": 5,
+    "EventEnqueuedUtcTime": "2022-03-11T11:22:33.0000000Z"
+}
+                        </textarea>
                     </td>
                 </tr>
 
-                <!--
-                <tr>
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_banking.py</a></td>
-                </tr>
-                <tr>
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_healthcare.py</a></td>
-                </tr>
-                <tr>
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
-                </tr>
-                <tr>
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_telco_security.py</a></td>
-                </tr>
-                -->
             </table>
         </div>
     </div>
