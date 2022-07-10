@@ -45,58 +45,46 @@
         }
     }
 
-    $.fn.zato.editor.clear_header_links = function(prefix, item_no, text, is_last) {
+    $.fn.zato.editor.clear_header_links = function(prefix) {
 
         // The element where all the links reside ..
-        let header_links_id = `#header-links`;
+        let header_links_id = `#header-links-${prefix}`;
         let header_links = $(header_links_id);
 
-        // .. first, clear it up ..
-        elem.empty();
-
-        // .. what each link will look like ..
-        let link_pattern = '<a href="$.fn.zato.editor.invoke_header_link(\"{0}\", {1})" id="header-{0}-link-{1}"></a>';
-
-        // .. what kind of links and how many of them we will have ..
-        let prefix_list = ["left", "right"];
-        let item_max = 7;
-
-        // .. now, recreate all the link placeholders ..
-        for (const prefix of prefix_list) {
-            let item_no = 0;
-            while(item_no < 7) {
-
-                // .. build a string containing the link ..
-                let link_string = String.format(link_pattern, prefix, item_no);
-
-                // .. now, the element ..
-                let link = $(link_string);
-
-                // .. now, append it to our links ..
-                link.append(header_links);
-
-                // .. and continue the loop.
-                item_no += 1;
-            }
-        }
+        // .. clean it up.
+        header_links.empty();
     }
 
-    $.fn.zato.editor.populate_header_link = function(prefix, item_no, text, is_last) {
-        let elem_id = `#header-${prefix}-link-${item_no}`;
-        let elem = $(elem_id);
-        elem.text(text);
+    $.fn.zato.editor.add_header_link = function(prefix, item_no, text, is_last) {
 
+        // The element where all the links reside ..
+        let header_links_id = `#header-links-${prefix}`;
+        let header_links = $(header_links_id);
+
+        // .. this is what each link will be based on ..
+        let link_pattern = '<a href="$.fn.zato.editor.invoke_header_link(\"{0}\", {1})" id="header-{0}-link-{1}">{2}</a>';
+
+        // .. build a string containing the link ..
+        let link_string = String.format(link_pattern, prefix, item_no, text);
+
+        // .. now, the element ..
+        link = $(link_string);
+
+        // .. now, append it to our links ..
+        header_links.append(link);
+
+        // .. and add a separator unless this is the last link.
         if(!is_last) {
-            $("<span>|</span>").insertAfter(elem);
+            $("<span> | </span>").insertAfter(link);
         }
     }
 
-    $.fn.zato.editor.populate_header_left_link = function(item_no, text, is_last) {
-        $.fn.zato.editor.populate_header_link("left", item_no, text, is_last);
+    $.fn.zato.editor.add_header_left_link = function(item_no, text, is_last) {
+        $.fn.zato.editor.add_header_link("left", item_no, text, is_last);
     }
 
-    $.fn.zato.editor.populate_header_right_link = function(item_no, text, is_last) {
-        $.fn.zato.editor.populate_header_link("right", item_no, text, is_last);
+    $.fn.zato.editor.add_header_right_link = function(item_no, text, is_last) {
+        $.fn.zato.editor.add_header_link("right", item_no, text, is_last);
     }
 
     $.fn.zato.editor.populate_header_status = function(text) {
@@ -108,31 +96,36 @@
     $.fn.zato.editor.populate_browser_area = function() {
 
         // Clear anything that we may already have
-        $.fn.zato.editor.clear_header_links()
+        $.fn.zato.editor.clear_header_links("left")
+        $.fn.zato.editor.clear_header_links("right")
 
         // Left-hand side links
-        $.fn.zato.editor.populate_header_left_link(1, "New");
-        $.fn.zato.editor.populate_header_left_link(2, "Deploy");
-        $.fn.zato.editor.populate_header_left_link(3, "Deploy all", true);
+        $.fn.zato.editor.add_header_left_link(1, "Deploy");
+        $.fn.zato.editor.add_header_left_link(2, "Deploy all");
+        $.fn.zato.editor.add_header_left_link(3, "New", true);
 
         // Right-hand side links
-        $.fn.zato.editor.populate_header_right_link(1, "Push", true);
+        $.fn.zato.editor.add_header_right_link(1, "Push", true);
 
         // One-line status bar
-        $.fn.zato.editor.populate_header_status("4 files, 9 services");
+        //$.fn.zato.editor.populate_header_status("4 files, 9 services");
     }
 
     $.fn.zato.editor.populate_invoker_area = function() {
 
+        // Clear anything that we may already have
+        $.fn.zato.editor.clear_header_links("left")
+        $.fn.zato.editor.clear_header_links("right")
+
         // Left-hand side links
-        $.fn.zato.editor.populate_header_left_link(1, "Deploy");
-        $.fn.zato.editor.populate_header_left_link(2, "Deploy all");
-        $.fn.zato.editor.populate_header_left_link(3, "Previous");
-        $.fn.zato.editor.populate_header_left_link(4, "Next");
-        $.fn.zato.editor.populate_header_left_link(5, "Clear form", true);
+        $.fn.zato.editor.add_header_left_link(1, "Deploy");
+        $.fn.zato.editor.add_header_left_link(2, "Deploy all");
+        $.fn.zato.editor.add_header_left_link(3, "Previous");
+        $.fn.zato.editor.add_header_left_link(4, "Next");
+        $.fn.zato.editor.add_header_left_link(5, "Clear form", true);
 
         // Right-hand side links
-        $.fn.zato.editor.populate_header_right_link(1, "OpenAPI", true);
+        $.fn.zato.editor.add_header_right_link(1, "OpenAPI", true);
 
         // One-line status bar
         $("#header-status").text("curl http://api:api@10.151.19.39:11223/zato/api/api.adapter.crm.customer.create -d '{\"customer_id\":\"123\"}'");
@@ -178,7 +171,6 @@
     #action-area-header a.img-button {
         border-right: 1px solid #d3d3d3;
     }
-
 
     #action-area-header a.img-button:hover {
         background-color: #e9e9e9;
@@ -245,6 +237,11 @@
         font-size: 1.1em;
     }
 
+    #header-links-right {
+        width:100%;
+        text-align:right;
+    }
+
     .file-system-listing td {
         font-size: 0.73rem;
         padding: 3px;
@@ -297,30 +294,30 @@
 <div id="main-area-container">
     <div class="item">
         <div id="editor">
-            if __name__ == '__main__':
+if __name__ == '__main__':
 
-                env_key_name = 'ZATO_SERVER_BASE_DIR'
-                env_server_base_dir = os.environ.get(env_key_name)
+    env_key_name = 'ZATO_SERVER_BASE_DIR'
+    env_server_base_dir = os.environ.get(env_key_name)
 
-                if env_server_base_dir:
+    if env_server_base_dir:
 
 
-                    server_base_dir = env_server_base_dir
-                    cmd_line_options = {
-                        'fg':True,
-                        'sync_internal':True,
-                        'secret_key':'',
-                        'stderr_path':None,
-                    }
-                else:
-                    server_base_dir = sys.argv[1]
-                    cmd_line_options = sys.argv[2]
-                    cmd_line_options = parse_cmd_line_options(cmd_line_options)
+        server_base_dir = env_server_base_dir
+        cmd_line_options = {
+            'fg':True,
+            'sync_internal':True,
+            'secret_key':'',
+            'stderr_path':None,
+        }
+    else:
+        server_base_dir = sys.argv[1]
+        cmd_line_options = sys.argv[2]
+        cmd_line_options = parse_cmd_line_options(cmd_line_options)
 
-                if not os.path.isabs(server_base_dir):
-                    server_base_dir = os.path.abspath(os.path.join(os.getcwd(), server_base_dir))
+    if not os.path.isabs(server_base_dir):
+        server_base_dir = os.path.abspath(os.path.join(os.getcwd(), server_base_dir))
 
-                run(server_base_dir, options=cmd_line_options)
+    run(server_base_dir, options=cmd_line_options)
         </div>
     </div>
     <div id="action-area-container">
@@ -335,17 +332,8 @@
             <table class="file-system-listing">
                 <tr class="header">
                     <td colspan="2" class="header">
-                        <div id="header-links">
-                            <a href="#" id="header-left-link-1">New</a>
-                            <a href="#" id="header-left-link-2">Deploy</a>
-                            <a href="#" id="header-left-link-3">Deploy all</a>
-                            <a href="#" id="header-left-link-4"></a>
-                            <a href="#" id="header-left-link-5"></a>
-                            <a href="#" id="header-left-link-6"></a>
-                        </div>
-                        <div style="width:100%; text-align:right;">
-                            <a href="#" id="header-right-link-1">Push</a>
-                        </div>
+                        <div id="header-links-left"></div>
+                        <div id="header-links-right"></div>
                     </td>
                 </tr>
                 <tr class="header">
