@@ -1578,14 +1578,11 @@ class HL7:
             zato   = 'Zato'
 
         class FHIR_Auth_Type:
-            PRIMARY = NameId('Primary', 'primary')
-            PRIMARY_PREFERRED = NameId('Primary pref.', 'primaryPreferred')
-            SECONDARY = NameId('Secondary', 'secondary')
-            SECONDARY_PREFERRED = NameId('Secondary pref.', 'secondaryPreferred')
-            NEAREST = NameId('Nearest', 'nearest')
+            Basic_Auth = NameId('Basic Auth', 'basic-auth')
+            JWT = NameId('JWT', 'jwt')
 
             def __iter__(self):
-                return iter((self.PRIMARY, self.PRIMARY_PREFERRED, self.SECONDARY, self.SECONDARY_PREFERRED, self.NEAREST))
+                return iter((self.Basic_Auth, self.JWT))
 
 # ################################################################################################################################
 # ################################################################################################################################

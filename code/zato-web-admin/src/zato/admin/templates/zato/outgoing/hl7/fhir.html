@@ -33,15 +33,15 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
+            'pool_size',
             'address',
 
             {% comment %} 2 {% endcomment %}
             'username',
-            'api_version',
-            '_is_cloud',
+            'auth_type',
+            '_change_password',
 
             {% comment %} 3 {% endcomment %}
-            '_change_api_token',
             '_edit',
             '_delete',
             '_ping',
@@ -49,7 +49,6 @@
             {% comment %} 4 {% endcomment %}
             'id',
             'is_active',
-            'is_cloud',
 
         ]
     }
@@ -86,21 +85,20 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
+                        <th><a href="#">Pool size</a></th>
                         <th><a href="#">Address</a></th>
 
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Username</a></th>
-                        <th>API version</th>
-                        <th>Cloud edition</th>
+                        <th>Auth. type</th>
+                        <th>&nbsp;</th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th>&nbsp;</th>
 
                         {% comment %} 4 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -116,15 +114,15 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.pool_size }}</td>
                         <td>{{ item.address }}</td>
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.username }}</td>
-                        <td>{{ item.api_version }}</td>
-                        <td>{{ item.is_cloud|yesno:'Yes,No' }}</td>
+                        <td>{{ item.auth_type }}</td>
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change password')">Change password</a></td>
 
                         {% comment %} 3 {% endcomment %}
-                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change API token')">Change API token</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.hl7.fhir.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.hl7.fhir.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
@@ -132,7 +130,6 @@
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.is_cloud }}</td>
 
                     </tr>
                 {% endfor %}
@@ -171,16 +168,17 @@
                                 |
 
                                 <label>
-                                Cloud edition
-                                {{ create_form.is_cloud }}
+                                Pool size
+                                {{ create_form.pool_size }}
                                 </label>
 
                                 |
 
                                 <label>
-                                API version
-                                {{ create_form.api_version }}
+                                Auth. type
+                                {{ create_form.auth_type }}
                                 </label>
+
                             </td>
                         </tr>
                         <tr>
@@ -238,15 +236,17 @@
                                 |
 
                                 <label>
-                                Cloud edition
-                                {{ edit_form.is_cloud }}
+                                Pool size
+                                {{ edit_form.pool_size }}
                                 </label>
 
                                 |
 
                                 <label>
-                                API version
-                                {{ edit_form.api_version }}
+                                Auth. type
+                                {{ edit_form.auth_type }}
+                                </label>
+
                                 </label>
                             </td>
                         </tr>
