@@ -1233,6 +1233,7 @@ class GENERIC:
             CLOUD_JIRA = 'cloud-jira'
             CLOUD_SALESFORCE = 'cloud-salesforce'
             DEF_KAFKA = 'def-kafka'
+            OUTCONN_HL7_FHIR = 'outconn-hl7-fhir'
             OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
             OUTCONN_IM_SLACK = 'outconn-im-slack'
             OUTCONN_IM_TELEGRAM = 'outconn-im-telegram'
@@ -1517,7 +1518,10 @@ class HL7:
     class Default:
         """ Default values for HL7 objects.
         """
-        # Default TCP port for MLLP connections
+        # Default address for FHIR connections
+        address_fhir = 'https://simplifier.net/zato'
+
+        # Default address for MLLP connections
         address = '0.0.0.0:30901'
 
         # Assume that UTF-8 is sent in by default
@@ -1572,6 +1576,16 @@ class HL7:
         class ImplClass:
             hl7apy = 'hl7apy'
             zato   = 'Zato'
+
+        class FHIR_Auth_Type:
+            PRIMARY = NameId('Primary', 'primary')
+            PRIMARY_PREFERRED = NameId('Primary pref.', 'primaryPreferred')
+            SECONDARY = NameId('Secondary', 'secondary')
+            SECONDARY_PREFERRED = NameId('Secondary pref.', 'secondaryPreferred')
+            NEAREST = NameId('Nearest', 'nearest')
+
+            def __iter__(self):
+                return iter((self.PRIMARY, self.PRIMARY_PREFERRED, self.SECONDARY, self.SECONDARY_PREFERRED, self.NEAREST))
 
 # ################################################################################################################################
 # ################################################################################################################################
