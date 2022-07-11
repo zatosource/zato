@@ -6,51 +6,42 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from logging import getLogger
-from traceback import format_exc
+# Django
+from django import forms
 
 # Zato
-from zato.hl7.mllp.client import HL7MLLPClient
-from zato.server.connection.queue import Wrapper
+from zato.admin.web.forms import add_select, WithAuditLog
+from zato.common.api import HL7 as HL7Commonn
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+_const = HL7Commonn.Const
+_default = HL7Commonn.Default
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _HL7MLLPConnection:
-    def __init__(self, config):
-        self.impl = HL7MLLPClient(config)
+class CreateForm(WithAuditLog):
 
-    def invoke(self, data):
-        # type: (str) -> str
-        return self.impl.send(data)
+    name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+
+    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.address_fhir)
+    auth_type = forms.ChoiceField(widget=forms.Select())
+
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    password = forms.CharField(strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
+
+    def __init__(self, *args, **kwargs):
+        super(CreateForm, self).__init__(*args, **kwargs)
+        add_select(self, 'auth_type', _const.FHIR_Auth_Type(), needs_initial_select=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class OutconnHL7MLLPWrapper(Wrapper):
-    """ Wraps a queue of connections to HL7 MLLP servers.
-    """
-    def __init__(self, config, server):
-        config.auth_url = config.address
-        super(OutconnHL7MLLPWrapper, self).__init__(config, 'HL7 MLLP', server)
-
-    def add_client(self):
-
-        try:
-            conn = _HL7MLLPConnection(self.config)
-            self.client.put_client(conn)
-        except Exception:
-            logger.warning('Caught an exception while adding an HL7 MLLP client (%s); e:`%s`',
-                self.config.name, format_exc())
-
-    def delete(self, ignored_reason=None):
-        pass
+class EditForm(CreateForm):
+    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################
 # ################################################################################################################################
