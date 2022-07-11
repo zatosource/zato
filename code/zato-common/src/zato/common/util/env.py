@@ -25,25 +25,25 @@ def populate_environment_from_file(env_path:'str') -> 'None':
             msg = 'No such path (env. variables) -> %s' % env_path
 
             # We need to use print too because logging may not be configured yet ..
-            print('No such path (env. variables) -> %s' % env_path)
+            print(msg % env_path)
 
             # .. but use logging nevertheless.
             logger.info(msg, env_path)
 
-            # Return explicitly
-            return
+        else:
 
-    else:
+            # Zato
+            from zato.common.ext.configobj_ import ConfigObj
 
-        # Zato
-        from zato.common.ext.configobj_ import ConfigObj
+            env_config = ConfigObj(env_path)
+            env = env_config.get('env') or {}
 
-        env_config = ConfigObj(env_path)
-        env = env_config.get('env') or {}
+            msg = 'Imported env. variable `%s` from `%s`'
 
-        for key, value in env.items(): # type: ignore
-            os.environ[key] = value
-            logger.info('Imported env. variable `%s` from `%s`', env_path)
+            for key, value in env.items(): # type: ignore
+                os.environ[key] = value
+                print(msg % (key, env_path))
+                logger.info(msg, key, env_path)
 
 # ################################################################################################################################
 # ################################################################################################################################
