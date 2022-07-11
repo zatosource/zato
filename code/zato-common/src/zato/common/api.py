@@ -29,6 +29,9 @@ engine_def_sqlite = 'sqlite:///{sqlite_path}'
 
 # Convenience access functions and constants.
 
+class OS_Env:
+    Zato_Enable_Memory_Profiler = 'Zato_Enable_Memory_Profiler'
+
 megabyte = 10 ** 6
 
 # Hook methods whose func.im_func.func_defaults contains this argument will be assumed to have not been overridden by users
