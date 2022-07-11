@@ -435,7 +435,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         dir_name = mkdtemp(prefix='zato-memory-profiler-')
 
         # .. now, the full path to the memory profile file ..
-        full_path = os.path.join(dir_name, 'zato-memory-profie.bin')
+        full_path = os.path.join(dir_name, 'zato-memory-profile.bin')
 
         # .. we can start the memray's tracker now ..
         with memray.Tracker(full_path):
