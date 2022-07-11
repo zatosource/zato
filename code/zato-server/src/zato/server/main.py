@@ -58,6 +58,7 @@ from zato.common.simpleio_ import get_sio_server_config
 from zato.common.util.api import absjoin, asbool, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.cli import read_stdin_data
+from zato.common.util.env import populate_environment_from_file
 from zato.common.util.platform_ import is_linux
 from zato.common.util.open_ import open_r
 from zato.server.base.parallel import ParallelServer
@@ -154,6 +155,9 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     # Store a pidfile before doing anything else
     store_pidfile(base_dir)
+
+    # Now, import environment variables
+    populate_environment_from_file(options.get('env_file') or '')
 
     # For dumping stacktraces
     if is_linux:
@@ -435,7 +439,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         dir_name = mkdtemp(prefix='zato-memory-profiler-')
 
         # .. now, the full path to the memory profile file ..
-        full_path = os.path.join(dir_name, 'zato-memory-profie.bin')
+        full_path = os.path.join(dir_name, 'zato-memory-profile.bin')
 
         # .. we can start the memray's tracker now ..
         with memray.Tracker(full_path):
@@ -473,6 +477,7 @@ if __name__ == '__main__':
             'sync_internal': True,
             'secret_key': '',
             'stderr_path': None,
+            'env_file': '',
         }
     else:
         server_base_dir = sys.argv[1]
@@ -481,6 +486,10 @@ if __name__ == '__main__':
 
     if not os.path.isabs(server_base_dir):
         server_base_dir = os.path.abspath(os.path.join(os.getcwd(), server_base_dir))
+
+    print()
+    print(111, cmd_line_options)
+    print()
 
     run(server_base_dir, options=cmd_line_options)
 

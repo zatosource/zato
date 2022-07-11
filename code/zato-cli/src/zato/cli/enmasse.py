@@ -1552,6 +1552,7 @@ class Enmasse(ManageCommand):
         # Zato
         from zato.cli.check_config import CheckConfig
         from zato.common.util.api import get_client_from_server_conf
+        from zato.common.util.env import populate_environment_from_file
         from zato.common.util.tcp import wait_for_zato_ping
 
         self.args = args
@@ -1561,15 +1562,7 @@ class Enmasse(ManageCommand):
 
         # Initialize environment variables
         env_path = self.get_file_path('env_file', False)
-        if os.path.exists(env_path):
-
-            # Zato
-            from zato.common.ext.configobj_ import ConfigObj
-
-            env_config = ConfigObj(env_path)
-            env = env_config.get('env') or {}
-            for key, value in env.items(): # type: ignore
-                os.environ[key] = value
+        populate_environment_from_file(env_path)
 
         if args.export_local or has_import:
             exit_on_missing_file = hasattr(self.args, 'exit_on_missing_file')
