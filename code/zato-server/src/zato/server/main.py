@@ -47,7 +47,7 @@ Logger._log = logging_Logger_log
 import yaml
 
 # Zato
-from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
+from zato.common.api import OS_Env, SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ipaddress_ import get_preferred_ip
@@ -419,7 +419,38 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         'zato_gunicorn_app': zato_gunicorn_app,
     })
 
-    # Run the app at last
+    # This will optionally enable the RAM usage profiler.
+    memory_profiler_key = OS_Env.Zato_Enable_Memory_Profiler
+    enable_memory_profiler = os.environ.get(memory_profiler_key)
+
+    if enable_memory_profiler:
+
+        # stdlib
+        from tempfile import mkdtemp
+
+        # memray
+        import memray
+
+        # Create an empty directory to store the output in ..
+        dir_name = mkdtemp(prefix='zato-memory-profiler-')
+
+        # .. now, the full path to the memory profile file ..
+        full_path = os.path.join(dir_name, 'zato-memory-profie.bin')
+
+        # .. we can start the memray's tracker now ..
+        with memray.Tracker(full_path):
+            logger.info('Starting with memory profiler; output in -> %s', full_path)
+
+            # .. finally, start the server
+            start_wsgi_app(zato_gunicorn_app, start_gunicorn_app)
+
+    # .. no memory profiler here.
+    start_wsgi_app(zato_gunicorn_app, start_gunicorn_app)
+
+# ################################################################################################################################
+
+def start_wsgi_app(zato_gunicorn_app:'any_', start_gunicorn_app:'bool') -> 'None':
+
     if start_gunicorn_app:
         zato_gunicorn_app.run()
     else:
@@ -438,10 +469,10 @@ if __name__ == '__main__':
 
         server_base_dir = env_server_base_dir
         cmd_line_options = {
-            'fg':True,
-            'sync_internal':True,
-            'secret_key':'',
-            'stderr_path':None,
+            'fg': True,
+            'sync_internal': True,
+            'secret_key': '',
+            'stderr_path': None,
         }
     else:
         server_base_dir = sys.argv[1]
