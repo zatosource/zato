@@ -487,10 +487,6 @@ if __name__ == '__main__':
     if not os.path.isabs(server_base_dir):
         server_base_dir = os.path.abspath(os.path.join(os.getcwd(), server_base_dir))
 
-    print()
-    print(111, cmd_line_options)
-    print()
-
     run(server_base_dir, options=cmd_line_options)
 
 # ################################################################################################################################
