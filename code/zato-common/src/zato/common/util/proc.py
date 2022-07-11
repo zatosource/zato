@@ -170,11 +170,6 @@ def start_python_process(component_name, run_in_fg, py_path, program_dir, on_key
         extra_cli_options += '{} '.format(program_dir_option)
     extra_cli_options += '{}'.format(options)
 
-    print()
-    print(111, options)
-    print(222, extra_cli_options)
-    print()
-
     return start_process(component_name, get_executable(), run_in_fg, None, extra_cli_options, on_keyboard_interrupt,
         failed_to_start_err, extra_options, stderr_path, stdin_data)
 
