@@ -19,9 +19,8 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms([
         'name',
-        'api_version',
         'address',
-        'username',
+        'pool_size',
     ]);
 })
 
@@ -55,16 +54,16 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', item.pool_size);
     row += String.format('<td>{0}</td>', item.address);
 
     // 2
     row += String.format("<td>{0}</td>", item.username);
-    row += String.format("<td>{0}</td>", item.api_version);
-    row += String.format('<td>{0}</td>', is_cloud ? 'Yes' : 'No');
+    row += String.format("<td>{0}</td>", item.auth_type);
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change password')\">Change password</a>", item.id));
 
     // 3
-    row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change API token')\">Change API token</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.hl7.fhir.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.hl7.fhir.delete_({0});'>Delete</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.ping({0});'>Ping</a>", item.id));
@@ -72,7 +71,6 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     // 4
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
-    row += String.format("<td class='ignore'>{0}</td>", item.username);
 
     if(include_tr) {
         row += '</tr>';
