@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,20 +10,21 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
+from zato.admin.web.forms.outgoing.hl7.fhir import CreateForm, EditForm
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
+    invoke_action_handler, method_allowed, ping_connection
 from zato.common.api import GENERIC, generic_attrs
-from zato.common.model.hl7 import HL7MLLPConfigObject
+from zato.common.model.hl7 import HL7FHIRConfigObject
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Index(_Index):
     method_allowed = 'GET'
-    url_name = 'outgoing-hl7-mllp'
-    template = 'zato/outgoing/hl7/mllp.html'
+    url_name = 'outgoing-hl7-fhir'
+    template = 'zato/outgoing/hl7/fhir.html'
     service_name = 'zato.generic.connection.get-list'
-    output_class = HL7MLLPConfigObject
+    output_class = HL7FHIRConfigObject
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
@@ -54,7 +55,7 @@ class _CreateEdit(CreateEdit):
 # ################################################################################################################################
 
     def populate_initial_input_dict(self, initial_input_dict):
-        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP
+        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outgoing'] = True
@@ -71,14 +72,14 @@ class _CreateEdit(CreateEdit):
 # ################################################################################################################################
 
 class Create(_CreateEdit):
-    url_name = 'outgoing-hl7-mllp-create'
+    url_name = 'outgoing-hl7-fhir-create'
     service_name = 'zato.generic.connection.create'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
-    url_name = 'outgoing-hl7-mllp-edit'
+    url_name = 'outgoing-hl7-fhir-edit'
     form_prefix = 'edit-'
     service_name = 'zato.generic.connection.edit'
 
@@ -86,7 +87,7 @@ class Edit(_CreateEdit):
 # ################################################################################################################################
 
 class Delete(_Delete):
-    url_name = 'outgoing-hl7-mllp-delete'
+    url_name = 'outgoing-hl7-fhir-delete'
     error_message = 'Could not delete HL7 MLLP outgoing connection'
     service_name = 'zato.generic.connection.delete'
 
@@ -105,12 +106,24 @@ def invoke(req, conn_id, max_wait_time, conn_name, conn_slug):
         'cluster_id': req.zato.cluster_id,
     }
 
-    return TemplateResponse(req, 'zato/outgoing/hl7/mllp-invoke.html', return_data)
+    return TemplateResponse(req, 'zato/outgoing/hl7/fhir-invoke.html', return_data)
 
 # ################################################################################################################################
 
 @method_allowed('POST')
 def invoke_action(req, conn_name):
     return invoke_action_handler(req, 'zato.generic.connection.invoke', ('conn_name', 'conn_type', 'request_data', 'timeout'))
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def change_password(req):
+    return _change_password(req, 'zato.generic.connection.change-password', success_msg='API token updated')
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def ping(req, id, cluster_id):
+    return ping_connection(req, 'zato.generic.connection.ping', id, 'Confluence connection')
 
 # ################################################################################################################################

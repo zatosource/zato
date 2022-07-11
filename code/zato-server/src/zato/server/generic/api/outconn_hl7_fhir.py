@@ -33,7 +33,7 @@ class _HL7MLLPConnection:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class OutconnHL7MLLPWrapper(Wrapper):
+class OutconnHL7FHIRWrapper(Wrapper):
     """ Wraps a queue of connections to HL7 MLLP servers.
     """
     def __init__(self, config, server):
