@@ -77,6 +77,7 @@ Mako==1.1.5
 markdown==3.3.4
 MarkupSafe==2.0
 mccabe==0.6.1
+memray==1.1.0
 mock==3.0.5
 ndg-httpsclient==0.4.0
 netaddr==0.8.0
