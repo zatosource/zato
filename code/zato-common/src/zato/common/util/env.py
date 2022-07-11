@@ -22,7 +22,7 @@ def populate_environment_from_file(env_path:'str') -> 'None':
         if not os.path.exists(env_path):
 
             # Reusable
-            msg = 'No such path (env. variables) -> %s' % env_path
+            msg = 'No such path (env. variables) -> %s'
 
             # We need to use print too because logging may not be configured yet ..
             print(msg % env_path)
