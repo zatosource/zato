@@ -36,8 +36,8 @@
             'address',
 
             {% comment %} 2 {% endcomment %}
-            'username',
-            'auth_type',
+            '_username',
+            '_auth_type',
             '_change_password',
 
             {% comment %} 3 {% endcomment %}
@@ -49,6 +49,10 @@
             'id',
             'is_active',
             '_pool_size',
+
+            {% comment %} 4 {% endcomment %}
+            'username',
+            'auth_type',
 
         ]
     }
