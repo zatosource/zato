@@ -548,7 +548,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def add_wsx_gateway_service_allowed(self) -> 'None':
+
         wsx_gateway_service_allowed = os.environ.get('Zato_WSX_Gateway_Service_Allowed', '')
+
         if wsx_gateway_service_allowed:
 
             config_wsx_gateway_service_allowed = self.fs_server_config.pubsub.wsx_gateway_service_allowed
@@ -557,7 +559,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.fs_server_config.pubsub.wsx_gateway_service_allowed = config_wsx_gateway_service_allowed
 
             wsx_gateway_service_allowed = wsx_gateway_service_allowed.split(',')
-            wsx_gateway_service_allowed = [elem.strip() for elem in wsx_gateway_service_allowed]
+            wsx_gateway_service_allowed = [elem.strip() for elem in wsx_gateway_service_allowed if elem]
             self.fs_server_config.pubsub.wsx_gateway_service_allowed.extend(wsx_gateway_service_allowed)
 
 # ################################################################################################################################

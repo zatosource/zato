@@ -41,7 +41,8 @@ def populate_environment_from_file(env_path:'str') -> 'None':
             msg = 'Imported env. variable `%s` from `%s`'
 
             for key, value in env.items(): # type: ignore
-                os.environ[key] = str(value)
+                if isinstance(value, (int, float)):
+                    os.environ[key] = str(value)
                 print(msg % (key, env_path))
                 logger.info(msg, key, env_path)
 
