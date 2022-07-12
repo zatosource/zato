@@ -42,6 +42,7 @@ Examples:
         {'name':'--fg', 'help':'If given, the component will run in foreground', 'action':'store_true'},
         {'name':'--sync-internal', 'help':"Whether to synchronize component's internal state with ODB", 'action':'store_true'},
         {'name':'--secret-key', 'help':"Component's secret key", 'action':'store'},
+        {'name':'--env-file', 'help':'Path to a file with environment variables to use', 'action':'store'},
         {'name':'--stderr-path', 'help':'Where to redirect stderr', 'action':'store'}
     ]
 
@@ -118,6 +119,7 @@ Examples:
                 'sync_internal': self.args.sync_internal,
                 'secret_key': self.args.secret_key or '',
                 'stderr_path': self.args.stderr_path,
+                'env_file': self.args.env_file,
             },
             stderr_path=self.args.stderr_path,
             stdin_data=self.stdin_data)
