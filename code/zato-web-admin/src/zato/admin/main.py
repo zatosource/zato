@@ -39,6 +39,19 @@ logger = logging.getLogger(__name__)
 
 def main():
 
+    # stdlib
+    import sys
+
+    # Zato
+    from zato.common.util.api import parse_cmd_line_options
+    from zato.common.util.env import populate_environment_from_file
+
+    cmd_line_options = sys.argv[1]
+    cmd_line_options = parse_cmd_line_options(cmd_line_options)
+
+    env_file = cmd_line_options.get('env_file') or ''
+    populate_environment_from_file(env_file)
+
     env_dir = os.environ.get('ZATO_DASHBOARD_BASE_DIR')
 
     base_dir = env_dir or '.'
