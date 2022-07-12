@@ -33,7 +33,6 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
-            'pool_size',
             'address',
 
             {% comment %} 2 {% endcomment %}
@@ -49,6 +48,7 @@
             {% comment %} 4 {% endcomment %}
             'id',
             'is_active',
+            '_pool_size',
 
         ]
     }
@@ -65,7 +65,7 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% with has_generic="1" generic_type="outgoing-hl7-fhir" %}
+{% with has_generic="1" generic_type="outconn-hl7-fhir" %}
     {% include "zato/search-form.html" with page_prompt="Show connections"%}
 {% endwith %}
 
@@ -85,7 +85,6 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Pool size</a></th>
                         <th><a href="#">Address</a></th>
 
                         {% comment %} 2 {% endcomment %}
@@ -101,6 +100,7 @@
                         {% comment %} 4 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -114,12 +114,11 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.pool_size }}</td>
                         <td>{{ item.address }}</td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td>{{ item.username }}</td>
-                        <td>{{ item.auth_type }}</td>
+                        <td>{{ item.username|no_value_indicator }}</td>
+                        <td>{{ item.auth_type|no_value_indicator }}</td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change password')">Change password</a></td>
 
                         {% comment %} 3 {% endcomment %}
@@ -130,6 +129,7 @@
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.pool_size }}</td>
 
                     </tr>
                 {% endfor %}
