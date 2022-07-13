@@ -39,30 +39,23 @@ _jwt = HL7.Const.FHIR_Auth_Type.JWT.id
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _HL7FHIRConnection:
-    conn: 'SyncFHIRClient'
-    config: 'stranydict'
+class _HL7FHIRConnection(SyncFHIRClient):
+    zato_config: 'stranydict'
 
     def __init__(self, config:'stranydict') -> 'None':
-        self.config = config
-        self.conn = self.build_connection()
+        self.zato_config = config
+
+        address = self.zato_config['address']
+        auth_header = self.zato_build_basic_auth_header()
+
+        super().__init__(address, authorization=auth_header)
 
 # ################################################################################################################################
 
-    def build_connection(self) -> 'SyncFHIRClient':
+    def zato_build_basic_auth_header(self) -> 'str':
 
-        address = self.config['address']
-        auth_header = self.build_basic_auth_header()
-
-        conn = SyncFHIRClient(address, authorization=auth_header)
-        return conn
-
-# ################################################################################################################################
-
-    def build_basic_auth_header(self) -> 'str':
-
-        username = self.config['username']
-        password = self.config['secret']
+        username = self.zato_config['username']
+        password = self.zato_config['secret']
 
         auth_header = f'{username}:{password}'
         auth_header = auth_header.encode('ascii')
@@ -74,13 +67,13 @@ class _HL7FHIRConnection:
 
 # ################################################################################################################################
 
-    def build_jwt_header(self) -> 'str':
+    def zato_build_jwt_header(self) -> 'str':
         pass
 
 # ################################################################################################################################
 
-    def ping(self):
-        self.conn.execute('/', 'get')
+    def zato_ping(self):
+        self.execute('/', 'get')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,7 +94,7 @@ class OutconnHL7FHIRWrapper(Wrapper):
             self.client.put_client(conn)
         except Exception:
             logger.warning('Caught an exception while adding an HL7 FHIR client (%s); e:`%s`',
-                self.config.name, format_exc())
+                self.config['name'], format_exc())
 
 # ################################################################################################################################
 
@@ -112,8 +105,8 @@ class OutconnHL7FHIRWrapper(Wrapper):
 
     def ping(self):
         with self.client() as client:
-            client = cast_('OutconnHL7FHIRWrapper', client)
-            client.ping()
+            client = cast_('_HL7FHIRConnection', client)
+            client.zato_ping()
 
 # ################################################################################################################################
 # ################################################################################################################################
