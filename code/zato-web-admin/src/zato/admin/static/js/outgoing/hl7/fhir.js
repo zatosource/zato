@@ -54,12 +54,11 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.pool_size);
-    row += String.format('<td>{0}</td>', item.address);
+    row += String.format('<td><a href="{0}">{0}</a></td>', item.address);
 
     // 2
-    row += String.format("<td>{0}</td>", item.username);
-    row += String.format("<td>{0}</td>", item.auth_type);
+    row += String.format("<td>{0}</td>", item.username || $.fn.zato.empty_value);
+    row += String.format("<td>{0}</td>", item.auth_type || $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>',
         String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change password')\">Change password</a>", item.id));
 
@@ -71,6 +70,11 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     // 4
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
+    row += String.format("<td class='ignore'>{0}</td>", item.pool_size);
+
+    // 5
+    row += String.format("<td class='ignore'>{0}</td>", item.username);
+    row += String.format("<td class='ignore'>{0}</td>", item.auth_type);
 
     if(include_tr) {
         row += '</tr>';

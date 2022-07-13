@@ -50,7 +50,7 @@
             'is_active',
             '_pool_size',
 
-            {% comment %} 4 {% endcomment %}
+            {% comment %} 5 {% endcomment %}
             'username',
             'auth_type',
 
@@ -106,6 +106,10 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} 4 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -118,7 +122,7 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.address }}</td>
+                        <td><a href="{{ item.address }}">{{ item.address }}</a></td>
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.username|no_value_indicator }}</td>
@@ -134,6 +138,10 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.pool_size }}</td>
+
+                        {% comment %} 5 {% endcomment %}
+                        <td class='ignore'>{{ item.username|default:"" }}</td>
+                        <td class='ignore'>{{ item.auth_type|default:"" }}</td>
 
                     </tr>
                 {% endfor %}
