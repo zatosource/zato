@@ -50,8 +50,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_internal', 'address', 'username', 'auth_type'
-        input_optional = ('is_active', 'pool_size') + generic_attrs
+        input_required = 'name', 'is_internal', 'address', 'username', 'auth_type', 'pool_size'
+        input_optional = ('is_active',) + generic_attrs
         output_required = 'id', 'name'
 
 # ################################################################################################################################
@@ -64,6 +64,11 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outconn'] = False
         initial_input_dict['sec_use_rbac'] = False
         initial_input_dict['recv_timeout'] = 250
+
+# ################################################################################################################################
+
+    def pre_process_input_dict(self, input_dict):
+        input_dict['pool_size'] = int(input_dict['pool_size'])
 
 # ################################################################################################################################
 
