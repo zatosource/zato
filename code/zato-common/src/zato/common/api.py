@@ -1519,7 +1519,7 @@ class HL7:
         """ Default values for HL7 objects.
         """
         # Default address for FHIR connections
-        address_fhir = 'https://simplifier.net/zato'
+        address_fhir = 'https://fhir.simplifier.net/zato'
 
         # Default address for MLLP connections
         address = '0.0.0.0:30901'
