@@ -30,11 +30,11 @@ class _HL7FHIRConnection:
 # ################################################################################################################################
 
 class OutconnHL7FHIRWrapper(Wrapper):
-    """ Wraps a queue of connections to HL7 MLLP servers.
+    """ Wraps a queue of connections to HL7 FHIR servers.
     """
     def __init__(self, config, server):
         config.auth_url = config.address
-        super(OutconnHL7FHIRWrapper, self).__init__(config, 'HL7 MLLP', server)
+        super(OutconnHL7FHIRWrapper, self).__init__(config, 'HL7 FHIR', server)
 
     def add_client(self):
 
@@ -42,7 +42,7 @@ class OutconnHL7FHIRWrapper(Wrapper):
             conn = _HL7FHIRConnection(self.config)
             self.client.put_client(conn)
         except Exception:
-            logger.warning('Caught an exception while adding an HL7 MLLP client (%s); e:`%s`',
+            logger.warning('Caught an exception while adding an HL7 FHIR client (%s); e:`%s`',
                 self.config.name, format_exc())
 
     def delete(self, ignored_reason=None):
