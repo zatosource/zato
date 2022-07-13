@@ -29,7 +29,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'security_name', 'address', 'pool_size'
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'username', 'auth_type', 'pool_size'
         output_optional = generic_attrs
         output_repeated = True
 
@@ -48,7 +48,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_internal', 'address'
+        input_required = 'name', 'is_internal', 'address', 'username', 'auth_type'
         input_optional = ('is_active', 'pool_size') + generic_attrs
         output_required = 'id', 'name'
 
