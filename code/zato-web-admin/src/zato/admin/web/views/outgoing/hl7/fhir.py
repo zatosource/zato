@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.hl7.fhir import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
     invoke_action_handler, method_allowed, ping_connection
@@ -39,6 +40,7 @@ class Index(_Index):
         return {
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
+            'change_password_form': ChangePasswordForm(),
         }
 
 # ################################################################################################################################
@@ -66,7 +68,7 @@ class _CreateEdit(CreateEdit):
 # ################################################################################################################################
 
     def success_message(self, item):
-        return 'Successfully {} HL7 MLLP outgoing connection `{}`'.format(self.verb, item.name)
+        return 'Successfully {} HL7 FHIR outgoing connection `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,7 +90,7 @@ class Edit(_CreateEdit):
 
 class Delete(_Delete):
     url_name = 'outgoing-hl7-fhir-delete'
-    error_message = 'Could not delete HL7 MLLP outgoing connection'
+    error_message = 'Could not delete HL7 FHIR outgoing connection'
     service_name = 'zato.generic.connection.delete'
 
 # ################################################################################################################################
@@ -118,12 +120,12 @@ def invoke_action(req, conn_name):
 
 @method_allowed('POST')
 def change_password(req):
-    return _change_password(req, 'zato.generic.connection.change-password', success_msg='API token updated')
+    return _change_password(req, 'zato.generic.connection.change-password', success_msg='Password updated')
 
 # ################################################################################################################################
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    return ping_connection(req, 'zato.generic.connection.ping', id, 'Confluence connection')
+    return ping_connection(req, 'zato.generic.connection.ping', id, 'HL7 FHIR connection')
 
 # ################################################################################################################################
