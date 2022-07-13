@@ -34,6 +34,8 @@ class CreateForm(WithAuditLog):
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     password = forms.CharField(strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
+    extra = forms.CharField(widget=forms.Textarea(attrs={'style':'height:60px'}))
+
     def __init__(self, *args, **kwargs):
         super(CreateForm, self).__init__(*args, **kwargs)
         add_select(self, 'auth_type', _const.FHIR_Auth_Type(), needs_initial_select=True)

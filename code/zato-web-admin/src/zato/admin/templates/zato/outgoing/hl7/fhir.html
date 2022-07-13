@@ -53,6 +53,7 @@
             {% comment %} 5 {% endcomment %}
             'username',
             'auth_type',
+            'extra',
 
         ]
     }
@@ -109,6 +110,7 @@
                         {% comment %} 4 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -142,6 +144,7 @@
                         {% comment %} 5 {% endcomment %}
                         <td class='ignore'>{{ item.username|default:"" }}</td>
                         <td class='ignore'>{{ item.auth_type|default:"" }}</td>
+                        <td class='ignore'>{{ item.extra|default:"" }}</td>
 
                     </tr>
                 {% endfor %}
@@ -214,6 +217,14 @@
                             </td>
                         </tr>
                         <tr>
+                            <td colspan="2">
+                                <label for="id_extra">
+                                Extra
+                                </label>
+                                {{ create_form.extra }}
+                            </td>
+                        </tr>
+                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
@@ -280,6 +291,14 @@
                             </td>
                             <td>
                                 {{ edit_form.username }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <label for="id_extra">
+                                Extra
+                                </label>
+                                {{ edit_form.extra }}
                             </td>
                         </tr>
                         <tr>

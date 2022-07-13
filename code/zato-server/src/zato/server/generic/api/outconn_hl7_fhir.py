@@ -47,8 +47,9 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
         address = self.zato_config['address']
         auth_header = self.zato_build_basic_auth_header()
+        extra_headers = self.zato_build_extra_headers()
 
-        super().__init__(address, authorization=auth_header)
+        super().__init__(address, authorization=auth_header, extra_headers=extra_headers)
 
 # ################################################################################################################################
 
@@ -64,6 +65,13 @@ class _HL7FHIRConnection(SyncFHIRClient):
         auth_header = f'Basic {auth_header}'
 
         return auth_header
+
+# ################################################################################################################################
+
+    def zato_build_extra_headers(self) -> 'stranydict':
+        out = {}
+
+        return out
 
 # ################################################################################################################################
 
