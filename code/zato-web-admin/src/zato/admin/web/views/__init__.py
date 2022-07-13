@@ -325,7 +325,7 @@ class _BaseView:
         cluster_id = self.req.zato.cluster_id
 
         if cluster_id:
-            self.cluster_id = cluster_id
+            self.cluster_id = int(cluster_id)
 
     def populate_initial_input_dict(self, initial_input_dict):
         """ May be overridden by subclasses if needed.
