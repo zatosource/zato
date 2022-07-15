@@ -41,6 +41,7 @@ from zato.admin.web.views.email import smtp as email_smtp
 from zato.admin.web.views.notif import sql as notif_sql
 from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
+from zato.admin.web.views.outgoing.hl7 import fhir as outgoing_hl7_fhir
 from zato.admin.web.views.outgoing.hl7 import mllp as outgoing_hl7_mllp
 from zato.admin.web.views.outgoing.im import slack as out_im_slack
 from zato.admin.web.views.outgoing.im import telegram as out_im_telegram
@@ -611,6 +612,32 @@ urlpatterns += [
         login_required(out_ftp.Delete()), name=out_ftp.Delete.url_name),
     url(r'^zato/outgoing/ftp/change-password/$',
         login_required(out_ftp.change_password), name='out-ftp-change-password'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. HL7 - FHIR
+
+    url(r'^zato/outgoing/hl7/fhir/$',
+        login_required(outgoing_hl7_fhir.Index()), name=outgoing_hl7_fhir.Index.url_name),
+    url(r'^zato/outgoing/hl7/fhir/create/$',
+        login_required(outgoing_hl7_fhir.Create()), name=outgoing_hl7_fhir.Create.url_name),
+    url(r'^zato/outgoing/hl7/fhir/edit/$',
+        login_required(outgoing_hl7_fhir.Edit()), name=outgoing_hl7_fhir.Edit.url_name),
+    url(r'^zato/outgoing/hl7/fhir/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(outgoing_hl7_fhir.Delete()), name=outgoing_hl7_fhir.Delete.url_name),
+    url(r'^zato/outgoing/hl7/fhir/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(outgoing_hl7_fhir.ping), name='outgoing-hl7-fhir-ping'),
+    url(r'^zato/outgoing/hl7/fhir/change-password/$',
+        login_required(outgoing_hl7_fhir.change_password), name='outgoing-hl7-fhir-change-password'),
+
+    url(r'^zato/outgoing/hl7/fhir/invoke/action/(?P<conn_name>.*)/$',
+        login_required(outgoing_hl7_fhir.invoke_action), name='outgoing-hl7-fhir-invoke-action'),
+    url(r'^zato/outgoing/hl7/fhir/invoke/(?P<conn_id>.*)/(?P<max_wait_time>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
+        login_required(outgoing_hl7_fhir.invoke), name='outgoing-hl7-fhir-invoke'),
+
     ]
 
 # ################################################################################################################################

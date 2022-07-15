@@ -24,7 +24,7 @@ class CreateForm(forms.Form):
     username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
     pool_size = forms.IntegerField(initial=1,
         widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:40px'}))
-    extra = forms.CharField(widget=forms.Textarea())
+    extra = forms.CharField(widget=forms.Textarea(attrs={'style':'height:60px'}))
 
     def __init__(self, req, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
