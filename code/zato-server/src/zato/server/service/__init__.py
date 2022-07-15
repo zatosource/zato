@@ -593,9 +593,12 @@ class Service:
             self._worker_store.outconn_ldap,
             self._worker_store.outconn_mongodb,
             self._worker_store.def_kafka,
-            HL7API(self._worker_store.outconn_hl7_mllp) if self.component_enabled_hl7 else None,
             self.kvdb
         ) # type: Outgoing
+
+        if self.component_enabled_hl7:
+            hl7_api = HL7API(self._worker_store.outconn_hl7_fhir, self._worker_store.outconn_hl7_mllp)
+            self.out.hl7 = hl7_api
 
 # ################################################################################################################################
 
