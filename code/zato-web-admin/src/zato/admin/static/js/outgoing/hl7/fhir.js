@@ -58,7 +58,7 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
 
     // 2
     row += String.format("<td>{0}</td>", item.username || $.fn.zato.empty_value);
-    row += String.format("<td>{0}</td>", item.auth_type || $.fn.zato.empty_value);
+    // row += String.format("<td>{0}</td>", item.auth_type || $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>',
         String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change password')\">Change password</a>", item.id));
 
