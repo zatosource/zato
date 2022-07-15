@@ -37,7 +37,7 @@
 
             {% comment %} 2 {% endcomment %}
             '_username',
-            '_auth_type',
+            //'_auth_type',
             '_change_password',
 
             {% comment %} 3 {% endcomment %}
@@ -94,7 +94,7 @@
 
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Username</a></th>
-                        <th>Auth. type</th>
+                        <!-- <th>Auth. type</th> -->
                         <th>&nbsp;</th>
 
                         {% comment %} 3 {% endcomment %}
@@ -128,7 +128,7 @@
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.username|no_value_indicator }}</td>
-                        <td>{{ item.auth_type|no_value_indicator }}</td>
+                        <!-- <td>{{ item.auth_type|no_value_indicator }}</td> -->
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change password')">Change password</a></td>
 
                         {% comment %} 3 {% endcomment %}
@@ -187,12 +187,14 @@
                                 {{ create_form.pool_size }}
                                 </label>
 
+                                <!--
                                 |
 
                                 <label>
                                 Auth. type
                                 {{ create_form.auth_type }}
                                 </label>
+                                -->
 
                             </td>
                         </tr>
@@ -263,14 +265,14 @@
                                 {{ edit_form.pool_size }}
                                 </label>
 
+                                <!--
                                 |
 
                                 <label>
                                 Auth. type
                                 {{ edit_form.auth_type }}
                                 </label>
-
-                                </label>
+                                -->
                             </td>
                         </tr>
                         <tr>
