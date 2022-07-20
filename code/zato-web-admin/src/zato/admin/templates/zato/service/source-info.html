@@ -2,499 +2,61 @@
 
 {% block html_title %}{{ service.name }} - Source{% endblock %}
 
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/pygments.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
+
+{% endblock %}
+
 {% block "content" %}
 
-<script type="text/javascript" src="/static/js/common.js"></script>
-<script>
-    $.fn.zato.editor.toggle_action_area = function() {
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<h2 class="zato">Services : <a href="{% url "service" %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : Source code</h2>
+
+<div class='page_prompt'>
+    <a href="{% url "service-overview" service.name %}?cluster={{ cluster_id }}" class="common">Overview</a>
+    <a href="{% url "service-invoker" service.name %}?cluster={{ cluster_id }}" class="common">Invoker</a>
+    <a href="{% url "service-source-info" service.name %}?cluster={{ cluster_id }}" class="common current">Source code</a>
+</div>
+
+<div id="markup">
+    <table id="data-table">
+{% if service.source_info %}
+        <tr>
+            <td class='inline_header'>Server</td>
+        </tr>
+        <tr>
+            <td>{{ service.source_info.server_name }}</td>
+        </tr>
+        <tr>
+            <td class='inline_header'>Path</td>
+        </tr>
+        <tr>
+            <td>{{ service.source_info.path }}</td>
+        </tr>
+        <tr>
+            <td class='inline_header'>Hash</td>
+        </tr>
+        <tr>
+            <td>{{ service.source_info.hash_method }} {{ service.source_info.hash }}</td>
+        </tr>
+        <tr>
+            <td class='inline_header'>Source</td>
+        </tr>
+        <tr>
+            <td style="background-color:#eeffcc">{{ service.source_info.source_html|safe }}</td>
+        </tr>
+{% else %}
+    <tr><td>Service has no source code information available</td></tr>
+{% endif %}
+    </table>
+</div>
 
-        let css_property = "grid-template-columns";
-        // let default_size = "3.9fr 1fr 0.06fr";
-        // let expanded_size = "1.0fr 1fr 0.06fr";
-
-        let default_size = "1.0fr 1fr 0.06fr";
-        let expanded_size = "3.9fr 1fr 0.06fr";
-
-        let main_area_container = $("#main-area-container");
-        let elem_to_expand = $("#action-area-header");
-
-        let is_expanded = elem_to_expand.attr("data-is-expanded");
-
-        if(is_expanded == "false") {
-            new_size = expanded_size;
-            elem_to_expand.attr("data-is-expanded", "true");
-        }
-        else {
-            new_size = default_size
-            elem_to_expand.attr("data-is-expanded", "false");
-        }
-
-        main_area_container.css(css_property, new_size);
-    }
-
-    $.fn.zato.editor.switch_to_action_area = function(name) {
-        console.log("Name -> " + name);
-        if(name == "browser") {
-            $.fn.zato.editor.populate_browser_area();
-        }
-        else if(name == "invoker") {
-            $.fn.zato.editor.populate_invoker_area();
-        }
-        else if(name == "info") {
-            $.fn.zato.editor.populate_data_model_area();
-        }
-    }
-
-    $.fn.zato.editor.clear_header_links = function(prefix) {
-
-        // The element where all the links reside ..
-        let header_links_id = `#header-links-${prefix}`;
-        let header_links = $(header_links_id);
-
-        // .. clean it up.
-        header_links.empty();
-    }
-
-    $.fn.zato.editor.add_header_link = function(prefix, item_no, text, is_last) {
-
-        // The element where all the links reside ..
-        let header_links_id = `#header-links-${prefix}`;
-        let header_links = $(header_links_id);
-
-        // .. this is what each link will be based on ..
-        let link_pattern = '<a href="$.fn.zato.editor.invoke_header_link(\"{0}\", {1})" id="header-{0}-link-{1}">{2}</a>';
-
-        // .. build a string containing the link ..
-        let link_string = String.format(link_pattern, prefix, item_no, text);
-
-        // .. now, the element ..
-        link = $(link_string);
-
-        // .. now, append it to our links ..
-        header_links.append(link);
-
-        // .. and add a separator unless this is the last link.
-        if(!is_last) {
-            $("<span> | </span>").insertAfter(link);
-        }
-    }
-
-    $.fn.zato.editor.add_header_left_link = function(item_no, text, is_last) {
-        $.fn.zato.editor.add_header_link("left", item_no, text, is_last);
-    }
-
-    $.fn.zato.editor.add_header_right_link = function(item_no, text, is_last) {
-        $.fn.zato.editor.add_header_link("right", item_no, text, is_last);
-    }
-
-    $.fn.zato.editor.populate_header_status = function(text) {
-        let elem_id = `#header-status`;
-        let elem = $(elem_id);
-        elem.text(text);
-    }
-
-    $.fn.zato.editor.populate_browser_area = function() {
-
-        // Clear anything that we may already have
-        $.fn.zato.editor.clear_header_links("left")
-        $.fn.zato.editor.clear_header_links("right")
-
-        // Make sure that we are only showing our own area now
-        $('.file-listing-tr').show();
-        $('.invoker-tr').hide();
-
-        // Left-hand side links
-        $.fn.zato.editor.add_header_left_link(1, "Deploy");
-        $.fn.zato.editor.add_header_left_link(2, "Deploy all");
-        $.fn.zato.editor.add_header_left_link(3, "New", true);
-
-        // Right-hand side links
-        $.fn.zato.editor.add_header_right_link(1, "Push", true);
-
-        // One-line status bar
-        $("#header-status").text("4 files, 9 services");
-    }
-
-    $.fn.zato.editor.populate_invoker_area = function() {
-
-        // Clear anything that we may already have
-        $.fn.zato.editor.clear_header_links("left")
-        $.fn.zato.editor.clear_header_links("right")
-
-        // Make sure that we are only showing our own area now
-        $('.file-listing-tr').hide();
-        $('.invoker-tr').show();
-
-        // Left-hand side links
-        $.fn.zato.editor.add_header_left_link(1, "Deploy");
-        $.fn.zato.editor.add_header_left_link(2, "Deploy all");
-        $.fn.zato.editor.add_header_left_link(3, "Previous");
-        $.fn.zato.editor.add_header_left_link(4, "Next");
-        $.fn.zato.editor.add_header_left_link(5, "Clear form", true);
-
-        // Right-hand side links
-        $.fn.zato.editor.add_header_right_link(1, "OpenAPI", true);
-
-        // One-line status bar
-        $("#header-status").text("curl http://api:api@10.151.19.39:11223/zato/api/api.adapter.crm.customer.create -d '{\"customer_id\":\"123\"}'");
-        /*
-        $("#header-status").text("curl http://api:api@10.151.19.39:11223/zato/api/api.adapter.crm.customer.create -d '{\"customer_id\":\"123\"}'");
-        $("<a href=\"#\">Edit</a>").insertAfter("#header-status");
-        $("<a class=\"header-sublink-first\" href=\"#\">Copy</a>").insertAfter("#header-status");
-        */
-    }
-
-    $.fn.zato.editor.populate_data_model_area = function() {
-    }
-
-</script>
-
-<style type="text/css" media="screen">
-
-    #main-area-container {
-        display: grid;
-        grid-template-rows: 87vh;
-        grid-template-columns: 1.0fr 1fr 0.06fr;
-        align-items: stretch;
-        height: 87vh;
-    }
-
-    #action-area-container {
-        display: grid;
-        grid-template-rows: 3vh 84vh;
-        align-items: stretch;
-    }
-
-    #action-area-header {
-        align-self: baseline;
-        margin: 0px;
-        padding-top: 4px;
-        padding-left: 4px;
-        padding-bottom: 4px;
-        background-color: #e9e9e9;
-        border-bottom: 1px solid #ccc;
-    }
-
-    #action-area-header img {
-        width: 14px;
-        vertical-align: middle;
-        padding-right: 7px;
-    }
-
-    #action-area-header a.img-button {
-        border-right: 1px solid #d3d3d3;
-    }
-
-    #action-area-header a.img-button:hover {
-        background-color: #e9e9e9;
-    }
-
-    img.button {
-        opacity: 30%;
-    }
-
-    img.button:hover {
-        opacity: 100%;
-    }
-
-    a.img-button {
-        padding: 0px;
-    }
-
-    span.header-text {
-        font-family: monospace;
-    }
-
-    .left-side-buttons a.img-button:hover {
-        background-color: #dfdfdf;
-    }
-
-    .left-side-buttons img {
-        width: 30px;
-        padding: 15px;
-    }
-
-    #editor {
-        height: 87vh;
-        border-right: 1px solid #ddd;
-        border-bottom: 1px solid #ddd;
-    }
-
-    #left-action-area {
-        background-color: #fff;
-    }
-
-    #left-side-menu {
-        background-color:#dfdfdf;
-        border-left: 1px solid #bbb;
-    }
-
-    .file-system-listing img.fs-icon {
-        width: 16px
-    }
-
-    .file-system-listing {
-        width: 100%;
-    }
-
-    .file-system-listing tr.header {
-        background-color: #eee;
-    }
-
-    .file-system-listing td.header {
-        vertical-align: middle;
-        padding: 9px;
-    }
-
-    #header-status {
-        font-size: 1.1em;
-    }
-
-    #header-links-wrapper {
-        display: flex;
-    }
-
-    #header-links-left {
-        flex: 0 0 55%;
-    }
-
-    #header-links-right {
-        flex: 1;
-        text-align:right;
-    }
-
-    .header-sublink-first {
-        margin-left:6px;
-    }
-
-    .file-system-listing td {
-        font-size: 0.73rem;
-        padding: 3px;
-        padding-left: 9px;
-        padding-top: 4px;
-        padding-bottom: 0px;
-        vertical-align: middle;
-    }
-
-    .file-system-listing td.item-header {
-        width: 17px;
-    }
-
-    .file-system-listing td.item-name {
-        padding-top: 2px;
-        padding-left: 5px;
-        color: #000;
-    }
-
-    .file-system-listing td.item-name a {
-        text-decoration: none !important;
-        font-family: monospace !important;
-        font-size: 1.0em;
-    }
-
-    input.data-request {
-        width:100%;
-    }
-
-    input.data-request::placeholder {
-        color:#999 !important
-    }
-
-    td.data-input-field-name {
-        font-family: "Jost";
-        font-size: 0.86em;
-    }
-
-    #data-response {
-        height: 59.1vh;
-        margin-top: 3px;
-    }
-
-    .dimmed {
-        opacity: 70%;
-    }
-
-</style>
-
-<div id="main-area-container">
-    <div class="item">
-        <div id="editor">
-if __name__ == '__main__':
-
-    env_key_name = 'ZATO_SERVER_BASE_DIR'
-    env_server_base_dir = os.environ.get(env_key_name)
-
-    if env_server_base_dir:
-
-
-        server_base_dir = env_server_base_dir
-        cmd_line_options = {
-            'fg':True,
-            'sync_internal':True,
-            'secret_key':'',
-            'stderr_path':None,
-        }
-    else:
-        server_base_dir = sys.argv[1]
-        cmd_line_options = sys.argv[2]
-        cmd_line_options = parse_cmd_line_options(cmd_line_options)
-
-    if not os.path.isabs(server_base_dir):
-        server_base_dir = os.path.abspath(os.path.join(os.getcwd(), server_base_dir))
-
-    run(server_base_dir, options=cmd_line_options)
-        </div>
-    </div>
-    <div id="action-area-container">
-        <div id="action-area-header" data-is-expanded="false">
-            <a href="javascript:$.fn.zato.editor.toggle_action_area()" class="img-button"><img src="/static/gfx/editor/resize.png" class="button" title="Resize this area" /></a>
-            <select>
-                <option>api.adapter.crm.customer.create</option>
-                <option>api.adapter.crm.customer.delete</option>
-            </select>
-        </div>
-        <div id="left-action-area" class="item item-2">
-            <table class="file-system-listing">
-                <tr class="header">
-                    <td colspan="2" class="header">
-                        <div id="header-links-wrapper">
-                            <div id="header-links-left"></div>
-                            <div id="header-links-right"></div>
-                        </div>
-                    </td>
-                </tr>
-                <tr class="header">
-                    <td colspan="2" class="header">
-                        <span id="header-status" class="dimmed"></span>
-                    </td>
-                </tr>
-
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_banking.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_healthcare_hl7_fhir.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_telco_network_security_visibility.py</a></td>
-                </tr>
-
-                <tr colspan="2" class="invoker-tr">
-                    <td class="data-input-field-name" title="This field is required">
-                        customer_id *
-                        <br/>
-                        <input type="text" class="data-request" placeholder="customer_id"/>
-                    </td>
-                </tr>
-
-                <tr colspan="2" class="invoker-tr">
-                    <td class="data-input-field-name" title="This field is optional">
-                        account_id
-                        <br/>
-                        <input type="text" class="data-request" placeholder="account_id"/>
-                    </td>
-                </tr>
-
-                <tr colspan="2" class="invoker-tr">
-                    <td class="data-input-field-name" title="This field is optional">
-                        account_number
-                        <br/>
-                        <input type="text" class="data-request" placeholder="account_number"/>
-                    </td>
-                </tr>
-                <tr colspan="2" class="invoker-tr">
-                    <td>
-                        <input type="button" value="Invoke" />
-                    </td>
-                </tr>
-                <tr colspan="2" class="invoker-tr">
-                    <td>
-                        <br/>
-                        <span class="dimmed">Response 200 OK</span> <a href="#">Copy</a>
-                        <textarea id="data-response">
-{
-    "RecordType": "MO",
-    "SystemIdentity": "ga",
-    "FileNum": "54",
-    "SwitchNum": "US",
-    "CallingNum": "12345567",
-    "CallingIMSI": "1234556700911",
-    "CalledNum": "77191972",
-    "CalledIMSI": "091716266251113",
-    "DateS": "20220311",
-    "TimeS": null,
-    "TimeType": 2,
-    "CallPeriod": 313,
-    "CallingCellID": null,
-    "CalledCellID": null,
-    "ServiceType": "S",
-    "Transfer": 1,
-    "IncomingTrunk": null,
-    "OutgoingTrunk": "3456",
-    "MSRN": "817296834",
-    "CalledNum2": null,
-    "FCIFlag": null,
-    "callrecTime": "2022-03-11T11:22:33.0000000Z",
-    "EventProcessedUtcTime": "2022-03-11T11:22:33.0000000Z",
-    "PartitionId": 5,
-    "EventEnqueuedUtcTime": "2022-03-11T11:22:33.0000000Z"
-}
-                        </textarea>
-                    </td>
-                </tr>
-
-            </table>
-        </div>
-    </div>
-    <div id="left-side-menu" class="item">
-
-        <ul class="left-side-buttons">
-            <li>
-                <a href="javascript:$.fn.zato.editor.switch_to_action_area('browser')" class="img-button">
-                    <img src="/static/gfx/editor/files.png" class="button" title="Browse files on server" />
-                </a>
-            </li>
-            <li>
-                <a href="javascript:$.fn.zato.editor.switch_to_action_area('invoker')" class="img-button">
-                    <img src="/static/gfx/editor/play.png" class="button" title="Invoke the current service" />
-                </a>
-            </li>
-            <li>
-                <a href="javascript:$.fn.zato.editor.switch_to_action_area('info')" class="img-button">
-                    <img src="/static/gfx/editor/icons/data-models.png" class="button" title="Data models" />
-                </a>
-            </li>
-        </ul>
-
-    </div>
-  </div>
-
-<script src="/static/ace-builds/src/ace.js" type="text/javascript" charset="utf-8"></script>
-<script src="/static/ace-builds/src/ext-error_marker.js" type="text/javascript" charset="utf-8"></script>
-<script src="/static/ace-builds/src/ext-language_tools.js" type="text/javascript" charset="utf-8"></script>
-<script>
-    var editor = ace.edit("editor");
-    editor.setTheme("ace/theme/sqlserver");
-    editor.session.setMode("ace/mode/python");
-
-    editor.setOptions({
-        enableBasicAutocompletion: true,
-        enableSnippets: true,
-        enableLiveAutocompletion: true,
-        newLineMode: "unix",
-        fontSize: 17,
-        cursorStyle: "ace"
-    });
-
-    $.fn.zato.editor.populate_browser_area();
-
-</script>
 
 {% endblock %}
