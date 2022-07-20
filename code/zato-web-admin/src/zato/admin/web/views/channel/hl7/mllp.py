@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
 from zato.admin.web.forms.channel.hl7.mllp import CreateForm, EditForm
@@ -27,7 +25,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'hl7_version', 'service', 'security_name', 'address'
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'service', 'security_name', 'address'
         output_optional = ('should_parse_on_input', 'should_validate', 'should_return_errors') + generic_attrs
         output_repeated = True
 
@@ -46,7 +44,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_internal', 'hl7_version', 'service', 'address'
+        input_required = 'name', 'is_internal', 'service', 'address'
         input_optional = ('is_active', 'should_parse_on_input', 'should_validate', 'should_return_errors') + generic_attrs
         output_required = 'id', 'name'
 
@@ -62,7 +60,16 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['should_validate'] = True
         initial_input_dict['should_parse_on_input'] = True
         initial_input_dict['data_format'] = HL7.Const.Version.v2.id
+        initial_input_dict['hl7_version'] = HL7.Const.Version.v2.id
         initial_input_dict['data_encoding'] = 'utf-8'
+
+# ################################################################################################################################
+
+    def pre_process_item(self, name, value):
+        if name == 'recv_timeout':
+            return int(value)
+        else:
+            return value
 
 # ################################################################################################################################
 

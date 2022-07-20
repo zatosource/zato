@@ -247,7 +247,7 @@ class ChangePasswordForm(forms.Form):
 # ################################################################################################################################
 
 class DataFormatForm(forms.Form):
-    data_format = forms.ChoiceField(widget=forms.Select())
+    data_format = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100px'}))
     data_formats_allowed = None
 
     def __init__(self, *args, **kwargs):
