@@ -274,7 +274,7 @@ class Outgoing:
 
     def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, zmq=None,
             wsx=None, vault=None, sms=None, sap=None, sftp=None, ldap=None, mongodb=None, def_kafka=None,
-            hl7=None, redis=None):
+            redis=None, hl7=None):
 
         self.amqp = amqp # type: AMQPFacade
         self.ftp  = ftp  # type: FTPStore
@@ -299,8 +299,8 @@ class Outgoing:
         self.mongodb = mongodb # type: dict
         self.def_kafka = None  # type: dict
 
-        self.hl7   = hl7   # type: HL7API
         self.redis = redis # type: KVDBAPI
+        self.hl7   = hl7   # type: HL7API
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -334,7 +334,6 @@ class Definition:
     """ A container for connection definitions a service has access to.
     """
     __slots__ = 'kafka',
-
     kafka: 'stranydict'
 
 # ################################################################################################################################
@@ -360,10 +359,14 @@ class MLLP:
 class HL7API:
     """ A container for HL7 connections a service can establish.
     """
-    __slots__ = 'mllp'
+    __slots__ = 'fhir', 'mllp'
 
-    def __init__(self, mllp=None):
-        self.mllp = mllp or MLLP()
+    fhir: 'stranydict'
+    mllp: 'stranydict'
+
+    def __init__(self, fhir:'stranydict', mllp:'stranydict') -> None:
+        self.fhir = fhir
+        self.mllp = mllp
 
 # ################################################################################################################################
 # ################################################################################################################################

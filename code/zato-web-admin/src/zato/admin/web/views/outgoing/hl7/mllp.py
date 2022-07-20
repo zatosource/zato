@@ -13,7 +13,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
 from zato.common.api import GENERIC, generic_attrs
-from zato.common.model.hl7 import HL7ConfigObject
+from zato.common.model.hl7 import HL7MLLPConfigObject
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,7 +23,7 @@ class Index(_Index):
     url_name = 'outgoing-hl7-mllp'
     template = 'zato/outgoing/hl7/mllp.html'
     service_name = 'zato.generic.connection.get-list'
-    output_class = HL7ConfigObject
+    output_class = HL7MLLPConfigObject
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
