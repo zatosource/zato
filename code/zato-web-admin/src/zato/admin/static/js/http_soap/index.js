@@ -54,8 +54,8 @@ $.fn.zato.data_table.on_before_element_validation = function(elem) {
     }
 }
 
-$.fn.zato.http_soap.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new object', null);
+$.fn.zato.http_soap.create = function(object_type) {
+    $.fn.zato.data_table._create_edit('create', 'Create a new ' + object_type, null);
 }
 
 $.fn.zato.http_soap.edit = function(id) {
