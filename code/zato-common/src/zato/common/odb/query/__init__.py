@@ -735,7 +735,13 @@ def http_soap_list(session, cluster_id, connection=None, transport=None, return_
         q = q.filter(HTTPSOAP.transport==transport)
 
     if not return_internal:
-        q = q.filter(not_(HTTPSOAP.name.startswith('zato')))
+        q = q.filter(
+            not_(
+                HTTPSOAP.name.startswith('zato') |
+                HTTPSOAP.name.startswith('/zato/sso/') |
+                HTTPSOAP.name.startswith('pub.zato.service.service-invoker')
+            )
+        )
 
     if data_format:
         q = q.filter(HTTPSOAP.data_format.startswith(data_format))
