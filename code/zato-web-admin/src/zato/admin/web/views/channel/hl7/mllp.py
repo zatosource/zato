@@ -66,6 +66,14 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
+    def pre_process_item(self, name, value):
+        if name == 'recv_timeout':
+            return int(value)
+        else:
+            return value
+
+# ################################################################################################################################
+
     def success_message(self, item):
         return 'Successfully {} HL7 MLLP channel `{}`'.format(self.verb, item.name)
 
