@@ -237,7 +237,28 @@
 
                             </td>
                         </tr>
+
                         <tr>
+                            <td style="vertical-align:middle;width:12%">
+                                <label for="id_service">
+                                Service
+                                </label>
+                            </td>
+                            <td>{{ create_form.service }}</td>
+                        </tr>
+
+                        {% include "zato/include/audit-log/create.html" %}
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            More options
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.more-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
                             <td></td>
                             <td>
 
@@ -263,7 +284,7 @@
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="more-options-block hidden">
                             <td></td>
                             <td>
 
@@ -282,7 +303,7 @@
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="more-options-block hidden">
                             <td>Max. size</td>
                             <td>
 
@@ -301,7 +322,7 @@
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="more-options-block hidden">
                             <td>Separator</td>
                             <td>
 
@@ -319,17 +340,6 @@
 
                             </td>
                         </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle;width:12%">
-                                <label for="id_service">
-                                Service
-                                </label>
-                            </td>
-                            <td>{{ create_form.service }}</td>
-                        </tr>
-
-                        {% include "zato/include/audit-log/create.html" %}
 
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -385,7 +395,28 @@
 
                             </td>
                         </tr>
+
                         <tr>
+                            <td style="vertical-align:middle;width:12%">
+                                <label for="id_edit-service">
+                                Service
+                                </label>
+                            </td>
+                            <td>{{ edit_form.service }}</td>
+                        </tr>
+
+                        {% include "zato/include/audit-log/edit.html" %}
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            More options
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.more-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
                             <td></td>
                             <td>
 
@@ -411,7 +442,7 @@
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="more-options-block hidden">
                             <td></td>
                             <td>
 
@@ -430,7 +461,7 @@
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="more-options-block hidden">
                             <td>Max. size</td>
                             <td>
 
@@ -449,7 +480,7 @@
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="more-options-block hidden">
                             <td>Separator</td>
                             <td>
 
@@ -467,17 +498,6 @@
 
                             </td>
                         </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle;width:12%">
-                                <label for="id_service">
-                                Service
-                                </label>
-                            </td>
-                            <td>{{ edit_form.service }}</td>
-                        </tr>
-
-                        {% include "zato/include/audit-log/edit.html" %}
 
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -499,4 +519,3 @@
 {% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}
-
