@@ -33,7 +33,6 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
-            'hl7_version',
 
             {% comment %} 2 {% endcomment %}
             'address',
@@ -101,7 +100,6 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Version</a></th>
 
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Address</a></th>
@@ -147,7 +145,6 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.hl7_version }}</td>
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.address }}</td>
@@ -219,13 +216,6 @@
                                 <label>
                                 Active
                                 {{ create_form.is_active }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Ver.
-                                {{ create_form.hl7_version }}
                                 </label>
 
                                 |
@@ -377,13 +367,6 @@
                                 <label>
                                 Active
                                 {{ edit_form.is_active }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Ver.
-                                {{ edit_form.hl7_version }}
                                 </label>
 
                                 |
