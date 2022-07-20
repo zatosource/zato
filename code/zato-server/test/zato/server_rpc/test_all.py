@@ -14,6 +14,7 @@ from unittest import main, TestCase
 from zato.common.ext.dataclasses import dataclass
 from zato.common.odb.model import Base, HTTPBasicAuth, Cluster, Server as ServerModel
 from zato.common.odb.api import ODBManager, SQLConnectionPool
+from zato.common.test import TestCluster, TestParallelServer
 from zato.common.typing_ import anydict, cast_, dict_field
 from zato.server.connection.server.rpc.api import ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import CredentialsConfig, ODBConfigSource
@@ -46,31 +47,6 @@ class TestConfig:
     server1_port = 1111
     server2_port = 2222
     server3_port = 3333
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TestCluster:
-    def __init__(self, name:'str') -> 'None':
-        self.name = name
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TestParallelServer:
-    def __init__(
-        self,
-        cluster,    # type: TestCluster
-        odb,        # type: ODBManager
-        server_name # type: str
-    ) -> 'None':
-        self.cluster = cluster
-        self.cluster_name = self.cluster.name
-        self.odb = odb
-        self.name = server_name
-
-    def decrypt(self, data:'str') -> 'str':
-        return data
 
 # ################################################################################################################################
 # ################################################################################################################################
