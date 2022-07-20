@@ -169,7 +169,7 @@
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.http_soap.create()">Create a new {{ transport_label }} {{ connection_label }}</a>
+            <a href="javascript:$.fn.zato.http_soap.create('{{ transport_label }} {{ connection_label }}')">Create a new {{ transport_label }} {{ connection_label }}</a>
         </div>
 
         <div id="markup">
@@ -444,14 +444,22 @@
                 <form action="{% url "http-soap-create" %}?connection={{ connection }}&amp;transport={{ transport }}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:18%">Name</td>
+                            <td style="vertical-align:middle;width:17%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
+                            <td></td>
                             <td>
-                                {{ create_form.is_active }}
+                                <label>
+                                    Active
+                                    {{ create_form.is_active }}
+                                </label>
+                                |
+                                <label>
+                                    Data format
+                                    {{ create_form.data_format }}
+                                </label>
                             </td>
                         </tr>
 
@@ -466,52 +474,22 @@
                             <td style="vertical-align:middle">URL path</td>
                             <td>
                                 {{ create_form.url_path }}
-                                {% ifequal connection 'channel' %}
-                                    |
-                                    <label>Match slash
-                                    {{ create_form.match_slash }}
-                                    </label>
-                                {% endifequal %}
                             </td>
                         </tr>
 
                         {% ifequal connection 'channel' %}
-
                         <tr>
-                            <td style="vertical-align:middle">URL params</td>
-                            <td>
-                                {{ create_form.url_params_pri }}
-                                |
-                                <label>
-                                Merge to request
-                                {{ create_form.merge_url_params_req }}
-                                </label>
-                            </td>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_form.service }}</td>
                         </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Params priority</td>
-                            <td>{{ create_form.params_pri }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Method</td>
-                            <td>
-                                {{ create_form.method }}
-                                |
-                                <label>
-                                    Encoding
-                                    {{ create_form.content_encoding }}
-                                </label>
-                                |
-                                <label>
-                                    Data format
-                                    {{ create_form.data_format }}
-                                </label>
-                            </td>
-                        </tr>
-
                         {% endifequal %}
+
+                        <tr>
+                            <td style="vertical-align:middle">Security<br/>definition</td>
+                            <td>
+                                {{ create_form.security }}
+                            </td>
+                        </tr>
 
                         {% ifequal connection 'outgoing' %}
                             {% ifequal transport 'plain_http' %}
@@ -524,15 +502,6 @@
                             {% endifequal %}
                         {% endifequal %}
 
-                        {% ifequal connection 'channel' %}
-                        <tr>
-                            <td style="vertical-align:middle">Accept header</td>
-                            <td>
-                                {{ create_form.http_accept }}
-                            </td>
-                        </tr>
-                        {% endifequal %}
-
                         {% ifequal transport 'soap' %}
                         <tr>
                             <td style="vertical-align:middle">SOAP action</td>
@@ -542,13 +511,6 @@
                         <tr>
                             <td style="vertical-align:middle">SOAP version</td>
                             <td>{{ create_form.soap_version }}</td>
-                        </tr>
-                        {% endifequal %}
-
-                        {% ifequal connection 'channel' %}
-                        <tr>
-                            <td style="vertical-align:middle">Service</td>
-                            <td>{{ create_form.service }}</td>
                         </tr>
                         {% endifequal %}
 
@@ -592,16 +554,17 @@
 
                         {% endifequal %}
 
-                        <tr>
-                            <td style="vertical-align:middle">Security<br/>definition</td>
-                            <td>
-                                {{ create_form.security }}
-                            </td>
-                        </tr>
-
                         {% ifequal connection 'channel' %}
                         <tr>
-                            <td style="vertical-align:middle">Cache</td>
+                            <td style="vertical-align:middle">
+                            Cache
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.cache-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="cache-options-block hidden">
+                            <td></td>
                             <td>{{ create_form.cache_id }}
                             |
                             Expiry
@@ -615,6 +578,63 @@
 
                         {% ifequal connection 'channel' %}
                             {% include "zato/include/audit-log/create.html" %}
+                        {% endifequal %}
+
+                        {% ifequal connection 'channel' %}
+                        <tr>
+                            <td style="vertical-align:middle">
+                            More options
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.more-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        {% endifequal %}
+
+                        {% ifequal connection 'channel' %}
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle">URL params</td>
+                            <td>
+                                {{ create_form.url_params_pri }}
+                                |
+                                <label>
+                                Merge to request
+                                {{ create_form.merge_url_params_req }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle">Params priority</td>
+                            <td>
+                                {{ create_form.params_pri }}
+                                {% ifequal connection 'channel' %}
+                                    |
+                                    <label>Match slash
+                                    {{ create_form.match_slash }}
+                                    </label>
+                                {% endifequal %}
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle">Method</td>
+                            <td>
+                                {{ create_form.method }}
+                                |
+                                <label>
+                                    Encoding
+                                    {{ create_form.content_encoding }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle">Accept header</td>
+                            <td>
+                                {{ create_form.http_accept }}
+                            </td>
+                        </tr>
                         {% endifequal %}
 
                         {% ifequal connection 'outgoing' %}
@@ -655,9 +675,17 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
+                            <td></td>
                             <td>
-                                {{ edit_form.is_active }}
+                                <label>
+                                    Active
+                                    {{ edit_form.is_active }}
+                                </label>
+                                |
+                                <label>
+                                    Data format
+                                    {{ edit_form.data_format }}
+                                </label>
                             </td>
                         </tr>
 
@@ -672,50 +700,8 @@
                             <td style="vertical-align:middle">URL path</td>
                             <td>
                                 {{ edit_form.url_path }}
-                                {% ifequal connection 'channel' %}
-                                    |
-                                    <label>Match slash
-                                    {{ edit_form.match_slash }}
-                                    </label>
-                                {% endifequal %}
                             </td>
                         </tr>
-
-                        {% ifequal connection 'channel' %}
-
-                        <tr>
-                            <td style="vertical-align:middle">URL params</td>
-                            <td>
-                                {{ edit_form.url_params_pri }}
-                                |
-                                <label>
-                                Merge to request
-                                {{ edit_form.merge_url_params_req }}
-                                </label>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Params priority</td>
-                            <td>{{ edit_form.params_pri }}</td>
-
-                        <tr>
-                            <td style="vertical-align:middle">Method</td>
-                            <td>
-                                {{ edit_form.method }}
-                                |
-                                <label>
-                                    Encoding
-                                    {{ edit_form.content_encoding }}
-                                </label>
-                                |
-                                <label>
-                                    Data format
-                                    {{ edit_form.data_format }}
-                                </label>
-                            </td>
-                        </tr>
-                        {% endifequal %}
 
                         {% ifequal connection 'outgoing' %}
                             {% ifequal transport 'plain_http' %}
@@ -796,23 +782,6 @@
                         </tr>
 
                         {% ifequal connection 'channel' %}
-                        <tr>
-                        <td style="vertical-align:middle">Cache</td>
-                        <td>
-                            {{ edit_form.cache_id }}
-                            |
-                            <label>
-                            Expiry
-                            {{ edit_form.cache_expiry }}
-                            </label>
-                            <span class="form_hint">(in minutes, 0=unlimited)</span>
-                        </td>
-                        <tr>
-                            <td style="vertical-align:middle">Accept header</td>
-                            <td>
-                                {{ edit_form.http_accept }}
-                            </td>
-                        </tr>
 
                         {% include "zato/include/rate-limiting/edit.html" %}
                         {% endifequal %}
@@ -825,6 +794,63 @@
                         <tr>
                             <td style="vertical-align:middle">TLS CA certs</td>
                             <td>{{ edit_form.sec_tls_ca_cert_id }}</td>
+                        </tr>
+                        {% endifequal %}
+
+                        {% ifequal connection 'channel' %}
+                        <tr>
+                            <td style="vertical-align:middle">
+                            More options
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.more-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        {% endifequal %}
+
+                        {% ifequal connection 'channel' %}
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle">URL params</td>
+                            <td>
+                                {{ edit_form.url_params_pri }}
+                                |
+                                <label>
+                                Merge to request
+                                {{ edit_form.merge_url_params_req }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle">Params priority</td>
+                            <td>
+                                {{ edit_form.params_pri }}
+                                {% ifequal connection 'channel' %}
+                                    |
+                                    <label>Match slash
+                                    {{ edit_form.match_slash }}
+                                    </label>
+                                {% endifequal %}
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle">Method</td>
+                            <td>
+                                {{ edit_form.method }}
+                                |
+                                <label>
+                                    Encoding
+                                    {{ edit_form.content_encoding }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle">Accept header</td>
+                            <td>
+                                {{ edit_form.http_accept }}
+                            </td>
                         </tr>
                         {% endifequal %}
 

@@ -20,7 +20,6 @@ $(document).ready(function() {
     $.fn.zato.data_table.setup_forms([
         'name',
         'address',
-        'hl7_version',
         'service',
         'logging_level',
         'data_encoding',
@@ -62,7 +61,6 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.hl7_version);
 
     // 2
     row += String.format('<td>{0}</td>', item.address);
