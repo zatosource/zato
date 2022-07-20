@@ -11,6 +11,7 @@ from gevent import monkey
 monkey.patch_all()
 
 # stdlib
+import logging
 import os
 from time import sleep
 from unittest import main, TestCase
@@ -33,27 +34,23 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# During development, it is convenient to configure it here to catch information that should be logged
-# even prior to setting up main loggers in each of components.
-if 1:
-
-    # stdlib
-    import logging
-
-    log_level = logging.DEBUG
-    log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
-    logging.basicConfig(level=log_level, format=log_format)
+log_level = logging.DEBUG
+log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+logging.basicConfig(level=log_level, format=log_format)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ModuleCtx:
+    Env_Key_FHIR_ID = 'Zato_Test_FHIR_ID'
+    Env_Key_FHIR_Meta_Last_Updated = 'Zato_Test_FHIR_Meta_Last_Updated'
     Env_Key_FHIR_Username = 'Zato_Test_FHIR_Username'
     Env_Key_FHIR_Password = 'Zato_Test_FHIR_Password'
     Env_Key_FHIR_Address = 'Zato_Test_FHIR_Address'
-    Env_Key_FHIR_Person_Given_Name = 'Zato_Test_FHIR_Person_Given_Name'
-    Env_Key_FHIR_Person_Last_Name = 'Zato_Test_FHIR_Person_Last_Name'
-    Queue_Build_Cap = 3
+    Env_Key_FHIR_Person_Given_Name1 = 'Zato_Test_FHIR_Person_Given_Name1'
+    Env_Key_FHIR_Person_Given_Name2 = 'Zato_Test_FHIR_Person_Given_Name2'
+    Env_Key_FHIR_Person_Family_Name = 'Zato_Test_FHIR_Person_Family_Name'
+    Queue_Build_Cap = 0.5
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,8 +71,13 @@ class HL7FHIRReadTestCase(TestCase):
         # Get the rest of the configuration
         password = os.environ.get(ModuleCtx.Env_Key_FHIR_Password) or 'Missing_Env_Key_FHIR_Password'
         address = os.environ.get(ModuleCtx.Env_Key_FHIR_Address) or 'Missing_Env_Key_FHIR_Password'
-        # person_first_name = os.environ.get(ModuleCtx.Env_Key_FHIR_Person_Given_Name) or 'Missing_Env_Key_FHIR_Person_Given_Name'
-        # person_last_name = os.environ.get(ModuleCtx.Env_Key_FHIR_Person_Last_Name) or 'Missing_Env_Key_FHIR_Person_Last_Name'
+
+        resource_id = os.environ.get(ModuleCtx.Env_Key_FHIR_ID) or 'Missing_Env_Key_FHIR_ID'
+        meta_last_updated = os.environ.get(ModuleCtx.Env_Key_FHIR_Meta_Last_Updated) or 'Missing_Env_Key_FHIR_Meta_Last_Updated'
+
+        given_name1 = os.environ.get(ModuleCtx.Env_Key_FHIR_Person_Given_Name1) or 'Missing_Env_Key_FHIR_Person_Given_Name1'
+        given_name2 = os.environ.get(ModuleCtx.Env_Key_FHIR_Person_Given_Name2) or 'Missing_Env_Key_FHIR_Person_Given_Name2'
+        family_name = os.environ.get(ModuleCtx.Env_Key_FHIR_Person_Family_Name) or 'Missing_Env_Key_FHIR_Person_Family_Name'
 
         # Build the entire config dictionary that the wrapper expects
         config = bunchify({
@@ -107,8 +109,41 @@ class HL7FHIRReadTestCase(TestCase):
         wrapper.ping()
 
         # Now, obtain a test resource
+        with wrapper.client() as client:
 
-        # Finally, confirm that it is what we expect to receive
+            # We are going to look up patients
+            patients = client.resources('Patient') # type: ignore
+
+            # Look for this particular one
+            result = patients.search(name__contains=ModuleCtx.Env_Key_FHIR_Person_Given_Name1)
+
+            # Get the patient
+            result = result.first()
+
+            # Log information received
+            logging.info('FHIR result -> %s', dict(result))
+
+        # Now, check that all the details match
+
+        self.assertFalse(result.active)
+        self.assertEqual(result.id, resource_id)
+        self.assertEqual(result.resourceType, 'Patient')
+
+        self.assertEqual(result.meta.versionId, '1')
+        self.assertEqual(result.meta.lastUpdated, meta_last_updated)
+
+        names = result.name
+        self.assertEqual(len(names), 1)
+
+        name = names[0]
+
+        expected_given_names = sorted([given_name1, given_name2])
+        received_given_names = sorted(name.given)
+
+        self.assertListEqual(expected_given_names, received_given_names)
+
+        self.assertEqual(name.use, 'official')
+        self.assertEqual(name.family, family_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
