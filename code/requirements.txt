@@ -140,7 +140,7 @@ requests-toolbelt==0.9.1
 rsa==4.1
 sarge==0.1.5.post0
 setproctitle==1.1.10
-sh==1.12.14
+sh==1.14.3
 simplejson==3.3.0
 simple-parsing==0.0.17
 six==1.16.0
