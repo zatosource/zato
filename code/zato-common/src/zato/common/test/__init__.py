@@ -56,6 +56,7 @@ from past.builtins import basestring, cmp, unicode, xrange
 # ################################################################################################################################
 
 if 0:
+    from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anylist, intnone, strnone
     from zato.common.util.search import SearchResults
     SearchResults = SearchResults
@@ -234,6 +235,31 @@ def enrich_with_static_config(object_):
         cassandra_query_api=None, email_smtp_api=None, email_imap_api=None, search_es_api=None, search_solr_api=None,
         target_matcher=Bunch(target_match=target_match, is_allowed=is_allowed), invoke_matcher=Bunch(is_allowed=is_allowed),
         vault_conn_api=None, sms_twilio_api=None)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestCluster:
+    def __init__(self, name:'str') -> 'None':
+        self.name = name
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestParallelServer:
+    def __init__(
+        self,
+        cluster,    # type: TestCluster
+        odb,        # type: ODBManager
+        server_name # type: str
+    ) -> 'None':
+        self.cluster = cluster
+        self.cluster_name = self.cluster.name
+        self.odb = odb
+        self.name = server_name
+
+    def decrypt(self, data:'str') -> 'str':
+        return data
 
 # ################################################################################################################################
 # ################################################################################################################################

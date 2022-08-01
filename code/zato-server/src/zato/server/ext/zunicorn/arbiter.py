@@ -48,6 +48,7 @@ import time
 import traceback
 
 # Zato
+from zato.common.api import OS_Env
 from zato.common.util.platform_ import is_posix
 from zato.common.version import get_version
 from zato.server.ext.zunicorn import SERVER_SOFTWARE, sock, systemd, util
@@ -609,8 +610,11 @@ class Arbiter:
         worker = self.worker_class(self.worker_age, self.pid, self.LISTENERS, self.app, self.timeout / 2.0, self.cfg, self.log)
         self.cfg.pre_fork(self, worker)
 
-        # We can actually fork on this system ..
-        if is_forking:
+        # Fork only if we can fork on this system
+        # and if memory profiling is not enabled.
+        needs_fork = is_forking and (not os.environ.get(OS_Env.Zato_Enable_Memory_Profiler))
+
+        if needs_fork:
             pid = os.fork()
             if pid != 0:
                 worker.pid = pid

@@ -59,6 +59,7 @@ from gevent.server import StreamServer
 from gevent.socket import wait_write, socket
 from gevent import pywsgi
 
+from zato.common.api import OS_Env
 from zato.common.util.platform_ import is_windows
 from zato.server.ext.zunicorn import SERVER_SOFTWARE
 from zato.server.ext.zunicorn.http.wsgi import base_environ
@@ -117,7 +118,11 @@ class GeventWorker(AsyncWorker):
     def notify(self):
         super(GeventWorker, self).notify()
         if self.ppid != os.getppid():
-            if is_forking:
+
+            # We have forked only if we can fork on this system and if memory profiling is not enabled.
+            needs_fork = is_forking and (not os.environ.get(OS_Env.Zato_Enable_Memory_Profiler))
+
+            if needs_fork:
                 self.log.info("Parent changed, shutting down: %s", self)
                 sys.exit(0)
 

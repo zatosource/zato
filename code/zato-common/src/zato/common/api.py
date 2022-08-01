@@ -29,6 +29,9 @@ engine_def_sqlite = 'sqlite:///{sqlite_path}'
 
 # Convenience access functions and constants.
 
+class OS_Env:
+    Zato_Enable_Memory_Profiler = 'Zato_Enable_Memory_Profiler'
+
 megabyte = 10 ** 6
 
 # Hook methods whose func.im_func.func_defaults contains this argument will be assumed to have not been overridden by users
@@ -254,7 +257,7 @@ class SEC_DEF_TYPE:
 SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.APIKEY: 'API key',
     SEC_DEF_TYPE.AWS: 'AWS',
-    SEC_DEF_TYPE.BASIC_AUTH: 'HTTP Basic Auth',
+    SEC_DEF_TYPE.BASIC_AUTH: 'Basic Auth',
     SEC_DEF_TYPE.JWT: 'JWT',
     SEC_DEF_TYPE.NTLM: 'NTLM',
     SEC_DEF_TYPE.OAUTH: 'OAuth 1.0',
@@ -1230,6 +1233,7 @@ class GENERIC:
             CLOUD_JIRA = 'cloud-jira'
             CLOUD_SALESFORCE = 'cloud-salesforce'
             DEF_KAFKA = 'def-kafka'
+            OUTCONN_HL7_FHIR = 'outconn-hl7-fhir'
             OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
             OUTCONN_IM_SLACK = 'outconn-im-slack'
             OUTCONN_IM_TELEGRAM = 'outconn-im-telegram'
@@ -1514,7 +1518,10 @@ class HL7:
     class Default:
         """ Default values for HL7 objects.
         """
-        # Default TCP port for MLLP connections
+        # Default address for FHIR connections
+        address_fhir = 'https://fhir.simplifier.net/zato'
+
+        # Default address for MLLP connections
         address = '0.0.0.0:30901'
 
         # Assume that UTF-8 is sent in by default
@@ -1569,6 +1576,13 @@ class HL7:
         class ImplClass:
             hl7apy = 'hl7apy'
             zato   = 'Zato'
+
+        class FHIR_Auth_Type:
+            Basic_Auth = NameId('Basic Auth', 'basic-auth')
+            JWT = NameId('JWT', 'jwt')
+
+            def __iter__(self):
+                return iter((self.Basic_Auth, self.JWT))
 
 # ################################################################################################################################
 # ################################################################################################################################

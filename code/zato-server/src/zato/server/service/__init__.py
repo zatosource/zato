@@ -593,9 +593,12 @@ class Service:
             self._worker_store.outconn_ldap,
             self._worker_store.outconn_mongodb,
             self._worker_store.def_kafka,
-            HL7API(self._worker_store.outconn_hl7_mllp) if self.component_enabled_hl7 else None,
             self.kvdb
         ) # type: Outgoing
+
+        if self.component_enabled_hl7:
+            hl7_api = HL7API(self._worker_store.outconn_hl7_fhir, self._worker_store.outconn_hl7_mllp)
+            self.out.hl7 = hl7_api
 
 # ################################################################################################################################
 
@@ -881,9 +884,6 @@ class Service:
                     for elem in service._after_job_hooks:
                         if elem:
                             call_hook_with_service(elem, service)
-
-                # Internal method - always defined and called
-                service.post_handle()
 
                 # Optional, almost never overridden.
                 if service.finalize_handle:
@@ -1180,41 +1180,6 @@ class Service:
                 _ = self.invoke(callback_service, payload=response, channel=_async_callback, cid=new_cid,
                     data_format=ctx.data_format, in_reply_to=ctx.cid, environ=ctx.environ,
                     skip_response_elem=True)
-
-# ################################################################################################################################
-
-    def post_handle(self) -> 'None':
-        """ An internal method executed after the service has completed and has
-        a response ready to return. Updates its statistics and, optionally, stores
-        a sample request/response pair.
-        """
-
-        #
-        # Statistics
-        #
-
-        self.handle_return_time = _utcnow()
-        self.processing_time_raw = self.handle_return_time - self.invocation_time
-
-        if self.server.component_enabled.stats:
-
-            # Time spent in this service, as a float rounding to the fifth digit
-            proc_time = self.processing_time_raw.total_seconds() * 1000.0
-            proc_time = round(proc_time, 5)
-
-            self.processing_time = proc_time
-
-            # Store usage statistics in the time series database ..
-            self.server.stats_client.push(
-                self.cid,
-                self.invocation_time.isoformat(),
-                self.name,
-                False,
-                self.processing_time
-            )
-
-            # .. as well as in the in-RAM key keep track of the last duration times.
-            self.server.current_usage.set_last_duration(self.name, self.processing_time)
 
 # ################################################################################################################################
 
