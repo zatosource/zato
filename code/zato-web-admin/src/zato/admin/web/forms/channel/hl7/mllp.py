@@ -31,7 +31,7 @@ class CreateForm(WithAuditLog):
     should_log_messages = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     hl7_version = forms.ChoiceField(widget=forms.Select())
-    address = forms.CharField(initial=HL7.Default.address, widget=forms.TextInput(attrs={'style':'width:48%'}))
+    address = forms.CharField(initial=HL7.Default.address, widget=forms.TextInput(attrs={'style':'width:73%'}))
     service = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:100%'}))
 
     logging_level = forms.ChoiceField(widget=forms.Select())

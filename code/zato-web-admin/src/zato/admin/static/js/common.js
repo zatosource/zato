@@ -103,6 +103,7 @@ $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');
 $.namespace('zato.outgoing.ftp');
 $.namespace('zato.outgoing.hl7');
+$.namespace('zato.outgoing.hl7.fhir');
 $.namespace('zato.outgoing.hl7.mllp');
 $.namespace('zato.outgoing.im');
 $.namespace('zato.outgoing.im.slack');
