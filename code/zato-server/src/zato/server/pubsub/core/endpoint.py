@@ -8,13 +8,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import PUBSUB
+from zato.common.typing_ import cast_, strcalldict
 from zato.server.pubsub.model import Endpoint
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anytuple, callable_, dict_, intdict, intnone, strcalldict
+    from zato.common.typing_ import anydict, anytuple, callable_, dict_, intdict, intnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,7 +42,7 @@ class EndpointAPI:
 
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
-        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE())
+        self.endpoint_impl_getter = cast_('strcalldict', dict.fromkeys(PUBSUB.ENDPOINT_TYPE()))
 
         # Sec def ID -> Endpoint ID
         self.sec_id_to_endpoint_id = {}
