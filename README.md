@@ -18,4 +18,8 @@ and more.
   <a href="https://zato.io?gh2"><img alt="" src="https://zato.io/static/img/platform.webp" /></a>
 </p>
 
-Visit https://zato.io for more information and details.
+Visit https://zato.io for details:
+
+* [Downloads](https://zato.io/en/docs/3.2/admin/guide/install/index.html?gh)
+* [Screenshots](https://zato.io/en/docs/3.2/intro/screenshots.html?gh)
+* [Programming examples](https://zato.io/en/docs/3.2/dev/index.html?gh)
