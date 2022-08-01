@@ -1,8 +1,6 @@
 <p align="center">
-  <img alt="" src="https://zato.io/static/img/platform.png" />
+  <a href="https://zato.io"><img alt="" src="https://zato.io/static/img/platform.png" /></a>
 </p>
-
-
 
 Zato /zɑːtəʊ/
 -------------
