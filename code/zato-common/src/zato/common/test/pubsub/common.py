@@ -21,6 +21,13 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from unittest import TestCase
+    TestCase = TestCase
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -51,10 +58,11 @@ topic_name_unique = TestConfig.pubsub_topic_name_unique
 
 class FullPathTester:
 
-    def __init__(self, test:'PubSubTestingClass', sub_before_publish:'bool') -> 'None':
+    def __init__(self, test:'PubSubTestingClass', sub_before_publish:'bool', topic_name:'str'='') -> 'None':
         self.test = test
         self.sub_before_publish = sub_before_publish
         self.sub_after_publish = not self.sub_before_publish
+        self.topic_name = topic_name
         self.sub_key = '<no-sk>'
 
         #
@@ -70,7 +78,7 @@ class FullPathTester:
             self.needs_unique = False
             self.runner_name = 'Shared{}'.format(self.__class__.__name__)
         else:
-            self.topic_name = topic_name_unique
+            self.topic_name = topic_name
             self.needs_unique = True
             self.runner_name = 'Unique{}'.format(self.__class__.__name__)
 
@@ -103,6 +111,7 @@ class FullPathTester:
         if self.sub_after_publish:
             logger.info('Subscribing %s (2) (%s)', self.runner_name, self.sub_key)
             self.sub_key = self.test._subscribe(self.topic_name)
+            logger.info('Received sub_key %s for %s (2) (after)', self.sub_key, self.runner_name)
 
         # Synchronization tasks run once in 0.5 second, which is why we wait a bit longer
         # to give them enough time to push the message to a delivery task.
