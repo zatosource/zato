@@ -103,6 +103,7 @@ class FullPathTester:
         if self.sub_after_publish:
             logger.info('Subscribing %s (2) (%s)', self.runner_name, self.sub_key)
             self.sub_key = self.test._subscribe(self.topic_name)
+            logger.info('Received sub_key %s for %s (2) (after)', self.sub_key, self.runner_name)
 
         # Synchronization tasks run once in 0.5 second, which is why we wait a bit longer
         # to give them enough time to push the message to a delivery task.
