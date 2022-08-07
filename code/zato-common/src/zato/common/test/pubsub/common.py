@@ -21,6 +21,13 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from unittest import TestCase
+    TestCase = TestCase
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -51,10 +58,11 @@ topic_name_unique = TestConfig.pubsub_topic_name_unique
 
 class FullPathTester:
 
-    def __init__(self, test:'PubSubTestingClass', sub_before_publish:'bool') -> 'None':
+    def __init__(self, test:'PubSubTestingClass', sub_before_publish:'bool', topic_name:'str'='') -> 'None':
         self.test = test
         self.sub_before_publish = sub_before_publish
         self.sub_after_publish = not self.sub_before_publish
+        self.topic_name = topic_name
         self.sub_key = '<no-sk>'
 
         #
@@ -70,7 +78,7 @@ class FullPathTester:
             self.needs_unique = False
             self.runner_name = 'Shared{}'.format(self.__class__.__name__)
         else:
-            self.topic_name = topic_name_unique
+            self.topic_name = topic_name
             self.needs_unique = True
             self.runner_name = 'Unique{}'.format(self.__class__.__name__)
 
