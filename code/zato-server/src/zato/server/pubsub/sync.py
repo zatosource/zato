@@ -358,9 +358,6 @@ class InRAMSync:
                 if delete_msg:
                     to_delete_msg.add(msg_id)
 
-        # Explicitly delete a left-over name from the loop above
-        del sub_key
-
         # Delete all messages marked to be deleted ..
         for msg_id in to_delete_msg:
 
