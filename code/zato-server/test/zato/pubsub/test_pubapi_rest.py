@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from datetime import datetime
 from time import sleep
 
 # Zato
@@ -95,7 +96,18 @@ class PubAPITestCase(BasePubSubRestTestCase):
 # ################################################################################################################################
 
     def test_full_path_subscribe_after_publication(self):
-        tester = FullPathTester(self, False) # type: ignore
+
+        prefix = '/zato/demo/unique.'
+        topic_name = prefix + datetime.utcnow().isoformat()
+
+        # Command to invoke ..
+        cli_params = ['pubsub', 'create-topic', '--name', topic_name]
+
+        # .. get its response as a dict ..
+        out = self.run_zato_cli_json_command(cli_params) # type: anydict
+        topic_name = out['name']
+
+        tester = FullPathTester(self, False, topic_name) # type: ignore
         tester.run()
 
 # ################################################################################################################################
