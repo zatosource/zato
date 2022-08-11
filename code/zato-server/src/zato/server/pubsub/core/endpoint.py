@@ -8,14 +8,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import PUBSUB
-from zato.common.typing_ import cast_, strcalldict
+from zato.common.typing_ import cast_
 from zato.server.pubsub.model import Endpoint
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anytuple, callable_, dict_, intdict, intnone
+    from zato.common.typing_ import anydict, anytuple, callable_, dict_, intdict, intnone, strcalldict
+    strcalldict = strcalldict
 
 # ################################################################################################################################
 # ################################################################################################################################

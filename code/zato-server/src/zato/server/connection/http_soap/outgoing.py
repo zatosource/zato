@@ -458,11 +458,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
     def get(self, cid:'str', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
         return self.http_request('GET', cid, '', params, *args, **kwargs)
 
-    def delete(self, cid:'str', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
-        return self.http_request('DELETE', cid, '', params, *args, **kwargs)
+    def delete(self, cid:'str', data:'any_'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
+        return self.http_request('DELETE', cid, data, params, *args, **kwargs)
 
-    def options(self, cid:'str', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
-        return self.http_request('OPTIONS', cid, '', params, *args, **kwargs)
+    def options(self, cid:'str', data:'any_'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
+        return self.http_request('OPTIONS', cid, data, params, *args, **kwargs)
 
     def post(self, cid:'str', data:'any_'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
         return self.http_request('POST', cid, data, params, *args, **kwargs)

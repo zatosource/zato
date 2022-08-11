@@ -10,7 +10,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from http.client import OK
 from json import dumps, loads
-from unittest import TestCase
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -20,6 +19,7 @@ import requests
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test import BaseZatoTestCase
 from zato.common.test.config import TestConfig
 from zato.common.util.cli import get_zato_sh_command
 from zato.sso import status_code
@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RESTClientTestCase(TestCase):
+class RESTClientTestCase(BaseZatoTestCase):
 
     needs_bunch = True
     needs_current_app = True
