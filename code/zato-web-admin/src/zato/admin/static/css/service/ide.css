@@ -1,0 +1,163 @@
+
+#main-area-container {
+    display: grid;
+    grid-template-rows: 87vh;
+    grid-template-columns: 1.0fr 1fr 0.06fr;
+    align-items: stretch;
+    height: 87vh;
+}
+
+#action-area-container {
+    display: grid;
+    grid-template-rows: 3vh 84vh;
+    align-items: stretch;
+}
+
+#action-area-header {
+    align-self: baseline;
+    margin: 0px;
+    padding-top: 4px;
+    padding-left: 4px;
+    padding-bottom: 4px;
+    background-color: #e9e9e9;
+    border-bottom: 1px solid #ccc;
+}
+
+#action-area-header img {
+    width: 14px;
+    vertical-align: middle;
+    padding-right: 7px;
+}
+
+#action-area-header a.img-button {
+    border-right: 1px solid #d3d3d3;
+}
+
+#action-area-header a.img-button:hover {
+    background-color: #e9e9e9;
+}
+
+img.button {
+    opacity: 30%;
+}
+
+img.button:hover {
+    opacity: 100%;
+}
+
+a.img-button {
+    padding: 0px;
+}
+
+span.header-text {
+    font-family: monospace;
+}
+
+.left-side-buttons a.img-button:hover {
+    background-color: #dfdfdf;
+}
+
+.left-side-buttons img {
+    width: 30px;
+    padding: 15px;
+}
+
+#editor {
+    height: 87vh;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+
+#left-action-area {
+    background-color: #fff;
+}
+
+#left-side-menu {
+    background-color:#dfdfdf;
+    border-left: 1px solid #bbb;
+}
+
+.file-system-listing img.fs-icon {
+    width: 16px
+}
+
+.file-system-listing {
+    width: 100%;
+}
+
+.file-system-listing tr.header {
+    background-color: #eee;
+}
+
+.file-system-listing td.header {
+    vertical-align: middle;
+    padding: 9px;
+}
+
+#header-status {
+    font-size: 1.1em;
+}
+
+#header-links-wrapper {
+    display: flex;
+}
+
+#header-links-left {
+    flex: 0 0 55%;
+}
+
+#header-links-right {
+    flex: 1;
+    text-align:right;
+}
+
+.header-sublink-first {
+    margin-left:6px;
+}
+
+.file-system-listing td {
+    font-size: 0.73rem;
+    padding: 3px;
+    padding-left: 9px;
+    padding-top: 4px;
+    padding-bottom: 0px;
+    vertical-align: middle;
+}
+
+.file-system-listing td.item-header {
+    width: 17px;
+}
+
+.file-system-listing td.item-name {
+    padding-top: 2px;
+    padding-left: 5px;
+    color: #000;
+}
+
+.file-system-listing td.item-name a {
+    text-decoration: none !important;
+    font-family: monospace !important;
+    font-size: 1.0em;
+}
+
+input.data-request {
+    width:100%;
+}
+
+input.data-request::placeholder {
+    color:#666 !important
+}
+
+td.data-input-field-name {
+    font-family: "Jost";
+    font-size: 0.86em;
+}
+
+#data-response {
+    height: 59.1vh;
+    margin-top: 3px;
+}
+
+.dimmed {
+    opacity: 70%;
+}
