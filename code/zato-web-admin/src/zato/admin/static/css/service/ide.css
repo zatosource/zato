@@ -66,7 +66,6 @@ span.header-text {
     height: 87vh;
     border-right: 1px solid #ddd;
     border-bottom: 1px solid #ddd;
-    background-color: red;
 }
 
 #left-action-area {
@@ -161,18 +160,4 @@ td.data-input-field-name {
 
 .dimmed {
     opacity: 70%;
-}
-
-div.tab {
-    color: #333;
-    border-top-left-radius: 2px;
-    border-top-right-radius: 2px;
-    font-family: "Ubuntu Mono", monospace;
-    margin-top: 0px;
-    margin-bottom: 11px;
-    padding: 5px !important;
-    padding-top: 0px !important;
-    background-color: #e3e3e3;
-    font-size: 1rem;
-    display: inline;
 }
