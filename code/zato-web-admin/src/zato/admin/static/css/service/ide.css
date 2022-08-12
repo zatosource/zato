@@ -68,6 +68,11 @@ span.header-text {
     border-bottom: 1px solid #ddd;
 }
 
+#file-system-listing-div {
+    overflow-y:scroll;
+    height: 81vh;
+}
+
 #action-area {
     background-color: #fff;
 }
