@@ -69,6 +69,7 @@ from zato.admin.web.views.pubsub import topic as pubsub_topic
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
+from zato.admin.web.views.service import ide as service_ide
 from zato.admin.web.views.sms import twilio
 from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, oauth, rbac
 from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as tls_channel, key_cert as tls_key_cert
@@ -163,28 +164,16 @@ urlpatterns += [
         login_required(service.Index()), name=service.Index.url_name),
     url(r'^zato/service/details$',
         login_required(service.Index()), name=service.Index.url_name),
-    url(r'^zato/service/last-stats/(?P<service_id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(service.last_stats), name='service-last-stats'),
     url(r'^zato/service/cluster/(?P<cluster_id>.*)/upload/$',
         login_required(service.package_upload), name='service-package-upload'),
     url(r'^zato/service/edit/$',
         login_required(service.Edit()), name=service.Edit.url_name),
-    url(r'^zato/service/invoke/(?P<name>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(service.invoke), name='service-invoke'),
     url(r'^zato/service/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(service.Delete()), name=service.Delete.url_name),
     url(r'^zato/service/overview/(?P<service_name>.*)/$',
         login_required(service.overview), name='service-overview'),
     url(r'^zato/service/source-ide/(?P<service_name>.*)/$',
-        login_required(service.ide), name='service-ide'),
-    url(r'^zato/service/request-response/(?P<service_name>.*)/cluster/(?P<cluster_id>.*)/configure/$',
-        login_required(service.request_response_configure), name='service-request-response-configure'),
-    url(r'^zato/service/request-response/(?P<service_name>.*)/$',
-        login_required(service.request_response), name='service-request-response'),
-    url(r'^zato/service/slow-response/details/(?P<cid>.*)/(?P<service_name>.*)/$',
-        login_required(service.slow_response_details), name='service-slow-response-details'),
-    url(r'^zato/service/slow-response/(?P<service_name>.*)/$',
-        login_required(service.slow_response), name='service-slow-response'),
+        login_required(service_ide.ide), name='service-ide'),
     ]
 
 # ################################################################################################################################
