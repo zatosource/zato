@@ -175,7 +175,7 @@ def overview(req, service_name):
                 channels = _get_channels(req.zato.client, req.zato.cluster, service.id, channel_type)
                 getattr(service, channel_type.replace('jms-', '') + '_channels').extend(channels)
 
-            for item in req.zato.client.invoke('zato.service.get-deployment-info-list', {'id': service.id}):
+            for item in req.zato.client.invoke('zato.service.get-deployment-info-list', {'id': service.id, 'needs_details':True}):
                 service.deployment_info.append(DeploymentInfo(item.server_name, item.details))
 
             response = req.zato.client.invoke('zato.scheduler.job.get-list', {'cluster_id':cluster_id})

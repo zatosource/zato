@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from base64 import b64decode, b64encode
 from contextlib import closing
 from enum import Enum
@@ -35,7 +36,7 @@ from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import get_service_config
 from zato.common.marshal_.api import Model
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
-from zato.common.odb.query import service_list
+from zato.common.odb.query import service_deployment_list, service_list
 from zato.common.rate_limiting import DefinitionParser
 from zato.common.scheduler import get_startup_job_services
 from zato.common.typing_ import any_
@@ -543,21 +544,38 @@ class GetDeploymentInfoList(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_deployment_info_list_request'
         response_elem = 'zato_service_get_deployment_info_list_response'
-        input_required = ('id',)
-        output_required = ('server_id', 'server_name', 'details')
+        input = '-id', '-needs_details'
+        output = 'server_id', 'server_name', 'service_id', 'service_name', 'file_name', '-details'
 
     def get_data(self, session):
-        items = session.query(DeployedService.details,
-            Server.name.label('server_name'),
-            Server.id.label('server_id')).\
-            outerjoin(Server, DeployedService.server_id==Server.id).\
-            filter(DeployedService.service_id==self.request.input.id).\
-            all()
+
+        out = []
+        needs_details = self.request.input.needs_details
+        items = service_deployment_list(session, self.request.input.id)
 
         for item in items:
-            item.details = loads(item.details)
 
-        return items
+            # Convert the item from SQLAlchemy to a dict because we are going to append the file_name to it ..
+            _item = item._asdict()
+
+            # .. load it but do not assign it yet because it is optional ..
+            details = loads(item.details)
+
+            # .. extract the file name out of the full path to the service ..
+            fs_location = details['fs_location']
+            _item['file_name'] = os.path.basename(fs_location)
+
+            # .. this is optional ..
+            if needs_details:
+                _item['details'] = details
+            else:
+                del _item['details']
+
+            # .. we can append this item now ..
+            out.append(_item)
+
+        # .. and return the whole output once we are done,
+        return out
 
     def handle(self):
         with closing(self.odb.session()) as session:
