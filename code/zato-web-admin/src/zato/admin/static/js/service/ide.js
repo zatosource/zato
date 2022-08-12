@@ -64,17 +64,17 @@ $.fn.zato.editor.clear_header_links = function(prefix) {
     header_links.empty();
 }
 
-$.fn.zato.editor.add_header_link = function(prefix, item_no, text, is_last) {
+$.fn.zato.editor.add_header_link = function(prefix, item_label, text, is_last) {
 
     // The element where all the links reside ..
     let header_links_id = `#header-links-${prefix}`;
     let header_links = $(header_links_id);
 
     // .. this is what each link will be based on ..
-    let link_pattern = '<a href="$.fn.zato.editor.invoke_header_link(\"{0}\", {1})" id="header-{0}-link-{1}">{2}</a>';
+    let link_pattern = '<a href="$.fn.zato.editor.invoke_header_link(\'{0}\', \'{1}\')" id="header-{0}-link-{1}">{2}</a>';
 
     // .. build a string containing the link ..
-    let link_string = String.format(link_pattern, prefix, item_no, text);
+    let link_string = String.format(link_pattern, prefix, item_label, text);
 
     // .. now, the element ..
     link = $(link_string);
@@ -88,12 +88,12 @@ $.fn.zato.editor.add_header_link = function(prefix, item_no, text, is_last) {
     }
 }
 
-$.fn.zato.editor.add_header_left_link = function(item_no, text, is_last) {
-    $.fn.zato.editor.add_header_link("left", item_no, text, is_last);
+$.fn.zato.editor.add_header_left_link = function(item_label, text, is_last) {
+    $.fn.zato.editor.add_header_link("left", item_label, text, is_last);
 }
 
-$.fn.zato.editor.add_header_right_link = function(item_no, text, is_last) {
-    $.fn.zato.editor.add_header_link("right", item_no, text, is_last);
+$.fn.zato.editor.add_header_right_link = function(item_label, text, is_last) {
+    $.fn.zato.editor.add_header_link("right", item_label, text, is_last);
 }
 
 $.fn.zato.editor.populate_header_status = function(text) {
@@ -113,12 +113,13 @@ $.fn.zato.editor.populate_browser_area = function() {
     $('.invoker-tr').hide();
 
     // Left-hand side links
-    $.fn.zato.editor.add_header_left_link(1, "Deploy");
-    $.fn.zato.editor.add_header_left_link(2, "Deploy all");
-    $.fn.zato.editor.add_header_left_link(3, "New", true);
+    $.fn.zato.editor.add_header_left_link("deploy", "Deploy");
+    $.fn.zato.editor.add_header_left_link("deploy-all", "Deploy all");
+    $.fn.zato.editor.add_header_left_link("new", "New", true);
 
     // Right-hand side links
-    $.fn.zato.editor.add_header_right_link(1, "Push", true);
+    $.fn.zato.editor.add_header_right_link("push", "Push", false);
+    $.fn.zato.editor.add_header_right_link("push-all", "Push all", true);
 
     // One-line status bar
     $("#header-status").text("4 files, 9 services");
@@ -135,14 +136,14 @@ $.fn.zato.editor.populate_invoker_area = function() {
     $('.invoker-tr').show();
 
     // Left-hand side links
-    $.fn.zato.editor.add_header_left_link(1, "Deploy");
-    $.fn.zato.editor.add_header_left_link(2, "Deploy all");
-    $.fn.zato.editor.add_header_left_link(3, "Previous");
-    $.fn.zato.editor.add_header_left_link(4, "Next");
-    $.fn.zato.editor.add_header_left_link(5, "Clear form", true);
+    $.fn.zato.editor.add_header_left_link("deploy", "Deploy");
+    $.fn.zato.editor.add_header_left_link("deploy-all", "Deploy all");
+    $.fn.zato.editor.add_header_left_link("previous", "Previous");
+    $.fn.zato.editor.add_header_left_link("next", "Next");
+    $.fn.zato.editor.add_header_left_link("clear-form", "Clear form", true);
 
     // Right-hand side links
-    $.fn.zato.editor.add_header_right_link(1, "OpenAPI", true);
+    $.fn.zato.editor.add_header_right_link("open-api", "OpenAPI", true);
 
     // One-line status bar
     $("#header-status").text("curl http://api:api@10.151.19.39:11223/zato/api/api.adapter.crm.customer.create -d '{\"customer_id\":\"123\"}'");

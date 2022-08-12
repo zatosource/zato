@@ -75,12 +75,7 @@
             <div id="main-menu">
                 <ul class="sf-menu" >
                 <li><a href="{% url "cluster" %}">Clusters</a></li>
-
-                <li><span class="like-a">Services &darr;</span>
-                    <ul>
-                        <li><a href="{% url "service" %}?cluster={{ cluster_id|default:'' }}">List services</a></li>
-                    </ul>
-                </li>
+                <li><a href="{% url "service" %}?cluster={{ cluster_id|default:'' }}">Services</a></span></li>
 
                 <li><span class="like-a">Security &darr;</span>
                     <ul>
