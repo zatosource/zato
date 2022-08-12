@@ -53,11 +53,11 @@ span.header-text {
     font-family: monospace;
 }
 
-.left-side-buttons a.img-button:hover {
+.side-buttons a.img-button:hover {
     background-color: #dfdfdf;
 }
 
-.left-side-buttons img {
+.side-buttons img {
     width: 30px;
     padding: 15px;
 }
@@ -68,11 +68,11 @@ span.header-text {
     border-bottom: 1px solid #ddd;
 }
 
-#left-action-area {
+#action-area {
     background-color: #fff;
 }
 
-#left-side-menu {
+#side-menu {
     background-color:#dfdfdf;
     border-left: 1px solid #bbb;
 }
