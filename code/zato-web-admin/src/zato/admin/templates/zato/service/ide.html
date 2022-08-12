@@ -65,6 +65,16 @@ if __name__ == '__main__':
             <div id="file-system-listing-div">
             <table class="file-system-listing">
 
+                {{ data }}
+
+                {% for file_name in data.file_list %}
+                    <tr class="file-listing-tr">
+                        <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
+                        <td class="item-name"><a href="#">{{ file_name }}</a></td>
+                    </tr>
+                {% endfor %}
+
+                <!--
                 <tr class="file-listing-tr">
                     <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
                     <td class="item-name"><a href="#">demo_banking.py</a></td>
@@ -75,200 +85,14 @@ if __name__ == '__main__':
                 </tr>
                 <tr class="file-listing-tr">
                     <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
+                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> **</a></td>
                 </tr>
                 <tr class="file-listing-tr">
                     <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
                     <td class="item-name"><a href="#">demo_telco_network_security_visibility.py</a></td>
                 </tr>
+                -->
 
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_banking.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_healthcare_hl7_fhir.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_telco_network_security_visibility.py</a></td>
-                </tr>
-
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_banking.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_healthcare_hl7_fhir.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_telco_network_security_visibility.py</a></td>
-                </tr>
-
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_banking.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_healthcare_hl7_fhir.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_telco_network_security_visibility.py</a></td>
-                </tr>
-
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_banking.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_healthcare_hl7_fhir.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_telco_network_security_visibility.py</a></td>
-                </tr>
-
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_banking.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_healthcare_hl7_fhir.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_telco_network_security_visibility.py</a></td>
-                </tr>
-
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_banking.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_healthcare_hl7_fhir.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_telco_network_security_visibility.py</a></td>
-                </tr>
-
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_banking.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_healthcare_hl7_fhir.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_telco_network_security_visibility.py</a></td>
-                </tr>
-
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_banking.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_healthcare_hl7_fhir.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_telco_network_security_visibility.py</a></td>
-                </tr>
-
-
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_banking.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_healthcare_hl7_fhir.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_telco_network_security_visibility.py</a></td>
-                </tr>
-
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_banking.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_healthcare_hl7_fhir.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_telco_network_security_visibility.py</a></td>
-                </tr>
-
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_banking.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_healthcare_hl7_fhir.py</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#"><b>demo_telco_5g.py</b> *</a></td>
-                </tr>
-                <tr class="file-listing-tr">
-                    <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                    <td class="item-name"><a href="#">demo_telco_network_security_visibility.py</a></td>
-                </tr>
                 <tr colspan="2" class="invoker-tr">
                     <td class="data-input-field-name" title="This field is required">
                         customer_id *

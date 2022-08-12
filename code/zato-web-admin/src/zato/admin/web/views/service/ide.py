@@ -39,6 +39,7 @@ class IDE(BaseCallView):
     def build_http_response(self, response):
         return_data = {
             'cluster_id':self.req.zato.cluster_id,
+            'data': response.data.response
         }
 
         print()
@@ -84,7 +85,7 @@ class ServiceIDE(Service):
 
         response = {
             'service_source': service_source,
-            'file_list': file_list,
+            'file_list': [1,2,3],
             'file_num': file_num,
             'service_num': service_num,
             'file_num_human': file_num_human,
