@@ -9,6 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 
+# Django
+from django.template.response import TemplateResponse
+
 # Zato
 from zato.admin.web.views import BaseCallView
 
@@ -30,6 +33,15 @@ class IDE(BaseCallView):
         return {
             'cluster_id': self.cluster_id
         }
+
+# ################################################################################################################################
+
+    def build_http_response(self, response):
+        return_data = {
+            'cluster_id':self.req.zato.cluster_id,
+        }
+
+        return TemplateResponse(self.req, self.template, return_data)
 
 # ################################################################################################################################
 # ################################################################################################################################
