@@ -274,7 +274,7 @@ def build_sec_def_link_by_input(req, cluster_id, input_data):
 
 # ################################################################################################################################
 
-class _BaseView:
+class BaseView:
     method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
     service_name = None
     async_invoke = False
@@ -369,7 +369,7 @@ class _BaseView:
 
 # ################################################################################################################################
 
-class Index(_BaseView):
+class Index(BaseView):
     """ A base class upon which other index views are based.
     """
     url_name = 'url_name-must-be-defined-in-a-subclass'
@@ -594,7 +594,7 @@ class Index(_BaseView):
 
 # ################################################################################################################################
 
-class CreateEdit(_BaseView):
+class CreateEdit(BaseView):
     """ Subclasses of this class will handle the creation/updates of Zato objects.
     """
 
@@ -693,7 +693,7 @@ class CreateEdit(_BaseView):
 
 # ################################################################################################################################
 
-class BaseCallView(_BaseView):
+class BaseCallView(BaseView):
 
     method_allowed = 'POST'
     error_message = 'error_message-must-be-defined-in-a-subclass'
