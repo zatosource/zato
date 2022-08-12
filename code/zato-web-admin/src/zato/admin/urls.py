@@ -173,7 +173,7 @@ urlpatterns += [
     url(r'^zato/service/overview/(?P<service_name>.*)/$',
         login_required(service.overview), name='service-overview'),
     url(r'^zato/service/source-ide/(?P<service_name>.*)/$',
-        login_required(service_ide.ide), name='service-ide'),
+        login_required(service_ide.IDE()), name=service_ide.IDE.url_name),
     ]
 
 # ################################################################################################################################
