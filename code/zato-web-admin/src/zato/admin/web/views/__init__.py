@@ -701,14 +701,18 @@ class BaseCallView(BaseView):
     def get_input_dict(self):
         raise NotImplementedError('Must be defined in subclasses')
 
+    def build_http_response(self, response):
+        return HttpResponse()
+
     def __call__(self, req, initial_input_dict=None, *args, **kwargs):
         initial_input_dict = initial_input_dict or {}
         try:
             super(BaseCallView, self).__call__(req, *args, **kwargs)
             input_dict = self.get_input_dict()
             input_dict.update(initial_input_dict)
-            req.zato.client.invoke(self.service_name or self.get_service_name(), input_dict)
-            return HttpResponse()
+            response = req.zato.client.invoke(self.service_name or self.get_service_name(), input_dict)
+            http_response = self.build_http_response(response)
+            return http_response
         except Exception:
             msg = '{}, e:`{}`'.format(self.error_message, format_exc())
             logger.error(msg)
