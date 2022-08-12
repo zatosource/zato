@@ -287,7 +287,7 @@ def overview(req, service_name):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def source_info(req, service_name):
+def ide(req, service_name):
 
     service = Service(name=service_name)
     input_dict = {
@@ -527,18 +527,6 @@ def slow_response_details(req, cid, service_name):
         }
 
     return TemplateResponse(req, 'zato/service/slow-response-details.html', return_data)
-
-# ################################################################################################################################
-
-@method_allowed('GET')
-def invoker(req, service_name):
-
-    return_data = {
-        'cluster_id': req.zato.cluster_id,
-        'service': _get_service(req, service_name),
-        }
-
-    return TemplateResponse(req, 'zato/service/invoker.html', return_data)
 
 # ################################################################################################################################
 
