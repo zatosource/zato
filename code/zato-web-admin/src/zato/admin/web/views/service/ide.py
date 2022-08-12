@@ -76,6 +76,12 @@ class ServiceIDE(Service):
         file_num_human = '0 files'
         service_num_human = '0 services'
 
+        service_list = self.invoke('zato.service.get-deployment-info-list', needs_details=False, skip_response_elem=True)
+
+        print()
+        print(111, service_list)
+        print()
+
         response = {
             'service_source': service_source,
             'file_list': file_list,
@@ -89,5 +95,4 @@ class ServiceIDE(Service):
 
 # ################################################################################################################################
 # ################################################################################################################################
-
 '''
