@@ -881,7 +881,9 @@ def service_deployment_list(session, service_id=None, include_internal=None):
         query = query.filter(
             not_(
                 Service.name.startswith('zato') |
-                Service.name.startswith('pub.zato')
+                Service.name.startswith('pub.zato') |
+                Service.name.startswith('pub.helpers') |
+                Service.name.startswith('helpers')
             )
         )
 

@@ -42,8 +42,9 @@ if __name__ == '__main__':
         <div id="action-area-header" data-is-expanded="false">
             <a href="javascript:$.fn.zato.editor.toggle_action_area()" class="img-button"><img src="/static/gfx/editor/resize.png" class="button" title="Resize this area" /></a>
             <select>
-                <option>api.adapter.crm.customer.create</option>
-                <option>api.adapter.crm.customer.delete</option>
+                {% for service_item in data.service_list %}
+                    <option>{{ service_item.name }}</option>
+                {% endfor %}
             </select>
         </div>
         <div id="action-area" class="item item-2">
@@ -65,10 +66,10 @@ if __name__ == '__main__':
             <div id="file-system-listing-div">
             <table class="file-system-listing">
 
-                {% for file_name in data.file_name_list %}
+                {% for file_item in data.file_list %}
                     <tr class="file-listing-tr">
                         <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                        <td class="item-name"><a href="#">{{ file_name }}</a></td>
+                        <td class="item-name"><a href="#" title="{{ file_item.fs_location }}">{{ file_item.name }}</a></td>
                     </tr>
                 {% endfor %}
 
@@ -186,7 +187,7 @@ if __name__ == '__main__':
 <script src="/static/ace-builds/src/ext-error_marker.js" type="text/javascript" charset="utf-8"></script>
 <script src="/static/ace-builds/src/ext-language_tools.js" type="text/javascript" charset="utf-8"></script>
 <script type="text/javascript">
-    $.fn.zato.editor.init_editor();
+    $.fn.zato.editor.init_editor("{{ data.file_count_human }}, {{ data.service_count_human }}");
 </script>
 
 {% endblock %}
