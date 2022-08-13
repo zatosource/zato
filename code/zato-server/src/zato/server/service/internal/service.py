@@ -544,14 +544,22 @@ class GetDeploymentInfoList(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_deployment_info_list_request'
         response_elem = 'zato_service_get_deployment_info_list_response'
-        input = '-id', '-needs_details'
+        input = '-id', '-needs_details', Boolean('-include_internal')
         output = 'server_id', 'server_name', 'service_id', 'service_name', 'file_name', '-details'
 
     def get_data(self, session):
 
+        # Response to produce
         out = []
+
+        # This is optional and if it does not exist we assume that it is True
+        if not 'include_internal' in self.request.input:
+            include_internal = True
+        else:
+            include_internal = self.request.input.get('include_internal')
+
         needs_details = self.request.input.needs_details
-        items = service_deployment_list(session, self.request.input.id)
+        items = service_deployment_list(session, self.request.input.id, include_internal)
 
         for item in items:
 
