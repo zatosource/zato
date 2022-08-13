@@ -1939,3 +1939,12 @@ def tabulate_dictlist(data:'dictlist', skip_keys:'listnone'=None) -> 'str':
     return tabulate(data, headers='keys', tablefmt='pretty', colalign=col_align)
 
 # ################################################################################################################################
+
+def needs_suffix(item:'any_') -> 'bool':
+    if isinstance(item, int):
+        len_item = item
+    else:
+        len_item = len(item)
+    return len_item == 0 or len_item > 1
+
+# ################################################################################################################################

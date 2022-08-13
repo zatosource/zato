@@ -9,7 +9,7 @@
 
 #action-area-container {
     display: grid;
-    grid-template-rows: 3vh 84vh;
+    grid-template-rows: 5vh 84vh;
     align-items: stretch;
 }
 
