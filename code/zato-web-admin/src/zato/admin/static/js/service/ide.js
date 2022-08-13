@@ -1,5 +1,5 @@
 
-$.fn.zato.editor.init_editor = function() {
+$.fn.zato.editor.init_editor = function(initial_header_status) {
     var editor = ace.edit("editor");
     editor.setTheme("ace/theme/sqlserver");
     editor.session.setMode("ace/mode/python");
@@ -12,7 +12,7 @@ $.fn.zato.editor.init_editor = function() {
         fontSize: 17,
         cursorStyle: "ace"
     });
-    $.fn.zato.editor.populate_browser_area();
+    $.fn.zato.editor.populate_browser_area(initial_header_status);
 }
 
 $.fn.zato.editor.toggle_action_area = function() {
@@ -102,7 +102,7 @@ $.fn.zato.editor.populate_header_status = function(text) {
     elem.text(text);
 }
 
-$.fn.zato.editor.populate_browser_area = function() {
+$.fn.zato.editor.populate_browser_area = function(initial_header_status) {
 
     // Clear anything that we may already have
     $.fn.zato.editor.clear_header_links("left")
@@ -122,7 +122,7 @@ $.fn.zato.editor.populate_browser_area = function() {
     $.fn.zato.editor.add_header_right_link("push-all", "Push all", true);
 
     // One-line status bar
-    $("#header-status").text("4 files, 9 services");
+    $("#header-status").text(initial_header_status);
 }
 
 $.fn.zato.editor.populate_invoker_area = function() {
