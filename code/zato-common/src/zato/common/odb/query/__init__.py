@@ -859,7 +859,7 @@ def service_id_list(session, cluster_id, name_list=None):
 
 # ################################################################################################################################
 
-def service_deployment_list(session, service_id=None):
+def service_deployment_list(session, service_id=None, include_internal=None):
     query = session.query(
         DeployedService.details,
         Server.name.label('server_name'),
@@ -868,11 +868,22 @@ def service_deployment_list(session, service_id=None):
         Service.name.label('service_name'),
         ).\
         filter(DeployedService.service_id==Service.id).\
-        outerjoin(Server, DeployedService.server_id==Server.id)
+        filter(Server.id, DeployedService.server_id==Server.id)
 
     if service_id:
         query = query.\
         filter(DeployedService.service_id==service_id)
+
+    if not include_internal:
+        query = query.\
+            filter(Service.is_internal==False)
+
+        query = query.filter(
+            not_(
+                Service.name.startswith('zato') |
+                Service.name.startswith('pub.zato')
+            )
+        )
 
     return query.all()
 

@@ -65,9 +65,7 @@ if __name__ == '__main__':
             <div id="file-system-listing-div">
             <table class="file-system-listing">
 
-                {{ data }}
-
-                {% for file_name in data.file_list %}
+                {% for file_name in data.file_name_list %}
                     <tr class="file-listing-tr">
                         <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
                         <td class="item-name"><a href="#">{{ file_name }}</a></td>

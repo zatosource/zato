@@ -54,9 +54,11 @@ class IDE(BaseCallView):
 '''
 # -*- coding: utf-8 -*-
 
-
 # Zato
-from zato.server.service import Service
+from zato.server.service import List, Service
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,27 +67,34 @@ class ServiceIDE(Service):
     name = 'dev.service.ide'
 
     input = '-service_name'
-    output = '-service_source', 'file_list', 'file_num', 'service_num', 'file_num_human', 'service_num_human'
+    output = '-service_source', List('file_name_list'), 'file_num', 'service_num', 'file_num_human', 'service_num_human'
 
     def handle(self):
 
         # Default data structures to fill out with details
         service_source = None
-        file_list = []
+        file_name_list = set()
         file_num = 0
         service_num = 0
         file_num_human = '0 files'
         service_num_human = '0 services'
 
-        service_list = self.invoke('zato.service.get-deployment-info-list', needs_details=False, skip_response_elem=True)
+        service_list_kwargs = {
+            'needs_details': False,
+            'include_internal': False,
+            'skip_response_elem': True,
+        }
+        service_list = self.invoke('zato.service.get-deployment-info-list', **service_list_kwargs)
 
-        print()
-        print(111, service_list)
-        print()
+        for item in service_list:
+            #print()
+            #print(111, item)
+            #print()
+            file_name_list.add(item['file_name'])
 
         response = {
             'service_source': service_source,
-            'file_list': [1,2,3],
+            'file_name_list': sorted(file_name_list),
             'file_num': file_num,
             'service_num': service_num,
             'file_num_human': file_num_human,
