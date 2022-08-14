@@ -156,3 +156,10 @@ $.fn.zato.editor.populate_invoker_area = function() {
 
 $.fn.zato.editor.populate_data_model_area = function() {
 }
+
+$.fn.zato.editor.on_service_select_changed = function(select_elem) {
+    let new_service_name = select_elem.value;
+    let new_title = `${new_service_name} - IDE - Zato`
+    let new_url_path = `/zato/service/source-ide/${new_service_name}/?cluster=1`;
+    history.pushState(new_url_path, new_title, new_url_path)
+}
