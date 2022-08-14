@@ -40,8 +40,8 @@ if __name__ == '__main__':
     </div>
     <div id="action-area-container">
         <div id="action-area-header" data-is-expanded="false">
-            <a href="javascript:$.fn.zato.editor.toggle_action_area()" class="img-button"><img src="/static/gfx/editor/resize.png" class="button" title="Resize this area" /></a>
-            <select id="service-select" onchange="$.fn.zato.editor.on_service_select_changed(this);">
+            <a href="javascript:$.fn.zato.ide.toggle_action_area()" class="img-button"><img src="/static/gfx/editor/resize.png" class="button" title="Resize this area" /></a>
+            <select id="service-select" onchange="$.fn.zato.ide.on_service_select_changed(this);">
                 {% for service_item in data.service_list %}
                     <option {% if current_service_name == service_item.name %}selected="selected"{% endif %}>{{ service_item.name }}</option>
                 {% endfor %}
@@ -69,7 +69,7 @@ if __name__ == '__main__':
                 {% for file_item in data.file_list %}
                     <tr class="file-listing-tr">
                         <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                        <td class="item-name"><a href="#" title="{{ file_item.fs_location }}" class="{% if file_item.fs_location in data.current_service_files %}current{% endif %}">{{ file_item.name }}</a></td>
+                        <td class="item-name"><a href="javascript:$.fn.zato.ide.on_file_selected('{{ file_item.name }}')" title="{{ file_item.fs_location }}" class="{% if file_item.fs_location in data.current_service_files %}current{% endif %}">{{ file_item.name }}</a></td>
                     </tr>
                 {% endfor %}
 
@@ -164,17 +164,17 @@ if __name__ == '__main__':
 
         <ul class="side-buttons">
             <li>
-                <a href="javascript:$.fn.zato.editor.switch_to_action_area('browser')" class="img-button">
+                <a href="javascript:$.fn.zato.ide.switch_to_action_area('browser')" class="img-button">
                     <img src="/static/gfx/editor/files.png" class="button" title="Browse files on server" />
                 </a>
             </li>
             <li>
-                <a href="javascript:$.fn.zato.editor.switch_to_action_area('invoker')" class="img-button">
+                <a href="javascript:$.fn.zato.ide.switch_to_action_area('invoker')" class="img-button">
                     <img src="/static/gfx/editor/play.png" class="button" title="Invoke the current service" />
                 </a>
             </li>
             <li>
-                <a href="javascript:$.fn.zato.editor.switch_to_action_area('info')" class="img-button">
+                <a href="javascript:$.fn.zato.ide.switch_to_action_area('info')" class="img-button">
                     <img src="/static/gfx/editor/icons/data-models.png" class="button" title="Data models" />
                 </a>
             </li>
@@ -187,7 +187,7 @@ if __name__ == '__main__':
 <script src="/static/ace-builds/src/ext-error_marker.js" type="text/javascript" charset="utf-8"></script>
 <script src="/static/ace-builds/src/ext-language_tools.js" type="text/javascript" charset="utf-8"></script>
 <script type="text/javascript">
-    $.fn.zato.editor.init_editor("{{ data.file_count_human }}, {{ data.service_count_human }}");
+    $.fn.zato.ide.init_editor("{{ data.file_count_human }}, {{ data.service_count_human }}");
 </script>
 
 {% endblock %}

@@ -33,7 +33,7 @@ class IDE(BaseCallView):
 
         return {
             'cluster_id': self.cluster_id,
-            'service_name': self.req.zato.args.service_name,
+            'service_name': self.req.zato.args.name,
         }
 
 # ################################################################################################################################
@@ -41,7 +41,7 @@ class IDE(BaseCallView):
     def build_http_response(self, response):
         return_data = {
             'cluster_id':self.req.zato.cluster_id,
-            'current_service_name': self.req.zato.args.service_name,
+            'current_service_name': self.req.zato.args.name,
             'data': response.data.response,
         }
         return TemplateResponse(self.req, self.template, return_data)

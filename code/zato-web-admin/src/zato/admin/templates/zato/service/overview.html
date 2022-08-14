@@ -39,7 +39,7 @@
 
 <div class='page_prompt'>
     <a href="{% url "service-overview" service.name %}?cluster={{ cluster_id }}" class="common current">Overview</a>
-    <a href="{% url "service-ide" service.name %}?cluster={{ cluster_id }}" class="common">IDE</a>
+    <a href="{% url "service-ide" "service" service.name %}?cluster={{ cluster_id }}" class="common">IDE</a>
 </div>
 
 <div id="markup">
