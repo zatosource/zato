@@ -30,8 +30,10 @@ class IDE(BaseCallView):
     service_name = 'dev.service.ide'
 
     def get_input_dict(self):
+
         return {
-            'cluster_id': self.cluster_id
+            'cluster_id': self.cluster_id,
+            'service_name': self.req.zato.args.service_name,
         }
 
 # ################################################################################################################################
@@ -39,13 +41,9 @@ class IDE(BaseCallView):
     def build_http_response(self, response):
         return_data = {
             'cluster_id':self.req.zato.cluster_id,
-            'data': response.data.response
+            'current_service_name': self.req.zato.args.service_name,
+            'data': response.data.response,
         }
-
-        print()
-        print(111, response.data)
-        print()
-
         return TemplateResponse(self.req, self.template, return_data)
 
 # ################################################################################################################################
@@ -72,7 +70,7 @@ class ServiceIDE(Service):
 
     input = '-service_name'
     output = '-service_source', List('file_list'), 'file_count', 'service_count', 'file_count_human', 'service_count_human', \
-        List('service_list')
+        List('service_list'), List('-current_service_files')
 
     def handle(self):
 
@@ -80,6 +78,14 @@ class ServiceIDE(Service):
         service_source = None
         file_item_dict = {}
         service_list = []
+
+        # The service that we are currently processing
+        current_service = self.request.input.service_name
+
+        # This will point to files that contain the currently selected service.
+        # It is possible that more than one file will have the same service
+        # and we need to recognize such a case.
+        current_service_files = []
 
         service_list_response = self.invoke('zato.service.get-deployment-info-list', **{
             'needs_details': False,
@@ -90,15 +96,22 @@ class ServiceIDE(Service):
         # The file_item_dict dictionary maps file system locations to file names which means that keys
         # are always unique (because FS locations are always unique).
         for item in service_list_response:
-            fs_location = item['fs_location']
             file_name = item['file_name']
+            fs_location = item['fs_location']
+            service_name = item['service_name']
+
+            # This maps a full file path to its extract file name.
             file_item_dict[fs_location] = file_name
 
             # Appending to our list of services is something that we can always do
             service_list.append({
-                'name': item['service_name'],
+                'name': service_name,
                 'fs_location': fs_location,
             })
+
+            # If the current service is among what this file contains, append the latter's name for later use.
+            if current_service == service_name:
+                current_service_files.append(fs_location)
 
         # This list may have file names that are not unique
         # but their FS locations will be always unique.
@@ -127,6 +140,7 @@ class ServiceIDE(Service):
             'service_count': service_count,
             'file_count_human': file_count_human,
             'service_count_human': service_count_human,
+            'current_service_files': current_service_files,
         }
 
         self.response.payload = response
