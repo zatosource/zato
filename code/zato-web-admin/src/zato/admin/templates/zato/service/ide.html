@@ -43,7 +43,7 @@ if __name__ == '__main__':
             <a href="javascript:$.fn.zato.editor.toggle_action_area()" class="img-button"><img src="/static/gfx/editor/resize.png" class="button" title="Resize this area" /></a>
             <select>
                 {% for service_item in data.service_list %}
-                    <option>{{ service_item.name }}</option>
+                    <option {% if current_service_name == service_item.name %}selected="selected"{% endif %}>{{ service_item.name }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -69,7 +69,7 @@ if __name__ == '__main__':
                 {% for file_item in data.file_list %}
                     <tr class="file-listing-tr">
                         <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                        <td class="item-name"><a href="#" title="{{ file_item.fs_location }}">{{ file_item.name }}</a></td>
+                        <td class="item-name"><a href="#" title="{{ file_item.fs_location }}" class="{% if file_item.fs_location in data.current_service_files %}current{% endif %}">{{ file_item.name }}</a></td>
                     </tr>
                 {% endfor %}
 
