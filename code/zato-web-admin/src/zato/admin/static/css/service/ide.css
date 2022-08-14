@@ -145,6 +145,10 @@ span.header-text {
     font-size: 1.0em;
 }
 
+.file-system-listing td.item-name a.current {
+    font-weight: 600;
+}
+
 input.data-request {
     width:100%;
 }
