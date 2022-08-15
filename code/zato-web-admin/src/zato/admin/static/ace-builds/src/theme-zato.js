@@ -123,6 +123,15 @@ color: #000\
 .ace-zato .ace_string {\
 color: #007f00;\
 }\
+.ace-zato .ace_string + .ace_paren.ace_lparen {\
+color: #007f00;\
+}\
+.ace-zato .ace_string + .ace_paren.ace_lparen + .ace_identifier {\
+color: #007f00;\
+}\
+.ace-zato .ace_identifier + .ace_paren.ace_rparen:not(:last-child) {\
+color: #007f00;\
+}\
 .ace-zato .ace_entity.ace_other.ace_attribute-name {\
 color: #000;\
 }\
