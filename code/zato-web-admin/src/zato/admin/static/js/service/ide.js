@@ -1,7 +1,7 @@
 
 $.fn.zato.ide.init_editor = function(initial_header_status) {
     var editor = ace.edit("editor");
-    editor.setTheme("ace/theme/sqlserver");
+    editor.setTheme("ace/theme/zato");
     editor.session.setMode("ace/mode/python");
 
     editor.setOptions({
