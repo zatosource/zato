@@ -11,7 +11,7 @@
 
 <div id="main-area-container">
     <div class="item">
-        <div id="editor">{{ data.current_service_source_code }}</div>
+        <div id="editor">{{ data.current_file_source_code }}</div>
     </div>
     <div id="action-area-container">
         <div id="action-area-header" data-is-expanded="false">
@@ -50,7 +50,7 @@
                 {% for file_item in data.file_list %}
                     <tr class="file-listing-tr">
                         <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                        <td class="item-name"><a href="javascript:$.fn.zato.ide.on_file_selected('{{ file_item.name }}')" title="{{ file_item.fs_location }}" class="{% if file_item.fs_location in data.current_service_files %}current{% endif %}">{{ file_item.name }}</a></td>
+                        <td class="item-name"><a href="javascript:$.fn.zato.ide.on_file_selected('{{ file_item.fs_location }}')" title="{{ file_item.fs_location }}" class="{% if file_item.fs_location in data.current_service_files %}current{% endif %}">{{ file_item.name }}</a></td>
                     </tr>
                 {% endfor %}
 
