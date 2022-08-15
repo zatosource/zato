@@ -11,32 +11,7 @@
 
 <div id="main-area-container">
     <div class="item">
-        <div id="editor">
-if __name__ == '__main__':
-
-    env_key_name = 'ZATO_SERVER_BASE_DIR'
-    env_server_base_dir = os.environ.get(env_key_name)
-
-    if env_server_base_dir:
-
-
-        server_base_dir = env_server_base_dir
-        cmd_line_options = {
-            'fg':True,
-            'sync_internal':True,
-            'secret_key':'',
-            'stderr_path':None,
-        }
-    else:
-        server_base_dir = sys.argv[1]
-        cmd_line_options = sys.argv[2]
-        cmd_line_options = parse_cmd_line_options(cmd_line_options)
-
-    if not os.path.isabs(server_base_dir):
-        server_base_dir = os.path.abspath(os.path.join(os.getcwd(), server_base_dir))
-
-    run(server_base_dir, options=cmd_line_options)
-        </div>
+        <div id="editor">{{ data.current_service_source_code }}</div>
     </div>
     <div id="action-area-container">
         <div id="action-area-header" data-is-expanded="false">
