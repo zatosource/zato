@@ -22,10 +22,10 @@ color: black;\
 color: rgb(191, 191, 191);\
 }\
 .ace-zato .ace_constant.ace_buildin {\
-color: rgb(88, 72, 246);\
+color: #b21104;\
 }\
 .ace-zato .ace_constant.ace_language {\
-color: rgb(88, 92, 246);\
+color: #b21104;\
 }\
 .ace-zato .ace_constant.ace_library {\
 color: rgb(6, 150, 14);\
@@ -37,7 +37,7 @@ color: white;\
 .ace-zato .ace_fold {\
 }\
 .ace-zato .ace_support.ace_function {\
-color: #55f;\
+color: #000;\
 }\
 .ace-zato .ace_support.ace_constant {\
 color: #f0f;\
@@ -68,7 +68,7 @@ color: #007f00;\
 color: #007f00;\
 }\
 .ace-zato .ace_constant.ace_numeric {\
-color: violet;\
+color: #000;\
 }\
 .ace-zato .ace_variable {\
 color: #000;\
@@ -115,16 +115,16 @@ color: violet;\
 color: #b21104;\
 }\
 .ace-zato .ace_meta.ace_tag {\
-color: pink;\
+color: #000;\
 }\
 .ace-zato .ace_string.ace_regex {\
-color: pink\
+color: #000\
 }\
 .ace-zato .ace_string {\
 color: #007f00;\
 }\
 .ace-zato .ace_entity.ace_other.ace_attribute-name {\
-color: pink;\
+color: #000;\
 }\
 .ace-zato .ace_indent-guide {\
 background: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAE0lEQVQImWP4////f4bLly//BwAmVgd1/w11/gAAAABJRU5ErkJggg==\") right repeat-y;\
