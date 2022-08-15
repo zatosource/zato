@@ -42,7 +42,7 @@ class IDE(BaseCallView):
         return_data = {
             'cluster_id':self.req.zato.cluster_id,
             'current_service_name': self.req.zato.args.name,
-            'data': response.data.response,
+            'data': response.data,
         }
         return TemplateResponse(self.req, self.template, return_data)
 
@@ -53,45 +53,78 @@ class IDE(BaseCallView):
 # -*- coding: utf-8 -*-
 
 # stdlib
+from dataclasses import dataclass
 from operator import itemgetter
 
 # Zato
+from zato.common.typing_ import list_, list_field, strnone
 from zato.common.util.api import needs_suffix
-from zato.server.service import List, Service
+from zato.common.util.open_ import open_r
+from zato.server.service import List, Model, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass(init=False)
+class IDERequest(Model):
+    service_name: 'strnone' = None
+    fs_location: 'strnone' = None
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ServiceIDE(Service):
+@dataclass(init=False)
+class IDEResponse(Model):
+    service_count: 'int'
+    service_count_human: 'str'
+    file_count: 'int'
+    file_count_human: 'str'
+    current_file_source_code: 'str'
+    service_list: 'list_' = list_field()
+    current_service_files: 'list_' = list_field()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _IDEBase(Service):
+
+    def get_deployment_info_list(self):
+        service_list_response = self.invoke('zato.service.get-deployment-info-list', **{
+            'needs_details': False,
+            'include_internal': False,
+            'skip_response_elem': True,
+        })
+        return service_list_response
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ServiceIDE(_IDEBase):
     name = 'dev.service.ide'
-
-    input = '-service_name'
-    output = '-service_source', List('file_list'), 'file_count', 'service_count', 'file_count_human', 'service_count_human', \
-        List('service_list'), List('-current_service_files')
+    input = IDERequest
+    output = IDEResponse
 
     def handle(self):
 
+        # Add type hints
+        input = self.request.input # type: IDERequest
+
         # Default data structures to fill out with details
-        service_source = None
         file_item_dict = {}
         service_list = []
 
         # The service that we are currently processing
-        current_service = self.request.input.service_name
+        current_service = input.service_name
+
+        # Current's service source code
+        current_file_source_code = ''
 
         # This will point to files that contain the currently selected service.
         # It is possible that more than one file will have the same service
         # and we need to recognize such a case.
         current_service_files = []
 
-        service_list_response = self.invoke('zato.service.get-deployment-info-list', **{
-            'needs_details': False,
-            'include_internal': False,
-            'skip_response_elem': True,
-        })
+        service_list_response = self.get_deployment_info_list()
 
         # The file_item_dict dictionary maps file system locations to file names which means that keys
         # are always unique (because FS locations are always unique).
@@ -113,6 +146,12 @@ class ServiceIDE(Service):
             if current_service == service_name:
                 current_service_files.append(fs_location)
 
+                # Note that we may potentially have mulitple services with the same name
+                # and what we are doing here is potentially overwriting the already assigned
+                # object that contains the source code.
+                with open_r(fs_location) as f:
+                    current_file_source_code = f.read()
+
         # This list may have file names that are not unique
         # but their FS locations will be always unique.
         file_list = []
@@ -133,7 +172,6 @@ class ServiceIDE(Service):
         service_count_human = f'{service_count} service{service_list_suffix}'
 
         response = {
-            'service_source': service_source,
             'service_list': sorted(service_list, key=itemgetter('name')),
             'file_list': sorted(file_list, key=itemgetter('name')),
             'file_count': file_count,
@@ -141,9 +179,16 @@ class ServiceIDE(Service):
             'file_count_human': file_count_human,
             'service_count_human': service_count_human,
             'current_service_files': current_service_files,
+            'current_file_source_code': current_file_source_code,
         }
 
         self.response.payload = response
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetFile(_IDEBase):
+    name = 'dev.service.ide.get-file'
 
 # ################################################################################################################################
 # ################################################################################################################################
