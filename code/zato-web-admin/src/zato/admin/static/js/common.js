@@ -1163,6 +1163,12 @@ $.fn.zato.startswith = function(s, prefix) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.toggle_css_class = function(elem, remove_class, add_class) {
+    $(elem).removeClass(remove_class).addClass(add_class);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.toggle_visible_hidden = function(elem, is_visible) {
     var elem = $(elem);
     var remove_class = '';
@@ -1176,7 +1182,7 @@ $.fn.zato.toggle_visible_hidden = function(elem, is_visible) {
         remove_class = 'visible';
         add_class = 'hidden';
     }
-    $(elem).removeClass(remove_class).addClass(add_class);
+    $.fn.zato.toggle_css_class(elem, remove_class, add_class);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
