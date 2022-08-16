@@ -855,13 +855,14 @@ def get_http_channel_security_id(item):
 
 # ################################################################################################################################
 
-def invoke_action_handler(req, service_name:'str', send_attrs:'any_', extra=None) -> 'any_':
+def invoke_action_handler(req, service_name:'str', send_attrs:'any_'=None, extra=None) -> 'any_':
 
     try:
         request = {
             'cluster_id': req.zato.cluster_id
         }
 
+        send_attrs = send_attrs or {}
         for name in send_attrs:
             request[name] = req.POST.get(name, '')
 
@@ -872,7 +873,10 @@ def invoke_action_handler(req, service_name:'str', send_attrs:'any_', extra=None
         response = req.zato.client.invoke(service_name, request)
 
         if response.ok:
-            response_data = response.data['response_data']
+            if 'response_data' in response.data:
+                response_data = response.data['response_data']
+            else:
+                response_data = response.data
             if isinstance(response_data, dict):
                 response_data = dumps(response_data)
                 logger.info('Returning `%s` from `%s`', response_data, service_name)
