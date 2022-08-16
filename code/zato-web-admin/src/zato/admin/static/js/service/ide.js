@@ -219,12 +219,25 @@ $.fn.zato.ide.on_service_select_changed = function(select_elem) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.highlight_current_file = function(fs_location) {
+    $("a.fs-location-link").each(function(idx) {
+        let title = $(this).attr("title");
+        if(title == fs_location) {
+            $.fn.zato.toggle_css_class(this, "zato-invalid", "current");
+        }
+        else {
+            $.fn.zato.toggle_css_class(this, "current", "zato-invalid");
+        }
+    });
+}
+
 $.fn.zato.ide.load_source_object = function(object_type, name) {
     var callback = function(data, status) {
         let msg = data.responseText;
         let json = JSON.parse(msg)
         let current_file_source_code = json.current_file_source_code;
         window.zato_editor.setValue(current_file_source_code, -1);
+        $.fn.zato.ide.highlight_current_file(name);
     }
 
     var url = String.format('/zato/service/ide/get-{0}/{1}/', object_type, name);

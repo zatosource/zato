@@ -70,14 +70,15 @@ def get_file(req, fs_location):
 # -*- coding: utf-8 -*-
 
 # stdlib
+import os
 from dataclasses import dataclass
 from operator import itemgetter
 
 # Zato
-from zato.common.typing_ import list_, list_field, strnone
+from zato.common.typing_ import intnone, list_, list_field, strnone
 from zato.common.util.api import needs_suffix
 from zato.common.util.open_ import open_r
-from zato.server.service import List, Model, Service
+from zato.server.service import Model, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,12 +93,13 @@ class IDERequest(Model):
 
 @dataclass(init=False)
 class IDEResponse(Model):
-    service_count: 'int'
-    service_count_human: 'str'
-    file_count: 'int'
-    file_count_human: 'str'
-    current_file_source_code: 'str'
+    service_count: 'intnone' = None
+    service_count_human: 'strnone' = None
+    file_count: 'intnone' = None
+    file_count_human: 'strnone' = None
+    current_file_source_code: 'strnone' = None
     service_list: 'list_' = list_field()
+    current_file_name: 'strnone' = None
     current_service_files: 'list_' = list_field()
 
 # ################################################################################################################################
@@ -220,19 +222,17 @@ class GetFile(_IDEBase):
 
     def handle(self):
 
+        # Reusable
         fs_location = self.request.input.fs_location
 
-        response = {
-            'service_list': [],
-            'file_list': [],
-            'file_count': 1,
-            'service_count': 2,
-            'file_count_human': '333',
-            'service_count_human': '44',
-            'current_service_files': [],
-            'current_file_source_code': open(fs_location).read(),
-        }
+        # Build a response ..
+        response = IDEResponse()
+        response.service_list = []
+        response.current_service_files = []
+        response.current_file_name = os.path.basename(fs_location)
+        response.current_file_source_code = open(fs_location).read()
 
+        # .. and return it to our caller.
         self.response.payload = response
 
 # ################################################################################################################################

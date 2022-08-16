@@ -871,6 +871,7 @@ def invoke_action_handler(req, service_name:'str', send_attrs:'any_'=None, extra
 
         logger.info('Invoking `%s` with `%s`', service_name, request)
         response = req.zato.client.invoke(service_name, request)
+        logger.info('Response received `%s`', response.data)
 
         if response.ok:
             if 'response_data' in response.data:
