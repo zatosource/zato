@@ -21,6 +21,8 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     }
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.toggle_action_area = function() {
 
     let css_property = "grid-template-columns";
@@ -47,6 +49,8 @@ $.fn.zato.ide.toggle_action_area = function() {
     main_area_container.css(css_property, new_size);
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.switch_to_action_area = function(name) {
     console.log("Name -> " + name);
     if(name == "browser") {
@@ -60,6 +64,8 @@ $.fn.zato.ide.switch_to_action_area = function(name) {
     }
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.clear_header_links = function(prefix) {
 
     // The element where all the links reside ..
@@ -69,6 +75,8 @@ $.fn.zato.ide.clear_header_links = function(prefix) {
     // .. clean it up.
     header_links.empty();
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.add_header_link = function(prefix, item_label, text, is_last) {
 
@@ -94,19 +102,27 @@ $.fn.zato.ide.add_header_link = function(prefix, item_label, text, is_last) {
     }
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.add_header_left_link = function(item_label, text, is_last) {
     $.fn.zato.ide.add_header_link("left", item_label, text, is_last);
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.add_header_right_link = function(item_label, text, is_last) {
     $.fn.zato.ide.add_header_link("right", item_label, text, is_last);
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.populate_header_status = function(text) {
     let elem_id = `#header-status`;
     let elem = $(elem_id);
     elem.text(text);
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.populate_browser_area = function(initial_header_status) {
 
@@ -130,6 +146,8 @@ $.fn.zato.ide.populate_browser_area = function(initial_header_status) {
     // One-line status bar
     $("#header-status").text(initial_header_status);
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.populate_invoker_area = function() {
 
@@ -160,13 +178,19 @@ $.fn.zato.ide.populate_invoker_area = function() {
     */
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.populate_data_model_area = function() {
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.populate_document_title = function(name) {
     let new_title = `${name} - IDE - Zato`;
     document.title = new_title;
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.push_url_path = function(object_type, name) {
     let new_url_path = `/zato/service/ide/${object_type}/${name}/?cluster=1`;
@@ -174,19 +198,46 @@ $.fn.zato.ide.push_url_path = function(object_type, name) {
     $.fn.zato.ide.populate_document_title(name);
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.push_service_url_path = function(name) {
     $.fn.zato.ide.push_url_path("service", name);
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.push_file_url_path = function(name) {
     $.fn.zato.ide.push_url_path("file", name);
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.on_service_select_changed = function(select_elem) {
     let new_service_name = select_elem.value;
     $.fn.zato.ide.push_service_url_path(new_service_name);
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.load_source_object = function(object_type, name) {
+    var callback = function(data, status) {
+        var success = status == 'success';
+        if(success) {
+            msg = 'Request submitted, check the server logs for details';
+        }
+        else {
+            msg = data.responseText;
+        }
+        $.fn.zato.user_message(success, msg);
+    }
+
+    var url = String.format('/zato/service/ide/get-{0}/{1}/', object_type, name);
+    $.fn.zato.post(url, callback);
+}
+
 $.fn.zato.ide.on_file_selected = function(name) {
     $.fn.zato.ide.push_url_path("file", name);
+    $.fn.zato.ide.load_source_object("file", name);
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */

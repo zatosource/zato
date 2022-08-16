@@ -855,7 +855,7 @@ def get_http_channel_security_id(item):
 
 # ################################################################################################################################
 
-def invoke_action_handler(req, service_name:'str', send_attrs:'any_') -> 'any_':
+def invoke_action_handler(req, service_name:'str', send_attrs:'any_', extra=None) -> 'any_':
 
     try:
         request = {
@@ -864,6 +864,9 @@ def invoke_action_handler(req, service_name:'str', send_attrs:'any_') -> 'any_':
 
         for name in send_attrs:
             request[name] = req.POST.get(name, '')
+
+        extra = extra or {}
+        request.update(extra)
 
         logger.info('Invoking `%s` with `%s`', service_name, request)
         response = req.zato.client.invoke(service_name, request)
