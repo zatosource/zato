@@ -1,10 +1,10 @@
 
 $.fn.zato.ide.init_editor = function(initial_header_status) {
-    var editor = ace.edit("editor");
-    editor.setTheme("ace/theme/zato");
-    editor.session.setMode("ace/mode/python");
+    window.zato_editor = ace.edit("editor");
+    window.zato_editor.setTheme("ace/theme/zato");
+    window.zato_editor.session.setMode("ace/mode/python");
 
-    editor.setOptions({
+    window.zato_editor.setOptions({
         enableBasicAutocompletion: true,
         enableSnippets: true,
         enableLiveAutocompletion: true,
@@ -221,14 +221,10 @@ $.fn.zato.ide.on_service_select_changed = function(select_elem) {
 
 $.fn.zato.ide.load_source_object = function(object_type, name) {
     var callback = function(data, status) {
-        var success = status == 'success';
-        if(success) {
-            msg = 'Request submitted, check the server logs for details';
-        }
-        else {
-            msg = data.responseText;
-        }
-        $.fn.zato.user_message(success, msg);
+        let msg = data.responseText;
+        let json = JSON.parse(msg)
+        let current_file_source_code = json.current_file_source_code;
+        window.zato_editor.setValue(current_file_source_code, -1);
     }
 
     var url = String.format('/zato/service/ide/get-{0}/{1}/', object_type, name);
