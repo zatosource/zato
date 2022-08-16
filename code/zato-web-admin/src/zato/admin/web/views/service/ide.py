@@ -58,7 +58,10 @@ def get_service(req, service_name):
 
 @method_allowed('POST')
 def get_file(req, fs_location):
-    return invoke_action_handler(req, 'dev.service.ide.get-file', {'fs_location': fs_location})
+    print()
+    print(111, repr(fs_location))
+    print()
+    return invoke_action_handler(req, 'dev.service.ide.get-file', extra={'fs_location': fs_location})
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,6 +105,9 @@ class IDEResponse(Model):
 
 class _IDEBase(Service):
 
+    input = IDERequest
+    output = IDEResponse
+
     def get_deployment_info_list(self):
         service_list_response = self.invoke('zato.service.get-deployment-info-list', **{
             'needs_details': False,
@@ -116,8 +122,6 @@ class _IDEBase(Service):
 
 class ServiceIDE(_IDEBase):
     name = 'dev.service.ide'
-    input = IDERequest
-    output = IDEResponse
 
     def handle(self):
 
@@ -205,11 +209,31 @@ class ServiceIDE(_IDEBase):
 class GetService(_IDEBase):
     name = 'dev.service.ide.get-service'
 
+    def handle(self):
+        self.response.payload = '{}'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class GetFile(_IDEBase):
     name = 'dev.service.ide.get-file'
+
+    def handle(self):
+
+        fs_location = self.request.input.fs_location
+
+        response = {
+            'service_list': [],
+            'file_list': [],
+            'file_count': 1,
+            'service_count': 2,
+            'file_count_human': '333',
+            'service_count_human': '44',
+            'current_service_files': [],
+            'current_file_source_code': open(fs_location).read(),
+        }
+
+        self.response.payload = response
 
 # ################################################################################################################################
 # ################################################################################################################################
