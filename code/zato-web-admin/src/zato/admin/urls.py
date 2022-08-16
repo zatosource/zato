@@ -172,6 +172,10 @@ urlpatterns += [
         login_required(service.Delete()), name=service.Delete.url_name),
     url(r'^zato/service/overview/(?P<service_name>.*)/$',
         login_required(service.overview), name='service-overview'),
+    url(r'^zato/service/ide/get-service/(?P<service_name>.*)/$',
+        login_required(service_ide.get_service), name='service-ide-get-service'),
+    url(r'^zato/service/ide/get-file/(?P<fs_location>.*)/$',
+        login_required(service_ide.get_file), name='service-ide-get-file'),
     url(r'^zato/service/ide/(?P<object_type>.*)/(?P<name>.*)/$',
         login_required(service_ide.IDE()), name=service_ide.IDE.url_name),
     ]
