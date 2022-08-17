@@ -10,6 +10,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     window.zato_editor = ace.edit("editor");
     window.zato_editor.setTheme("ace/theme/zato");
     window.zato_editor.session.setMode("ace/mode/python");
+    window.zato_editor.session.setUndoSelect(false);
 
     window.zato_editor.setOptions({
         enableBasicAutocompletion: true,
@@ -274,6 +275,7 @@ $.fn.zato.ide.load_editor_session = function(fs_location, current_file_source_co
         var editor_session = ace.createEditSession(current_file_source_code);
     }
     editor_session.setMode("ace/mode/python");
+    editor_session.setUndoSelect(false);
     window.zato_editor.setSession(editor_session);
 }
 
