@@ -248,7 +248,7 @@ $.fn.zato.ide.load_source_object = function(object_type, name) {
         let msg = data.responseText;
         let json = JSON.parse(msg)
         let current_file_source_code = json.current_file_source_code;
-        window.zato_editor.setValue(current_file_source_code, -1);
+        $.fn.zato.ide.load_editor_session(name, current_file_source_code);
         $.fn.zato.ide.highlight_current_file(name);
     }
 
@@ -268,14 +268,12 @@ $.fn.zato.ide.set_current_fs_location = function(name) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.load_editor_session = function(fs_location) {
+$.fn.zato.ide.load_editor_session = function(fs_location, current_file_source_code) {
     var editor_session = window.zato_editor_session_map[fs_location];
     if(!editor_session) {
-        var _new_doc = new ace.Document();
-        var _text_mode = window.zato_editor.getSession().getMode();
-        var editor_session = new ace.EditSession(_new_doc, _text_mode);
-        alert("111 -> " +" "+ fs_location +" "+ editor_session);
+        var editor_session = ace.createEditSession(current_file_source_code);
     }
+    editor_session.setMode("ace/mode/python");
     window.zato_editor.setSession(editor_session);
 }
 
@@ -290,7 +288,6 @@ $.fn.zato.ide.on_file_selected = function(fs_location) {
     $.fn.zato.ide.save_current_editor_session();
     $.fn.zato.ide.set_current_fs_location(fs_location);
     $.fn.zato.ide.push_url_path("file", fs_location);
-    $.fn.zato.ide.load_editor_session(fs_location);
     $.fn.zato.ide.load_source_object("file", fs_location);
 }
 
