@@ -100,6 +100,7 @@ class IDEResponse(Model):
     current_file_source_code: 'strnone' = None
     service_list: 'list_' = list_field()
     current_file_name: 'strnone' = None
+    current_fs_location: 'strnone' = None
     current_service_files: 'list_' = list_field()
 
 # ################################################################################################################################
@@ -137,6 +138,9 @@ class ServiceIDE(_IDEBase):
         # The service that we are currently processing
         current_service = input.service_name
 
+        # Full path to the file with the current service's source code
+        current_fs_location = ''
+
         # Current's service source code
         current_file_source_code = ''
 
@@ -171,6 +175,7 @@ class ServiceIDE(_IDEBase):
                 # and what we are doing here is potentially overwriting the already assigned
                 # object that contains the source code.
                 with open_r(fs_location) as f:
+                    current_fs_location = fs_location
                     current_file_source_code = f.read()
 
         # This list may have file names that are not unique
@@ -200,6 +205,7 @@ class ServiceIDE(_IDEBase):
             'file_count_human': file_count_human,
             'service_count_human': service_count_human,
             'current_service_files': current_service_files,
+            'current_fs_location': current_fs_location,
             'current_file_source_code': current_file_source_code,
         }
 

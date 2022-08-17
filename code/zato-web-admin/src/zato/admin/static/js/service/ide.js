@@ -1,5 +1,12 @@
 
 $.fn.zato.ide.init_editor = function(initial_header_status) {
+
+    // Our initial file that we process
+    let current_fs_location = $("#current_fs_location").val();
+
+    // Maps file names to Ace EditorSession objects.
+    window.zato_editor_session_map = {};
+
     window.zato_editor = ace.edit("editor");
     window.zato_editor.setTheme("ace/theme/zato");
     window.zato_editor.session.setMode("ace/mode/python");
@@ -13,8 +20,13 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         cursorStyle: "ace"
     });
 
+    // Store a reference to the editor as we will be likely switching to various files
+    window.zato_editor_session_map[current_fs_location] = window.zato_editor;
+
+    // Set initial data
     $.fn.zato.ide.populate_browser_area(initial_header_status);
 
+    // Handle browser history back/forward actions
     window.onpopstate = function(event) {
         let name = event.state.name;
         $.fn.zato.ide.populate_document_title(name);
@@ -85,7 +97,7 @@ $.fn.zato.ide.add_header_link = function(prefix, item_label, text, is_last) {
     let header_links = $(header_links_id);
 
     // .. this is what each link will be based on ..
-    let link_pattern = '<a href="$.fn.zato.ide.invoke_header_link(\'{0}\', \'{1}\')" id="header-{0}-link-{1}">{2}</a>';
+    let link_pattern = '<a href="javascript:$.fn.zato.ide.invoke_header_link(\'{0}\', \'{1}\')" id="header-{0}-link-{1}">{2}</a>';
 
     // .. build a string containing the link ..
     let link_string = String.format(link_pattern, prefix, item_label, text);
@@ -244,9 +256,38 @@ $.fn.zato.ide.load_source_object = function(object_type, name) {
     $.fn.zato.post(url, callback);
 }
 
-$.fn.zato.ide.on_file_selected = function(name) {
-    $.fn.zato.ide.push_url_path("file", name);
-    $.fn.zato.ide.load_source_object("file", name);
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.get_current_fs_location = function() {
+    return $("#current_fs_location").val();
+}
+
+$.fn.zato.ide.set_current_fs_location = function(name) {
+    $("#current_fs_location").val(name);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.load_editor_session = function(fs_location) {
+    let editor_session = window.zato_editor_session_map[fs_location];
+    if(editor_session) {
+        window.zato_editor.setSession(editor_session);
+    }
+}
+
+$.fn.zato.ide.save_current_editor_session = function() {
+    let current_fs_location = $.fn.zato.ide.get_current_fs_location();
+    window.zato_editor_session_map[current_fs_location] = window.zato_editor.getSession();
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.on_file_selected = function(fs_location) {
+    $.fn.zato.ide.set_current_fs_location(fs_location);
+    $.fn.zato.ide.save_current_editor_session();
+    $.fn.zato.ide.push_url_path("file", fs_location);
+    $.fn.zato.ide.load_editor_session(fs_location);
+    $.fn.zato.ide.load_source_object("file", fs_location);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
