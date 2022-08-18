@@ -31,19 +31,33 @@ class IDE(BaseCallView):
 
     def get_input_dict(self):
 
+        # This will point either to a service or to a full file name
+        object_type = self.req.zato.args.object_type
+
+        if object_type == 'service':
+            current_service_name = self.req.zato.args.name
+            fs_location = ''
+        else:
+            current_service_name = ''
+            fs_location = self.req.zato.args.name
+
         return {
             'cluster_id': self.cluster_id,
-            'service_name': self.req.zato.args.name,
+            'current_service_name': current_service_name,
+            'fs_location': fs_location,
         }
 
 # ################################################################################################################################
 
     def build_http_response(self, response):
+
         return_data = {
             'cluster_id':self.req.zato.cluster_id,
-            'current_service_name': self.req.zato.args.name,
+            'current_object_name': self.req.zato.args.name,
+            'current_object_name_url_safe': self.req.zato.args.name.replace('~', '/'),
             'data': response.data,
         }
+
         return TemplateResponse(self.req, self.template, return_data)
 
 # ################################################################################################################################
