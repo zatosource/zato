@@ -276,7 +276,7 @@ $.fn.zato.ide.on_document_changed = function(e) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.mark_file_modified = function(has_undo, has_redo, undo_stack) {
+$.fn.zato.ide.mark_file_modified = function(has_undo) {
 
     // There will be only one such element but it will not have an ID, hence the iteration.
     $("a.fs-location-link.current").each(function() {
@@ -293,7 +293,7 @@ $.fn.zato.ide.mark_file_modified = function(has_undo, has_redo, undo_stack) {
 
 $.fn.zato.ide.set_up_editor_session = function(editor_session) {
     editor_session.setMode("ace/mode/python");
-    editor_session.setUndoSelect(false);
+    editor_session.setUndoSelect(true);
     editor_session.on("change", $.fn.zato.ide.on_document_changed);
 }
 
