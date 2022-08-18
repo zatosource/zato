@@ -218,19 +218,6 @@ $.fn.zato.ide.push_service_url_path = function(name) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.push_file_url_path = function(name) {
-    $.fn.zato.ide.push_url_path("file", name);
-}
-
-/* ---------------------------------------------------------------------------------------------------------------------------- */
-
-$.fn.zato.ide.on_service_select_changed = function(select_elem) {
-    let new_service_name = select_elem.value;
-    $.fn.zato.ide.push_service_url_path(new_service_name);
-}
-
-/* ---------------------------------------------------------------------------------------------------------------------------- */
-
 $.fn.zato.ide.highlight_current_file = function(fs_location) {
     $("a.fs-location-link").each(function(idx) {
         let title = $(this).attr("title");
@@ -321,6 +308,15 @@ $.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe) {
     $.fn.zato.ide.set_current_fs_location(fs_location);
     $.fn.zato.ide.push_url_path("file", fs_location, fs_location_url_safe);
     $.fn.zato.ide.load_source_object("file", fs_location);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.on_service_select_changed = function(select_elem) {
+    let new_service_name = select_elem.value;
+    $.fn.zato.ide.save_current_editor_session();
+    $.fn.zato.ide.push_service_url_path(new_service_name);
+    $.fn.zato.ide.load_source_object("service", new_service_name);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
