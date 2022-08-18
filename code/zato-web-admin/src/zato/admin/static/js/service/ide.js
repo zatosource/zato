@@ -9,8 +9,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     window.zato_editor = ace.edit("editor");
     window.zato_editor.setTheme("ace/theme/zato");
-    window.zato_editor.session.setMode("ace/mode/python");
-    window.zato_editor.session.setUndoSelect(false);
+    $.fn.zato.ide.set_up_editor_session(window.zato_editor.session);
 
     window.zato_editor.setOptions({
         enableBasicAutocompletion: true,
@@ -269,13 +268,19 @@ $.fn.zato.ide.set_current_fs_location = function(name) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.set_up_editor_session = function(editor_session) {
+    editor_session.setMode("ace/mode/python");
+    editor_session.setUndoSelect(false);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.load_editor_session = function(fs_location, current_file_source_code) {
     var editor_session = window.zato_editor_session_map[fs_location];
     if(!editor_session) {
         var editor_session = ace.createEditSession(current_file_source_code);
     }
-    editor_session.setMode("ace/mode/python");
-    editor_session.setUndoSelect(false);
+    $.fn.zato.ide.set_up_editor_session(editor_session);
     window.zato_editor.setSession(editor_session);
     window.zato_editor.focus();
 }
