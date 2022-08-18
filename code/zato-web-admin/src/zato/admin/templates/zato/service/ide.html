@@ -52,7 +52,7 @@
                 {% for file_item in data.file_list %}
                     <tr class="file-listing-tr">
                         <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                        <td class="item-name"><a href="javascript:$.fn.zato.ide.on_file_selected('{{ file_item.fs_location }}')" title="{{ file_item.fs_location }}" class="fs-location-link {% if file_item.fs_location in data.current_service_files %}current{% endif %}">{{ file_item.name }}</a></td>
+                        <td class="item-name"><a href="javascript:$.fn.zato.ide.on_file_selected('{{ file_item.fs_location }}')" data-file-name="{{ file_item.name }}" title="{{ file_item.fs_location }}" class="fs-location-link {% if file_item.fs_location in data.current_service_files %}current{% endif %}">{{ file_item.name }}</a></td>
                     </tr>
                 {% endfor %}
 
