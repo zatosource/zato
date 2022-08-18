@@ -65,7 +65,7 @@ class IDE(BaseCallView):
 
 @method_allowed('POST')
 def get_service(req, service_name):
-    return invoke_action_handler(req, 'dev.service.ide.get-service', {'service_name': service_name})
+    return invoke_action_handler(req, 'dev.service.ide.get-service', extra={'service_name': service_name})
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -237,7 +237,26 @@ class GetService(_IDEBase):
     name = 'dev.service.ide.get-service'
 
     def handle(self):
-        self.response.payload = '{}'
+
+        for item in self.get_deployment_info_list():
+
+            if item['service_name'] == self.request.input.service_name:
+
+                # Extract the full file system path
+                fs_location = item['fs_location']
+
+                # Build a response ..
+                response = IDEResponse()
+                response.service_list = []
+                response.current_service_files = []
+                response.current_file_name = os.path.basename(fs_location)
+                response.current_file_source_code = open(fs_location).read()
+
+                # .. this is what we return to our caller ..
+                self.response.payload = response
+
+                # .. no need to iterate further.
+                break
 
 # ################################################################################################################################
 # ################################################################################################################################
