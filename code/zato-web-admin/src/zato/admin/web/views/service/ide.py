@@ -249,6 +249,7 @@ class GetService(_IDEBase):
                 response = IDEResponse()
                 response.service_list = []
                 response.current_service_files = []
+                response.current_fs_location = fs_location
                 response.current_file_name = os.path.basename(fs_location)
                 response.current_file_source_code = open(fs_location).read()
 
@@ -273,6 +274,7 @@ class GetFile(_IDEBase):
         response = IDEResponse()
         response.service_list = []
         response.current_service_files = []
+        response.current_fs_location = fs_location
         response.current_file_name = os.path.basename(fs_location)
         response.current_file_source_code = open(fs_location).read()
 

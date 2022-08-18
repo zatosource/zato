@@ -230,13 +230,13 @@ $.fn.zato.ide.highlight_current_file = function(fs_location) {
     });
 }
 
-$.fn.zato.ide.load_source_object = function(object_type, name) {
+$.fn.zato.ide.load_source_object = function(object_type, name, fs_location) {
     var callback = function(data, status) {
         let msg = data.responseText;
         let json = JSON.parse(msg)
         let current_file_source_code = json.current_file_source_code;
-        $.fn.zato.ide.load_editor_session(name, current_file_source_code);
-        $.fn.zato.ide.highlight_current_file(name);
+        $.fn.zato.ide.load_editor_session(fs_location, current_file_source_code);
+        $.fn.zato.ide.highlight_current_file(fs_location);
     }
 
     var url = String.format('/zato/service/ide/get-{0}/{1}/', object_type, name);
@@ -307,16 +307,18 @@ $.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe) {
     $.fn.zato.ide.save_current_editor_session();
     $.fn.zato.ide.set_current_fs_location(fs_location);
     $.fn.zato.ide.push_url_path("file", fs_location, fs_location_url_safe);
-    $.fn.zato.ide.load_source_object("file", fs_location);
+    $.fn.zato.ide.load_source_object("file", fs_location, fs_location);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.on_service_select_changed = function(select_elem) {
     let new_service_name = select_elem.value;
+    let fs_location = $('option:selected', select_elem).attr('data-fs-location');
     $.fn.zato.ide.save_current_editor_session();
+    $.fn.zato.ide.set_current_fs_location(fs_location);
     $.fn.zato.ide.push_service_url_path(new_service_name);
-    $.fn.zato.ide.load_source_object("service", new_service_name);
+    $.fn.zato.ide.load_source_object("service", new_service_name, fs_location);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
