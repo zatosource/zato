@@ -2,7 +2,7 @@
 $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     // Our initial file that we process
-    let current_fs_location = $("#current_fs_location").val();
+    let current_fs_location = $.fn.zato.ide.get_current_fs_location();
 
     // Maps file names to Ace EditorSession objects.
     window.zato_editor_session_map = {};
@@ -268,9 +268,33 @@ $.fn.zato.ide.set_current_fs_location = function(name) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.on_document_changed = function(e) {
+    let undo_manager = window.zato_editor.getSession().getUndoManager();
+    let has_undo = undo_manager.hasUndo();
+    $.fn.zato.ide.mark_file_modified(has_undo);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.mark_file_modified = function(has_undo, has_redo, undo_stack) {
+
+    // There will be only one such element but it will not have an ID, hence the iteration.
+    $("a.fs-location-link.current").each(function() {
+        var elem = $(this);
+        var file_name = elem.attr("data-file-name");
+        if(has_undo) {
+            file_name += " *";
+        }
+        elem.text(file_name);
+    })
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.set_up_editor_session = function(editor_session) {
     editor_session.setMode("ace/mode/python");
     editor_session.setUndoSelect(false);
+    editor_session.on("change", $.fn.zato.ide.on_document_changed);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
