@@ -204,9 +204,9 @@ $.fn.zato.ide.populate_document_title = function(name) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.push_url_path = function(object_type, name) {
-    let new_url_path = `/zato/service/ide/${object_type}/${name}/?cluster=1`;
-    history.pushState({"object_type":object_type, "name": name}, null, new_url_path);
+$.fn.zato.ide.push_url_path = function(object_type, name, name_url_safe) {
+    let new_url_path = `/zato/service/ide/${object_type}/${name_url_safe}/?cluster=1`;
+    history.pushState({"object_type":object_type, "name": name_url_safe}, null, new_url_path);
     $.fn.zato.ide.populate_document_title(name);
 }
 
@@ -262,8 +262,8 @@ $.fn.zato.ide.get_current_fs_location = function() {
     return $("#current_fs_location").val();
 }
 
-$.fn.zato.ide.set_current_fs_location = function(name) {
-    $("#current_fs_location").val(name);
+$.fn.zato.ide.set_current_fs_location = function(fs_location) {
+    $("#current_fs_location").val(fs_location);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -316,10 +316,10 @@ $.fn.zato.ide.save_current_editor_session = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.on_file_selected = function(fs_location) {
+$.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe) {
     $.fn.zato.ide.save_current_editor_session();
     $.fn.zato.ide.set_current_fs_location(fs_location);
-    $.fn.zato.ide.push_url_path("file", fs_location);
+    $.fn.zato.ide.push_url_path("file", fs_location, fs_location_url_safe);
     $.fn.zato.ide.load_source_object("file", fs_location);
 }
 
