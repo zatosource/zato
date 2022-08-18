@@ -43,7 +43,7 @@ class IDE(BaseCallView):
 
         return {
             'cluster_id': self.cluster_id,
-            'current_service_name': current_service_name,
+            'service_name': current_service_name,
             'fs_location': fs_location,
         }
 
@@ -65,16 +65,13 @@ class IDE(BaseCallView):
 
 @method_allowed('POST')
 def get_service(req, service_name):
-    return invoke_action_handler(req, 'dev.service.ide.get-file', {'service_name': service_name})
+    return invoke_action_handler(req, 'dev.service.ide.get-service', {'service_name': service_name})
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def get_file(req, fs_location):
-    print()
-    print(111, repr(fs_location))
-    print()
     return invoke_action_handler(req, 'dev.service.ide.get-file', extra={'fs_location': fs_location})
 
 # ################################################################################################################################
@@ -127,7 +124,7 @@ class _IDEBase(Service):
 
     def get_deployment_info_list(self):
         service_list_response = self.invoke('zato.service.get-deployment-info-list', **{
-            'needs_details': False,
+            'needs_details': True,
             'include_internal': False,
             'skip_response_elem': True,
         })
@@ -149,8 +146,12 @@ class ServiceIDE(_IDEBase):
         file_item_dict = {}
         service_list = []
 
-        # The service that we are currently processing
-        current_service = input.service_name
+        # The service that we want to look up ..
+        input_service_name = input.service_name
+
+        # .. or a file that we need.
+        input_fs_location = input.fs_location or ''
+        input_fs_location = input_fs_location.replace('~', '/')
 
         # Full path to the file with the current service's source code
         current_fs_location = ''
@@ -181,8 +182,11 @@ class ServiceIDE(_IDEBase):
                 'fs_location': fs_location,
             })
 
-            # If the current service is among what this file contains, append the latter's name for later use.
-            if current_service == service_name:
+            # If the current service is among what this file contains or if the current file is what we have on input,
+            # append the latter's name for later use.
+            input_service_name_matches = input_service_name and input_service_name == service_name
+            input_fs_location_matches = input_fs_location and input_fs_location == fs_location
+            if input_service_name_matches or input_fs_location_matches:
                 current_service_files.append(fs_location)
 
                 # Note that we may potentially have mulitple services with the same name
@@ -199,7 +203,8 @@ class ServiceIDE(_IDEBase):
         for fs_location, file_name in file_item_dict.items():
             file_list.append({
                 'name': file_name,
-                'fs_location': fs_location
+                'fs_location': fs_location,
+                'fs_location_url_safe': fs_location.replace('/', '~'),
             })
 
         file_count = len(file_list)
