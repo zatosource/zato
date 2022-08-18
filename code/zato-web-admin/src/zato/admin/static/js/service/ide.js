@@ -277,6 +277,7 @@ $.fn.zato.ide.load_editor_session = function(fs_location, current_file_source_co
     editor_session.setMode("ace/mode/python");
     editor_session.setUndoSelect(false);
     window.zato_editor.setSession(editor_session);
+    window.zato_editor.focus();
 }
 
 $.fn.zato.ide.save_current_editor_session = function() {
