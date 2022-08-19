@@ -94,6 +94,12 @@ from zato.server.service import Model, Service
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import dictlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass(init=False)
 class IDERequest(Model):
     service_name: 'strnone' = None
@@ -255,18 +261,23 @@ class ServiceIDE(_IDEBase):
 class _GetBase(_IDEBase):
     name = 'dev.service.ide.get-service'
 
-    def _build_base_response(self, fs_location:'str') -> 'IDEResponse':
+    def _get_service_list_by_fs_location(self, fs_location:'str') -> 'dictlist':
+        out = []
+        return out
+
+# ################################################################################################################################
+
+    def _build_get_response(self, fs_location:'str') -> 'IDEResponse':
 
         response = IDEResponse()
         response.service_list = []
-        response.current_file_service_list = []
+        response.current_file_service_list = self._get_service_list_by_fs_location(fs_location)
         response.current_service_file_list = []
         response.current_fs_location = fs_location
         response.current_file_name = os.path.basename(fs_location)
         response.current_file_source_code = open(fs_location).read()
 
         return response
-
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -276,7 +287,9 @@ class GetService(_GetBase):
 
     def handle(self):
 
-        for item in self.get_deployment_info_list():
+        deployment_info_list = list(self.get_deployment_info_list())
+
+        for item in deployment_info_list:
 
             if item['service_name'] == self.request.input.service_name:
 
@@ -284,7 +297,7 @@ class GetService(_GetBase):
                 fs_location = item['fs_location']
 
                 # Build a response ..
-                response = self._build_base_response(fs_location)
+                response = self._build_get_response(fs_location)
 
                 # .. this is what we return to our caller ..
                 self.response.payload = response
@@ -304,7 +317,7 @@ class GetFile(_GetBase):
         fs_location = self.request.input.fs_location
 
         # Build a response ..
-        response = self._build_base_response(fs_location)
+        response = self._build_get_response(fs_location)
 
         # .. and return it to our caller.
         self.response.payload = response
