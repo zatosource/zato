@@ -213,7 +213,7 @@ $.fn.zato.ide.push_url_path = function(object_type, name, name_url_safe) {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.push_service_url_path = function(name) {
-    $.fn.zato.ide.push_url_path("service", name);
+    $.fn.zato.ide.push_url_path("service", name, name);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
