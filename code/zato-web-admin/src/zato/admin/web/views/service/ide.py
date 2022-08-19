@@ -261,9 +261,15 @@ class ServiceIDE(_IDEBase):
 class _GetBase(_IDEBase):
     name = 'dev.service.ide.get-service'
 
-    def _get_service_list_by_fs_location(self, fs_location:'str') -> 'dictlist':
+    def _get_service_list_by_fs_location(self, deployment_info_list:'any_', fs_location:'str') -> 'dictlist':
         out = []
-        return out
+        for item in deployment_info_list:
+            if fs_location == item['fs_location']:
+                out.append({
+                    'name': item['service_name'],
+                    'fs_location': item['fs_location'],
+                })
+        return sorted(out, key=itemgetter('name'))
 
 # ################################################################################################################################
 
@@ -271,7 +277,7 @@ class _GetBase(_IDEBase):
 
         response = IDEResponse()
         response.service_list = []
-        response.current_file_service_list = self._get_service_list_by_fs_location(fs_location)
+        response.current_file_service_list = self._get_service_list_by_fs_location(deployment_info_list, fs_location)
         response.current_service_file_list = []
         response.current_fs_location = fs_location
         response.current_file_name = os.path.basename(fs_location)
