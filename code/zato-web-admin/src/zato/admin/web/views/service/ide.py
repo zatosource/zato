@@ -252,7 +252,26 @@ class ServiceIDE(_IDEBase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetService(_IDEBase):
+class _GetBase(_IDEBase):
+    name = 'dev.service.ide.get-service'
+
+    def _build_base_response(self, fs_location:'str') -> 'IDEResponse':
+
+        response = IDEResponse()
+        response.service_list = []
+        response.current_file_service_list = []
+        response.current_service_file_list = []
+        response.current_fs_location = fs_location
+        response.current_file_name = os.path.basename(fs_location)
+        response.current_file_source_code = open(fs_location).read()
+
+        return response
+
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetService(_GetBase):
     name = 'dev.service.ide.get-service'
 
     def handle(self):
@@ -265,13 +284,7 @@ class GetService(_IDEBase):
                 fs_location = item['fs_location']
 
                 # Build a response ..
-                response = IDEResponse()
-                response.service_list = []
-                response.current_file_service_list = []
-                response.current_service_file_list = []
-                response.current_fs_location = fs_location
-                response.current_file_name = os.path.basename(fs_location)
-                response.current_file_source_code = open(fs_location).read()
+                response = self._build_base_response(fs_location)
 
                 # .. this is what we return to our caller ..
                 self.response.payload = response
@@ -282,7 +295,7 @@ class GetService(_IDEBase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetFile(_IDEBase):
+class GetFile(_GetBase):
     name = 'dev.service.ide.get-file'
 
     def handle(self):
@@ -291,13 +304,7 @@ class GetFile(_IDEBase):
         fs_location = self.request.input.fs_location
 
         # Build a response ..
-        response = IDEResponse()
-        response.service_list = []
-        response.current_file_service_list = []
-        response.current_service_file_list = []
-        response.current_fs_location = fs_location
-        response.current_file_name = os.path.basename(fs_location)
-        response.current_file_source_code = open(fs_location).read()
+        response = self._build_base_response(fs_location)
 
         # .. and return it to our caller.
         self.response.payload = response
