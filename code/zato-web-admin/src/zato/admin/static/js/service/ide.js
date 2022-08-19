@@ -232,7 +232,7 @@ $.fn.zato.ide.highlight_current_file = function(fs_location) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.populate_current_file_service_list = function(current_file_service_list) {
+$.fn.zato.ide.populate_current_file_service_list = function(current_file_service_list, new_service_name) {
 
     // First, remove anything we already have in the list ..
     $(".option-current-file").remove();
@@ -242,11 +242,18 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
 
     // .. and populate it anew
     for (const item of current_file_service_list) {
+
         var option = $("<option>");
-        option.val(item.name);
+
         option.text(item.name);
         option.attr("class", "option-current-file");
         option.attr("data-fs-location", item.fs_location);
+
+        if(item.name == new_service_name) {
+            console.log("ITEM: "+ item.name +" "+ new_service_name);
+            option.attr("selected", "selected");
+        }
+
         option.appendTo(optgroup);
     }
 }
@@ -258,9 +265,9 @@ $.fn.zato.ide.load_source_object = function(object_type, name, fs_location) {
         let msg = data.responseText;
         let json = JSON.parse(msg)
         let current_file_source_code = json.current_file_source_code;
-        $.fn.zato.ide.populate_current_file_service_list(json.current_file_service_list);
         $.fn.zato.ide.load_editor_session(fs_location, current_file_source_code);
         $.fn.zato.ide.highlight_current_file(fs_location);
+        $.fn.zato.ide.populate_current_file_service_list(json.current_file_service_list, name);
     }
 
     var url = String.format('/zato/service/ide/get-{0}/{1}/', object_type, name);
