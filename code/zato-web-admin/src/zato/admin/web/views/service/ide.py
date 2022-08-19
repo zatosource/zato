@@ -95,7 +95,7 @@ from zato.server.service import Model, Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import dictlist
+    from zato.common.typing_ import any_, dictlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -267,7 +267,7 @@ class _GetBase(_IDEBase):
 
 # ################################################################################################################################
 
-    def _build_get_response(self, fs_location:'str') -> 'IDEResponse':
+    def _build_get_response(self, deployment_info_list:'any_', fs_location:'str') -> 'IDEResponse':
 
         response = IDEResponse()
         response.service_list = []
@@ -297,7 +297,7 @@ class GetService(_GetBase):
                 fs_location = item['fs_location']
 
                 # Build a response ..
-                response = self._build_get_response(fs_location)
+                response = self._build_get_response(deployment_info_list, fs_location)
 
                 # .. this is what we return to our caller ..
                 self.response.payload = response
@@ -315,9 +315,10 @@ class GetFile(_GetBase):
 
         # Reusable
         fs_location = self.request.input.fs_location
+        deployment_info_list = self.get_deployment_info_list()
 
         # Build a response ..
-        response = self._build_get_response(fs_location)
+        response = self._build_get_response(deployment_info_list, fs_location)
 
         # .. and return it to our caller.
         self.response.payload = response
