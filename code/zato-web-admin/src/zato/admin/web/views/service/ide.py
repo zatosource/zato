@@ -112,7 +112,12 @@ class IDEResponse(Model):
     service_list: 'list_' = list_field()
     current_file_name: 'strnone' = None
     current_fs_location: 'strnone' = None
-    current_service_files: 'list_' = list_field()
+
+    # A list of services that are contained in a particular file.
+    current_file_service_list: 'list_' = list_field()
+
+    # A list of files that may potentially have a service of the given name.
+    current_service_file_list: 'list_' = list_field()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -159,10 +164,13 @@ class ServiceIDE(_IDEBase):
         # Current's service source code
         current_file_source_code = ''
 
+        # All services stored in the current file
+        current_file_service_list = []
+
         # This will point to files that contain the currently selected service.
         # It is possible that more than one file will have the same service
         # and we need to recognize such a case.
-        current_service_files = []
+        current_service_file_list = []
 
         service_list_response = self.get_deployment_info_list()
 
@@ -186,14 +194,24 @@ class ServiceIDE(_IDEBase):
             # append the latter's name for later use.
             input_service_name_matches = input_service_name and input_service_name == service_name
             input_fs_location_matches = input_fs_location and input_fs_location == fs_location
-            if input_service_name_matches or input_fs_location_matches:
-                current_service_files.append(fs_location)
 
-                # Note that we may potentially have mulitple services with the same name
-                # and what we are doing here is potentially overwriting the already assigned
-                # object that contains the source code.
+            if input_service_name_matches or input_fs_location_matches:
+
+                # This is the file that contains the service that we have on input
+                # or if input location is the same as what we are processing right now in this loop's iteration.
+                current_fs_location = fs_location
+
+                # Append this location to the list of locations that the service is available under ..
+                current_service_file_list.append(fs_location)
+
+                # .. also, append the service name to the list of services this file contains ..
+                current_file_service_list.append({
+                    'name': service_name,
+                    'fs_location': fs_location,
+                })
+
+                # .. and read the service's source code for our caller's benefit.
                 with open_r(fs_location) as f:
-                    current_fs_location = fs_location
                     current_file_source_code = f.read()
 
         # This list may have file names that are not unique
@@ -223,7 +241,8 @@ class ServiceIDE(_IDEBase):
             'service_count': service_count,
             'file_count_human': file_count_human,
             'service_count_human': service_count_human,
-            'current_service_files': current_service_files,
+            'current_file_service_list': current_file_service_list,
+            'current_service_file_list': current_service_file_list,
             'current_fs_location': current_fs_location,
             'current_file_source_code': current_file_source_code,
         }
@@ -248,7 +267,8 @@ class GetService(_IDEBase):
                 # Build a response ..
                 response = IDEResponse()
                 response.service_list = []
-                response.current_service_files = []
+                response.current_file_service_list = []
+                response.current_service_file_list = []
                 response.current_fs_location = fs_location
                 response.current_file_name = os.path.basename(fs_location)
                 response.current_file_source_code = open(fs_location).read()
@@ -273,7 +293,8 @@ class GetFile(_IDEBase):
         # Build a response ..
         response = IDEResponse()
         response.service_list = []
-        response.current_service_files = []
+        response.current_file_service_list = []
+        response.current_service_file_list = []
         response.current_fs_location = fs_location
         response.current_file_name = os.path.basename(fs_location)
         response.current_file_source_code = open(fs_location).read()
