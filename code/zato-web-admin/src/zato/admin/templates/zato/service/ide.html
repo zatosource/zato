@@ -18,9 +18,11 @@
     <div id="action-area-container">
         <div id="action-area-header" data-is-expanded="false">
             <a href="javascript:$.fn.zato.ide.toggle_action_area()" class="img-button"><img src="/static/gfx/editor/resize.png" class="button" title="Resize this area" /></a>
+            >>{{ data.current_file_service_list }}<<
             <select id="service-select" onchange="$.fn.zato.ide.on_service_select_changed(this);">
                 <optgroup label="Current file">
-                    {% for service_item in data.service_list %}
+                    {% for service_item in data.current_file_service_list %}
+                        <option data-fs-location="{{ service_item.fs_location }}" {% if current_object_name == service_item.name %}selected="selected"{% endif %}>{{ service_item.name }}</option>
                     {% endfor %}
                 </optgroup>
                 <optgroup label="All services">
@@ -52,7 +54,7 @@
                 {% for file_item in data.file_list %}
                     <tr class="file-listing-tr">
                         <td class="item-header"><img src="/static/gfx/editor/icons/python.png" class="fs-icon" /></td>
-                        <td class="item-name"><a href="javascript:$.fn.zato.ide.on_file_selected('{{ file_item.fs_location }}', '{{ file_item.fs_location_url_safe }}')" data-file-name="{{ file_item.name }}" title="{{ file_item.fs_location }}" class="fs-location-link {% if file_item.fs_location in data.current_service_files %}current{% endif %}">{{ file_item.name }}</a></td>
+                        <td class="item-name"><a href="javascript:$.fn.zato.ide.on_file_selected('{{ file_item.fs_location }}', '{{ file_item.fs_location_url_safe }}')" data-file-name="{{ file_item.name }}" title="{{ file_item.fs_location }}" class="fs-location-link {% if file_item.fs_location in data.current_service_file_list %}current{% endif %}">{{ file_item.name }}</a></td>
                     </tr>
                 {% endfor %}
 
