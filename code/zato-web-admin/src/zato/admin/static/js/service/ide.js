@@ -244,17 +244,13 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
     for (const item of current_file_service_list) {
 
         var option = $("<option>");
-
         option.text(item.name);
         option.attr("class", "option-current-file");
         option.attr("data-fs-location", item.fs_location);
-
+        option.appendTo(optgroup);
         if(item.name == new_service_name) {
-            console.log("ITEM: "+ item.name +" "+ new_service_name);
             option.attr("selected", "selected");
         }
-
-        option.appendTo(optgroup);
     }
 }
 
