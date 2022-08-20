@@ -750,6 +750,9 @@ class ServiceStore:
                 class_ = service.service_class
                 impl_name = service.impl_name
 
+                # The line number this class object is defined on
+                line_number = inspect.findsource(class_)[1]
+
                 service_info.append({
                     'service_class': class_,
                     'mod': inspect.getmodule(class_),
@@ -758,6 +761,7 @@ class ServiceStore:
                     'is_active': self.services[impl_name]['is_active'],
                     'slow_threshold': self.services[impl_name]['slow_threshold'],
                     'fs_location': inspect.getfile(class_),
+                    'line_number': line_number,
                     'deployment_info': 'no-deployment-info'
                 })
 
@@ -859,10 +863,14 @@ class ServiceStore:
                 item_deployment_info = item.deployment_info
                 item_service_class = item.service_class
 
+                # The line number this class object is defined on
+                line_number = inspect.findsource(item_service_class)[1]
+
                 self.services[item.impl_name] = {}
                 self.services[item.impl_name]['name'] = item_name
                 self.services[item.impl_name]['deployment_info'] = item_deployment_info
                 self.services[item.impl_name]['service_class'] = item_service_class
+                self.services[item.impl_name]['line_number'] = line_number
 
                 item_is_active = item.is_active
                 item_slow_threshold = item.slow_threshold
