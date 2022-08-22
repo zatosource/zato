@@ -234,6 +234,10 @@ $.fn.zato.ide.highlight_current_file = function(fs_location) {
 
 $.fn.zato.ide.populate_current_file_service_list = function(current_file_service_list, new_service_name) {
 
+    // For later use
+    var first_option_elem = null;
+    var has_new_service_name_match = false;
+
     // First, remove anything we already have in the list ..
     $(".option-current-file").remove();
 
@@ -247,11 +251,27 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
         option.text(item.name);
         option.attr("class", "option-current-file");
         option.attr("data-fs-location", item.fs_location);
-        option.attr("data-line-number", item.line_number);
+        option.attr("data-line-number", item.line_number_human);
+        option.attr("data-is-current-file", "1");
         option.appendTo(optgroup);
+
+        if(first_option_elem === null) {
+            first_option_elem = option;
+        }
+
+        // This will match only if we have a meaningful new service name on input,
+        // which will be the case with "on-service-selected" handlers only
+        // but not with "on-file-selected" ones.
         if(item.name == new_service_name) {
             option.attr("selected", "selected");
+            has_new_service_name_match = true;
         }
+    }
+
+    // This will be entered only by the "on-file-selected" handlers
+    // because they do not have any specific service to select.
+    if(!has_new_service_name_match) {
+        first_option_elem.attr("selected", "selected");
     }
 }
 
@@ -340,20 +360,41 @@ $.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.on_service_select_changed = function(select_elem) {
-    let new_service_name = select_elem.value;
-    let fs_location = $('option:selected', select_elem).attr('data-fs-location');
-    var line_number = $('option:selected', select_elem).attr('data-line-number');
-    line_number = line_number - 3; // Scroll up a little bit to ensure the class name is not in the first line
-    console.log("AAA: "+ line_number);
+$.fn.zato.ide.on_service_select_changed_current_file = function(option_selected) {
+
+    let fs_location = option_selected.attr('data-fs-location');
+    var line_number = option_selected.attr('data-line-number');
+
     let should_center = false;
     let should_animate = true;
     let callback_function = null;
+
     window.zato_editor.scrollToLine(line_number, should_center, should_animate, callback_function);
-    //$.fn.zato.ide.save_current_editor_session();
-    //$.fn.zato.ide.set_current_fs_location(fs_location);
-    //$.fn.zato.ide.push_service_url_path(new_service_name);
-    //$.fn.zato.ide.load_source_object("service", new_service_name, fs_location);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.on_service_select_changed_non_current_file = function(select_elem, option_selected) {
+    let new_service_name = select_elem.value;
+    let fs_location = option_selected.attr('data-fs-location');
+    $.fn.zato.ide.save_current_editor_session();
+    $.fn.zato.ide.set_current_fs_location(fs_location);
+    $.fn.zato.ide.push_service_url_path(new_service_name);
+    $.fn.zato.ide.load_source_object("service", new_service_name, fs_location);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.on_service_select_changed = function(select_elem) {
+    let option_selected = $('option:selected', select_elem);
+    let is_current_file = option_selected.attr('data-is-current-file') == "1";
+
+    if(is_current_file) {
+        $.fn.zato.ide.on_service_select_changed_current_file(option_selected);
+    }
+    else {
+        $.fn.zato.ide.on_service_select_changed_non_current_file(select_elem, option_selected);
+    }
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
