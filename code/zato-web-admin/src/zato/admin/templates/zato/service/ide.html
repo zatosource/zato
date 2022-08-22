@@ -21,12 +21,12 @@
             <select id="service-select" onchange="$.fn.zato.ide.on_service_select_changed(this);">
                 <optgroup label="Current file" id="optgroup-current-file">
                     {% for service_item in data.current_file_service_list %}
-                        <option class="option-current-file" data-line-number="{{ service_item.line_number }}" data-fs-location="{{ service_item.fs_location }}" {% if current_object_name == service_item.name %}selected="selected"{% endif %}>{{ service_item.name }}</option>
+                        <option class="option-current-file" data-is-current-file="1" data-line-number="{{ service_item.line_number_human }}" data-fs-location="{{ service_item.fs_location }}" {% if current_object_name == service_item.name %}selected="selected"{% endif %}>{{ service_item.name }}</option>
                     {% endfor %}
                 </optgroup>
                 <optgroup label="All services" id="optgroup-all-services">
                 {% for service_item in data.service_list %}
-                    <option class="option-all-services" data-fs-location="{{ service_item.fs_location }}">{{ service_item.name }}</option>
+                    <option class="option-all-services" data-is-current-file="{% if service_item.fs_location == data.current_fs_location %}1{% else %}0{% endif %}" data-line-number="{{ service_item.line_number_human }}" data-fs-location="{{ service_item.fs_location }}">{{ service_item.name }}</option>
                 {% endfor %}
                 </optgroup>
             </select>
