@@ -247,6 +247,7 @@ $.fn.zato.ide.populate_current_file_service_list = function(current_file_service
         option.text(item.name);
         option.attr("class", "option-current-file");
         option.attr("data-fs-location", item.fs_location);
+        option.attr("data-line-number", item.line_number);
         option.appendTo(optgroup);
         if(item.name == new_service_name) {
             option.attr("selected", "selected");
@@ -342,10 +343,17 @@ $.fn.zato.ide.on_file_selected = function(fs_location, fs_location_url_safe) {
 $.fn.zato.ide.on_service_select_changed = function(select_elem) {
     let new_service_name = select_elem.value;
     let fs_location = $('option:selected', select_elem).attr('data-fs-location');
-    $.fn.zato.ide.save_current_editor_session();
-    $.fn.zato.ide.set_current_fs_location(fs_location);
-    $.fn.zato.ide.push_service_url_path(new_service_name);
-    $.fn.zato.ide.load_source_object("service", new_service_name, fs_location);
+    var line_number = $('option:selected', select_elem).attr('data-line-number');
+    line_number = line_number - 3; // Scroll up a little bit to ensure the class name is not in the first line
+    console.log("AAA: "+ line_number);
+    let should_center = false;
+    let should_animate = true;
+    let callback_function = null;
+    window.zato_editor.scrollToLine(line_number, should_center, should_animate, callback_function);
+    //$.fn.zato.ide.save_current_editor_session();
+    //$.fn.zato.ide.set_current_fs_location(fs_location);
+    //$.fn.zato.ide.push_service_url_path(new_service_name);
+    //$.fn.zato.ide.load_source_object("service", new_service_name, fs_location);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */

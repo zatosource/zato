@@ -1684,9 +1684,9 @@ ZATO_INFO_FILE = '.zato-info'
 # ################################################################################################################################
 
 class SourceCodeInfo:
-    """ A bunch of attributes dealing the service's source code.
+    """ Attributes describing the service's source code file.
     """
-    __slots__ = 'source', 'source_html', 'len_source', 'path', 'hash', 'hash_method', 'server_name'
+    __slots__ = 'source', 'source_html', 'len_source', 'path', 'hash', 'hash_method', 'server_name', 'line_number'
 
     def __init__(self):
         self.source = b''       # type: bytes
@@ -1696,6 +1696,7 @@ class SourceCodeInfo:
         self.hash = None        # type: str
         self.hash_method = None # type: str
         self.server_name = None # type: str
+        self.line_number = 0    # type: int
 
 # ################################################################################################################################
 # ################################################################################################################################
