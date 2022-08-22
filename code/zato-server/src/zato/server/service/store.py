@@ -442,18 +442,18 @@ class ServiceStore:
             if _direct_sio_input or _direct_sio_output:
 
                 # If I/O is declared directly, it means that we do not need response wrappers
-                class_._zato_needs_response_wrapper = False
+                class_._zato_needs_response_wrapper = False # type: ignore
 
                 class _Class_SimpleIO:
                     pass
 
                 if _direct_sio_input:
-                    _Class_SimpleIO.input = _direct_sio_input
+                    _Class_SimpleIO.input = _direct_sio_input # type: ignore
 
                 if _direct_sio_output:
-                    _Class_SimpleIO.output = _direct_sio_output
+                    _Class_SimpleIO.output = _direct_sio_output # type: ignore
 
-                class_.SimpleIO = _Class_SimpleIO
+                class_.SimpleIO = _Class_SimpleIO # type: ignore
 
         try:
             class_.SimpleIO # type: ignore
@@ -750,9 +750,6 @@ class ServiceStore:
                 class_ = service.service_class
                 impl_name = service.impl_name
 
-                # The line number this class object is defined on
-                line_number = inspect.findsource(class_)[1]
-
                 service_info.append({
                     'service_class': class_,
                     'mod': inspect.getmodule(class_),
@@ -761,7 +758,6 @@ class ServiceStore:
                     'is_active': self.services[impl_name]['is_active'],
                     'slow_threshold': self.services[impl_name]['slow_threshold'],
                     'fs_location': inspect.getfile(class_),
-                    'line_number': line_number,
                     'deployment_info': 'no-deployment-info'
                 })
 
@@ -829,7 +825,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _store_in_ram(self, session:'SASession', to_process:'inramlist') -> 'None':
+    def _store_in_ram(self, session:'SASession | None', to_process:'inramlist') -> 'None':
 
         if self.is_testing:
             services = {}
@@ -863,14 +859,10 @@ class ServiceStore:
                 item_deployment_info = item.deployment_info
                 item_service_class = item.service_class
 
-                # The line number this class object is defined on
-                line_number = inspect.findsource(item_service_class)[1]
-
                 self.services[item.impl_name] = {}
                 self.services[item.impl_name]['name'] = item_name
                 self.services[item.impl_name]['deployment_info'] = item_deployment_info
                 self.services[item.impl_name]['service_class'] = item_service_class
-                self.services[item.impl_name]['line_number'] = line_number
 
                 item_is_active = item.is_active
                 item_slow_threshold = item.slow_threshold
@@ -1019,6 +1011,7 @@ class ServiceStore:
                 class_ = service.service_class
                 path = service.source_code_info.path
                 deployment_info_dict = deployment_info('service-store', str(class_), now_iso, path)
+                deployment_info_dict['line_number'] = service.source_code_info.line_number
                 self.deployment_info[service.impl_name] = deployment_info_dict
                 deployment_details = dumps(deployment_info_dict)
 
@@ -1045,7 +1038,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _store_in_odb(self, session:'SASession', to_process:'inramlist') -> 'None':
+    def _store_in_odb(self, session:'SASession | None', to_process:'inramlist') -> 'None':
 
         # Indicates boundaries of deployment batches
         batch_indexes = get_batch_indexes(to_process, self.max_batch_size)
@@ -1178,7 +1171,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def after_import(self, session:'SASession', info:'DeploymentInfo') -> 'None':
+    def after_import(self, session:'SASession | None', info:'DeploymentInfo') -> 'None':
 
         # Names of all services that have been just deployed ..
         deployed_service_name_list = [item.name for item in info.to_process]
@@ -1324,7 +1317,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _get_source_code_info(self, mod:'ModuleType') -> 'SourceCodeInfo':
+    def _get_source_code_info(self, mod:'ModuleType', class_:'any_') -> 'SourceCodeInfo':
         """ Returns the source code of and the FS path to the given module.
         """
 
@@ -1342,6 +1335,9 @@ class ServiceStore:
             source_info.path = inspect.getsourcefile(mod) or 'no-source-file'
             source_info.hash = sha256(source_info.source).hexdigest()
             source_info.hash_method = 'SHA-256'
+
+            # The line number this class object is defined on
+            source_info.line_number = inspect.findsource(class_)[1]
 
         except IOError:
             if has_trace1:
@@ -1385,7 +1381,7 @@ class ServiceStore:
         service.name = name
         service.impl_name = impl_name
         service.service_class = class_
-        service.source_code_info = self._get_source_code_info(mod)
+        service.source_code_info = self._get_source_code_info(mod, class_)
 
         return service
 

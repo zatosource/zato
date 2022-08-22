@@ -545,7 +545,8 @@ class GetDeploymentInfoList(AdminService):
         request_elem = 'zato_service_get_deployment_info_list_request'
         response_elem = 'zato_service_get_deployment_info_list_response'
         input = '-id', '-needs_details', Boolean('-include_internal')
-        output = 'server_id', 'server_name', 'service_id', 'service_name', 'file_name', 'fs_location', '-details'
+        output = 'server_id', 'server_name', 'service_id', 'service_name', 'fs_location', 'file_name', \
+            Integer('line_number'), '-details'
 
     def get_data(self, session):
 
@@ -575,6 +576,9 @@ class GetDeploymentInfoList(AdminService):
 
             # .. but append the full path as well ..
             _item['fs_location'] = fs_location
+
+            # .. this is also required ..
+            _item['line_number'] = details['line_number']
 
             # .. this is optional ..
             if needs_details:
