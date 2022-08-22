@@ -186,6 +186,7 @@ class ServiceIDE(_IDEBase):
             file_name = item['file_name']
             fs_location = item['fs_location']
             service_name = item['service_name']
+            line_number = item['line_number']
 
             # This maps a full file path to its extract file name.
             file_item_dict[fs_location] = file_name
@@ -194,6 +195,7 @@ class ServiceIDE(_IDEBase):
             service_list.append({
                 'name': service_name,
                 'fs_location': fs_location,
+                'line_number': line_number,
             })
 
             # If the current service is among what this file contains or if the current file is what we have on input,
@@ -214,6 +216,7 @@ class ServiceIDE(_IDEBase):
                 current_file_service_list.append({
                     'name': service_name,
                     'fs_location': fs_location,
+                    'line_number': line_number,
                 })
 
                 # .. and read the service's source code for our caller's benefit.
@@ -268,6 +271,7 @@ class _GetBase(_IDEBase):
                 out.append({
                     'name': item['service_name'],
                     'fs_location': item['fs_location'],
+                    'line_number': item['line_number'],
                 })
         return sorted(out, key=itemgetter('name'))
 
