@@ -43,6 +43,32 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
             $.fn.zato.ide.on_key_f2(null, null);
         }
     })
+
+    window.zato_inactivity_interval = null;
+    document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.reset_inactivity_timeout = function() {
+    clearTimeout(window.zato_inactivity_interval);
+    $.fn.zato.ide.set_inactivity_handler();
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.set_inactivity_handler = function() {
+    window.zato_inactivity_interval = setTimeout($.fn.zato.ide.handle_inactivity, 200)
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.handle_inactivity = function() {
+    $.fn.zato.ide.save_current_source_code_to_local_storage();
+}
+
+$.fn.zato.ide.save_current_source_code_to_local_storage = function() {
+    console.log("INACTIVE")
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -83,7 +109,7 @@ $.fn.zato.ide.toggle_action_area = function() {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.switch_to_action_area = function(name) {
-    console.log("Name -> " + name);
+
     if(name == "browser") {
         $.fn.zato.ide.populate_browser_area();
     }
