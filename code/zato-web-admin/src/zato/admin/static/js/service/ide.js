@@ -31,6 +31,25 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         let name = event.state.name;
         $.fn.zato.ide.populate_document_title(name);
     }
+
+    // Resizes the action area
+    hotkeys('F2', $.fn.zato.ide.on_key_f2);
+
+    // Same as above (F2)
+    window.zato_editor.commands.addCommand({
+        name: 'on_F2',
+        bindKey: {win: 'F2',  mac: 'F2'},
+        exec: function(_ignored_editor) {
+            $.fn.zato.ide.on_key_f2(null, null);
+        }
+    })
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// Resizes the action area
+$.fn.zato.ide.on_key_f2 = function(_ignored_event, _ignored_handler) {
+    $.fn.zato.ide.toggle_action_area();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
