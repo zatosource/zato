@@ -52,7 +52,8 @@ class IDE(BaseCallView):
     def build_http_response(self, response):
 
         return_data = {
-            'cluster_id':self.req.zato.cluster_id,
+            'cluster_id': self.req.zato.cluster_id,
+            'cluster_name': self.req.zato.cluster.name,
             'current_object_name': self.req.zato.args.name,
             'current_object_name_url_safe': self.req.zato.args.name.replace('~', '/'),
             'data': response.data,

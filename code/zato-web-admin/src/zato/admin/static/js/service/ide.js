@@ -68,7 +68,9 @@ $.fn.zato.ide.handle_inactivity = function() {
 }
 
 $.fn.zato.ide.save_current_source_code_to_local_storage = function() {
-    console.log("INACTIVE")
+    let key = "abc"
+    let value = "def";
+    store.set(key, value);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
