@@ -6,6 +6,7 @@
 
 <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
 <script type="text/javascript" src="/static/hotkeys/hotkeys.js"></script>
+<script type="text/javascript" src="/static/store2/store2.js"></script>
 
 <script type="text/javascript" src="/static/js/common.js"></script>
 <script type="text/javascript" src="/static/js/service/ide.js"></script>
@@ -14,6 +15,7 @@
 
 <div id="main-area-container">
     <div class="item">
+        <input type="hidden" id="cluster_name" value="{{ cluster_name }}"/>
         <input type="hidden" id="current_fs_location" value="{{ data.current_fs_location }}"/>
         <div id="editor">{{ data.current_file_source_code }}</div>
     </div>
