@@ -46,6 +46,9 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
 
     window.zato_inactivity_interval = null;
     document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
+
+    // This will try to load the content from LocalStorage
+    $.fn.zato.ide.load_current_source_code_from_local_storage();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -67,10 +70,24 @@ $.fn.zato.ide.handle_inactivity = function() {
     $.fn.zato.ide.save_current_source_code_to_local_storage();
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.save_current_source_code_to_local_storage = function() {
-    let key = "abc"
-    let value = "def";
+    let key = $.fn.zato.ide.get_current_source_code_key()
+    let value = window.zato_editor.getValue();
     store.set(key, value);
+}
+
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.load_current_source_code_from_local_storage = function() {
+    let key = $.fn.zato.ide.get_current_source_code_key()
+    let value = store.get(key)
+    if(value) {
+        window.zato_editor.setValue(value);
+        window.zato_editor.clearSelection();
+    }
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -340,12 +357,26 @@ $.fn.zato.ide.load_source_object = function(object_type, name, fs_location) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+$.fn.zato.ide.get_cluster_name = function() {
+    return $("#cluster_name").val();
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.get_current_fs_location = function() {
     return $("#current_fs_location").val();
 }
 
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.set_current_fs_location = function(fs_location) {
     $("#current_fs_location").val(fs_location);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.get_current_source_code_key = function() {
+    return $.fn.zato.ide.get_cluster_name() + "." + $.fn.zato.ide.get_current_fs_location();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -354,6 +385,14 @@ $.fn.zato.ide.on_document_changed = function(e) {
     let undo_manager = window.zato_editor.getSession().getUndoManager();
     let has_undo = undo_manager.hasUndo();
     $.fn.zato.ide.mark_file_modified(has_undo);
+
+    // Make sure there is no selection if there is no undo
+    // because there may be some in case the edit we have just undone
+    // had come from LocalStorate, in which case it overwrote the whole document,
+    // thus making everything use a yellow background which is not necessary.
+    if(!has_undo) {
+        window.zato_editor.clearSelection()
+    }
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
