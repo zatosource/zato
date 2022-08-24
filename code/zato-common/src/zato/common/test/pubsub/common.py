@@ -78,7 +78,7 @@ class FullPathTester:
             self.needs_unique = False
             self.runner_name = 'Shared{}'.format(self.__class__.__name__)
         else:
-            self.topic_name = topic_name
+            self.topic_name = topic_name or topic_name_unique
             self.needs_unique = True
             self.runner_name = 'Unique{}'.format(self.__class__.__name__)
 
