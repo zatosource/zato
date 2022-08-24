@@ -1,7 +1,10 @@
 
 $.fn.zato.ide.init_editor = function(initial_header_status) {
 
-    // All the various keys that we use with
+    // All the keys that we use with LocalStorage
+    window.zato_local_storage_key = {
+        'zato_action_area_size': 'zato.action-area-size',
+    }
 
     // Our initial file that we process
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
@@ -96,7 +99,11 @@ $.fn.zato.ide.load_current_source_code_from_local_storage = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.load_current_source_code_from_local_storage = function() {
+$.fn.zato.ide.restore_layout = function() {
+    let size = store.get(window.zato_local_storage_key.zato_action_area_size);
+    if(size) {
+        $.fn.zato.ide.set_main_area_container_size(size);
+    }
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -110,16 +117,13 @@ $.fn.zato.ide.on_key_f2 = function(_ignored_event, _ignored_handler) {
 
 $.fn.zato.ide.toggle_action_area = function() {
 
-    let css_property = "grid-template-columns";
     // let default_size = "3.9fr 1fr 0.06fr";
     // let expanded_size = "1.0fr 1fr 0.06fr";
 
     let default_size = "1.0fr 1fr 0.06fr";
     let expanded_size = "3.9fr 1fr 0.06fr";
 
-    let main_area_container = $("#main-area-container");
     let elem_to_expand = $("#action-area-header");
-
     let is_expanded = elem_to_expand.attr("data-is-expanded");
 
     if(is_expanded == "false") {
@@ -132,10 +136,18 @@ $.fn.zato.ide.toggle_action_area = function() {
     }
 
     // Set the current layout ..
-    main_area_container.css(css_property, new_size);
+    $.fn.zato.ide.set_main_area_container_size(new_size);
 
     // .. and persist it for later use.
-    store.set("zato.action-area-size", new_size);
+    store.set(window.zato_local_storage_key.zato_action_area_size, new_size);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.set_main_area_container_size = function(size) {
+    let main_area_container = $("#main-area-container");
+    let css_property = "grid-template-columns";
+    main_area_container.css(css_property, size);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
