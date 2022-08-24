@@ -42,7 +42,8 @@ def populate_environment_from_file(env_path:'str') -> 'None':
 
             for key, value in env.items(): # type: ignore
                 if isinstance(value, (int, float)):
-                    os.environ[key] = str(value)
+                    value = str(value)
+                os.environ[key] = value
                 print(msg % (key, env_path))
                 logger.info(msg, key, env_path)
 
