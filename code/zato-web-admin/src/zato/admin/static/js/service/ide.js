@@ -1,6 +1,8 @@
 
 $.fn.zato.ide.init_editor = function(initial_header_status) {
 
+    // All the various keys that we use with
+
     // Our initial file that we process
     let current_fs_location = $.fn.zato.ide.get_current_fs_location();
 
@@ -47,6 +49,9 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     window.zato_inactivity_interval = null;
     document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
 
+    // This will try to load all the remember layout options from LocalStorage
+    $.fn.zato.ide.restore_layout();
+
     // This will try to load the content from LocalStorage
     $.fn.zato.ide.load_current_source_code_from_local_storage();
 }
@@ -78,7 +83,6 @@ $.fn.zato.ide.save_current_source_code_to_local_storage = function() {
     store.set(key, value);
 }
 
-
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.load_current_source_code_from_local_storage = function() {
@@ -88,6 +92,11 @@ $.fn.zato.ide.load_current_source_code_from_local_storage = function() {
         window.zato_editor.setValue(value);
         window.zato_editor.clearSelection();
     }
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.load_current_source_code_from_local_storage = function() {
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -122,7 +131,11 @@ $.fn.zato.ide.toggle_action_area = function() {
         elem_to_expand.attr("data-is-expanded", "false");
     }
 
+    // Set the current layout ..
     main_area_container.css(css_property, new_size);
+
+    // .. and persist it for later use.
+    store.set("zato.action-area-size", new_size);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
