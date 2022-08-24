@@ -2,7 +2,7 @@ mypy
 openapi-spec-validator
 playwright
 pylint
-pyright
+pyright==1.1.266
 requests-openapi
 selenium==4.2.0
 selenium-wire
