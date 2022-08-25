@@ -1168,13 +1168,16 @@ class WorkerStore(_WorkerStoreBase):
 
         for config_dict in self.worker_config.generic_connection.values():
 
-            config_type = config_dict['config']['type_']
+            if config_dict:
+                config = config_dict.get('config')
+                if config:
+                    config_type = config['type_']
 
-            # Not all generic connections are created here
-            if config_type in to_skip:
-                continue
+                    # Not all generic connections are created here
+                    if config_type in to_skip:
+                        continue
 
-            self._create_generic_connection(bunchify(config_dict['config']), raise_exc=False, is_starting=True)
+                    self._create_generic_connection(bunchify(config), raise_exc=False, is_starting=True)
 
 # ################################################################################################################################
 
