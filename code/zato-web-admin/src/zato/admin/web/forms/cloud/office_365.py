@@ -11,12 +11,12 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import WithAuditLog
-from zato.common.api import Atlassian as AtlassianCommon
+from zato.common.api import Office365 as Office365Common
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_default = AtlassianCommon.Default
+_default = Office365Common.Default
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,8 +27,8 @@ class CreateForm(WithAuditLog):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     is_cloud = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    api_version = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=_default.API_Version)
-    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Address)
+    api_version = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial='\n'.join(_default.Scopes))
+    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Auth_Redirect_URL)
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
     password = forms.CharField(strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
