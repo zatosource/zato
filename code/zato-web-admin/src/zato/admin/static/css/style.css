@@ -199,6 +199,10 @@ span.like-a {
     padding: 10.5px 5px
 }
 
+#main-menu ul li a.spaced {
+    line-height: 1rem;
+}
+
 #main-menu ul li.wide {
     width: 120px
 }
