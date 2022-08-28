@@ -19,9 +19,10 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms([
         'name',
-        'api_version',
-        'address',
-        'username',
+        'client_id',
+        'secret_value',
+        'scopes',
+        'auth_redirect_url',
     ]);
 })
 

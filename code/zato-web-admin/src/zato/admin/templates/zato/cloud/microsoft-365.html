@@ -199,22 +199,22 @@
                         </tr>
                         <tr class="oauth2-options-block hidden">
                             <td>
-                                <label for="id_scopes">
-                                Scopes
-                                </label>
-                            </td>
-                            <td>
-                                {{ create_form.scopes }}
-                            </td>
-                        </tr>
-                        <tr class="oauth2-options-block hidden">
-                            <td>
                                 <label for="id_auth_redirect_url">
                                 Auth. redirect URL
                                 </label>
                             </td>
                             <td>
                                 {{ create_form.auth_redirect_url }}
+                            </td>
+                        </tr>
+                        <tr class="oauth2-options-block hidden">
+                            <td>
+                                <label for="id_scopes">
+                                Scopes
+                                </label>
+                            </td>
+                            <td>
+                                {{ create_form.scopes }}
                             </td>
                         </tr>
                         <tr>
@@ -234,7 +234,7 @@
                 <form action="{% url "cloud-microsoft-365-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:17%">
+                            <td style="vertical-align:middle;width:13%">
                                 <label for="id_name">
                                 Name
                                 </label>
@@ -248,40 +248,54 @@
                                 Active
                                 {{ edit_form.is_active }}
                                 </label>
-
-                                |
-
-                                <label>
-                                Cloud edition
-                                {{ edit_form.is_cloud }}
-                                </label>
-
-                                |
-
-                                <label>
-                                API version
-                                {{ edit_form.api_version }}
-                                </label>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_address">
-                                Address
+                                <label for="id_client_id">
+                                Client ID
                                 </label>
                             </td>
                             <td>
-                                {{ edit_form.address }}
+                                {{ edit_form.client_id }}
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_username">
-                                Username
+                                <label for="id_secret_value">
+                                Secret value
                                 </label>
                             </td>
                             <td>
-                                {{ edit_form.username }}
+                                {{ edit_form.secret_value }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                            OAuth2
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.oauth2-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="oauth2-options-block hidden">
+                            <td>
+                                <label for="id_auth_redirect_url">
+                                Auth. redirect URL
+                                </label>
+                            </td>
+                            <td>
+                                {{ edit_form.auth_redirect_url }}
+                            </td>
+                        </tr>
+                        <tr class="oauth2-options-block hidden">
+                            <td>
+                                <label for="id_scopes">
+                                Scopes
+                                </label>
+                            </td>
+                            <td>
+                                {{ edit_form.scopes }}
                             </td>
                         </tr>
                         <tr>
