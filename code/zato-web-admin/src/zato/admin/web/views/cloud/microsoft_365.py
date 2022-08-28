@@ -7,12 +7,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.cloud.microsoft_365 import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, \
     method_allowed, ping_connection
 from zato.common.api import GENERIC, generic_attrs
-from zato.common.model.atlassian_ import AtlassianConfigObject
+from zato.common.model.microsoft_365 import Microsoft365ConfigObject
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,12 +21,12 @@ class Index(_Index):
     url_name = 'cloud-microsoft-365'
     template = 'zato/cloud/microsoft-365.html'
     service_name = 'zato.generic.connection.get-list'
-    output_class = AtlassianConfigObject
+    output_class = Microsoft365ConfigObject
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'is_cloud', 'api_version', 'address', 'username'
+        output_required = 'id', 'name', 'is_active', 'client_id', 'secret_value', 'scopes', 'auth_redirect_url'
         output_optional = generic_attrs
         output_repeated = True
 
@@ -37,7 +36,6 @@ class Index(_Index):
         return {
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
-            'change_password_form': ChangePasswordForm()
         }
 
 # ################################################################################################################################
@@ -47,13 +45,13 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'name', 'is_active', 'is_cloud', 'api_version', 'address', 'username'
+        input_required = 'id', 'name', 'is_active', 'client_id', 'secret_value', 'scopes', 'auth_redirect_url'
         output_required = 'id', 'name'
 
 # ################################################################################################################################
 
     def populate_initial_input_dict(self, initial_input_dict):
-        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CLOUD_OFFICE_365
+        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outgoing'] = True
@@ -89,13 +87,6 @@ class Delete(_Delete):
     url_name = 'cloud-microsoft-365-delete'
     error_message = 'Could not delete Microsoft 365 connection'
     service_name = 'zato.generic.connection.delete'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def change_password(req):
-    return _change_password(req, 'zato.generic.connection.change-password', success_msg='API token updated')
 
 # ################################################################################################################################
 
