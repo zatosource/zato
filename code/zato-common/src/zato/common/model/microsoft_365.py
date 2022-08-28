@@ -15,8 +15,10 @@ class Microsoft365ConfigObject:
         self.id   = -1         # type: int
         self.name = ''         # type: str
         self.is_active = True  # type: bool
-        self.api_version = ''  # type: str
-        self.username = ''     # type: str
+        self.client_id = ''    # type: str
+        self.secret_value = '' # type: str
+        self.scopes = ''       # type: str
+        self.auth_redirect_url = '' # type: str
 
 # ################################################################################################################################
 # ################################################################################################################################
