@@ -1231,7 +1231,7 @@ class GENERIC:
             CLOUD_CONFLUENCE = 'cloud-confluence'
             CLOUD_DROPBOX = 'cloud-dropbox'
             CLOUD_JIRA = 'cloud-jira'
-            CLOUD_OFFICE_365 = 'cloud-office-365'
+            CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
             CLOUD_SALESFORCE = 'cloud-salesforce'
             DEF_KAFKA = 'def-kafka'
             OUTCONN_HL7_FHIR = 'outconn-hl7-fhir'
@@ -1514,7 +1514,7 @@ class Atlassian:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Office365:
+class Microsoft365:
 
     class Default:
         Auth_Redirect_URL = 'https://zato.io/ext/redirect/oauth2/'

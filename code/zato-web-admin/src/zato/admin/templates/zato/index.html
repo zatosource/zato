@@ -187,7 +187,7 @@
                             <span class="like-a">Notifications &rarr;</span>
                             <ul>
                                 <li><a href="{% url "notif-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
-                                <li><a href="{% url "notif-sql" %}?cluster={{ cluster_id|default:'' }}">Office 365 E-mail</a></li>
+                                <li><a href="{% url "notif-sql" %}?cluster={{ cluster_id|default:'' }}">Microsoft 365 E-mail</a></li>
                             </ul>
                         </li>
                         <li>
@@ -202,7 +202,7 @@
                             <ul>
                                 <li class='wide'><a href="{% url "email-imap" %}?cluster={{ cluster_id|default:'' }}">IMAP</a></li>
                                 <li class='wide'><a href="{% url "email-smtp" %}?cluster={{ cluster_id|default:'' }}">SMTP</a></li>
-                                <li class='wide'><a class="spaced" href="{% url "email-smtp" %}?cluster={{ cluster_id|default:'' }}">Office 365 Notifications</a></li>
+                                <li class='wide'><a class="spaced" href="{% url "email-smtp" %}?cluster={{ cluster_id|default:'' }}">Microsoft 365 Notifications</a></li>
                             </ul>
                         </li>
                         <li>
@@ -230,7 +230,7 @@
                             </ul>
                         </li>
                         <li><a href="{% url "cloud-dropbox" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-dropbox">Dropbox</a></li>
-                        <li><a href="{% url "cloud-office-365" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-office-365">Office 365</a></li>
+                        <li><a href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-microsoft-365">Microsoft 365</a></li>
                         <li><a href="{% url "cloud-salesforce" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-salesforce">Salesforce</a></li>
                     </ul>
                 </li>
