@@ -1380,8 +1380,6 @@ urlpatterns += [
         login_required(cloud_microsoft_365.Delete()), name=cloud_microsoft_365.Delete.url_name),
     url(r'^zato/cloud/microsoft-365/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cloud_microsoft_365.ping), name='cloud-microsoft-365-ping'),
-    url(r'^zato/cloud/microsoft-365/change-password/$',
-        login_required(cloud_microsoft_365.change_password), name='cloud-microsoft-365-change-password'),
     ]
 
 urlpatterns += [
