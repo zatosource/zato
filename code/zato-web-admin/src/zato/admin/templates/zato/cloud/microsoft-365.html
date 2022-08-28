@@ -33,23 +33,22 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
-            'address',
+            'client_id',
 
             {% comment %} 2 {% endcomment %}
-            'username',
-            'api_version',
-            '_is_cloud',
-
-            {% comment %} 3 {% endcomment %}
             '_change_api_token',
             '_edit',
             '_delete',
+
+            {% comment %} 3 {% endcomment %}
             '_ping',
+            'secret_value',
+            'scopes',
 
             {% comment %} 4 {% endcomment %}
             'id',
             'is_active',
-            'is_cloud',
+            'auth_redirect_url',
 
         ]
     }
@@ -86,18 +85,17 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Address</a></th>
+                        <th><a href="#">Client ID</a></th>
 
                         {% comment %} 2 {% endcomment %}
-                        <th><a href="#">Username</a></th>
-                        <th>API version</th>
-                        <th>Cloud edition</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 4 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
@@ -116,23 +114,22 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.address }}</td>
+                        <td>{{ item.client_id }}</td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td>{{ item.username }}</td>
-                        <td>{{ item.api_version }}</td>
-                        <td>{{ item.is_cloud|yesno:'Yes,No' }}</td>
-
-                        {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change API token')">Change API token</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.microsoft_365.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.microsoft_365.delete_('{{ item.id }}')">Delete</a></td>
+
+                        {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+                        <td class='ignore'>{{ item.secret_value }}</td>
+                        <td class='ignore'>{{ item.scopes }}</td>
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.is_cloud }}</td>
+                        <td class='ignore'>{{ item.auth_redirect_url }}</td>
 
                     </tr>
                 {% endfor %}
