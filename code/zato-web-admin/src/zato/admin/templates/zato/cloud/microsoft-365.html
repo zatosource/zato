@@ -1,7 +1,7 @@
 {% extends "zato/index.html" %}
 {% load extras %}
 
-{% block html_title %}Confluence connections{% endblock %}
+{% block html_title %}Microsoft 365 connections{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -22,7 +22,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/cloud/confluence.js"></script>
+    <script type="text/javascript" src="/static/js/cloud/microsoft_365.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -58,7 +58,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Confluence connections</h2>
+<h2 class="zato">Microsoft 365 connections</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -66,13 +66,13 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% with has_generic="1" generic_type="outconn-confluence" %}
+{% with has_generic="1" generic_type="cloud-microsoft-365" %}
     {% include "zato/search-form.html" with page_prompt="Show connections"%}
 {% endwith %}
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.cloud.confluence.create()">Create a new connection</a>
+            <a href="javascript:$.fn.zato.cloud.microsoft_365.create()">Create a new connection</a>
         </div>
 
 
@@ -125,8 +125,8 @@
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change API token')">Change API token</a></td>
-                        <td><a href="javascript:$.fn.zato.cloud.confluence.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.cloud.confluence.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.cloud.microsoft_365.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.cloud.microsoft_365.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
 
                         {% comment %} 4 {% endcomment %}
@@ -150,7 +150,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "cloud-confluence-create" %}" method="post" id="create-form">
+                <form action="{% url "cloud-microsoft-365-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:17%">
@@ -217,7 +217,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "cloud-confluence-edit" %}" method="post" id="edit-form">
+                <form action="{% url "cloud-microsoft-365-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:17%">
@@ -285,7 +285,7 @@
 
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "cloud-confluence-change-password" %}" method="post" id="change_password-form">
+                <form action="{% url "cloud-microsoft-365-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:19%">Name</td>

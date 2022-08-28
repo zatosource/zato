@@ -29,7 +29,7 @@ from zato.admin.web.views.channel import zmq as channel_zmq
 from zato.admin.web.views.cloud import confluence as cloud_confluence
 from zato.admin.web.views.cloud import dropbox as cloud_dropbox
 from zato.admin.web.views.cloud import jira as cloud_jira
-from zato.admin.web.views.cloud import office_365 as cloud_office_365
+from zato.admin.web.views.cloud import microsoft_365 as cloud_microsoft_365
 from zato.admin.web.views.cloud import salesforce as cloud_salesforce
 from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
 from zato.admin.web.views import config_file
@@ -1368,20 +1368,20 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. Office 365
+    # .. Microsoft 365
 
-    url(r'^zato/cloud/office-365/$',
-        login_required(cloud_office_365.Index()), name=cloud_office_365.Index.url_name),
-    url(r'^zato/cloud/office-365/create/$',
-        login_required(cloud_office_365.Create()), name=cloud_office_365.Create.url_name),
-    url(r'^zato/cloud/office-365/edit/$',
-        login_required(cloud_office_365.Edit()), name=cloud_office_365.Edit.url_name),
-    url(r'^zato/cloud/office-365/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cloud_office_365.Delete()), name=cloud_office_365.Delete.url_name),
-    url(r'^zato/cloud/office-365/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cloud_office_365.ping), name='cloud-office-365-ping'),
-    url(r'^zato/cloud/office-365/change-password/$',
-        login_required(cloud_office_365.change_password), name='cloud-office-365-change-password'),
+    url(r'^zato/cloud/microsoft-365/$',
+        login_required(cloud_microsoft_365.Index()), name=cloud_microsoft_365.Index.url_name),
+    url(r'^zato/cloud/microsoft-365/create/$',
+        login_required(cloud_microsoft_365.Create()), name=cloud_microsoft_365.Create.url_name),
+    url(r'^zato/cloud/microsoft-365/edit/$',
+        login_required(cloud_microsoft_365.Edit()), name=cloud_microsoft_365.Edit.url_name),
+    url(r'^zato/cloud/microsoft-365/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_microsoft_365.Delete()), name=cloud_microsoft_365.Delete.url_name),
+    url(r'^zato/cloud/microsoft-365/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_microsoft_365.ping), name='cloud-microsoft-365-ping'),
+    url(r'^zato/cloud/microsoft-365/change-password/$',
+        login_required(cloud_microsoft_365.change_password), name='cloud-microsoft-365-change-password'),
     ]
 
 urlpatterns += [

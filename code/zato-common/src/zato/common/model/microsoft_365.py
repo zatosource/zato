@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 # ################################################################################################################################
 
-class AtlassianConfigObject:
+class Microsoft365ConfigObject:
     def __init__(self):
         self._config_attrs = []
         self.id   = -1         # type: int
