@@ -21,7 +21,7 @@ from zato.common.odb.query.generic import connection_list
 from zato.common.typing_ import cast_
 from zato.common.util.api import parse_simple_type
 from zato.server.generic.connection import GenericConnection
-from zato.server.service import Bool, Int
+from zato.server.service import AsIs, Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 from zato.server.service.internal.generic import _BaseService
 from zato.server.service.meta import DeleteMeta
@@ -90,7 +90,7 @@ class _CreateEditSIO(AdminSIO):
     input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'),
         Bool('sec_use_rbac'))
     input_optional = ('cluster_id', 'id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
-        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id') + \
+        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id', AsIs('client_id')) + \
         extra_secret_keys + generic_attrs
     force_empty_keys = True
 
