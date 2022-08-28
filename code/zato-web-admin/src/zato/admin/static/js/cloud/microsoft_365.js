@@ -58,17 +58,16 @@ $.fn.zato.cloud.microsoft_365.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.address);
 
-    // 2
-    row += String.format("<td>{0}</td>", item.username);
-    row += String.format("<td>{0}</td>", item.api_version);
-    row += String.format('<td>{0}</td>', is_cloud ? 'Yes' : 'No');
-
     // 3
     row += String.format('<td>{0}</td>',
         String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change API token')\">Change API token</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cloud.microsoft_365.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.cloud.microsoft_365.delete_({0});'>Delete</a>", item.id));
+
+    // 3
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.ping({0});'>Ping</a>", item.id));
+    row += String.format("<td class='ignore'>{0}</td>", item.secret_value);
+    row += String.format("<td class='ignore'>{0}</td>", item.scopes);
 
     // 4
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
