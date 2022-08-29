@@ -34,6 +34,7 @@ from six import add_metaclass
 
 if 0:
     from bunch import Bunch
+    from zato.common.typing_ import anydict
     from zato.server.service import Service
 
     Bunch = Bunch
@@ -253,8 +254,31 @@ class GetList(AdminService):
 
 # ################################################################################################################################
 
-    def _enrich_conn_dict(self, conn_dict):
-        # type: (dict)
+    def _set_conn_dict_value_reset_oauth2_scopes_url(self, conn_dict:'anydict') -> 'None':
+        scopes = (conn_dict['scopes'] or '').splitlines()
+        auth_redirect_url = conn_dict['auth_redirect_url']
+
+        client_id = conn_dict['client_id']
+        secret_value = conn_dict['secret_value']
+
+        # Office-365
+        from O365 import Account
+
+        credentials = (client_id, secret_value)
+        account = Account(credentials)
+        reset_oauth2_scopes_url, _ = account.con.get_authorization_url(requested_scopes=scopes, redirect_uri=auth_redirect_url)
+
+        conn_dict['reset_oauth2_scopes_url'] = reset_oauth2_scopes_url
+
+# ################################################################################################################################
+
+    def _add_custom_conn_dict_fields(self, conn_dict:'anydict') -> 'None':
+        if conn_dict['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365:
+            self._set_conn_dict_value_reset_oauth2_scopes_url(conn_dict)
+
+# ################################################################################################################################
+
+    def _enrich_conn_dict(self, conn_dict:'anydict') -> 'None':
 
         # Local aliases
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
@@ -262,6 +286,7 @@ class GetList(AdminService):
         # New items that will be potentially added to conn_dict
         to_add = {}
 
+        # Process all the items found in the database ..
         for key, value in conn_dict.items():
 
             if value:
@@ -287,6 +312,10 @@ class GetList(AdminService):
                             item_name = '{}_name'.format(id_name_base)
                             to_add[item_name] = config_dict['name']
 
+        # .. add custom fields that do not exist in the database ..
+        self._add_custom_conn_dict_fields(conn_dict)
+
+        # .. and hand the final result back to our caller.
         if to_add:
             conn_dict.update(to_add)
 
