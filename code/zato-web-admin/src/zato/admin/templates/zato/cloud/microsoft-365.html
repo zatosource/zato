@@ -74,7 +74,6 @@
             <a href="javascript:$.fn.zato.cloud.microsoft_365.create()">Create a new connection</a>
         </div>
 
-
         <div id="markup">
             <table id="data-table">
                 <thead>
@@ -117,7 +116,7 @@
                         <td>{{ item.client_id }}</td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change API token')">Change API token</a></td>
+                        <td><a href="javascript:$.fn.zato.cloud.microsoft_365.reset_oauth2_scopes('{{ item.id }}', 'Reset OAuth2 scopes')">Reset OAuth2 scopes</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.microsoft_365.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.microsoft_365.delete_('{{ item.id }}')">Delete</a></td>
 
@@ -304,6 +303,46 @@
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "cloud-jira-change-password" %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr style="padding-bottom: 0.5rem;">
+                            <td style="width:12%">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:top">
+                                Step #1
+                            </td>
+                            <td style="vertical-align:top !important; padding-bottom: 0.5rem">
+                                In a new tab, log in to Azure and open the address below
+                                <textarea id="reset_oauth2_scopes_url_step_1" style="margin-top:0.3rem; margin-bottom:0.3rem; height:7rem"></textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:top">
+                                Step #2
+                            </td>
+                            <td style="line-height: 1rem">
+                                Paste below the address from the page that Azure redirected you to
+                                <br/>
+                                <textarea id="reset_oauth2_scopes_url_step_2" name="reset_oauth2_scopes_url_step_2" style="margin-top:0.3rem; margin-bottom:0.3rem; height:7rem"></textarea>
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
                 </form>
             </div>
         </div>

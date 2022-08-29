@@ -34,6 +34,16 @@ $.fn.zato.cloud.microsoft_365.create = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.cloud.microsoft_365.reset_oauth2_scopes = function(id, title) {
+    $.fn.zato.data_table.change_password(id, title);
+    let instance = $.fn.zato.data_table.data[id];
+    let elem = $("#reset_oauth2_scopes_url_step_1");
+    elem.val(instance.reset_oauth2_scopes_url);
+}
+
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.cloud.microsoft_365.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the Microsoft 365 connection', id);
 }
@@ -48,7 +58,6 @@ $.fn.zato.cloud.microsoft_365.data_table.new_row = function(item, data, include_
     }
 
     let is_active = item.is_active == true;
-    let is_cloud = item.is_cloud == true;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
@@ -60,7 +69,7 @@ $.fn.zato.cloud.microsoft_365.data_table.new_row = function(item, data, include_
 
     // 3
     row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change API token')\">Change API token</a>", item.id));
+        String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Reset OAuth2 scopes')\">Reset OAuth2 scopes</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cloud.microsoft_365.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.cloud.microsoft_365.delete_({0});'>Delete</a>", item.id));
 
