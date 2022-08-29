@@ -49,6 +49,7 @@
             'id',
             'is_active',
             'auth_redirect_url',
+            'reset_oauth2_scopes_url',
 
         ]
     }
@@ -100,6 +101,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -129,6 +131,7 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.auth_redirect_url }}</td>
+                        <td class='ignore'>{{ item.reset_oauth2_scopes_url }}</td>
 
                     </tr>
                 {% endfor %}

@@ -38,6 +38,7 @@ $.fn.zato.cloud.microsoft_365.reset_oauth2_scopes = function(id, title) {
     $.fn.zato.data_table.change_password(id, title);
     let instance = $.fn.zato.data_table.data[id];
     let elem = $("#reset_oauth2_scopes_url_step_1");
+    alert(instance.reset_oauth2_scopes_url);
     elem.val(instance.reset_oauth2_scopes_url);
 }
 
@@ -82,6 +83,7 @@ $.fn.zato.cloud.microsoft_365.data_table.new_row = function(item, data, include_
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.username);
+    row += String.format("<td class='ignore'>{0}</td>", item.reset_oauth2_scopes_ur);
 
     if(include_tr) {
         row += '</tr>';
