@@ -38,10 +38,8 @@ $.fn.zato.cloud.microsoft_365.reset_oauth2_scopes = function(id, title) {
     $.fn.zato.data_table.change_password(id, title);
     let instance = $.fn.zato.data_table.data[id];
     let elem = $("#reset_oauth2_scopes_url_step_1");
-    alert(instance.reset_oauth2_scopes_url);
     elem.val(instance.reset_oauth2_scopes_url);
 }
-
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
