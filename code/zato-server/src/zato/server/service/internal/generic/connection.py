@@ -352,6 +352,54 @@ class ChangePassword(ChangePasswordBase):
     class SimpleIO(ChangePasswordBase.SimpleIO):
         response_elem = None
 
+# ################################################################################################################################
+
+    def _run_pre_handle_tasks_CLOUD_MICROSOFT_365(self, session, instance):
+
+        # stdlib
+        from json import dumps, loads
+        from urllib.parse import parse_qs, urlsplit
+
+        # office-365
+        from O365 import Account
+
+        auth_url = self.request.input.password1
+        auth_url = self.server.decrypt(auth_url)
+
+        query = urlsplit(auth_url).query
+        parsed = parse_qs(query)
+
+        state = parsed['state']
+        state = state[0]
+
+        opaque1 = instance.opaque1
+        opaque1 = loads(opaque1)
+
+        client_id = opaque1['client_id']
+        secret_value = opaque1['secret_value']
+
+        credentials = (client_id, secret_value)
+
+        account = Account(credentials)
+        account.con.request_token(authorization_url=auth_url, state=state)
+
+        opaque1['token'] = account.con.token_backend.token
+        opaque1 = dumps(opaque1)
+        instance.opaque1 = opaque1
+
+        session.add(instance)
+        session.commit()
+
+# ################################################################################################################################
+
+    def _run_pre_handle_tasks(self, session, instance):
+        conn_type = self.request.input.get('type_')
+
+        if conn_type == COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365:
+            self._run_pre_handle_tasks_CLOUD_MICROSOFT_365(session, instance)
+
+# ################################################################################################################################
+
     def handle(self):
 
         def _auth(instance, secret):
@@ -369,7 +417,16 @@ class ChangePassword(ChangePasswordBase):
                     filter(ModelGenericConn.type_==self.request.input.type_).\
                     one().id
 
-        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value, instance_id=instance_id,
+        with closing(self.odb.session()) as session:
+            query = session.query(ModelGenericConn)
+            query = query.filter(ModelGenericConn.id==instance_id)
+            instance = query.one()
+
+            # This steps runs optional post-handle tasks that some types of connections may require.
+            self._run_pre_handle_tasks(session, instance)
+
+        # This step updates the secret.
+        self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value, instance_id=instance_id,
             publish_instance_attrs=['type_'])
 
 # ################################################################################################################################
