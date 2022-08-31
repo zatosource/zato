@@ -101,6 +101,7 @@ def reset_oauth2_scopes(req):
         'id': req.POST['id'],
         'password1': reset_oauth2_scopes_url_step_2,
         'password2': reset_oauth2_scopes_url_step_2,
+        'type_': GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365,
     }
 
     return _change_password(req, 'zato.generic.connection.change-password', success_msg='OAuth2 scopes reset', data=data)
