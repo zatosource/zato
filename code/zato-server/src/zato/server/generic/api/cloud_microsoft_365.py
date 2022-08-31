@@ -39,8 +39,32 @@ class _Microsoft365Client:
         # self.get = self.impl.get
         # self.post = self.impl.post
         # self.ping = self.impl.ping
-        config
-        pass
+
+        # stdlib
+        from json import loads
+
+        # Office-365
+        from O365 import Account
+
+        opaque1 = config['opaque1']
+        opaque1 = loads(opaque1)
+
+        token = opaque1.get('token')
+        scopes = config['scopes']
+
+        client_id = opaque1['client_id']
+        secret_value = opaque1['secret_value']
+
+        credentials = (client_id, secret_value)
+
+        account = Account(credentials, scopes=scopes)
+        account.con.token_backend.token = token
+        mailbox = account.mailbox()
+
+        inbox = mailbox.sent_folder()
+        messages = list(inbox.get_messages())
+        for message in messages:
+            print(111, message.to[0], message.body)
 
 # ################################################################################################################################
 # ################################################################################################################################
