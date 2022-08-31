@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.admin.web.forms.cloud.microsoft_365 import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, \
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
     method_allowed, ping_connection
 from zato.common.api import GENERIC, generic_attrs
 from zato.common.model.microsoft_365 import Microsoft365ConfigObject
@@ -88,6 +88,22 @@ class Delete(_Delete):
     url_name = 'cloud-microsoft-365-delete'
     error_message = 'Could not delete Microsoft 365 connection'
     service_name = 'zato.generic.connection.delete'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def reset_oauth2_scopes(req):
+
+    reset_oauth2_scopes_url_step_2 = req.POST['reset_oauth2_scopes_url_step_2']
+
+    data = {
+        'id': req.POST['id'],
+        'password1': reset_oauth2_scopes_url_step_2,
+        'password2': reset_oauth2_scopes_url_step_2,
+    }
+
+    return _change_password(req, 'zato.generic.connection.change-password', success_msg='OAuth2 scopes reset', data=data)
 
 # ################################################################################################################################
 
