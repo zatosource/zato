@@ -1380,6 +1380,8 @@ urlpatterns += [
         login_required(cloud_microsoft_365.Delete()), name=cloud_microsoft_365.Delete.url_name),
     url(r'^zato/cloud/microsoft-365/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cloud_microsoft_365.ping), name='cloud-microsoft-365-ping'),
+    url(r'^zato/cloud/jira/reset-oauth2-scopes/$',
+        login_required(cloud_microsoft_365.reset_oauth2_scopes), name='cloud-microsoft-365-reset-oauth2-scopes'),
     ]
 
 urlpatterns += [
