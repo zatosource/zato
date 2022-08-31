@@ -33,12 +33,14 @@ class _Microsoft365Client:
     def __init__(self, config:'stranydict') -> 'None':
 
         # The actual connection object
-        self.impl = Microsoft365Client.from_config(config)
+        # self.impl = Microsoft365Client.from_config(config)
 
         # Forward invocations to the underlying client
-        self.get = self.impl.get
-        self.post = self.impl.post
-        self.ping = self.impl.ping
+        # self.get = self.impl.get
+        # self.post = self.impl.post
+        # self.ping = self.impl.ping
+        config
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,7 +57,7 @@ class CloudMicrosoft365Wrapper(Wrapper):
     def add_client(self):
 
         try:
-            conn = int()#_Microsoft365Client(self.config)
+            conn = _Microsoft365Client(self.config)
             self.client.put_client(conn)
         except Exception:
             logger.warning('Caught an exception while adding a Microsoft 365 client (%s); e:`%s`',

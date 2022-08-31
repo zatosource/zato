@@ -1517,7 +1517,7 @@ class Atlassian:
 class Microsoft365:
 
     class Default:
-        Auth_Redirect_URL = 'https://zato.io/ext/redirect/oauth2/'
+        Auth_Redirect_URL = 'https://zato.io/ext/redirect/oauth2'
         Scopes = [
             'User.Read',
             'Mail.Read',
