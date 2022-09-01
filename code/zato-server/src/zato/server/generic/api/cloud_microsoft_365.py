@@ -12,7 +12,6 @@ from traceback import format_exc
 
 # Zato
 from zato.common.typing_ import cast_
-from zato.server.connection.microsoft_365 import Microsoft365Client
 from zato.server.connection.queue import Wrapper
 
 # ################################################################################################################################
@@ -20,6 +19,8 @@ from zato.server.connection.queue import Wrapper
 
 if 0:
     from zato.common.typing_ import stranydict
+    from O365 import Account as Office365Account
+    Office365Account = Office365Account
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,13 +33,13 @@ logger = getLogger(__name__)
 class _Microsoft365Client:
     def __init__(self, config:'stranydict') -> 'None':
 
-        # The actual connection object
-        # self.impl = Microsoft365Client.from_config(config)
+        self.config = config
+        self.impl = self.impl_from_config(config)
+        self.ping()
 
-        # Forward invocations to the underlying client
-        # self.get = self.impl.get
-        # self.post = self.impl.post
-        # self.ping = self.impl.ping
+# ################################################################################################################################
+
+    def impl_from_config(self, config:'stranydict') -> 'Office365Account':
 
         # stdlib
         from json import loads
@@ -59,12 +60,14 @@ class _Microsoft365Client:
 
         account = Account(credentials, scopes=scopes)
         account.con.token_backend.token = token
-        mailbox = account.mailbox()
 
-        inbox = mailbox.sent_folder()
-        messages = list(inbox.get_messages())
-        for message in messages:
-            print(111, message.to[0], message.body)
+        return account
+
+# ################################################################################################################################
+
+    def ping(self):
+        result = self.impl.get_current_user()
+        logger.info('Microsoft 365 ping result (%s) -> `%s`', self.config['name'], result)
 
 # ################################################################################################################################
 # ################################################################################################################################
