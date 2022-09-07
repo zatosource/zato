@@ -187,7 +187,9 @@
                             <span class="like-a">Notifications &rarr;</span>
                             <ul>
                                 <li><a href="{% url "notif-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
+                                <!--
                                 <li><a href="{% url "notif-sql" %}?cluster={{ cluster_id|default:'' }}">Microsoft 365 E-mail</a></li>
+                                -->
                             </ul>
                         </li>
                         <li>
@@ -202,7 +204,9 @@
                             <ul>
                                 <li class='wide'><a href="{% url "email-imap" %}?cluster={{ cluster_id|default:'' }}">IMAP</a></li>
                                 <li class='wide'><a href="{% url "email-smtp" %}?cluster={{ cluster_id|default:'' }}">SMTP</a></li>
+                                <!--
                                 <li class='wide'><a class="spaced" href="{% url "email-smtp" %}?cluster={{ cluster_id|default:'' }}">Microsoft 365 Notifications</a></li>
+                                -->
                             </ul>
                         </li>
                         <li>
