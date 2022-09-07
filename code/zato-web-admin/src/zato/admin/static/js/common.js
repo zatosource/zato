@@ -73,6 +73,7 @@ $.namespace('zato.cloud.aws.s3');
 $.namespace('zato.cloud.confluence');
 $.namespace('zato.cloud.dropbox');
 $.namespace('zato.cloud.jira');
+$.namespace('zato.cloud.microsoft_365');
 $.namespace('zato.cloud.salesforce');
 $.namespace('zato.cluster');
 $.namespace('zato.cluster.servers');
