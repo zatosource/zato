@@ -46,13 +46,7 @@ from sortedcontainers import SortedKeyList
 
 class ExpiringDict(MutableMapping):
     def __init__(self, ttl=None, interval=0.100, *args, **kwargs):
-        """
-        Create an ExpiringDict class, optionally passing in a time-to-live
-        number in seconds that will act globally as an expiration time for keys.
 
-        If omitted, the dict will work like a normal dict by default, expiring
-        only keys explicity set via the `.ttl` method.
-        """
         self._store = dict(*args, **kwargs)
         self._keys = SortedKeyList(key=lambda x: x[0])
         self._ttl = ttl
@@ -66,7 +60,7 @@ class ExpiringDict(MutableMapping):
         max_index = 0
         with self._lock:
             for index, (timestamp, key) in enumerate(self._keys):
-                if timestamp > now:  # rest of the timestamps in future
+                if timestamp > now: # Break as soon as we find a key whose expiration time is in the future
                     max_index = index
                     break
                 try:
@@ -81,20 +75,12 @@ class ExpiringDict(MutableMapping):
             sleep(self._interval)
 
     def __setitem__(self, key, value):
-        """
-        Set `value` of `key` in dict. `key` will be automatically
-        deleted if the `ttl` option was provided for this object.
-        """
         if self._ttl:
             self._set_with_expire(key, value, self._ttl)
         else:
             self._store[key] = value
 
     def ttl(self, key, value, ttl):
-        """
-        Set `value` of `key` in dict to expire after `ttl` seconds.
-        Overrides object level `ttl` setting.
-        """
         self._set_with_expire(key, value, ttl)
 
     def _set_with_expire(self, key, value, ttl):
