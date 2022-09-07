@@ -159,7 +159,7 @@ twilio==6.50.1
 typing==3.5.3.0
 typing-extensions==4.0.1
 typing-utils==0.1.0
-tzlocal==2.1
+tzlocal==4.0
 ujson==3.2.0
 umalqurra==0.2
 urllib3==1.26.7
