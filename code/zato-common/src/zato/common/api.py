@@ -1231,6 +1231,7 @@ class GENERIC:
             CLOUD_CONFLUENCE = 'cloud-confluence'
             CLOUD_DROPBOX = 'cloud-dropbox'
             CLOUD_JIRA = 'cloud-jira'
+            CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
             CLOUD_SALESFORCE = 'cloud-salesforce'
             DEF_KAFKA = 'def-kafka'
             OUTCONN_HL7_FHIR = 'outconn-hl7-fhir'
@@ -1509,6 +1510,24 @@ class Atlassian:
     class Default:
         Address = 'https://example.atlassian.net'
         API_Version = '3'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Microsoft365:
+
+    class Default:
+        Auth_Redirect_URL = 'https://zato.io/ext/redirect/oauth2'
+        Scopes = [
+            'offline_access',
+            'User.Read',
+            'Mail.Read',
+            'Mail.ReadBasic',
+            'Mail.ReadWrite',
+            'Mail.Send',
+            'IMAP.AccessAsUser.All',
+            'SMTP.Send'
+        ]
 
 # ################################################################################################################################
 # ################################################################################################################################

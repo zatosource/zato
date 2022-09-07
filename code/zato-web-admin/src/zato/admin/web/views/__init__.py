@@ -206,12 +206,16 @@ def set_servers_state(cluster, client):
 
 # ################################################################################################################################
 
-def change_password(req, service_name, field1='password1', field2='password2', success_msg='Password updated'):
+def change_password(req, service_name, field1='password1', field2='password2', success_msg='Password updated', data=None):
+
+    data = data or req.POST
+
     try:
         input_dict = {
-            'id': req.POST.get('id'),
-            'password1': req.POST.get(field1, ''),
-            'password2': req.POST.get(field2, ''),
+            'id': data.get('id'),
+            'password1': data.get(field1, ''),
+            'password2': data.get(field2, ''),
+            'type_': data.get('type_', ''),
         }
         req.zato.client.invoke(service_name, input_dict)
 
