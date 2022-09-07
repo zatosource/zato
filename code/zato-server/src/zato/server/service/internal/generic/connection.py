@@ -21,7 +21,7 @@ from zato.common.odb.query.generic import connection_list
 from zato.common.typing_ import cast_
 from zato.common.util.api import parse_simple_type
 from zato.server.generic.connection import GenericConnection
-from zato.server.service import Bool, Int
+from zato.server.service import AsIs, Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 from zato.server.service.internal.generic import _BaseService
 from zato.server.service.meta import DeleteMeta
@@ -34,6 +34,7 @@ from six import add_metaclass
 
 if 0:
     from bunch import Bunch
+    from zato.common.typing_ import anydict
     from zato.server.service import Service
 
     Bunch = Bunch
@@ -90,7 +91,7 @@ class _CreateEditSIO(AdminSIO):
     input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'),
         Bool('sec_use_rbac'))
     input_optional = ('cluster_id', 'id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
-        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id') + \
+        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id', AsIs('client_id')) + \
         extra_secret_keys + generic_attrs
     force_empty_keys = True
 
@@ -253,8 +254,31 @@ class GetList(AdminService):
 
 # ################################################################################################################################
 
-    def _enrich_conn_dict(self, conn_dict):
-        # type: (dict)
+    def _set_conn_dict_value_reset_oauth2_scopes_url(self, conn_dict:'anydict') -> 'None':
+        scopes = (conn_dict['scopes'] or '').splitlines()
+        auth_redirect_url = conn_dict['auth_redirect_url']
+
+        client_id = conn_dict['client_id']
+        secret_value = conn_dict['secret_value']
+
+        # Office-365
+        from O365 import Account
+
+        credentials = (client_id, secret_value)
+        account = Account(credentials)
+        reset_oauth2_scopes_url, _ = account.con.get_authorization_url(requested_scopes=scopes, redirect_uri=auth_redirect_url)
+
+        conn_dict['reset_oauth2_scopes_url'] = reset_oauth2_scopes_url
+
+# ################################################################################################################################
+
+    def _add_custom_conn_dict_fields(self, conn_dict:'anydict') -> 'None':
+        if conn_dict['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365:
+            self._set_conn_dict_value_reset_oauth2_scopes_url(conn_dict)
+
+# ################################################################################################################################
+
+    def _enrich_conn_dict(self, conn_dict:'anydict') -> 'None':
 
         # Local aliases
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
@@ -262,6 +286,7 @@ class GetList(AdminService):
         # New items that will be potentially added to conn_dict
         to_add = {}
 
+        # Process all the items found in the database ..
         for key, value in conn_dict.items():
 
             if value:
@@ -287,6 +312,10 @@ class GetList(AdminService):
                             item_name = '{}_name'.format(id_name_base)
                             to_add[item_name] = config_dict['name']
 
+        # .. add custom fields that do not exist in the database ..
+        self._add_custom_conn_dict_fields(conn_dict)
+
+        # .. and hand the final result back to our caller.
         if to_add:
             conn_dict.update(to_add)
 
@@ -323,6 +352,54 @@ class ChangePassword(ChangePasswordBase):
     class SimpleIO(ChangePasswordBase.SimpleIO):
         response_elem = None
 
+# ################################################################################################################################
+
+    def _run_pre_handle_tasks_CLOUD_MICROSOFT_365(self, session, instance):
+
+        # stdlib
+        from json import dumps, loads
+        from urllib.parse import parse_qs, urlsplit
+
+        # office-365
+        from O365 import Account
+
+        auth_url = self.request.input.password1
+        auth_url = self.server.decrypt(auth_url)
+
+        query = urlsplit(auth_url).query
+        parsed = parse_qs(query)
+
+        state = parsed['state']
+        state = state[0]
+
+        opaque1 = instance.opaque1
+        opaque1 = loads(opaque1)
+
+        client_id = opaque1['client_id']
+        secret_value = opaque1['secret_value']
+
+        credentials = (client_id, secret_value)
+
+        account = Account(credentials)
+        account.con.request_token(authorization_url=auth_url, state=state)
+
+        opaque1['token'] = account.con.token_backend.token
+        opaque1 = dumps(opaque1)
+        instance.opaque1 = opaque1
+
+        session.add(instance)
+        session.commit()
+
+# ################################################################################################################################
+
+    def _run_pre_handle_tasks(self, session, instance):
+        conn_type = self.request.input.get('type_')
+
+        if conn_type == COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365:
+            self._run_pre_handle_tasks_CLOUD_MICROSOFT_365(session, instance)
+
+# ################################################################################################################################
+
     def handle(self):
 
         def _auth(instance, secret):
@@ -340,7 +417,16 @@ class ChangePassword(ChangePasswordBase):
                     filter(ModelGenericConn.type_==self.request.input.type_).\
                     one().id
 
-        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value, instance_id=instance_id,
+        with closing(self.odb.session()) as session:
+            query = session.query(ModelGenericConn)
+            query = query.filter(ModelGenericConn.id==instance_id)
+            instance = query.one()
+
+            # This steps runs optional post-handle tasks that some types of connections may require.
+            self._run_pre_handle_tasks(session, instance)
+
+        # This step updates the secret.
+        self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value, instance_id=instance_id,
             publish_instance_attrs=['type_'])
 
 # ################################################################################################################################
