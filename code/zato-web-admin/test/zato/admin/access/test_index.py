@@ -106,6 +106,8 @@ class IndexTestCase(BaseTestCase):
             '/data-dict/',
             '/edit/',
             '/logout',
+
+            '/zato/cloud/jira/reset-oauth2-scopes/',
         ]
 
         # Go through all the paths founds ..
