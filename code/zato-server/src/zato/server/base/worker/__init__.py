@@ -81,6 +81,7 @@ from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.cloud_confluence import CloudConfluenceWrapper
 from zato.server.generic.api.cloud_dropbox import CloudDropbox
 from zato.server.generic.api.cloud_jira import CloudJiraWrapper
+from zato.server.generic.api.cloud_microsoft_365 import CloudMicrosoft365Wrapper
 from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
 from zato.server.generic.api.outconn_hl7_fhir import OutconnHL7FHIRWrapper
@@ -216,6 +217,9 @@ class WorkerStore(_WorkerStoreBase):
         # Generic connections - Cloud - Jira
         self.cloud_jira = {}
 
+        # Generic connections - Cloud - Microsoft 365
+        self.cloud_microsoft_365 = {}
+
         # Generic connections - Cloud - Salesforce
         self.cloud_salesforce = {}
 
@@ -291,6 +295,7 @@ class WorkerStore(_WorkerStoreBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: self.cloud_confluence,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: self.cloud_dropbox,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: self.cloud_jira,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: self.cloud_microsoft_365,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: self.cloud_salesforce,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: self.outconn_hl7_fhir,
@@ -308,6 +313,7 @@ class WorkerStore(_WorkerStoreBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: CloudConfluenceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: CloudDropbox,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: CloudJiraWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: CloudMicrosoft365Wrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: CloudSalesforceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: DefKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: OutconnHL7FHIRWrapper,
@@ -1191,6 +1197,7 @@ class WorkerStore(_WorkerStoreBase):
         cloud_confluence_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE, {})
         cloud_dropbox_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX, {})
         cloud_jira_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA, {})
+        cloud_microsoft_365_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365, {})
         cloud_salesforce_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE, {})
         def_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA, {})
         outconn_hl7_fhir_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR, {})
@@ -1209,6 +1216,7 @@ class WorkerStore(_WorkerStoreBase):
             cloud_confluence_map,
             cloud_dropbox_map,
             cloud_jira_map,
+            cloud_microsoft_365_map,
             cloud_salesforce_map,
             def_kafka_map,
             outconn_hl7_fhir_map,
