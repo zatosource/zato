@@ -327,6 +327,12 @@ class Wrapper:
         self.python_id = get_python_id(self)
         self.should_reconnect = True
 
+        conn_type = self.config.get('type_')
+        if conn_type == COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365:
+            address = self.config['auth_redirect_url']
+        else:
+            address = self.config['auth_url']
+
         self.client = ConnectionQueue(
             server,
             self.config['is_active'],
@@ -335,7 +341,7 @@ class Wrapper:
             self.config['id'],
             self.config['name'],
             self.conn_type,
-            self.config['auth_url'],
+            address,
             self.add_client,
             self.config.get('needs_spawn', True),
             self.config.get('max_connect_attempts', 1234567890)
