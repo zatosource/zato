@@ -38,6 +38,7 @@ class ModuleCtx:
 
 _epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
 local_tz = get_localzone()
+local_tz_zone = str(local_tz)
 
 # ################################################################################################################################
 
@@ -96,7 +97,7 @@ class TimeUtil:
 
 # ################################################################################################################################
 
-    def now(self, format=ModuleCtx.Date_Time_Format, tz=local_tz.zone, needs_format=True, delta=None):
+    def now(self, format=ModuleCtx.Date_Time_Format, tz=local_tz_zone, needs_format=True, delta=None):
         """ Returns now in a specified timezone.
         """
         now = arrow.now(tz=tz)
@@ -138,12 +139,12 @@ class TimeUtil:
 
 # ################################################################################################################################
 
-    def yesterday(self, format=ModuleCtx.Date_Time_Format, tz=local_tz.zone, needs_format=True):
+    def yesterday(self, format=ModuleCtx.Date_Time_Format, tz=local_tz_zone, needs_format=True):
         return self.now(format, tz, needs_format, delta=timedelta(days=-1))
 
 # ################################################################################################################################
 
-    def tomorrow(self, format=ModuleCtx.Date_Time_Format, tz=local_tz.zone, needs_format=True):
+    def tomorrow(self, format=ModuleCtx.Date_Time_Format, tz=local_tz_zone, needs_format=True):
         return self.now(format, tz, needs_format, delta=timedelta(days=1))
 
 # ################################################################################################################################
@@ -155,7 +156,7 @@ class TimeUtil:
 
 # ################################################################################################################################
 
-    def today(self, format=ModuleCtx.Date_Format, tz=local_tz.zone, needs_format=True):
+    def today(self, format=ModuleCtx.Date_Format, tz=local_tz_zone, needs_format=True):
         """ Returns current day in a given timezone.
         """
         now = arrow.now(tz=tz)
@@ -171,7 +172,7 @@ class TimeUtil:
 
 # ################################################################################################################################
 
-    def isonow(self, tz=local_tz.zone, needs_format=True, _format=ModuleCtx.Timestamp_Format):
+    def isonow(self, tz=local_tz_zone, needs_format=True, _format=ModuleCtx.Timestamp_Format):
         return self.now(_format, tz, needs_format)
 
 # ################################################################################################################################
