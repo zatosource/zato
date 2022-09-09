@@ -77,10 +77,12 @@ def parse_response_data(response):
 
 # ################################################################################################################################
 
-def _get_list(client, cluster, service):
+def invoke_list_service(client, cluster, service, extra=None):
 
     out = {}
-    for item in client.invoke(service, {'cluster_id':cluster.id}):
+    request = {'cluster_id':cluster.id}
+    request.update(extra or {})
+    for item in client.invoke(service, request):
         out[item.id] = item.name
 
     return out
@@ -90,7 +92,7 @@ def _get_list(client, cluster, service):
 def get_definition_list(client, cluster, def_type):
     """ Returns all definitions of a given type existing on a given cluster.
     """
-    return _get_list(client, cluster, 'zato.definition.{}.get-list'.format(def_type))
+    return invoke_list_service(client, cluster, 'zato.definition.{}.get-list'.format(def_type))
 
 # ################################################################################################################################
 
@@ -122,7 +124,7 @@ def get_outconn_rest_list(req, name_to_id=False):
 def get_tls_ca_cert_list(client, cluster):
     """ Returns all TLS CA certs on a given cluster.
     """
-    return _get_list(client, cluster, 'zato.security.tls.ca-cert.get-list')
+    return invoke_list_service(client, cluster, 'zato.security.tls.ca-cert.get-list')
 
 # ################################################################################################################################
 
