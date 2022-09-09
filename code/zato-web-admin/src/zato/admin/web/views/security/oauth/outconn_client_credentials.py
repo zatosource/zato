@@ -33,7 +33,7 @@ class Index(_Index):
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id'
+        input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'username', 'proto_version', 'sig_method', 'max_nonce_log'
         output_repeated = True
 
