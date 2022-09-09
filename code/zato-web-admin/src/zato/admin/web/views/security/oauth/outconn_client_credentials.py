@@ -34,7 +34,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'username', 'proto_version', 'sig_method', 'max_nonce_log'
+        output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes'
         output_repeated = True
 
     def handle(self):
@@ -51,7 +51,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'username', 'proto_version', 'sig_method', 'max_nonce_log'
+        input_required = 'name', 'is_active', 'username', 'auth_server_url', 'scopes'
         output_required = 'id', 'name'
 
     def success_message(self, item):
@@ -85,7 +85,7 @@ class Delete(_Delete):
 
 @method_allowed('POST')
 def change_secret(req):
-    return _change_password(req, 'zato.security.oauth.change-password')
+    return _change_password(req, 'zato.security.oauth.change-password', success_msg='Secret updated')
 
 # ################################################################################################################################
 # ################################################################################################################################

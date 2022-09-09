@@ -16,7 +16,7 @@ from zato.common.api import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, OAuth
 from zato.common.odb.query import oauth_list
-from zato.server.service import Integer
+from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 # ################################################################################################################################
@@ -32,13 +32,15 @@ class GetList(AdminService):
         response_elem = 'zato_security_oauth_get_list_response'
         input_required = 'cluster_id'
         output_required = 'id', 'name', 'is_active', 'username'
+        output_optional = 'auth_server_url', 'scopes'
 
     def get_data(self, session):
-        return self._search(oauth_list, session, self.request.input.cluster_id, False)
+        return elems_with_opaque(self._search(oauth_list, session, self.request.input.cluster_id, False))
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            data = self.get_data(session)
+            self.response.payload[:] = data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,6 +52,7 @@ class Create(AdminService):
         request_elem = 'zato_security_oauth_create_request'
         response_elem = 'zato_security_oauth_create_response'
         input_required = 'cluster_id', 'name', 'is_active', 'username'
+        input_optional = 'auth_server_url', 'scopes'
         output_required = 'id', 'name'
 
     def handle(self):
@@ -78,6 +81,8 @@ class Create(AdminService):
                 definition.max_nonce_log = 0 # type: ignore
                 definition.cluster = cluster # type: ignore
 
+                set_instance_opaque_attrs(definition, input)
+
                 session.add(definition)
                 session.commit()
 
@@ -105,9 +110,9 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_oauth_edit_request'
         response_elem = 'zato_security_oauth_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'username',
-            'proto_version', 'sig_method', Integer('max_nonce_log'))
-        output_required = ('id', 'name')
+        input_required = 'id', 'cluster_id', 'name', 'is_active', 'username'
+        input_optional = 'auth_server_url', 'scopes'
+        output_required = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -128,6 +133,8 @@ class Edit(AdminService):
                 definition.name = input.name
                 definition.is_active = input.is_active
                 definition.username = input.username
+
+                set_instance_opaque_attrs(definition, input)
 
                 session.add(definition)
                 session.commit()
@@ -174,7 +181,7 @@ class Delete(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_oauth_delete_request'
         response_elem = 'zato_security_oauth_delete_response'
-        input_required = ('id',)
+        input_required = 'id'
 
     def handle(self):
         with closing(self.odb.session()) as session:
