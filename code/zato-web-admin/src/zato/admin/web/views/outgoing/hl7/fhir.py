@@ -13,7 +13,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.hl7.fhir import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
-    invoke_action_handler, method_allowed, ping_connection
+    invoke_action_handler, invoke_list_service, method_allowed, ping_connection
 from zato.common.api import GENERIC, generic_attrs, HL7 as HL7Common
 from zato.common.model.hl7 import HL7FHIRConfigObject
 
@@ -42,9 +42,10 @@ class Index(_Index):
 # ################################################################################################################################
 
     def handle(self):
+        oauth_security_list = []
         return {
-            'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit'),
+            'create_form': CreateForm(oauth_security_list=oauth_security_list),
+            'edit_form': EditForm(oauth_security_list=oauth_security_list, prefix='edit'),
             'change_password_form': ChangePasswordForm(),
         }
 
