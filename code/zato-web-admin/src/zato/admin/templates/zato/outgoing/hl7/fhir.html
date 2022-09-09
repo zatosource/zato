@@ -56,7 +56,7 @@
             'extra',
 
             {% comment %} 6 {% endcomment %}
-            'oauth_def_id',
+            'oauth_def',
 
         ]
     }
@@ -153,7 +153,7 @@
                         <td class='ignore'>{{ item.extra|default:"" }}</td>
 
                         {% comment %} 6 {% endcomment %}
-                        <td class='ignore'>{{ item.oauth_def_id|default:"" }}</td>
+                        <td class='ignore'>{{ item.oauth_def|default:"" }}</td>
 
                     </tr>
                 {% endfor %}
@@ -226,7 +226,7 @@
                             <td>
                                 {{ create_form.username }}
                                 <label>OAuth</label>
-                                {{ create_form.oauth_def_id }}
+                                {{ create_form.oauth_def }}
                             </td>
                         </tr>
                         <tr>
@@ -305,7 +305,7 @@
                             <td>
                                 {{ edit_form.username }}
                                 <label>OAuth</label>
-                                {{ edit_form.oauth_def_id }}
+                                {{ edit_form.oauth_def }}
                             </td>
                         </tr>
                         <tr>

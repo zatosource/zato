@@ -32,16 +32,16 @@ class CreateForm(forms.Form):
     auth_type = forms.ChoiceField(widget=forms.Select())
 
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
-    oauth_def_id = forms.ChoiceField(widget=forms.Select())
     password = forms.CharField(strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
+    oauth_def = forms.ChoiceField(widget=forms.Select())
     extra = forms.CharField(widget=forms.Textarea(attrs={'style':'height:60px'}))
 
     def __init__(self, oauth_security_list, prefix=None):
         super(CreateForm, self).__init__(prefix=prefix)
         add_select(self, 'auth_type', _const.FHIR_Auth_Type(), needs_initial_select=True)
         add_security_select(
-            self, security_list=oauth_security_list, needs_no_security=False, field_name='oauth_def_id', needs_rbac=False)
+            self, security_list=oauth_security_list, needs_no_security=False, field_name='oauth_def', needs_rbac=False)
 
 # ################################################################################################################################
 # ################################################################################################################################
