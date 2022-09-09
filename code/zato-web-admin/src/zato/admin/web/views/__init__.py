@@ -736,20 +736,24 @@ class Delete(BaseCallView):
 # ################################################################################################################################
 
 class SecurityList:
-    def __init__(self):
+    def __init__(self, needs_def_type_name_label=True):
+        self.needs_def_type_name_label = needs_def_type_name_label
         self.def_items = []
 
     def __iter__(self):
         return iter(self.def_items)
 
     def append(self, def_item):
-        value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
-        label = '{0}/{1}'.format(SEC_DEF_TYPE_NAME[def_item.sec_type], def_item.name)
+        value = '{}/{}'.format(def_item.sec_type, def_item.id)
+        if self.needs_def_type_name_label:
+            label = '{}/{}'.format(SEC_DEF_TYPE_NAME[def_item.sec_type], def_item.name)
+        else:
+            label = def_item.name
         self.def_items.append((value, label))
 
     @staticmethod
-    def from_service(client, cluster_id, sec_type=None):
-        sec_list = SecurityList()
+    def from_service(client, cluster_id, sec_type=None, needs_def_type_name_label=True):
+        sec_list = SecurityList(needs_def_type_name_label=needs_def_type_name_label)
 
         result = client.invoke('zato.security.get-list', {'cluster_id': cluster_id, 'sec_type':sec_type})
 
