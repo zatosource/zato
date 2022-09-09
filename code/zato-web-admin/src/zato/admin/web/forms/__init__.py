@@ -82,13 +82,15 @@ def add_security_select(form, security_list, needs_no_security=True, field_name=
     form.fields[field_name].choices = []
     form.fields[field_name].choices.append(INITIAL_CHOICES)
 
-    print(111, form.fields[field_name].choices)
-
     if needs_no_security:
         form.fields[field_name].choices.append([ZATO_NONE, 'No security definition'])
 
     if needs_rbac:
         form.fields[field_name].choices.append([ZATO_SEC_USE_RBAC, DELEGATED_TO_RBAC])
+
+    print()
+    print(111, security_list.def_items)
+    print()
 
     for value, label in security_list:
         form.fields[field_name].choices.append([value, label])

@@ -77,6 +77,9 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     row += String.format("<td class='ignore'>{0}</td>", item.auth_type);
     row += String.format("<td class='ignore'>{0}</td>", item.extra);
 
+    // 6
+    row += String.format("<td class='ignore'>{0}</td>", item.oauth_def);
+
     if(include_tr) {
         row += '</tr>';
     }
