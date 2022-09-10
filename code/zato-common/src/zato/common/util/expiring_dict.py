@@ -48,17 +48,25 @@ class ExpiringDict(MutableMapping):
     def __init__(self, ttl=None, interval=0.100, *args, **kwargs):
 
         self._store = dict(*args, **kwargs)
-        self._keys = SortedKeyList(key=lambda x: x[0])
+        # self._keys = SortedKeyList(key=lambda x: x[0])
+        self._keys = SortedKeyList(key=self._sort_func)
         self._ttl = ttl
-        self._lock = Lock()
+        self.impl_lock = Lock()
         self._interval = interval
 
         Thread(target=self._worker, daemon=True).start()
 
+# ################################################################################################################################
+
+    def _sort_func(elem):
+        return elem[0]
+
+# ################################################################################################################################
+
     def flush(self):
         now = gmtime()
         max_index = 0
-        with self._lock:
+        with self.impl_lock:
             for index, (timestamp, key) in enumerate(self._keys):
                 if timestamp > now: # Break as soon as we find a key whose expiration time is in the future
                     max_index = index
@@ -69,34 +77,48 @@ class ExpiringDict(MutableMapping):
                     pass  # Ignore it if it was deleted early
             del self._keys[0:max_index]
 
+# ################################################################################################################################
+
     def _worker(self):
         while True:
             self.flush()
             sleep(self._interval)
 
-    def __setitem__(self, key, value):
-        if self._ttl:
-            self._set_with_expire(key, value, self._ttl)
-        else:
-            self._store[key] = value
+# ################################################################################################################################
+
+    def get(self, key, default=None):
+        return self._store.get(key, default)
+
+# ################################################################################################################################
+
+    def set(self, key, value, ttl=None):
+        ttl = ttl or self._ttl
+        self._set_with_expire(key, value, ttl)
+
+# ################################################################################################################################
 
     def ttl(self, key, value, ttl):
         self._set_with_expire(key, value, ttl)
 
+# ################################################################################################################################
+
+    def delete(self, key):
+        _ = self._store.pop(key, None)
+
+# ################################################################################################################################
+
     def _set_with_expire(self, key, value, ttl):
-        self._lock.acquire()
+        self.impl_lock.acquire()
         self._keys.add((gmtime() + ttl, key))
         self._store[key] = value
-        self._lock.release()
+        self.impl_lock.release()
 
-    def __delitem__(self, key):
-        del self._store[key]
-
-    def __getitem__(self, key):
-        return self._store[key]
+# ################################################################################################################################
 
     def __iter__(self):
         return iter(self._store)
+
+# ################################################################################################################################
 
     def __len__(self):
         return len(self._store)
