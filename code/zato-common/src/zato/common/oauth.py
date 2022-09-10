@@ -22,8 +22,10 @@ if 0:
 # ################################################################################################################################
 
 class ModuleCtx:
+
+    TTL = 40 * 60             # 40 minutes in seconds
     Impl_Cleanup_Interval = 5 # In seconds
-    TTL = 40 * 60 # 40 minutes in seconds
+
     Test_Token = {
         'token_type': 'Bearer',
         'expires_in': 3600,
@@ -36,10 +38,17 @@ class ModuleCtx:
 
 class OAuthStore:
 
-    def __init__(self, get_config_func:'callable_') -> 'None':
+    def __init__(
+        self,
+        get_config_func, # type: callable_
+        obtain_item_func, # type: callable_
+    ) -> 'None':
 
         # This callable will return an OAuth definition's configuration based on its ID
         self.get_config_func = get_config_func
+
+        # This callable is used to obtain an OAuth token from an auth server
+        self.obtain_item_func = obtain_item_func
 
         # Keys are OAuth definition IDs and values are RLock objects
         self._lock_dict = {} # type: intanydict
