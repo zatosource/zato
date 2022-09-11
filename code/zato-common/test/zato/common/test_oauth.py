@@ -39,7 +39,7 @@ class _BaseTestCase(TestCase):
 
         secret = os.environ.get('Zato_Test_OAuth_Secret')
         auth_server_url = os.environ.get('Zato_Test_OAuth_Auth_Server_URL')
-        scopes = os.environ.get('Zato_Test_OAuth_Scopes')
+        scopes = os.environ.get('Zato_Test_OAuth_Scopes') + 'a'
 
         self.zato_test_config['conn_name'] = 'OAuthTokenClientTestCase'
         self.zato_test_config['username'] = username
@@ -65,7 +65,7 @@ class _BaseTestCase(TestCase):
 
 class OAuthTokenClientTestCase(_BaseTestCase):
 
-    def test_obtain_token(self) -> 'None':
+    def xtest_obtain_token(self) -> 'None':
 
         if not self.zato_test_config:
             return
