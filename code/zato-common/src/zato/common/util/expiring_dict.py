@@ -32,7 +32,7 @@ SOFTWARE.
 
 # stdlib
 from collections.abc import MutableMapping
-from time import gmtime
+from time import time
 
 # gevent
 from gevent import sleep
@@ -58,13 +58,17 @@ class ExpiringDict(MutableMapping):
 
 # ################################################################################################################################
 
-    def _sort_func(elem):
+    def _sort_func(self, elem):
+        # Object 'elem' is a two-element tuple.
+        # Index 0 is the expiration time.
+        # Index 1 is the actual object held at that key.
+        # By using index 0, we can sort objects by their expiration time.
         return elem[0]
 
 # ################################################################################################################################
 
     def flush(self):
-        now = gmtime()
+        now = time()
         max_index = 0
         with self.impl_lock:
             for index, (timestamp, key) in enumerate(self._keys):
@@ -109,7 +113,7 @@ class ExpiringDict(MutableMapping):
 
     def _set_with_expire(self, key, value, ttl):
         self.impl_lock.acquire()
-        self._keys.add((gmtime() + ttl, key))
+        self._keys.add((time() + ttl, key))
         self._store[key] = value
         self.impl_lock.release()
 
@@ -122,6 +126,19 @@ class ExpiringDict(MutableMapping):
 
     def __len__(self):
         return len(self._store)
+
+# ################################################################################################################################
+
+    # Methods below are not used
+
+    def __delitem__(self, *ignored_args, **ignored_kwargs):
+        raise NotImplementedError*()
+
+    def __getitem__(self, *ignored_args, **ignored_kwargs):
+        raise NotImplementedError*()
+
+    def __setitem__(self, *ignored_args, **ignored_kwargs):
+        raise NotImplementedError*()
 
 # ################################################################################################################################
 # ################################################################################################################################
