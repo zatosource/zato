@@ -9,6 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # gevent
 from gevent.lock import RLock
 
+# Requests
+from requests import post as requests_post
+
 # Zato
 from zato.common.util.expiring_dict import ExpiringDict
 
@@ -16,7 +19,7 @@ from zato.common.util.expiring_dict import ExpiringDict
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import callable_, intanydict, stranydict
+    from zato.common.typing_ import callable_, dictnone, intanydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,6 +35,33 @@ class ModuleCtx:
         'access_token': 'abc',
         'scope': 'zato.access'
     }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OAuthTokenClient:
+
+    def __init__(
+        self,
+        username,        # type: str
+        secret,          # type: str
+        auth_server_url, # type: str
+        scopes           # type: str
+    ) -> 'None':
+
+        self.username = username
+        self.secret = secret
+        self.auth_server_url = auth_server_url
+        self.scopes = scopes
+
+# ################################################################################################################################
+
+    def obtain_token(self) -> 'dictnone':
+
+        post_data = {
+            'grant_type': 'client_credentials',
+            'scope': self.scopes,
+        }
 
 # ################################################################################################################################
 # ################################################################################################################################
