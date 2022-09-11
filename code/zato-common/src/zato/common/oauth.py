@@ -23,7 +23,7 @@ from zato.common.util.expiring_dict import ExpiringDict
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import callable_, dictnone, intanydict, stranydict
+    from zato.common.typing_ import any_, callable_, dictnone, intanydict, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,6 +66,21 @@ class OAuthTokenClient:
         self.auth = (self.username, self.secret)
         self.auth_server_url = auth_server_url
         self.scopes = (scopes or '').splitlines()
+
+# ################################################################################################################################
+
+    @staticmethod
+    def from_config(config:'stranydict') -> 'OAuthTokenClient':
+        out = OAuthTokenClient(**config)
+        return out
+
+# ################################################################################################################################
+
+    @staticmethod
+    def obtain_from_config(config:'stranydict') -> 'dictnone':
+        client = OAuthTokenClient.from_config(config)
+        token = client.obtain_token()
+        return token
 
 # ################################################################################################################################
 
@@ -136,15 +151,38 @@ class OAuthStore:
 
 # ################################################################################################################################
 
-    def get(self, item_id:'int') -> 'stranydict':
-        return self._impl.get(item_id)
+    def _get(self, item_id:'int') -> 'dictnone':
+        item = self._impl.get(item_id)
+        return item
+
+# ################################################################################################################################
+
+    def get(self, item_id:'int') -> 'dictnone':
+
+        # This may be potentially missing ..
+        item = self._get(item_id)
+
+        # .. if it does not, we need to obtain it ..
+        if not item:
+            self.set(item_id)
+
+            # .. now, we know that it will exist ..
+            item = self._get(item_id)
+
+        # .. finally, we can return it to our caller.
+        return item
+
+# ################################################################################################################################
+
+    def _obtain_item(self, item_id:'int') -> 'any_':
+        client =
 
 # ################################################################################################################################
 
     def set(self, item_id:'int') -> 'None':
         self._lock_dict[item_id] = RLock()
-        token = ModuleCtx.Test_Token
-        self._impl.set(item_id, token)
+        item = self._obtain_item(item_id)
+        self._impl.set(item_id, item)
 
 # ################################################################################################################################
 
