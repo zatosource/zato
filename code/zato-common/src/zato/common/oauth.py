@@ -23,7 +23,7 @@ from zato.common.util.expiring_dict import ExpiringDict
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, callable_, dictnone, intanydict, stranydict
+    from zato.common.typing_ import callable_, dictnone, intanydict, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -174,15 +174,44 @@ class OAuthStore:
 
 # ################################################################################################################################
 
-    def _obtain_item(self, item_id:'int') -> 'any_':
-        client =
+    def _obtain_item(self, item_id:'int') -> 'dictnone':
+
+        # We are going to keep iterating until we do obtain the item
+        # or until we can no longer find the configuration for this item,
+        # e.g. because it has been already deleted.
+        while True:
+
+            # Try to look the configuration by ID ..
+            config = self.get_config_func(item_id)
+
+            # .. if it is not found, it means that it no longer exists,
+            # .. for instance, because it has been already deleted,
+            # .. in which case, we have nothing to return ..
+            if not config:
+                return
+
+            # .. if we are here, it means that configuration exists ..
+            # .. so we can obtain the item now ..
+            item = self.obtain_item_func(config)
+
+            # .. return the obtained item, no matter what it was.
+            return item
 
 # ################################################################################################################################
 
     def set(self, item_id:'int') -> 'None':
-        self._lock_dict[item_id] = RLock()
+
+        # First, try to obtain the item ..
         item = self._obtain_item(item_id)
-        self._impl.set(item_id, item)
+
+        # .. if we do not have it, we can already return ..
+        if not item:
+            return
+
+        # .. otherwise, we populate the expected data structures.
+        else:
+            self._lock_dict[item_id] = RLock()
+            self._impl.set(item_id, item)
 
 # ################################################################################################################################
 
