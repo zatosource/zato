@@ -9,8 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from http.client import OK
 from json import loads
+import logging
 
 # gevent
+from gevent import sleep
 from gevent.lock import RLock
 
 # Requests
@@ -24,6 +26,11 @@ from zato.common.util.expiring_dict import ExpiringDict
 
 if 0:
     from zato.common.typing_ import callable_, dictnone, intanydict, stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger('zato')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -111,7 +118,7 @@ class OAuthTokenClient:
 
         # .. make sure the response is as expected ..
         if response.status_code != OK:
-            msg = 'OAuth token for `{}` ({}) could not be obtained -> {} -> {}'.format(
+            msg = 'OAuth token for `{}` ({}) could not be obtained -> code:{} -> {}'.format(
                 self.conn_name,
                 self.auth_server_url,
                 response.status_code,
@@ -133,8 +140,10 @@ class OAuthStore:
 
     def __init__(
         self,
-        get_config_func, # type: callable_
-        obtain_item_func, # type: callable_
+        get_config_func,   # type: callable_
+        obtain_item_func,  # type: callable_
+        max_obtain_iters,  # type: int
+        obtain_sleep_time, # type: int
     ) -> 'None':
 
         # This callable will return an OAuth definition's configuration based on its ID
@@ -142,6 +151,12 @@ class OAuthStore:
 
         # This callable is used to obtain an OAuth token from an auth server
         self.obtain_item_func = obtain_item_func
+
+        # How many times at most we will try to obtain an individual token
+        self.max_obtain_iters = max_obtain_iters
+
+        # For how many seconds to sleep in each iteration when obtaining a token
+        self.obtain_sleep_time = obtain_sleep_time
 
         # Keys are OAuth definition IDs and values are RLock objects
         self._lock_dict = {} # type: intanydict
@@ -176,10 +191,17 @@ class OAuthStore:
 
     def _obtain_item(self, item_id:'int') -> 'dictnone':
 
-        # We are going to keep iterating until we do obtain the item
-        # or until we can no longer find the configuration for this item,
-        # e.g. because it has been already deleted.
-        while True:
+        # We are going to keep iterating until we do obtain the item,
+        # or until we can no longer find the configuration for this item, e.g. because it has been already deleted,
+        # or until we run out of iteration attempts.
+
+        # We are just starting out
+        current_iter = 0
+
+        while current_iter < self.max_obtain_iters:
+
+            # First, let's increase it
+            current_iter += 1
 
             # Try to look the configuration by ID ..
             config = self.get_config_func(item_id)
@@ -194,8 +216,23 @@ class OAuthStore:
             # .. so we can obtain the item now ..
             item = self.obtain_item_func(config)
 
-            # .. return the obtained item, no matter what it was.
-            return item
+            # .. if there is no item, we sleep for a while and retry again ..
+            if not item:
+                sleep(self.obtain_sleep_time)
+                continue
+
+            # .. otherwise, return the obtained item, no matter what it was.
+            else:
+                return item
+
+        # If we are here, it means that we reached the limit for iterations
+        msg = 'OAuth token for `{}` ({}) could not be obtained -> code:{} -> {}'.format(
+            self.conn_name,
+            self.auth_server_url,
+            response.status_code,
+            response.text
+        )
+        raise ValueError(msg)
 
 # ################################################################################################################################
 
