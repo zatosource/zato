@@ -40,6 +40,9 @@ class ModuleCtx:
     TTL = 40 * 60             # 40 minutes in seconds
     Impl_Cleanup_Interval = 5 # In seconds
 
+    # That many OAuth definitions can exist at a time (each of them will produce in as many tokens as needed, without limits).
+    Max_Definitions = 1_000
+
     # This is used to join multiple scopes in an HTTP call that requests a new token to be generated
     Scopes_Separator = ' '
 
@@ -164,6 +167,17 @@ class OAuthStore:
         # This is where we actually keep tokens
         self._impl = ExpiringDict(ttl=ModuleCtx.TTL, interval=ModuleCtx.Impl_Cleanup_Interval)
 
+        # Populate initial data
+        self._init()
+
+# ################################################################################################################################
+
+    def _init(self):
+
+        # Create a lock object for each possible definition
+        for definition_id in range(ModuleCtx.Max_Definitions):
+            self._lock_dict[definition_id] = RLock()
+
 # ################################################################################################################################
 
     def _get(self, item_id:'int') -> 'dictnone':
@@ -247,7 +261,6 @@ class OAuthStore:
 
         # .. otherwise, we populate the expected data structures.
         else:
-            self._lock_dict[item_id] = RLock()
             self._impl.set(item_id, item)
 
 # ################################################################################################################################
