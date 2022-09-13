@@ -239,15 +239,6 @@ class OAuthStore:
             else:
                 return item
 
-        # If we are here, it means that we reached the limit for iterations
-        msg = 'OAuth token for `{}` ({}) could not be obtained -> code:{} -> {}'.format(
-            self.conn_name,
-            self.auth_server_url,
-            response.status_code,
-            response.text
-        )
-        raise ValueError(msg)
-
 # ################################################################################################################################
 
     def _set(self, item_id:'int') -> 'any_':
