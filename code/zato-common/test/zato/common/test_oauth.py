@@ -39,7 +39,7 @@ class _BaseTestCase(TestCase):
 
         secret = os.environ.get('Zato_Test_OAuth_Secret')
         auth_server_url = os.environ.get('Zato_Test_OAuth_Auth_Server_URL')
-        scopes = os.environ.get('Zato_Test_OAuth_Scopes') + 'a'
+        scopes = os.environ.get('Zato_Test_OAuth_Scopes')
 
         self.zato_test_config['conn_name'] = 'OAuthTokenClientTestCase'
         self.zato_test_config['username'] = username
@@ -65,7 +65,7 @@ class _BaseTestCase(TestCase):
 
 class OAuthTokenClientTestCase(_BaseTestCase):
 
-    def xtest_obtain_token(self) -> 'None':
+    def test_client_obtain_token_from_remote_auth_server(self) -> 'None':
 
         if not self.zato_test_config:
             return
@@ -82,8 +82,7 @@ class OAuthStoreTestCase(_BaseTestCase):
 
     def test_get_with_set(self) -> 'None':
 
-        # This is not taken into account anywhere
-        # and the value can be anything.
+        # This value can be any integer
         item_id = 123
 
         if not self.zato_test_config:
@@ -92,7 +91,11 @@ class OAuthStoreTestCase(_BaseTestCase):
         def get_config(ignored_item_id:'any_') -> 'stranydict':
             return self.zato_test_config
 
-        store = OAuthStore(get_config, OAuthTokenClient.obtain_from_config)
+        max_obtain_iters = 1
+        obtain_sleep_time = 0
+
+        store = OAuthStore(get_config, OAuthTokenClient.obtain_from_config, max_obtain_iters, obtain_sleep_time)
+        store.create(item_id)
         token = store.get(item_id)
 
         self.run_common_token_assertions(token)

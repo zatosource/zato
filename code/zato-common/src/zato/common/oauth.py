@@ -18,14 +18,11 @@ from gevent.lock import RLock
 # Requests
 from requests import post as requests_post
 
-# Zato
-from zato.common.util.expiring_dict import ExpiringDict
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import callable_, dictnone, intanydict, stranydict
+    from zato.common.typing_ import any_, callable_, dictnone, intanydict, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,9 +36,6 @@ class ModuleCtx:
 
     TTL = 40 * 60             # 40 minutes in seconds
     Impl_Cleanup_Interval = 5 # In seconds
-
-    # That many OAuth definitions can exist at a time (each of them will produce in as many tokens as needed, without limits).
-    Max_Definitions = 1_000
 
     # This is used to join multiple scopes in an HTTP call that requests a new token to be generated
     Scopes_Separator = ' '
@@ -165,18 +159,12 @@ class OAuthStore:
         self._lock_dict = {} # type: intanydict
 
         # This is where we actually keep tokens
-        self._impl = ExpiringDict(ttl=ModuleCtx.TTL, interval=ModuleCtx.Impl_Cleanup_Interval)
-
-        # Populate initial data
-        self._init()
+        self._impl = {}
 
 # ################################################################################################################################
 
-    def _init(self):
-
-        # Create a lock object for each possible definition
-        for definition_id in range(ModuleCtx.Max_Definitions):
-            self._lock_dict[definition_id] = RLock()
+    def create(self, item_id:'int') -> 'None':
+        self._lock_dict[item_id] = RLock()
 
 # ################################################################################################################################
 
@@ -188,18 +176,21 @@ class OAuthStore:
 
     def get(self, item_id:'int') -> 'dictnone':
 
-        # This may be potentially missing ..
-        item = self._get(item_id)
+        # This will always exist ..
+        lock = self._lock_dict[item_id]
 
-        # .. if it does not, we need to obtain it ..
-        if not item:
-            self.set(item_id)
+        # .. make sure we are the only one trying to get the token ..
+        with lock:
 
-            # .. now, we know that it will exist ..
+            # This may be potentially missing ..
             item = self._get(item_id)
 
-        # .. finally, we can return it to our caller.
-        return item
+            # .. if it does not, we need to obtain it ..
+            if not item:
+                item = self._set(item_id)
+
+            # .. finally, we can return it to our caller.
+            return item
 
 # ################################################################################################################################
 
@@ -212,7 +203,16 @@ class OAuthStore:
         # We are just starting out
         current_iter = 0
 
-        while current_iter < self.max_obtain_iters:
+        # By default, we are to run
+        keep_running = True
+
+        while keep_running:
+
+            # Confirm whether we should still continue
+            keep_running = current_iter < self.max_obtain_iters
+
+            if not keep_running:
+                break
 
             # First, let's increase it
             current_iter += 1
@@ -250,18 +250,23 @@ class OAuthStore:
 
 # ################################################################################################################################
 
-    def set(self, item_id:'int') -> 'None':
+    def _set(self, item_id:'int') -> 'any_':
 
         # First, try to obtain the item ..
         item = self._obtain_item(item_id)
 
-        # .. if we do not have it, we can already return ..
+        # .. if we do not have it, we can explicitly return None ..
         if not item:
-            return
+            return None
 
-        # .. otherwise, we populate the expected data structures.
+        # .. otherwise ..
         else:
-            self._impl.set(item_id, item)
+
+            # .. we populate the expected data structures ..
+            self._impl[item_id] = item
+
+            # .. and return the item obtained.
+            return item
 
 # ################################################################################################################################
 
@@ -271,7 +276,7 @@ class OAuthStore:
         with self._lock_dict[item_id]:
 
             # .. remove the definition from the underlying implementation ..
-            self._impl.delete(item_id)
+            _ = self._impl.pop(item_id, None)
 
         # .. finally, remove our own lock now.
         _ = self._lock_dict.pop(item_id, None)
