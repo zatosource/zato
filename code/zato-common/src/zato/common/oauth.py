@@ -7,9 +7,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
+from datetime import datetime, timedelta
 from http.client import OK
 from json import loads
-import logging
 
 # gevent
 from gevent import sleep
@@ -18,10 +19,14 @@ from gevent.lock import RLock
 # Requests
 from requests import post as requests_post
 
+# Zato
+from zato.common.typing_ import dataclass
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from zato.common.typing_ import any_, callable_, dictnone, intanydict, stranydict
 
 # ################################################################################################################################
@@ -34,8 +39,8 @@ logger = logging.getLogger('zato')
 
 class ModuleCtx:
 
-    TTL = 40 * 60             # 40 minutes in seconds
-    Impl_Cleanup_Interval = 5 # In seconds
+    # After how many seconds we will consider a token to have expired
+    TTL = 40 * 60
 
     # This is used to join multiple scopes in an HTTP call that requests a new token to be generated
     Scopes_Separator = ' '
@@ -49,6 +54,16 @@ class ModuleCtx:
         'access_token': 'abc',
         'scope': 'zato.access'
     }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class StoreItem:
+    parent_id: 'int'
+    data: 'any_'
+    creation_time: 'datetime'
+    expiration_time: 'datetime'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -168,13 +183,13 @@ class OAuthStore:
 
 # ################################################################################################################################
 
-    def _get(self, item_id:'int') -> 'dictnone':
+    def _get(self, item_id:'int') -> 'StoreItem | None':
         item = self._impl.get(item_id)
         return item
 
 # ################################################################################################################################
 
-    def get(self, item_id:'int') -> 'dictnone':
+    def get(self, item_id:'int') -> 'StoreItem | None':
 
         # This will always exist ..
         lock = self._lock_dict[item_id]
@@ -189,12 +204,25 @@ class OAuthStore:
             if not item:
                 item = self._set(item_id)
 
+            # .. if we do have an item, we still need to check whether it is not time to renew it,
+            # .. in which we case we need to obtain a new one anyway ..
+            else:
+                if self._needs_renew(item):
+                    item = self._set(item_id)
+
             # .. finally, we can return it to our caller.
             return item
 
 # ################################################################################################################################
 
-    def _obtain_item(self, item_id:'int') -> 'dictnone':
+    def _needs_renew(self, item:'StoreItem') -> 'bool':
+        now = datetime.utcnow()
+        needs_renew = now >= item.expiration_time
+        return needs_renew
+
+# ################################################################################################################################
+
+    def _obtain_item(self, item_id:'int') -> 'StoreItem | None':
 
         # We are going to keep iterating until we do obtain the item,
         # or until we can no longer find the configuration for this item, e.g. because it has been already deleted,
@@ -227,21 +255,26 @@ class OAuthStore:
                 return
 
             # .. if we are here, it means that configuration exists ..
-            # .. so we can obtain the item now ..
-            item = self.obtain_item_func(config)
+            # .. so we can obtain its underlying data now ..
+            data = self.obtain_item_func(config)
 
             # .. if there is no item, we sleep for a while and retry again ..
-            if not item:
+            if not data:
                 sleep(self.obtain_sleep_time)
                 continue
 
             # .. otherwise, return the obtained item, no matter what it was.
             else:
+                item = StoreItem()
+                item.data = data
+                item.parent_id = item_id
+                item.creation_time = datetime.utcnow()
+                item.expiration_time = item.creation_time + timedelta(seconds=ModuleCtx.TTL)
                 return item
 
 # ################################################################################################################################
 
-    def _set(self, item_id:'int') -> 'any_':
+    def _set(self, item_id:'int') -> 'StoreItem | None':
 
         # First, try to obtain the item ..
         item = self._obtain_item(item_id)

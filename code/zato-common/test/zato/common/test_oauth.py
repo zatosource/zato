@@ -96,9 +96,9 @@ class OAuthStoreTestCase(_BaseTestCase):
 
         store = OAuthStore(get_config, OAuthTokenClient.obtain_from_config, max_obtain_iters, obtain_sleep_time)
         store.create(item_id)
-        token = store.get(item_id)
+        item = store.get(item_id)
 
-        self.run_common_token_assertions(token)
+        self.run_common_token_assertions(item.data)
 
 # ################################################################################################################################
 # ################################################################################################################################
