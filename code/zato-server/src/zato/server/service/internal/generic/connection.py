@@ -13,7 +13,7 @@ from datetime import datetime
 from traceback import format_exc
 
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs, ZATO_NONE
+from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, ZATO_NONE
 from zato.common.broker_message import GENERIC
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
@@ -60,6 +60,8 @@ config_dict_id_name_outconnn = {
     'ftp_source': 'out_ftp',
     'sftp_source': 'out_sftp',
 }
+
+sec_def_sep = '/'
 
 # ################################################################################################################################
 
@@ -152,6 +154,34 @@ class _CreateEdit(_BaseService):
         if 'is_active' in data:
             if data['is_active'] is None:
                 data['is_active'] = False
+
+        # Break down security definitions into components
+        security_id = data.get('security_id') or ''
+        if sec_def_sep in security_id:
+
+            # Extract the components ..
+            sec_def_type, security_id = security_id.split(sec_def_sep)
+            sec_def_type_name = SEC_DEF_TYPE_NAME[sec_def_type]
+
+            security_id = int(security_id)
+
+            # .. look the security name by its ID ..
+            if sec_def_type == SEC_DEF_TYPE.BASIC_AUTH:
+                func = self.server.worker_store.basic_auth_get_by_id
+            elif sec_def_type == SEC_DEF_TYPE.OAUTH:
+                func = self.server.worker_store.oauth_get_by_id
+            else:
+                func = None
+
+            if func:
+                sec_def = func(security_id)
+                security_name = sec_def.name
+            else:
+                security_name = 'unset'
+
+            # .. and store everything now.
+            data['sec_def_type_name'] = sec_def_type_name
+            data['security_name'] = security_name
 
         conn = GenericConnection.from_dict(data)
 
