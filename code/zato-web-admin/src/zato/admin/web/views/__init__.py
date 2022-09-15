@@ -753,14 +753,18 @@ class SecurityList:
 
     @staticmethod
     def from_service(client, cluster_id, sec_type=None, needs_def_type_name_label=True):
-        sec_list = SecurityList(needs_def_type_name_label=needs_def_type_name_label)
 
-        result = client.invoke('zato.security.get-list', {'cluster_id': cluster_id, 'sec_type':sec_type})
+        out = SecurityList(needs_def_type_name_label=needs_def_type_name_label)
+        sec_type = sec_type if isinstance(sec_type, list) else [sec_type]
+
+        result = client.invoke('zato.security.get-list', {
+            'cluster_id': cluster_id,
+        })
 
         for def_item in result:
-            sec_list.append(def_item)
+            out.append(def_item)
 
-        return sec_list
+        return out
 
 # ################################################################################################################################
 
