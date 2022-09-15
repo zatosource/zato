@@ -43,17 +43,16 @@ class Index(_Index):
 
     def handle(self):
 
-        oauth_security_list = SecurityList.from_service(
+        security_list = SecurityList.from_service(
             self.req.zato.client,
             self.cluster_id,
-            sec_type=SEC_DEF_TYPE.OAUTH,
-            needs_def_type_name_label=False
+            sec_type = [SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.OAUTH],
+            needs_def_type_name_label=True
         )
 
         return {
-            'create_form': CreateForm(oauth_security_list=oauth_security_list),
-            'edit_form': EditForm(oauth_security_list=oauth_security_list, prefix='edit'),
-            'change_password_form': ChangePasswordForm(),
+            'create_form': CreateForm(self.req, security_list),
+            'edit_form': EditForm(self.req, security_list, prefix='edit'),
         }
 
 # ################################################################################################################################

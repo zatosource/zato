@@ -73,6 +73,12 @@ extra_secret_keys = (
     # Salesforce
     'consumer_key',
     'consumer_secret',
+
+    # Outconn FHIR
+    'security_id',
+
+    # Outconn FHIR
+    'sec_tls_ca_cert_id'
 )
 
 # Note that this is a set, unlike extra_secret_keys, because we do not make it part of SIO.
