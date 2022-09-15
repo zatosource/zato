@@ -1602,10 +1602,10 @@ class HL7:
 
         class FHIR_Auth_Type:
             Basic_Auth = NameId('Basic Auth', 'basic-auth')
-            JWT = NameId('JWT', 'jwt')
+            OAuth = NameId('OAuth', 'oauth')
 
             def __iter__(self):
-                return iter((self.Basic_Auth, self.JWT))
+                return iter((self.Basic_Auth, self.OAuth))
 
 # ################################################################################################################################
 # ################################################################################################################################
