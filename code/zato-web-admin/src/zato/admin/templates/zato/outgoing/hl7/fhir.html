@@ -154,7 +154,8 @@
                         <td class='ignore'>{{ item.extra|default:"" }}</td>
 
                         {% comment %} 6 {% endcomment %}
-                        <td class='ignore'>{{ item.oauth_def|default:"" }}</td>
+                        <td class='ignore'>{{ item.security_id|default:"" }}</td>
+                        <td class='ignore'>{{ item.sec_tls_ca_cert_id|default:"" }}</td>
 
                     </tr>
                 {% endfor %}

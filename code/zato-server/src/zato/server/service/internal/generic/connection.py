@@ -74,11 +74,6 @@ extra_secret_keys = (
     'consumer_key',
     'consumer_secret',
 
-    # Outconn FHIR
-    'security_id',
-
-    # Outconn FHIR
-    'sec_tls_ca_cert_id'
 )
 
 # Note that this is a set, unlike extra_secret_keys, because we do not make it part of SIO.
@@ -97,8 +92,8 @@ class _CreateEditSIO(AdminSIO):
     input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'),
         Bool('sec_use_rbac'))
     input_optional = ('cluster_id', 'id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
-        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id', AsIs('client_id')) + \
-        extra_secret_keys + generic_attrs
+        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id', AsIs('client_id'),
+        AsIs('security_id'), AsIs('sec_tls_ca_cert_id')) + extra_secret_keys + generic_attrs
     force_empty_keys = True
 
 # ################################################################################################################################
