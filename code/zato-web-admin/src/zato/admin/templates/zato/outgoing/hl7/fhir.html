@@ -36,9 +36,7 @@
             'address',
 
             {% comment %} 2 {% endcomment %}
-            '_username',
-            //'_auth_type',
-            '_change_password',
+            'security',
 
             {% comment %} 3 {% endcomment %}
             '_edit',
@@ -51,8 +49,6 @@
             '_pool_size',
 
             {% comment %} 5 {% endcomment %}
-            'username',
-            'auth_type',
             'extra',
 
             {% comment %} 6 {% endcomment %}
@@ -97,9 +93,7 @@
                         <th><a href="#">Address</a></th>
 
                         {% comment %} 2 {% endcomment %}
-                        <th><a href="#">Username</a></th>
-                        <!-- <th>Auth. type</th> -->
-                        <th>&nbsp;</th>
+                        <th><a href="#">Security</a></th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -134,9 +128,13 @@
                         <td><a href="{{ item.address }}">{{ item.address }}</a></td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td>{{ item.username|no_value_indicator }}</td>
-                        <!-- <td>{{ item.auth_type|no_value_indicator }}</td> -->
-                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change password')">Change password</a></td>
+                        <td>
+                            {% if item.security_name %}
+                                {{ item.sec_def_type_name }}
+                                <br/>
+                                {{ item.security_name }}
+                            {% endif %}
+                        </td>
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.outgoing.hl7.fhir.edit('{{ item.id }}')">Edit</a></td>
@@ -149,8 +147,6 @@
                         <td class='ignore'>{{ item.pool_size }}</td>
 
                         {% comment %} 5 {% endcomment %}
-                        <td class='ignore'>{{ item.username|default:"" }}</td>
-                        <td class='ignore'>{{ item.auth_type|default:"" }}</td>
                         <td class='ignore'>{{ item.extra|default:"" }}</td>
 
                         {% comment %} 6 {% endcomment %}
@@ -327,36 +323,6 @@
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
-                </form>
-            </div>
-        </div>
-
-        <div id="change_password-div" class='data-popup ignore'>
-            <div class="bd">
-                <form action="{% url "outgoing-hl7-fhir-change-password" %}" method="post" id="change_password-form">
-                    <table class="form-data">
-                        <tr>
-                            <td style="vertical-align:middle; width:19%">Name</td>
-                            <td id="change-password-name"></td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Password</td>
-                            <td>{{ change_password_form.password1 }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Confirm password</td>
-                            <td>{{ change_password_form.password2 }}
-                                <input type="hidden" id="id_change_password-id" name="id" />
-                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
-                            </td>
-                        </tr>
-                    </table>
                 </form>
             </div>
         </div>

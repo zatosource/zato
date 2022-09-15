@@ -35,7 +35,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'security_id', 'sec_tls_ca_cert_id', 'pool_size'
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'security_id', 'sec_tls_ca_cert_id', \
+            'pool_size', 'sec_def_type_name', 'security_name'
         output_optional = ('extra',) + generic_attrs
         output_repeated = True
 

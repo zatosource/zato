@@ -48,7 +48,7 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     }
 
     let is_active = item.is_active == true;
-    let is_cloud = item.is_cloud == true;
+    var security_name = item.security_id ? item.security_select : '<span class="form_hint">---</span>';
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
@@ -59,10 +59,7 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     row += String.format('<td><a href="{0}">{0}</a></td>', item.address);
 
     // 2
-    row += String.format("<td>{0}</td>", item.username || $.fn.zato.empty_value);
-    // row += String.format("<td>{0}</td>", item.auth_type || $.fn.zato.empty_value);
-    row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change password')\">Change password</a>", item.id));
+    row += String.format("<td>{0}</td>", security_name || $.fn.zato.empty_value);
 
     // 3
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.hl7.fhir.edit('{0}')\">Edit</a>", item.id));
@@ -75,8 +72,6 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     row += String.format("<td class='ignore'>{0}</td>", item.pool_size);
 
     // 5
-    row += String.format("<td class='ignore'>{0}</td>", item.username);
-    row += String.format("<td class='ignore'>{0}</td>", item.auth_type);
     row += String.format("<td class='ignore'>{0}</td>", item.extra);
 
     // 6
