@@ -34,7 +34,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 _basic_auth = HL7.Const.FHIR_Auth_Type.Basic_Auth.id
-_jwt = HL7.Const.FHIR_Auth_Type.JWT.id
+_oauth = HL7.Const.FHIR_Auth_Type.OAuth.id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,13 +47,41 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
         address = self.zato_config['address']
         auth_header = self.zato_build_basic_auth_header()
-        extra_headers = self.zato_build_extra_headers()
 
-        super().__init__(address, authorization=auth_header, extra_headers=extra_headers)
+        super().__init__(address, authorization=auth_header)
 
 # ################################################################################################################################
 
-    def zato_build_basic_auth_header(self) -> 'str':
+    def _build_request_headers(self):
+
+        # This is constant
+        headers = {
+            'Accept': 'application/json'
+        }
+
+        # This is inherited from the parent class
+        if self.extra_headers is not None:
+            headers = {**headers, **self.extra_headers}
+
+        # This needs to be dynamically created ..
+        if self.zato_config['auth_type'] == _basic_auth:
+            auth_header = self.zato_get_basic_auth_header()
+
+        elif self.zato_config['auth_type'] == _oauth:
+            auth_header = self.zato_get_basic_auth_header()
+
+        else:
+            auth_header = None
+
+        # .. now, it can be assigned ..
+        headers['Authorization'] = auth_header
+
+        # .. and the whole set of headers can be returned.
+        return headers
+
+# ################################################################################################################################
+
+    def zato_get_basic_auth_header(self) -> 'str':
 
         username = self.zato_config['username']
         password = self.zato_config['secret']
@@ -68,10 +96,8 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
 # ################################################################################################################################
 
-    def zato_build_extra_headers(self) -> 'stranydict':
-        out = {}
-
-        return out
+    def zato_get_oauth_header(self) -> 'str':
+        pass
 
 # ################################################################################################################################
 
