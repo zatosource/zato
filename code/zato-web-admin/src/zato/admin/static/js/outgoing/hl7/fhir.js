@@ -21,6 +21,8 @@ $(document).ready(function() {
         'name',
         'address',
         'pool_size',
+        'security_id',
+        'sec_tls_ca_cert_id',
     ]);
 })
 
@@ -78,7 +80,8 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     row += String.format("<td class='ignore'>{0}</td>", item.extra);
 
     // 6
-    row += String.format("<td class='ignore'>{0}</td>", item.oauth_def);
+    row += String.format("<td class='ignore'>{0}</td>", item.security_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.sec_tls_ca_cert_id);
 
     if(include_tr) {
         row += '</tr>';

@@ -56,7 +56,8 @@
             'extra',
 
             {% comment %} 6 {% endcomment %}
-            'oauth_def',
+            'security_id',
+            'sec_tls_ca_cert_id',
 
         ]
     }
@@ -220,13 +221,13 @@
                         <tr>
                             <td>
                                 <label for="id_username">
-                                Username
+                                Security
                                 </label>
                             </td>
                             <td>
-                                {{ create_form.username }}
-                                <label>OAuth</label>
-                                {{ create_form.oauth_def }}
+                                {{ create_form.security_id }}
+                                <label>TLS CA Certs</label>
+                                {{ create_form.sec_tls_ca_cert_id }}
                             </td>
                         </tr>
                         <tr>
@@ -299,13 +300,13 @@
                         <tr>
                             <td>
                                 <label for="id_username">
-                                Username
+                                Security
                                 </label>
                             </td>
                             <td>
-                                {{ edit_form.username }}
-                                <label>OAuth</label>
-                                {{ edit_form.oauth_def }}
+                                {{ edit_form.security_id }}
+                                <label>TLS CA Certs</label>
+                                {{ edit_form.sec_tls_ca_cert_id }}
                             </td>
                         </tr>
                         <tr>
