@@ -10,17 +10,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.hl7.fhir import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
     invoke_action_handler, method_allowed, ping_connection, SecurityList
 from zato.common.api import GENERIC, generic_attrs, HL7 as HL7Common, SEC_DEF_TYPE
 from zato.common.model.hl7 import HL7FHIRConfigObject
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-default_auth_type = HL7Common.Const.FHIR_Auth_Type.Basic_Auth.id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,7 +71,6 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outconn'] = False
         initial_input_dict['sec_use_rbac'] = False
         initial_input_dict['recv_timeout'] = 250
-        initial_input_dict['auth_type'] = default_auth_type
 
 # ################################################################################################################################
 
