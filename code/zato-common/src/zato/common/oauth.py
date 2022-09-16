@@ -26,7 +26,7 @@ from zato.common.typing_ import dataclass
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, callable_, dictnone, intanydict, stranydict
+    from zato.common.typing_ import any_, callable_, dictnone, intanydict, stranydict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -213,6 +213,14 @@ class OAuthStore:
 
             # .. finally, we can return it to our caller.
             return item
+
+# ################################################################################################################################
+
+    def get_auth_header(self, item_id:'int') -> 'strnone':
+        item = self.get(item_id)
+        if item:
+            header = '{} {}'.format(item.data['token_type'], item.data['access_token'])
+            return header
 
 # ################################################################################################################################
 

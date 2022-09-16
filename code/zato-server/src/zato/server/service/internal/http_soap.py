@@ -49,7 +49,7 @@ class _HTTPSOAPService:
         """ First checks whether the security type is correct for the given
         connection type. If it is, returns a dictionary of security-related information.
         """
-        info = {'security_name':None, 'sec_type':None}
+        info = {'security_id': None, 'security_name':None, 'sec_type':None}
 
         if security_id:
 
@@ -57,14 +57,14 @@ class _HTTPSOAPService:
                 filter(SecurityBase.id==security_id).\
                 one()
 
-            # Outgoing plain HTTP connections may use HTTP Basic Auth only,
-            # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
             if connection == 'outgoing':
 
                 if transport == URL_TYPE.PLAIN_HTTP and \
-                   sec_def.sec_type not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT, SEC_DEF_TYPE.APIKEY):
+                   sec_def.sec_type not in (SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT,
+                        SEC_DEF_TYPE.APIKEY, SEC_DEF_TYPE.OAUTH):
                     raise Exception('Unsupported sec_type `{}`'.format(sec_def.sec_type))
 
+            info['security_id'] = security_id
             info['security_name'] = sec_def.name
             info['sec_type'] = sec_def.sec_type
 
@@ -672,6 +672,8 @@ class Ping(AdminService):
                 result = config_dict.get(item.name).ping(self.cid)
                 is_success = True
             except Exception as e:
+                from traceback import format_exc
+                self.logger.warn('QQQ-1 -> %s', format_exc())
                 result = e.args[0]
                 is_success = False
             finally:
