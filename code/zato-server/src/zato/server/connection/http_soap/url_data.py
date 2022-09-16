@@ -891,6 +891,12 @@ class URLData(CyURLData, OAuthDataStore):
         with self.url_sec_lock:
             return self.oauth_config.get(name)
 
+    def oauth_get_by_id(self, def_id):
+        """ Same as oauth_get but returns information by definition ID.
+        """
+        with self.url_sec_lock:
+            return self._get_sec_def_by_id(self.oauth_config, def_id)
+
     def on_broker_msg_SECURITY_OAUTH_CREATE(self, msg, *args):
         """ Creates a new OAuth account.
         """

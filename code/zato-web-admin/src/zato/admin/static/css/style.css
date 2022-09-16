@@ -295,7 +295,7 @@ span.like-a {
 }
 
 #data-table td {
-    vertical-align: base
+    vertical-align:middle !important
 }
 
 #data-table td.inline_header {

@@ -90,6 +90,23 @@ class _BaseGet(AdminService):
 
 # ################################################################################################################################
 
+    def _get_sec_tls_ca_cert_id_from_item(self, item):
+
+        sec_tls_ca_cert_id = item.get('sec_tls_ca_cert_id')
+        sec_tls_ca_cert_verify_strategy = item.get('sec_tls_ca_cert_verify_strategy')
+
+        if sec_tls_ca_cert_id is None:
+            if sec_tls_ca_cert_verify_strategy is False:
+                out = ZATO_NONE
+            else:
+                out = ZATO_DEFAULT
+        else:
+            out = sec_tls_ca_cert_id
+
+        return out
+
+# ################################################################################################################################
+
 class Get(_BaseGet):
     """ Returns information about an individual HTTP/SOAP object by its ID.
     """
@@ -104,6 +121,7 @@ class Get(_BaseGet):
             self.request.input.require_any('id', 'name')
             item = http_soap(session, self.request.input.cluster_id, self.request.input.id, self.request.input.name)
             out = get_dict_with_opaque(item)
+            out['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(out)
             self.response.payload = out
 
 # ################################################################################################################################
@@ -128,11 +146,18 @@ class GetList(_BaseGet):
             self.request.input.get('data_format'),
             False,
             )
-        return elems_with_opaque(result)
+
+        data = elems_with_opaque(result)
+
+        for item in data:
+            item['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(item)
+
+        return data
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            data = self.get_data(session)
+            self.response.payload[:] = data
 
 # ################################################################################################################################
 # ################################################################################################################################
