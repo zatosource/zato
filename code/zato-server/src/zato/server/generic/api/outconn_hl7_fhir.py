@@ -24,6 +24,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from zato.common.typing_ import stranydict
+    from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,11 +45,15 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
     def __init__(self, config:'stranydict') -> 'None':
         self.zato_config = config
-
         address = self.zato_config['address']
-        auth_header = self.zato_build_basic_auth_header()
 
-        super().__init__(address, authorization=auth_header)
+        # This can be built in advance in case we are using Basic Auth
+        if self.zato_config['auth_type'] == _basic_auth:
+            self.zato_basic_auth_header = self.zato_get_basic_auth_header()
+        else:
+            self.zato_basic_auth_header = None
+
+        super().__init__(address)
 
 # ################################################################################################################################
 
@@ -63,18 +68,20 @@ class _HL7FHIRConnection(SyncFHIRClient):
         if self.extra_headers is not None:
             headers = {**headers, **self.extra_headers}
 
-        # This needs to be dynamically created ..
+        # This is already available ..
         if self.zato_config['auth_type'] == _basic_auth:
-            auth_header = self.zato_get_basic_auth_header()
+            auth_header = self.zato_basic_auth_header
 
+        # .. while this needs to be dynamically created ..
         elif self.zato_config['auth_type'] == _oauth:
-            auth_header = self.zato_get_basic_auth_header()
+            auth_header = self.zato_get_oauth_header()
 
         else:
             auth_header = None
 
         # .. now, it can be assigned ..
-        headers['Authorization'] = auth_header
+        if auth_header:
+            headers['Authorization'] = auth_header
 
         # .. and the whole set of headers can be returned.
         return headers
@@ -97,7 +104,8 @@ class _HL7FHIRConnection(SyncFHIRClient):
 # ################################################################################################################################
 
     def zato_get_oauth_header(self) -> 'str':
-        pass
+        server = self.zato_config['server'] # type: ParallelServer
+        server
 
 # ################################################################################################################################
 
@@ -112,6 +120,7 @@ class OutconnHL7FHIRWrapper(Wrapper):
     """
     def __init__(self, config, server):
         config.auth_url = config.address
+        config.server = server
         super(OutconnHL7FHIRWrapper, self).__init__(config, 'HL7 FHIR', server)
 
 # ################################################################################################################################

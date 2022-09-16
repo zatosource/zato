@@ -179,7 +179,14 @@ class _CreateEdit(_BaseService):
             else:
                 security_name = 'unset'
 
-            # .. and store everything now.
+            # .. potentially overwrites the security type with what we have here ..
+            data['auth_type'] = sec_def_type
+
+            # .. turns the ID into an integer but also remove the sec_type prefix,
+            # .. e.g. 17 instead of 'oauth/17'.
+            data['security_id'] = int(security_id)
+
+            # .. and store everything else now.
             data['sec_def_type_name'] = sec_def_type_name
             data['security_name'] = security_name
 
