@@ -47,13 +47,6 @@ class ModuleCtx:
     # How many seconds to wait for the auth server to reply when requesting a new token
     Auth_Reply_Timeout = 20
 
-    Test_Token = {
-        'token_type': 'Bearer',
-        'expires_in': 3600,
-        'access_token': 'abc',
-        'scope': 'zato.access'
-    }
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -89,7 +82,16 @@ class OAuthTokenClient:
 
     @staticmethod
     def from_config(config:'stranydict') -> 'OAuthTokenClient':
-        out = OAuthTokenClient(**config)
+
+        # Extract only the information that the client object expects on input
+        client_config = {
+            'conn_name': config['name'],
+            'username': config['username'],
+            'secret': config['password'],
+            'auth_server_url': config['auth_server_url'],
+            'scopes': config['scopes'],
+        }
+        out = OAuthTokenClient(**client_config)
         return out
 
 # ################################################################################################################################
@@ -151,10 +153,10 @@ class OAuthStore:
 
     def __init__(
         self,
-        get_config_func,   # type: callable_
-        obtain_item_func,  # type: callable_
-        max_obtain_iters,  # type: int
-        obtain_sleep_time, # type: int
+        get_config_func,  # type: callable_
+        obtain_item_func, # type: callable_
+        obtain_sleep_time = 5,          # type: int
+        max_obtain_iters  = 1234567890, # type: int
     ) -> 'None':
 
         # This callable will return an OAuth definition's configuration based on its ID
@@ -163,11 +165,11 @@ class OAuthStore:
         # This callable is used to obtain an OAuth token from an auth server
         self.obtain_item_func = obtain_item_func
 
-        # How many times at most we will try to obtain an individual token
-        self.max_obtain_iters = max_obtain_iters
-
         # For how many seconds to sleep in each iteration when obtaining a token
         self.obtain_sleep_time = obtain_sleep_time
+
+        # How many times at most we will try to obtain an individual token
+        self.max_obtain_iters = max_obtain_iters
 
         # Keys are OAuth definition IDs and values are RLock objects
         self._lock_dict = {} # type: intanydict

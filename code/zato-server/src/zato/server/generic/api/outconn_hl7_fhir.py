@@ -23,7 +23,7 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict
+    from zato.common.typing_ import stranydict, strnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -44,8 +44,9 @@ class _HL7FHIRConnection(SyncFHIRClient):
     zato_config: 'stranydict'
 
     def __init__(self, config:'stranydict') -> 'None':
+
         self.zato_config = config
-        address = self.zato_config['address']
+        self.zato_security_id = self.zato_config.get('security_id') or 0
 
         # This can be built in advance in case we are using Basic Auth
         if self.zato_config['auth_type'] == _basic_auth:
@@ -53,6 +54,7 @@ class _HL7FHIRConnection(SyncFHIRClient):
         else:
             self.zato_basic_auth_header = None
 
+        address = self.zato_config['address']
         super().__init__(address)
 
 # ################################################################################################################################
@@ -103,9 +105,11 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
 # ################################################################################################################################
 
-    def zato_get_oauth_header(self) -> 'str':
+    def zato_get_oauth_header(self) -> 'strnone':
         server = self.zato_config['server'] # type: ParallelServer
-        server
+        item = server.oauth_store.get(self.zato_security_id)
+        if item:
+            return '{} {}'.format(item.data['token_type'], item.data['access_token'])
 
 # ################################################################################################################################
 
