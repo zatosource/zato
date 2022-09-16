@@ -13,7 +13,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web.forms.outgoing.hl7.fhir import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
     invoke_action_handler, method_allowed, ping_connection, SecurityList
-from zato.common.api import GENERIC, generic_attrs, HL7 as HL7Common, SEC_DEF_TYPE
+from zato.common.api import GENERIC, generic_attrs, SEC_DEF_TYPE
 from zato.common.model.hl7 import HL7FHIRConfigObject
 
 # ################################################################################################################################
