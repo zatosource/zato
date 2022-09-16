@@ -107,9 +107,8 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
     def zato_get_oauth_header(self) -> 'strnone':
         server = self.zato_config['server'] # type: ParallelServer
-        item = server.oauth_store.get(self.zato_security_id)
-        if item:
-            return '{} {}'.format(item.data['token_type'], item.data['access_token'])
+        auth_header = server.oauth_store.get_auth_header(self.zato_security_id)
+        return auth_header
 
 # ################################################################################################################################
 

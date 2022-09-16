@@ -89,7 +89,7 @@ class IndexTestCase(BaseTestCase):
 
         # .. the list of patterns that point to URL paths that need to be skipped,
         # .. e.g. that appear to be index-like but they are not really.
-        to_skip = [
+        to_skip = {
 
             'basic/save/',
             'cache/builtin/clear',
@@ -108,7 +108,8 @@ class IndexTestCase(BaseTestCase):
             '/logout',
 
             '/zato/cloud/jira/reset-oauth2-scopes/',
-        ]
+            '/zato/security/oauth/outconn/client-credentials/change-secret/',
+        }
 
         # Go through all the paths founds ..
         for item in url_paths:
