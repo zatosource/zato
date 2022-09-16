@@ -46,6 +46,7 @@ from zato.common.json_internal import dumps, loads
 from zato.common.kv_data import KVDataAPI
 from zato.common.kvdb.api import KVDB
 from zato.common.marshal_.api import MarshalAPI
+from zato.common.oauth import OAuthStore, OAuthTokenClient
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import SkipDelivery
@@ -134,6 +135,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     broker_client: 'BrokerClient'
     zato_lock_manager: 'LockManager'
     startup_callable_tool: 'StartupCallableTool'
+    oauth_store: 'OAuthStore'
 
     def __init__(self) -> 'None':
         self.logger = logger
@@ -888,6 +890,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Configure remaining parts of SSO
         self.configure_sso()
 
+        # Configure the store to obtain OAuth tokens through
+        self.set_up_oauth_store()
+
         # Cannot be done in __init__ because self.sso_config is not available there yet
         salt_size = self.sso_config.hash_secret.salt_size
         self.crypto_manager.add_hash_scheme('zato.default', self.sso_config.hash_secret.rounds, salt_size)
@@ -1330,6 +1335,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             os.makedirs(self.kvdb_dir, exist_ok=True)
 
         self.load_zato_kvdb_data()
+
+# ################################################################################################################################
+
+    def set_up_oauth_store(self) -> 'None':
+
+        # Create the base object ..
+        self.oauth_store = OAuthStore(
+            self.worker_store.oauth_get_by_id,
+            OAuthTokenClient.obtain_from_config
+        )
+
+        # .. and populate it with initial data now.
+        for item_id in self.worker_store.oauth_get_all_id_list():
+            self.oauth_store.create(item_id)
 
 # ################################################################################################################################
 

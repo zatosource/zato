@@ -1514,6 +1514,18 @@ class WorkerStore(_WorkerStoreBase):
         """
         return self.request_dispatcher.url_data.oauth_get(name)
 
+    def oauth_get_by_id(self, def_id:'int') -> 'Bunch':
+        """ Same as oauth_get but by definition ID.
+        """
+        return self.request_dispatcher.url_data.oauth_get_by_id(def_id)
+
+    def oauth_get_all_id_list(self) -> 'Bunch':
+        """ Returns IDs of all OAuth definitions.
+        """
+        for item in self.request_dispatcher.url_data.oauth_config.values():
+            config = item.config
+            yield config['id']
+
     def on_broker_msg_SECURITY_OAUTH_CREATE(self, msg:'Bunch', *args:'any_') -> 'None':
         """ Creates a new OAuth security definition
         """
