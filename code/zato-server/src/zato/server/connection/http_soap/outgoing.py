@@ -63,11 +63,12 @@ soapenv12_namespace = 'http://www.w3.org/2003/05/soap-envelope'
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Basic_Auth = SEC_DEF_TYPE.BASIC_AUTH
 _API_Key = SEC_DEF_TYPE.APIKEY
+_Basic_Auth = SEC_DEF_TYPE.BASIC_AUTH
+_NTLM = SEC_DEF_TYPE.NTLM
+_OAuth = SEC_DEF_TYPE.OAUTH
 _TLS_Key_Cert = SEC_DEF_TYPE.TLS_KEY_CERT
 _WSS = SEC_DEF_TYPE.WSS
-_NTLM = SEC_DEF_TYPE.NTLM
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -85,12 +86,18 @@ class HTTPSAdapter(HTTPAdapter):
 class BaseHTTPSOAPWrapper:
     """ Base class for HTTP/SOAP connection wrappers.
     """
-    def __init__(self, config:'stranydict', _requests_session:'SASession'=None) -> 'None':
+    def __init__(
+        self,
+        config, # type: stranydict
+        _requests_session=None, # type: SASession
+        server=None # type: ParallelServer | None
+    ) -> 'None':
         self.config = config
         self.config['timeout'] = float(self.config['timeout']) if self.config['timeout'] else 0
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
         self.RequestsSession = RequestsSession or _requests_session
+        self.server = server
         self.session = RequestsSession()
         self.https_adapter = HTTPSAdapter()
         self.session.mount('https://', self.https_adapter)
@@ -136,14 +143,30 @@ class BaseHTTPSOAPWrapper:
 
         try:
 
-            # Suds connections don't have requests_auth
-            auth = getattr(self, 'requests_auth', None)
+            # OAuth tokens are obtained dynamically ..
+            if self.sec_type == _OAuth:
+                auth_header = self._get_oauth_auth()
+                headers['Authorization'] = auth_header
+
+                # This is needed by request
+                auth = None
+
+            # .. otherwise, the credentials will have been already obtained
+            # .. but note that Suds connections don't have requests_auth, hence the getattr call.
+            else:
+                auth = getattr(self, 'requests_auth', None)
 
             return self.session.request(
                 method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
                 cert=cert, verify=tls_verify, timeout=self.config['timeout'], *args, **kwargs)
         except RequestsTimeout:
             raise TimeoutException(cid, format_exc())
+
+# ################################################################################################################################
+
+    def _get_oauth_auth(self):
+        auth_header = self.server.oauth_store.get_auth_header(self.config['security_id'])
+        return auth_header
 
 # ################################################################################################################################
 
@@ -253,10 +276,13 @@ class BaseHTTPSOAPWrapper:
 class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
     """ A thin wrapper around the API exposed by the 'requests' package.
     """
-    def __init__(self, server, config, requests_module=None) -> 'None':
-        # type: (ParallelServer, dict, object) -> None
-        super(HTTPSOAPWrapper, self).__init__(config, requests_module)
-
+    def __init__(
+        self,
+        server, # type: ParallelServer
+        config, # type: stranydict
+        requests_module=None # type: any_
+    ) -> 'None':
+        super(HTTPSOAPWrapper, self).__init__(config, requests_module, server)
         self.server = server
 
         self.soap = {}
