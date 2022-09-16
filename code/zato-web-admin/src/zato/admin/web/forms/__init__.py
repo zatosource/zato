@@ -16,7 +16,7 @@ from future.utils import iteritems
 from past.builtins import basestring
 
 # Zato
-from zato.common.api import AuditLog, DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, TLS, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common.api import AuditLog, DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, TLS, ZATO_DEFAULT, ZATO_NONE, ZATO_SEC_USE_RBAC
 
 # ################################################################################################################################
 
@@ -90,6 +90,22 @@ def add_security_select(form, security_list, needs_no_security=True, field_name=
 
     for value, label in security_list:
         form.fields[field_name].choices.append([value, label])
+
+# ################################################################################################################################
+
+def add_sec_tls_ca_cert_id_select(req, form):
+
+    from zato.admin.web.views import get_tls_ca_cert_list
+
+    tls_ca_cert_list = get_tls_ca_cert_list(req.zato.client, req.zato.cluster)
+
+    form.fields['sec_tls_ca_cert_id'].choices = []
+    form.fields['sec_tls_ca_cert_id'].choices.append(INITIAL_CHOICES)
+    form.fields['sec_tls_ca_cert_id'].choices.append([ZATO_NONE, 'Skip validation'])
+    form.fields['sec_tls_ca_cert_id'].choices.append([ZATO_DEFAULT, 'Default bundle'])
+
+    for value, label in tls_ca_cert_list.items():
+        form.fields['sec_tls_ca_cert_id'].choices.append([value, label])
 
 # ################################################################################################################################
 
