@@ -63,6 +63,15 @@ soapenv12_namespace = 'http://www.w3.org/2003/05/soap-envelope'
 # ################################################################################################################################
 # ################################################################################################################################
 
+_Basic_Auth = SEC_DEF_TYPE.BASIC_AUTH
+_API_Key = SEC_DEF_TYPE.APIKEY
+_TLS_Key_Cert = SEC_DEF_TYPE.TLS_KEY_CERT
+_WSS = SEC_DEF_TYPE.WSS
+_NTLM = SEC_DEF_TYPE.NTLM
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class HTTPSAdapter(HTTPAdapter):
     """ An adapter which exposes a method for clearing out the underlying pool. Useful with HTTPS as it allows to update TLS
     material on the fly.
@@ -91,9 +100,10 @@ class BaseHTTPSOAPWrapper:
         self.address = ''
         self.path_params = []
         self.base_headers = {}
+        self.sec_type = self.config['sec_type']
 
         # API keys
-        if self.config['sec_type'] == SEC_DEF_TYPE.APIKEY:
+        if self.sec_type == _API_Key:
             username = self.config.get('orig_username')
             if not username:
                 username = self.config['username']
@@ -116,7 +126,7 @@ class BaseHTTPSOAPWrapper:
     ) -> 'Response':
 
         json = kwargs.pop('json', None)
-        cert = self.config['tls_key_cert_full_path'] if self.config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT else None
+        cert = self.config['tls_key_cert_full_path'] if self.sec_type == _TLS_Key_Cert else None
 
         if 'ZATO_SKIP_TLS_VERIFY' in os.environ:
             tls_verify = False
@@ -288,18 +298,16 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
     def set_auth(self) -> 'None':
 
-        sec_type = self.config['sec_type']
-
         self.requests_auth = None
         self.username = None
 
         # HTTP Basic Auth
-        if sec_type == SEC_DEF_TYPE.BASIC_AUTH:
+        if self.sec_type == _Basic_Auth:
             self.requests_auth = self.auth
             self.username = self.requests_auth[0]
 
         # WS-Security
-        elif sec_type == SEC_DEF_TYPE.WSS:
+        elif self.sec_type == _WSS:
             self.soap[self.config['soap_version']]['header'] = \
                 self.soap[self.config['soap_version']]['header_template'].format(
                     Username=self.config['username'], Password=self.config['password'])
@@ -351,7 +359,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         """ Returns a username and password pair or None, if no security definition
         has been attached.
         """
-        if self.config['sec_type'] in (SEC_DEF_TYPE.BASIC_AUTH,):
+        if self.sec_type in {_Basic_Auth}:
             auth = (self.config['username'], self.config['password'])
         else:
             auth = None
@@ -564,26 +572,24 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
             client = None
             transport = None
 
-            sec_type = self.config['sec_type']
-
-            if sec_type == SEC_DEF_TYPE.BASIC_AUTH:
+            if self.sec_type == _Basic_Auth:
                 transport = HttpAuthenticated(**self.suds_auth)
 
-            elif sec_type == SEC_DEF_TYPE.NTLM:
+            elif self.sec_type == _NTLM:
                 transport = WindowsHttpAuthenticated(**self.suds_auth)
 
-            elif sec_type == SEC_DEF_TYPE.WSS:
+            elif self.sec_type == _WSS:
                 security = Security()
                 token = UsernameToken(self.suds_auth['username'], self.suds_auth['password'])
                 security.tokens.append(token)
 
                 client = Client(self.address, autoblend=True, wsse=security)
 
-            if sec_type in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM):
+            if self.sec_type in {_Basic_Auth, _NTLM}:
                 client = Client(self.address, autoblend=True, transport=transport)
 
             # Still could be either none at all or WSS
-            if not sec_type:
+            if not self.sec_type:
                 client = Client(self.address, autoblend=True, timeout=self.config['timeout'])
 
             if client:
