@@ -12,9 +12,6 @@ from datetime import datetime
 from logging import getLogger
 from operator import add as op_add, gt as op_gt, lt as op_lt, sub as op_sub
 
-# numpy
-import numpy as np
-
 # Zato
 from zato.common.api import StatsKey
 from zato.common.typing_ import dataclass
@@ -198,6 +195,9 @@ class NumberRepo(BaseRepo):
 # ################################################################################################################################
 
     def set_last_duration(self, key:'str', current_duration:'float') -> 'None':
+
+        # Numpy
+        import numpy as np
 
         with self.update_lock:
 
