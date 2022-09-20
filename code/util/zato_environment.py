@@ -338,6 +338,46 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
+    def pip_install_packages(self, packages) -> 'None':
+
+        # All the -e arguments that pip will receive
+        pip_args = []
+
+        # Build the arguments
+        for name in packages:
+            package_path = os.path.join(self.base_dir, name)
+            arg = '-e {}'.format(package_path)
+            pip_args.append(arg)
+
+        # Build the command ..
+        command = '{} install {}'.format(self.pip_command, ' '.join(pip_args))
+
+        # .. and run it.
+        self.run_command(command, exit_on_error=False)
+
+# ################################################################################################################################
+
+    def pip_install_standalone_requirements(self) -> 'None':
+
+        # These cannot be installed via requirements.txt
+        packages = [
+            'cython',
+            'numpy',
+        ]
+
+        for package in packages:
+
+            # Set up the command ..
+            command = '{pip_command} install {package}'.format(**{
+                'pip_command': self.pip_command,
+                'package': package,
+            })
+
+            # .. and run it.
+            self.run_command(command, exit_on_error=False)
+
+# ################################################################################################################################
+
     def pip_install_zato_packages(self) -> 'None':
 
         # Note that zato-common must come first.
@@ -359,20 +399,7 @@ class EnvironmentManager:
             'zato-testing',
         ]
 
-        # All the -e arguments that pip will receive
-        pip_args = []
-
-        # Build the arguments
-        for name in packages:
-            package_path = os.path.join(self.base_dir, name)
-            arg = '-e {}'.format(package_path)
-            pip_args.append(arg)
-
-        # Build the command ..
-        command = '{} install {}'.format(self.pip_command, ' '.join(pip_args))
-
-        # .. and run it.
-        self.run_command(command, exit_on_error=False)
+        self.pip_install_packages(packages)
 
 # ################################################################################################################################
 
@@ -395,6 +422,7 @@ class EnvironmentManager:
 
     def pip_install(self) -> 'None':
         self.pip_install_core_pip()
+        self.pip_install_standalone_requirements()
         self.pip_install_zato_requirements()
         self.pip_install_zato_packages()
         self.pip_uninstall()
