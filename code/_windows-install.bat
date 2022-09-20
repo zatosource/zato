@@ -8,6 +8,11 @@ rem
 set curdir=%~dp0
 
 rem
+rem Ensure that git considers our directory as safe
+rem
+git config --add safe.directory curdir\..
+
+rem
 rem Install prerequisites
 rem
 python -m ensurepip
