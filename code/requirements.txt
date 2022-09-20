@@ -84,7 +84,6 @@ netaddr==0.8.0
 netifaces==0.10.4
 newrelic==2.20.0.17
 nose==1.3.7
-numpy==1.23.3
 o365==2.0.19
 odoo-client-lib==1.2.2
 openpyxl==3.0.5
@@ -172,11 +171,12 @@ zato-vault-client==1.3
 zope.event==4.5.0
 zxcvbn==4.4.28
 
-future==0.18.2; sys_platform == 'linux'
+future==0.18.2
 gevent-inotifyx==0.1.1; sys_platform == 'linux'
 greenify==0.3.2; sys_platform == 'linux'
 inotify-simple==1.3.5; sys_platform == 'linux'
 memray==1.1.0; sys_platform == 'linux'
+numpy==1.23.3; sys_platform == 'linux'
 posix-ipc==1.0.0; sys_platform == 'linux'
 psycopg2==2.8.6; sys_platform == 'linux'
 python-ldap==3.4.0; sys_platform == 'linux'
