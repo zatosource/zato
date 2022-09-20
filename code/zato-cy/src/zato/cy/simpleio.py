@@ -43,7 +43,7 @@ from zato.util_convert import to_bool
 from zato.bunch import Bunch, bunchify
 
 # Python 2/3 compatibility
-from past.builtins import basestring, str as past_str
+from zato.common.py23_.past.builtins import basestring, str as past_str
 
 # ################################################################################################################################
 

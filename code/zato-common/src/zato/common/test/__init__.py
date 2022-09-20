@@ -50,7 +50,7 @@ from zato.server.service import Service
 from zato.simpleio import CySimpleIO
 
 # Python 2/3 compatibility
-from past.builtins import basestring, cmp, unicode, xrange
+from zato.common.py23_.past.builtins import basestring, cmp, unicode, xrange
 
 # ################################################################################################################################
 # ################################################################################################################################

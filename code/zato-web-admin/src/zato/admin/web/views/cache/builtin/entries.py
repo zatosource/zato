@@ -16,7 +16,7 @@ from base64 import b64decode, b64encode
 from bunch import Bunch
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 
 # Zato
 from zato.admin.web import from_utc_to_user
