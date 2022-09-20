@@ -50,6 +50,11 @@ pip_deps = pip_deps_windows if is_windows else pip_deps_non_windows
 zato_command_template = """
 #!{bin_dir}/python
 
+# To prevent an attribute error in pyreadline\py3k_compat.py
+# AttributeError: module 'collections' has no attribute 'Callable'
+import collections
+collections.Callable = collections.abc.Callable
+
 # Zato
 from zato.cli.zato_command import main
 
@@ -314,6 +319,7 @@ class EnvironmentManager:
         # Set up the command ..
         command = """
             {pip_command}
+            -v
             install
             {pip_options}
             -r {reqs_path}
@@ -350,7 +356,7 @@ class EnvironmentManager:
             pip_args.append(arg)
 
         # Build the command ..
-        command = '{} install {}'.format(self.pip_command, ' '.join(pip_args))
+        command = '{} -v install {}'.format(self.pip_command, ' '.join(pip_args))
 
         # .. and run it.
         self.run_command(command, exit_on_error=False)
@@ -363,12 +369,13 @@ class EnvironmentManager:
         packages = [
             'cython==0.29.32',
             'numpy==1.22.3',
+            'pyOpenSSL==22.0.0',
         ]
 
         for package in packages:
 
             # Set up the command ..
-            command = '{pip_command} install {package}'.format(**{
+            command = '{pip_command} -v install {package}'.format(**{
                 'pip_command': self.pip_command,
                 'package': package,
             })
