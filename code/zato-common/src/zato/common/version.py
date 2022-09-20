@@ -58,7 +58,7 @@ def get_version():
     from sys import version_info as py_version_info
 
     # Python 2/3 compatibility
-    from past.builtins import execfile
+    from zato.common.py23_.past.builtins import execfile
 
     try:
 

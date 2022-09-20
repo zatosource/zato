@@ -23,7 +23,7 @@ from zato.admin.web.forms.cache.builtin.entry import CreateForm, EditForm
 from zato.common.api import CACHE
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 
 # ################################################################################################################################
 
