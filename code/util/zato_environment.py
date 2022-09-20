@@ -361,8 +361,8 @@ class EnvironmentManager:
 
         # These cannot be installed via requirements.txt
         packages = [
-            'cython',
-            'numpy',
+            'cython==0.29.32',
+            'numpy==1.22.3',
         ]
 
         for package in packages:
