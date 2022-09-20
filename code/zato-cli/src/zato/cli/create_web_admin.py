@@ -99,7 +99,7 @@ class Create(ZatoCommand):
         from django.core.management import call_command
 
         # Python 2/3 compatibility
-        from past.builtins import unicode
+        from zato.common.py23_.past.builtins import unicode
 
         # Zato
         # TODO: There really shouldn't be any direct dependency between zato-cli and zato-web-admin

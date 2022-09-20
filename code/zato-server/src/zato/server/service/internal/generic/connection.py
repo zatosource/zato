@@ -27,7 +27,7 @@ from zato.server.service.internal.generic import _BaseService
 from zato.server.service.meta import DeleteMeta
 
 # Python 2/3 compatibility
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 from six import add_metaclass
 
 # ################################################################################################################################

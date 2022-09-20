@@ -239,7 +239,7 @@ class SetAdminInvokePassword(_WebAdminAuthCommand):
         from zato.common.crypto.api import WebAdminCryptoManager
 
         # Python 2/3 compatibility
-        from past.builtins import unicode
+        from zato.common.py23_.past.builtins import unicode
 
         # Find directories for config data
         os.chdir(os.path.abspath(args.path))

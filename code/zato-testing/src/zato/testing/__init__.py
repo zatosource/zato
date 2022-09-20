@@ -35,7 +35,7 @@ from zato.server.service.store import ServiceStore
 from zato.testing.requests_ import RequestsAdapter
 
 # Python 2/3 compatibility
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 
 # ################################################################################################################################
 
