@@ -462,7 +462,8 @@ class EnvironmentManager:
         self.add_extlib_to_sys_path(extlib_dir)
 
         # .. and symlink it for backward compatibility.
-        self._create_symlink(extlib_dir_path, extra_paths_dir)
+        if not is_windows:
+            self._create_symlink(extlib_dir_path, extra_paths_dir)
 
 # ################################################################################################################################
 
