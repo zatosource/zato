@@ -71,7 +71,8 @@ from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
 from zato.admin.web.views.sms import twilio
-from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, oauth, rbac
+from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, rbac
+from zato.admin.web.views.security.oauth import outconn_client_credentials as oauth_outconn_client_credentials
 from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as tls_channel, key_cert as tls_key_cert
 from zato.admin.web.views.security.vault import connection as vault_conn
 from zato.admin.web.views.stats import service_usage as stats_service_usage
@@ -326,20 +327,19 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. OAuth
+    # .. OAuth - Outgoing connections
 
-    url(r'^zato/security/oauth/$',
-        login_required(oauth.Index()), name=oauth.Index.url_name),
-    url(r'^zato/security/oauth/$',
-        login_required(oauth.Index()), name=oauth.Index.url_name),
-    url(r'^zato/security/oauth/create/$',
-        login_required(oauth.Create()), name=oauth.Create.url_name),
-    url(r'^zato/security/oauth/edit/$',
-        login_required(oauth.Edit()), name=oauth.Edit.url_name),
-    url(r'^zato/security/oauth/change-password/$',
-        login_required(oauth.change_secret), name='security-oauth-change-secret'),
-    url(r'^zato/security/oauth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(oauth.Delete()), name=oauth.Delete.url_name),
+    url(r'^zato/security/oauth/outconn/client-credentials/$',
+        login_required(oauth_outconn_client_credentials.Index()), name=oauth_outconn_client_credentials.Index.url_name),
+    url(r'^zato/security/oauth/outconn/client-credentials/create/$',
+        login_required(oauth_outconn_client_credentials.Create()), name=oauth_outconn_client_credentials.Create.url_name),
+    url(r'^zato/security/oauth/outconn/client-credentials/edit/$',
+        login_required(oauth_outconn_client_credentials.Edit()), name=oauth_outconn_client_credentials.Edit.url_name),
+    url(r'^zato/security/oauth/outconn/client-credentials/change-secret/$',
+        login_required(oauth_outconn_client_credentials.change_secret),
+            name='security-oauth-outconn-client-credentials-change-secret'),
+    url(r'^zato/security/oauth/outconn/client-credentials/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(oauth_outconn_client_credentials.Delete()), name=oauth_outconn_client_credentials.Delete.url_name),
     ]
 
 # ################################################################################################################################
