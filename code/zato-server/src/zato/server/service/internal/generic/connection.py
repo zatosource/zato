@@ -11,6 +11,7 @@ from contextlib import closing
 from copy import deepcopy
 from datetime import datetime
 from traceback import format_exc
+from uuid import uuid4
 
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, ZATO_NONE
@@ -141,6 +142,8 @@ class _CreateEdit(_BaseService):
                 value = self._sio.eval_(key, value, self.server.encrypt)
 
             if key in extra_secret_keys:
+                if value is None:
+                    value = 'auto.generic.{}'.format(uuid4().hex)
                 value = self.crypto.encrypt(value)
                 value = value.decode('utf8')
 
