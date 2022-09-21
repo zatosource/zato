@@ -84,6 +84,11 @@ zato_generic_connection:
       security_def: ZATO_NONE
       subscription_list:
       type_: outconn-wsx
+
+      # These are taken from generic.connection.py -> extra_secret_keys
+      oauth2_access_token: null
+      consumer_key: null
+      consumer_secret: null
 """
 
 # ################################################################################################################################

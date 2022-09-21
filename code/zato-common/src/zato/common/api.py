@@ -100,7 +100,7 @@ generic_attrs = (
     'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
     'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding',
     'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq',
-    'max_wait_time'
+    'max_wait_time', 'oauth_def'
 )
 
 # ################################################################################################################################
@@ -260,7 +260,7 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.BASIC_AUTH: 'Basic Auth',
     SEC_DEF_TYPE.JWT: 'JWT',
     SEC_DEF_TYPE.NTLM: 'NTLM',
-    SEC_DEF_TYPE.OAUTH: 'OAuth 1.0',
+    SEC_DEF_TYPE.OAUTH: 'OAuth',
     SEC_DEF_TYPE.TLS_CHANNEL_SEC: 'TLS channel',
     SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
     SEC_DEF_TYPE.VAULT: 'Vault',
@@ -709,13 +709,6 @@ class PARAMS_PRIORITY:
 
     def __iter__(self):
         return iter((self.CHANNEL_PARAMS_OVER_MSG, self.MSG_OVER_CHANNEL_PARAMS, self.DEFAULT))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class NONCE_STORE:
-    KEY_PATTERN = 'zato:nonce-store:{}:{}' # E.g. zato:nonce-store:oauth:27
-    DEFAULT_MAX_LOG = 25000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1532,6 +1525,17 @@ class Microsoft365:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class OAuth:
+
+    class Default:
+        Auth_Server_URL = 'https://example.com/oauth2/default/v1/token'
+        Scopes = [
+            'zato.access',
+        ]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class HL7:
 
     class Default:
@@ -1598,10 +1602,10 @@ class HL7:
 
         class FHIR_Auth_Type:
             Basic_Auth = NameId('Basic Auth', 'basic-auth')
-            JWT = NameId('JWT', 'jwt')
+            OAuth = NameId('OAuth', 'oauth')
 
             def __iter__(self):
-                return iter((self.Basic_Auth, self.JWT))
+                return iter((self.Basic_Auth, self.OAuth))
 
 # ################################################################################################################################
 # ################################################################################################################################
