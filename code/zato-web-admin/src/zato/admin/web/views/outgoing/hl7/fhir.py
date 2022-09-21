@@ -10,17 +10,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.hl7.fhir import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
-    invoke_action_handler, method_allowed, ping_connection
-from zato.common.api import GENERIC, generic_attrs, HL7 as HL7Common
+    invoke_action_handler, method_allowed, ping_connection, SecurityList
+from zato.common.api import GENERIC, generic_attrs, SEC_DEF_TYPE
 from zato.common.model.hl7 import HL7FHIRConfigObject
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-default_auth_type = HL7Common.Const.FHIR_Auth_Type.Basic_Auth.id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,17 +29,25 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'username', 'auth_type', 'pool_size'
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'address', 'security_id', 'sec_tls_ca_cert_id', \
+            'pool_size', 'sec_def_type_name', 'security_name'
         output_optional = ('extra',) + generic_attrs
         output_repeated = True
 
 # ################################################################################################################################
 
     def handle(self):
+
+        security_list = SecurityList.from_service(
+            self.req.zato.client,
+            self.cluster_id,
+            sec_type = [SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.OAUTH],
+            needs_def_type_name_label=True
+        )
+
         return {
-            'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit'),
-            'change_password_form': ChangePasswordForm(),
+            'create_form': CreateForm(self.req, security_list),
+            'edit_form': EditForm(self.req, security_list, prefix='edit'),
         }
 
 # ################################################################################################################################
@@ -55,7 +57,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_internal', 'address', 'username', 'auth_type', 'pool_size'
+        input_required = 'name', 'is_internal', 'address', 'security_id', 'sec_tls_ca_cert_id', 'pool_size'
         input_optional = ('is_active', 'extra') + generic_attrs
         output_required = 'id', 'name'
 
@@ -69,7 +71,6 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outconn'] = False
         initial_input_dict['sec_use_rbac'] = False
         initial_input_dict['recv_timeout'] = 250
-        initial_input_dict['auth_type'] = default_auth_type
 
 # ################################################################################################################################
 

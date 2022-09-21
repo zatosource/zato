@@ -91,6 +91,8 @@ class GenericObjectWrapper:
             _generic_attr_name: opaque,
         })
 
+# ################################################################################################################################
+
     def update(self, name, opaque):
         """ Updates an already existing object.
         """
