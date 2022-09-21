@@ -52,8 +52,12 @@ zato_command_template = """
 
 # To prevent an attribute error in pyreadline\py3k_compat.py
 # AttributeError: module 'collections' has no attribute 'Callable'
-import collections
-collections.Callable = collections.abc.Callable
+
+try:
+    import collections
+    collections.Callable = collections.abc.Callable
+except AttributeError:
+    pass
 
 # Zato
 from zato.cli.zato_command import main
