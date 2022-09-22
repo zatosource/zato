@@ -306,10 +306,12 @@ class Elem:
         self.parse_from[DATA_FORMAT_JSON] = self.from_json
         self.parse_from[DATA_FORMAT_CSV] = self.from_csv
         self.parse_from[DATA_FORMAT_DICT] = self.from_dict
+        self.parse_from[DATA_FORMAT_FORM] = self.from_dict
 
         self.parse_to[DATA_FORMAT_JSON] = self.to_json
         self.parse_to[DATA_FORMAT_CSV] = self.to_csv
         self.parse_to[DATA_FORMAT_DICT] = self.to_dict
+        self.parse_to[DATA_FORMAT_FORM] = self.to_dict
 
 # ################################################################################################################################
 
