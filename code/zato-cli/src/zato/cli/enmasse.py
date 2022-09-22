@@ -1119,8 +1119,8 @@ class ObjectManager:
 
             if dep_id != 'ZATO_SEC_USE_RBAC':
                 if not dep:
-                    raise Exception('Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, ' \
-                        'item:`{}`'.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
+                    msg = 'Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, item:`{}`'
+                    raise Exception(msg.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
                 else:
                     item[field_name] = dep[info['dependent_field']]
 
