@@ -44,7 +44,7 @@ class OutconnMongoDBWrapper(Wrapper):
         with self.update_lock:
 
             write_to_replica = self.config.write_to_replica
-            if not isinstance(write_to_replica, int):
+            if not isinstance(write_to_replica, int) or isinstance(write_to_replica, bool):
                 try:
                     write_to_replica = int(write_to_replica)
                 except(ValueError, TypeError):
