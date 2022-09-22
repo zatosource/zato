@@ -191,7 +191,7 @@ class EnmasseTestCase(TestCase):
             stderr = e.stderr
 
             self._warn_on_error(stdout, stderr)
-            self.fail('Caught an exception while invoking enmasse')
+            self.fail(f'Caught an exception while invoking enmasse; stdout -> {stdout}')
 
         finally:
             self._cleanup(test_suffix)
