@@ -93,12 +93,13 @@ install-qa-reqs:
 
 run-tests:
 	$(MAKE) install-qa-reqs
+	$(CURDIR)/code/bin/playwright install
 	$(MAKE) static-check
 	$(MAKE) type-check
+	$(MAKE) web-admin-tests
 	$(MAKE) common-tests
 	$(MAKE) server-tests
 	$(MAKE) cli-tests
 	$(MAKE) scheduler-tests
-	$(MAKE) web-admin-tests
 	$(MAKE) cy-tests
 	@if [ "$(ZATO_TEST_SSO)" = "true" ]; then $(MAKE) sso-tests; fi

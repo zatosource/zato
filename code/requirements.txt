@@ -137,7 +137,7 @@ redis==2.10.6
 regex==2016.11.21
 repoze.lru==0.6
 repoze.profile==2.3
-requests==2.26.0
+requests==2.28.1
 requests-toolbelt==0.9.1
 rsa==4.1
 sarge==0.1.5.post0
