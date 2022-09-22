@@ -11,6 +11,9 @@ from json import dumps
 import select
 import sys
 
+# gevent
+from gevent import sleep
+
 # sh
 import sh
 from sh import CommandNotFound
@@ -180,6 +183,9 @@ class _AuthManager:
 
         if needs_stdout:
             self.command._log_response(create_response, needs_stdout=needs_stdout)
+
+        # Wait a moment to make sure that the definition has been created
+        sleep(0.5)
 
         # Change the newly created definition's password
         self._change_password(self.name, self.password, False)
