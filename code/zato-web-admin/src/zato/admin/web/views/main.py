@@ -14,7 +14,7 @@ from django.contrib.auth import authenticate, login as django_login, logout as d
 from django.http import HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.template.response import TemplateResponse
-from django.utils.http import is_safe_url
+from django.utils.http import url_has_allowed_host_and_scheme as is_safe_url
 
 # PyOTP
 import pyotp
