@@ -124,7 +124,7 @@ def login(req):
 
             # Make sure the redirect-to address is valid
             redirect_to = req.POST.get('next', '') or req.GET.get('next', '')
-            if not is_safe_url(url=redirect_to, host=req.get_host()):
+            if not is_safe_url(url=redirect_to, allowed_hosts=req.get_host()):
                 redirect_to = resolve_url(LOGIN_REDIRECT_URL)
 
             # At this point we know that all the possible credentials are valid
