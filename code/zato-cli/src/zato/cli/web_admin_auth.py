@@ -117,9 +117,18 @@ class CreateUser(_WebAdminAuthCommand):
         Command.stdout = CreateUser._FakeStdout(self.logger)
         Command.stdin = CreateUser._FakeStdin()
 
-        options = {'verbosity':0} if self.is_interactive else {
-            'username':self.args.username, 'email':self.args.email, 'verbosity':0
-        }
+        if self.is_interactive:
+            options = {
+                'verbosity':0,
+                'database': None,
+            }
+        else:
+            options = {
+                'verbosity':0,
+                'database': None,
+                'username':self.args.username,
+                'email':self.args.email,
+            }
 
         try:
             Command().handle(interactive=self.is_interactive, **options)
@@ -164,7 +173,7 @@ class UpdatePassword(_WebAdminAuthCommand):
         else:
             _Command = Command
 
-        _Command().handle(username=args.username)
+        _Command().handle(username=args.username, database=None)
 
         if not called_from_wrapper:
             self._ok(args)

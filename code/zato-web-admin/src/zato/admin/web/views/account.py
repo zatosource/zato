@@ -11,7 +11,7 @@ import logging
 
 # Django
 from django.contrib import messages
-from django.urls import resolve
+from django.urls import reverse
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
