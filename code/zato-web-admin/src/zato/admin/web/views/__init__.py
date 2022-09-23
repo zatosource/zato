@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -40,12 +40,8 @@ from zato.common.util.api import get_lb_client as _get_lb_client
 
 # ################################################################################################################################
 
-try:
-    from django.core.urlresolvers import reverse as django_url_reverse # Django < 1.10
-    from django.utils.text import slugify
-except ImportError:
-    from django.urls import reverse as django_url_reverse              # Django >= 1.10
-    from django.utils import slugify
+from django.urls import reverse as django_url_reverse
+from django.utils.text import slugify
 
 # For pyflakes
 django_url_reverse = django_url_reverse

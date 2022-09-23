@@ -19,7 +19,7 @@ from traceback import format_exc
 from dateutil.relativedelta import relativedelta
 
 # Django
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 

@@ -16,6 +16,10 @@ from django.contrib.auth.models import User
 from zato.admin.web import DATE_FORMATS, MONTH_YEAR_FORMATS, TIME_FORMATS
 from zato.common.json_internal import loads
 
+# Not used in practice
+def _on_delete(*unused_args, **unused_kwargs):
+    pass
+
 class TOTPData:
     def __init__(self):
         self.key = None
@@ -25,7 +29,7 @@ class UserProfile(models.Model):
     class Meta:
         db_table = 'user_profile'
 
-    user = models.OneToOneField(User)
+    user = models.OneToOneField(User, on_delete=_on_delete)
     timezone = models.CharField(max_length=100, null=True, default='UTC')
     date_format = models.CharField(max_length=100, null=True, default='dd-mm-yyyy')
     time_format = models.CharField(max_length=10, null=True, default='24')
@@ -61,7 +65,7 @@ class ClusterColorMarker(models.Model):
     class Meta:
         db_table = 'cluster_color_marker'
 
-    user_profile = models.ForeignKey(UserProfile, related_name='cluster_color_markers')
+    user_profile = models.ForeignKey(UserProfile, on_delete=_on_delete, related_name='cluster_color_markers')
     cluster_id = models.IntegerField()
     color = models.CharField(max_length=6) # RGB
 
