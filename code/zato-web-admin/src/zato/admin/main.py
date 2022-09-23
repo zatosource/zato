@@ -37,6 +37,9 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# Currently, this is not needed.
+needs_migrate = True
+
 def main():
 
     # stdlib
@@ -75,7 +78,9 @@ def main():
 
     django.setup()
 
-    call_command('migrate')
+    if needs_migrate:
+        call_command('migrate', verbosity=999, fake=True)
+
     call_command('loaddata', os.path.join(repo_dir, 'initial-data.json'))
 
     RepoManager(repo_dir).ensure_repo_consistency()
