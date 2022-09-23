@@ -18,7 +18,8 @@ from .base import BaseTestCase
 # ################################################################################################################################
 
 if 0:
-    from django.core.urlresolvers import RegexURLPattern
+    from django.urls.resolvers import URLPattern
+    URLPattern = URLPattern
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,10 +69,12 @@ class IndexTestCase(BaseTestCase):
         # Paths to collect
         url_paths = set() # type: set[URLPath]
 
-        for item in urlpatterns: # type: RegexURLPattern
+        for item in urlpatterns: # type: URLPattern
+
+            pattern = str(item.pattern)
 
             # Skip patterns that have parameters, i.e. ones that are not index pages.
-            if regex_param_marker in item._regex:
+            if regex_param_marker in pattern:
                 continue
 
             if not item.name:
@@ -79,8 +82,8 @@ class IndexTestCase(BaseTestCase):
 
             url_path = URLPath()
             url_path.name = item.name
-            url_path.path = item._regex.replace('^', '/').replace('$', '')
-            url_path.pattern = item._regex
+            url_path.path = pattern.replace('^', '/').replace('$', '')
+            url_path.pattern = pattern
 
             url_paths.add(url_path)
 
@@ -109,6 +112,7 @@ class IndexTestCase(BaseTestCase):
 
             '/zato/cloud/jira/reset-oauth2-scopes/',
             '/zato/security/oauth/outconn/client-credentials/change-secret/',
+            '/zato/security/rbac/role/',
         }
 
         # Go through all the paths founds ..
