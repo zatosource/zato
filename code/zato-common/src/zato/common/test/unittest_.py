@@ -42,7 +42,7 @@ class PubSubAPIRestImpl:
     def _publish(self, topic_name:'str', data:'any_') -> 'stranydict':
         request = {'data': data, 'has_gd':True}
         response = self.rest_client.post(PubSubConfig.PathPublish + topic_name, request) # type: stranydict
-        sleep(3)
+        sleep(6)
         return response
 
 # ################################################################################################################################
@@ -51,7 +51,7 @@ class PubSubAPIRestImpl:
 
         # Wait a moment to make sure a previously published message is delivered -
         # the server's delivery task runs once in 2 seconds.
-        sleep(3)
+        sleep(6)
 
         return cast_('anylist', self.rest_client.patch(PubSubConfig.PathReceive + topic_name, expect_ok=expect_ok))
 
@@ -61,7 +61,7 @@ class PubSubAPIRestImpl:
         if needs_unsubscribe:
             self._unsubscribe(topic_name)
         response = self.rest_client.post(PubSubConfig.PathSubscribe + topic_name)
-        sleep(3)
+        sleep(6)
         return response['sub_key']
 
 # ################################################################################################################################
@@ -72,7 +72,7 @@ class PubSubAPIRestImpl:
         response = self.rest_client.delete(PubSubConfig.PathUnsubscribe + topic_name) # type: anydict
 
         # Wait a moment to make sure the subscription is deleted
-        sleep(3)
+        sleep(6)
 
         # We always expect an empty dict on reply from unsubscribe
         self.test.assertDictEqual(response, {})
