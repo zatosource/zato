@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}{% ifequal action "create" %}Add a new entry{% else %}Update an entry{% endifequal %}{% endblock %}
+{% block html_title %}{% if action == "create" %}Add a new entry{% else %}Update an entry{% endif %}{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -26,7 +26,7 @@
 <div id="markup">
     <table id="data-table">
         <tr>
-            <td class='inline_header'>{% ifequal action "create" %} Add a new entry {% endifequal %}</td>
+            <td class='inline_header'>{% if action == "create" %} Add a new entry {% endif %}</td>
         </tr>
         <tr>
             <td>
@@ -71,9 +71,9 @@
 
                     <input type="hidden" id="action" name="action" value="{{ action }}" />
 
-                    {% ifequal action "edit" %}
+                    {% if action == "edit" %}
                         {{ form.old_key }}
-                    {% endifequal %}
+                    {% endif %}
 
                     <div style="text-align:right">
                         <input type="submit" value="Submit" />
