@@ -11,7 +11,7 @@ from unittest import main
 
 # Zato
 from base import BaseTest
-from zato.common.test import CommandLineServiceInvoker
+from zato.common.util.cli import CommandLineServiceInvoker
 
 # ################################################################################################################################
 # ################################################################################################################################
