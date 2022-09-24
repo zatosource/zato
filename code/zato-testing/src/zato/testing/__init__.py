@@ -200,7 +200,6 @@ class ServiceTestCase(TestCase):
         class_.component_enabled_ibm_mq = True
         class_.component_enabled_zeromq = False
         class_.component_enabled_sms = True
-        class_.component_enabled_cassandra = False
         class_.component_enabled_email = False
         class_.component_enabled_search = False
         class_.component_enabled_msg_path = False

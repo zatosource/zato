@@ -441,7 +441,6 @@ class ServiceTestCase(TestCase):
         an instance of the service.
         """
         mock_data = mock_data or {}
-        class_.component_enabled_cassandra = True
         class_.component_enabled_email = True
         class_.component_enabled_search = True
         class_.component_enabled_msg_path = True
