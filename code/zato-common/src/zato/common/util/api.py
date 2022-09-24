@@ -664,7 +664,7 @@ def grouper(n, iterable, fillvalue=None) -> 'any_':
     """ grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx
     """
     args = [iter(iterable)] * n
-    return zip_longest(fillvalue=fillvalue, *args)
+    return zip_longest(*args, fillvalue=fillvalue)
 
 # ################################################################################################################################
 
