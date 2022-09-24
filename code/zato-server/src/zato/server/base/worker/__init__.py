@@ -58,7 +58,6 @@ from zato.server.base.parallel.subprocess_.api import StartConfig as SubprocessS
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
-from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
@@ -93,7 +92,6 @@ from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 from zato.server.pubsub import PubSub
 from zato.server.pubsub.delivery.tool import PubSubTool
-from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
 from zato.zmq_.channel import MDPv01 as ChannelZMQMDPv01, Simple as ChannelZMQSimple
 from zato.zmq_.outgoing import Simple as OutZMQSimple
@@ -250,11 +248,6 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def init(self):
-
-        # Cassandra
-        self.cassandra_api = CassandraAPI(CassandraConnStore())
-        self.cassandra_query_store = CassandraQueryStore()
-        self.cassandra_query_api = CassandraQueryAPI(self.cassandra_query_store)
 
         # Search
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())

@@ -496,7 +496,6 @@ class ServiceStore:
 
                 class_._worker_store = self._testing_worker_store
                 class_._worker_config = self._testing_worker_store.worker_config
-                class_.component_enabled_cassandra = True
                 class_.component_enabled_email = True
                 class_.component_enabled_search = True
                 class_.component_enabled_msg_path = True
@@ -535,7 +534,6 @@ class ServiceStore:
 
                 class_._worker_config = service_store.server.worker_store.worker_config
 
-                class_.component_enabled_cassandra = service_store.server.fs_server_config.component_enabled.cassandra
                 class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
                 class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
                 class_.component_enabled_msg_path = service_store.server.fs_server_config.component_enabled.msg_path

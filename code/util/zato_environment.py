@@ -360,7 +360,7 @@ class EnvironmentManager:
             pip_args.append(arg)
 
         # Build the command ..
-        command = '{} -v install {}'.format(self.pip_command, ' '.join(pip_args))
+        command = '{} install {}'.format(self.pip_command, ' '.join(pip_args))
 
         # .. and run it.
         self.run_command(command, exit_on_error=False)
@@ -379,13 +379,17 @@ class EnvironmentManager:
         for package in packages:
 
             # Set up the command ..
-            command = '{pip_command} -v install {package}'.format(**{
+            command = '{pip_command} install {package}'.format(**{
                 'pip_command': self.pip_command,
                 'package': package,
             })
 
             # .. and run it.
             self.run_command(command, exit_on_error=False)
+
+        # This package has its own specific installation procedure
+        command = f'{self.pip_command} install -U nose --no-binary :all:'
+        self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
 
