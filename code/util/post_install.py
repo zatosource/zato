@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -57,8 +57,7 @@ build_dir_list = [
 class WindowsPostInstall:
     """ Code to run after a Windows package has been just installed.
     """
-    def __init__(self, base_dir, bin_dir):
-        # type: (str) -> None
+    def __init__(self, base_dir:'str', bin_dir:'str') -> 'None':
         self.base_dir = base_dir
         self.bin_dir = bin_dir
 
@@ -101,7 +100,7 @@ class WindowsPostInstall:
                 else:
                     should_add = True
 
-                # .. if we enter this if, it means that the file is not to be ignored.
+                # .. if we enter this 'if' branch, it means that the file is not to be ignored.
                 if should_add:
                     file_names.append(full_path)
 
