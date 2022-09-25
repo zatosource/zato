@@ -14,7 +14,7 @@ from uuid import uuid4
 from dateutil.parser import parser as DateTimeParser
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 
 # Zato
 from zato.common import NotGiven

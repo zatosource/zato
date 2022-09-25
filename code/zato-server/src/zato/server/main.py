@@ -57,7 +57,6 @@ from zato.common.repo import RepoManager
 from zato.common.simpleio_ import get_sio_server_config
 from zato.common.util.api import absjoin, asbool, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
-from zato.common.util.cli import read_stdin_data
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.platform_ import is_linux
 from zato.common.util.open_ import open_r
@@ -147,6 +146,9 @@ class ZatoGunicornApplication(Application):
 # ################################################################################################################################
 
 def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None) -> 'ParallelServer | None':
+
+    # Zato
+    from zato.common.util.cli import read_stdin_data
 
     # Type hints
     preferred_address: 'str'

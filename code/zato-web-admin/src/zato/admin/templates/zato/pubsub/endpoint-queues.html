@@ -321,7 +321,7 @@
                 <form action="{% url "pubsub-endpoint-queue-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
 
-                        {% ifequal endpoint.endpoint_type endpoint_type.WEB_SOCKETS.id %}
+                        {% if endpoint.endpoint_type == endpoint_type.WEB_SOCKETS.id %}
 
                         <tr>
                             <td style="vertical-align:middle; width:20%">State</td>
@@ -340,7 +340,7 @@
                             </td>
                         </tr>
 
-                        {% endifequal %}
+                        {% endif %}
 
                         {% if endpoint.endpoint_type != endpoint_type.WEB_SOCKETS.id %}
 
@@ -378,7 +378,7 @@
                         </tr>
 
                         {% comment %} --------- AMQP --------- {% endcomment %}
-                        {% ifequal endpoint.endpoint_type endpoint_type.AMQP.id %}
+                        {% if endpoint.endpoint_type == endpoint_type.AMQP.id %}
                         <tr id="dyn_form_row_id_out_amqp_id">
                             <td style="vertical-align:middle; width:12%">AMQP outconn</td>
                             <td>{{ edit_form.out_amqp_id }}</td>
@@ -390,41 +390,41 @@
                                 {{ edit_form.amqp_routing_key }}
                             </td>
                         </tr>
-                        {% endifequal %}
+                        {% endif %}
 
                         {% comment %} --------- Files --------- {% endcomment %}
-                        {% ifequal endpoint.endpoint_type endpoint_type.FILES.id %}
+                        {% if endpoint.endpoint_type == endpoint_type.FILES.id %}
                         <tr id="dyn_form_row_id_files_directory_list">
                             <td style="vertical-align:middle; width:12%">Local directories</td>
                             <td>{{ edit_form.files_directory_list }}</td>
                         </tr>
-                        {% endifequal %}
+                        {% endif %}
 
                         {% comment %} --------- FTP --------- {% endcomment %}
-                        {% ifequal endpoint.endpoint_type endpoint_type.FTP.id %}
+                        {% if endpoint.endpoint_type == endpoint_type.FTP.id %}
                         <tr>
                         <tr id="dyn_form_row_id_ftp_directory_list">
                             <td style="vertical-align:middle; width:12%">FTP directories</td>
                             <td>{{ edit_form.ftp_directory_list }}</td>
                         </tr>
-                        {% endifequal %}
+                        {% endif %}
 
                         {% comment %} --------- REST/SOAP --------- {% endcomment %}
-                        {% ifequal endpoint.endpoint_type endpoint_type.REST.id %}
+                        {% if endpoint.endpoint_type == endpoint_type.REST.id %}
                         <tr id="dyn_form_row_id_out_http_method">
                             <td style="vertical-align:middle; width:12%">HTTP method</td>
                             <td>{{ edit_form.out_http_method }}</td>
                         </tr>
-                        {% endifequal %}
-                        {% ifequal endpoint.endpoint_type endpoint_type.SOAP.id %}
+                        {% endif %}
+                        {% if endpoint.endpoint_type == endpoint_type.SOAP.id %}
                         <tr id="dyn_form_row_id_out_http_method">
                             <td style="vertical-align:middle; width:12%">HTTP method</td>
                             <td>{{ edit_form.out_http_method }}</td>
                         </tr>
-                        {% endifequal %}
+                        {% endif %}
 
                         {% comment %} --------- REST --------- {% endcomment %}
-                        {% ifequal endpoint.endpoint_type endpoint_type.REST.id %}
+                        {% if endpoint.endpoint_type == endpoint_type.REST.id %}
                         <tr id="dyn_form_row_id_out_rest_http_soap_id">
                             <td style="vertical-align:middle; width:12%">REST outconn</td>
                             <td>{{ edit_form.out_rest_http_soap_id }}</td>
@@ -433,18 +433,18 @@
                             <td style="vertical-align:middle; width:12%">REST callback</td>
                             <td>{{ edit_form.rest_delivery_endpoint }}</td>
                         </tr>
-                        {% endifequal %}
+                        {% endif %}
 
                         {% comment %} --------- Service --------- {% endcomment %}
-                        {% ifequal endpoint.endpoint_type endpoint_type.SERVICE.id %}
+                        {% if endpoint.endpoint_type == endpoint_type.SERVICE.id %}
                         <tr id="dyn_form_row_id_service_id">
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.service_id }} </td>
                         </tr>
-                        {% endifequal %}
+                        {% endif %}
 
                         {% comment %} --------- SMS - Twilio --------- {% endcomment %}
-                        {% ifequal endpoint.endpoint_type endpoint_type.SMS_TWILIO.id %}
+                        {% if endpoint.endpoint_type == endpoint_type.SMS_TWILIO.id %}
                         <tr id="dyn_form_row_id_sms_twilio_from">
                             <td style="vertical-align:middle">SMS from</td>
                             <td>{{ edit_form.sms_twilio_from }} </td>
@@ -453,10 +453,10 @@
                             <td style="vertical-align:middle">SMS to</td>
                             <td>{{ edit_form.sms_twilio_to_list }} </td>
                         </tr>
-                        {% endifequal %}
+                        {% endif %}
 
                         {% comment %} --------- SMTP --------- {% endcomment %}
-                        {% ifequal endpoint.endpoint_type endpoint_type.SMTP.id %}
+                        {% if endpoint.endpoint_type == endpoint_type.SMTP.id %}
                         <tr id="dyn_form_row_id_out_smtp_id">
                             <td style="vertical-align:middle">SMTP outconn</td>
                             <td>
@@ -491,10 +491,10 @@
                                 {{ edit_form.smtp_body }}
                             </td>
                         </tr>
-                        {% endifequal %}
+                        {% endif %}
 
                         {% comment %} --------- SOAP --------- {% endcomment %}
-                        {% ifequal endpoint.endpoint_type endpoint_type.SOAP.id %}
+                        {% if endpoint.endpoint_type == endpoint_type.SOAP.id %}
                         <tr id="dyn_form_row_id_out_soap_http_soap_id">
                             <td style="vertical-align:middle; width:12%">SOAP outconn</td>
                             <td>{{ edit_form.out_soap_http_soap_id }}</td>
@@ -503,7 +503,7 @@
                             <td style="vertical-align:middle; width:12%">SOAP callback</td>
                             <td>{{ edit_form.soap_delivery_endpoint }}</td>
                         </tr>
-                        {% endifequal %}
+                        {% endif %}
 
                         <tr>
                             <td colspan="2" style="text-align:right">

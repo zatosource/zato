@@ -19,7 +19,7 @@ from gevent import sleep
 from redis.sentinel import MasterNotFoundError
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 
 # Zato
 from zato.common.exception import ZatoException

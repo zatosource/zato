@@ -50,6 +50,15 @@ pip_deps = pip_deps_windows if is_windows else pip_deps_non_windows
 zato_command_template = """
 #!{bin_dir}/python
 
+# To prevent an attribute error in pyreadline\py3k_compat.py
+# AttributeError: module 'collections' has no attribute 'Callable'
+
+try:
+    import collections
+    collections.Callable = collections.abc.Callable
+except AttributeError:
+    pass
+
 # Zato
 from zato.cli.zato_command import main
 
@@ -314,6 +323,7 @@ class EnvironmentManager:
         # Set up the command ..
         command = """
             {pip_command}
+            -v
             install
             {pip_options}
             -r {reqs_path}
@@ -338,6 +348,51 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
+    def pip_install_packages(self, packages) -> 'None':
+
+        # All the -e arguments that pip will receive
+        pip_args = []
+
+        # Build the arguments
+        for name in packages:
+            package_path = os.path.join(self.base_dir, name)
+            arg = '-e {}'.format(package_path)
+            pip_args.append(arg)
+
+        # Build the command ..
+        command = '{} install {}'.format(self.pip_command, ' '.join(pip_args))
+
+        # .. and run it.
+        self.run_command(command, exit_on_error=False)
+
+# ################################################################################################################################
+
+    def pip_install_standalone_requirements(self) -> 'None':
+
+        # These cannot be installed via requirements.txt
+        packages = [
+            'cython==0.29.32',
+            'numpy==1.22.3',
+            'pyOpenSSL==22.0.0',
+        ]
+
+        for package in packages:
+
+            # Set up the command ..
+            command = '{pip_command} install {package}'.format(**{
+                'pip_command': self.pip_command,
+                'package': package,
+            })
+
+            # .. and run it.
+            self.run_command(command, exit_on_error=False)
+
+        # This package has its own specific installation procedure
+        command = f'{self.pip_command} install -U nose --no-binary :all:'
+        self.run_command(command, exit_on_error=False)
+
+# ################################################################################################################################
+
     def pip_install_zato_packages(self) -> 'None':
 
         # Note that zato-common must come first.
@@ -359,20 +414,7 @@ class EnvironmentManager:
             'zato-testing',
         ]
 
-        # All the -e arguments that pip will receive
-        pip_args = []
-
-        # Build the arguments
-        for name in packages:
-            package_path = os.path.join(self.base_dir, name)
-            arg = '-e {}'.format(package_path)
-            pip_args.append(arg)
-
-        # Build the command ..
-        command = '{} install {}'.format(self.pip_command, ' '.join(pip_args))
-
-        # .. and run it.
-        self.run_command(command, exit_on_error=False)
+        self.pip_install_packages(packages)
 
 # ################################################################################################################################
 
@@ -395,6 +437,7 @@ class EnvironmentManager:
 
     def pip_install(self) -> 'None':
         self.pip_install_core_pip()
+        self.pip_install_standalone_requirements()
         self.pip_install_zato_requirements()
         self.pip_install_zato_packages()
         self.pip_uninstall()
@@ -462,7 +505,8 @@ class EnvironmentManager:
         self.add_extlib_to_sys_path(extlib_dir)
 
         # .. and symlink it for backward compatibility.
-        self._create_symlink(extlib_dir_path, extra_paths_dir)
+        if not is_windows:
+            self._create_symlink(extlib_dir_path, extra_paths_dir)
 
 # ################################################################################################################################
 

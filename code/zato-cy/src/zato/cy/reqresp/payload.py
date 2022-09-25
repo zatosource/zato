@@ -23,7 +23,7 @@ from zato.simpleio import CySimpleIO
 # ################################################################################################################################
 
 if 0:
-    from past.builtins import unicode as past_unicode
+    from zato.common.py23_.past.builtins import unicode as past_unicode
     past_unicode = past_unicode
 
 # ################################################################################################################################

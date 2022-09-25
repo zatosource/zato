@@ -38,7 +38,7 @@ import xml.etree.ElementTree as etree
 
 # Python 2/3 compatibility
 from future.utils import iteritems
-from past.builtins import basestring, long, unicode
+from zato.common.py23_.past.builtins import basestring, long, unicode
 
 # Zato
 from zato.common.util.wmq import unhexlify_wmq_id

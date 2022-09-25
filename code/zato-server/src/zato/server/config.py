@@ -19,7 +19,7 @@ from zato.bunch import Bunch
 
 # Python 2/3 compatibility
 from future.utils import itervalues
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 
 # Zato
 from zato.common.api import ZATO_NONE

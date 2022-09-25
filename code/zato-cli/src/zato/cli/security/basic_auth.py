@@ -13,7 +13,6 @@ from uuid import uuid4
 # Zato
 from zato.cli import ServerAwareCommand
 from zato.common.util.api import fs_safe_now
-from zato.common.util.cli import BasicAuthManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,6 +39,9 @@ class CreateDefinition(ServerAwareCommand):
     ]
 
     def execute(self, args:'Namespace'):
+
+        # Zato
+        from zato.common.util.cli import BasicAuthManager
 
         name = getattr(args, 'name', None)
         realm = getattr(args, 'realm', None)
@@ -74,6 +76,9 @@ class ChangePassword(ServerAwareCommand):
     ]
 
     def execute(self, args:'Namespace'):
+
+        # Zato
+        from zato.common.util.cli import BasicAuthManager
 
         name = getattr(args, 'name', None)
         password = getattr(args, 'password', None)
