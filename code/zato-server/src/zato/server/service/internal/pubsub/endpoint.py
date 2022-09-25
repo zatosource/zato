@@ -33,7 +33,7 @@ from zato.server.service.internal.pubsub.search import NonGDSearchService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 from six import add_metaclass
 
 # ################################################################################################################################

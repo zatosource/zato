@@ -14,10 +14,6 @@ import sys
 # gevent
 from gevent import sleep
 
-# sh
-import sh
-from sh import CommandNotFound
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -42,6 +38,10 @@ class CommandName:
 # ################################################################################################################################
 
 def get_zato_sh_command(command_name:'str'=CommandName.Default) -> 'RunningCommand':
+
+    # sh
+    import sh
+    from sh import CommandNotFound
 
     try:
         command = getattr(sh, command_name) # type: ignore

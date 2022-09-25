@@ -17,7 +17,7 @@ from traceback import format_exc
 from hl7apy.core import Message
 
 # Past
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 
 # Zato
 from zato.common.api import GENERIC, HL7

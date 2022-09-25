@@ -28,7 +28,6 @@ from sh import ErrorReturnCode
 from zato.common.test.apispec_ import run_common_apispec_assertions
 from zato.common.test.config import TestConfig
 from zato.common.test import rand_string, rand_unicode
-from zato.common.util.cli import get_zato_sh_command
 from zato.common.util.open_ import open_r
 
 # ################################################################################################################################
@@ -82,6 +81,9 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def _invoke_command(self, file_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
+
+        # Zato
+        from zato.common.util.cli import get_zato_sh_command
 
         # A shortcut
         command = get_zato_sh_command() # type: ignore

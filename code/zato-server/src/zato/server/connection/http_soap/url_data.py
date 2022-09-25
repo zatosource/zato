@@ -16,7 +16,7 @@ from uuid import uuid4
 
 # Python 2/3 compatibility
 from future.utils import iteritems, iterkeys, itervalues
-from past.builtins import basestring, unicode
+from zato.common.py23_.past.builtins import basestring, unicode
 from six import PY2
 
 # Zato

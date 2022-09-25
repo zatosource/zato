@@ -29,7 +29,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
 
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 
 PY2 = sys.version_info[0] == 2
 

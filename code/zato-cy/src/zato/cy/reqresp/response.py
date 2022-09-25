@@ -30,7 +30,7 @@ from zato.common.marshal_.api import Model
 from zato.cy.reqresp.payload import SimpleIOPayload
 
 # Python 2/3 compatibility
-from past.builtins import unicode as past_unicode
+from zato.common.py23_.past.builtins import unicode as past_unicode
 
 # ################################################################################################################################
 

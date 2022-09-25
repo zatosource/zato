@@ -14,7 +14,6 @@ from contextlib import closing
 from zato.cli import ManageCommand
 from zato.common.const import SECRETS
 from zato.common.util.api import get_odb_session_from_server_dir
-from zato.common.util.cli import CommandLineServiceInvoker
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,6 +40,7 @@ class SetIDEPassword(ManageCommand):
         from zato.common.api import IDEDeploy
         from zato.common.crypto.api import CryptoManager, ServerCryptoManager
         from zato.common.odb.model import HTTPBasicAuth
+        from zato.common.util.cli import CommandLineServiceInvoker
 
         password = self.args.password or CryptoManager.generate_password()
         password = password if isinstance(password, str) else password.decode('utf8')

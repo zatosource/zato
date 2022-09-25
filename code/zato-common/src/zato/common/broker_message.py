@@ -16,7 +16,7 @@ from candv import Constants as _Constants, ValueConstant as _ValueConstant
 
 # Python 2/3 compatibility
 from future.utils import iteritems
-from past.builtins import cmp
+from zato.common.py23_.past.builtins import cmp
 
 class Constants(_Constants):
     values = _Constants.constants

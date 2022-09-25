@@ -21,7 +21,6 @@ import requests
 from zato.common.crypto.api import CryptoManager
 from zato.common.test import BaseZatoTestCase
 from zato.common.test.config import TestConfig
-from zato.common.util.cli import get_zato_sh_command
 from zato.sso import status_code
 
 # ################################################################################################################################
@@ -101,6 +100,9 @@ class RESTClient:
 # ################################################################################################################################
 
     def init(self, /, username:'str'='', sec_name:'str'='') -> 'None':
+
+        # Zato
+        from zato.common.util.cli import get_zato_sh_command
 
         username = username or 'pubapi'
         sec_name = sec_name or 'pubapi'

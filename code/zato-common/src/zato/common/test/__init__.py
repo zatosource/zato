@@ -43,14 +43,13 @@ from zato.common.simpleio_ import get_bytes_to_str_encoding, get_sio_server_conf
 from zato.common.py23_ import maxint
 from zato.common.typing_ import cast_
 from zato.common.util.api import is_port_taken, new_cid
-from zato.common.util.cli import CommandLineInvoker, CommandLineServiceInvoker
 from zato.server.service import Service
 
 # Zato - Cython
 from zato.simpleio import CySimpleIO
 
 # Python 2/3 compatibility
-from past.builtins import basestring, cmp, unicode, xrange
+from zato.common.py23_.past.builtins import basestring, cmp, unicode, xrange
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -442,7 +441,6 @@ class ServiceTestCase(TestCase):
         an instance of the service.
         """
         mock_data = mock_data or {}
-        class_.component_enabled_cassandra = True
         class_.component_enabled_email = True
         class_.component_enabled_search = True
         class_.component_enabled_msg_path = True
@@ -786,6 +784,9 @@ class BaseZatoTestCase(TestCase):
         load_json:'bool'=False,
         ) -> 'any_':
 
+        # Zato
+        from zato.common.util.cli import CommandLineInvoker
+
         # Prepare the invoker ..
         invoker = CommandLineInvoker(check_stdout=False)
 
@@ -816,6 +817,9 @@ class CommandLineTestCase(BaseZatoTestCase):
 class CommandLineServiceTestCase(BaseZatoTestCase):
 
     def run_zato_service_test(self, service_name:'str', assert_ok:'bool'=True) -> 'str':
+
+        # Zato
+        from zato.common.util.cli import CommandLineServiceInvoker
 
         # Prepare the invoker
         invoker = CommandLineServiceInvoker(check_stdout=False)
