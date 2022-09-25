@@ -13,7 +13,7 @@ from django import forms
 
 # Python 2/3 compatibility
 from future.utils import iteritems
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 
 # Zato
 from zato.common.api import AuditLog, DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, TLS, ZATO_DEFAULT, ZATO_NONE, ZATO_SEC_USE_RBAC

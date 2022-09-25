@@ -22,7 +22,7 @@ from zato.common.util.api import make_repr, new_cid
 from zato.cy.reqresp.payload import SimpleIOPayload
 
 # Past builtins
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 
 # ################################################################################################################################
 # ################################################################################################################################

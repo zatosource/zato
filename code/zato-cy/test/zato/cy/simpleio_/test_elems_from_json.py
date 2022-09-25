@@ -23,7 +23,7 @@ from zato.simpleio import AsIs, Bool,  CSV, Date, DateTime, Decimal, Dict, DictL
 from zato.util_convert import false_values, true_values
 
 # Python 2/3 compatibility
-from past.builtins import basestring, long, unicode
+from zato.common.py23_.past.builtins import basestring, long, unicode
 
 # ################################################################################################################################
 # ################################################################################################################################

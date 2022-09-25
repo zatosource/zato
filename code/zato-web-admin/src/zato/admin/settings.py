@@ -57,6 +57,9 @@ INTERNAL_IPS = ('127.0.0.1',)
 # to load the internationalization machinery.
 USE_I18N = True
 
+DEBUG = True
+APPEND_SLASH = True
+
 # Absolute path to the directory that holds media.
 # Example: '/home/media/media.lawrence.com/'
 MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'static')
@@ -71,14 +74,15 @@ MEDIA_URL = '/static/'
 # Examples: 'http://foo.com/media/', '/media/'.
 ADMIN_MEDIA_PREFIX = '/media/'
 
-MIDDLEWARE_CLASSES = (
-    'django.middleware.common.CommonMiddleware',
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'zato.admin.middleware.ZatoMiddleware',
-)
+]
 
 ROOT_URLCONF = 'zato.admin.urls'
 
@@ -106,7 +110,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.humanize',
-    'django.contrib.staticfiles',
+    # 'django.contrib.staticfiles',
     'zato.admin.web',
 )
 

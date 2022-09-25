@@ -28,7 +28,6 @@ from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.util.api import as_bool, absjoin, get_config, new_cid
-from zato.common.util.cli import read_stdin_data
 from zato.scheduler.api import SchedulerAPI
 from zato.scheduler.util import set_up_zato_client
 
@@ -72,6 +71,9 @@ class Config:
 
     @staticmethod
     def from_repo_location(repo_location:'str') -> 'Config':
+
+        # Zato
+        from zato.common.util.cli import read_stdin_data
 
         # Response to produce
         config = Config()

@@ -39,7 +39,7 @@ from zato.common.odb.model import CronStyleJob, IntervalBasedJob, Job
 from zato.common.util.api import pprint
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 
 # ################################################################################################################################
 # ################################################################################################################################

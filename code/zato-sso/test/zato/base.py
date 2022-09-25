@@ -25,7 +25,6 @@ from zato.common.crypto.totp_ import TOTPManager
 from zato.common.test.config import TestConfig
 from zato.common.test.rest_client import RESTClientTestCase
 from zato.common.test import rand_string
-from zato.common.util.cli import get_zato_sh_command
 from zato.sso import const, status_code
 from zato.sso.odb.query import get_user_by_name
 
@@ -67,6 +66,9 @@ class BaseTest(RESTClientTestCase):
         if not os.environ.get('ZATO_TEST_SSO'):
             self.ctx = None
             return
+
+        # Zato
+        from zato.common.util.cli import get_zato_sh_command
 
         try:
 

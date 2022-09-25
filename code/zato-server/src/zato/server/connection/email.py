@@ -21,7 +21,7 @@ from zato.common.ext.imbox.parser import parse_email
 from zato.server.ext.outbox import AnonymousOutbox, Attachment, Email, Outbox
 
 # Python 2/3 compatibility
-from past.builtins import basestring, unicode
+from zato.common.py23_.past.builtins import basestring, unicode
 
 # Zato
 from zato.common.api import IMAPMessage, EMAIL

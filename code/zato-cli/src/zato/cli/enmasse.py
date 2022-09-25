@@ -1217,7 +1217,7 @@ class ObjectManager:
 
         # Python 2/3 compatibility
         from future.utils import iteritems
-        from past.builtins import basestring
+        from zato.common.py23_.past.builtins import basestring
 
         service_info = SERVICE_BY_NAME[item_type]
 
@@ -1358,7 +1358,7 @@ class InputParser:
     def is_include(self, value):
 
         # Python 2/3 compatibility
-        from past.builtins import basestring
+        from zato.common.py23_.past.builtins import basestring
 
         return isinstance(value, basestring)
 

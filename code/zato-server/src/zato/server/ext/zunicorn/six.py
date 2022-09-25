@@ -74,7 +74,7 @@ PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
 
 # For pyflakes
-from past.builtins import basestring, execfile, long, unicode
+from zato.common.py23_.past.builtins import basestring, execfile, long, unicode
 execfile = execfile
 
 if PY3:

@@ -9,6 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 
+# Zato
+from zato.common.util.platform_ import is_non_windows
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -30,7 +33,11 @@ def path_string_to_list(base_dir:'str', data:'str') -> 'strlist':
     out = []
 
     # A list of path separators to try out
-    path_sep_list = [',', ';', ':']
+    path_sep_list = [',', ';']
+
+    # This can be appended only if we are not on Windows where it would mean a drive name separator
+    if is_non_windows:
+        path_sep_list.append(':')
 
     # Try to find which path separator should be used, if any at all
     path_sep = None

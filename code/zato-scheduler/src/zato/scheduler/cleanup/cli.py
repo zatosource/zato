@@ -14,7 +14,6 @@ from sh import ErrorReturnCode
 
 # Zato
 from zato.common.typing_ import cast_
-from zato.common.util.cli import CommandLineInvoker
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,6 +24,9 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 def start_cleanup(path:'str') -> 'None':
+
+    # Zato
+    from zato.common.util.cli import CommandLineInvoker
 
     # Build the base invoker object
     invoker = CommandLineInvoker()
