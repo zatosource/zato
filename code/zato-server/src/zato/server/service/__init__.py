@@ -547,7 +547,6 @@ class Service:
     component_enabled_zeromq: 'bool'
     component_enabled_msg_path: 'bool'
     component_enabled_patterns: 'bool'
-    component_enabled_cassandra: 'bool'
     component_enabled_target_matcher: 'bool'
     component_enabled_invoke_matcher: 'bool'
 
@@ -671,12 +670,6 @@ class Service:
         # and method calls in this method - it's invoked each time a service is executed. The attributes are set
         # for the whole of the Service class each time it is discovered they are needed. It cannot be done in ServiceStore
         # because at the time that ServiceStore executes the worker config may still not be ready.
-
-        if self.component_enabled_cassandra:
-            if not Service.cassandra_conn:
-                Service.cassandra_conn = self._worker_store.cassandra_api
-            if not Service.cassandra_query:
-                Service.cassandra_query = self._worker_store.cassandra_query_api
 
         if self.component_enabled_email:
             if not Service.email:

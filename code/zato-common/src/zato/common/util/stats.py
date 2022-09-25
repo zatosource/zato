@@ -14,9 +14,6 @@ from operator import itemgetter
 # Humanize
 from humanize import precisedelta
 
-# numpy
-import numpy as np
-
 # Zato
 from zato.common.api import StatsKey
 
@@ -87,6 +84,9 @@ def percentile(data, percent, key=lambda x:x):
 
 def collect_current_usage(data):
     # type: (list) -> dict
+
+    # numpy
+    import numpy as np
 
     # For later use
     usage = 0

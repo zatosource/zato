@@ -20,7 +20,7 @@ from crontab import CronTab
 from gevent import sleep
 
 # Python 2/3 compatibility
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 
 # Zato
 from zato.common.api import SCHEDULER, ZATO_NONE
