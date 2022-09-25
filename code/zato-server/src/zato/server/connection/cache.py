@@ -31,7 +31,7 @@ from zato.common.util.api import parse_extra_into_dict
 
 # Python 2/3 compatibility
 from future.utils import iteritems, itervalues
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 from zato.common.py23_ import pickle_dumps
 
 # ################################################################################################################################

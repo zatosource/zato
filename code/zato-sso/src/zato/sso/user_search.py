@@ -13,7 +13,7 @@ from sqlalchemy import asc, desc
 from sqlalchemy.sql import and_ as sql_and, or_ as sql_or
 
 # Python 2/3 compatibility
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 
 # Zato
 from zato.common.odb.model import SSOUser

@@ -7,10 +7,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # flake8: noqa
-import os
 from setuptools import setup, find_packages
 
-version = '3.2.1'
+version = '3.2'
 
 long_description = description = 'Python API client for Zato - ESB, APIs, AI and Cloud Integrations in Python (https://zato.io)'
 

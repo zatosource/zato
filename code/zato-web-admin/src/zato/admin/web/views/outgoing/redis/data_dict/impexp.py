@@ -25,7 +25,7 @@ from zato.common.json_internal import dumps
 from zato.common.util.api import current_host, translation_name
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 
 logger = logging.getLogger(__name__)
 

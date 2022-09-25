@@ -26,7 +26,7 @@ from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport,
 
 # Python 2/3 compatibility
 from future.utils import itervalues
-from past.builtins import xrange
+from zato.common.py23_.past.builtins import xrange
 
 # Zato
 from zato.common.api import AMQP, CHANNEL, SECRET_SHADOW

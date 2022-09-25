@@ -20,7 +20,6 @@ from sh import ErrorReturnCode
 # Zato
 from zato.common.test.config import TestConfig
 from zato.common.test import rand_string, rand_unicode
-from zato.common.util.cli import get_zato_sh_command
 from zato.common.util.open_ import open_w
 
 # ################################################################################################################################
@@ -124,6 +123,9 @@ class EnmasseTestCase(TestCase):
 
     def _invoke_command(self, config_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
 
+        # Zato
+        from zato.common.util.cli import get_zato_sh_command
+
         # A shortcut
         command = get_zato_sh_command()
 
@@ -140,6 +142,9 @@ class EnmasseTestCase(TestCase):
 # ################################################################################################################################
 
     def _cleanup(self, test_suffix:'str') -> 'None':
+
+        # Zato
+        from zato.common.util.cli import get_zato_sh_command
 
         # A shortcut
         command = get_zato_sh_command()

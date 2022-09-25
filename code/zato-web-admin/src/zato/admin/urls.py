@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Django
-from django.conf.urls import url
+from django.urls import re_path as url
 from django.contrib.auth.decorators import login_required
 from django.views.static import serve as django_static_serve
 

@@ -20,7 +20,7 @@ from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import psutil
 
 # Python 2/3 compatibility
-from past.builtins import xrange
+from zato.common.py23_.past.builtins import xrange
 
 # Zato
 from zato.common.api import ZATO_OK
