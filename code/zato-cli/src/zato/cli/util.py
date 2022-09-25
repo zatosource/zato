@@ -12,7 +12,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 if 0:
 
     from argparse import Namespace
-    from past.builtins import unicode
+    from zato.common.py23_.past.builtins import unicode
     from zato.common.typing_ import any_, anydict
 
     Namespace = Namespace

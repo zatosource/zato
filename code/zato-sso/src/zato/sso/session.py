@@ -15,7 +15,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 
 # Zato
 from zato.common.api import GENERIC, SEC_DEF_TYPE

@@ -22,7 +22,7 @@ from sqlalchemy import and_ as sql_and, update as sql_update
 from sqlalchemy.exc import IntegrityError
 
 # Python 2/3 compatibility
-from past.builtins import basestring, unicode
+from zato.common.py23_.past.builtins import basestring, unicode
 
 # Zato
 from zato.common.api import RATE_LIMIT, SEC_DEF_TYPE, TOTP

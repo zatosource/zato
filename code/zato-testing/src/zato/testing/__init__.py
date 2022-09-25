@@ -35,7 +35,7 @@ from zato.server.service.store import ServiceStore
 from zato.testing.requests_ import RequestsAdapter
 
 # Python 2/3 compatibility
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 
 # ################################################################################################################################
 
@@ -200,7 +200,6 @@ class ServiceTestCase(TestCase):
         class_.component_enabled_ibm_mq = True
         class_.component_enabled_zeromq = False
         class_.component_enabled_sms = True
-        class_.component_enabled_cassandra = False
         class_.component_enabled_email = False
         class_.component_enabled_search = False
         class_.component_enabled_msg_path = False

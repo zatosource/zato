@@ -78,14 +78,14 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>
-                            {% ifequal item.name|lower "root" %}
+                            {% if item.name|lower == "root" %}
                                 <span class="form_hint"><i>---</i></span>
                             {% else %}
                                 {{ item.parent_name }}
-                            {% endifequal %}
+                            {% endif %}
                         </td>
 
-                        {% ifequal item.name|lower "root" %}
+                        {% if item.name|lower == "root" %}
                             <td>
                                 <span class="form_hint"><i>---</i></span>
                             </td>
@@ -99,7 +99,7 @@
                             <td>
                                 <a href="javascript:$.fn.zato.security.rbac.role.delete_('{{ item.id }}')">Delete</a>
                             </td>
-                        {% endifequal %}
+                        {% endif %}
 
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.parent_id }}</td>

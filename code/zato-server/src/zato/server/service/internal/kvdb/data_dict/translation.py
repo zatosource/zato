@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from hashlib import sha1, sha256
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 
 # Zato
 from zato.common.api import KVDB

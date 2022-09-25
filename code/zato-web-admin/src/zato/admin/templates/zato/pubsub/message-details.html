@@ -34,21 +34,21 @@
         <table id="data-table">
             <tr>
                 <td class='inline_header' style="width:80px">
-                    {% ifequal object_type "topic" %}
+                    {% if object_type == "topic" %}
                         Topic
                     {% else %}
                         Queue for topic
-                    {% endifequal %}
+                    {% endif %}
                 </td>
                 <td style="width:140px">
-                    {% ifequal object_type "topic" %}
+                    {% if object_type == "topic" %}
                         <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ object_name }}">{{ object_name }}</a>
                     {% else %}
                         <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id object_name_slug %}?query={{ object_name }}">{{ object_name }}</a>
                         {% if ws_ext_client_id %}
                             <span class="form_hint">{{ ws_ext_client_id }}</span>
                         {% endif %}
-                    {% endifequal %}
+                    {% endif %}
                 </td>
 
                 <td class='inline_header' style="width:90px">
@@ -61,26 +61,26 @@
 
                 <td class='inline_header' style="width:90px">Priority <span class="form_hint">(1-9, 1=min)</span></td>
                 <td>
-                    {% ifequal object_type "topic" %}
+                    {% if object_type == "topic" %}
                         {{ form.priority }}
                     {% else %}
                         {{ priority }}
-                    {% endifequal %}
+                    {% endif %}
                 </td>
             </tr>
             <tr>
                 <td class='inline_header' style="width:80px">
-                    {% ifequal object_type "topic" %}
+                    {% if object_type == "topic" %}
                         Pub time
                     {% else %}
                         Recv time
-                    {% endifequal %}
+                    {% endif %}
                 </td>
                 <td style="width:120px">
-                    {% ifequal action "publish" %}
+                    {% if action == "publish" %}
                         <span class='form_hint'>---</span>
                     {% else %}
-                        {% ifequal object_type "topic" %}
+                        {% if object_type == "topic" %}
                             <a
                                 id="a_pub_time"
                                 href="javascript:$.fn.zato.toggle_time('pub_time', '{{ pub_time }}', '{{ pub_time_utc }}')">{{ pub_time }}
@@ -90,20 +90,20 @@
                                 id="a_recv_time"
                                 href="javascript:$.fn.zato.toggle_time('recv_time', '{{ recv_time }}', '{{ recv_time_utc }}')">{{ recv_time }}
                             </a>
-                        {% endifequal %}
-                    {% endifequal %}
+                        {% endif %}
+                    {% endif %}
                 </td>
 
 
                 <td class='inline_header' style="width:90px">
-                    {% ifequal object_type "topic" %}
+                    {% if object_type == "topic" %}
                         Ext. pub time
                     {% else %}
                         Subscriber
-                    {% endifequal %}
+                    {% endif %}
                 </td>
                 <td style="width:170px">
-                    {% ifequal object_type "topic" %}
+                    {% if object_type == "topic" %}
                         {% if ext_pub_time %}
                         <a
                             id="a_ext_pub_time"
@@ -115,7 +115,7 @@
                     {% else %}
                         {{ sub_endpoint_html|safe }}
                         {{ sub_pattern_matched }}
-                    {% endifequal %}
+                    {% endif %}
 
                 </td>
 
@@ -124,16 +124,16 @@
             </tr>
             <tr>
                 <td class='inline_header' style="width:80px">Msg ID</td>
-                <td style="width:120px">{% ifequal action "publish" %}<span class='form_hint'>---</span>{% else %}{{ msg_id }}{% endifequal %}</td>
+                <td style="width:120px">{% if action == "publish" %}<span class='form_hint'>---</span>{% else %}{{ msg_id }}{% endif %}</td>
 
                 <td class='inline_header' style="width:90px">Expiration <span class="form_hint">(in ms)</span></td>
                 <td style="width:170px">
-                    {% ifequal object_type "topic" %}
+                    {% if object_type == "topic" %}
                         {{ form.expiration }}
                         {{ form.exp_from_now }} <label for="id_exp_from_now">From now</label>
                     {% else %}
                         {{ expiration }}
-                    {% endifequal %}
+                    {% endif %}
                 </td>
 
                 <td class='inline_header' style="width:90px">Service</td>
@@ -149,11 +149,11 @@
             <tr>
                 <td class='inline_header' style="width:80px">Correl ID</td>
                 <td style="width:120px">
-                    {% ifequal object_type "topic" %}
+                    {% if object_type == "topic" %}
                         {{ form.correl_id }}
                     {% else %}
                         {{ correl_id|default:"<span class='form_hint'>---</span>" }}
-                    {% endifequal %}
+                    {% endif %}
                 </td>
 
                 <td class='inline_header' style="width:90px">Expiration time</td>
@@ -180,15 +180,15 @@
             <tr>
                 <td class='inline_header' style="width:80px">In reply to</td>
                 <td style="width:120px">
-                    {% ifequal object_type "topic" %}
+                    {% if object_type == "topic" %}
                         {{ form.in_reply_to }}
                     {% else %}
                         {{ in_reply_to|default:"<span class='form_hint'>---</span>" }}
-                    {% endifequal %}
+                    {% endif %}
                 </td>
 
                 <td class='inline_header' style="width:90px">Size <span class='form_hint'>(in bytes)</span></td>
-                <td style="width:170px" id="size">{% ifequal action "publish" %}<span class='form_hint'>---</span>{% else %}{{ size }}{% endifequal %}</td>
+                <td style="width:170px" id="size">{% if action == "publish" %}<span class='form_hint'>---</span>{% else %}{{ size }}{% endif %}</td>
 
                 <td class='inline_header' style="width:90px">
                     {% if not has_gd %}Server{% endif %}
@@ -200,26 +200,26 @@
             <tr>
             <tr>
                 <td class='inline_header' colspan="6">
-                    {% ifequal object_type "queue" %}
+                    {% if object_type == "queue" %}
                         Data in queue
                     {% else %}
                         Data in topic
-                    {% endifequal %}
+                    {% endif %}
                     ↓
                 </td>
             </tr>
             <tr>
                 <td colspan="6"><textarea style="height:200px" id="data-textarea" name="data">{{ data }}</textarea></td>
             </tr>
-            {% ifequal object_type "topic" %}
+            {% if object_type == "topic" %}
             <tr>
                 <td colspan="6" style="text-align:right">
                     <input type="submit" name="update-message-button" value="Update message in {{ object_type }}" />
                 </td>
 
-                {% ifequal object_type "topic" %}
+                {% if object_type == "topic" %}
                     {{ form.mime_type }}
-                {% endifequal %}
+                {% endif %}
 
                 <input type="hidden" name="msg_id" id="msg_id" value="{{ msg_id }}" />
                 <input type="hidden" name="has_gd" id="has_gd" value="{{ has_gd }}" />
@@ -227,7 +227,7 @@
                 <input type="hidden" name="server_pid" id="server_pid" value="{{ server_pid }}" />
                 <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
             </tr>
-            {% endifequal %}
+            {% endif %}
         </table>
     </form>
 </div>

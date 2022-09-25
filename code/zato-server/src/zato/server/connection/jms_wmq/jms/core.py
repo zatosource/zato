@@ -31,7 +31,7 @@ from string import Template
 from io import StringIO
 
 # Python 2/3 compatibility
-from past.builtins import basestring, unicode
+from zato.common.py23_.past.builtins import basestring, unicode
 from zato.common.py23_ import pickle_dumps
 
 # Zato

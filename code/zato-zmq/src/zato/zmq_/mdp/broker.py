@@ -27,7 +27,7 @@ from gevent.lock import RLock
 import zmq.green as zmq
 
 # Python 2/3 compatibility
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 
 # Zato
 from zato.common.api import CHANNEL, ZMQ
