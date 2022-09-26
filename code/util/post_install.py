@@ -42,14 +42,31 @@ site_packages_relative = ['lib', 'site-packages']
 # This is where the source code is built under Windows and this is what we are replacing during the installation
 # with a final path that the package has been installed to, e.g. C:\Users\Jane\LocalAppData\ZatoSource\Zato\Zato-3.2-python38
 #
+
+build_user = os.environ['Zato_Windows_Build_User']
+
 build_dir_list = [
-    r'c:\Users\Administrator\Desktop\projects\zato\code',
-    r'C:\Users\Administrator\Desktop\projects\zato\code',
+    fr'c:\\Users\\{build_user}\\projects\\src-zato-3.2-python-3.9\\code',
+    fr'C:\\Users\\{build_user}\\projects\\src-zato-3.2-python-3.9\\code',
 
-    r'c:\\Users\\Administrator\\Desktop\\projects\\zato\\code',
-    r'C:\\Users\\Administrator\\Desktop\\projects\\zato\\code',
+    fr'c:\\Users\\{build_user}\\projects\\src-zato-3.2-python-3.10\\code',
+    fr'C:\\Users\\{build_user}\\projects\\src-zato-3.2-python-3.10\\code',
+
+    fr'c:\\Users\\{build_user}\\projects\\src-zato-3.2-python-3.11\\code',
+    fr'C:\\Users\\{build_user}\\projects\\src-zato-3.2-python-3.11\\code',
+
+    fr'c:\\Users\\{build_user}\\projects\\src-zato-3.2-python-3.12\\code',
+    fr'C:\\Users\\{build_user}\\projects\\src-zato-3.2-python-3.12\\code',
+
+    fr'c:\\Users\\{build_user}\\projects\\src-zato-3.2-python-3.13\\code',
+    fr'C:\\Users\\{build_user}\\projects\\src-zato-3.2-python-3.13\\code',
+
+    fr'c:\\Users\\{build_user}\\projects\\src-zato-3.2-python-3.14\\code',
+    fr'C:\\Users\\{build_user}\\projects\\src-zato-3.2-python-3.14\\code',
+
+    fr'c:\\Users\\{build_user}\\projects\\src-zato-3.2-python-3.15\\code',
+    fr'C:\\Users\\{build_user}\\projects\\src-zato-3.2-python-3.15\\code',
 ]
-
 
 # ################################################################################################################################
 # ################################################################################################################################
