@@ -9,9 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 
-# sh
-from sh import ErrorReturnCode
-
 # Zato
 from zato.common.typing_ import cast_
 
@@ -24,6 +21,9 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 def start_cleanup(path:'str') -> 'None':
+
+    # sh
+    from sh import ErrorReturnCode
 
     # Zato
     from zato.common.util.cli import CommandLineInvoker
