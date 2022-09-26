@@ -49,71 +49,71 @@ build_dir_list = [
     # 3.9
     #
 
-    fr'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.9\code',
-    fr'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.9\code',
+    r'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.9\code',
+    r'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.9\code',
 
-    fr'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.9\\code',
-    fr'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.9\\code',
+    r'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.9\\code',
+    r'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.9\\code',
 
     #
     # 3.10
     #
 
-    fr'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.10\code',
-    fr'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.10\code',
+    r'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.10\code',
+    r'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.10\code',
 
-    fr'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.10\\code',
-    fr'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.10\\code',
+    r'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.10\\code',
+    r'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.10\\code',
 
     #
     # 3.11
     #
 
-    fr'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.11\code',
-    fr'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.11\code',
+    r'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.11\code',
+    r'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.11\code',
 
-    fr'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.11\\code',
-    fr'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.11\\code',
+    r'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.11\\code',
+    r'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.11\\code',
 
     #
     # 3.12
     #
 
-    fr'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.12\code',
-    fr'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.12\code',
+    r'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.12\code',
+    r'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.12\code',
 
-    fr'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.12\\code',
-    fr'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.12\\code',
+    r'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.12\\code',
+    r'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.12\\code',
 
     #
     # 3.13
     #
 
-    fr'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.13\code',
-    fr'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.13\code',
+    r'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.13\code',
+    r'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.13\code',
 
-    fr'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.13\\code',
-    fr'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.13\\code',
+    r'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.13\\code',
+    r'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.13\\code',
 
     #
     # 3.14
     #
 
-    fr'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.14\code',
-    fr'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.14\code',
+    r'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.14\code',
+    r'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.14\code',
 
-    fr'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.14\\code',
-    fr'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.14\\code',
+    r'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.14\\code',
+    r'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.14\\code',
 
     #
     # 3.15
     #
 
-    fr'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.15\code',
-    fr'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.15\code',
+    r'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.15\code',
+    r'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.15\code',
 
-    fr'c:\\Users\\dsuch\\projects\src-zato\\zato-3.2-python-3.15\\code',
-    fr'C:\\Users\\dsuch\\projects\src-zato\\zato-3.2-python-3.15\\code',
+    r'c:\\Users\\dsuch\\projects\src-zato\\zato-3.2-python-3.15\\code',
+    r'C:\\Users\\dsuch\\projects\src-zato\\zato-3.2-python-3.15\\code',
 
 ]
 
