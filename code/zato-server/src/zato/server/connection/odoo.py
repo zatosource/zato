@@ -49,6 +49,7 @@ class OdooWrapper:
         self.url = '{protocol}://{user}:******@{host}:{port}/{database}'.format(**self.config)
         self.client = ConnectionQueue(
             self.server,
+            self.config.is_active,
             self.config.pool_size,
             self.config.queue_build_cap,
             self.config.id,
