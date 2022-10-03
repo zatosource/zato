@@ -21,9 +21,6 @@ from openapi_spec_validator.readers import read_from_filename
 # requests-openapi
 import requests_openapi
 
-# sh
-from sh import ErrorReturnCode
-
 # Zato
 from zato.common.test.apispec_ import run_common_apispec_assertions
 from zato.common.test.config import TestConfig
@@ -106,6 +103,9 @@ class APISpecTestCase(TestCase):
 
         if not os.environ.get('ZATO_TEST_OPENAPI'):
             return
+
+        # sh
+        from sh import ErrorReturnCode
 
         tmp_dir = gettempdir()
         test_suffix = rand_unicode() + '.' + rand_string()

@@ -47,9 +47,10 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
         self.zato_config = config
         self.zato_security_id = self.zato_config.get('security_id') or 0
+        self.zato_auth_type = self.zato_config.get('auth_type')
 
         # This can be built in advance in case we are using Basic Auth
-        if self.zato_config['auth_type'] == _basic_auth:
+        if self.zato_auth_type == _basic_auth:
             self.zato_basic_auth_header = self.zato_get_basic_auth_header()
         else:
             self.zato_basic_auth_header = None
@@ -71,11 +72,11 @@ class _HL7FHIRConnection(SyncFHIRClient):
             headers = {**headers, **self.extra_headers}
 
         # This is already available ..
-        if self.zato_config['auth_type'] == _basic_auth:
+        if self.zato_auth_type == _basic_auth:
             auth_header = self.zato_basic_auth_header
 
         # .. while this needs to be dynamically created ..
-        elif self.zato_config['auth_type'] == _oauth:
+        elif self.zato_auth_type == _oauth:
             auth_header = self.zato_get_oauth_header()
 
         else:
