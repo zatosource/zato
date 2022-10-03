@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,9 +13,6 @@ from tempfile import gettempdir
 from traceback import format_exc
 
 from unittest import main, TestCase
-
-# sh
-from sh import ErrorReturnCode
 
 # Zato
 from zato.common.test.config import TestConfig
@@ -165,6 +162,9 @@ class EnmasseTestCase(TestCase):
 # ################################################################################################################################
 
     def test_enmasse_ok(self) -> 'None':
+
+        # sh
+        from sh import ErrorReturnCode
 
         tmp_dir = gettempdir()
         test_suffix = rand_unicode() + '.' + rand_string()

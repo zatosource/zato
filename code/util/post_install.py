@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -42,14 +42,80 @@ site_packages_relative = ['lib', 'site-packages']
 # This is where the source code is built under Windows and this is what we are replacing during the installation
 # with a final path that the package has been installed to, e.g. C:\Users\Jane\LocalAppData\ZatoSource\Zato\Zato-3.2-python38
 #
+
 build_dir_list = [
-    r'c:\Users\Administrator\Desktop\projects\zato\code',
-    r'C:\Users\Administrator\Desktop\projects\zato\code',
 
-    r'c:\\Users\\Administrator\\Desktop\\projects\\zato\\code',
-    r'C:\\Users\\Administrator\\Desktop\\projects\\zato\\code',
+    #
+    # 3.9
+    #
+
+    r'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.9\code',
+    r'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.9\code',
+
+    r'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.9\\code',
+    r'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.9\\code',
+
+    #
+    # 3.10
+    #
+
+    r'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.10\code',
+    r'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.10\code',
+
+    r'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.10\\code',
+    r'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.10\\code',
+
+    #
+    # 3.11
+    #
+
+    r'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.11\code',
+    r'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.11\code',
+
+    r'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.11\\code',
+    r'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.11\\code',
+
+    #
+    # 3.12
+    #
+
+    r'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.12\code',
+    r'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.12\code',
+
+    r'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.12\\code',
+    r'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.12\\code',
+
+    #
+    # 3.13
+    #
+
+    r'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.13\code',
+    r'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.13\code',
+
+    r'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.13\\code',
+    r'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.13\\code',
+
+    #
+    # 3.14
+    #
+
+    r'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.14\code',
+    r'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.14\code',
+
+    r'c:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.14\\code',
+    r'C:\\Users\\dsuch\\projects\\src-zato\\zato-3.2-python-3.14\\code',
+
+    #
+    # 3.15
+    #
+
+    r'c:\Users\dsuch\projects\src-zato\zato-3.2-python-3.15\code',
+    r'C:\Users\dsuch\projects\src-zato\zato-3.2-python-3.15\code',
+
+    r'c:\\Users\\dsuch\\projects\src-zato\\zato-3.2-python-3.15\\code',
+    r'C:\\Users\\dsuch\\projects\src-zato\\zato-3.2-python-3.15\\code',
+
 ]
-
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,8 +123,7 @@ build_dir_list = [
 class WindowsPostInstall:
     """ Code to run after a Windows package has been just installed.
     """
-    def __init__(self, base_dir, bin_dir):
-        # type: (str) -> None
+    def __init__(self, base_dir:'str', bin_dir:'str') -> 'None':
         self.base_dir = base_dir
         self.bin_dir = bin_dir
 
@@ -101,7 +166,7 @@ class WindowsPostInstall:
                 else:
                     should_add = True
 
-                # .. if we enter this if, it means that the file is not to be ignored.
+                # .. if we enter this 'if' branch, it means that the file is not to be ignored.
                 if should_add:
                     file_names.append(full_path)
 
@@ -176,6 +241,20 @@ class WindowsPostInstall:
 
 # ################################################################################################################################
 
+    def set_git_root_dir_config(self):
+
+        git_root_dir = os.path.join(self.base_dir, '..')
+        git_root_dir = os.path.abspath(git_root_dir)
+        git_root_dir = git_root_dir.replace('\\', '/')
+
+        try:
+            command = f'git config --global --add safe.directory {git_root_dir}'
+            os.system(command)
+        except Exception:
+            pass
+
+# ################################################################################################################################
+
     def update_windows_registry(self):
 
         # stdlib
@@ -224,6 +303,7 @@ class WindowsPostInstall:
         self.update_site_packages_files()
         self.update_bin_files()
         self.copy_zato_binary()
+        self.set_git_root_dir_config()
 
 # ################################################################################################################################
 

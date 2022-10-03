@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -24,8 +24,7 @@ logger = logging.getLogger('zato')
 class WindowsPreUninstall:
     """ Code to run before a Windows package is to be uninstalled.
     """
-    def __init__(self, base_dir, bin_dir):
-        # type: (str) -> None
+    def __init__(self, base_dir:'str', bin_dir:'str') -> 'None':
         self.base_dir = base_dir
         self.bin_dir = bin_dir
 
