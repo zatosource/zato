@@ -14,8 +14,12 @@ patch_all()
 import os
 from unittest import main, TestCase
 
+# Bunch
+from bunch import Bunch
+
 # Zato
-from zato.common.ext.imbox.imbox import Imbox
+from zato.common.api import EMAIL
+from zato.server.connection.email import Imbox
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,16 +32,22 @@ class IMAP_Without_OAuth_TestCase(TestCase):
         if not host:
             return
 
-        password = os.environ.get('Zato_Test_IMAP_Password')
         port = os.environ.get('Zato_Test_IMAP_Port')
         username = os.environ.get('Zato_Test_IMAP_Username')
+        password = os.environ.get('Zato_Test_IMAP_Password')
 
-        imbox = Imbox(
-            hostname = host,
-            username = username,
-            password = password,
-            port = port,
-        )
+        config = Bunch()
+
+        config.host = host
+        config.port = port
+
+        config.username = username
+        config.password = password
+
+        config.mode = EMAIL.IMAP.MODE.SSL
+        config.debug_level = 0
+
+        imbox = Imbox(config, config)
 
         result = imbox.folders()
         self.assertTrue(len(result) > 0)
