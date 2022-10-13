@@ -24,17 +24,22 @@ from zato.server.connection.email import Imbox
 # ################################################################################################################################
 # ################################################################################################################################
 
-class IMAP_Without_OAuth_TestCase(TestCase):
+class _Base_Test_Case(TestCase):
 
-    def test_connection(self) -> 'None':
+    def _run_test(self, key_config):
 
-        host = os.environ.get('Zato_Test_IMAP_Host')
+        host_key = key_config.get('host')
+        port_key = key_config.get('port')
+        username_key = key_config.get('username')
+        password_key = key_config.get('password')
+
+        host = os.environ.get(host_key)
         if not host:
             return
 
-        port = os.environ.get('Zato_Test_IMAP_Port')
-        username = os.environ.get('Zato_Test_IMAP_Username')
-        password = os.environ.get('Zato_Test_IMAP_Password')
+        port = os.environ.get(port_key)
+        username = os.environ.get(username_key)
+        password = os.environ.get(password_key)
 
         config = Bunch()
 
@@ -53,6 +58,22 @@ class IMAP_Without_OAuth_TestCase(TestCase):
         self.assertTrue(len(result) > 0)
 
         imbox.server.server.sock.close()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class IMAP_Without_OAuth_TestCase(_Base_Test_Case):
+
+    def test_connection(self) -> 'None':
+
+        config = {
+            'host': 'Zato_Test_IMAP_Host',
+            'port': 'Zato_Test_IMAP_Port',
+            'username': 'Zato_Test_IMAP_Username',
+            'password': 'Zato_Test_IMAP_Password',
+        }
+
+        self._run_test(config)
 
 # ################################################################################################################################
 # ################################################################################################################################
