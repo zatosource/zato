@@ -20,11 +20,9 @@ from zato.common.ext.imbox.imbox import Imbox
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _BaseTestCase(TestCase):
+class IMAP_Without_OAuth_TestCase(TestCase):
 
-    def setUp(self) -> 'None':
-
-        self.zato_test_config = {}
+    def test_connection(self) -> 'None':
 
         host = os.environ.get('Zato_Test_IMAP_Host')
         if not host:
@@ -34,26 +32,11 @@ class _BaseTestCase(TestCase):
         port = os.environ.get('Zato_Test_IMAP_Port')
         username = os.environ.get('Zato_Test_IMAP_Username')
 
-        self.zato_test_config['host'] = host
-        self.zato_test_config['port'] = port
-        self.zato_test_config['username'] = username
-        self.zato_test_config['password'] = password
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class IMAP_Without_OAuth_TestCase(_BaseTestCase):
-
-    def test_connection(self) -> 'None':
-
-        if not self.zato_test_config:
-            return
-
         imbox = Imbox(
-            hostname=self.zato_test_config['host'],
-            username=self.zato_test_config['username'],
-            password=self.zato_test_config['password'],
-            port=self.zato_test_config['port'],
+            hostname = host,
+            username = username,
+            password = password,
+            port = port,
         )
 
         result = imbox.folders()
@@ -64,7 +47,7 @@ class IMAP_Without_OAuth_TestCase(_BaseTestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class IMAP_With_OAuth_TestCase(_BaseTestCase):
+class IMAP_With_OAuth_TestCase(TestCase):
 
     def xtest_connection(self) -> 'None':
         pass
