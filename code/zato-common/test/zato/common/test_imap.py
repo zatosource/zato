@@ -15,14 +15,7 @@ import os
 from unittest import main, TestCase
 
 # Zato
-from zato.common.oauth import OAuthTokenClient, OAuthStore
-from zato.common.typing_ import cast_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import any_, dictnone, stranydict
+from zato.common.ext.imbox.imbox import Imbox
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,32 +26,18 @@ class _BaseTestCase(TestCase):
 
         self.zato_test_config = {}
 
-        username = os.environ.get('Zato_Test_OAuth_Username')
-        if not username:
+        host = os.environ.get('Zato_Test_IMAP_Host')
+        if not host:
             return
 
-        secret = os.environ.get('Zato_Test_OAuth_Secret')
-        auth_server_url = os.environ.get('Zato_Test_OAuth_Auth_Server_URL')
-        scopes = os.environ.get('Zato_Test_OAuth_Scopes')
+        password = os.environ.get('Zato_Test_IMAP_Password')
+        port = os.environ.get('Zato_Test_IMAP_Port')
+        username = os.environ.get('Zato_Test_IMAP_Username')
 
-        self.zato_test_config['conn_name'] = 'OAuthTokenClientTestCase'
+        self.zato_test_config['host'] = host
+        self.zato_test_config['port'] = port
         self.zato_test_config['username'] = username
-        self.zato_test_config['secret'] = secret
-        self.zato_test_config['auth_server_url'] = auth_server_url
-        self.zato_test_config['scopes'] = scopes
-
-# ################################################################################################################################
-
-    def run_common_token_assertions(self, token:'dictnone') -> 'None':
-
-        token = cast_('stranydict', token)
-
-        self.assertEqual(token['token_type'], 'Bearer')
-        self.assertEqual(token['expires_in'], 3600)
-        self.assertEqual(token['scope'], self.zato_test_config['scopes'])
-
-        self.assertIsInstance(token['access_token'], str)
-        self.assertGreaterEqual(len(token['access_token']), 50)
+        self.zato_test_config['password'] = password
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,17 +49,24 @@ class IMAP_Without_OAuth_TestCase(_BaseTestCase):
         if not self.zato_test_config:
             return
 
-        client = OAuthTokenClient(**self.zato_test_config)
-        token = client.obtain_token()
+        imbox = Imbox(
+            hostname=self.zato_test_config['host'],
+            username=self.zato_test_config['username'],
+            password=self.zato_test_config['password'],
+            port=self.zato_test_config['port'],
+        )
 
-        self.run_common_token_assertions(token)
+        result = imbox.folders()
+        self.assertTrue(len(result) > 0)
+
+        imbox.server.server.sock.close()
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class IMAP_With_OAuth_TestCase(_BaseTestCase):
 
-    def test_connection(self) -> 'None':
+    def xtest_connection(self) -> 'None':
         pass
 
 # ################################################################################################################################

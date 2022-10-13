@@ -54,7 +54,7 @@ class ImapTransport:
 
         if starttls:
             self.server.starttls()
-        logger.info(f'Created IMAP4 transport for {self.host}:{self.port}')
+        logger.info(f'Created IMAP4 transport for {self.hostname}:{self.port}')
 
 # ################################################################################################################################
 
