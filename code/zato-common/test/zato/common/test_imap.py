@@ -44,7 +44,7 @@ class _Base_Test_Case(TestCase):
         config = Bunch()
 
         config.host = host
-        config.port = port
+        config.port = int(port) # type: ignore
 
         config.username = username
         config.password = password
@@ -78,10 +78,18 @@ class IMAP_Without_OAuth_TestCase(_Base_Test_Case):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class IMAP_With_OAuth_TestCase(TestCase):
+class IMAP_With_OAuth_TestCase(_Base_Test_Case):
 
     def xtest_connection(self) -> 'None':
-        pass
+
+        config = {
+            'host': 'Zato_Test_IMAP_OAuth_Host',
+            'port': 'Zato_Test_IMAP_OAuth_Port',
+            'username': 'Zato_Test_IMAP_OAuth_Username',
+            'password': 'Zato_Test_IMAP_OAuth_Password',
+        }
+
+        self._run_test(config)
 
 # ################################################################################################################################
 # ################################################################################################################################
