@@ -47,14 +47,15 @@ class _Microsoft365Client:
         # Office-365
         from O365 import Account
 
-        opaque1 = config['opaque1']
+        opaque1 = config.pop('opaque1', '{}')
         opaque1 = loads(opaque1)
+        config.update(opaque1)
 
-        token = opaque1.get('token')
+        token = config.get('token')
         scopes = config['scopes']
 
-        client_id = opaque1['client_id']
-        secret_value = opaque1['secret_value']
+        client_id = config['client_id']
+        secret_value = config['secret_value']
 
         credentials = (client_id, secret_value)
 
