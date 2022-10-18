@@ -51,16 +51,12 @@ class _Microsoft365Client:
         opaque1 = loads(opaque1)
         config.update(opaque1)
 
-        token = config.get('token')
-        scopes = config['scopes']
-
         client_id = config['client_id']
         secret_value = config['secret_value']
 
         credentials = (client_id, secret_value)
 
-        account = Account(credentials, scopes=scopes)
-        account.con.token_backend.token = token
+        account = Account(credentials, auth_flow_type='credentials', tenant_id='QQQ')
 
         return account
 
