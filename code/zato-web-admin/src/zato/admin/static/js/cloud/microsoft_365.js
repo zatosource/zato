@@ -19,10 +19,10 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms([
         'name',
+        'tenant_id',
         'client_id',
         'secret_value',
         'scopes',
-        'auth_redirect_url',
     ]);
 })
 
@@ -30,15 +30,6 @@ $(document).ready(function() {
 
 $.fn.zato.cloud.microsoft_365.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new Microsoft 365 connection', null);
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.cloud.microsoft_365.reset_oauth2_scopes = function(id, title) {
-    $.fn.zato.data_table.change_password(id, title);
-    let instance = $.fn.zato.data_table.data[id];
-    let elem = $("#reset_oauth2_scopes_url_step_1");
-    elem.val(instance.reset_oauth2_scopes_url);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -64,11 +55,9 @@ $.fn.zato.cloud.microsoft_365.data_table.new_row = function(item, data, include_
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.address);
+    row += String.format('<td>{0}</td>', item.client_id);
 
     // 3
-    row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Reset OAuth2 scopes')\">Reset OAuth2 scopes</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cloud.microsoft_365.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.cloud.microsoft_365.delete_({0});'>Delete</a>", item.id));
 
@@ -80,8 +69,7 @@ $.fn.zato.cloud.microsoft_365.data_table.new_row = function(item, data, include_
     // 4
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
-    row += String.format("<td class='ignore'>{0}</td>", item.username);
-    row += String.format("<td class='ignore'>{0}</td>", item.reset_oauth2_scopes_ur);
+    row += String.format("<td class='ignore'>{0}</td>", item.tenant_id);
 
     if(include_tr) {
         row += '</tr>';
