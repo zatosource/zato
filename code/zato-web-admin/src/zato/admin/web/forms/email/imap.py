@@ -22,9 +22,9 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     host = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
-    port = forms.CharField(initial=IMAP4_PORT, widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
+    port = forms.CharField(initial=IMAP4_PORT, widget=forms.TextInput(attrs={'class':'required', 'style':'width:10%'}))
     timeout = forms.CharField(
-        initial=EMAIL.DEFAULT.TIMEOUT, widget=forms.TextInput(attrs={'class':'required', 'style':'width:10%'}))
+        initial=EMAIL.DEFAULT.TIMEOUT, widget=forms.TextInput(attrs={'class':'required', 'style':'width:6%'}))
     debug_level = forms.CharField(
         initial=EMAIL.DEFAULT.IMAP_DEBUG_LEVEL, widget=forms.TextInput(attrs={'class':'required', 'style':'width:7%'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
