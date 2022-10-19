@@ -55,6 +55,7 @@ $.fn.zato.cloud.microsoft_365.data_table.new_row = function(item, data, include_
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', item.tenant_id);
     row += String.format('<td>{0}</td>', item.client_id);
 
     // 3
