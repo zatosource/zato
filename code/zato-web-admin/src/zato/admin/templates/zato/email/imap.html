@@ -124,7 +124,7 @@
                 <form action="{% url "email-imap-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:17%">
+                            <td style="vertical-align:middle; width:19%">
                             <label for="id_name">Name</label>
                             </td>
                             <td>{{ create_form.name }}</td>
@@ -141,11 +141,19 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
+                            Generic IMAP
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.generic-imap-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="generic-imap-options-block hidden">
+                            <td style="vertical-align:middle">
                             <label for="id_host">Host</label>
                             </td>
                             <td>{{ create_form.host }} </td>
                         </tr>
-                        <tr>
+                        <tr class="generic-imap-options-block hidden">
                             <td style="vertical-align:middle">
                             </td>
                             <td>
@@ -171,19 +179,27 @@
                                 </label>
                             </td>
                         </tr>
-                        <tr>
+                        <tr class="generic-imap-options-block hidden">
                             <td style="vertical-align:middle">
                             <label for="id_username">Username</label>
                             </td>
                             <td>{{ create_form.username }} </td>
                         </tr>
-                        <tr>
+                        <tr class="generic-imap-options-block hidden">
                             <td style="vertical-align:middle">
                             <label for="id_get_criteria">Get criteria
                             <br/>
                             <span class="form_hint">(Def.: {{ default_get_criteria }})</span>
                             </label>
                             <td>{{ create_form.get_criteria }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                            Microsoft 365
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.ms-365-options-block')">Toggle options</a>
+                            </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
