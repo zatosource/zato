@@ -1512,14 +1512,7 @@ class Microsoft365:
     class Default:
         Auth_Redirect_URL = 'https://zato.io/ext/redirect/oauth2'
         Scopes = [
-            'offline_access',
-            'User.Read',
-            'Mail.Read',
-            'Mail.ReadBasic',
-            'Mail.ReadWrite',
-            'Mail.Send',
-            'IMAP.AccessAsUser.All',
-            'SMTP.Send'
+            'https://graph.microsoft.com/.default'
         ]
 
 # ################################################################################################################################

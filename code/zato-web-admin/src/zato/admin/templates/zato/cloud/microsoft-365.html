@@ -36,7 +36,6 @@
             'client_id',
 
             {% comment %} 2 {% endcomment %}
-            '_change_api_token',
             '_edit',
             '_delete',
 
@@ -48,9 +47,7 @@
             {% comment %} 4 {% endcomment %}
             'id',
             'is_active',
-            'auth_redirect_url',
-            'reset_oauth2_scopes_url',
-
+            'tenant_id',
         ]
     }
     </script>
@@ -90,7 +87,6 @@
                         {% comment %} 2 {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th>&nbsp;</th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -98,7 +94,6 @@
                         <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 4 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -118,7 +113,6 @@
                         <td>{{ item.client_id }}</td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td><a href="javascript:$.fn.zato.cloud.microsoft_365.reset_oauth2_scopes('{{ item.id }}', 'Reset OAuth2 scopes')">Reset OAuth2 scopes</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.microsoft_365.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.microsoft_365.delete_('{{ item.id }}')">Delete</a></td>
 
@@ -130,8 +124,7 @@
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.auth_redirect_url }}</td>
-                        <td class='ignore'>{{ item.reset_oauth2_scopes_url }}</td>
+                        <td class='ignore'>{{ item.tenant_id }}</td>
 
                     </tr>
                 {% endfor %}
@@ -170,6 +163,16 @@
                         </tr>
                         <tr>
                             <td>
+                                <label for="id_tenant_id">
+                                Tenant ID
+                                </label>
+                            </td>
+                            <td>
+                                {{ create_form.tenant_id }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
                                 <label for="id_client_id">
                                 Client ID
                                 </label>
@@ -194,16 +197,6 @@
                             </td>
                             <td>
                             <a href="javascript:$.fn.zato.toggle_visibility('.oauth2-options-block')">Toggle options</a>
-                            </td>
-                        </tr>
-                        <tr class="oauth2-options-block hidden">
-                            <td>
-                                <label for="id_auth_redirect_url">
-                                Auth. redirect URL
-                                </label>
-                            </td>
-                            <td>
-                                {{ create_form.auth_redirect_url }}
                             </td>
                         </tr>
                         <tr class="oauth2-options-block hidden">
@@ -251,6 +244,16 @@
                         </tr>
                         <tr>
                             <td>
+                                <label for="id_tenant_id">
+                                Tenant ID
+                                </label>
+                            </td>
+                            <td>
+                                {{ edit_form.tenant_id }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
                                 <label for="id_client_id">
                                 Client ID
                                 </label>
@@ -275,16 +278,6 @@
                             </td>
                             <td>
                             <a href="javascript:$.fn.zato.toggle_visibility('.oauth2-options-block')">Toggle options</a>
-                            </td>
-                        </tr>
-                        <tr class="oauth2-options-block hidden">
-                            <td>
-                                <label for="id_auth_redirect_url">
-                                Auth. redirect URL
-                                </label>
-                            </td>
-                            <td>
-                                {{ edit_form.auth_redirect_url }}
                             </td>
                         </tr>
                         <tr class="oauth2-options-block hidden">
