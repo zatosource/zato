@@ -33,6 +33,7 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
+            'tenant_id',
             'client_id',
 
             {% comment %} 2 {% endcomment %}
@@ -47,7 +48,6 @@
             {% comment %} 4 {% endcomment %}
             'id',
             'is_active',
-            'tenant_id',
         ]
     }
     </script>
@@ -82,6 +82,7 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
+                        <th><a href="#">Tenant ID</a></th>
                         <th><a href="#">Client ID</a></th>
 
                         {% comment %} 2 {% endcomment %}
@@ -110,6 +111,7 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.tenant_id }}</td>
                         <td>{{ item.client_id }}</td>
 
                         {% comment %} 2 {% endcomment %}
@@ -124,7 +126,6 @@
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.tenant_id }}</td>
 
                     </tr>
                 {% endfor %}
