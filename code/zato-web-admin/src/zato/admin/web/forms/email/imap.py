@@ -36,8 +36,8 @@ class CreateForm(forms.Form):
 
     tenant_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     client_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    search_criteria = forms.CharField(
-        initial='TODO-1',
+    filter_criteria = forms.CharField(
+        initial=EMAIL.DEFAULT.FILTER_CRITERIA,
         widget=forms.Textarea(attrs={'style':'width:100%; height:4rem'}
     ))
 

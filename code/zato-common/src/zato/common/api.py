@@ -938,7 +938,7 @@ class EMAIL:
         TIMEOUT = 10
         PING_ADDRESS = 'invalid@invalid'
         GET_CRITERIA = 'UNSEEN'
-        SEARCH_CRITERIA = 'TODO-2'
+        FILTER_CRITERIA = 'isRead ne true'
         IMAP_DEBUG_LEVEL = 0
 
     class IMAP:
