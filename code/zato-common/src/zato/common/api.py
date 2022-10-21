@@ -938,15 +938,27 @@ class EMAIL:
         TIMEOUT = 10
         PING_ADDRESS = 'invalid@invalid'
         GET_CRITERIA = 'UNSEEN'
+        SEARCH_CRITERIA = 'TODO-2'
         IMAP_DEBUG_LEVEL = 0
 
     class IMAP:
+
         class MODE:
             PLAIN = 'plain'
             SSL = 'ssl'
 
             def __iter__(self):
                 return iter((self.PLAIN, self.SSL))
+
+        class ServerType:
+            Generic = 'generic-imap'
+            Microsoft365 = 'microsoft-365'
+
+        ServerTypeHuman = {
+            ServerType.Generic: 'Generic IMAP',
+            ServerType.Microsoft365: 'Microsoft 365',
+        }
+
 
     class SMTP:
         class MODE:
