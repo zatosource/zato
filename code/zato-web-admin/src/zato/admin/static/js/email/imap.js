@@ -17,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.IMAP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.email.imap.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'host', 'port', 'timeout', 'mode', 'get_criteria']);
+    $.fn.zato.data_table.setup_forms(['name', 'server_type']);
 })
 
 
@@ -39,24 +39,39 @@ $.fn.zato.email.imap.data_table.new_row = function(item, data, include_tr) {
     var is_active = item.is_active == true
     var username = item.username ? item.username : "<span class='form_hint'>(None)</span>";
 
+    // 1
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
+
+    // 2
     row += String.format('<td>{0}</td>', is_active ? "Yes" : "No");
+    row += String.format('<td>{0}</td>', item.server_type_human);
     row += String.format('<td>{0}</td>', item.host);
+
+    // 3
     row += String.format('<td>{0}</td>', item.port);
     row += String.format('<td>{0}</td>', username);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}')\">Change password</a>", item.id));
+
+    // 4
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.email.imap.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.email.imap.delete_({0});'>Delete</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.ping({0});'>Ping</a>", item.id));
+
+    // 5
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.timeout);
+
+    // 6
     row += String.format("<td class='ignore'>{0}</td>", item.debug_level);
     row += String.format("<td class='ignore'>{0}</td>", item.mode);
     row += String.format("<td class='ignore'>{0}</td>", item.get_criteria ? item.get_criteria : "");
+
+    // 7
     row += String.format("<td class='ignore'>{0}</td>", item.username ? item.username : "");
+    row += String.format("<td class='ignore'>{0}</td>", item.server_type);
 
     if(include_tr) {
         row += '</tr>';
