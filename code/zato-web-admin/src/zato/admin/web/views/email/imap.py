@@ -47,7 +47,7 @@ class Index(_Index):
         return {
             'default_debug_level': EMAIL.DEFAULT.IMAP_DEBUG_LEVEL,
             'default_get_criteria': EMAIL.DEFAULT.GET_CRITERIA,
-            'default_search_criteria': EMAIL.DEFAULT.SEARCH_CRITERIA,
+            'default_filter_criteria': EMAIL.DEFAULT.FILTER_CRITERIA,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm()
