@@ -97,7 +97,7 @@
 
                         {% comment %} 3 {% endcomment %}
                         <th><a href="#">Port</a></th>
-                        <th><a href="#">User / address</a></th>
+                        <th><a href="#">User / e-mail</a></th>
                         <th>&nbsp;</th>
 
                         {% comment %} 4 {% endcomment %}
@@ -137,7 +137,13 @@
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.server_type_human }}</td>
-                        <td>{{ item.host }}</td>
+                        <td>
+                            {% if item.server_type == "microsoft-365" %}
+                                {{ item.tenant_id }}
+                            {% else %}
+                                {{ item.host }}
+                            {% endif %}
+                        </td>
 
                         {% comment %} 3 {% endcomment %}
                         <td>{{ item.port }}</td>
@@ -213,7 +219,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
-                            <label for="id_username">User / address</label>
+                            <label for="id_username">User / e-mail</label>
                             </td>
                             <td>{{ create_form.username }} </td>
                         </tr>
@@ -310,7 +316,7 @@
                 <form action="{% url "email-imap-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:17%">
+                            <td style="vertical-align:middle; width:19%">
                             <label for="id_name">Name</label>
                             </td>
                             <td>{{ edit_form.name }}</td>
@@ -332,17 +338,25 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
-                            <label for="id_username">Username</label>
+                            <label for="id_username">User / e-mail</label>
                             </td>
                             <td>{{ edit_form.username }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
+                            Generic IMAP
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.generic-imap-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="generic-imap-options-block hidden">
+                            <td style="vertical-align:middle">
                             <label for="id_host">Host</label>
                             </td>
                             <td>{{ edit_form.host }} </td>
                         </tr>
-                        <tr>
+                        <tr class="generic-imap-options-block hidden">
                             <td style="vertical-align:middle">
                             </td>
                             <td>
@@ -368,13 +382,41 @@
                                 </label>
                             </td>
                         </tr>
-                        <tr>
+                        <tr class="generic-imap-options-block hidden">
                             <td style="vertical-align:middle">
                             <label for="id_get_criteria">Get criteria
                             <br/>
                             <span class="form_hint">(Def.: {{ default_get_criteria }})</span>
                             </label>
                             <td>{{ edit_form.get_criteria }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                            Microsoft 365
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.microsoft-365-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="microsoft-365-options-block hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_client_id">Tenant ID</label>
+                            </td>
+                            <td>{{ edit_form.tenant_id }} </td>
+                        </tr>
+                        <tr class="microsoft-365-options-block hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_client_id">Client ID</label>
+                            </td>
+                            <td>{{ edit_form.client_id }} </td>
+                        </tr>
+                        <tr class="microsoft-365-options-block hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_filter_criteria">Filter
+                            <br/>
+                            <span class="form_hint">(Def.: {{ default_filter_criteria }})</span>
+                            </label>
+                            <td>{{ edit_form.filter_criteria }} </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">

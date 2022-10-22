@@ -14,10 +14,11 @@ from time import time
 from six import add_metaclass
 
 # Zato
-from zato.common.api import EMAIL as EMail_Common
+from zato.common.api import EMAIL as EMail_Common, Zato_None
 from zato.common.broker_message import EMAIL
 from zato.common.odb.model import IMAP
 from zato.common.odb.query import email_imap_list
+from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -37,29 +38,37 @@ get_list_docs = 'IMAP connections'
 broker_message = EMAIL
 broker_message_prefix = 'IMAP_'
 list_func = email_imap_list
-output_optional_extra = ['server_type', 'server_type_human']
+create_edit_input_optional_extra = ['server_type', AsIs('tenant_id'), AsIs('client_id'), 'filter_criteria']
+output_optional_extra = ['server_type', 'server_type_human', AsIs('tenant_id'), AsIs('client_id'), 'filter_criteria']
 
 # ################################################################################################################################
 
 def instance_hook(service:'Service', input:'Bunch', instance:'any_', attrs:'any_'):
     if attrs.is_create_edit:
         instance.username = input.username or '' # So it's not stored as None/NULL
+        instance.host = input.host or Zato_None
 
 # ################################################################################################################################
 
 def response_hook(service:'Service', input:'Bunch', instance:'any_', attrs:'any_', hook_type:'str'):
 
-    for item in service.response.payload:
+    if hook_type == 'get_list':
 
-        # This may be None ..
-        server_type = item.get('server_type')
+        for item in service.response.payload:
 
-        # .. in which case we can assume a default one ..
-        if not server_type:
-            item.server_type = EMail_Common.IMAP.ServerType.Generic
+            # This may be None ..
+            server_type = item.get('server_type')
 
-        # .. and now we can obtain a human-friendly name.
-        item.server_type_human = EMail_Common.IMAP.ServerTypeHuman[item.server_type]
+            # .. in which case we can assume a default one ..
+            if not server_type:
+                item.server_type = EMail_Common.IMAP.ServerType.Generic
+
+            # .. and now we can obtain a human-friendly name.
+            item.server_type_human = EMail_Common.IMAP.ServerTypeHuman[item.server_type]
+
+            # This should be cleared out in case there is no user-set value
+            if item.host == Zato_None:
+                item.host = ''
 
 # ################################################################################################################################
 
