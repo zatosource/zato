@@ -42,10 +42,12 @@ $.fn.zato.email.imap.data_table.new_row = function(item, data, include_tr) {
     if(item.server_type == "microsoft-365") {
         var _host = item.tenant_id || $.fn.zato.empty_value;
         var _port = $.fn.zato.empty_value;
+        var _server_type_human = "Microsoft 365";
     }
     else {
         var _host = item.host || $.fn.zato.empty_value;
         var _port = item.port || $.fn.zato.empty_value;
+        var _server_type_human = "Generic IMAP";
     }
 
     // 1
@@ -55,7 +57,7 @@ $.fn.zato.email.imap.data_table.new_row = function(item, data, include_tr) {
 
     // 2
     row += String.format('<td>{0}</td>', is_active ? "Yes" : "No");
-    row += String.format('<td>{0}</td>', item.server_type_human);
+    row += String.format('<td>{0}</td>', _server_type_human);
     row += String.format("<td>{0}</td>", _host);
 
     // 3
