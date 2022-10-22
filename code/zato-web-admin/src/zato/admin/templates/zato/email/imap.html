@@ -146,11 +146,17 @@
                         </td>
 
                         {% comment %} 3 {% endcomment %}
-                        <td>{{ item.port }}</td>
+                        <td>
+                            {% if item.server_type == "generic-imap" %}
+                                {{ item.port }}
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
                         <td>{{ item.username|default:"<span class='form_hint'>(None)</span>" }}</td>
                         <td>
                             {% if item.server_type == "microsoft-365" %}
-                                <a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change secret</a>
+                                <a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change secret', 'Secret', 'secret')">Change secret</a>
                             {% else %}
                                 <a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a>
                             {% endif %}
@@ -436,16 +442,17 @@
                 <form action="{% url "email-imap-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:19%">Name</td>
                             <td id="change-password-name"></td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Password</td>
+                            <td style="vertical-align:middle"><span id="secret_label1">Password</span></td>
                             <td>{{ change_password_form.password1 }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Confirm password</td>
+                            <td style="vertical-align:middle">Confirm <span id="secret_label2">password</span></td>
                             <td>{{ change_password_form.password2 }}
+                                <input type="hidden" id="secret_type_id" name="secret_type" />
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
                             </td>
