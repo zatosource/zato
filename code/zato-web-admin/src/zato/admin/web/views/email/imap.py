@@ -40,7 +40,7 @@ class Index(_Index):
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'debug_level', 'mode', \
              'get_criteria', 'server_type', 'server_type_human'
-        output_optional = 'username', 'tenant_id', 'client_id', 'search_criteria'
+        output_optional = 'username', 'tenant_id', 'client_id', 'search_criteria', 'filter_criteria'
         output_repeated = True
 
     def handle(self):
@@ -61,7 +61,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'debug_level', 'mode', 'get_criteria', \
-            'server_type', 'tenant_id', 'client_id', 'search_criteria'
+            'server_type', 'tenant_id', 'client_id', 'search_criteria', 'filter_criteria'
         output_required = 'id', 'name'
 
     def success_message(self, item):
