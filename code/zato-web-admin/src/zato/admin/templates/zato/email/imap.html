@@ -27,10 +27,10 @@
             // 2
             '_is_active',
             '_server_type',
-            'host',
+            '_host',
 
             // 3
-            'port',
+            '_port',
             '_username',
             '_change_password,',
 
@@ -56,6 +56,8 @@
 
             // 8
             'client_id',
+            'host',
+            'port',
         ]
     }
     </script>
@@ -122,6 +124,8 @@
 
                         {% comment %} 8 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -139,9 +143,9 @@
                         <td>{{ item.server_type_human }}</td>
                         <td>
                             {% if item.server_type == "microsoft-365" %}
-                                {{ item.tenant_id }}
+                                {{ item.tenant_id|default:"<span class='form_hint'>---</span>" }}
                             {% else %}
-                                {{ item.host }}
+                                {{ item.host|default:"<span class='form_hint'>---</span>" }}
                             {% endif %}
                         </td>
 
@@ -184,6 +188,8 @@
 
                         {% comment %} 8 {% endcomment %}
                         <td class='ignore'>{{ item.client_id|default:"" }}</td>
+                        <td class='ignore'>{{ item.host|default:"" }}</td>
+                        <td class='ignore'>{{ item.port|default:"993" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
