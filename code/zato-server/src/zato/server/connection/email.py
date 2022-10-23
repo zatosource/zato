@@ -247,7 +247,14 @@ class GenericIMAPConnection(_IMAPConnection):
 # ################################################################################################################################
 
 class Microsoft365IMAPConnection(_IMAPConnection):
-    impl: 'Microsoft365Client'
+
+    def ping(self):
+
+        client = Microsoft365Client(self.config)
+        mailbox = client.impl.mailbox(resource=self.config['username'])
+        result = mailbox.get_folders()
+
+        return result
 
 # ################################################################################################################################
 # ################################################################################################################################
