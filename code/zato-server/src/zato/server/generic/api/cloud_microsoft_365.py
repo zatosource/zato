@@ -30,7 +30,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _Microsoft365Client:
+class Microsoft365Client:
     def __init__(self, config:'stranydict') -> 'None':
 
         self.config = config
@@ -85,7 +85,7 @@ class CloudMicrosoft365Wrapper(Wrapper):
     def add_client(self):
 
         try:
-            conn = _Microsoft365Client(self.config)
+            conn = Microsoft365Client(self.config)
             self.client.put_client(conn)
         except Exception:
             logger.warning('Caught an exception while adding a Microsoft 365 client (%s); e:`%s`',
@@ -95,7 +95,7 @@ class CloudMicrosoft365Wrapper(Wrapper):
 
     def ping(self):
         with self.client() as client:
-            client = cast_('_Microsoft365Client', client)
+            client = cast_('Microsoft365Client', client)
             client.ping()
 
 # ################################################################################################################################
