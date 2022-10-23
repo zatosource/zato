@@ -11,7 +11,7 @@ import os
 from unittest import main, TestCase
 
 # Zato
-from zato.server.connection.email import Microsoft365IMAPConnection
+# from zato.server.connection.email import Microsoft365IMAPConnection
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,9 +36,11 @@ class Microsoft365IMAPConnectionTestCase(TestCase):
         if not tenant_id:
             return
         else:
+            """
             client_id = os.environ.get(ModuleCtx.Env_Key_Tenant_ID)
             secret = os.environ.get(ModuleCtx.Env_Key_Secret)
             resource = os.environ.get(ModuleCtx.Env_Key_Resource)
+            """
 
 # ################################################################################################################################
 # ################################################################################################################################

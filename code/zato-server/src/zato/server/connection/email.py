@@ -13,7 +13,6 @@ from logging import getLogger, INFO
 from traceback import format_exc
 
 # imbox
-from zato.common.api import EMAIL
 from zato.common.ext.imbox import Imbox as _Imbox
 from zato.common.ext.imbox.imap import ImapTransport as _ImapTransport
 from zato.common.ext.imbox.parser import parse_email
@@ -26,6 +25,7 @@ from zato.common.py23_.past.builtins import basestring, unicode
 
 # Zato
 from zato.common.api import IMAPMessage, EMAIL
+from zato.server.connection.cloud.microsoft_365 import Microsoft365Client
 from zato.server.store import BaseAPI, BaseStore
 
 # ################################################################################################################################
@@ -247,7 +247,7 @@ class GenericIMAPConnection(_IMAPConnection):
 # ################################################################################################################################
 
 class Microsoft365IMAPConnection(_IMAPConnection):
-    pass
+    impl: 'Microsoft365Client'
 
 # ################################################################################################################################
 # ################################################################################################################################
