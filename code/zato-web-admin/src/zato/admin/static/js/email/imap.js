@@ -43,11 +43,19 @@ $.fn.zato.email.imap.data_table.new_row = function(item, data, include_tr) {
         var _host = item.tenant_id || $.fn.zato.empty_value;
         var _port = $.fn.zato.empty_value;
         var _server_type_human = "Microsoft 365";
+        var _change_secret_link = String.format(
+            "<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change secret', 'Secret', 'secret')\">Change secret</a>",
+            item.id
+        );
     }
     else {
         var _host = item.host || $.fn.zato.empty_value;
         var _port = item.port || $.fn.zato.empty_value;
         var _server_type_human = "Generic IMAP";
+        var _change_secret_link = String.format(
+            "<a href=\"javascript:$.fn.zato.data_table.change_password('{0}')\">Change password</a>",
+            item.id
+        );
     }
 
     // 1
@@ -63,7 +71,7 @@ $.fn.zato.email.imap.data_table.new_row = function(item, data, include_tr) {
     // 3
     row += String.format('<td>{0}</td>', _port);
     row += String.format('<td>{0}</td>', username);
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}')\">Change password</a>", item.id));
+    row += String.format('<td>{0}</td>', _change_secret_link);
 
     // 4
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.email.imap.edit('{0}')\">Edit</a>", item.id));
