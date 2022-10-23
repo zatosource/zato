@@ -11,7 +11,8 @@ import os
 from unittest import main, TestCase
 
 # Zato
-# from zato.server.connection.email import Microsoft365IMAPConnection
+from zato.common.api import EMAIL
+from zato.server.connection.email import Microsoft365IMAPConnection
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,11 +37,37 @@ class Microsoft365IMAPConnectionTestCase(TestCase):
         if not tenant_id:
             return
         else:
-            """
-            client_id = os.environ.get(ModuleCtx.Env_Key_Tenant_ID)
+            client_id = os.environ.get(ModuleCtx.Env_Key_Client_ID)
             secret = os.environ.get(ModuleCtx.Env_Key_Secret)
             resource = os.environ.get(ModuleCtx.Env_Key_Resource)
-            """
+
+        config = {
+            'cluster_id': 1,
+            'id': 2,
+            'is_active':True,
+            'opaque1':None,
+            'name': 'My Name',
+            'tenant_id': tenant_id,
+            'client_id': client_id,
+            'password': secret,
+            'username': resource,
+            'filter_criteria': EMAIL.DEFAULT.FILTER_CRITERIA,
+            'server_type': EMAIL.IMAP.ServerType.Microsoft365,
+        }
+
+        conn = Microsoft365IMAPConnection(config, config)
+        result = conn.ping()
+
+        # Assume we will not find the Inbox folder
+        found_inbox = False
+
+        for item in result:
+            if item.name == 'Inbox':
+                found_inbox = True
+                break
+
+        if not found_inbox:
+            self.fail(f'Expected for folder Inbox to exist among {result}')
 
 # ################################################################################################################################
 # ################################################################################################################################
