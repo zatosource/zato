@@ -1,7 +1,7 @@
 # -# -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,6 +13,7 @@ from logging import getLogger, INFO
 from traceback import format_exc
 
 # imbox
+from zato.common.api import EMAIL
 from zato.common.ext.imbox import Imbox as _Imbox
 from zato.common.ext.imbox.imap import ImapTransport as _ImapTransport
 from zato.common.ext.imbox.parser import parse_email
@@ -28,9 +29,11 @@ from zato.common.api import IMAPMessage, EMAIL
 from zato.server.store import BaseAPI, BaseStore
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 logger = getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 _modes = {
@@ -39,6 +42,7 @@ _modes = {
     EMAIL.SMTP.MODE.STARTTLS: 'TLS'
 }
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Imbox(_Imbox):
@@ -77,6 +81,7 @@ class Imbox(_Imbox):
         self.connection.close()
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ImapTransport(_ImapTransport):
     def connect(self, username, password, debug_level):
@@ -87,6 +92,7 @@ class ImapTransport(_ImapTransport):
         return self.server
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class EMailAPI:
     def __init__(self, smtp, imap):
@@ -94,12 +100,14 @@ class EMailAPI:
         self.imap = imap
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class _Connection:
 
     def __repr__(self):
         return '<{} at {}, config:`{}`>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SMTPConnection(_Connection):
@@ -127,6 +135,8 @@ class SMTPConnection(_Connection):
 
         else:
             self.conn_class = AnonymousOutbox
+
+# ################################################################################################################################
 
     def send(self, msg, from_=None):
 
@@ -163,11 +173,13 @@ class SMTPConnection(_Connection):
                     msg.subject, msg.from_, msg.to, atts_info)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class SMTPAPI(BaseAPI):
     """ API to obtain SMTP connections through.
     """
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SMTPConnStore(BaseStore):
@@ -178,11 +190,30 @@ class SMTPConnStore(BaseStore):
         return SMTPConnection(config, config_no_sensitive)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class IMAPConnection(_Connection):
+class _IMAPConnection(_Connection):
+
     def __init__(self, config, config_no_sensitive):
         self.config = config
         self.config_no_sensitive = config_no_sensitive
+
+    def get(self, *args, **kwargs):
+        raise NotImplementedError('Must be implemented by subclasses')
+
+    def ping(self, *args, **kwargs):
+        raise NotImplementedError('Must be implemented by subclasses')
+
+    def delete(self, *args, **kwargs):
+        raise NotImplementedError('Must be implemented by subclasses')
+
+    def mark_seen(self, *args, **kwargs):
+        raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GenericIMAPConnection(_IMAPConnection):
 
     @contextmanager
     def get_connection(self):
@@ -213,17 +244,36 @@ class IMAPConnection(_Connection):
                 conn.connection.uid('STORE', uid, '+FLAGS', '\\Seen')
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class Microsoft365IMAPConnection(_IMAPConnection):
+    pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class IMAPConnStore(BaseStore):
+    """ Stores connections to IMAP.
+    """
+    _impl_class = {
+        EMAIL.IMAP.ServerType.Generic: GenericIMAPConnection,
+        EMAIL.IMAP.ServerType.Microsoft365: Microsoft365IMAPConnection,
+    }
+
+    def create_impl(self, config, config_no_sensitive):
+
+        server_type = config.server_type
+        class_ = self._impl_class[server_type]
+        instance = class_(config, config_no_sensitive)
+
+        return instance
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class IMAPAPI(BaseAPI):
     """ API to obtain SMTP connections through.
     """
 
 # ################################################################################################################################
-
-class IMAPConnStore(BaseStore):
-    """ Stores connections to IMAP.
-    """
-    def create_impl(self, config, config_no_sensitive):
-        return IMAPConnection(config, config_no_sensitive)
-
 # ################################################################################################################################
