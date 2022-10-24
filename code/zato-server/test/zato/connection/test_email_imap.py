@@ -28,7 +28,7 @@ class ModuleCtx:
 
 class Microsoft365IMAPConnectionTestCase(TestCase):
 
-    def test_ping(self):
+    def get_conn(self) -> 'Microsoft365IMAPConnection | None':
 
         # Try to get the main environment variable ..
         tenant_id = os.environ.get(ModuleCtx.Env_Key_Tenant_ID)
@@ -56,10 +56,21 @@ class Microsoft365IMAPConnectionTestCase(TestCase):
         }
 
         conn = Microsoft365IMAPConnection(config, config)
-        result = conn.ping()
+        return conn
+
+# ################################################################################################################################
+
+    def xtest_ping(self):
+
+        conn = self.get_conn()
+        if not conn:
+            return
 
         # Assume we will not find the Inbox folder
         found_inbox = False
+
+        # Run the function under test
+        result = conn.ping()
 
         for item in result:
             if item.name == 'Inbox':
@@ -68,6 +79,19 @@ class Microsoft365IMAPConnectionTestCase(TestCase):
 
         if not found_inbox:
             self.fail(f'Expected for folder Inbox to exist among {result}')
+
+# ################################################################################################################################
+
+    def test_get(self):
+
+        conn = self.get_conn()
+        if not conn:
+            return
+
+        # Run the function under test
+        result = conn.get()
+
+        print(111, result)
 
 # ################################################################################################################################
 # ################################################################################################################################
