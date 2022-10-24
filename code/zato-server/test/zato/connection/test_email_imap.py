@@ -91,7 +91,12 @@ class Microsoft365IMAPConnectionTestCase(TestCase):
         # Run the function under test
         result = conn.get()
 
-        print(111, result)
+        for item_id, item in result:
+            print(111, item_id)
+            print(222, item.data.sent_from[0])
+            print(333, item.data.subject)
+            print(444, item.data.message_id)
+            print()
 
 # ################################################################################################################################
 # ################################################################################################################################
