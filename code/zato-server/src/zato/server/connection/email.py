@@ -31,6 +31,13 @@ from zato.server.store import BaseAPI, BaseStore
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from O365.mailbox import MailBox
+    MailBox = MailBox
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -248,10 +255,26 @@ class GenericIMAPConnection(_IMAPConnection):
 
 class Microsoft365IMAPConnection(_IMAPConnection):
 
-    def ping(self):
-
+    def _get_mailbox(self) -> 'MailBox':
         client = Microsoft365Client(self.config)
         mailbox = client.impl.mailbox(resource=self.config['username'])
+
+        return mailbox
+
+# ################################################################################################################################
+
+    def get(self, folder='INBOX'):
+
+        mailbox = self._get_mailbox()
+        result = mailbox.get_folders()
+
+        return result
+
+# ################################################################################################################################
+
+    def ping(self):
+
+        mailbox = self._get_mailbox()
         result = mailbox.get_folders()
 
         return result
