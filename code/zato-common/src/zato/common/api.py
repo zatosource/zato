@@ -1880,14 +1880,15 @@ class IMAPMessage:
         self.data = data
 
     def __repr__(self):
-        return '<{} at {}, uid:`{}`, conn.config:`{}`>'.format(
-            self.__class__.__name__, hex(id(self)), self.uid, self.conn.config_no_sensitive)
+        class_name = self.__class__.__name__
+        self_id = hex(id(self))
+        return '<{} at {}, uid:`{}`, conn.config:`{}`>'.format(class_name, self_id, self.uid, self.conn.config_no_sensitive)
 
     def delete(self):
-        self.conn.delete(self.uid)
+        raise NotImplementedError('Must be implemented by subclasses')
 
     def mark_seen(self):
-        self.conn.mark_seen(self.uid)
+        raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
 # ################################################################################################################################

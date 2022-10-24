@@ -15,7 +15,7 @@ from traceback import format_exc
 # imbox
 from zato.common.ext.imbox import Imbox as _Imbox
 from zato.common.ext.imbox.imap import ImapTransport as _ImapTransport
-from zato.common.ext.imbox.parser import parse_email
+from zato.common.ext.imbox.parser import parse_email, Struct
 
 # Outbox
 from zato.server.ext.outbox import AnonymousOutbox, Attachment, Email, Outbox
@@ -33,7 +33,9 @@ from zato.server.store import BaseAPI, BaseStore
 
 if 0:
     from O365.mailbox import MailBox
+    from O365.message import Message as MS365Message
     MailBox = MailBox
+    MS365Message = MS365Message
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,6 +50,23 @@ _modes = {
     EMAIL.SMTP.MODE.SSL: 'SSL',
     EMAIL.SMTP.MODE.STARTTLS: 'TLS'
 }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GenericIMAPMessage(IMAPMessage):
+
+    def delete(self):
+        self.conn.delete(self.uid)
+
+    def mark_seen(self):
+        self.conn.mark_seen(self.uid)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Microsoft365IMAPMessage(IMAPMessage):
+    pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -255,20 +274,83 @@ class GenericIMAPConnection(_IMAPConnection):
 
 class Microsoft365IMAPConnection(_IMAPConnection):
 
+    def _convert_to_imap_message(self, msg_id:'str', native_message:'MS365Message') -> 'IMAPMessage':
+
+        # A dict object to base the resulting message's struct on ..
+        data_dict = {}
+
+        # .. the message's body (always HTML)..
+        body = {}
+        body['plain'] = ''
+        body['html'] = native_message.body
+        data_dict['body'] = body
+
+        # .. who sent the message ..
+        sent_from = {
+            'name': native_message.sender.name,
+            'email': native_message.sender.address
+        }
+
+        # .. try to extract the recipient of the message ..
+        sent_to = native_message.to.get_first_recipient_with_address()
+        if sent_to:
+            sent_to = sent_to.address
+
+        # .. populate the correspondents fields ..
+        data_dict['sent_from'] = [sent_from]
+        data_dict['sent_to'] = sent_to
+        data_dict['cc'] = native_message.cc
+
+        # .. build the remaining fields ..
+        data_dict['message_id'] = msg_id
+        data_dict['subject'] = native_message.subject
+
+        # .. build the messages internal Struct object (as in generic IMAP connections) ..
+        data = Struct(**data_dict)
+
+        # .. now, construct the response ..
+        out = IMAPMessage(msg_id, self, data)
+
+        # .. and return it to our caller.
+        return out
+
+# ################################################################################################################################
+
     def _get_mailbox(self) -> 'MailBox':
+
+        # Obtain a new connection ..
         client = Microsoft365Client(self.config)
+
+        # .. get a handle to the user's underlying mailbox ..
         mailbox = client.impl.mailbox(resource=self.config['username'])
 
+        # .. and return it to the caller.
         return mailbox
 
 # ################################################################################################################################
 
     def get(self, folder='INBOX'):
 
-        mailbox = self._get_mailbox()
-        result = mailbox.get_folders()
+        # By default, we have nothing to return.
+        default = []
 
-        return result
+        # Obtain a handle to a mailbox ..
+        mailbox = self._get_mailbox()
+
+        # .. try to look up a folder by its name ..
+        folder = mailbox.get_folder(folder_name=folder)
+
+        # .. if found, we can return all of its messages ..
+        if folder:
+            messages = folder.get_messages(limit=1000, query=self.config['filter_criteria'])
+            for item in messages:
+                msg_id = item.internet_message_id
+                imap_message = self._convert_to_imap_message(msg_id, item)
+                yield msg_id, imap_message
+
+        else:
+            for item in default:
+                yield item
 
 # ################################################################################################################################
 
@@ -285,6 +367,7 @@ class Microsoft365IMAPConnection(_IMAPConnection):
 class IMAPConnStore(BaseStore):
     """ Stores connections to IMAP.
     """
+
     _impl_class = {
         EMAIL.IMAP.ServerType.Generic: GenericIMAPConnection,
         EMAIL.IMAP.ServerType.Microsoft365: Microsoft365IMAPConnection,
