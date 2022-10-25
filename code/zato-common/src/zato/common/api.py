@@ -949,7 +949,7 @@ class EMAIL:
             SSL = 'ssl'
 
             def __iter__(self):
-                return iter((self.PLAIN, self.SSL))
+                return iter((self.SSL, self.PLAIN))
 
         class ServerType:
             Generic = 'generic-imap'

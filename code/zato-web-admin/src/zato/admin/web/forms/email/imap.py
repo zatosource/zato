@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from imaplib import IMAP4_PORT
+from imaplib import IMAP4_SSL_PORT
 
 # Django
 from django import forms
@@ -24,7 +24,7 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     server_type = forms.ChoiceField(widget=forms.Select())
     host = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    port = forms.CharField(initial=IMAP4_PORT, widget=forms.TextInput(attrs={'style':'width:10%'}))
+    port = forms.CharField(initial=IMAP4_SSL_PORT, widget=forms.TextInput(attrs={'style':'width:10%'}))
     timeout = forms.CharField(initial=EMAIL.DEFAULT.TIMEOUT, widget=forms.TextInput(attrs={'style':'width:6%'}))
     debug_level = forms.CharField(initial=EMAIL.DEFAULT.IMAP_DEBUG_LEVEL, widget=forms.TextInput(attrs={'style':'width:7%'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
