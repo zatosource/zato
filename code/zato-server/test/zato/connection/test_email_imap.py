@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from operator import itemgetter
 from unittest import main, TestCase
 
 # Bunch
@@ -20,6 +21,13 @@ from zato.server.connection.email import GenericIMAPConnection, Microsoft365IMAP
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.api import IMAPMessage
+    from zato.common.typing_ import anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ModuleCtx:
 
     Env_Key_IMAP_Host = 'Zato_Test_IMAP_Host'
@@ -28,17 +36,94 @@ class ModuleCtx:
     Env_Key_IMAP_Password = 'Zato_Test_IMAP_Password'
     Env_Key_IMAP_Test_Subject = 'Zato_Test_IMAP_Test_Subject'
 
-    Env_Key_Tenant_ID = 'Zato_Test_IMAP_MS365_Tenant_ID'
-    Env_Key_Client_ID = 'Zato_Test_IMAP_MS365_Client_ID'
-    Env_Key_Secret = 'Zato_Test_IMAP_MS365_Secret'
-    Env_Key_Resource = 'Zato_Test_IMAP_MS365_Resource'
+    Env_Key_MS365_Tenant_ID = 'Zato_Test_IMAP_MS365_Tenant_ID'
+    Env_Key_MS365_Client_ID = 'Zato_Test_IMAP_MS365_Client_ID'
+    Env_Key_MS365_Secret = 'Zato_Test_IMAP_MS365_Secret'
+    Env_Key_MS365_Resource = 'Zato_Test_IMAP_MS365_Resource'
+    Env_Key_MS365_Test_Subject = 'Zato_Test_IMAP_MS365_Test_Subject'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GenericIMAPConnectionTestCase(TestCase):
+class ExpectedGetData:
+    msg_id: 'str'
+    imap_message: 'IMAPMessage'
+    body_plain: 'anylist'
+    body_html: 'anylist'
+    name: 'str'
+    username: 'str'
+    subject: 'str'
+    sent_from_name: 'str'
+    sent_from_email: 'str'
+    sent_to_name: 'str'
+    sent_to_email: 'str'
+    cc: 'str | None'
+    bcc: 'str | None'
 
-    maxDiff = 100_000_000
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BaseIMAPConnectionTestCase(TestCase):
+
+    def run_get_assertions(self, expected:'ExpectedGetData') -> 'None':
+
+        self.assertTrue(len(expected.msg_id) > 1)
+        self.assertEqual(expected.imap_message.data.subject, expected.subject)
+
+        sent_from = expected.imap_message.data.sent_from[0]
+        expected_sent_from = {
+            'name': expected.sent_from_name,
+            'email': expected.sent_from_email,
+        }
+        self.assertDictEqual(sent_from, expected_sent_from)
+
+        sent_to = expected.imap_message.data.sent_to[0]
+        expected_sent_to = {
+            'name': expected.sent_to_name,
+            'email': expected.sent_to_email,
+        }
+        self.assertDictEqual(sent_to, expected_sent_to)
+
+        self.assertListEqual(expected.imap_message.data.cc, [])
+        self.assertListEqual(expected.imap_message.data.bcc, [])
+
+        body = expected.imap_message.data.body
+        expected_body = {
+            'plain': expected.body_plain,
+            'html': expected.body_html,
+        }
+        self.assertDictEqual(body, expected_body)
+
+        attachments = expected.imap_message.data.attachments
+        attachments = sorted(attachments, key=itemgetter('filename'))
+
+        # We expect for exactly two attachments to exist
+        self.assertEqual(len(attachments), 2)
+
+        attach1 = attachments[0]
+        attach2 = attachments[1]
+
+        self.assertEqual(attach1['content-type'], 'text/plain')
+        self.assertEqual(attach1['size'], 5)
+        self.assertEqual(attach1['filename'], 'file1.txt')
+
+        self.assertEqual(attach2['content-type'], 'text/plain')
+        self.assertEqual(attach2['size'], 5)
+        self.assertEqual(attach2['filename'], 'file2.txt')
+
+        attach1_content = attach1['content']
+        attach1_content = attach1_content.getvalue()
+
+        attach2_content = attach2['content']
+        attach2_content = attach2_content.getvalue()
+
+        self.assertEqual(attach1_content, b'data1')
+        self.assertEqual(attach2_content, b'data2')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GenericIMAPConnectionTestCase(BaseIMAPConnectionTestCase):
 
     def get_conn(self) -> 'GenericIMAPConnection | None':
 
@@ -82,8 +167,8 @@ class GenericIMAPConnectionTestCase(TestCase):
             return
 
         # Reusable
-        test_subject = os.environ.get(ModuleCtx.Env_Key_IMAP_Test_Subject)
-        username = os.environ.get(ModuleCtx.Env_Key_IMAP_Username)
+        test_subject = os.environ.get(ModuleCtx.Env_Key_IMAP_Test_Subject) or ''
+        username = os.environ.get(ModuleCtx.Env_Key_IMAP_Username) or ''
 
         # Run the function under test
         result = conn.get()
@@ -99,51 +184,43 @@ class GenericIMAPConnectionTestCase(TestCase):
 
         msg_id, imap_message = result
 
-        print(111, imap_message.data)
+        # Prepare the information about what we expect to receive ..
 
-        # Run assertions
+        expected = ExpectedGetData()
 
-        self.assertTrue(len(msg_id) > 1)
-        self.assertEqual(imap_message.data.subject, test_subject)
+        expected.msg_id = msg_id
+        expected.imap_message = imap_message
+        expected.subject = test_subject
 
-        sent_from = imap_message.data.sent_from[0]
-        expected_sent_from = {
-            'name': '',
-            'email': username,
-        }
-        self.assertDictEqual(sent_from, expected_sent_from)
+        expected.sent_from_name = ''
+        expected.sent_from_email = username
 
-        sent_to = imap_message.data.sent_to[0]
-        expected_sent_to = {
-            'name': '',
-            'email': username,
-        }
-        self.assertDictEqual(sent_to, expected_sent_to)
+        expected.sent_to_name = ''
+        expected.sent_to_email = username
 
-        self.assertListEqual(imap_message.data.cc, [])
-        self.assertListEqual(imap_message.data.bcc, [])
+        expected.body_plain = ['This is a test message.']
+        expected.body_html = []
 
-        body = imap_message.data.body
-        expected_body = {'plain': ['This is a test message.'], 'html': []}
-        self.assertDictEqual(body, expected_body)
+        # .. and run assertions now.
+        self.run_get_assertions(expected)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Microsoft365IMAPConnectionTestCase(TestCase):
+class Microsoft365IMAPConnectionTestCase(BaseIMAPConnectionTestCase):
 
     def get_conn(self) -> 'Microsoft365IMAPConnection | None':
 
         # Try to get the main environment variable ..
-        tenant_id = os.environ.get(ModuleCtx.Env_Key_Tenant_ID)
+        tenant_id = os.environ.get(ModuleCtx.Env_Key_MS365_Tenant_ID)
 
         # .. and if it does not exist, do not run the test
         if not tenant_id:
             return
         else:
-            client_id = os.environ.get(ModuleCtx.Env_Key_Client_ID)
-            secret = os.environ.get(ModuleCtx.Env_Key_Secret)
-            resource = os.environ.get(ModuleCtx.Env_Key_Resource)
+            client_id = os.environ.get(ModuleCtx.Env_Key_MS365_Client_ID)
+            secret = os.environ.get(ModuleCtx.Env_Key_MS365_Secret)
+            resource = os.environ.get(ModuleCtx.Env_Key_MS365_Resource)
 
         config = {
             'cluster_id': 1,
@@ -192,14 +269,22 @@ class Microsoft365IMAPConnectionTestCase(TestCase):
         if not conn:
             return
 
+        # Reusable
+        test_subject = os.environ.get(ModuleCtx.Env_Key_MS365_Test_Subject)
+
         # Run the function under test
         result = conn.get()
 
         for item_id, item in result:
+
+            if item.data.subject != test_subject:
+                continue
+
             print(111, item_id)
             print(222, item.data.sent_from[0])
             print(333, item.data.subject)
             print(444, item.data.message_id)
+            print(555, item.data)
             print()
 
 # ################################################################################################################################
