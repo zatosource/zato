@@ -39,6 +39,7 @@ class ModuleCtx:
     Env_Key_MS365_Tenant_ID = 'Zato_Test_IMAP_MS365_Tenant_ID'
     Env_Key_MS365_Client_ID = 'Zato_Test_IMAP_MS365_Client_ID'
     Env_Key_MS365_Secret = 'Zato_Test_IMAP_MS365_Secret'
+    Env_Key_MS365_Username = 'Zato_Test_IMAP_MS365_Username'
     Env_Key_MS365_Resource = 'Zato_Test_IMAP_MS365_Resource'
     Env_Key_MS365_Test_Subject = 'Zato_Test_IMAP_MS365_Test_Subject'
 
@@ -76,6 +77,9 @@ class BaseIMAPConnectionTestCase(TestCase):
             'email': expected.sent_from_email,
         }
         self.assertDictEqual(sent_from, expected_sent_from)
+
+        print(111, expected.imap_message.data.sent_from)
+        print(222, expected.imap_message.data.sent_to)
 
         sent_to = expected.imap_message.data.sent_to[0]
         expected_sent_to = {
@@ -160,7 +164,7 @@ class GenericIMAPConnectionTestCase(BaseIMAPConnectionTestCase):
 
 # ################################################################################################################################
 
-    def test_get(self):
+    def xtest_get(self):
 
         conn = self.get_conn()
         if not conn:
@@ -173,7 +177,7 @@ class GenericIMAPConnectionTestCase(BaseIMAPConnectionTestCase):
         # Run the function under test
         result = conn.get()
 
-        # Turn it to a list upfront
+        # Turn it into a list upfront
         result = list(result)
 
         # We expect to find one test message
@@ -263,29 +267,50 @@ class Microsoft365IMAPConnectionTestCase(BaseIMAPConnectionTestCase):
 
 # ################################################################################################################################
 
-    def xtest_get(self):
+    def test_get(self):
 
         conn = self.get_conn()
         if not conn:
             return
 
         # Reusable
-        test_subject = os.environ.get(ModuleCtx.Env_Key_MS365_Test_Subject)
+        test_subject = os.environ.get(ModuleCtx.Env_Key_MS365_Test_Subject) or ''
+        username = os.environ.get(ModuleCtx.Env_Key_MS365_Username) or ''
+        resource = os.environ.get(ModuleCtx.Env_Key_MS365_Resource) or ''
 
         # Run the function under test
-        result = conn.get()
+        result = conn.get(filter=f"subject eq '{test_subject}'")
 
-        for item_id, item in result:
+        # Turn it into a list upfront
+        result = list(result)
 
-            if item.data.subject != test_subject:
-                continue
+        # We expect to find one test message
+        self.assertEqual(len(result), 1)
 
-            print(111, item_id)
-            print(222, item.data.sent_from[0])
-            print(333, item.data.subject)
-            print(444, item.data.message_id)
-            print(555, item.data)
-            print()
+        # From now on, work with this message only
+        result = result[0]
+
+        msg_id, imap_message = result
+
+        # Prepare the information about what we expect to receive ..
+
+        expected = ExpectedGetData()
+
+        expected.msg_id = msg_id
+        expected.imap_message = imap_message
+        expected.subject = test_subject
+
+        expected.sent_from_name = username
+        expected.sent_from_email = resource
+
+        expected.sent_to_name = username
+        expected.sent_to_email = resource
+
+        expected.body_plain = ['This is a test message.']
+        expected.body_html = []
+
+        # .. and run assertions now.
+        self.run_get_assertions(expected)
 
 # ################################################################################################################################
 # ################################################################################################################################
