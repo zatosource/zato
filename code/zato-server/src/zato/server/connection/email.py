@@ -295,7 +295,10 @@ class Microsoft365IMAPConnection(_IMAPConnection):
         # .. try to extract the recipient of the message ..
         sent_to = native_message.to.get_first_recipient_with_address()
         if sent_to:
-            sent_to = sent_to.address
+            sent_to = [{
+                'name': sent_to.name,
+                'email': sent_to.address
+            }]
 
         # .. populate the correspondents fields ..
         data_dict['sent_from'] = [sent_from]
@@ -330,7 +333,9 @@ class Microsoft365IMAPConnection(_IMAPConnection):
 
 # ################################################################################################################################
 
-    def get(self, folder='INBOX'):
+    def get(self, folder='INBOX', filter=None):
+
+        filter = filter or self.config['filter_criteria']
 
         # By default, we have nothing to return.
         default = []
@@ -343,7 +348,7 @@ class Microsoft365IMAPConnection(_IMAPConnection):
 
         # .. if found, we can return all of its messages ..
         if folder:
-            messages = folder.get_messages(limit=10_000, query=self.config['filter_criteria'])
+            messages = folder.get_messages(limit=10_000, query=filter)
             for item in messages:
                 msg_id = item.internet_message_id
                 imap_message = self._convert_to_imap_message(msg_id, item)
