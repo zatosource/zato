@@ -246,6 +246,7 @@ class GenericIMAPConnection(_IMAPConnection):
         conn = Imbox(self.config, self.config_no_sensitive)
         yield conn
         conn.close()
+        conn.server.server.sock.close()
 
     def get(self, folder='INBOX'):
         with self.get_connection() as conn: # type: Imbox
@@ -342,7 +343,7 @@ class Microsoft365IMAPConnection(_IMAPConnection):
 
         # .. if found, we can return all of its messages ..
         if folder:
-            messages = folder.get_messages(limit=1000, query=self.config['filter_criteria'])
+            messages = folder.get_messages(limit=10_000, query=self.config['filter_criteria'])
             for item in messages:
                 msg_id = item.internet_message_id
                 imap_message = self._convert_to_imap_message(msg_id, item)
