@@ -299,8 +299,8 @@ class Microsoft365IMAPConnection(_IMAPConnection):
 
         # .. the message's body (always HTML)..
         body = {}
-        body['plain'] = ''
-        body['html'] = native_message.body
+        body['plain'] = []
+        body['html'] = [native_message.body]
         data_dict['body'] = body
 
         # .. who sent the message ..
