@@ -26,8 +26,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'client_id', 'secret_value', 'scopes', 'auth_redirect_url', \
-            'reset_oauth2_scopes_url'
+        output_required = 'id', 'name', 'is_active', 'client_id', 'secret_value', 'scopes', 'tenant_id'
         output_optional = generic_attrs
         output_repeated = True
 
@@ -46,8 +45,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'name', 'is_active', 'client_id', 'secret_value', 'scopes', 'auth_redirect_url'
-        output_required = 'id', 'name', 'reset_oauth2_scopes_url'
+        input_required = 'id', 'name', 'is_active', 'client_id', 'secret_value', 'scopes', 'tenant_id'
+        output_required = 'id', 'name'
 
 # ################################################################################################################################
 
