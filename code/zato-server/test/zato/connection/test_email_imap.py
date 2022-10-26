@@ -60,7 +60,6 @@ class ExpectedGetData:
     sent_to_display_name: 'str'
     sent_to_email: 'str'
     cc: 'str | None'
-    bcc: 'str | None'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -115,11 +114,6 @@ class BaseIMAPConnectionTestCase(TestCase):
             'email': expected.sent_to_email,
         }
         self.assertDictEqual(sent_to_cc, expected_sent_to_cc)
-
-        #
-        # BCC
-        #
-        self.assertListEqual(expected.imap_message.data.bcc, [])
 
         #
         # Body
@@ -306,7 +300,7 @@ class Microsoft365IMAPConnectionTestCase(BaseIMAPConnectionTestCase):
 
 # ################################################################################################################################
 
-    def xtest_get(self):
+    def test_get(self):
 
         conn = self.get_conn()
         if not conn:

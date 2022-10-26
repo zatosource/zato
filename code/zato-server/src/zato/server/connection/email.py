@@ -34,6 +34,7 @@ from zato.server.store import BaseAPI, BaseStore
 if 0:
     from O365.mailbox import MailBox
     from O365.message import Message as MS365Message
+    from zato.common.typing_ import any_, anylist
     MailBox = MailBox
     MS365Message = MS365Message
 
@@ -275,6 +276,22 @@ class GenericIMAPConnection(_IMAPConnection):
 
 class Microsoft365IMAPConnection(_IMAPConnection):
 
+    def _extract_list_of_addresses(self, native_elem:'any_') -> 'anylist':
+
+        out = []
+        elems = ((elem.name, elem.address) for elem in list(native_elem))
+
+        # .. try to extract the recipients of the message ..
+        for display_name, email in elems:
+            out.append({
+                'name': display_name,
+                'email': email,
+            })
+
+        return out
+
+# ################################################################################################################################
+
     def _convert_to_imap_message(self, msg_id:'str', native_message:'MS365Message') -> 'IMAPMessage':
 
         # A dict object to base the resulting message's struct on ..
@@ -292,18 +309,13 @@ class Microsoft365IMAPConnection(_IMAPConnection):
             'email': native_message.sender.address
         }
 
-        # .. try to extract the recipient of the message ..
-        sent_to = native_message.to.get_first_recipient_with_address()
-        if sent_to:
-            sent_to = [{
-                'name': sent_to.name,
-                'email': sent_to.address
-            }]
+        sent_to = self._extract_list_of_addresses(native_message.to)
+        sent_cc = self._extract_list_of_addresses(native_message.cc)
 
         # .. populate the correspondents fields ..
         data_dict['sent_from'] = [sent_from]
         data_dict['sent_to'] = sent_to
-        data_dict['cc'] = native_message.cc
+        data_dict['cc'] = sent_cc
 
         # .. build the remaining fields ..
         data_dict['message_id'] = msg_id
