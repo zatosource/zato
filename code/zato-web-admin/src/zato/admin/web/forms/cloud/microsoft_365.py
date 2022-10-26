@@ -26,11 +26,11 @@ class CreateForm(WithAuditLog):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
+    tenant_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     client_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     secret_value = forms.CharField(widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
     scopes = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}), initial='\n'.join(_default.Scopes))
-    auth_redirect_url = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Auth_Redirect_URL)
 
 # ################################################################################################################################
 # ################################################################################################################################

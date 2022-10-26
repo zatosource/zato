@@ -95,8 +95,8 @@ class _CreateEditSIO(AdminSIO):
     input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'),
         Bool('sec_use_rbac'))
     input_optional = ('cluster_id', 'id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
-        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id', AsIs('client_id'),
-        AsIs('security_id'), AsIs('sec_tls_ca_cert_id')) + extra_secret_keys + generic_attrs
+        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id', AsIs('tenant_id'),
+        AsIs('client_id'), AsIs('security_id'), AsIs('sec_tls_ca_cert_id')) + extra_secret_keys + generic_attrs
     force_empty_keys = True
 
 # ################################################################################################################################
@@ -295,27 +295,8 @@ class GetList(AdminService):
 
 # ################################################################################################################################
 
-    def _set_conn_dict_value_reset_oauth2_scopes_url(self, conn_dict:'anydict') -> 'None':
-        scopes = (conn_dict['scopes'] or '').splitlines()
-        auth_redirect_url = conn_dict['auth_redirect_url']
-
-        client_id = conn_dict['client_id']
-        secret_value = conn_dict['secret_value']
-
-        # Office-365
-        from O365 import Account
-
-        credentials = (client_id, secret_value)
-        account = Account(credentials)
-        reset_oauth2_scopes_url, _ = account.con.get_authorization_url(requested_scopes=scopes, redirect_uri=auth_redirect_url)
-
-        conn_dict['reset_oauth2_scopes_url'] = reset_oauth2_scopes_url
-
-# ################################################################################################################################
-
     def _add_custom_conn_dict_fields(self, conn_dict:'anydict') -> 'None':
-        if conn_dict['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365:
-            self._set_conn_dict_value_reset_oauth2_scopes_url(conn_dict)
+        pass
 
 # ################################################################################################################################
 
