@@ -32,15 +32,16 @@ class ModuleCtx:
 
     Env_Key_IMAP_Host = 'Zato_Test_IMAP_Host'
     Env_Key_IMAP_Port = 'Zato_Test_IMAP_Port'
-    Env_Key_IMAP_Username = 'Zato_Test_IMAP_Username'
+    Env_Key_IMAP_Display_Name = 'Zato_Test_IMAP_Display_Name'
+    Env_Key_IMAP_Email = 'Zato_Test_IMAP_Email'
     Env_Key_IMAP_Password = 'Zato_Test_IMAP_Password'
     Env_Key_IMAP_Test_Subject = 'Zato_Test_IMAP_Test_Subject'
 
     Env_Key_MS365_Tenant_ID = 'Zato_Test_IMAP_MS365_Tenant_ID'
     Env_Key_MS365_Client_ID = 'Zato_Test_IMAP_MS365_Client_ID'
     Env_Key_MS365_Secret = 'Zato_Test_IMAP_MS365_Secret'
-    Env_Key_MS365_Username = 'Zato_Test_IMAP_MS365_Username'
-    Env_Key_MS365_Resource = 'Zato_Test_IMAP_MS365_Resource'
+    Env_Key_MS365_Display_Name = 'Zato_Test_IMAP_MS365_Display_Name'
+    Env_Key_MS365_Email = 'Zato_Test_IMAP_MS365_Email'
     Env_Key_MS365_Test_Subject = 'Zato_Test_IMAP_MS365_Test_Subject'
 
 # ################################################################################################################################
@@ -54,9 +55,9 @@ class ExpectedGetData:
     name: 'str'
     username: 'str'
     subject: 'str'
-    sent_from_name: 'str'
+    sent_from_display_name: 'str'
     sent_from_email: 'str'
-    sent_to_name: 'str'
+    sent_to_display_name: 'str'
     sent_to_email: 'str'
     cc: 'str | None'
     bcc: 'str | None'
@@ -71,9 +72,13 @@ class BaseIMAPConnectionTestCase(TestCase):
         self.assertTrue(len(expected.msg_id) > 1)
         self.assertEqual(expected.imap_message.data.subject, expected.subject)
 
+        #
+        # From
+        #
+
         sent_from = expected.imap_message.data.sent_from[0]
         expected_sent_from = {
-            'name': expected.sent_from_name,
+            'name': expected.sent_from_display_name,
             'email': expected.sent_from_email,
         }
         self.assertDictEqual(sent_from, expected_sent_from)
@@ -81,15 +86,44 @@ class BaseIMAPConnectionTestCase(TestCase):
         print(111, expected.imap_message.data.sent_from)
         print(222, expected.imap_message.data.sent_to)
 
-        sent_to = expected.imap_message.data.sent_to[0]
+        #
+        # To
+        #
+
+        sent_to = expected.imap_message.data.sent_to
+        self.assertEqual(len(sent_to), 1)
+
+        sent_to = sent_to[0]
+
         expected_sent_to = {
-            'name': expected.sent_to_name,
+            'name': expected.sent_to_display_name,
             'email': expected.sent_to_email,
         }
         self.assertDictEqual(sent_to, expected_sent_to)
 
-        self.assertListEqual(expected.imap_message.data.cc, [])
+        #
+        # CC
+        #
+
+        sent_to_cc = expected.imap_message.data.cc
+        self.assertEqual(len(sent_to_cc), 1)
+
+        sent_to_cc = sent_to_cc[0]
+
+        expected_sent_to_cc = {
+            'name': expected.sent_to_display_name,
+            'email': expected.sent_to_email,
+        }
+        self.assertDictEqual(sent_to_cc, expected_sent_to_cc)
+
+        #
+        # BCC
+        #
         self.assertListEqual(expected.imap_message.data.bcc, [])
+
+        #
+        # Body
+        #
 
         body = expected.imap_message.data.body
         expected_body = {
@@ -97,6 +131,10 @@ class BaseIMAPConnectionTestCase(TestCase):
             'html': expected.body_html,
         }
         self.assertDictEqual(body, expected_body)
+
+        #
+        # Attachments
+        #
 
         attachments = expected.imap_message.data.attachments
         attachments = sorted(attachments, key=itemgetter('filename'))
@@ -139,7 +177,7 @@ class GenericIMAPConnectionTestCase(BaseIMAPConnectionTestCase):
             return
         else:
             port = os.environ.get(ModuleCtx.Env_Key_IMAP_Port)
-            username = os.environ.get(ModuleCtx.Env_Key_IMAP_Username)
+            email = os.environ.get(ModuleCtx.Env_Key_IMAP_Email)
             password = os.environ.get(ModuleCtx.Env_Key_IMAP_Password)
             test_subject = os.environ.get(ModuleCtx.Env_Key_IMAP_Test_Subject)
 
@@ -151,7 +189,7 @@ class GenericIMAPConnectionTestCase(BaseIMAPConnectionTestCase):
             'name': 'My Name',
             'host': host,
             'port': port,
-            'username': username,
+            'username': email,
             'password': password,
             'mode': EMAIL.IMAP.MODE.SSL,
             'debug_level': 2,
@@ -172,7 +210,8 @@ class GenericIMAPConnectionTestCase(BaseIMAPConnectionTestCase):
 
         # Reusable
         test_subject = os.environ.get(ModuleCtx.Env_Key_IMAP_Test_Subject) or ''
-        username = os.environ.get(ModuleCtx.Env_Key_IMAP_Username) or ''
+        display_name = os.environ.get(ModuleCtx.Env_Key_IMAP_Display_Name) or ''
+        email = os.environ.get(ModuleCtx.Env_Key_IMAP_Email) or ''
 
         # Run the function under test
         result = conn.get()
@@ -196,11 +235,11 @@ class GenericIMAPConnectionTestCase(BaseIMAPConnectionTestCase):
         expected.imap_message = imap_message
         expected.subject = test_subject
 
-        expected.sent_from_name = ''
-        expected.sent_from_email = username
+        expected.sent_from_display_name = display_name
+        expected.sent_from_email = email
 
-        expected.sent_to_name = ''
-        expected.sent_to_email = username
+        expected.sent_to_display_name = display_name
+        expected.sent_to_email = email
 
         expected.body_plain = ['This is a test message.']
         expected.body_html = []
@@ -224,7 +263,7 @@ class Microsoft365IMAPConnectionTestCase(BaseIMAPConnectionTestCase):
         else:
             client_id = os.environ.get(ModuleCtx.Env_Key_MS365_Client_ID)
             secret = os.environ.get(ModuleCtx.Env_Key_MS365_Secret)
-            resource = os.environ.get(ModuleCtx.Env_Key_MS365_Resource)
+            email = os.environ.get(ModuleCtx.Env_Key_MS365_Email)
 
         config = {
             'cluster_id': 1,
@@ -235,7 +274,7 @@ class Microsoft365IMAPConnectionTestCase(BaseIMAPConnectionTestCase):
             'tenant_id': tenant_id,
             'client_id': client_id,
             'password': secret,
-            'username': resource,
+            'username': email,
             'filter_criteria': EMAIL.DEFAULT.FILTER_CRITERIA,
             'server_type': EMAIL.IMAP.ServerType.Microsoft365,
         }
@@ -267,7 +306,7 @@ class Microsoft365IMAPConnectionTestCase(BaseIMAPConnectionTestCase):
 
 # ################################################################################################################################
 
-    def test_get(self):
+    def xtest_get(self):
 
         conn = self.get_conn()
         if not conn:
@@ -275,8 +314,8 @@ class Microsoft365IMAPConnectionTestCase(BaseIMAPConnectionTestCase):
 
         # Reusable
         test_subject = os.environ.get(ModuleCtx.Env_Key_MS365_Test_Subject) or ''
-        username = os.environ.get(ModuleCtx.Env_Key_MS365_Username) or ''
-        resource = os.environ.get(ModuleCtx.Env_Key_MS365_Resource) or ''
+        username = os.environ.get(ModuleCtx.Env_Key_MS365_Display_Name) or ''
+        email = os.environ.get(ModuleCtx.Env_Key_MS365_Email) or ''
 
         # Run the function under test
         result = conn.get(filter=f"subject eq '{test_subject}'")
@@ -300,11 +339,11 @@ class Microsoft365IMAPConnectionTestCase(BaseIMAPConnectionTestCase):
         expected.imap_message = imap_message
         expected.subject = test_subject
 
-        expected.sent_from_name = username
-        expected.sent_from_email = resource
+        expected.sent_from_display_name = username
+        expected.sent_from_email = email
 
-        expected.sent_to_name = username
-        expected.sent_to_email = resource
+        expected.sent_to_display_name = username
+        expected.sent_to_email = email
 
         expected.body_plain = ['This is a test message.']
         expected.body_html = []
