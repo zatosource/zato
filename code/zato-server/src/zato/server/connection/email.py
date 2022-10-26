@@ -7,9 +7,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from base64 import b64decode
 from contextlib import contextmanager
 from io import BytesIO
 from logging import getLogger, INFO
+from mimetypes import guess_type as guess_mime_type
 from traceback import format_exc
 
 # imbox
@@ -292,6 +294,38 @@ class Microsoft365IMAPConnection(_IMAPConnection):
 
 # ################################################################################################################################
 
+    def _extract_attachments(self, native_message:'MS365Message') -> 'anylist':
+
+        # Our response to produce
+        out = []
+
+        attachments = list(native_message.attachments)
+        for elem in attachments:
+
+            mime_type, _ = guess_mime_type(elem.name)
+            if not mime_type:
+                mime_type = 'text/plain'
+
+            content = elem.content
+            if content:
+                content = b64decode(content)
+            else:
+                content = b''
+
+            size = len(content)
+            content = BytesIO(content)
+
+            out.append({
+                'filename': elem.name,
+                'size': size,
+                'content': content,
+                'content-type': mime_type
+            })
+
+        return out
+
+# ################################################################################################################################
+
     def _convert_to_imap_message(self, msg_id:'str', native_message:'MS365Message') -> 'IMAPMessage':
 
         # A dict object to base the resulting message's struct on ..
@@ -316,6 +350,10 @@ class Microsoft365IMAPConnection(_IMAPConnection):
         data_dict['sent_from'] = [sent_from]
         data_dict['sent_to'] = sent_to
         data_dict['cc'] = sent_cc
+
+        # .. populate attachments ..
+        attachments = self._extract_attachments(native_message)
+        data_dict['attachments'] = attachments
 
         # .. build the remaining fields ..
         data_dict['message_id'] = msg_id
@@ -360,7 +398,7 @@ class Microsoft365IMAPConnection(_IMAPConnection):
 
         # .. if found, we can return all of its messages ..
         if folder:
-            messages = folder.get_messages(limit=10_000, query=filter)
+            messages = folder.get_messages(limit=10_000, query=filter, download_attachments=True)
             for item in messages:
                 msg_id = item.internet_message_id
                 imap_message = self._convert_to_imap_message(msg_id, item)
