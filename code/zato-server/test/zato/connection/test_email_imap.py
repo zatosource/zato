@@ -44,6 +44,8 @@ class ModuleCtx:
     Env_Key_MS365_Email = 'Zato_Test_IMAP_MS365_Email'
     Env_Key_MS365_Test_Subject = 'Zato_Test_IMAP_MS365_Test_Subject'
 
+    HTML_Body_MS365 = '<html><head>\r\n<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><style type="text/css" style="display:none">\r\n<!--\r\np\r\n\t{margin-top:0;\r\n\tmargin-bottom:0}\r\n-->\r\n</style></head><body dir="ltr"><div class="elementToProof" style="font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt; color:rgb(0,0,0); background-color:rgb(255,255,255)"><div style="color:#000000; background-color:#ffffff; font-family:\'Ubuntu Mono\',\'Droid Sans Mono\',\'monospace\',monospace,\'Droid Sans Fallback\',\'Droid Sans Mono\',\'monospace\',monospace,\'Droid Sans Fallback\'; font-weight:normal; font-size:17px; line-height:20px"><span><span class="ContentPasted0" style="color:#007f00">This is a test message.</span></span></div></div></body></html>' # type: ignore
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -66,9 +68,12 @@ class ExpectedGetData:
 
 class BaseIMAPConnectionTestCase(TestCase):
 
+    maxDiff = 100_000_000
+
     def run_get_assertions(self, expected:'ExpectedGetData') -> 'None':
 
         self.assertTrue(len(expected.msg_id) > 1)
+        self.assertTrue(len(expected.imap_message.data.message_id) > 1)
         self.assertEqual(expected.imap_message.data.subject, expected.subject)
 
         #
@@ -125,6 +130,8 @@ class BaseIMAPConnectionTestCase(TestCase):
             'html': expected.body_html,
         }
         self.assertDictEqual(body, expected_body)
+
+        return
 
         #
         # Attachments
@@ -339,8 +346,8 @@ class Microsoft365IMAPConnectionTestCase(BaseIMAPConnectionTestCase):
         expected.sent_to_display_name = username
         expected.sent_to_email = email
 
-        expected.body_plain = ['This is a test message.']
-        expected.body_html = []
+        expected.body_plain = []
+        expected.body_html = [ModuleCtx.HTML_Body_MS365]
 
         # .. and run assertions now.
         self.run_get_assertions(expected)
