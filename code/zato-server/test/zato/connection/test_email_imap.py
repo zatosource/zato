@@ -44,7 +44,14 @@ class ModuleCtx:
     Env_Key_MS365_Email = 'Zato_Test_IMAP_MS365_Email'
     Env_Key_MS365_Test_Subject = 'Zato_Test_IMAP_MS365_Test_Subject'
 
-    HTML_Body_MS365 = '<html><head>\r\n<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><style type="text/css" style="display:none">\r\n<!--\r\np\r\n\t{margin-top:0;\r\n\tmargin-bottom:0}\r\n-->\r\n</style></head><body dir="ltr"><div class="elementToProof" style="font-family:Calibri,Arial,Helvetica,sans-serif; font-size:12pt; color:rgb(0,0,0); background-color:rgb(255,255,255)"><div style="color:#000000; background-color:#ffffff; font-family:\'Ubuntu Mono\',\'Droid Sans Mono\',\'monospace\',monospace,\'Droid Sans Fallback\',\'Droid Sans Mono\',\'monospace\',monospace,\'Droid Sans Fallback\'; font-weight:normal; font-size:17px; line-height:20px"><span><span class="ContentPasted0" style="color:#007f00">This is a test message.</span></span></div></div></body></html>' # type: ignore
+    HTML_Body_MS365 = '<html><head>\r\n<meta http-equiv="Content-Type" content="text/html; charset=utf-8">' \
+        '<style type="text/css" style="display:none">\r\n<!--\r\np\r\n\t{margin-top:0;\r\n\tmargin-bottom:0}\r\n-->' \
+        '\r\n</style></head><body dir="ltr"><div class="elementToProof" style="font-family:Calibri,Arial,Helvetica,' \
+        'sans-serif; font-size:12pt; color:rgb(0,0,0); background-color:rgb(255,255,255)"><div style="color:#000000' \
+        '; background-color:#ffffff; font-family:\'Ubuntu Mono\',\'Droid Sans Mono\',\'monospace\',monospace,\'Droid Sans ' \
+        'Fallback\',\'Droid Sans Mono\',\'monospace\',monospace,\'Droid Sans Fallback\'; font-weight:normal; ' \
+        'font-size:17px; line-height:20px"><span><span class="ContentPasted0" style="color:#007f00">This is a test message.' \
+        '</span></span></div></div></body></html>'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,9 +94,6 @@ class BaseIMAPConnectionTestCase(TestCase):
         }
         self.assertDictEqual(sent_from, expected_sent_from)
 
-        print(111, expected.imap_message.data.sent_from)
-        print(222, expected.imap_message.data.sent_to)
-
         #
         # To
         #
@@ -130,8 +134,6 @@ class BaseIMAPConnectionTestCase(TestCase):
             'html': expected.body_html,
         }
         self.assertDictEqual(body, expected_body)
-
-        return
 
         #
         # Attachments
@@ -203,7 +205,7 @@ class GenericIMAPConnectionTestCase(BaseIMAPConnectionTestCase):
 
 # ################################################################################################################################
 
-    def xtest_get(self):
+    def test_get(self):
 
         conn = self.get_conn()
         if not conn:
@@ -285,7 +287,7 @@ class Microsoft365IMAPConnectionTestCase(BaseIMAPConnectionTestCase):
 
 # ################################################################################################################################
 
-    def xtest_ping(self):
+    def test_ping(self):
 
         conn = self.get_conn()
         if not conn:

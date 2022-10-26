@@ -960,7 +960,6 @@ class EMAIL:
             ServerType.Microsoft365: 'Microsoft 365',
         }
 
-
     class SMTP:
         class MODE:
             PLAIN = 'plain'
