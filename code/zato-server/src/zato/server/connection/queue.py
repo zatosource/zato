@@ -328,10 +328,7 @@ class Wrapper:
         self.should_reconnect = True
 
         conn_type = self.config.get('type_')
-        if conn_type == COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365:
-            address = self.config['auth_redirect_url']
-        else:
-            address = self.config['auth_url']
+        address = self.config['auth_url']
 
         self.client = ConnectionQueue(
             server,
