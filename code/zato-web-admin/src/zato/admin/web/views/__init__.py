@@ -207,6 +207,10 @@ def set_servers_state(cluster, client):
 def change_password(req, service_name, field1='password1', field2='password2', success_msg='Password updated', data=None):
 
     data = data or req.POST
+    secret_type = data.get('secret_type')
+
+    if secret_type == 'secret':
+        success_msg = 'Secret updated'
 
     try:
         input_dict = {

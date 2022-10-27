@@ -67,6 +67,7 @@ ZATO_WARNING = 'ZATO_WARNING'
 ZATO_NONE = 'ZATO_NONE'
 ZATO_DEFAULT = 'ZATO_DEFAULT'
 ZATO_SEC_USE_RBAC = 'ZATO_SEC_USE_RBAC'
+Zato_None = ZATO_NONE
 
 DELEGATED_TO_RBAC = 'Delegated to RBAC'
 
@@ -938,15 +939,26 @@ class EMAIL:
         TIMEOUT = 10
         PING_ADDRESS = 'invalid@invalid'
         GET_CRITERIA = 'UNSEEN'
+        FILTER_CRITERIA = 'isRead ne true'
         IMAP_DEBUG_LEVEL = 0
 
     class IMAP:
+
         class MODE:
             PLAIN = 'plain'
             SSL = 'ssl'
 
             def __iter__(self):
-                return iter((self.PLAIN, self.SSL))
+                return iter((self.SSL, self.PLAIN))
+
+        class ServerType:
+            Generic = 'generic-imap'
+            Microsoft365 = 'microsoft-365'
+
+        ServerTypeHuman = {
+            ServerType.Generic: 'Generic IMAP',
+            ServerType.Microsoft365: 'Microsoft 365',
+        }
 
     class SMTP:
         class MODE:
@@ -1512,14 +1524,7 @@ class Microsoft365:
     class Default:
         Auth_Redirect_URL = 'https://zato.io/ext/redirect/oauth2'
         Scopes = [
-            'offline_access',
-            'User.Read',
-            'Mail.Read',
-            'Mail.ReadBasic',
-            'Mail.ReadWrite',
-            'Mail.Send',
-            'IMAP.AccessAsUser.All',
-            'SMTP.Send'
+            'https://graph.microsoft.com/.default'
         ]
 
 # ################################################################################################################################
@@ -1874,14 +1879,15 @@ class IMAPMessage:
         self.data = data
 
     def __repr__(self):
-        return '<{} at {}, uid:`{}`, conn.config:`{}`>'.format(
-            self.__class__.__name__, hex(id(self)), self.uid, self.conn.config_no_sensitive)
+        class_name = self.__class__.__name__
+        self_id = hex(id(self))
+        return '<{} at {}, uid:`{}`, conn.config:`{}`>'.format(class_name, self_id, self.uid, self.conn.config_no_sensitive)
 
     def delete(self):
-        self.conn.delete(self.uid)
+        raise NotImplementedError('Must be implemented by subclasses')
 
     def mark_seen(self):
-        self.conn.mark_seen(self.uid)
+        raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
 # ################################################################################################################################
