@@ -69,7 +69,10 @@ def path_string_to_list(base_dir:'str', data:'str') -> 'strlist':
 
 # ################################################################################################################################
 
-def path_string_list_to_list(base_dir:'str', data:'strlist') -> 'strlist':
+def path_string_list_to_list(base_dir:'str', data:'str | strlist') -> 'strlist':
+
+    if isinstance(data, str):
+        return path_string_to_list(base_dir, data)
 
     # A list of path strings to produce
     out = []
