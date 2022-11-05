@@ -455,11 +455,13 @@
                                     Active
                                     {{ create_form.is_active }}
                                 </label>
-                                |
-                                <label>
-                                    Data format
-                                    {{ create_form.data_format }}
-                                </label>
+                                {% if transport == 'plain_http' %}
+                                    |
+                                    <label>
+                                        Data format
+                                        {{ create_form.data_format }}
+                                    </label>
+                                {% endif %}
                             </td>
                         </tr>
 
@@ -490,17 +492,6 @@
                                 {{ create_form.security }}
                             </td>
                         </tr>
-
-                        {% if connection == 'outgoing' %}
-                            {% if transport == 'plain_http' %}
-                                <tr>
-                                    <td style="vertical-align:middle"><label for="id_data_format">Data format</label></td>
-                                    <td>
-                                        {{ create_form.data_format }}
-                                    </td>
-                                </tr>
-                            {% endif %}
-                        {% endif %}
 
                         {% if transport == 'soap' %}
                         <tr>
