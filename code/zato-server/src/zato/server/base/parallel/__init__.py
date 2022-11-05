@@ -55,7 +55,7 @@ from zato.common.typing_ import cast_, optional
 from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
     register_diag_handlers
-from zato.common.util.file_transfer import path_string_to_list
+from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.platform_ import is_posix
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
@@ -680,7 +680,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def set_up_user_config_location(self) -> 'strlist':
 
         user_conf_location = self.pickup_config.get('user_conf', {}).get('pickup_from', '')
-        return path_string_to_list(self.base_dir, user_conf_location)
+        return path_string_list_to_list(self.base_dir, user_conf_location)
 
 # ################################################################################################################################
 
