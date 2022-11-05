@@ -503,7 +503,8 @@ class WorkerStore(_WorkerStoreBase):
                 _sec_config = func(security_name).config
 
         if _sec_config:
-            sec_config['security_id'] = _sec_config['security_id']
+            _sec_config_id = _sec_config.get('id') or _sec_config.get('security_id')
+            sec_config['security_id'] = _sec_config_id
             sec_config['sec_type'] = _sec_config['sec_type']
             sec_config['username'] = _sec_config.get('username')
             sec_config['orig_username'] = _sec_config.get('orig_username')
