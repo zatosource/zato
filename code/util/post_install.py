@@ -192,10 +192,10 @@ class WindowsPostInstall:
                     # Replace the build directory with the actual installation directory ..
                     data = data.replace(build_dir, self.base_dir)
 
-                # .. and save the data on disk.
-                f = open(name, 'w')
-                f.write(data)
-                f.close()
+                    # .. and save the data on disk.
+                    f = open(name, 'w')
+                    f.write(data)
+                    f.close()
 
 # ################################################################################################################################
 
