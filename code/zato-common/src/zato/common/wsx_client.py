@@ -376,7 +376,6 @@ class Client:
         self.on_closed_callback = self.config.on_closed_callback
         self.needs_auth = bool(self.config.username)
         self.max_connect_attempts = self.config.max_connect_attempts
-        self._json_parser = SIMDJSONParser()
         self._marshal_api = MarshalAPI()
         self.logger = getLogger('zato_web_socket')
 
@@ -485,7 +484,7 @@ class Client:
     def on_message(self, msg:'TextMessage') -> 'None':
         """ Invoked for each message received from Zato, both for responses to previous requests and for incoming requests.
         """
-        _msg_parsed = self._json_parser.parse(msg.data) # type: any_
+        _msg_parsed = SIMDJSONParser().parse(msg.data) # type: any_
         _msg = _msg_parsed.as_dict() # type: anydict
         self.logger.info('Received message `%s`', _msg)
 
