@@ -433,16 +433,16 @@ class MarshalAPI:
             # .. if this field points to a list ..
             elif field_ctx.is_list:
 
-                # .. make sure that what we have on input really is a list object ..
-                if not isinstance(field_ctx.value, list):
-                    raise self.get_validation_error(field_ctx, error_class=ElementIsNotAList)
-
                 # If we have a model class the elements of the list are of,
                 # we need to visit each of them now.
                 if field_ctx.model_class:
 
                     # Enter further only if we have any value at all to check
                     if field_ctx.value and field_ctx.value != ZatoNotGiven: # type: ignore
+
+                        # .. make sure that what we have on input really is a list object ..
+                        if not isinstance(field_ctx.value, list):
+                            raise self.get_validation_error(field_ctx, error_class=ElementIsNotAList)
 
                         # However, that model class may actually point to <type 'str'> types
                         # in case of fields like strlist, and we need to take that into account
