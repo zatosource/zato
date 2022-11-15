@@ -204,6 +204,23 @@ class JSONToDataclassTestCase(TestCase):
         api.from_dict(service, data, MyRequestWithAfterCreated)
 
 # ################################################################################################################################
+
+    def test_unmarshall_input_is_a_dataclass(self):
+
+        @dataclass(init=False)
+        class MyModel(Model):
+            my_field: str
+
+        expected_value = 'abc'
+
+        data = {'my_field': expected_value}
+        service = cast_('Service', None)
+        api = MarshalAPI()
+
+        result = api.from_dict(service, data, MyModel) # type: MyModel
+        self.assertEqual(result.my_field, expected_value)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
