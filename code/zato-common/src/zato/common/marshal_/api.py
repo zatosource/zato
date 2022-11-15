@@ -379,6 +379,12 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
+    def _ensure_value_is_a_list(self, field_ctx:'FieldCtx', value:'any_') -> 'None':
+        if not isinstance(value, list):
+            raise self.get_validation_error(field_ctx, error_class=ElementIsNotAList)
+
+# ################################################################################################################################
+
     def from_dict(
         self,
         service:      'Service',
@@ -437,18 +443,43 @@ class MarshalAPI:
                 # we need to visit each of them now.
                 if field_ctx.model_class:
 
-                    # Enter further only if we have any value at all to check
+                    # Enter further only if we have any value at all to check ..
                     if field_ctx.value and field_ctx.value != ZatoNotGiven: # type: ignore
 
                         # .. make sure that what we have on input really is a list object ..
-                        if not isinstance(field_ctx.value, list):
-                            raise self.get_validation_error(field_ctx, error_class=ElementIsNotAList)
+                        self._ensure_value_is_a_list(field_ctx, field_ctx.value)
 
                         # However, that model class may actually point to <type 'str'> types
                         # in case of fields like strlist, and we need to take that into account
                         # before entering the _visit_list method below.
                         if field_ctx.is_model or field_ctx.contains_model:
                             field_ctx.value = self._visit_list(field_ctx)
+
+                    # .. if we are here, it may be because the value is a dictlist instance
+                    # .. for which there will be no underlying model and we can just assign it as is ..
+                    else:
+
+                        #
+                        # Object current_field may be returned by a default factory
+                        # in declarations, such as the one below. This is why we need to
+                        # ensure that this name exist in current_dict before we extract its value.
+                        #
+                        #
+                        # @dataclass(init=False, repr=False)
+                        # class MyModel(Model):
+                        #     my_list: anylistnone = list_field()
+                        #     my_dict: anydictnone = dict_field()
+                        #
+                        if field_ctx.name in current_dict:
+
+                            # .. extract the value first ..
+                            value = current_dict[field_ctx.name]
+
+                            # .. make sure that what we have on input really is a list object ..
+                            self._ensure_value_is_a_list(field_ctx, value)
+
+                            # .. assign the dictlist now.
+                            field_ctx.value = value
 
             # If we do not have a value yet, perhaps we will find a default one
             if field_ctx.value == ZatoNotGiven:
