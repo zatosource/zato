@@ -107,9 +107,10 @@ class DataClassSimpleIO:
             elif isinstance(data, PubSubMessage):
                 data = data.data
 
-            # .. otherwise, it must be a dict and we extract its contents.
-            if data_format in _dict_like and (not isinstance(data, dict)):
-                data = loads(data)
+            # .. otherwise, it can be a dict and we extract its contents.
+            if data_format in _dict_like and (not isinstance(data, (dict))):
+                if not isinstance(data, list):
+                    data = loads(data)
             return self.server.marshal_api.from_dict(service, data, self.user_declaration.input, extra)
 
 # ################################################################################################################################
