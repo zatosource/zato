@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,7 +14,7 @@ from zato.common.ext.dataclasses import dataclass, field
 from zato.common.marshal_.api import MarshalAPI, Model
 from zato.common.test import rand_int, rand_string
 from zato.common.test.marshall_ import CreateUserRequest, Role, TestService, User
-from zato.common.typing_ import cast_, list_field, strlistnone
+from zato.common.typing_ import cast_, list_field, dictlist, strlistnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -212,6 +212,26 @@ class JSONToDataclassTestCase(TestCase):
             my_field: str
 
         expected_value = 'abc'
+
+        data = {'my_field': expected_value}
+        service = cast_('Service', None)
+        api = MarshalAPI()
+
+        result = api.from_dict(service, data, MyModel) # type: MyModel
+        self.assertEqual(result.my_field, expected_value)
+
+# ################################################################################################################################
+
+    def test_unmarshall_input_is_a_dictlist(self):
+
+        @dataclass(init=False)
+        class MyModel(Model):
+            my_field: dictlist
+
+        expected_value = [{
+            'abc':111,
+            'zxc':222
+        }]
 
         data = {'my_field': expected_value}
         service = cast_('Service', None)

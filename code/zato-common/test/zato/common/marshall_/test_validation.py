@@ -10,11 +10,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-from zato.common.marshal_.api import ElementMissing, MarshalAPI
+from zato.common.ext.dataclasses import dataclass
+from zato.common.marshal_.api import ElementIsNotAList, ElementMissing, MarshalAPI, Model
 from zato.common.test import rand_int, rand_string
 from zato.common.test.marshall_ import Address, AddressWithDefaults, CreateAttrListRequest, CreatePhoneListRequest, \
     CreateUserRequest, LineParent, WithAny
-from zato.common.typing_ import cast_
+from zato.common.typing_ import cast_, dictlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -494,6 +495,24 @@ class ValidationTestCase(TestCase):
         # i.e. extra should not permanently overwrite either of dictionaries or the other way around.
         self.assertEqual(data['name'], parent_value)
         self.assertEqual(extra['name'], extra_value)
+
+# ################################################################################################################################
+
+    def test_unmarshall_input_is_a_dictlist_invalid_input(self):
+
+        @dataclass(init=False)
+        class MyModel(Model):
+            my_field: dictlist
+
+        data = {'my_field': 123}
+        service = cast_('Service', None)
+        api = MarshalAPI()
+
+        with self.assertRaises(ElementIsNotAList) as cm:
+            api.from_dict(service, data, MyModel)
+
+        e = cm.exception # type: ElementIsNotAList
+        self.assertEqual(e.reason, 'Element is not a list: /my_field')
 
 # ################################################################################################################################
 # ################################################################################################################################
