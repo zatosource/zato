@@ -836,7 +836,7 @@ class PubSub:
         session.add(ws_sub_key)
 
         # Update in-RAM state of workers
-        self.broker_client.publish({ # type: ignore
+        self.broker_client.publish({
             'action': BROKER_MSG_PUBSUB.SUB_KEY_SERVER_SET.value,
             'cluster_id': self.cluster_id,
             'server_name': self.server.name,
