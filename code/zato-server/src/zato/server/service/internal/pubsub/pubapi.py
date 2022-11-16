@@ -7,10 +7,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from json import dumps
 from traceback import format_exc
-
-# rapidjson
-from rapidjson import dumps
 
 # Zato
 from zato.common.api import CHANNEL, ContentType, CONTENT_TYPE, PUBSUB, ZATO_NONE
