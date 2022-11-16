@@ -6,6 +6,10 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# First thing in the process
+from gevent import monkey
+monkey.patch_all()
+
 # stdlib
 import random
 import socket
@@ -690,6 +694,9 @@ if __name__ == '__main__':
         except Exception:
             return format_exc()
 
+    def check_is_active_func():
+        return True
+
     address = 'ws://127.0.0.1:47043/zato.wsx.apitests'
     client_id = '123456'
     client_name = 'My Client'
@@ -700,6 +707,7 @@ if __name__ == '__main__':
     config.client_id = client_id
     config.client_name = client_name
     config.on_request_callback = on_request_callback
+    config.check_is_active_func = check_is_active_func
     config.username = 'user1'
     config.secret = 'secret1'
 
