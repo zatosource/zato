@@ -14,6 +14,7 @@ import stat
 import tempfile
 from datetime import datetime, timedelta
 from io import StringIO
+from json import loads
 from traceback import format_exc
 from uuid import uuid4
 
@@ -25,9 +26,6 @@ except ImportError:
 
 # gevent
 from gevent import sleep
-
-# pyrapidjson
-from rapidjson import loads
 
 # Zato
 from zato.common.api import IPC
