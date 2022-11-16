@@ -30,8 +30,8 @@ from zato.common.marshal_.api import Model
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import new_msg_id, PubSubMessage
-from zato.common.typing_ import any_, anydict, anylistnone, anynone, boolnone, cast_, dict_field, intnone, list_field, \
-     strlistempty, strnone
+from zato.common.typing_ import any_, anydict, anydictnone, anylistnone, anynone, boolnone, cast_, dict_field, intnone, \
+    list_field, strlistnone, strnone
 from zato.common.util.pubsub import get_expiration, get_priority
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_ms
@@ -175,11 +175,11 @@ class PubRequest(Model):
     group_id:          strnone = ''
     position_in_group: intnone = PUBSUB.DEFAULT.PositionInGroup
 
-    reply_to_sk:   strlistempty = list_field()
-    deliver_to_sk: strlistempty = list_field()
+    reply_to_sk:   strlistnone = list_field()
+    deliver_to_sk: strlistnone = list_field()
 
     user_ctx:      anynone    = None
-    zato_ctx:      anydict = dict_field()
+    zato_ctx:      anydictnone = dict_field()
 
 # ################################################################################################################################
 # ################################################################################################################################
