@@ -446,8 +446,9 @@ class MarshalAPI:
                     # Enter further only if we have any value at all to check ..
                     if field_ctx.value and field_ctx.value != ZatoNotGiven: # type: ignore
 
-                        # .. make sure that what we have on input really is a list object ..
-                        self._ensure_value_is_a_list(field_ctx, field_ctx.value)
+                        # .. if the field is required, make sure that what we have on input really is a list object ..
+                        if field_ctx.is_required:
+                            self._ensure_value_is_a_list(field_ctx, field_ctx.value)
 
                         # However, that model class may actually point to <type 'str'> types
                         # in case of fields like strlist, and we need to take that into account
@@ -475,10 +476,11 @@ class MarshalAPI:
                             # .. extract the value first ..
                             value = current_dict[field_ctx.name]
 
-                            # .. make sure that what we have on input really is a list object ..
-                            self._ensure_value_is_a_list(field_ctx, value)
+                            # .. if the field is required, make sure that what we have on input really is a list object ..
+                            if field_ctx.is_required:
+                                self._ensure_value_is_a_list(field_ctx, value)
 
-                            # .. assign the dictlist now.
+                            # .. assign the list now.
                             field_ctx.value = value
 
             # If we do not have a value yet, perhaps we will find a default one
