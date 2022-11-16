@@ -110,7 +110,7 @@ PyMySQL==1.0.2
 pyotp==2.6.0
 pyparsing==2.4.2
 pyprof2calltree==1.4.5
-pyrapidjson==0.5.1; python_version<3.11
+pyrapidjson==0.5.1; python_version < '3.11'
 pysimdjson==5.0.1
 pysolr==3.9.0
 python-butler==0.9
