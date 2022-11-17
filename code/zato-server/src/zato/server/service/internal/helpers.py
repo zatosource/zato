@@ -49,6 +49,7 @@ default_services_allowed = (
     'zato.pubsub.pubapi.subscribe-wsx',
     'zato.pubsub.pubapi.unsubscribe',
     'zato.pubsub.resume-wsx-subscription',
+    'zato.pubsub.subscription.create-wsx-subscription',
     'zato.ping'
 )
 
@@ -299,9 +300,17 @@ class WebSocketsGateway(Service):
         input = self.request.input
         service = input.service
 
-        if service \
-           and service not in _default_allowed \
-           and service not in self.services_allowed:
+        # Make sure that the service can be invoked if we have one on input
+        if service:
+
+            # These services can be always invoked
+            is_allowed_by_default = service in _default_allowed
+
+            # Our subclasses may add more services that they allow
+            is_allowed_by_self_service = service in self.services_allowed
+
+            # Ensure that the input service is allowed
+            if not (is_allowed_by_default or is_allowed_by_self_service):
                 self.logger.warning('Service `%s` is not among %s', service, self.services_allowed) # noqa: E117
                 raise Forbidden(self.cid)
 
