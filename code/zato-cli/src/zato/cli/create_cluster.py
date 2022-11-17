@@ -495,7 +495,7 @@ class Create(ZatoCommand):
         from zato.common.api import DATA_FORMAT
         from zato.common.odb.model import HTTPSOAP
 
-        data_formats = [DATA_FORMAT.JSON, DATA_FORMAT.XML]
+        data_formats = [DATA_FORMAT.JSON]
         for data_format in data_formats:
 
             name = 'zato.checks.{}.{}'.format(data_format, service.name)
