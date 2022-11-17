@@ -1,7 +1,7 @@
 anyjson>=0.3.3
 arrow>=0.4.2
 boto>=2.35.1
-https://github.com/dsuch/bunch/archive/master.zip#egg=bunch
+-e git://github.com/dsuch/bunch/archive/master.zip#egg=bunch
 candv>=1.1.1
 ConcurrentLogHandler>=0.9.1
 configobj>=5.0.5
