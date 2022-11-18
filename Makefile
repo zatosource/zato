@@ -83,7 +83,7 @@ type-check:
 mypy:
 	cd $(CURDIR)/code/zato-common && $(MAKE) mypy
 	cd $(CURDIR)/code/zato-server && $(MAKE) mypy
-	echo "Type checks OK"
+	echo "Mypy checks OK"
 
 web-admin-tests:
 	cd $(CURDIR)/code/zato-web-admin && make run-tests
