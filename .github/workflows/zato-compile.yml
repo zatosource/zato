@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04, ubuntu-22.04]
-        python-version: ['3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.8', '3.9', '3.10']
     steps:
       - uses: actions/checkout@v3
 
@@ -31,4 +31,4 @@ jobs:
         run: python --version
 
       - name: Clone and compile
-        run: git clone https://github.com/zatosource/zato && cd ./zato && git checkout support/3.2 && ./code/install.sh && ./code/bin/zato --version
+        run: git clone https://github.com/zatosource/zato && cd ./zato && git checkout support/3.2 && ./code/install.sh && ./code/bin/zato --version && ./code/bin/zato quickstart /tmp/qs-1
