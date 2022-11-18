@@ -372,6 +372,8 @@ class EnvironmentManager:
         # These cannot be installed via requirements.txt
         packages = [
             'cython==0.29.32',
+            'greenlet==1.1.2',
+            'gevent==21.12.0',
             'numpy==1.22.3',
             'pyOpenSSL==22.0.0',
             'git+https://github.com/dsuch/bunch/#egg=bunch'
