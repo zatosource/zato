@@ -80,6 +80,11 @@ type-check:
 	cd $(CURDIR)/code/zato-server && $(MAKE) type-check
 	echo "Type checks OK"
 
+mypy:
+	cd $(CURDIR)/code/zato-common && $(MAKE) mypy
+	cd $(CURDIR)/code/zato-server && $(MAKE) mypy
+	echo "Mypy checks OK"
+
 web-admin-tests:
 	cd $(CURDIR)/code/zato-web-admin && make run-tests
 
