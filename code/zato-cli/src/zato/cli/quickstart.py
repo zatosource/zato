@@ -117,7 +117,7 @@ echo [2/$STEPS] SQL ODB connection OK
 # Make sure TCP ports are available
 echo [3/$STEPS] Checking TCP ports availability
 
-ZATO_BIN_PATH=$ZATO_BIN_PATH || `which zato`
+ZATO_BIN_PATH=${1:-`which zato`}
 ZATO_BIN_DIR=`python -c "import os; print(os.path.dirname('$ZATO_BIN_PATH'))"`
 UTIL_DIR=`python -c "import os; print(os.path.join('$ZATO_BIN_DIR', '..', 'util'))"`
 
