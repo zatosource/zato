@@ -374,6 +374,7 @@ class EnvironmentManager:
             'cython==0.29.32',
             'numpy==1.22.3',
             'pyOpenSSL==22.0.0',
+            'git+https://github.com/dsuch/bunch/#egg=bunch'
         ]
 
         for package in packages:
