@@ -80,6 +80,11 @@ type-check:
 	cd $(CURDIR)/code/zato-server && $(MAKE) type-check
 	echo "Type checks OK"
 
+mypy:
+	cd $(CURDIR)/code/zato-common && $(MAKE) mypy
+	cd $(CURDIR)/code/zato-server && $(MAKE) mypy
+	echo "Mypy checks OK"
+
 web-admin-tests:
 	cd $(CURDIR)/code/zato-web-admin && make run-tests
 
@@ -90,6 +95,11 @@ install-qa-reqs:
 	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
 	npx -y playwright install
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
+
+all-static-checks:
+	$(MAKE) flake8
+	$(MAKE) static-check
+	$(MAKE) type-check
 
 run-tests:
 	$(MAKE) install-qa-reqs
