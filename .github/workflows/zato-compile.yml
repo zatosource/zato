@@ -31,4 +31,4 @@ jobs:
         run: python --version
 
       - name: Clone and compile
-        run: mkdir -p /tmp/src-zato && git clone https://github.com/zatosource/zato && cd ./zato && git checkout support/3.2 && ./code/install.sh && ./code/bin/zato --version && ./code/bin/zato quickstart /tmp/qs-1 && ZATO_BIN_PATH=/tmp/src-zato/code/bin/zato /tmp/qs-1/zato-qs-start.sh
+        run: mkdir -p /tmp/src-zato && git clone https://github.com/zatosource/zato && cd ./zato && git checkout support/3.2 && ./code/install.sh && ./code/bin/zato --version && ./code/bin/zato quickstart /tmp/qs-1 && export ZATO_BIN_PATH=/tmp/src-zato/code/bin/zato /tmp/qs-1/zato-qs-start.sh
