@@ -29,6 +29,7 @@ code/release-info/revision.txt
 code/Scripts/*
 code/sec-wall-trunk-src/*
 code/share/*
+code/src/*
 code/tests/*
 code/windows-bin/zato.py
 code/zato-cy/src/zato/cy/*.c
