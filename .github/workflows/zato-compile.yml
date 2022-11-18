@@ -31,4 +31,4 @@ jobs:
         run: python --version
 
       - name: Clone and compile
-        run: git clone https://github.com/zatosource/zato && cd ./zato && git checkout support/3.2 &&  ./code/install.sh && make static-check && ./code/bin/zato --version && ./code/bin/zato quickstart /tmp/qs-1
+        run: cd /tmp/src-zato && git clone https://github.com/zatosource/zato && cd ./zato && git checkout support/3.2 &&  ./code/install.sh && && ./code/bin/pip install -r ./code/qa-requirements.txt && make all-static-checks && ./code/bin/zato --version && ./code/bin/zato quickstart /tmp/qs-1
