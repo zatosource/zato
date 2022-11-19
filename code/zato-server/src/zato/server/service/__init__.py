@@ -105,6 +105,7 @@ if 0:
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
     from zato.server.connection.ftp import FTPStore
+    from zato.server.connection.web_socket import WebSocket
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
@@ -130,6 +131,7 @@ if 0:
     SSOAPI = SSOAPI # type: ignore
     timedelta = timedelta
     TimeUtil = TimeUtil
+    WebSocket = WebSocket
     WorkerStore = WorkerStore
 
 # ################################################################################################################################
@@ -807,7 +809,8 @@ class Service:
             job_type=job_type, channel_params=channel_params,
             merge_channel_params=merge_channel_params, params_priority=params_priority,
             in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
-            wmq_ctx=kwargs.get('wmq_ctx'), channel_info=kwargs.get('channel_info'), channel_item=channel_item)
+            wmq_ctx=kwargs.get('wmq_ctx'), channel_info=kwargs.get('channel_info'),
+            channel_item=channel_item, wsx=wsgi_environ.get('zato.wsx'))
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
@@ -1367,6 +1370,7 @@ class Service:
         wmq_ctx=None,          # type: dictnone
         channel_info=None,     # type: ChannelInfo | None
         channel_item=None,     # type: dictnone
+        wsx=None,              # type: WebSocket | None
         _AMQP=CHANNEL.AMQP,            # type: str
         _IBM_MQ=CHANNEL.IBM_MQ,        # type: str
         _HL7v2=HL7.Const.Version.v2.id # type: str

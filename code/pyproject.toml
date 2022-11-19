@@ -26,6 +26,12 @@ reportUntypedFunctionDecorator    = "error"
 reportWildcardImportFromLibrary   = "error"
 reportImplicitStringConcatenation = "error"
 
+reportUnknownLambdaType    = "none"
+reportUnknownMemberType    = "none"
+reportUnknownParameterType = "none"
+reportUnknownVariableType  = "none"
+reportTypeCommentUsage     = "none"
+
 #
 # This is level 2
 #
