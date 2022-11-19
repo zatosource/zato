@@ -772,7 +772,7 @@ if __name__ == '__main__':
 
     # .. and run sample code now ..
 
-    is_subscriber = 0
+    is_subscriber = 1
 
     if is_subscriber:
         client.subscribe(topic_name1)
@@ -782,6 +782,7 @@ if __name__ == '__main__':
             idx += 1
             client.invoke({'service':'zato.ping'})
             client.publish(topic_name1, f'{idx}')
+            # sleep(1)
 
     _cli_logger.info('Press Ctrl-C to quit')
 
