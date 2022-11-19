@@ -487,7 +487,7 @@ class WebSocket(_WebSocket):
             # Update last interaction metadata time for our peer
             self.last_interact_source = source
 
-            # It is possible that we are etting the metadata the first time here,
+            # It is possible that we are setting the metadata the first time here,
             # in which case we will always invoke the service,
             # having first stored current timestamp for later use.
             if not self.interact_last_set:
@@ -1032,17 +1032,18 @@ class WebSocket(_WebSocket):
             'initial_http_wsgi_environ': self.initial_http_wsgi_environ,
         }
 
-        request = {
+        msg = {
             'cid': cid or new_cid(),
             'data_format': _data_format,
             'service': service_name,
             'payload': data,
             'environ': environ,
+            'wsx': self,
         }
 
         on_message_callback = cast_('callable_', self.config.on_message_callback)
         response = on_message_callback(
-            request,
+            msg,
             CHANNEL.WEB_SOCKET,
             None,
             needs_response=needs_response,
