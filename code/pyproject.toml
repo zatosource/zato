@@ -1,13 +1,13 @@
 [tool.pyright]
 pythonVersion = "3.8"
-typeCheckingMode = "strict"
+typeCheckingMode = "basic"
 
 #
 # This is level 1
 #
 #reportOptionalOperand       = "none"
 #reportGeneralTypeIssues     = "none"
-reportOptionalMemberAccess  = "none"
+#reportOptionalMemberAccess  = "none"
 reportPrivateUsage        = "error"
 reportAssertAlwaysTrue    = "error"
 reportUnusedImport        = "error"
@@ -25,6 +25,12 @@ reportUnsupportedDunderAll  = "error"
 reportUntypedFunctionDecorator    = "error"
 reportWildcardImportFromLibrary   = "error"
 reportImplicitStringConcatenation = "error"
+
+reportUnknownLambdaType    = "none"
+reportUnknownMemberType    = "none"
+reportUnknownParameterType = "none"
+reportUnknownVariableType  = "none"
+reportTypeCommentUsage     = "none"
 
 #
 # This is level 2
