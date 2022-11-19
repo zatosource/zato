@@ -12,6 +12,7 @@ from inspect import isclass
 
 # Zato
 from zato.common.api import PUBSUB
+from zato.common.exception import Forbidden
 from zato.common.pubsub import skip_to_external
 from zato.common.typing_ import cast_
 from zato.common.util.file_system import fs_safe_name
@@ -151,7 +152,9 @@ class PubAPI:
 
             # .. but if there is no such service at all, we give up.
             if not self.service_store.has_service(name):
-                raise ValueError('No such service `{}`'.format(name))
+                msg = f'No such topic or service `{name}` (cid:{correl_id})'
+                logger.info(msg)
+                raise Forbidden(correl_id, 'You are not allowed to access this resource')
 
             # At this point we know this is a service so we may build the topic's full name,
             # taking into account the fact that a service's name is arbitrary string
@@ -160,9 +163,10 @@ class PubAPI:
 
             # We continue only if the publisher is allowed to publish messages to that service.
             if not self.pubsub.is_allowed_pub_topic_by_endpoint_id(topic_name, endpoint_id):
-                msg = 'No pub pattern matched service `{}` and endpoint `{}` (#1)'.format(
-                    name, self.pubsub.get_endpoint_by_id(endpoint_id).name)
-                raise ValueError(msg)
+                endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
+                msg = f'No pub pattern matched service `{name}` and endpoint `{endpoint.name}` (#1) (cid:{correl_id})'
+                logger.info(msg)
+                raise Forbidden(correl_id, 'You are not allowed to access this resource')
 
             # We create a topic for that service to receive messages from unless it already exists
             if not self.topic_api.has_topic_by_name(topic_name):
