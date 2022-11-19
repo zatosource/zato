@@ -590,11 +590,9 @@ class Publisher:
             # for whom no one is waiting or continue and place them in the topic directly.
             if ctx.topic.config.get('on_no_subs_pub') == PUBSUB.ON_NO_SUBS_PUB.DROP.id:
                 log_msg_drop = 'Dropping messages. ' + log_msg
-                logger.info(log_msg_drop, *log_msg_args)
                 logger_pubsub.info(log_msg_drop, *log_msg_args)
                 return None
             else:
-                logger.info(log_msg, *log_msg_args)
                 logger_pubsub.info(log_msg, *log_msg_args)
 
         # Local aliases
