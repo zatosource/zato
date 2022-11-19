@@ -328,7 +328,7 @@ class _WebSocketClientImpl(WebSocketClient):
             )
             return
 
-        message_sender = self.stream.binary_message if binary else self.stream.text_message
+        message_sender = self.stream.binary_message if binary else self.stream.text_message # type: any_
 
         if isinstance(payload, str) or isinstance(payload, bytearray):
             m = message_sender(payload).single(mask=self.stream.always_mask)
@@ -416,7 +416,7 @@ class Client:
 
 # ################################################################################################################################
 
-    def _send(self, msg_id:'str', msg:'dict', serialized:'str', wait_time:'int') -> 'None':
+    def _send(self, msg_id:'str', msg:'anydict', serialized:'str', wait_time:'int') -> 'None':
         """ Sends a request to Zato and waits up to wait_time or self.config.wait_time seconds for a reply.
         """
         self.logger.info('Sending msg `%s`', serialized)
@@ -442,7 +442,7 @@ class Client:
 
         while now < until:
 
-            response = self.responses_received.get(request_id)
+            response = self.responses_received.get(request_id) # type: any_
             if response:
                 return response
             else:
@@ -608,7 +608,7 @@ class Client:
 
 # ################################################################################################################################
 
-    def _wait_until_flag_is_true(self, get_flag_func:'bool', max_wait:'int'=Default.MaxWaitTime) -> 'bool':
+    def _wait_until_flag_is_true(self, get_flag_func:'callable_', max_wait:'int'=Default.MaxWaitTime) -> 'bool':
 
         # .. wait for the connection for that much time ..
         now = utcnow()
@@ -646,7 +646,7 @@ class Client:
 
 # ################################################################################################################################
 
-    def wait_until_authenticated(self, max_wait:'int'=Default.MaxWaitTime) -> 'None':
+    def wait_until_authenticated(self, max_wait:'int'=Default.MaxWaitTime) -> 'bool':
 
         def get_flag_func():
             return self.is_authenticated
@@ -700,6 +700,23 @@ class Client:
         return self.invoke_service(service_name, request)
 
 # ################################################################################################################################
+
+    def publish(
+        self,
+        topic_name, # type: str
+        data        # type: any_
+    ) -> 'None':
+
+        service_name = 'zato.pubsub.pubapi.publish-message'
+
+        response = self.invoke_service(service_name, {
+            'topic_name': topic_name,
+            'data':data
+        })
+
+        response
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
@@ -731,6 +748,10 @@ if __name__ == '__main__':
     client_name = 'My Client'
     on_request_callback = on_request_from_zato
 
+    # Test topic to use
+    topic_name1 = '/test1'
+    topic_name2 = '/test2'
+
     config = Config()
     config.address = address
     config.client_id = client_id
@@ -749,8 +770,10 @@ if __name__ == '__main__':
     # .. wait until it is authenticated ..
     client.wait_until_authenticated()
 
-    # .. and run sample code now.
-    client.subscribe('/test1')
+    # .. and run sample code now ..
+
+    client.subscribe(topic_name1)
+    client.publish(topic_name2, 'abc')
 
     while False:
         client.invoke({'service':'zato.ping'})
