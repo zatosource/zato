@@ -136,7 +136,7 @@ class TopicService(_PubSubService):
             'data': input.data,
             'priority': input.priority,
             'expiration': input.expiration,
-            'correl_id': input.correl_id,
+            'correl_id': input.correl_id or self.cid,
             'in_reply_to': input.in_reply_to,
             'ext_client_id': input.ext_client_id,
             'has_gd': input.has_gd or ZATO_NONE,

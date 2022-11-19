@@ -1,13 +1,13 @@
 [tool.pyright]
 pythonVersion = "3.8"
-typeCheckingMode = "basic"
+typeCheckingMode = "strict"
 
 #
 # This is level 1
 #
 #reportOptionalOperand       = "none"
 #reportGeneralTypeIssues     = "none"
-#reportOptionalMemberAccess  = "none"
+reportOptionalMemberAccess  = "none"
 reportPrivateUsage        = "error"
 reportAssertAlwaysTrue    = "error"
 reportUnusedImport        = "error"
