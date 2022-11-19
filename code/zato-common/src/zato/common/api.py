@@ -19,7 +19,7 @@ from bunch import Bunch
 
 if 0:
     from zato.common.ext.imbox import Imbox
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strstrdict
 
 # ################################################################################################################################
 
@@ -1098,7 +1098,7 @@ CONTENT_TYPE = Bunch(
     PLAIN_XML = 'application/xml',
     SOAP11 = 'text/xml',
     SOAP12 = 'application/soap+xml; charset=utf-8',
-)
+) # type: strstrdict
 
 class ContentType:
     FormURLEncoded = 'application/x-www-form-urlencoded'
