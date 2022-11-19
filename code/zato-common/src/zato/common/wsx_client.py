@@ -772,17 +772,22 @@ if __name__ == '__main__':
 
     # .. and run sample code now ..
 
-    client.subscribe(topic_name1)
-    client.publish(topic_name2, 'abc')
+    is_subscriber = 0
 
-    while False:
-        client.invoke({'service':'zato.ping'})
+    if is_subscriber:
+        client.subscribe(topic_name1)
+    else:
+        idx = 0
+        while idx < 100_000_000:
+            idx += 1
+            client.invoke({'service':'zato.ping'})
+            client.publish(topic_name1, f'{idx}')
 
     _cli_logger.info('Press Ctrl-C to quit')
 
     try:
         x = 0
-        while x < 1000 and client.keep_running:
+        while x < 100_000_000 and client.keep_running:
             sleep(0.2)
     except KeyboardInterrupt:
         client.stop()
