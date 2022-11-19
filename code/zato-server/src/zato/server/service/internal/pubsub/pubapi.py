@@ -152,7 +152,7 @@ class TopicService(_PubSubService):
             'endpoint_id': endpoint_id,
         }
 
-        return self.pubsub.publish(input.topic_name, **ctx)
+        return self.pubsub.publish(input.topic_name, service=self, **ctx)
 
 # ################################################################################################################################
 
@@ -363,7 +363,8 @@ class PublishMessage(Service):
         response = self.invoke(TopicService.get_name(), self.request.input,
             wsgi_environ={
                 'REQUEST_METHOD':'POST',
-                'zato.wsx': self.wsgi_environ.get('zato.wsx')
+                'zato.wsx': self.wsgi_environ.get('zato.wsx'),
+                'zato.request_ctx.async_msg': self.wsgi_environ.get('zato.request_ctx.async_msg'),
             })
         self.response.payload = response
 
