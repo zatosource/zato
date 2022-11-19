@@ -289,8 +289,8 @@ class WebSocketsGateway(Service):
     services_allowed = []
 
     class SimpleIO:
-        input_required = 'service',
-        input_optional = AsIs('request'),
+        input_required = 'service'
+        input_optional = AsIs('request')
         output_optional = 'sub_key', AsIs(wsx_gateway_response_elem)
         skip_empty_keys = True
 
@@ -323,7 +323,8 @@ class WebSocketsGateway(Service):
                 topic_name,
                 use_current_wsx=True,
                 unsub_on_wsx_close=unsub_on_wsx_close,
-                service=self
+                service=self,
+                cid=input.cid,
             )
             self.response.payload.sub_key = sub_key
 
@@ -334,7 +335,11 @@ class WebSocketsGateway(Service):
 
             # Invoke the underlying service and get its response
             response = self.invoke(
-                service, self.request.input.request, wsgi_environ=self.wsgi_environ, skip_response_elem=True
+                service,
+                self.request.input.request,
+                wsgi_environ=self.wsgi_environ,
+                skip_response_elem=True,
+                cid=self.cid,
             )
 
             # Use setattr to attach the response because we keep the response element's name in a variable
@@ -748,7 +753,7 @@ class PubAPIInvoker(Service):
                             'error_test': test,
                             'error_reason': reason,
                         }
-                        self.logger.warning('Test error -> %s', result.errors)
+                        self.logger.warning('Test error in %s\n%s', test, reason)
                         errors.append(_error)
 
                     for failure in result.failures:
@@ -759,7 +764,7 @@ class PubAPIInvoker(Service):
                             'failure_test': test,
                             'failure_reason': reason,
                         }
-                        self.logger.warning('Test Failure -> %s', result.errors)
+                        self.logger.warning('Test failure in %s\n%s', test, reason)
                         errors.append(_failure)
 
                     # Serialize all the warnings and errors ..

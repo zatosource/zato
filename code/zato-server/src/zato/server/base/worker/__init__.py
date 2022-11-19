@@ -1707,6 +1707,9 @@ class WorkerStore(_WorkerStoreBase):
             'zato.request_ctx.parallel_exec_cid':zato_ctx.get('parallel_exec_cid'),
         }
 
+        if 'wsx' in msg:
+            wsgi_environ['zato.wsx'] = msg['wsx']
+
         if zato_ctx:
             wsgi_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')
 
