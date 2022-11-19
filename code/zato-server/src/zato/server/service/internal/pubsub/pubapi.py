@@ -364,7 +364,7 @@ class PublishMessage(Service):
             wsgi_environ={
                 'REQUEST_METHOD':'POST',
                 'zato.wsx': self.wsgi_environ.get('zato.wsx'),
-                'zato.request_ctx.async_msg': self.wsgi_environ.get('zato.request_ctx.async_msg'),
+                'zato.request_ctx.async_msg': self.wsgi_environ.get('zato.request_ctx.async_msg') or {},
             })
         self.response.payload = response
 
