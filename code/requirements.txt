@@ -93,7 +93,7 @@ Paste==3.5.2
 pg8000==1.13.1
 portalocker==0.5.7
 prettytable==0.7.2
-psutil==5.7.2
+psutil==5.9.4
 py-cpuinfo==3.3.0
 pyarrow==9.0.0
 pyaml==20.4.0
