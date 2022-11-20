@@ -83,7 +83,7 @@ class EnvironmentManager:
     def __init__(self, base_dir:'str', bin_dir:'str') -> 'None':
         self.base_dir = base_dir
         self.bin_dir = bin_dir
-        self.pip_command = os.path.join(self.bin_dir, 'pip')
+        self.pip_command = 'c:\\ZZZ\\windows-python-embedded-3.10.8\\python.exe c:\\ZZZ\\windows-python-embedded-3.10.8\pip.pyz' # os.path.join(self.bin_dir, 'Scripts', 'pip')
         self.python_command = os.path.join(self.bin_dir, 'python')
         self.pip_options = ''
 
@@ -152,6 +152,7 @@ class EnvironmentManager:
         # under what Python version we are are going to run.
         py_version = '{}.{}'.format(sys.version_info.major, sys.version_info.minor)
         logger.info('Python version maj.min -> %s', py_version)
+        logger.info('Python self.base_dir -> %s', self.base_dir)
 
         # Under Linux, the path to site-packages contains the Python version but it does not under Windows.
         # E.g. ~/src-zato/lib/python3.8/site-packages vs. C:\src-zato\lib\site-packages
@@ -160,7 +161,7 @@ class EnvironmentManager:
         else:
             py_lib_dir = ''
 
-        py_lib_dir = os.path.join(self.base_dir, 'lib', py_lib_dir)
+        py_lib_dir = os.path.join(self.base_dir, 'windows-python-embedded-3.10.8', 'lib', py_lib_dir)
         py_lib_dir = os.path.abspath(py_lib_dir)
         logger.info('Python lib dir -> %s', py_lib_dir)
 
@@ -303,7 +304,7 @@ class EnvironmentManager:
     def pip_install_core_pip(self) -> 'None':
 
         # Set up the command ..
-        command = '{pip_command} install {pip_options} -U {pip_deps}'.format(**{
+        command = '{pip_command} install --prefix c:\\ZZZ\\windows-python-embedded-3.10.8 {pip_options} -U {pip_deps}'.format(**{
             'pip_command': self.pip_command,
             'pip_options': self.pip_options,
             'pip_deps':    pip_deps,
@@ -325,6 +326,7 @@ class EnvironmentManager:
             {pip_command}
             -v
             install
+            --prefix c:\\ZZZ\\windows-python-embedded-3.10.8
             {pip_options}
             -r {reqs_path}
         """.format(**{
@@ -360,7 +362,7 @@ class EnvironmentManager:
             pip_args.append(arg)
 
         # Build the command ..
-        command = '{} install {}'.format(self.pip_command, ' '.join(pip_args))
+        command = '{} install --prefix c:\\ZZZ\\windows-python-embedded-3.10.8 --no-warn-script-location {}'.format(self.pip_command, ' '.join(pip_args))
 
         # .. and run it.
         self.run_command(command, exit_on_error=False)
@@ -380,7 +382,7 @@ class EnvironmentManager:
         for package in packages:
 
             # Set up the command ..
-            command = '{pip_command} install {package}'.format(**{
+            command = '{pip_command} install --prefix c:\\ZZZ\\windows-python-embedded-3.10.8 --no-warn-script-location {package}'.format(**{
                 'pip_command': self.pip_command,
                 'package': package,
             })
@@ -578,8 +580,11 @@ class EnvironmentManager:
 
     def install(self) -> 'None':
 
-        self.update_git_revision()
+        # self.update_git_revision()
         self.pip_install()
+
+        return
+
         self.add_eggs_symlink()
         self.add_extlib()
         self.add_py_command()

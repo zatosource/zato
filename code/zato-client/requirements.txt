@@ -1,4 +1,0 @@
-anyjson
-future
-requests
-zato-common>=3.1.0
