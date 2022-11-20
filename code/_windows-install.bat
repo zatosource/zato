@@ -3,9 +3,16 @@ echo Zato Windows installation
 ver
 
 rem
+rem The embedded Python version
+rem
+set python_version=3.10.8
+
+rem
 rem Local aliases
 rem
 set curdir=%~dp0
+set python_bin_dir=%curdir%\windows-python-embedded-%python_version%
+set python_cmd=%python_bin_dir%\python.exe
 
 rem
 rem Ensure that git considers our directory as safe
@@ -15,19 +22,11 @@ git config --add safe.directory curdir\..
 rem
 rem Install prerequisites
 rem
-python -m ensurepip
-python -m pip install -U --upgrade pip
-python -m pip install -U virtualenv==20.4.3
-
-rem
-rem Note that we install virtualenv but we do not activate it,
-rem as it would otherwise prevent us from calling the following .bat file.
-rem
-echo Installing virtualenv in %curdir%
-python -m virtualenv %curdir%
+cd python_bin_dir
+rem %python_cmd% %python_bin_dir%\get-pip.py
 
 rem
 rem Actually install all Python dependencies
 rem
-echo Setting up environment in %curdir%
+rem echo Setting up environment in %curdir%
 start "Zato install" call %curdir%\_windows-run-install.bat
