@@ -568,7 +568,7 @@ class Create(ZatoCommand):
         #
         # 8) Scripts
         #
-        zato_bin = 'zato'
+        zato_bin = 'zato.py' if is_windows else 'zato'
 
         # Visual Studio integration
         vscode_dir = os.path.join(args_path, '.vscode')
