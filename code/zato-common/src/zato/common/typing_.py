@@ -35,6 +35,9 @@ from typing import           \
 from typing_extensions import \
     TypeAlias as typealias_
 
+# dacite
+from dacite.core import from_dict
+
 # stdlib
 from dataclasses import * # noqa: F401
 
@@ -55,6 +58,7 @@ except ImportError:
 # ################################################################################################################################
 
 # For flake8
+from_dict = from_dict
 optional  = optional
 Protocol  = Protocol
 TypedDict = TypedDict
