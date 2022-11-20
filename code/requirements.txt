@@ -1,8 +1,5 @@
-alembic==1.6.2
-amazon.ion==0.7.0
-amqp==5.0.1
+amqp==5.1.1
 apispec==5.1.1
-argh==0.24.1
 arrow==0.4.2
 asn1crypto==0.21.0
 atlassian-python-api==3.19
@@ -11,12 +8,11 @@ boto==2.49.0
 candv==1.3.1
 cffi==1.15.0
 chardet==4.0.0
-ciso8601==2.1.3
 click==1.1
 codegen==1.0
-ConcurrentLogHandler==0.9.1
 configparser==3.7.1
 convertdate==2.0.3.1
+confluent-kafka==1.9.2
 coverage==3.7.1
 crontab==0.22.9
 cryptography==37.0.4
@@ -32,9 +28,8 @@ Django==4.1.1
 docformatter==0.8
 dropbox==10.10.0
 elasticsearch==7.15.2
-ephem==3.7.6.0
 faker==8.12.1
-fastparquet==0.6.1
+fastparquet==2022.11.0
 fhirpy==1.3.0
 flake8==3.8.4
 flake8-bugbear
@@ -42,10 +37,9 @@ flake8-coding
 flake8-comprehensions
 flake8-quotes
 flatbuffers==1.12
-fs==2.4.11
-futures==2.1.6
+fs==2.4.16
 gevent==21.12.0
-geventhttpclient==1.4.4
+geventhttpclient==2.0.8
 globre==0.1.5
 google-api-python-client==2.52.0
 google-auth-httplib2==0.1.0
@@ -53,11 +47,10 @@ google-auth-oauthlib==0.5.2
 greenlet==1.1.2
 hl7==0.4.1
 hl7apy==1.3.3
-hiredis==0.3.1
 httpagentparser==1.9.0
 httplib2==0.19.0
-https://github.com/dsuch/paodate/archive/master.zip#egg=paodate
-https://github.com/salmito/simple-rbac/archive/master.zip#egg=simple-rbac
+# https://github.com/dsuch/paodate/archive/master.zip#egg=paodate
+# https://github.com/salmito/simple-rbac/archive/master.zip#egg=simple-rbac
 humanize==3.0.1
 hvac==0.7.2
 idna==3.3
@@ -72,27 +65,24 @@ ldap3==2.8.1
 lxml==4.6.5
 Mako==1.1.5
 markdown==3.3.4
-MarkupSafe==2.0
+MarkupSafe==2.1.1
 mccabe==0.6.1
 mock==3.0.5
 ndg-httpsclient==0.4.0
 netaddr==0.8.0
-netifaces==0.10.4
-newrelic==2.20.0.17
-nose==1.3.7
 o365==2.0.21
 odoo-client-lib==1.2.2
 openpyxl==3.0.5
 orjson==3.8.0
-oslo.config==1.2.1
+oslo.config==9.0.0
 pandas==1.5.0
 parse-type==0.3.4
 parse==1.6.6
 passlib==1.7.1
 Paste==3.5.2
 pg8000==1.13.1
-portalocker==0.5.7
-prettytable==0.7.2
+portalocker==2.6.0
+prettytable==3.5.0
 psutil==5.9.4
 py-cpuinfo==3.3.0
 pyarrow==9.0.0
@@ -103,18 +93,13 @@ pyflakes==2.2.0
 pyftpdlib==1.5.6
 pygments==2.10.0
 PyJWT==2.0.1
-pykafka==2.8.0
 pymongo==4.2.0
 PyMySQL==1.0.2
 pyotp==2.6.0
 pyparsing==2.4.2
 pyprof2calltree==1.4.5
-pyrapidjson==0.5.1; python_version < '3.11'
 pysimdjson==5.0.1
-pysolr==3.9.0
-python-butler==0.9
 python-dateutil==2.8.1
-python-tds==1.9.1
 python-editor==1.0.1
 python-memcached==1.59
 python-ntlm==1.1.0
@@ -126,55 +111,60 @@ pyzmq==24.0.0
 raven==5.1.1
 recommonmark==0.6.0
 redis==2.10.6
-regex==2016.11.21
+regex==2022.10.31
 repoze.lru==0.6
 repoze.profile==2.3
 requests==2.28.1
 requests-toolbelt==0.9.1
 rsa==4.1
-sarge==0.1.5.post0
-setproctitle==1.1.10
+sarge==0.1.7.post1
+setproctitle==1.3.2
 simplejson==3.17.6
 simple-parsing==0.0.17
 six==1.16.0
 slackclient==1.3.1
 sortedcontainers==2.4.0
-south==1.0.2
 sphinx==4.2.0
-SQLAlchemy==1.3.19
+SQLAlchemy==1.4.44
 stroll==1.1.0
 suds==1.0.0
 stevedore==3.5.0
 texttable==1.6.1
-twilio==6.50.1
+twilio==7.15.3
 typing==3.5.3.0
 typing-extensions==4.0.1
 typing-utils==0.1.0
 tzlocal==4.0
-ujson==3.2.0
+ujson==5.5.0
 umalqurra==0.2
 urllib3==1.26.7
 vine==5.0.0
 watchdog==0.9.0
 WebHelpers==1.3
-wrapt
+wrapt==1.14.1
 ws4py==0.3.5
-wsaccel==0.6.3
+wsaccel==0.6.4
 zato-redis-paginator==1.0
 zato-vault-client==1.3
 zope.event==4.5.0
 zxcvbn==4.4.28
 
-future==0.18.2
+# python-tds==1.11.0 # No module name 'version'
+
+ciso8601==2.2.0; sys_platform == 'linux'
+ConcurrentLogHandler==0.9.1; sys_platform == 'linux'
 gevent-inotifyx==0.1.1; sys_platform == 'linux'
 greenify==0.3.2; sys_platform == 'linux'
+hiredis==2.0.0; sys_platform == 'linux'
 inotify-simple==1.3.5; sys_platform == 'linux'
 memray==1.4.1; sys_platform == 'linux'
+netifaces==0.11.0; sys_platform == 'linux'
+newrelic==8.4.0; sys_platform == 'linux'
+sh==1.14.3; sys_platform == 'linux'
 posix-ipc==1.0.0; sys_platform == 'linux'
 psycopg2==2.8.6; sys_platform == 'linux'
+pysolr==3.9.0; sys_platform == 'linux'
 python-ldap==3.4.0; sys_platform == 'linux'
-sh==1.14.3; sys_platform == 'linux'
 
 https://github.com/dsuch/inotifyx/archive/main.zip#egg=inotifyx; sys_platform == 'linux'
-https://github.com/dsuch/warlock/archive/main.zip#egg=warlock
 pywin32==304; platform_system == "Windows"
