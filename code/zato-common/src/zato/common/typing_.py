@@ -31,9 +31,6 @@ from typing import           \
     Set as set_,             \
     Union as union_
 
-# dacite
-from dacite import from_dict
-
 # typing-extensions
 from typing_extensions import \
     TypeAlias as typealias_
