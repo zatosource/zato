@@ -55,7 +55,6 @@ except ImportError:
 # ################################################################################################################################
 
 # For flake8
-from_dict = from_dict
 optional  = optional
 Protocol  = Protocol
 TypedDict = TypedDict
