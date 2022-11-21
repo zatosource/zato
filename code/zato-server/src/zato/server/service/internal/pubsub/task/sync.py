@@ -121,8 +121,9 @@ class GetDictValues(GetDict):
 
     def _handle_attr_call(self, attr):
 
+        key = self.request.input.key
+
         try:
-            key = self.request.input.key
 
             # This may be potentially an integer key that we received as string
             # so we need to try to convert it to one.
