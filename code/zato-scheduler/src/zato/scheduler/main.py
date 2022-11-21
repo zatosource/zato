@@ -20,7 +20,7 @@ import cloghandler
 cloghandler = cloghandler # For pyflakes
 
 # Python 2/3 compatibility
-from future.utils import iteritems
+from zato.common.ext.future.utils import iteritems
 
 # Zato
 from zato.common.api import SCHEDULER

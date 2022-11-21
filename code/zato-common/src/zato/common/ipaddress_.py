@@ -19,7 +19,7 @@ from netifaces import AF_INET, ifaddresses as net_ifaddresses, interfaces as net
 
 # Python 2/3 compatibility
 from builtins import bytes
-from future.moves.urllib.parse import urlparse
+from zato.common.ext.future.moves.urllib.parse import urlparse
 from six import PY2
 
 # ################################################################################################################################
