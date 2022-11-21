@@ -39,7 +39,7 @@ THE SOFTWARE.
 
 import inspect
 
-from future.utils import PY2, PY3, exec_
+from zato.common.ext.future.utils import PY2, PY3, exec_
 
 if PY2:
     from collections import Mapping

@@ -15,7 +15,7 @@ from operator import itemgetter
 from django import forms
 
 # Python 2/3 compatibility
-from future.utils import iteritems
+from zato.common.ext.future.utils import iteritems
 
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())

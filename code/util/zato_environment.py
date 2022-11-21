@@ -83,7 +83,7 @@ class EnvironmentManager:
     def __init__(self, base_dir:'str', bin_dir:'str') -> 'None':
         self.base_dir = base_dir
         self.bin_dir = bin_dir
-        self.pip_command = 'c:\\ZZZ\\windows-python-embedded-3.10.8\\python.exe c:\\ZZZ\\windows-python-embedded-3.10.8\pip.pyz' # os.path.join(self.bin_dir, 'Scripts', 'pip')
+        self.pip_command = 'c:\\ZZZ\\windows-python-embedded-3.10.8\\python.exe c:\\ZZZ\\windows-python-embedded-3.10.8\\pip.pyz' # os.path.join(self.bin_dir, 'Scripts', 'pip')
         self.python_command = os.path.join(self.bin_dir, 'python')
         self.pip_options = ''
 

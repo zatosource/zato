@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from logging import getLogger
 
 # Python 2/3 compatibility
-from future.utils import iteritems
+from zato.common.ext.future.utils import iteritems
 
 # Zato
 from zato.common.api import WEB_SOCKET

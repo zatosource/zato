@@ -18,7 +18,7 @@ from paste.util.multidict import MultiDict
 from zato.bunch import Bunch
 
 # Python 2/3 compatibility
-from future.utils import itervalues
+from zato.common.ext.future.utils import itervalues
 from zato.common.py23_.past.builtins import unicode
 
 # Zato
