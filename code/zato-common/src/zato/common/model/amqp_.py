@@ -9,8 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from typing import Callable as callable_, Optional as optional
 
+# dacite
+from dacite.core import from_dict
+
 # Zato
-from zato.common.typing_ import dataclass, from_dict
+from zato.common.typing_ import dataclass
 from zato.common.model.connector import ConnectorConfig
 
 # ################################################################################################################################
