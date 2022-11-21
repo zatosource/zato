@@ -31,7 +31,7 @@ from getpass import getuser as getpass_getuser
 from glob import glob
 from hashlib import sha256
 from inspect import isfunction, ismethod
-from itertools import tee
+from itertools import tee, zip_longest
 from io import StringIO
 from logging.config import dictConfig
 from operator import itemgetter
@@ -62,7 +62,11 @@ from lxml import etree
 from OpenSSL import crypto
 
 # portalocker
-import portalocker
+try:
+    import portalocker
+    has_portalocker = True
+except ImportError:
+    has_portalocker = False
 
 # psutil
 import psutil
@@ -88,7 +92,6 @@ import yaml
 
 # Python 2/3 compatibility
 from builtins import bytes
-from future.moves.itertools import zip_longest
 from future.utils import iteritems, raise_
 from zato.common.py23_.past.builtins import basestring, cmp, reduce, unicode
 from six import PY3
@@ -1139,8 +1142,16 @@ def store_tls(root_dir, payload, is_key=False):
     pem_file_path = get_tls_full_path(root_dir, TLS.DIR_KEYS_CERTS if is_key else TLS.DIR_CA_CERTS, info)
     pem_file = open(pem_file_path, 'w', encoding='utf8')
 
+    if has_portalocker:
+        exception_to_catch = portalocker.LockException
+    else:
+        # Purposefully, catch an exception that will never be raised
+        # so that we can actually get the traceback.
+        exception_to_catch = ZeroDivisionError
+
     try:
-        portalocker.lock(pem_file, portalocker.LOCK_EX)
+        if has_portalocker:
+            portalocker.lock(pem_file, portalocker.LOCK_EX)
 
         pem_file.write(payload)
         pem_file.close()
@@ -1149,7 +1160,7 @@ def store_tls(root_dir, payload, is_key=False):
 
         return pem_file_path
 
-    except portalocker.LockException:
+    except exception_to_catch:
         pass # It's OK, something else is doing the same thing right now
 
 # ################################################################################################################################

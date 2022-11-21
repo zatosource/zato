@@ -81,7 +81,6 @@ parse==1.6.6
 passlib==1.7.1
 Paste==3.5.2
 pg8000==1.13.1
-portalocker==2.6.0
 prettytable==3.5.0
 psutil==5.9.4
 py-cpuinfo==3.3.0
@@ -161,6 +160,7 @@ memray==1.4.1; sys_platform == 'linux'
 netifaces==0.11.0; sys_platform == 'linux'
 newrelic==8.4.0; sys_platform == 'linux'
 sh==1.14.3; sys_platform == 'linux'
+portalocker==2.6.0; sys_platform == 'linux'
 posix-ipc==1.0.0; sys_platform == 'linux'
 psycopg2==2.8.6; sys_platform == 'linux'
 pysolr==3.9.0; sys_platform == 'linux'
