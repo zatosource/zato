@@ -139,7 +139,7 @@ class PubSub:
         # How many messages a given endpoint published, topic_id -> its message counter.
         self.endpoint_msg_counter = {} # type: intdict
 
-        self.has_meta_endpoint = self.server.fs_server_config.pubsub_meta_endpoint_pub.enabled # type: bool
+        self.has_meta_endpoint = cast_('bool', self.server.fs_server_config.pubsub_meta_endpoint_pub.enabled)
         self.endpoint_meta_store_frequency = self.server.fs_server_config.pubsub_meta_endpoint_pub.store_frequency # type: int
         self.endpoint_meta_data_len = self.server.fs_server_config.pubsub_meta_endpoint_pub.data_len # type:int
         self.endpoint_meta_max_history = self.server.fs_server_config.pubsub_meta_endpoint_pub.max_history # type:int
@@ -1540,11 +1540,11 @@ class PubSub:
 
     def delete_message(
         self,
-        sub_key:'str',
-        msg_id:'str',
-        has_gd:'bool',
-        *args:'anytuple',
-        **kwargs:'any_'
+        sub_key,  # type: str
+        msg_id,   # type: str
+        has_gd,   # type: bool
+        *args,    # type: anytuple
+        **kwargs, # type: any_
     ) -> 'any_':
         """ Deletes a message from a subscriber's queue.
         DELETE /zato/pubsub/msg/{msg_id}
@@ -1557,7 +1557,7 @@ class PubSub:
     def subscribe(
         self,
         topic_name, # type: str
-        **kwargs # type: any_
+        **kwargs    # type: any_
     ) -> 'str':
         return self.pubapi.subscribe(topic_name, **kwargs)
 

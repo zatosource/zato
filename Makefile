@@ -80,6 +80,10 @@ type-check:
 	cd $(CURDIR)/code/zato-server && $(MAKE) type-check
 	echo "Type checks OK"
 
+type-check-pubsub:
+	cd $(CURDIR)/code/zato-server && $(MAKE) pyright-pubsub
+	echo "Type checks OK"
+
 mypy:
 	cd $(CURDIR)/code/zato-common && $(MAKE) mypy
 	cd $(CURDIR)/code/zato-server && $(MAKE) mypy

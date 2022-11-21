@@ -22,7 +22,7 @@ from zato.server.service.internal.pubsub.subscription import CreateWSXSubscripti
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, anytuple
+    from zato.common.typing_ import any_, anylist, anytuple, stranydict
     from zato.server.connection.http_soap.url_data import URLData
     from zato.server.connection.web_socket import WebSocket
     URLData = URLData
@@ -47,8 +47,8 @@ class BaseSIO:
 class TopicSIO(BaseSIO):
     input_optional = ('data', AsIs('msg_id'), 'has_gd', Int('priority'), # type: any_
         Int('expiration'), 'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time',
-        'sub_key', AsIs('wsx')) # type: any_
-    output_optional = AsIs('msg_id') # type: any_
+        'sub_key', AsIs('wsx'))       # type: any_
+    output_optional = AsIs('msg_id'), # type: anytuple
 
 # ################################################################################################################################
 
@@ -86,7 +86,7 @@ class _PubSubService(Service):
             raise Forbidden(self.cid)
 
         url_data = self.server.worker_store.request_dispatcher.url_data
-        basic_auth = url_data.basic_auth_config.values() # type: anydict
+        basic_auth = url_data.basic_auth_config.values() # type: any_
 
         # Assume we are not allowed by default
         auth_ok = False
@@ -136,7 +136,8 @@ class TopicService(_PubSubService):
 
         # Ignore the header set by curl and similar tools
         mime_type = self.wsgi_environ.get('CONTENT_TYPE')
-        mime_type = mime_type if mime_type != ContentType.FormURLEncoded else CONTENT_TYPE.JSON
+        if (not mime_type) or (mime_type == ContentType.FormURLEncoded):
+            mime_type = CONTENT_TYPE.JSON
 
         input = self.request.input
 
@@ -150,7 +151,7 @@ class TopicService(_PubSubService):
             'ext_client_id': input.ext_client_id,
             'has_gd': input.has_gd or ZATO_NONE,
             'endpoint_id': endpoint_id,
-        }
+        } # type: stranydict
 
         return self.pubsub.publish(input.topic_name, service=self, **ctx)
 
@@ -174,7 +175,7 @@ class TopicService(_PubSubService):
                 raise BadRequest(self.cid, 'You are not subscribed to topic `{}`'.format(topic_name), needs_msg=True)
 
         try:
-            self.pubsub.get_subscription_by_sub_key(sub_key)
+            _ = self.pubsub.get_subscription_by_sub_key(sub_key)
         except KeyError:
             self.logger.warning('Could not find sub_key:`%s`, e:`%s`', sub_key, format_exc())
             raise Forbidden(self.cid)
