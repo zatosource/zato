@@ -19,6 +19,12 @@ from zato.server.service.internal import AdminService, AdminSIO
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import anytuple
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _batch_size=PUBSUB.DEFAULT.GET_BATCH_SIZE
 
 # ################################################################################################################################
@@ -33,7 +39,7 @@ class GetMessages(AdminService):
         input_optional = 'batch_size'
         output_optional = AsIs('msg_id'), AsIs('correl_id'), 'in_reply_to', 'priority', 'size', \
             'data_format', 'mime_type', 'data', 'expiration', 'expiration_time', 'ext_client_id', 'topic_name', \
-            'recv_time', 'delivery_count'
+            'recv_time', 'delivery_count' # type: anytuple
         output_repeated = True
 
     def handle(self) -> 'None':
@@ -73,7 +79,7 @@ class AcknowledgeDelivery(AdminService):
     """ Invoked by API clients to confirm that delivery of all messages from input msg_id_list was successful.
     """
     class SimpleIO(AdminSIO):
-        input_required = 'sub_key', List('msg_id_list')
+        input_required = 'sub_key', List('msg_id_list') # type: anytuple
 
     def handle(self) -> 'None':
 
@@ -95,8 +101,8 @@ class GetQueueDepthBySubKey(AdminService):
     """ For each sub_key given on input, return depth of its associated message queue.
     """
     class SimpleIO(AdminSIO):
-        input_optional = 'sub_key', List('sub_key_list')
-        output_optional = Dict('queue_depth')
+        input_optional = 'sub_key', List('sub_key_list') # type: anytuple
+        output_optional = Dict('queue_depth'),           # type: anytuple
 
     def handle(self) -> 'None':
         input = self.request.input

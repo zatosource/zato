@@ -363,7 +363,7 @@ class SubscribeServiceImpl(_Subscribe):
                     if is_wsx:
 
                         # This object persists across multiple WSX connections
-                        add_wsx_subscription(session, ctx.cluster_id, ctx.is_internal, sub_key,
+                        _ = add_wsx_subscription(session, ctx.cluster_id, ctx.is_internal, sub_key,
                             ctx.ext_client_id, ctx.ws_channel_id, ps_sub.id)
 
                         # This object will be transient - dropped each time a WSX client disconnects
