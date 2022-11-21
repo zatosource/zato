@@ -41,6 +41,15 @@ async_keyword = 'async_' if PY2 else 'async_'
 
 # ################################################################################################################################
 
+# These messages may be returned by 'zato start' from underlying libraries
+# but they do not indicate a genuine error.
+stderr_ignore = [
+    'pykafka.rdkafka',
+    'Auto-created primary key used when not defining a primary key type',
+]
+
+# ################################################################################################################################
+
 import platform
 system = platform.system()
 is_windows = 'windows' in system.lower()
@@ -130,7 +139,12 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
         # Wait a moment for any potential errors
         _err = _stderr.wait_for_error()
         if _err:
-            if 'pykafka.rdkafka' not in _err:
+            should_be_ignored = False
+            for item in stderr_ignore:
+                if item in _err:
+                    should_be_ignored = True
+                    break
+            if not should_be_ignored:
                 logger.warning('Stderr received from program `%s` e:`%s`, kw:`%s`', program, _err, run_kwargs)
                 sys.exit(failed_to_start_err)
 
