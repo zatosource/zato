@@ -92,7 +92,7 @@ import yaml
 
 # Python 2/3 compatibility
 from builtins import bytes
-from future.utils import iteritems, raise_
+from zato.common.ext.future.utils import iteritems, raise_
 from zato.common.py23_.past.builtins import basestring, cmp, reduce, unicode
 from six import PY3
 from six.moves.urllib.parse import urlparse

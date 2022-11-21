@@ -67,8 +67,8 @@ TypedDict = TypedDict
 # ################################################################################################################################
 
 # Some basic types are defined upfront to make sure that none of the later definitions results in the type "Unknown".
-intnone       = int  | None
-strnone       = str_ | None
+intnone       = optional[int]
+strnone       = optional[str_]
 
 anydict       = dict_[any_, any_]
 anydictnone   = optional[anydict]
