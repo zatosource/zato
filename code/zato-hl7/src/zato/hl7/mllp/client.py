@@ -12,15 +12,16 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
+from zato.common.typing_ import type_
 from zato.common.util.api import new_cid
 from zato.common.util.tcp import parse_address, read_from_socket, SocketReaderCtx
 
 # ################################################################################################################################
 
 if 0:
+    from socket import AddressFamily, socket as Socket, SocketKind
     from bunch import Bunch
-
-    Bunch = Bunch
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,10 +35,21 @@ class HL7MLLPClient:
     """ An HL7 MLLP client for sending data to remote endpoints.
     """
     __slots__ = 'config', 'name', 'address', 'max_wait_time', 'max_msg_size', 'read_buffer_size', 'recv_timeout', \
-        'should_log_messages', 'start_seq', 'end_seq', 'host', 'port', 'reader'
+        'should_log_messages', 'start_seq', 'end_seq', 'host', 'port'
 
-    def __init__(self, config):
-        # type: (Bunch) -> None
+    config: 'Bunch'
+    name: 'str'
+    address: 'str'
+    max_wait_time: 'int'
+    max_msg_size: 'int'
+    read_buffer_size: 'int'
+    recv_timeout: 'float'
+    should_log_messages: 'bool'
+
+    host: 'str'
+    port: 'str'
+
+    def __init__(self, config:'any_') -> 'None':
 
         # Zato
         from zato.common.util.api import hex_sequence_to_bytes
@@ -45,19 +57,26 @@ class HL7MLLPClient:
         self.config = config
         self.name = config.name
         self.address = config.address
-        self.max_wait_time = int(config.max_wait_time) # type: float
-        self.max_msg_size = int(config.max_msg_size) # type: int
-        self.read_buffer_size = int(config.read_buffer_size) # type: int
-        self.recv_timeout = int(config.recv_timeout) / 1000.0 # type: float
-        self.should_log_messages = config.should_log_messages # type: bool
+        self.max_wait_time = int(config.max_wait_time)
+        self.max_msg_size = int(config.max_msg_size)
+        self.read_buffer_size = int(config.read_buffer_size)
+        self.recv_timeout = int(config.recv_timeout) / 1000.0
+        self.should_log_messages = config.should_log_messages
 
         self.start_seq = hex_sequence_to_bytes(config.start_seq)
         self.end_seq   = hex_sequence_to_bytes(config.end_seq)
 
-        self.host, self.port = parse_address(self.address) # type (str, int)
+        self.host, self.port = parse_address(self.address)
 
-    def send(self, data, _socket_socket=socket.socket, _family=socket.AF_INET, _type=socket.SOCK_STREAM):
-        # type: (bytes) -> bytes
+# ################################################################################################################################
+
+    def send(
+        self,
+        data, # type: bytes | str
+        _socket_socket=socket.socket, # type: type_[Socket]
+        _family=socket.AF_INET,       # type: AddressFamily
+        _type=socket.SOCK_STREAM      # type: SocketKind
+    ) -> 'bytes':
 
         try:
 
@@ -73,7 +92,7 @@ class HL7MLLPClient:
                 sock.connect((self.host, self.port))
 
                 # .. send our data ..
-                sock.send(msg)
+                _ = sock.send(msg)
 
                 # .. encapsulate configuration for our socket reader function ..
                 ctx = SocketReaderCtx(
@@ -102,11 +121,9 @@ class HL7MLLPClient:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def send_data(address, data):
+def send_data(address:'bytes', data:'bytes') -> 'bytes':
     """ Sends input data to a remote address by its configuration.
     """
-    # type: (bytes, str) -> bytes
-
     # Bunch
     from bunch import bunchify
 
