@@ -12,7 +12,6 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common.typing_ import type_
 from zato.common.util.api import new_cid
 from zato.common.util.tcp import parse_address, read_from_socket, SocketReaderCtx
 
@@ -21,7 +20,7 @@ from zato.common.util.tcp import parse_address, read_from_socket, SocketReaderCt
 if 0:
     from socket import AddressFamily, socket as Socket, SocketKind
     from bunch import Bunch
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,9 +33,6 @@ logger = getLogger('zato')
 class HL7MLLPClient:
     """ An HL7 MLLP client for sending data to remote endpoints.
     """
-    __slots__ = 'config', 'name', 'address', 'max_wait_time', 'max_msg_size', 'read_buffer_size', 'recv_timeout', \
-        'should_log_messages', 'start_seq', 'end_seq', 'host', 'port'
-
     config: 'Bunch'
     name: 'str'
     address: 'str'
