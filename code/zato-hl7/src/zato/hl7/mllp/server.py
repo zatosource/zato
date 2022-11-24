@@ -16,26 +16,22 @@ from traceback import format_exc
 # hl7apy
 from hl7apy.core import Message
 
-# Past
-from zato.common.py23_.past.builtins import basestring
-
 # Zato
 from zato.common.api import GENERIC, HL7
 from zato.common.audit_log import DataReceived, DataSent
+from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid
 from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
+    from logging import Logger
+    from socket import socket as Socket
     from bunch import Bunch
-    from gevent import socket
     from zato.common.audit_log import DataEvent, AuditLog
-
-    Bunch = Bunch
-    DataEvent = DataEvent
-    AuditLog = AuditLog
-    socket = socket
+    from zato.common.typing_ import anydict, anytuple, callable_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,10 +41,20 @@ server_type = 'HL7 MLLP'
 
 # ################################################################################################################################
 
-def new_conn_id(pattern='zhc{}', id_len=5, _new_cid=new_cid):
+def new_conn_id(
+    pattern='zhc{}', # type: str
+    id_len=5,        # type: int
+    _new_cid=new_cid # type: callable_
+) -> 'str':
     return pattern.format(_new_cid(id_len))
 
-def new_msg_id(pattern='zhl7{}', id_len=6, _new_cid=new_cid):
+# ################################################################################################################################
+
+def new_msg_id(
+    pattern='zhl7{}', # type: str
+    id_len=6,         # type: int
+    _new_cid=new_cid  # type: callable_
+) -> 'str':
     return pattern.format(_new_cid(id_len))
 
 # ################################################################################################################################
@@ -57,20 +63,35 @@ def new_msg_id(pattern='zhl7{}', id_len=6, _new_cid=new_cid):
 class ConnCtx:
     """ Details of an individual remote connection to a server.
     """
-    __slots__ = (
-        'conn_id', 'conn_name', 'socket', 'peer_ip', 'peer_port', 'peer_fqdn', 'local_ip',
-        'local_port', 'local_fqdn', 'stats_per_msg_type', 'total_message_packets_received',
-        'total_messages_received'
-    )
+    conn_id:    'str'
+    conn_name:  'str'
+    socket:     'Socket'
 
-    def __init__(self, conn_name, socket, peer_address, _new_conn_id=new_conn_id):
-        # type: (socket, tuple)
+    peer_ip:    'str'
+    peer_port:  'str'
+    peer_fqdn:  'str'
+
+    local_ip:   'str'
+    local_port: 'int'
+    local_fqdn: 'str'
+
+    stats_per_msg_type: 'anydict'
+    total_message_packets_received: 'int'
+    total_messages_received: 'int'
+
+    def __init__(
+        self,
+        conn_name,    # type: str
+        socket,       # type: Socket
+        peer_address, # type: anytuple
+        _new_conn_id=new_conn_id # type: callable_
+    ) -> 'None':
 
         self.conn_id = _new_conn_id()
         self.conn_name = conn_name
         self.socket = socket
-        self.peer_ip = peer_address[0]   # type: str
-        self.peer_port = peer_address[1] # type: int
+        self.peer_ip = peer_address[0]
+        self.peer_port = peer_address[1]
 
         # Statistics broken down by each message type, e.g. ADT
         self.stats_per_msg_type = {}
@@ -94,8 +115,7 @@ class ConnCtx:
 
 # ################################################################################################################################
 
-    def _get_local_conn_info(self, default_local_fqdn):
-        # type: (str) -> tuple
+    def _get_local_conn_info(self, default_local_fqdn:'str') -> 'anytuple':
         local_ip, local_port = self.socket.getsockname()
         local_fqdn = get_fqdn_by_ip(local_ip, default_local_fqdn, server_type)
 
@@ -109,20 +129,27 @@ class RequestCtx:
     """
     __slots__ = 'msg_id', 'conn_id', 'msg_size', 'data', 'meta', 'response'
 
+    msg_id: 'str'
+    conn_id: 'str'
+    msg_size: 'int'
+    data: 'bytes'
+    meta: 'anydict'
+    response: 'ResponseCtx'
+
 # ################################################################################################################################
 
-    def __init__(self, _new_msg_id=new_msg_id):
+    def __init__(self):
         self.conn_id = '<conn-id-not-given>'
-        self.msg_id = None   # type: str
-        self.msg_size = None # type: int
         self.data = b''
         self.meta = {}
-        self.response = None # type: ResponseCtx
         self.reset()
 
 # ################################################################################################################################
 
-    def reset(self, _new_msg_id=new_msg_id):
+    def reset(
+        self,
+        _new_msg_id=new_msg_id # type: callable_
+    ) -> 'None':
         self.msg_id = _new_msg_id()
         self.msg_size = 0
         self.data = b''
@@ -153,36 +180,71 @@ class HL7MLLPServer:
     """
 
     # We will never read less than that many bytes from client sockets
-    min_read_buffer_size = 2048
+    min_read_buffer_size: 'int' = 2048
 
-    def __init__(self, config, callback_func, audit_log):
-        # type: (Bunch, object, AuditLog)
+    config: 'Bunch'
+    callback_func: 'callable_'
+
+    object_id: 'str'
+    name: 'str'
+    address: 'str'
+    service_name: 'str'
+
+    audit_log: 'AuditLog'
+    should_log_messages: 'bool'
+
+    start_seq: 'str'
+    start_seq_len: 'int'
+    start_seq_len_eq_one: 'bool'
+
+    end_seq: 'str'
+    end_seq_len: 'int'
+
+    is_audit_log_sent_active: 'bool'
+    is_audit_log_received_active: 'bool'
+
+    keep_running: 'bool'
+    impl: 'ZatoStreamServer'
+
+    logger_zato: 'Logger'
+    logger_hl7:  'Logger'
+
+    _logger_info:   'callable_'
+    _logger_warn:   'callable_'
+    _logger_debug:  'callable_'
+    _has_debug_log: 'bool'
+
+    def __init__(
+        self,
+        config,        # type: Bunch
+        callback_func, # type: callable_
+        audit_log      # type: AuditLog
+    ) -> 'None':
+
         self.config = config
         self.callback_func = callback_func
-        self.object_id = config.id # type: str
+        self.object_id = config.id
         self.audit_log = audit_log
         self.address = config.address
         self.name = config.name
         self.service_name = config.service_name
-        self.should_log_messages = config.should_log_messages # type: bool
+        self.should_log_messages = config.should_log_messages
 
-        self.start_seq     = config.start_seq
-        self.start_seq_len = len(config.start_seq)
+        self.start_seq     = cast_('str', config.start_seq)
+        self.start_seq_len = len(self.start_seq)
         self.start_seq_len_eq_one = self.start_seq_len == 1
 
-        self.end_seq     = config.end_seq
-        self.end_seq_len = len(config.end_seq)
+        self.end_seq     = cast_('str', config.end_seq)
+        self.end_seq_len = len(self.end_seq)
 
-        self.is_audit_log_sent_active = config.get('is_audit_log_sent_active')
-        self.is_audit_log_received_active = config.get('is_audit_log_received_active')
+        self.is_audit_log_sent_active = config.get('is_audit_log_sent_active') or False
+        self.is_audit_log_received_active = config.get('is_audit_log_received_active') or False
 
         self.keep_running = True
-        self.impl = None # type: ZatoStreamServer
 
         self.logger_zato = getLogger('zato')
-
         self.logger_hl7 = getLogger('zato_hl7')
-        self.logger_hl7.setLevel(getLevelName(config.logging_level))
+        self.logger_hl7.setLevel(getLevelName(cast_('str', config.logging_level)))
 
         self._logger_info = self.logger_hl7.info
         self._logger_warn = self.logger_hl7.warn
@@ -191,8 +253,7 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _log_start_stop(self, is_start):
-        # type: (bool)
+    def _log_start_stop(self, is_start:'bool') -> 'None':
 
         msg = 'Starting' if is_start else 'Stopping'
         pattern = '%s %s connection `%s` (%s)'
@@ -227,7 +288,7 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def handle(self, socket, peer_address):
+    def handle(self, socket:'Socket', peer_address:'anytuple') -> 'None':
         try:
             self._handle(socket, peer_address)
         except Exception:
@@ -236,8 +297,7 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _handle(self, socket, peer_address):
-        # type: (socket, tuple)
+    def _handle(self, socket:'Socket', peer_address:'anytuple') -> 'None':
 
         # Wraps all the metadata about the connection
         conn_ctx = ConnCtx(self.name, socket, peer_address)
@@ -259,7 +319,7 @@ class HL7MLLPServer:
         _recv_timeout = self.config.recv_timeout         # type: float
 
         # We do not want for this to be too small
-        _read_buffer_size = max(self.config.read_buffer_size, self.min_read_buffer_size) # type: int
+        _read_buffer_size = max(cast_('int', self.config.read_buffer_size), self.min_read_buffer_size)
 
         _has_debug_log = self._has_debug_log
         _log_debug = self._logger_debug
@@ -450,11 +510,9 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _points_to_full_message(self, data):
+    def _points_to_full_message(self, data:'bytes') -> 'bool':
         """ Returns True if input bytes indicate that we have a full message from the socket.
         """
-        # type: (bytes) -> bool
-
         # Get as many bytes from data as we expected for our end_seq to be the length of ..
         data_last_bytes = data[-self.end_seq_len:]
 
@@ -463,8 +521,18 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _handle_complete_message(self, needs_response, _buffer, _buffer_join_func, conn_ctx, request_ctx, _request_ctx_reset,
-            _socket_send, _run_callback, _datetime_utcnow=datetime.utcnow):
+    def _handle_complete_message(
+        self,
+        needs_response,
+        _buffer,
+        _buffer_join_func,
+        conn_ctx,
+        request_ctx,
+        _request_ctx_reset,
+        _socket_send,
+        _run_callback,
+        _datetime_utcnow=datetime.utcnow
+    ) -> 'None':
         # type: (bool, bytes, object, ConnCtx, RequestCtx, object, object, object, object)
 
         # Produce the message to invoke the callback with ..
@@ -573,8 +641,8 @@ class HL7MLLPServer:
                 response = response.to_er7()
 
             # .. and make sure we actually do use bytes objects ..
-            if isinstance(response, basestring):
-                response = response if isinstance(response, bytes) else response.encode('utf8')
+            if not isinstance(response, bytes):
+                response = response.encode('utf8')
 
             # .. and return the response to our caller.
             return response
