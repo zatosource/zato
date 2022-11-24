@@ -20,6 +20,13 @@ from zato.common.hl7 import HL7Exception
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from hl7apy.core import Message
+    from zato.common.typing_ import any_, boolnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger('zato')
 logger_hl7 = getLogger('zato_hl7')
 
@@ -38,10 +45,16 @@ _impl_class = HL7.Const.ImplClass.hl7apy
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_payload_from_request(data, data_encoding, hl7_version, json_path, should_parse_on_input, should_validate):
+def get_payload_from_request(
+    data,           # type: str
+    data_encoding,  # type: str
+    hl7_version,    # type: str
+    _ignored_json_path,             # type: boolnone
+    _ignored_should_parse_on_input, # type: boolnone
+    should_validate                 # type: bool
+) -> 'Message':
     """ Parses a channel message into an HL7 one.
     """
-    # type: (str, str, str, bool, bool)
     try:
 
         # We always require str objects ..
@@ -58,7 +71,12 @@ def get_payload_from_request(data, data_encoding, hl7_version, json_path, should
 
 # ################################################################################################################################
 
-def parse(data, impl_class, hl7_version, should_validate):
+def parse(
+    data,            # type: str
+    impl_class,      # type: any_
+    hl7_version,     # type: str
+    should_validate  # type: bool
+) -> 'Message':
     """ Parses input data in the specified HL7 version using implementation pointed to be impl_class.
     """
     impl_dict = _parse_func_map[hl7_version] # type: dict
