@@ -189,12 +189,14 @@ class ResponseCtx:
 class HL7MLLPServer:
     """ Each instance of this class handles an individual HL7 MLLP connection in handle_connection.
     """
+    config: 'Bunch'
+    callback_func: 'callable_'
 
     # We will never read less than that many bytes from client sockets
     min_read_buffer_size: 'int' = 2048
 
-    config: 'Bunch'
-    callback_func: 'callable_'
+    # This is configurable by users
+    read_buffer_size: 'int'
 
     object_id: 'str'
     name: 'str'
@@ -240,6 +242,7 @@ class HL7MLLPServer:
         self.name = config.name
         self.service_name = config.service_name
         self.should_log_messages = config.should_log_messages
+        self.read_buffer_size = int(cast_('str', config.read_buffer_size))
 
         self.start_seq     = cast_('str', config.start_seq)
         self.start_seq_len = len(self.start_seq)
@@ -326,11 +329,11 @@ class HL7MLLPServer:
         _needs_header_check = True
 
         # To make fewer namespace lookups
-        _max_msg_size = self.config.max_msg_size         # type: int
-        _recv_timeout = self.config.recv_timeout         # type: float
+        _max_msg_size = int(cast_('str', self.config.max_msg_size))
+        _recv_timeout = self.config.recv_timeout # type: float
 
         # We do not want for this to be too small
-        _read_buffer_size = max(cast_('int', self.config.read_buffer_size), self.min_read_buffer_size)
+        _read_buffer_size = max(self.read_buffer_size, self.min_read_buffer_size)
 
         _has_debug_log = self._has_debug_log
         _log_debug = self._logger_debug
@@ -557,7 +560,7 @@ class HL7MLLPServer:
         args.conn_ctx.total_messages_received += 1
 
         # .. invoke the callback ..
-        response = args._run_callback(args.conn_ctx, args.request_ctx)
+        response = args._run_callback(args.conn_ctx, args.request_ctx) or b''
 
         # .. optionally, log what we are about to send ..
         if self.should_log_messages:

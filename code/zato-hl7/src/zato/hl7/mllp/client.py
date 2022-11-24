@@ -147,6 +147,7 @@ if __name__ == '__main__':
 
     import logging
     from zato.common.api import HL7
+    from zato.common.test.hl7_ import test_data
 
     log_level = logging.DEBUG
     log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
@@ -159,9 +160,7 @@ if __name__ == '__main__':
 
     logger.info('Sending HL7v2 to %s', address)
 
-    data = b'abc'
-
-    _ = send_data(address, data)
+    _ = send_data(address, test_data)
 
 # ################################################################################################################################
 # ################################################################################################################################
