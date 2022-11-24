@@ -59,7 +59,7 @@ def start_cleanup(path:'str') -> 'None':
         logger.info('Cleanup out.exit_code -> %s', out.exit_code)
         logger.info('Cleanup out.stderr -> %s', out.stderr)
         logger.info('Cleanup out.process.pid -> %s', out.process.pid if out.process else '(No PID)')
-        logger.info('Cleanup out.cmd -> %s', out.cmd)
+        logger.info('Cleanup out.cmd -> %s', cast_('str', out.cmd))
 
 # ################################################################################################################################
 # ################################################################################################################################

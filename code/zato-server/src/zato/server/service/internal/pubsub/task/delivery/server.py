@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -21,13 +19,22 @@ from zato.server.service import Int
 from zato.server.service.internal import AdminService, GetListAdminSIO
 
 # ################################################################################################################################
-
-_summary_delivery_server_sio = ('tasks', 'tasks_running', 'tasks_stopped', 'sub_keys', 'topics',
-    'messages', 'messages_gd', 'messages_non_gd', Int('msg_handler_counter'), 'last_gd_run', 'last_task_run')
-
 # ################################################################################################################################
 
-def delivery_server_list(session, cluster_id):
+if 0:
+    from sqlalchemy.orm.session import Session
+    from zato.common.typing_ import any_, anylist, anyset, anytuple
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_summary_delivery_server_sio = ('tasks', 'tasks_running', 'tasks_stopped', 'sub_keys', 'topics',
+    'messages', 'messages_gd', 'messages_non_gd', Int('msg_handler_counter'), 'last_gd_run', 'last_task_run') # type: anytuple
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def delivery_server_list(session:'Session', cluster_id:'int') -> 'anytuple':
     """ Returns a list of all servers (without PIDs) that are known to be delivery ones.
     """
     # WSX subscriptions first
@@ -40,20 +47,21 @@ def delivery_server_list(session, cluster_id):
         filter(WebSocketSubscription.sub_key==WebSocketClientPubSubKeys.sub_key).\
         filter(WebSocketClientPubSubKeys.client_id==WebSocketClient.id).\
         filter(WebSocketClient.server_id==Server.id).\
-        filter(Server.cluster_id==cluster_id)
+        filter(Server.cluster_id==cluster_id) # type: ignore
 
     # Non-WSX subscriptions now
     q_non_wsx = session.query(
         Server.id,
         Server.name,
         PubSubSubscription.sub_key
-        ).\
-        filter(Server.id==PubSubSubscription.server_id).\
-        filter(Server.cluster_id==cluster_id)
+        )
+
+    q_non_wsx = q_non_wsx.filter(Server.id==PubSubSubscription.server_id) # type: ignore
+    q_non_wsx = q_non_wsx.filter(Server.cluster_id==cluster_id)           # type: ignore
 
     # Return a union of WSX and non-WSX related subscription servers
     return q_wsx.union(q_non_wsx).\
-           all()
+           all() # type: ignore
 
 # ################################################################################################################################
 
@@ -75,7 +83,7 @@ class GetDetails(AdminService):
         messages_non_gd = 0
 
         total_sub_keys = 0
-        topics_seen = set()
+        topics_seen = set() # type: anyset
 
         max_last_gd_run = 0
         max_last_task_run = 0
@@ -86,8 +94,8 @@ class GetDetails(AdminService):
             total_sub_keys += len(item.sub_keys)
 
             item_last_gd_run = item.last_gd_run
-            item_last_gd_run_values = item_last_gd_run.values() if item_last_gd_run else []
-            max_item_last_gd_run = max(item_last_gd_run_values) if item_last_gd_run_values else 0
+            item_last_gd_run_values = item_last_gd_run.values() if item_last_gd_run else [] # type: any_
+            max_item_last_gd_run = max(item_last_gd_run_values) if item_last_gd_run_values else 0 # type: int
             max_last_gd_run = max(max_last_gd_run, max_item_last_gd_run)
 
             for task in item.get_delivery_tasks():
@@ -140,10 +148,10 @@ class GetList(AdminService):
         output_repeated = True
         output_elem = None
 
-    def get_data(self):
+    def get_data(self) -> 'anylist':
 
         # Response to produce
-        out = []
+        out = [] # type: anylist
 
         # All PIDs of all servers
         server_pids = {}
@@ -154,7 +162,7 @@ class GetList(AdminService):
             for _ignored_server_id, server_name, sub_key in delivery_server_list(session, self.request.input.cluster_id):
 
                 # All PIDs of current server
-                pids = server_pids.setdefault(server_name, set())
+                pids = server_pids.setdefault(server_name, set()) # type: anyset
 
                 # Add a PID found for that server
                 sk_server = self.pubsub.get_sub_key_server(sub_key)
@@ -184,8 +192,8 @@ class GetList(AdminService):
                     'last_task_run': pid_response.last_task_run,
                 })
 
-            # OK, we can append data about this PID now
-            out.append(pid_data)
+                # OK, we can append data about this PID now
+                out.append(pid_data)
 
         return out
 
