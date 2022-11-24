@@ -8,12 +8,12 @@ typeCheckingMode = "basic"
 #reportOptionalOperand       = "none"
 #reportGeneralTypeIssues     = "none"
 #reportOptionalMemberAccess  = "none"
-reportPrivateUsage        = "error"
+reportPrivateUsage        = "none"
 reportAssertAlwaysTrue    = "error"
 reportUnusedImport        = "error"
 reportUnusedFunction      = "error"
 reportUnusedCallResult    = "error"
-reportUnusedVariable      = "error"
+reportUnusedVariable      = "none"
 reportInvalidTypeVarUse   = "error"
 reportOverlappingOverload = "error"
 reportPropertyTypeMismatch  = "error"
@@ -35,14 +35,15 @@ reportTypeCommentUsage     = "none"
 #
 # This is level 2
 #
-#reportMissingImports       = "error"
-reportGeneralTypeIssues    = "error"
-reportOptionalMemberAccess = "error"
+reportMissingImports        = "none"
+reportGeneralTypeIssues     = "none"
+reportOptionalMemberAccess  = "none"
+reportMissingModuleSource   = "error"
 
 #
 # This is level 3
 #
-reportMissingParameterType = "error"
+reportMissingParameterType = "none"
 
 #
 # This is level 4, needed before reportUnknownMemberType

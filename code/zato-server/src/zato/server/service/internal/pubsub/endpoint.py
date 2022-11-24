@@ -114,7 +114,7 @@ def instance_hook(self:'Service', input:'stranydict', instance:'PubSubEndpoint',
         return
 
     # Don't use empty string with integer attributes, set them to None (NULL) instead
-    if instance.service_id == '':
+    if cast_('str', instance.service_id) == '':
         instance.service_id = None
 
     # SQLite will not accept empty strings, must be None

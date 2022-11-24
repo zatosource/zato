@@ -19,7 +19,7 @@ from bunch import Bunch
 
 if 0:
     from zato.common.ext.imbox import Imbox
-    from zato.common.typing_ import any_, strstrdict
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 
@@ -1098,7 +1098,7 @@ CONTENT_TYPE = Bunch(
     PLAIN_XML = 'application/xml',
     SOAP11 = 'text/xml',
     SOAP12 = 'application/soap+xml; charset=utf-8',
-) # type: strstrdict
+) # type: Bunch
 
 class ContentType:
     FormURLEncoded = 'application/x-www-form-urlencoded'
@@ -1549,8 +1549,9 @@ class HL7:
         # Default address for FHIR connections
         address_fhir = 'https://fhir.simplifier.net/zato'
 
-        # Default address for MLLP connections
-        address = '0.0.0.0:30901'
+        # Default address and port for MLLP connections
+        channel_host = '0.0.0.0'
+        channel_port = 30901
 
         # Assume that UTF-8 is sent in by default
         data_encoding = 'utf-8'

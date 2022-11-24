@@ -39,7 +39,7 @@ from typing_extensions import \
 from dacite.core import from_dict
 
 # stdlib
-from dataclasses import * # noqa: F401
+from dataclasses import * # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,8 +67,8 @@ TypedDict = TypedDict
 # ################################################################################################################################
 
 # Some basic types are defined upfront to make sure that none of the later definitions results in the type "Unknown".
-intnone       = union_[int,  None]
-strnone       = union_[str_, None]
+intnone       = optional[int]
+strnone       = optional[str]
 
 anydict       = dict_[any_, any_]
 anydictnone   = optional[anydict]
@@ -79,6 +79,8 @@ anyset        = set_[any_]
 anytuple      = tuple_[any_, ...]
 binaryio_     = binaryio_
 boolnone      = optional[bool]
+byteslist     = list_[bytes]
+bytesnone     = optional[bytes]
 callable_     = callable_[..., any_]
 callnone      = optional[callable_]
 cast_         = cast_
@@ -139,7 +141,7 @@ union_        = union_
 # ################################################################################################################################
 # ################################################################################################################################
 
-def instance_from_dict(class_:'any_', data:'dict') -> 'any_':
+def instance_from_dict(class_:'any_', data:'anydict') -> 'any_':
     instance = class_()
     for key, value in data.items():
         setattr(instance, key, value)
@@ -162,12 +164,12 @@ def extract_from_union(elem:'any_') -> 'anytuple':
 
 # ################################################################################################################################
 
-def list_field() -> 'callable_[anylist]':
+def list_field() -> 'callable_[anylist]': # type: ignore
     return field(default_factory=list) # noqa: F405
 
 # ################################################################################################################################
 
-def dict_field() -> 'callable_[anydict]':
+def dict_field() -> 'callable_[anydict]': # type: ignore
     return field(default_factory=dict) # noqa: F405
 
 # ################################################################################################################################

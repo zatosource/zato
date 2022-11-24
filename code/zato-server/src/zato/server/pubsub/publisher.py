@@ -670,7 +670,7 @@ class Publisher:
         # optionally, store data in pub/sub audit log.
         if has_pubsub_audit_log:
 
-            log_msg = 'Message published. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' \
+            log_msg = 'Message published. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' + \
                   ', GD data:`%s`, non-GD data:`%s`'
 
             logger_audit.info(log_msg, ctx.cid, ctx.topic.name, self.pubsub.endpoints[ctx.endpoint_id].name,
@@ -722,13 +722,13 @@ class Publisher:
             else:
                 has_topic = False
 
-            if ctx.pubsub.has_meta_endpoint and ctx.pubsub.needs_endpoint_meta_update:
+            if ctx.pubsub.has_meta_endpoint and ctx.pubsub.needs_endpoint_meta_update(ctx.endpoint_id):
                 has_endpoint = True
             else:
                 has_endpoint = False
 
             if has_topic or has_endpoint:
-                spawn(self.update_pub_metadata, ctx, has_topic, has_endpoint,
+                _ = spawn(self.update_pub_metadata, ctx, has_topic, has_endpoint,
                     ctx.pubsub.endpoint_meta_data_len, ctx.pubsub.endpoint_meta_max_history)
 
         # Build and return a response for our caller.
@@ -806,7 +806,7 @@ class Publisher:
                             idx_found = idx
                             break
                     if idx_found is not None:
-                        endpoint_topic_list.pop(idx_found)
+                        _ = endpoint_topic_list.pop(idx_found)
 
                 # Newest information about this endpoint's publication to this topic
                 endpoint_data = {

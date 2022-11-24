@@ -16,8 +16,8 @@ from zato.server.service.internal import AdminService, GetListAdminSIO
 
 # ################################################################################################################################
 
-# Type checking
 if 0:
+    from zato.common.typing_ import anylist, anytuple
     from zato.server.pubsub.delivery.task import DeliveryTask
     from zato.server.pubsub.delivery.tool import PubSubTool
     DeliveryTask = DeliveryTask
@@ -28,8 +28,8 @@ if 0:
 class GetTaskSIO:
     output_required = ('server_name', 'server_pid', 'sub_key', 'topic_id', 'topic_name', 'is_active',
         'endpoint_id', 'endpoint_name', 'py_object', AsIs('python_id'), Int('len_messages'), Int('len_history'), Int('len_batches'),
-        Int('len_delivered'))
-    output_optional = 'last_sync', 'last_sync_sk', 'last_iter_run', AsIs('ext_client_id')
+        Int('len_delivered')) # type: anytuple
+    output_optional = 'last_sync', 'last_sync_sk', 'last_iter_run', AsIs('ext_client_id') # type: anytuple
     output_elem = None
     response_elem = None
 
@@ -42,9 +42,9 @@ class GetServerDeliveryTaskList(AdminService):
     class SimpleIO(GetTaskSIO):
         output_repeated = True
 
-    def get_data(self):
+    def get_data(self) -> 'anylist':
 
-        out = []
+        out = [] # type: anylist
 
         for ps_tool in self.pubsub.pubsub_tools: # type: PubSubTool
             with ps_tool.lock:
