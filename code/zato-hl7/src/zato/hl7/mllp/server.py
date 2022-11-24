@@ -7,7 +7,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import datetime
 from logging import DEBUG, getLevelName, getLogger
 from socket import timeout as SocketTimeoutException
 from time import sleep
@@ -30,8 +29,8 @@ if 0:
     from logging import Logger
     from socket import socket as Socket
     from bunch import Bunch
-    from zato.common.audit_log import DataEvent, AuditLog
-    from zato.common.typing_ import anydict, anytuple, callable_
+    from zato.common.audit_log import AuditLog
+    from zato.common.typing_ import anydict, anylist, anytuple, boolnone, byteslist, bytesnone, callable_, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,6 +55,18 @@ def new_msg_id(
     _new_cid=new_cid  # type: callable_
 ) -> 'str':
     return pattern.format(_new_cid(id_len))
+
+class HandleCompleteMessageArgs:
+
+    _buffer:           'anylist'
+    _buffer_join_func: 'callable_'
+
+    conn_ctx:    'ConnCtx'
+    request_ctx: 'RequestCtx'
+
+    _socket_send:       'callable_'
+    _run_callback:      'callable_'
+    _request_ctx_reset: 'callable_'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -336,9 +347,14 @@ class HL7MLLPServer:
         _socket_send = conn_ctx.socket.send
         _socket_settimeout = conn_ctx.socket.settimeout
 
-        _handle_complete_message_args = (
-            _buffer, _buffer_join_func, conn_ctx, request_ctx, _request_ctx_reset, _socket_send, _run_callback
-        )
+        _handle_complete_message_args = HandleCompleteMessageArgs()
+        _handle_complete_message_args._buffer = _buffer
+        _handle_complete_message_args._buffer_join_func = _buffer_join_func
+        _handle_complete_message_args.conn_ctx = conn_ctx
+        _handle_complete_message_args.request_ctx = request_ctx
+        _handle_complete_message_args._socket_send = _socket_send
+        _handle_complete_message_args._run_callback = _run_callback
+        _handle_complete_message_args._request_ctx_reset = _request_ctx_reset
 
         # Run the main loop
         while self.keep_running:
@@ -406,11 +422,12 @@ class HL7MLLPServer:
                             # over the buffer of bytes received so far and concatenating them until we have
                             # at least as many bytes as there are in the header to check.
                             else:
-                                to_check_buffer = []
+                                to_check_buffer = [] # type: byteslist
                                 to_check_len = 0
 
                                 # Go through each, potentially multi-byte, element in the buffer so far ..
                                 for elem in _buffer:
+                                    elem = cast_('bytes', elem)
 
                                     # .. break if we have already all the bytes that we need ..
                                     if to_check_len >= self.start_seq_len:
@@ -462,7 +479,7 @@ class HL7MLLPServer:
                                 return
 
                             # .. it is a match so it means that data was the last part of a message that we can already process ..
-                            self._handle_complete_message(True, *_handle_complete_message_args)
+                            self._handle_complete_message(_handle_complete_message_args)
 
                         # .. otherwise, try to check if in combination with the previous segment,
                         # the data received now points to a full message. However, for this to work
@@ -474,7 +491,7 @@ class HL7MLLPServer:
 
                                 # Index -1 is our own segment (data) previously appended,
                                 # which is why we use -2 to get the segment preceeding it.
-                                last_data = _buffer[-2]
+                                last_data = _buffer[-2] # type: bytes
                                 concatenated = last_data + data
 
                                 # .. now that we have it concatenated, check if that indicates that a full message
@@ -489,7 +506,7 @@ class HL7MLLPServer:
                                         self._close_connection(conn_ctx, reason)
                                         return
 
-                                    self._handle_complete_message(True, *_handle_complete_message_args)
+                                    self._handle_complete_message(_handle_complete_message_args)
 
                     # No data received = remote end is no longer connected.
                     else:
@@ -521,58 +538,51 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _handle_complete_message(
-        self,
-        needs_response,
-        _buffer,
-        _buffer_join_func,
-        conn_ctx,
-        request_ctx,
-        _request_ctx_reset,
-        _socket_send,
-        _run_callback,
-        _datetime_utcnow=datetime.utcnow
-    ) -> 'None':
-        # type: (bool, bytes, object, ConnCtx, RequestCtx, object, object, object, object)
+    def _handle_complete_message(self, args:'HandleCompleteMessageArgs') -> 'None':
 
         # Produce the message to invoke the callback with ..
-        _buffer_data = _buffer_join_func(_buffer)
+        _buffer_data = args._buffer_join_func(args._buffer)
 
         # .. remove the header and trailer ..
         _buffer_data = _buffer_data[self.start_seq_len:-self.end_seq_len]
 
         # .. asign the actual business data to message ..
-        request_ctx.data = _buffer_data
+        args.request_ctx.data = _buffer_data
 
         # .. update our runtime metadata first (data received) ..
         if self.is_audit_log_received_active:
-            self._store_data_received(request_ctx)
+            self._store_data_received(args.request_ctx)
 
         # .. update counters ..
-        conn_ctx.total_messages_received += 1
+        args.conn_ctx.total_messages_received += 1
 
         # .. invoke the callback ..
-        response = _run_callback(conn_ctx, request_ctx)
+        response = args._run_callback(args.conn_ctx, args.request_ctx)
 
         # .. optionally, log what we are about to send ..
         if self.should_log_messages:
             self._logger_info('Sending HL7 MLLP response to `%s` -> `%s` (c:%s; s=%d)',
-                request_ctx.msg_id, response, conn_ctx.conn_id, len(response))
+                args.request_ctx.msg_id, response, args.conn_ctx.conn_id, len(response))
 
         # .. write the response back ..
-        _socket_send(response)
+        args._socket_send(response)
 
         # .. update our runtime metadata first (data sent) ..
         if self.is_audit_log_sent_active:
-            self._store_data_sent(request_ctx, response)
+            self._store_data_sent(args.request_ctx, response)
 
         # .. and reset the message to make it possible to handle a new one.
-        _request_ctx_reset()
+        args._request_ctx_reset()
 
 # ################################################################################################################################
 
-    def _store_data(self, request_ctx, _DataEventClass, response=None, _conn_type=conn_type):
-        # type: (RequestCtx, DataEvent, str, str) -> None
+    def _store_data(
+        self,
+        request_ctx,     # type: RequestCtx
+        _DataEventClass, # type: type_[DataSent | DataReceived]
+        response=None,   # type: bytes | None
+        _conn_type=conn_type # type: str
+    ) -> 'None':
 
         # Create and fill out details of the new event ..
         data_event = _DataEventClass()
@@ -587,18 +597,17 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _store_data_received(self, request_ctx, event_class=DataReceived):
+    def _store_data_received(self, request_ctx:'RequestCtx', event_class:'type_[DataReceived]'=DataReceived):
         self._store_data(request_ctx, event_class)
 
 # ################################################################################################################################
 
-    def _store_data_sent(self, request_ctx, response, event_class=DataSent):
+    def _store_data_sent(self, request_ctx:'RequestCtx', response:'bytes', event_class:'type_[DataSent]'=DataSent):
         self._store_data(request_ctx, event_class, response)
 
 # ################################################################################################################################
 
-    def _run_callback(self, conn_ctx, request_ctx, _hl7_v2=HL7.Const.Version.v2.id):
-        # type: (ConnCtx, RequestCtx) -> bytes
+    def _run_callback(self, conn_ctx:'ConnCtx', request_ctx:'RequestCtx', _hl7_v2:'str'=HL7.Const.Version.v2.id) -> 'bytesnone':
 
         pattern = 'Handling new HL7 MLLP message (%s; m:%s (s=%s), c:%s, p:%s; %s); `%r`'
         log_request = request_ctx.to_dict() if self.should_log_messages else '<masked>'
@@ -649,15 +658,22 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _close_connection(self, conn_ctx, reason):
-        # type: (str) -> None
+    def _close_connection(self, conn_ctx:'ConnCtx', reason:'str') -> 'None':
         self._logger_info('Closing connection; %s; %s', reason, conn_ctx.get_conn_pretty_info())
         conn_ctx.socket.close()
 
 # ################################################################################################################################
 
-    def _check_meta(self, conn_ctx, request_ctx, data, bytes_to_check, meta_attr, has_meta_attr, meta_seq):
-        # type: (ConnCtx, RequestCtx, bytes, bytes, str, bool, bytes) -> bool
+    def _check_meta(
+        self,
+        conn_ctx,       # type: ConnCtx
+        request_ctx,    # type: RequestCtx
+        data,           # type: bytes
+        bytes_to_check, # type: bytes
+        meta_attr,      # type: str
+        has_meta_attr,  # type: str
+        meta_seq        # type: str
+    ) -> 'boolnone':
 
         # If we already have the meta element then we do not expect another one
         # while we are still processing the same message and if one is found, we close the connection.
@@ -681,7 +697,7 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _check_header(self, conn_ctx, request_ctx, data):
+    def _check_header(self, conn_ctx:'ConnCtx', request_ctx:'RequestCtx', data:'bytes') -> 'boolnone':
 
         bytes_to_check = data[:self.start_seq_len]
         meta_attr = 'header'
@@ -701,8 +717,7 @@ def main():
     # Zato
     from zato.common.audit_log import AuditLog, LogContainerConfig
 
-    def on_message(msg):
-        # type: (str)
+    def on_message(msg:'str') -> 'None':
         raise Exception(msg)
 
     config = bunchify({
@@ -726,7 +741,7 @@ def main():
     audit_log = AuditLog()
     audit_log.create_container(log_container_config)
 
-    reader = HL7MLLPServer(config, audit_log)
+    reader = HL7MLLPServer(config, on_message, audit_log)
     reader.start()
 
 # ################################################################################################################################
