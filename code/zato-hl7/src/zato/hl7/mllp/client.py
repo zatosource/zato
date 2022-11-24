@@ -117,7 +117,7 @@ class HL7MLLPClient:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def send_data(address:'bytes', data:'bytes') -> 'bytes':
+def send_data(address:'str', data:'bytes') -> 'bytes':
     """ Sends input data to a remote address by its configuration.
     """
     # Bunch
@@ -140,4 +140,28 @@ def send_data(address:'bytes', data:'bytes') -> 'bytes':
 
     return response
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+
+    import logging
+    from zato.common.api import HL7
+
+    log_level = logging.DEBUG
+    log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+    logging.basicConfig(level=log_level, format=log_format)
+
+    logger = logging.getLogger(__name__)
+
+    channel_port = HL7.Default.channel_port
+    address = f'localhost:{channel_port}'
+
+    logger.info('Sending HL7v2 to %s', address)
+
+    data = b'abc'
+
+    _ = send_data(address, data)
+
+# ################################################################################################################################
 # ################################################################################################################################

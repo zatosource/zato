@@ -22,7 +22,7 @@ from zato.common.hl7 import HL7Exception
 
 if 0:
     from hl7apy.core import Message
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, boolnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,9 +49,9 @@ def get_payload_from_request(
     data,           # type: str
     data_encoding,  # type: str
     hl7_version,    # type: str
-    json_path,      # type: str
-    should_parse_on_input, # type: bool
-    should_validate        # type: bool
+    _ignored_json_path,             # type: boolnone
+    _ignored_should_parse_on_input, # type: boolnone
+    should_validate                 # type: bool
 ) -> 'Message':
     """ Parses a channel message into an HL7 one.
     """

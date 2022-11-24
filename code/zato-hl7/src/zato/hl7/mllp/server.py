@@ -30,7 +30,7 @@ if 0:
     from socket import socket as Socket
     from bunch import Bunch
     from zato.common.audit_log import AuditLog
-    from zato.common.typing_ import anydict, anylist, anytuple, boolnone, byteslist, bytesnone, callable_, type_
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, boolnone, byteslist, bytesnone, callable_, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -711,19 +711,39 @@ class HL7MLLPServer:
 
 def main():
 
+    # stdlib
+    import logging
+    from time import sleep
+
     # Bunch
     from bunch import bunchify
 
     # Zato
+    from zato.common.api import HL7
     from zato.common.audit_log import AuditLog, LogContainerConfig
 
-    def on_message(msg:'str') -> 'None':
-        raise Exception(msg)
+    log_level = logging.DEBUG
+    log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+    logging.basicConfig(level=log_level, format=log_format)
+
+    logger = logging.getLogger(__name__)
+
+    def on_message(*args:'any_', **kwargs:'any_') -> 'str':
+
+        logger.info('Args: %s',   args)
+        logger.info('Kwargs: %s', kwargs)
+
+        return 'Hello from HL7v2'
+
+    channel_port = HL7.Default.channel_port
+    address = f'0.0.0.0:{channel_port}'
 
     config = bunchify({
         'id': '123',
         'name': 'Hello HL7 MLLP',
-        'address': '0.0.0.0:30191',
+        'address': address,
+
+        'service_name': 'pub.zato.ping',
 
         'max_msg_size': 1_000_000,
         'read_buffer_size': 2048,
@@ -741,8 +761,12 @@ def main():
     audit_log = AuditLog()
     audit_log.create_container(log_container_config)
 
-    reader = HL7MLLPServer(config, on_message, audit_log)
-    reader.start()
+    server = HL7MLLPServer(config, on_message, audit_log)
+    server.start()
+
+    while True:
+        print(1)
+        sleep(1)
 
 # ################################################################################################################################
 
