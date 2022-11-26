@@ -25,6 +25,7 @@ from typing import Any, List
 from dill import load as dill_load
 
 # gevent
+from gevent import sleep as gevent_sleep
 from gevent.lock import RLock
 
 # humanize
@@ -1237,6 +1238,7 @@ class ServiceStore:
 
         for py_path in visit_py_source(dir_name):
             to_process.extend(self.import_services_from_file(py_path, False, base_dir))
+            gevent_sleep(0.03)
 
         return to_process
 
