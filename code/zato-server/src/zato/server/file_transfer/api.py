@@ -204,13 +204,14 @@ class FileTransferAPI:
         observer_to_delete = None
 
         # .. paths under which the observer may be listed (used only under Linux with inotify).
-        observer_path_list = []
+        observer_path_list = [] # type: anylist
 
         # .. have we preferred to use inotify for this channel ..
         prefer_inotify = self.is_notify_preferred(config)
 
         # .. stop its main loop ..
-        for observer in self.observer_list: # type: LocalObserver
+        for observer in self.observer_list:
+            observer = cast_('LocalObserver', observer)
             if observer.channel_id == config.id:
                 needs_log = observer.is_local and (not prefer_inotify)
                 observer.stop(needs_log=needs_log)
@@ -373,7 +374,7 @@ class FileTransferAPI:
 
         for item in service_list: # type: str
             try:
-                spawn_greenlet(self.server.invoke, item, request)
+                _ = spawn_greenlet(self.server.invoke, item, request)
             except Exception:
                 logger.warning(format_exc())
 
@@ -383,7 +384,7 @@ class FileTransferAPI:
 
         for item in topic_list: # type: str
             try:
-                spawn_greenlet(self.server.invoke, item, request)
+                _ = spawn_greenlet(self.server.invoke, item, request)
             except Exception:
                 logger.warning(format_exc())
 
@@ -429,7 +430,7 @@ class FileTransferAPI:
         # type: (list, dict) -> None
 
         for item_id in outconn_rest_list: # type: int
-            spawn_greenlet(self._invoke_rest_outconn_callback, item_id, request)
+            _ = spawn_greenlet(self._invoke_rest_outconn_callback, item_id, request)
 
 # ################################################################################################################################
 
@@ -539,7 +540,7 @@ class FileTransferAPI:
         # Note that if we are not on Linux, each observer.start call above already ran a new greenlet with an observer
         # for a particular directory.
         if self.is_notify_preferred(observer.channel_config): # type: ignore
-            spawn_greenlet(self._run_linux_inotify_loop)
+            _ = spawn_greenlet(self._run_linux_inotify_loop)
 
 # ################################################################################################################################
 
@@ -601,7 +602,7 @@ class FileTransferAPI:
         snapshot_maker.connect()
 
         for item in observer.path_list: # type: (str)
-            spawn_greenlet(observer.observe_with_snapshots, snapshot_maker, item, max_iters, False)
+            _ = spawn_greenlet(observer.observe_with_snapshots, snapshot_maker, item, max_iters, False)
 
 # ################################################################################################################################
 

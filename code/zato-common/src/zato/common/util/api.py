@@ -122,7 +122,7 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 if 0:
     from typing import Iterable as iterable
     from simdjson import Parser as SIMDJSONParser
-    from zato.common.typing_ import any_, anydict, callable_, dictlist, listnone
+    from zato.common.typing_ import any_, anydict, callable_, dictlist, listnone, strlistnone
 
     iterable = iterable
     SIMDJSONParser = SIMDJSONParser
@@ -603,11 +603,48 @@ def import_module_from_path(file_name, base_dir=None):
 
 # ################################################################################################################################
 
-def visit_py_source(dir_name):
-    for pattern in('*.py', '*.pyw'):
+def visit_py_source(
+    dir_name,  # type: str
+    order_patterns=None # type: strlistnone
+) -> 'any_':
+
+    # Assume we are not given any patterns on input ..
+    order_patterns = order_patterns or [
+
+        '  common*.py',
+        '*_common*.py',
+
+        '  model*.py',
+        '*_model*.py',
+
+        '  lib*.py',
+        '*_lib*.py',
+
+        '  util*.py',
+        '*_util*.py',
+
+        '  pri*.py',
+        '*_pri*.py',
+    ]
+
+    # For storing names of files that we have already deployed so as not ensure
+    # that there will be no duplicates.
+    already_visited = set()
+
+    # .. append the default ones, unless they are already there ..
+    for default in ['*.py', '*.pyw']:
+        if default not in order_patterns:
+            order_patterns.append(default)
+
+    for pattern in order_patterns:
+        pattern = pattern.strip()
         glob_path = os.path.join(dir_name, pattern)
         for py_path in sorted(glob(glob_path)):
-            yield py_path
+            if py_path in already_visited:
+                continue
+            else:
+                already_visited.add(py_path)
+                yield py_path
 
 # ################################################################################################################################
 
