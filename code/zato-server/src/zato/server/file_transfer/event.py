@@ -49,36 +49,33 @@ class FileTransferEvent:
         'has_raw_data', 'has_data', 'parse_error'
     )
 
-    def __init__(self):
+    # This is the directory where the file is located
+    base_dir = 'not-set'      # type: str
 
-        # This is the directory where the file is located
-        self.base_dir = None      # type: str
+    # This is the directory of the file relative to the server's base directory.
+    # It will stay None if self.full_path is an absolute directory.
+    relative_dir = 'not-set'  # type: str
 
-        # This is the directory of the file relative to the server's base directory.
-        # It will stay None if self.full_path is an absolute directory.
-        self.relative_dir = None  # type: str
+    # This is the file name only
+    file_name = 'not-set'     # type: str
 
-        # This is the file name only
-        self.file_name = None     # type: str
+    # Full path to the file
+    full_path = 'not-set'     # type: str
 
-        # Full path to the file
-        self.full_path = None     # type: str
-
-        self.channel_name = None  # type: str
-        self.ts_utc = None        # type: str
-        self.raw_data = ''        # type: str
-        self.data = singleton     # type: str
-        self.has_raw_data = False # type: bool
-        self.has_data = False     # type: bool
-        self.parse_error = None   # type: str
+    channel_name = 'not-set'  # type: str
+    ts_utc = 'not-set'        # type: str
+    raw_data = 'not-set'      # type: str
+    data = singleton          # type: str
+    has_raw_data = 'not-set'  # type: bool
+    has_data = 'not-set'      # type: bool
+    parse_error = 'not-set'   # type: str
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class FileTransferEventHandler:
 
-    def __init__(self, manager, channel_name, config):
-        # type: (FileTransferAPI, str, Bunch) -> None
+    def __init__(self, manager:'FileTransferAPI', channel_name:'str', config:'Bunch') -> 'None':
 
         self.manager = manager
         self.channel_name = channel_name
@@ -87,13 +84,17 @@ class FileTransferEventHandler:
         # Some parsers will require for input data to be a StringIO objects instead of plain str.
         self.config.parser_needs_string_io = self._check_if_parser_needs_string_io(self.config)
 
-    def _check_if_parser_needs_string_io(self, config):
+    def _check_if_parser_needs_string_io(self, config:'Bunch'):
         return config.should_parse_on_pickup and \
                config.parse_with and \
                config.parse_with == 'py:csv.reader'
 
-    def on_created(self, transfer_event, observer, snapshot_maker=None):
-        # type: (PathCreatedEvent, BaseObserver, BaseRemoteSnapshotMaker) -> None
+    def on_created(
+        self,
+        transfer_event,     # type: PathCreatedEvent
+        observer,           # type: BaseObserver
+        snapshot_maker=None # type: BaseRemoteSnapshotMaker | None
+    ) -> 'None':
 
         try:
 
