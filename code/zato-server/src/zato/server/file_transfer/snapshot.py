@@ -19,14 +19,17 @@ from ciso8601 import parse_datetime
 # Zato
 from zato.common.json_ import dumps
 from zato.common.odb.query.generic import FTPFileTransferWrapper, SFTPFileTransferWrapper
+from zato.common.typing_ import cast_
 from zato.server.connection.file_client.base import PathAccessException
 from zato.server.connection.file_client.ftp import FTPFileClient
 from zato.server.connection.file_client.sftp import SFTPFileClient
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
     from bunch import Bunch
+    from zato.common.typing_ import any_, anydict
     from zato.server.connection.file_client.base import BaseFileClient
     from zato.server.connection.ftp import FTPStore
     from zato.server.file_transfer.api import FileTransferAPI
@@ -57,7 +60,7 @@ class FileInfo:
     """
     __slots__ = 'full_path', 'name', 'size', 'last_modified'
 
-    def __init__(self, full_path='', name='', size=-1, last_modified=None):
+    def __init__(self, full_path:'str'='', name:'str'='', size:'int'=-1, last_modified:'str'=''):
         self.full_path = full_path
         self.name = name
         self.size = size
@@ -79,16 +82,16 @@ class FileInfo:
 class DirSnapshot:
     """ Represents the state of a given directory, i.e. a list of files in it.
     """
-    def __init__(self, path):
-        # type: (str) -> None
+    def __init__(self, path:'str') -> 'None':
         self.path = path
         self.file_data = {}
 
 # ################################################################################################################################
 
-    def add_file_list(self, data):
-        # type: (str, list) -> None
-        for item in data: # type: (dict)
+    def add_file_list(self, data:'str') -> 'None':
+
+        for item in data:
+            item = cast_('anydict', item)
 
             file_info = FileInfo()
             file_info.full_path = self.get_full_path(item)
@@ -103,8 +106,7 @@ class DirSnapshot:
 
 # ################################################################################################################################
 
-    def get_full_path(self, item):
-        # type: (dict) -> str
+    def get_full_path(self, item:'anydict') -> 'str':
 
         # Notifiers will sometimes have access to a full path to a file (e.g. local ones)
         # but sometimes they will only have the file name and the full path will have to be built
@@ -118,7 +120,7 @@ class DirSnapshot:
 
 # ################################################################################################################################
 
-    def to_dict(self):
+    def to_dict(self) -> 'anydict':
         dir_snapshot_file_list = []
         out = {'dir_snapshot_file_list': dir_snapshot_file_list}
 
@@ -130,17 +132,15 @@ class DirSnapshot:
 
 # ################################################################################################################################
 
-    def to_json(self):
+    def to_json(self) -> 'str':
         return dumps(self.to_dict())
 
 # ################################################################################################################################
 
     @staticmethod
-    def from_sql_dict(path, sql_dict):
+    def from_sql_dict(path:'str', sql_dict:'anydict') -> 'DirSnapshot':
         """ Builds a DirSnapshot object out of a dict read from the ODB.
         """
-        # type: (dict) -> DirSnapshot
-
         snapshot = DirSnapshot(path)
         snapshot.add_file_list(sql_dict['dir_snapshot_file_list'])
 
@@ -154,8 +154,7 @@ class DirSnapshotDiff:
     """
     __slots__ = 'files_created', 'files_modified'
 
-    def __init__(self, previous_snapshot, current_snapshot):
-        # type: (DirSnapshot, DirSnapshot)
+    def __init__(self, previous_snapshot:'DirSnapshot', current_snapshot:'DirSnapshot') -> 'None':
 
         # These will be new for sure ..
         self.files_created = set()
@@ -193,8 +192,7 @@ class DirSnapshotDiff:
 
 class AbstractSnapshotMaker:
 
-    def __init__(self, file_transfer_api, channel_config):
-        # type: (FileTransferAPI, Bunch)
+    def __init__(self, file_transfer_api:'FileTransferAPI', channel_config:'Bunch') -> 'None':
         self.file_transfer_api = file_transfer_api
         self.channel_config = channel_config
         self.file_client = None # type: BaseFileClient
@@ -202,23 +200,22 @@ class AbstractSnapshotMaker:
 
 # ################################################################################################################################
 
-    def connect(self):
+    def connect(self) -> 'None':
         raise NotImplementedError('Must be implemented in subclasses')
 
 # ################################################################################################################################
 
-    def get_snapshot(self, *args, **kwargs):
+    def get_snapshot(self, *args:'any_', **kwargs:'any_') -> 'None':
         raise NotImplementedError('Must be implemented in subclasses')
 
 # ################################################################################################################################
 
-    def get_file_data(self, *args, **kwargs):
+    def get_file_data(self, *args:'any_', **kwargs:'any_') -> 'None':
         raise NotImplementedError('Must be implemented in subclasses')
 
 # ################################################################################################################################
 
-    def store_snapshot(self, snapshot):
-        # type: (DirSnapshot) -> None
+    def store_snapshot(self, snapshot:'DirSnapshot') -> 'None':
         pass
 
 # ################################################################################################################################
@@ -229,8 +226,7 @@ class LocalSnapshotMaker(AbstractSnapshotMaker):
         # Not used with local snapshots
         pass
 
-    def get_snapshot(self, path, *args, **kwargs):
-        # type: (str, bool) -> DirSnapshot
+    def get_snapshot(self, path:'str', *args:'any_', **kwargs:'any_') -> 'DirSnapshot':
 
         # Output to return
         snapshot = DirSnapshot(path)
@@ -258,7 +254,7 @@ class LocalSnapshotMaker(AbstractSnapshotMaker):
 
 # ################################################################################################################################
 
-    def get_file_data(self, path):
+    def get_file_data(self, path:'str') -> 'str':
         with open(path, 'rb') as f:
             return f.read()
 
@@ -276,7 +272,7 @@ class BaseRemoteSnapshotMaker(AbstractSnapshotMaker):
 
 # ################################################################################################################################
 
-    def connect(self):
+    def connect(self) -> 'None':
 
         # Extract all the configuration ..
         store = getattr(self.file_transfer_api.server.worker_store.worker_config, self.worker_config_out_name)
@@ -304,8 +300,7 @@ class BaseRemoteSnapshotMaker(AbstractSnapshotMaker):
 
 # ################################################################################################################################
 
-    def _get_current_snapshot(self, path):
-        # type: (str) -> DirSnapshot
+    def _get_current_snapshot(self, path:'str') -> 'DirSnapshot':
 
         # First, get a list of files under path ..
         result = self.file_client.list(path)
@@ -322,8 +317,7 @@ class BaseRemoteSnapshotMaker(AbstractSnapshotMaker):
 
 # ################################################################################################################################
 
-    def get_snapshot(self, path, ignored_is_recursive, is_initial, needs_store):
-        # type: (str, bool) -> DirSnapshot
+    def get_snapshot(self, path:'str', ignored_is_recursive:'bool', is_initial:'bool', needs_store:'bool') -> 'DirSnapshot':
 
         # We are not sure yet if we are to need it.
         session = None
@@ -376,8 +370,7 @@ class BaseRemoteSnapshotMaker(AbstractSnapshotMaker):
 
 # ################################################################################################################################
 
-    def get_file_data(self, path):
-        # type: (str) -> bytes
+    def get_file_data(self, path:'str') -> 'bytes':
         return self.file_client.get(path)
 
 # ################################################################################################################################
