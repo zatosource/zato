@@ -29,7 +29,7 @@ from zato.server.connection.file_client.sftp import SFTPFileClient
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, anylist
     from zato.server.connection.file_client.base import BaseFileClient
     from zato.server.connection.ftp import FTPStore
     from zato.server.file_transfer.api import FileTransferAPI
@@ -58,13 +58,10 @@ default_interval = 1.1
 class FileInfo:
     """ Information about a single file as found by a snapshot maker.
     """
-    __slots__ = 'full_path', 'name', 'size', 'last_modified'
-
-    def __init__(self, full_path:'str'='', name:'str'='', size:'int'=-1, last_modified:'str'=''):
-        self.full_path = full_path
-        self.name = name
-        self.size = size
-        self.last_modified = last_modified
+    full_path: 'str'
+    name: 'str'
+    size: 'int' = -1
+    last_modified: 'datetime'
 
 # ################################################################################################################################
 
@@ -88,7 +85,7 @@ class DirSnapshot:
 
 # ################################################################################################################################
 
-    def add_file_list(self, data:'str') -> 'None':
+    def add_file_list(self, data:'anylist') -> 'None':
 
         for item in data:
             item = cast_('anydict', item)
@@ -125,7 +122,7 @@ class DirSnapshot:
         out = {'dir_snapshot_file_list': dir_snapshot_file_list}
 
         for value in self.file_data.values(): # type: (FileInfo)
-            value_as_dict = value.to_dict()
+            value_as_dict = value.to_dict() # type: anydict
             dir_snapshot_file_list.append(value_as_dict)
 
         return out
@@ -176,8 +173,9 @@ class DirSnapshotDiff:
         # we will not be able to tell the difference and the file will not be reported as modified
         # (we would have to download it and check its contents to cover such a case).
 
-        for current in current_snapshot.file_data.values(): # type: FileInfo
-            previous = previous_snapshot.file_data.get(current.full_path) # type: FileInfo
+        for current in current_snapshot.file_data.values():
+            current = cast_('FileInfo', current)
+            previous = previous_snapshot.file_data.get(current.full_path)
 
             if previous:
 
@@ -192,10 +190,11 @@ class DirSnapshotDiff:
 
 class AbstractSnapshotMaker:
 
-    def __init__(self, file_transfer_api:'FileTransferAPI', channel_config:'Bunch') -> 'None':
+    file_client: 'BaseFileClient'
+
+    def __init__(self, file_transfer_api:'FileTransferAPI', channel_config:'any_') -> 'None':
         self.file_transfer_api = file_transfer_api
         self.channel_config = channel_config
-        self.file_client = None # type: BaseFileClient
         self.odb = self.file_transfer_api.server.odb
 
 # ################################################################################################################################
@@ -232,7 +231,7 @@ class LocalSnapshotMaker(AbstractSnapshotMaker):
         snapshot = DirSnapshot(path)
 
         # All files found in path
-        file_list = []
+        file_list = [] # type: anylist
 
         # Recursively, get all files
         listing = Path(path).rglob('*')
@@ -254,7 +253,7 @@ class LocalSnapshotMaker(AbstractSnapshotMaker):
 
 # ################################################################################################################################
 
-    def get_file_data(self, path:'str') -> 'str':
+    def get_file_data(self, path:'str') -> 'bytes':
         with open(path, 'rb') as f:
             return f.read()
 
@@ -264,10 +263,10 @@ class LocalSnapshotMaker(AbstractSnapshotMaker):
 class BaseRemoteSnapshotMaker(AbstractSnapshotMaker):
     """ Functionality shared by FTP and SFTP.
     """
-    transfer_wrapper_class = None
+    transfer_wrapper_class:'any_' = None
     worker_config_out_name = '<invalid-worker_config_out_name>'
     source_id_attr_name = '<invalid-source_id_attr_name>'
-    file_client_class = None
+    file_client_class:'any_' = None
     has_get_by_id = False
 
 # ################################################################################################################################
@@ -303,7 +302,7 @@ class BaseRemoteSnapshotMaker(AbstractSnapshotMaker):
     def _get_current_snapshot(self, path:'str') -> 'DirSnapshot':
 
         # First, get a list of files under path ..
-        result = self.file_client.list(path)
+        result = self.file_client.list(path) # type: anydict
 
         # .. create a new container for the snapshot ..
         snapshot = DirSnapshot(path)
@@ -317,7 +316,13 @@ class BaseRemoteSnapshotMaker(AbstractSnapshotMaker):
 
 # ################################################################################################################################
 
-    def get_snapshot(self, path:'str', ignored_is_recursive:'bool', is_initial:'bool', needs_store:'bool') -> 'DirSnapshot':
+    def get_snapshot(
+        self,
+        path, # type: str
+        ignored_is_recursive, # type: bool
+        is_initial,           # type: bool
+        needs_store           # type: bool
+    ) -> 'DirSnapshot | None':
 
         # We are not sure yet if we are to need it.
         session = None
