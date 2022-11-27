@@ -382,7 +382,8 @@ class FileTransferAPI:
 
     def invoke_topic_callbacks(self, topic_list:'anylist', request:'anydict') -> 'None':
 
-        for item in topic_list: # type: str
+        for item in topic_list:
+            item = cast_('str', item)
             try:
                 _ = spawn_greenlet(self.server.invoke, item, request)
             except Exception:
@@ -426,8 +427,7 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def invoke_rest_outconn_callbacks(self, outconn_rest_list, request) -> 'None':
-        # type: (list, dict) -> None
+    def invoke_rest_outconn_callbacks(self, outconn_rest_list:'anylist', request:'anydict') -> 'None':
 
         for item_id in outconn_rest_list: # type: int
             _ = spawn_greenlet(self._invoke_rest_outconn_callback, item_id, request)
@@ -644,14 +644,12 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def add_local_ignored_path(self, path) -> 'None':
-        # type: (str) -> None
+    def add_local_ignored_path(self, path:'str') -> 'None':
         self._local_ignored.add(path)
 
 # ################################################################################################################################
 
-    def remove_local_ignored_path(self, path) -> 'None':
-        # type: (str) -> None
+    def remove_local_ignored_path(self, path:'str') -> 'None':
         try:
             self._local_ignored.remove(path)
         except KeyError:
@@ -659,8 +657,7 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
-    def is_local_path_ignored(self, path) -> 'bool':
-        # type: (str) -> bool
+    def is_local_path_ignored(self, path:'str') -> 'bool':
         return path in self._local_ignored
 
 # ################################################################################################################################
