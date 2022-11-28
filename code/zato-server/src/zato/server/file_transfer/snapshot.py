@@ -149,8 +149,6 @@ class DirSnapshot:
 class DirSnapshotDiff:
     """ A difference between two DirSnapshot objects, i.e. all the files created and modified.
     """
-    __slots__ = 'files_created', 'files_modified'
-
     def __init__(self, previous_snapshot:'DirSnapshot', current_snapshot:'DirSnapshot') -> 'None':
 
         # These will be new for sure ..
