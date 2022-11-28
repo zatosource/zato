@@ -44,11 +44,6 @@ singleton = object()
 class FileTransferEvent:
     """ Encapsulates information about a file picked up from file system.
     """
-    __slots__ = (
-        'base_dir', 'relative_dir', 'file_name', 'full_path', 'channel_name', 'ts_utc', 'raw_data', 'data',
-        'has_raw_data', 'has_data', 'parse_error'
-    )
-
     # This is the directory where the file is located
     base_dir = 'not-set'      # type: str
 
