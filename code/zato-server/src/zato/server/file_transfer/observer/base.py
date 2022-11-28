@@ -45,8 +45,6 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class PathCreatedEvent:
-    __slots__ = 'src_path'
-
     def __init__(self, src_path:'str') -> 'None':
         self.src_path = src_path
 
