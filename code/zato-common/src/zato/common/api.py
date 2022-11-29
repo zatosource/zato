@@ -1549,8 +1549,9 @@ class HL7:
         # Default address for FHIR connections
         address_fhir = 'https://fhir.simplifier.net/zato'
 
-        # Default address for MLLP connections
-        address = '0.0.0.0:30901'
+        # Default address and port for MLLP connections
+        channel_host = '0.0.0.0'
+        channel_port = 30901
 
         # Assume that UTF-8 is sent in by default
         data_encoding = 'utf-8'
