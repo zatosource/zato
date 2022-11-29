@@ -45,9 +45,15 @@ class Create(ZatoCommand):
 
     def execute(self, args, show_output=True):
 
+
         # Alembic
-        from alembic.migration import MigrationContext
-        from alembic.operations import Operations
+        try:
+            from alembic.migration import MigrationContext
+            from alembic.operations import Operations
+        except ImportError:
+            has_alembic = False
+        else:
+            has_alembic = True
 
         engine = self._get_engine(args)
         session = self._get_session(engine)
@@ -89,27 +95,29 @@ class Create(ZatoCommand):
 
             Base.metadata.create_all(engine)
 
-            state = ZatoInstallState(None, VERSION, datetime.now(), gethostname(), getuser())
-            alembic_rev = AlembicRevision(LATEST_ALEMBIC_REVISION)
+            if has_alembic:
 
-            session.add(state)
-            session.add(alembic_rev)
-            session.commit()
+                state = ZatoInstallState(None, VERSION, datetime.now(), gethostname(), getuser())
+                alembic_rev = AlembicRevision(LATEST_ALEMBIC_REVISION)
 
-            # We need to add a foreign key to this SSO table because we are conducting
-            # an ODB installation that combines base tables with SSO ones.
-            alembic_ctx = MigrationContext.configure(engine.connect())
-            alembic_ops = Operations(alembic_ctx)
+                session.add(state)
+                session.add(alembic_rev)
+                session.commit()
 
-            # There is no support for FKs during ALTER TABLE statements in SQLite.
-            if args.odb_type != 'sqlite':
-                alembic_ops.create_foreign_key(
-                    'fk_sso_linked_base_id',
-                    'zato_sso_linked_auth',
-                    'sec_base',
-                    ['auth_id'], ['id'],
-                    ondelete='CASCADE',
-                )
+                # We need to add a foreign key to this SSO table because we are conducting
+                # an ODB installation that combines base tables with SSO ones.
+                alembic_ctx = MigrationContext.configure(engine.connect())
+                alembic_ops = Operations(alembic_ctx)
+
+                # There is no support for FKs during ALTER TABLE statements in SQLite.
+                if args.odb_type != 'sqlite':
+                    alembic_ops.create_foreign_key(
+                        'fk_sso_linked_base_id',
+                        'zato_sso_linked_auth',
+                        'sec_base',
+                        ['auth_id'], ['id'],
+                        ondelete='CASCADE',
+                    )
 
             if show_output:
                 if self.verbose:

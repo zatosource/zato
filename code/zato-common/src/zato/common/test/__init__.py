@@ -20,9 +20,6 @@ from bunch import Bunch, bunchify
 # mock
 from mock import MagicMock, Mock
 
-# nose
-from nose.tools import eq_
-
 # six
 from six import string_types
 
@@ -548,7 +545,7 @@ class ServiceTestCase(TestCase):
             for key in expected_keys:
                 given_value = getattr(given, key)
                 expected_value = getattr(expected, key)
-                eq_(given_value, expected_value)
+                self.assertEqual(given_value, expected_value)
 
         self._check_sio_request_input(instance, request_data)
 

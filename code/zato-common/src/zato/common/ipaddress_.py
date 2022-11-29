@@ -6,8 +6,6 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import itertools
 
@@ -15,7 +13,12 @@ import itertools
 from ipaddress import ip_address, ip_network
 
 # netifaces
-from netifaces import AF_INET, ifaddresses as net_ifaddresses, interfaces as net_ifaces
+try:
+    from netifaces import AF_INET, ifaddresses as net_ifaddresses, interfaces as net_ifaces
+except ImportError:
+    has_netifaces = False
+else:
+    has_netifaces = True
 
 # Python 2/3 compatibility
 from builtins import bytes

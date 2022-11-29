@@ -13,9 +13,6 @@ import os
 from datetime import datetime
 from tempfile import gettempdir
 
-# ZeroMQ
-import zmq.green as zmq
-
 # Zato
 from zato.common.api import DATA_FORMAT, NO_DEFAULT_VALUE
 from zato.common.util.api import get_logger_for_class, make_repr, new_cid, spawn_greenlet
@@ -57,6 +54,10 @@ class IPCBase:
     """ Base class for core IPC objects.
     """
     def __init__(self, name, pid):
+
+        # ZeroMQ
+        import zmq.green as zmq
+
         self.name = name
         self.pid = pid
         self.ctx = zmq.Context()
@@ -94,6 +95,10 @@ class IPCEndpoint(IPCBase):
         return 'ipc://{}'.format(os.path.join(gettempdir(), 'zato-ipc-{}'.format(address)))
 
     def set_up_sockets(self):
+
+        # ZeroMQ
+        import zmq.green as zmq
+
         self.socket = self.ctx.socket(getattr(zmq, self.socket_type.upper()))
         self.socket.setsockopt(zmq.LINGER, 0)
         getattr(self.socket, self.socket_method)(self.address)
