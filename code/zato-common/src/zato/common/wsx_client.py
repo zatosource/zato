@@ -25,7 +25,10 @@ from types import GeneratorType
 from gevent import sleep, spawn
 
 # pysimdjson
-from simdjson import Parser as SIMDJSONParser
+try:
+    from simdjson import Parser as SIMDJSONParser
+except ImportError:
+    pass
 
 # ws4py
 from ws4py.client.geventclient import WebSocketClient

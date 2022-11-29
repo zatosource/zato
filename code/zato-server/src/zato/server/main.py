@@ -35,8 +35,12 @@ import sys
 from logging.config import dictConfig
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
-import cloghandler
-cloghandler = cloghandler # For pyflakes
+try:
+    import cloghandler
+except ImportError:
+    pass
+else:
+    cloghandler = cloghandler # For pyflakes
 
 # Update logging.Logger._log to make it a bit faster
 from zato.common.microopt import logging_Logger_log

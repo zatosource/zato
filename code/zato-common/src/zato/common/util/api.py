@@ -68,9 +68,6 @@ try:
 except ImportError:
     has_portalocker = False
 
-# psutil
-import psutil
-
 # pytz
 import pytz
 
@@ -1716,6 +1713,9 @@ def get_logger_for_class(class_):
 def get_worker_pids():
     """ Returns all sibling worker PIDs of the server process we are being invoked on, including our own worker too.
     """
+    # psutil
+    import psutil
+
     return sorted(elem.pid for elem in psutil.Process(psutil.Process().ppid()).children())
 
 # ################################################################################################################################

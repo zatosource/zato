@@ -43,7 +43,10 @@ from gevent.lock import RLock
 from gevent.pywsgi import WSGIServer as _Gevent_WSGIServer
 
 # pysimdjson
-from simdjson import Parser as SIMDJSONParser
+try:
+    from simdjson import Parser as SIMDJSONParser
+except ImportError:
+    pass
 
 # ws4py
 from ws4py.exc import HandshakeError
