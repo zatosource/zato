@@ -431,7 +431,7 @@ class IMAPConnStore(BaseStore):
 
     def create_impl(self, config, config_no_sensitive):
 
-        server_type = config.server_type
+        server_type = config.server_type or EMAIL.IMAP.ServerType.Generic
         class_ = self._impl_class[server_type]
         instance = class_(config, config_no_sensitive)
 

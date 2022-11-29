@@ -164,11 +164,13 @@ def get_fqdn_by_ip(ip_address, default, log_msg_prefix):
 
 # ################################################################################################################################
 
-def read_from_socket(ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
+def read_from_socket(
+    ctx, # type: SocketReaderCtx
+    _utcnow=datetime.utcnow,
+    _timedelta=timedelta
+) -> 'bytes':
     """ Reads data from an already connected TCP socket.
     """
-    # type: (SocketReaderCtx) -> bytes
-
     # Local aliases
     _should_log_messages = ctx.should_log_messages
 
