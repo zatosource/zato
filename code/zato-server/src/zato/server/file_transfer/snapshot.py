@@ -14,7 +14,10 @@ from pathlib import Path
 from traceback import format_exc
 
 # ciso8601
-from ciso8601 import parse_datetime
+try:
+    from ciso8601 import parse_datetime
+except ImportError:
+    pass
 
 # Zato
 from zato.common.json_ import dumps

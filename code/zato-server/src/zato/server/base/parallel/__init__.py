@@ -28,7 +28,12 @@ gevent.monkey        # type: ignore
 from paste.util.converters import asbool
 
 # pysimdjson
-from simdjson import Parser as SIMDJSONParser
+try:
+    from simdjson import Parser as SIMDJSONParser
+except ImportError:
+    has_simdjson = False
+else:
+    has_simdjson = True
 
 # Zato
 from zato.broker import BrokerMessageReceiver
@@ -209,13 +214,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.has_posix_ipc = is_posix
         self.user_config = Bunch()
         self.stderr_path = ''
-        self.json_parser = SIMDJSONParser()
         self.work_dir = 'ParallelServer-work_dir'
         self.events_dir = 'ParallelServer-events_dir'
         self.kvdb_dir = 'ParallelServer-kvdb_dir'
         self.marshal_api = MarshalAPI()
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
         self.enforce_service_invokes = False
+
+        if has_simdjson:
+            self.json_parser = SIMDJSONParser()
+        else:
+            self.json_parser = None
 
         # A server-wide publication counter, indicating which one the current publication is,
         # increased after each successful publication.

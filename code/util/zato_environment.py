@@ -83,7 +83,7 @@ class EnvironmentManager:
     def __init__(self, base_dir:'str', bin_dir:'str') -> 'None':
         self.base_dir = base_dir
         self.bin_dir = bin_dir
-        self.pip_command = 'c:\\ZZZ\\windows-python-embedded-3.10.8\\python.exe c:\\ZZZ\\windows-python-embedded-3.10.8\\pip.pyz' # os.path.join(self.bin_dir, 'Scripts', 'pip')
+        self.pip_command = 'c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8\\python.exe c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8\\pip.pyz' # os.path.join(self.bin_dir, 'Scripts', 'pip')
         self.python_command = os.path.join(self.bin_dir, 'python')
         self.pip_options = ''
 
@@ -304,7 +304,7 @@ class EnvironmentManager:
     def pip_install_core_pip(self) -> 'None':
 
         # Set up the command ..
-        command = '{pip_command} install --prefix c:\\ZZZ\\windows-python-embedded-3.10.8 {pip_options} -U {pip_deps}'.format(**{
+        command = '{pip_command} install --prefix c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8 {pip_options} -U {pip_deps}'.format(**{
             'pip_command': self.pip_command,
             'pip_options': self.pip_options,
             'pip_deps':    pip_deps,
@@ -326,7 +326,7 @@ class EnvironmentManager:
             {pip_command}
             -v
             install
-            --prefix c:\\ZZZ\\windows-python-embedded-3.10.8
+            --prefix c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8
             {pip_options}
             -r {reqs_path}
         """.format(**{
@@ -362,7 +362,7 @@ class EnvironmentManager:
             pip_args.append(arg)
 
         # Build the command ..
-        command = '{} install --prefix c:\\ZZZ\\windows-python-embedded-3.10.8 --no-warn-script-location {}'.format(self.pip_command, ' '.join(pip_args))
+        command = '{} install --prefix c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8 --no-warn-script-location {}'.format(self.pip_command, ' '.join(pip_args))
 
         # .. and run it.
         self.run_command(command, exit_on_error=False)
@@ -382,7 +382,7 @@ class EnvironmentManager:
         for package in packages:
 
             # Set up the command ..
-            command = '{pip_command} install --prefix c:\\ZZZ\\windows-python-embedded-3.10.8 --no-warn-script-location {package}'.format(**{
+            command = '{pip_command} install --prefix c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8 --no-warn-script-location {package}'.format(**{
                 'pip_command': self.pip_command,
                 'package': package,
             })
@@ -582,8 +582,6 @@ class EnvironmentManager:
 
         # self.update_git_revision()
         self.pip_install()
-
-        return
 
         self.add_eggs_symlink()
         self.add_extlib()

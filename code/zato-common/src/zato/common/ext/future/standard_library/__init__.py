@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function
+
 """
 This module is a modified vendor copy of the python-future package from https://github.com/PythonCharmers/python-future
 
@@ -81,8 +83,6 @@ We don't currently support these modules, but would like to::
     import pickle     # should (optionally) bring in cPickle on Python 2
 
 """
-
-from __future__ import absolute_import, division, print_function
 
 import sys
 import logging
