@@ -465,7 +465,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             if isinstance(data, str):
                 data = data.encode('utf-8')
 
-        logger.info('Sending -> %s', data)
+        logger.info('Sending (%s) -> %s', method, data)
 
         logger.info(
             'CID:`%s`, address:`%s`, qs:`%s`, auth_user:`%s`, kwargs:`%s`', cid, address, qs_params, self.username, kwargs)
