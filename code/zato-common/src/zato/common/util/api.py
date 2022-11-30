@@ -627,8 +627,8 @@ def visit_py_source(
         '*_pri*.py',
     ]
 
-    # For storing names of files that we have already deployed so as not ensure
-    # that there will be no duplicates.
+    # For storing names of files that we have already deployed,
+    # to ensure that there will be no duplicates.
     already_visited = set()
 
     # .. append the default ones, unless they are already there ..
