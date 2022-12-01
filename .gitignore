@@ -14,6 +14,7 @@ code/extlib
 code/get-pip.py
 code/include/*
 code/lib/*
+code/LICENSE.txt
 code/lib64
 code/local/*
 code/man/*
