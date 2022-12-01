@@ -256,7 +256,7 @@ class GenericIMAPConnection(_IMAPConnection):
             conn.connection.select(folder)
 
             for uid, msg in conn.fetch_list(' '.join(self.config.get_criteria.splitlines())):
-                yield (uid, IMAPMessage(uid, conn, msg))
+                yield (uid, GenericIMAPMessage(uid, conn, msg))
 
     def ping(self):
         with self.get_connection() as conn: # type: Imbox
@@ -363,7 +363,7 @@ class Microsoft365IMAPConnection(_IMAPConnection):
         data = Struct(**data_dict)
 
         # .. now, construct the response ..
-        out = IMAPMessage(msg_id, self, data)
+        out = Microsoft365IMAPMessage(msg_id, self, data)
 
         # .. and return it to our caller.
         return out
