@@ -94,12 +94,7 @@ class EnvironmentManager:
         self.bundled_python_dir = 'invalid-bundled_python_dir'
 
         self._set_up_pip_flags()
-        self._set_up_dir_names()
-
-        if is_windows:
-            self.pip_install_prefix = f'--prefix {self.bundled_python_dir}'
-        else:
-            self.pip_install_prefix = ''
+        self._set_up_dir_and_attr_names()
 
 # ################################################################################################################################
 
@@ -154,7 +149,7 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def _set_up_dir_names(self) -> 'None':
+    def _set_up_dir_and_attr_names(self) -> 'None':
 
         # This needs to be checked in runtime because we do not know
         # under what Python version we are are going to run.
