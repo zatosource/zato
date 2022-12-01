@@ -83,9 +83,15 @@ class EnvironmentManager:
     def __init__(self, base_dir:'str', bin_dir:'str') -> 'None':
         self.base_dir = base_dir
         self.bin_dir = bin_dir
-        self.pip_command = 'c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8\\python.exe c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8\\pip.pyz' # os.path.join(self.bin_dir, 'Scripts', 'pip')
         self.python_command = os.path.join(self.bin_dir, 'python')
         self.pip_options = ''
+
+        if is_windows:
+            self.pip_command = 'c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8\\python.exe c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8\\pip.pyz'
+            self.pip_install_prefix = '--prefix c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8'
+        else:
+            self.pip_command = os.path.join(self.bin_dir, 'pip')
+            self.pip_install_prefix = ''
 
         self.site_packages_dir = 'invalid-site_packages_dir'
         self.eggs_dir = 'invalid-self.eggs_dir'
@@ -157,11 +163,11 @@ class EnvironmentManager:
         # Under Linux, the path to site-packages contains the Python version but it does not under Windows.
         # E.g. ~/src-zato/lib/python3.8/site-packages vs. C:\src-zato\lib\site-packages
         if is_linux:
-            py_lib_dir = 'python' + py_version
+            python_version_dir = 'python' + py_version
+            py_lib_dir = os.path.join('lib', python_version_dir)
         else:
-            py_lib_dir = ''
+            py_lib_dir = os.path.join(self.base_dir, 'windows-python-embedded-3.10.8', 'lib')
 
-        py_lib_dir = os.path.join(self.base_dir, 'windows-python-embedded-3.10.8', 'lib', py_lib_dir)
         py_lib_dir = os.path.abspath(py_lib_dir)
         logger.info('Python lib dir -> %s', py_lib_dir)
 
@@ -304,8 +310,9 @@ class EnvironmentManager:
     def pip_install_core_pip(self) -> 'None':
 
         # Set up the command ..
-        command = '{pip_command} install --prefix c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8 {pip_options} -U {pip_deps}'.format(**{
+        command = '{pip_command} install {pip_install_prefix} {pip_options} -U {pip_deps}'.format(**{
             'pip_command': self.pip_command,
+            'pip_install_prefix': self.pip_install_prefix,
             'pip_options': self.pip_options,
             'pip_deps':    pip_deps,
         })
@@ -326,11 +333,12 @@ class EnvironmentManager:
             {pip_command}
             -v
             install
-            --prefix c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8
+            {pip_install_prefix}
             {pip_options}
             -r {reqs_path}
         """.format(**{
                'pip_command': self.pip_command,
+               'pip_install_prefix': self.pip_install_prefix,
                'pip_options': self.pip_options,
                'reqs_path':   reqs_path
             })
@@ -362,7 +370,11 @@ class EnvironmentManager:
             pip_args.append(arg)
 
         # Build the command ..
-        command = '{} install --prefix c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8 --no-warn-script-location {}'.format(self.pip_command, ' '.join(pip_args))
+        command = '{pip_command} install {pip_install_prefix} --no-warn-script-location {pip_args}'.format(**{
+            'pip_command': self.pip_command,
+            'pip_install_prefix': self.pip_install_prefix,
+            'pip_args': ' '.join(pip_args)
+        })
 
         # .. and run it.
         self.run_command(command, exit_on_error=False)
@@ -376,14 +388,15 @@ class EnvironmentManager:
             'cython==0.29.32',
             'numpy==1.22.3',
             'pyOpenSSL==22.0.0',
-            'git+https://github.com/dsuch/bunch/#egg=bunch'
+            'zato-ext-bunch==1.2'
         ]
 
         for package in packages:
 
             # Set up the command ..
-            command = '{pip_command} install --prefix c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8 --no-warn-script-location {package}'.format(**{
+            command = '{pip_command} install {pip_install_prefix} --no-warn-script-location {package}'.format(**{
                 'pip_command': self.pip_command,
+                'pip_install_prefix': self.pip_install_prefix,
                 'package': package,
             })
 
@@ -391,7 +404,7 @@ class EnvironmentManager:
             self.run_command(command, exit_on_error=False)
 
         # This package has its own specific installation procedure
-        command = f'{self.pip_command} install -U nose --no-binary :all:'
+        command = f'{self.pip_command} install -U nose --use-feature=no-binary-enable-wheel-cache :all:'
         self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
