@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import glob
 import logging
 import os
 import platform
@@ -83,21 +84,22 @@ class EnvironmentManager:
     def __init__(self, base_dir:'str', bin_dir:'str') -> 'None':
         self.base_dir = base_dir
         self.bin_dir = bin_dir
-        self.python_command = os.path.join(self.bin_dir, 'python')
         self.pip_options = ''
-
-        if is_windows:
-            self.pip_command = 'c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8\\python.exe c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8\\pip.pyz'
-            self.pip_install_prefix = '--prefix c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8'
-        else:
-            self.pip_command = os.path.join(self.bin_dir, 'pip')
-            self.pip_install_prefix = ''
-
-        self.site_packages_dir = 'invalid-site_packages_dir'
         self.eggs_dir = 'invalid-self.eggs_dir'
+        self.bundle_ext_dir = 'invalid-bundle_ext_dir'
+        self.site_packages_dir = 'invalid-site_packages_dir'
+        self.pip_pyz_path = 'invalid-pip_pyz_path'
+        self.python_command = 'invalid-python_command'
+        self.pip_command = 'invalid-pip_command'
+        self.bundled_python_dir = 'invalid-bundled_python_dir'
 
         self._set_up_pip_flags()
         self._set_up_dir_names()
+
+        if is_windows:
+            self.pip_install_prefix = f'--prefix {self.bundled_python_dir}'
+        else:
+            self.pip_install_prefix = ''
 
 # ################################################################################################################################
 
@@ -178,6 +180,58 @@ class EnvironmentManager:
         self.eggs_dir = os.path.join(self.base_dir, 'eggs')
         self.eggs_dir = os.path.abspath(self.eggs_dir)
         logger.info('Python eggs dir -> %s', self.eggs_dir)
+
+        self.bundle_ext_dir = os.path.join(self.base_dir, 'bundle-ext')
+        self.bundle_ext_dir = os.path.abspath(self.bundle_ext_dir)
+        logger.info('Bundle ext. dir -> %s', self.bundle_ext_dir)
+
+        if is_windows:
+
+            # This is always in the same location
+            self.pip_pyz_path = os.path.join(self.bundle_ext_dir, 'pip', 'pip.pyz')
+
+            # Dynamically check what our current embedded Python's directory is ..
+            self.bundled_python_dir = self.get_bundled_python_version(self.bundle_ext_dir, 'windows')
+
+            # .. and build the full Python command now.
+            self.python_command = os.path.join(self.bundled_python_dir, 'python.exe')
+
+            # We are now ready to build the full pip command ..
+            self.pip_command = f'{self.python_command} {self.pip_pyz_path}'
+
+            # .. and the install prefix as well.
+            self.pip_install_prefix = f'--prefix {self.bundled_python_dir}'
+
+        else:
+
+            # These are always in the same location
+            self.pip_command = os.path.join(self.bin_dir, 'pip')
+            self.python_command = os.path.join(self.bin_dir, 'python')
+
+# ################################################################################################################################
+
+    def get_bundled_python_version(self, bundle_ext_dir:'str', os_type:'str') -> 'str':
+
+        python_parent_dir = f'python-{os_type}'
+        python_parent_dir = os.path.join(bundle_ext_dir, python_parent_dir)
+
+        # We want to ignore any names other than ones matching this pattern
+        pattern = os.path.join(python_parent_dir, 'python-*')
+
+        results = []
+
+        for item in glob.glob(pattern):
+            results.append(item)
+
+        if not results:
+            raise Exception(f'No bundled Python version found matching pattern: `{pattern}`')
+
+        if len(results) > 1:
+            raise Exception(f'Too many results found matching pattern: `{pattern}` -> `{results}`')
+
+        # If we are here, it means that we have exactly one result that we can return to our caller
+        result = results[0]
+        return result
 
 # ################################################################################################################################
 
