@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from unittest import main
 from uuid import UUID as uuid_UUID
 
 # Bunch
@@ -214,6 +215,12 @@ class JSONResponse(BaseSIOTestCase):
 
         with self.assertRaises(SerialisationError):
             MyService._sio.get_output(data, DATA_FORMAT.JSON)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+    main()
 
 # ################################################################################################################################
 # ################################################################################################################################
