@@ -772,7 +772,7 @@ class PUBSUB:
 
     class DEFAULT:
         DATA_FORMAT = 'text'
-        MIME_TYPE = 'text/plain'
+        MIME_TYPE = 'application/json'
         TOPIC_MAX_DEPTH_GD = 10000
         TOPIC_MAX_DEPTH_NON_GD = 1000
         DEPTH_CHECK_FREQ = 100
