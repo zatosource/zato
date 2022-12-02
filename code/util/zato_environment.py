@@ -452,10 +452,6 @@ class EnvironmentManager:
             # .. and run it.
             self.run_command(command, exit_on_error=False)
 
-        # This package has its own specific installation procedure
-        command = f'{self.pip_command} install -U nose --use-feature=no-binary-enable-wheel-cache :all:'
-        self.run_command(command, exit_on_error=False)
-
 # ################################################################################################################################
 
     def pip_install_zato_packages(self) -> 'None':
