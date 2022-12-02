@@ -77,9 +77,6 @@ import requests
 import sqlalchemy as sa
 from sqlalchemy import orm
 
-# Tabulate
-from tabulate import tabulate
-
 # Texttable
 from texttable import Texttable
 
@@ -1950,6 +1947,9 @@ def tabulate_dictlist(data:'dictlist', skip_keys:'listnone'=None) -> 'str':
 
     # stdlib
     from copy import deepcopy
+
+    # Tabulate
+    from tabulate import tabulate
 
     # Return early if there is not anything that we can tabulate
     if not data:
