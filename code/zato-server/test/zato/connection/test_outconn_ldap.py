@@ -11,7 +11,7 @@ import os
 from unittest import main, TestCase
 
 # Bunch
-from bunch import Bunch
+from bunch import bunchify
 
 # Zato
 from zato.server.generic.api.outconn_ldap import LDAPClient
@@ -28,11 +28,45 @@ class ModuleCtx:
 
 class OutconnLDAPTestCase(TestCase):
 
-    def test_connect(self):
-        if not os.environ.get('ZATO_TEST_LDAP'):
+    def get_config(self, conn_name:'str') -> 'Bunch':
+
+        config = bunchify({
+            'name': conn_name,
+            'is_active': True,
+            'server_list': ['localhost:1389'],
+            'username': None,
+            'secret': None,
+            'is_tls_enabled': False,
+            'get_info': None,
+            'connect_timeout': 5,
+            'ip_mode': 'IP_SYSTEM_DEFAULT',
+            'tls': None,
+            'sasl_mechanism': None,
+            'pool_name': None,
+            'pool_ha_strategy': 'ROUND_ROBIN',
+            'pool_max_cycles': None,
+            'pool_exhaust_timeout': None,
+            'auto_bind': None,
+            'use_auto_range': None,
+            'should_check_names': None,
+            'is_stats_enabled': None,
+            'is_read_only': None,
+            'pool_lifetime': None,
+            'should_return_empty_attrs': None,
+            'pool_keep_alive': None,
+        })
+
+        return config
+
+# ################################################################################################################################
+
+    def test_ping(self):
+        if not os.environ.get('Zato_Test_LDAP'):
             return
 
-        config = Bunch()
+        conn_name = 'OutconnLDAPTestCase.test_connect'
+        config = self.get_config(conn_name)
+
         client = LDAPClient(config)
         client.ping()
 
