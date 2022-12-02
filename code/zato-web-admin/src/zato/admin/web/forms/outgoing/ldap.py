@@ -25,7 +25,8 @@ class CreateForm(WithTLSForm):
     connect_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.CONNECT_TIMEOUT)
     auto_bind = forms.ChoiceField(widget=forms.Select(), initial=LDAP.AUTO_BIND.DEFAULT)
 
-    server_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
+    server_list = forms.CharField(
+        widget=forms.Textarea(attrs={'style':'width:100%; height:30px'}), initial=LDAP.DEFAULT.Server_List)
 
     pool_name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:29%'}))
     pool_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.POOL_SIZE)
@@ -36,7 +37,7 @@ class CreateForm(WithTLSForm):
     pool_lifetime = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.POOL_LIFETIME)
     pool_ha_strategy = forms.ChoiceField(widget=forms.Select(), initial=LDAP.POOL_HA_STRATEGY.ROUND_ROBIN.id)
 
-    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=LDAP.DEFAULT.Username)
 
     auth_type = forms.ChoiceField(widget=forms.Select())
     sasl_mechanism = forms.ChoiceField(widget=forms.Select())
