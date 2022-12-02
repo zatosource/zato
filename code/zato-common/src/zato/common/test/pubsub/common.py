@@ -115,7 +115,7 @@ class FullPathTester:
 
         # Synchronization tasks run once in 0.5 second, which is why we wait a bit longer
         # to give them enough time to push the message to a delivery task.
-        sleep_time = 2.6
+        sleep_time = 3.6
         logger.info('%s sleeping for %ss (%s)', self.runner_name, sleep_time, self.sub_key)
         sleep(sleep_time)
 
