@@ -98,6 +98,7 @@ scheduler-tests:
 install-qa-reqs:
 	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
 	npx -y playwright install
+	mkdir -p $(CURDIR)/code/eggs/requests/
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 
 run-tests:

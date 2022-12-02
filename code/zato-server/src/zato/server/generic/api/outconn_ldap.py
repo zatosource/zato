@@ -145,7 +145,7 @@ class LDAPClient:
         # e.g. because we have just created this connection, we still need to
         # provide some secret as it is required by the underlying library.
         if self.config.secret is None:
-            secret = 'zato.ldap.{}'.format(uuid4().hex)
+            secret = 'zato.auto.ldap.{}'.format(uuid4().hex)
         else:
             secret = self.config.secret
 
