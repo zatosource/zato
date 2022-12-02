@@ -228,6 +228,12 @@ class LDAPClient:
 
 # ################################################################################################################################
 
+    def delete(self):
+        # Need for API completeness but it does not do anything
+        pass
+
+# ################################################################################################################################
+
     def ping(self):
         logger.info('Pinging LDAP `%s`', self.config.server_list)
         with self.get() as conn:
