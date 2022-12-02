@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import ssl
 from codecs import encode
 from logging import getLogger
 from traceback import format_exc
+from uuid import uuid4
 
 # ldap3
 from ldap3 import Connection, Server, ServerPool, SYNC, Tls
@@ -22,16 +21,15 @@ from zato.common.util.api import spawn_greenlet
 from zato.server.connection.queue import Wrapper
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-# Type hints
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
     from bunch import Bunch
-
-    # For pyflakes
+    from zato.common.typing_ import any_, stranydict, strdictnone
+    from zato.server.base.parallel import ParallelServer
     Bunch = Bunch
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
@@ -40,21 +38,25 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class ConnectionWrapper:
-    def __init__(self, client):
-        # type: (LDAPClient) -> None
+
+    conn: 'Connection'
+
+    def __init__(self, client:'LDAPClient') -> 'None':
         self.client = client
-        self.conn = None # type: Connection
 
     def __enter__(self):
         try:
             self.conn = self.client.connect()
         except Exception:
-            logger.warning('Could not obtain a connection to `%s` (%s)', self.client.config.server_list, self.client.config.name)
+            logger.warning(
+                'Could not obtain a connection to `%s` (%s)',
+                self.client.config.server_list, self.client.config.name
+            )
             raise
         else:
             return self.conn
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, type, value, traceback): # type: ignore
         if self.conn:
             self.conn.unbind()
 
@@ -64,8 +66,7 @@ class ConnectionWrapper:
 class LDAPClient:
     """ A client through which outgoing LDAP messages can be sent.
     """
-    def __init__(self, config):
-        # type: (Bunch) -> None
+    def __init__(self, config:'Bunch') -> 'None':
 
         self.config = config
 
@@ -74,7 +75,7 @@ class LDAPClient:
 
         # Initialize in a separate greenlet so as not to block the main one
         # if the remote server is slow to respond.
-        spawn_greenlet(self._init, timeout=2)
+        _ = spawn_greenlet(self._init, timeout=2)
 
 # ################################################################################################################################
 
@@ -90,7 +91,7 @@ class LDAPClient:
 
 # ################################################################################################################################
 
-    def get_conn_config(self):
+    def get_conn_config(self) -> 'stranydict':
 
         # All servers in our pool, even if there is only one
         servers = []
@@ -124,7 +125,7 @@ class LDAPClient:
                 'connect_timeout': self.config.connect_timeout,
                 'mode': self.config.ip_mode,
                 'tls': tls
-            }
+            } # type: stranydict
 
             # Create a server object and append it to the list given to the pool later on
             servers.append(Server(**server_config))
@@ -140,11 +141,19 @@ class LDAPClient:
         # Create our server pool
         pool = ServerPool(**pool_config)
 
+        # If secret is None, meaning that we do not have it at all yet,
+        # e.g. because we have just created this connection, we still need to
+        # provide some secret as it is required by the underlying library.
+        if self.config.secret is None:
+            secret = 'zato.ldap.{}'.format(uuid4().hex)
+        else:
+            secret = self.config.secret
+
         # Connection configuration
         conn_config = {
             'server': pool,
             'user': self.config.username,
-            'password': self.config.secret,
+            'password': secret,
             'auto_bind': self.config.auto_bind,
             'auto_range': self.config.use_auto_range,
             'client_strategy': SYNC,
@@ -165,7 +174,9 @@ class LDAPClient:
 
         return conn_config
 
-    def connect(self, conn_config=None):
+# ################################################################################################################################
+
+    def connect(self, conn_config:'strdictnone'=None):
 
         # Obtain connection configuration ..
         conn_config = conn_config or self.get_conn_config()
@@ -192,7 +203,7 @@ class LDAPClient:
 
 # ################################################################################################################################
 
-    def check_credentials(self, user_data, secret, raise_on_error=True):
+    def check_credentials(self, user_data:'any_', secret:'str', raise_on_error:'bool'=True):
 
         # Build a new connection definition dictionary with input credentials ..
         conn_config = self.get_conn_config()
@@ -228,7 +239,7 @@ class LDAPClient:
 class OutconnLDAPWrapper(Wrapper):
     """ Wraps a queue of connections to LDAP.
     """
-    def __init__(self, config, server):
+    def __init__(self, config:'Bunch', server:'ParallelServer') -> 'None':
         config.parent = self
         config.auth_url = config.server_list
         super(OutconnLDAPWrapper, self).__init__(config, 'outgoing LDAP', server)
@@ -237,7 +248,7 @@ class OutconnLDAPWrapper(Wrapper):
 
     def ping(self):
         with self.client() as client:
-            client.ping()
+            client.ping() # type: ignore
 
 # ################################################################################################################################
 
@@ -247,7 +258,7 @@ class OutconnLDAPWrapper(Wrapper):
         except Exception:
             logger.warning('LDAP client could not be built `%s`', format_exc())
         else:
-            self.client.put_client(conn)
+            _ = self.client.put_client(conn)
 
 # ################################################################################################################################
 # ################################################################################################################################
