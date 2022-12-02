@@ -337,7 +337,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     stop_after = options.get('stop_after') or os.environ.get('ZATO_STOP_AFTER')
     if stop_after:
-         stop_after = int(stop_after)
+        stop_after = int(stop_after)
 
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
