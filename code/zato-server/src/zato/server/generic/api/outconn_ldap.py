@@ -14,7 +14,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # ldap3
-from ldap3 import Connection, Server, ServerPool, SYNC, Tls
+from ldap3 import Connection as LDAPConnection, Server, ServerPool, SYNC, Tls
 
 # Zato
 from zato.common.util.api import spawn_greenlet
@@ -39,7 +39,7 @@ logger = getLogger(__name__)
 
 class ConnectionWrapper:
 
-    conn: 'Connection'
+    conn: 'LDAPConnection'
 
     def __init__(self, client:'LDAPClient') -> 'None':
         self.client = client
@@ -176,13 +176,13 @@ class LDAPClient:
 
 # ################################################################################################################################
 
-    def connect(self, conn_config:'strdictnone'=None):
+    def connect(self, conn_config:'strdictnone'=None) -> 'LDAPConnection':
 
         # Obtain connection configuration ..
         conn_config = conn_config or self.get_conn_config()
 
         # .. create the connection objet
-        conn = Connection(**conn_config)
+        conn = LDAPConnection(**conn_config)
 
         # .. bind only if we are to be active.
         if self.config.is_active:
