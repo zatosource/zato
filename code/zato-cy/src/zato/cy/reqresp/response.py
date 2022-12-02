@@ -22,7 +22,7 @@ from lxml.etree import _Element as EtreeElement
 from lxml.objectify import ObjectifiedElement
 
 # SQLAlchemy
-from sqlalchemy.util import KeyedTuple
+from sqlalchemy.engine import Row as KeyedTuple
 
 # Zato
 from zato.common.api import DATA_FORMAT, simple_types, ZATO_OK
