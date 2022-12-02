@@ -158,6 +158,15 @@ class _CreateEdit(_BaseService):
             if data['is_active'] is None:
                 data['is_active'] = False
 
+        # If we have a pool size on input, we want to ensure that it is an integer
+        pool_size = data.get('pool_size')
+        try:
+            pool_size = int(pool_size) if pool_size else pool_size
+        except ValueError:
+            pass # Not an integer
+        else:
+            data['pool_size'] = pool_size
+
         # Break down security definitions into components
         security_id = data.get('security_id') or ''
         if sec_def_sep in security_id:
