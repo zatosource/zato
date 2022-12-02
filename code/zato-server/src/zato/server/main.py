@@ -335,6 +335,10 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     # Assigned here because it is a circular dependency
     odb_manager.parallel_server = server
 
+    stop_after = options.get('stop_after') or os.environ.get('ZATO_STOP_AFTER')
+    if stop_after:
+        stop_after = int(stop_after)
+
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
     server.has_fg = options.get('fg') or False
@@ -362,6 +366,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.env_manager = env_manager
     server.jwt_secret = server.fs_server_config.misc.jwt_secret.encode('utf8')
     server.startup_callable_tool = startup_callable_tool
+    server.stop_after = stop_after
     server.is_sso_enabled = server.fs_server_config.component_enabled.sso
     if server.is_sso_enabled:
         server.sso_api = SSOAPI(server, sso_config, None, crypto_manager.encrypt, server.decrypt,
@@ -480,6 +485,7 @@ if __name__ == '__main__':
             'secret_key': '',
             'stderr_path': None,
             'env_file': '',
+            'stop_after': None,
         }
     else:
         server_base_dir = sys.argv[1]
