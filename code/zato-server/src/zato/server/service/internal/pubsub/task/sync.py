@@ -42,7 +42,6 @@ class GetServerList(AdminService):
             'server_name': self.server.name,
             'server_pid': self.server.pid,
             'server_api_address': '{}:{}'.format(self.server.preferred_address, self.server.port),
-            'keep_running': self.pubsub.keep_running,
             'msg_pub_counter': self.pubsub.msg_pub_counter,
             'has_meta_endpoint': self.pubsub.has_meta_endpoint,
             'endpoint_meta_store_frequency': self.pubsub.endpoint_meta_store_frequency,
