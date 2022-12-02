@@ -19,6 +19,12 @@ from zato.server.generic.api.outconn_ldap import LDAPClient
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from bunch import Bunch
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ModuleCtx:
     Env_Key_Service_File_Path = 'Zato_Test_Google_Service_File_Path'
     Env_Key_User = 'Zato_Test_Google_User'
@@ -34,8 +40,8 @@ class OutconnLDAPTestCase(TestCase):
             'name': conn_name,
             'is_active': True,
             'server_list': ['localhost:1389'],
-            'username': None,
-            'secret': None,
+            'username': 'cn=admin,dc=example,dc=org',
+            'secret': 'adminpassword',
             'is_tls_enabled': False,
             'get_info': None,
             'connect_timeout': 5,
@@ -60,15 +66,42 @@ class OutconnLDAPTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_ping(self):
+    def xtest_ping(self):
         if not os.environ.get('Zato_Test_LDAP'):
             return
 
-        conn_name = 'OutconnLDAPTestCase.test_connect'
+        conn_name = 'OutconnLDAPTestCase.test_ping'
         config = self.get_config(conn_name)
 
         client = LDAPClient(config)
         client.ping()
+
+# ################################################################################################################################
+
+    def test_query(self):
+        if not os.environ.get('Zato_Test_LDAP'):
+            return
+
+        conn_name = 'OutconnLDAPTestCase.test_ping'
+        config = self.get_config(conn_name)
+        client = LDAPClient(config)
+
+        # Where in the directory we expect to find the user
+        search_base = 'dc=example, dc=org'
+
+        # Look up users up by either username or email
+        # search_filter = '(uid=*)'
+        search_filter = '(&(|(uid={user_info})(mail={user_info})))'
+        user_filter = search_filter.format(user_info='user01')
+
+        # We are looking up these attributes
+        query_attributes = ['uid', 'givenName', 'sn', 'mail']
+
+        with client.get() as conn:
+
+            has_result = conn.search(search_base, user_filter, attributes=query_attributes)
+            if not has_result:
+                self.fail('Expected for results to be available')
 
 # ################################################################################################################################
 # ################################################################################################################################
