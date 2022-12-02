@@ -1278,9 +1278,9 @@ class LDAP:
         POOL_KEEP_ALIVE = 30
         POOL_LIFETIME = 3600
         POOL_MAX_CYCLES  = 1
-        POOL_SIZE = 10
+        POOL_SIZE = 1
         Server_List = 'localhost:1389'
-        Username = 'admin'
+        Username = 'cn=admin,dc=example,dc=org'
 
     class AUTH_TYPE:
         NTLM   = NameId('NTLM', 'NTLM')

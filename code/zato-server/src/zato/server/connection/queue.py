@@ -319,7 +319,7 @@ class Wrapper:
     has_delete_reasons = False
     supports_reconnections = False
 
-    def __init__(self, config:'stranydict', conn_type:'str', server:'ParallelServer') -> 'None':
+    def __init__(self, config:'Bunch', conn_type:'str', server:'ParallelServer') -> 'None':
         self.conn_type = conn_type
         self.config = config
         self.config['username_pretty'] = self.config['username'] or '(None)'
