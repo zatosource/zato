@@ -1363,7 +1363,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if isinstance(data, bytes):
             data = data.decode('utf8')
 
-        if data.startswith((_prefix, _marker)):
+        if data and data.startswith((_prefix, _marker)):
             return self.decrypt_no_prefix(data.replace(_prefix, '', 1))
         else:
             return data # Already decrypted, return as is
