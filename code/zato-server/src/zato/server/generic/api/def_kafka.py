@@ -13,7 +13,10 @@ from logging import getLogger
 from traceback import format_exc
 
 # PyKafka
-from pykafka import KafkaClient, SslConfig
+try:
+    from pykafka import KafkaClient, SslConfig
+except ImportError:
+    pass
 
 # Zato
 from zato.server.connection.wrapper import Wrapper
