@@ -105,7 +105,8 @@ class _CreateEditSIO(AdminSIO):
 class _CreateEdit(_BaseService):
     """ Creates a new or updates an existing generic connection in ODB.
     """
-    is_edit = None
+    is_create: 'bool'
+    is_edit:   'bool'
 
     class SimpleIO(_CreateEditSIO):
         output_required = ('id', 'name')
@@ -120,7 +121,7 @@ class _CreateEdit(_BaseService):
 
         # Build a reusable flag indicating that a secret was sent on input.
         secret = data.get('secret', ZATO_NONE)
-        if secret == ZATO_NONE:
+        if (secret is None) or (secret == ZATO_NONE):
             has_input_secret  = False
             input_secret = ''
         else:
@@ -219,7 +220,9 @@ class _CreateEdit(_BaseService):
                 else:
                     secret = model.secret
 
+                secret = self.server.decrypt(secret)
                 conn.secret = secret
+                data.secret = secret # We need to set it here because we also publish this message to other servers
 
             # .. but if it is the create action, we need to create a new instance
             # .. and ensure that its secret is auto-generated.
@@ -237,9 +240,12 @@ class _CreateEdit(_BaseService):
 
             for key, value in sorted(conn_dict.items()):
 
-                # Do not set the field unless a secret was sent on input.
-                if key == 'secret' and not (has_input_secret):
-                    continue
+                # If we are merely creating this connection, do not set the field unless a secret was sent on input.
+                # If it is an edit, then we will have the secret either from the input or from the model,
+                # which is why we do to enter this branch.
+                if self.is_create:
+                    if key == 'secret' and not (has_input_secret):
+                        continue
 
                 setattr(model, key, value)
 
@@ -266,7 +272,8 @@ class _CreateEdit(_BaseService):
 class Create(_CreateEdit):
     """ Creates a new generic connection.
     """
-    is_edit = False
+    is_create = True
+    is_edit   = False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -274,7 +281,8 @@ class Create(_CreateEdit):
 class Edit(_CreateEdit):
     """ Updates an existing generic connection.
     """
-    is_edit = True
+    is_create = False
+    is_edit   = True
 
 # ################################################################################################################################
 # ################################################################################################################################
