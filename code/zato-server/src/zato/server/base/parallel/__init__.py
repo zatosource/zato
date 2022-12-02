@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from logging import DEBUG, INFO, WARN
 from platform import system as platform_system
 from random import seed as random_seed
@@ -18,6 +18,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # gevent
+from gevent import sleep
 from gevent.lock import RLock
 
 # Needed for Cassandra
@@ -51,7 +52,7 @@ from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
-from zato.common.typing_ import cast_, optional
+from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
     register_diag_handlers
@@ -136,6 +137,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     zato_lock_manager: 'LockManager'
     startup_callable_tool: 'StartupCallableTool'
     oauth_store: 'OAuthStore'
+
+    stop_after: 'intnone'
 
     def __init__(self) -> 'None':
         self.logger = logger
@@ -977,6 +980,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.ipc_api.pid = self.pid
         self.ipc_api.on_message_callback = self.worker_store.on_ipc_message
 
+        # Stops the environment after N seconds
+        if self.stop_after:
+            spawn_greenlet(self._stop_after_timeout)
+
         if is_posix:
             spawn_greenlet(self.ipc_api.run)
             connector_config_ipc = cast_('ConnectorConfigIPC', self.connector_config_ipc)
@@ -994,6 +1001,59 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         })
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def _stop_after_timeout(self):
+
+        # psutil
+        import psutil
+
+        now = datetime.utcnow()
+        stop_at = now + timedelta(seconds=self.stop_after)
+
+        while now < stop_at:
+            logger.info(f'Now is {now}; waiting to stop until {stop_at}')
+            now = datetime.utcnow()
+            sleep(1)
+
+        logger.info(f'Stopping Zato after {self.stop_after}s')
+
+        # All the pids that we will stop
+        to_stop = set()
+
+        # Details of each process
+        details = {}
+
+        # Our own PID
+        our_pid = os.getpid()
+
+        # If a pid has any of these names in its name or command line,
+        # we consider it a process that will be stopped.
+        to_include = ['zato', 'gunicorn']
+
+        for proc in list(psutil.process_iter(['pid', 'name'])):
+            proc_name = proc.name()
+            proc_cmd_line = ' '.join(proc.cmdline())
+            for item in to_include:
+                if (item in proc_name) or (item in proc_cmd_line):
+                    to_stop.add(proc.pid)
+                    details[proc.pid] = f'{proc_name}; {proc_cmd_line}'
+                    logger.info('Found PID: %s; Name: %s; Cmd. line: %s', proc.pid, proc_name, proc_cmd_line)
+                    break
+
+        logger.info('Pids collected: %s; our PID: %s', to_stop, our_pid)
+
+        # Remove our PID so that we do not stop ourselves too early
+        to_stop.remove(our_pid)
+
+        # Now, we can stop all the other processes
+        for pid in to_stop:
+            logger.info('Stopping PID %s (%s)', pid, details[pid])
+            os.kill(pid, 9)
+
+        # Finally, we can stop ourselves
+        os.kill(our_pid, 9)
 
 # ################################################################################################################################
 
