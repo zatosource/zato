@@ -114,7 +114,7 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Servers</a></th>
-                        <th><a href="#">Credentials</a></th>
+                        <th><a href="#">Username</a></th>
 
                         <th><a href="#">Auth type</a></th>
                         <th><a href="#">Use TLS</a></th>
@@ -263,43 +263,44 @@
                                 </label>
                                 |
                                 <label>
-                                R/O
-                                {{ create_form.is_read_only }}
+                                Pool size
+                                {{ create_form.pool_size }}
                                 </label>
-                                |
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Username
+                            </td>
+                            <td>
                                 <label>
-                                Stats
-                                {{ create_form.is_stats_enabled }}
+                                {{ create_form.username }}
                                 </label>
-                                |
-                                <label>
-                                Auto-rng
-                                {{ create_form.use_auto_range }}
-                                </label>
-                                |
-                                <label>
-                                Chk. names
-                                {{ create_form.should_check_names }}
-                                </label>
-                                |
-                                <label>
-                                Emp. attrs
-                                {{ create_form.should_return_empty_attrs }}
-                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Servers
+                        </td>
+                            <td>
+                                {{ create_form.server_list }}
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Pool</td>
+                            <td style="vertical-align:middle">
+                            Pool
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.pool-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="pool-block hidden">
+                            <td></td>
                             <td>
                                 <label>
                                 Name
                                 {{ create_form.pool_name }}
-                                </label>
-                                |
-                                <label>
-                                Size
-                                {{ create_form.pool_size }}
                                 </label>
                                 |
                                 <label>
@@ -308,8 +309,7 @@
                                 </label>
                             </td>
                         </tr>
-
-                        <tr>
+                        <tr class="pool-block hidden">
                             <td></td>
                             <td>
                                 <label>
@@ -330,6 +330,14 @@
                         </tr>
 
                         <tr>
+                            <td style="vertical-align:middle">
+                            Timeout
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.timeout-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="timeout-block hidden">
                             <td>Timeout</td>
                             <td>
                                 <label>
@@ -350,31 +358,6 @@
                         </tr>
 
                         <tr>
-                            <td>Auth</td>
-                            <td>
-                                <label>
-                                Type
-                                {{ create_form.auth_type }}
-                                <label>
-                                |
-                                <label>
-                                SASL
-                                {{ create_form.sasl_mechanism }}
-                                </label>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                Creds.
-                            </td>
-                            <td>
-                                <label>
-                                {{ create_form.username }}
-                                </label>
-                            </td>
-                        </tr>
-
-                        <tr>
                             <td style="vertical-align:middle">
                             TLS
                             </td>
@@ -382,7 +365,6 @@
                             <a href="javascript:$.fn.zato.toggle_visibility('.tls-block')">Toggle options</a>
                             </td>
                         </tr>
-
                         <tr class="tls-block hidden">
                             <td></td>
                             <td>
@@ -402,7 +384,6 @@
                                 </label>
                             </td>
                         </tr>
-
                         <tr class="tls-block hidden">
                             <td style="vertical-align:middle"></td>
                             <td>
@@ -413,7 +394,6 @@
                                 </label>
                             </td>
                         </tr>
-
                         <tr class="tls-block hidden">
                             <td style="vertical-align:middle"></td>
                             <td>
@@ -424,7 +404,6 @@
                                 </label>
                             </td>
                         </tr>
-
                         <tr class="tls-block hidden">
                             <td style="vertical-align:middle"></td>
                             <td>
@@ -435,7 +414,6 @@
                                 </label>
                             </td>
                         </tr>
-
                         <tr class="tls-block hidden">
                             <td style="vertical-align:middle"></td>
                             <td>
@@ -446,11 +424,63 @@
                                 </label>
                             </td>
                         </tr>
-
                         <tr>
-                            <td style="vertical-align:middle">Servers</td>
+                            <td style="vertical-align:middle">
+                            Auth.
+                            </td>
                             <td>
-                                {{ create_form.server_list }}
+                            <a href="javascript:$.fn.zato.toggle_visibility('.auth-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="auth-block hidden">
+                            <td>Auth</td>
+                            <td>
+                                <label>
+                                Type
+                                {{ create_form.auth_type }}
+                                <label>
+                                |
+                                <label>
+                                SASL
+                                {{ create_form.sasl_mechanism }}
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                            Misc.
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.misc-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="misc-block hidden">
+                            <td></td>
+                            <td>
+                                <label>
+                                    R/O
+                                    {{ create_form.is_read_only }}
+                                    </label>
+                                    |
+                                    <label>
+                                    Stats
+                                    {{ create_form.is_stats_enabled }}
+                                    </label>
+                                    |
+                                    <label>
+                                    Auto-rng
+                                    {{ create_form.use_auto_range }}
+                                    </label>
+                                    |
+                                    <label>
+                                    Chk. names
+                                    {{ create_form.should_check_names }}
+                                    </label>
+                                    |
+                                    <label>
+                                    Emp. attrs
+                                    {{ create_form.should_return_empty_attrs }}
+                                    </label>
                             </td>
                         </tr>
 
@@ -470,6 +500,7 @@
             <div class="bd">
                 <form action="{% url "out-ldap-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
+
                         <tr>
                             <td style="vertical-align:middle;width:8%">Name</td>
                             <td>{{ edit_form.name }}</td>
@@ -485,43 +516,44 @@
                                 </label>
                                 |
                                 <label>
-                                R/O
-                                {{ edit_form.is_read_only }}
+                                Pool size
+                                {{ edit_form.pool_size }}
                                 </label>
-                                |
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Username
+                            </td>
+                            <td>
                                 <label>
-                                Stats
-                                {{ edit_form.is_stats_enabled }}
+                                {{ edit_form.username }}
                                 </label>
-                                |
-                                <label>
-                                Auto-rng
-                                {{ edit_form.use_auto_range }}
-                                </label>
-                                |
-                                <label>
-                                Chk. names
-                                {{ edit_form.should_check_names }}
-                                </label>
-                                |
-                                <label>
-                                Emp. attrs
-                                {{ edit_form.should_return_empty_attrs }}
-                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Servers
+                        </td>
+                            <td>
+                                {{ edit_form.server_list }}
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Pool</td>
+                            <td style="vertical-align:middle">
+                            Pool
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.pool-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="pool-block hidden">
+                            <td></td>
                             <td>
                                 <label>
                                 Name
                                 {{ edit_form.pool_name }}
-                                </label>
-                                |
-                                <label>
-                                Size
-                                {{ edit_form.pool_size }}
                                 </label>
                                 |
                                 <label>
@@ -530,8 +562,7 @@
                                 </label>
                             </td>
                         </tr>
-
-                        <tr>
+                        <tr class="pool-block hidden">
                             <td></td>
                             <td>
                                 <label>
@@ -552,6 +583,14 @@
                         </tr>
 
                         <tr>
+                            <td style="vertical-align:middle">
+                            Timeout
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.timeout-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="timeout-block hidden">
                             <td>Timeout</td>
                             <td>
                                 <label>
@@ -572,31 +611,6 @@
                         </tr>
 
                         <tr>
-                            <td>Auth</td>
-                            <td>
-                                <label>
-                                Type
-                                {{ edit_form.auth_type }}
-                                <label>
-                                |
-                                <label>
-                                SASL
-                                {{ edit_form.sasl_mechanism }}
-                                </label>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                Creds.
-                            </td>
-                            <td>
-                                <label>
-                                {{ edit_form.username }}
-                                </label>
-                            </td>
-                        </tr>
-
-                        <tr>
                             <td style="vertical-align:middle">
                             TLS
                             </td>
@@ -604,7 +618,6 @@
                             <a href="javascript:$.fn.zato.toggle_visibility('.tls-block')">Toggle options</a>
                             </td>
                         </tr>
-
                         <tr class="tls-block hidden">
                             <td></td>
                             <td>
@@ -624,7 +637,6 @@
                                 </label>
                             </td>
                         </tr>
-
                         <tr class="tls-block hidden">
                             <td style="vertical-align:middle"></td>
                             <td>
@@ -635,7 +647,6 @@
                                 </label>
                             </td>
                         </tr>
-
                         <tr class="tls-block hidden">
                             <td style="vertical-align:middle"></td>
                             <td>
@@ -646,7 +657,6 @@
                                 </label>
                             </td>
                         </tr>
-
                         <tr class="tls-block hidden">
                             <td style="vertical-align:middle"></td>
                             <td>
@@ -657,7 +667,6 @@
                                 </label>
                             </td>
                         </tr>
-
                         <tr class="tls-block hidden">
                             <td style="vertical-align:middle"></td>
                             <td>
@@ -668,13 +677,66 @@
                                 </label>
                             </td>
                         </tr>
-
                         <tr>
-                            <td style="vertical-align:middle">Servers</td>
+                            <td style="vertical-align:middle">
+                            Auth.
+                            </td>
                             <td>
-                                {{ edit_form.server_list }}
+                            <a href="javascript:$.fn.zato.toggle_visibility('.auth-block')">Toggle options</a>
                             </td>
                         </tr>
+                        <tr class="auth-block hidden">
+                            <td>Auth</td>
+                            <td>
+                                <label>
+                                Type
+                                {{ edit_form.auth_type }}
+                                <label>
+                                |
+                                <label>
+                                SASL
+                                {{ edit_form.sasl_mechanism }}
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                            Misc.
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.misc-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="misc-block hidden">
+                            <td></td>
+                            <td>
+                                <label>
+                                    R/O
+                                    {{ edit_form.is_read_only }}
+                                    </label>
+                                    |
+                                    <label>
+                                    Stats
+                                    {{ edit_form.is_stats_enabled }}
+                                    </label>
+                                    |
+                                    <label>
+                                    Auto-rng
+                                    {{ edit_form.use_auto_range }}
+                                    </label>
+                                    |
+                                    <label>
+                                    Chk. names
+                                    {{ edit_form.should_check_names }}
+                                    </label>
+                                    |
+                                    <label>
+                                    Emp. attrs
+                                    {{ edit_form.should_return_empty_attrs }}
+                                    </label>
+                            </td>
+                        </tr>
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
