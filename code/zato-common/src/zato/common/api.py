@@ -772,7 +772,7 @@ class PUBSUB:
 
     class DEFAULT:
         DATA_FORMAT = 'text'
-        MIME_TYPE = 'text/plain'
+        MIME_TYPE = 'application/json'
         TOPIC_MAX_DEPTH_GD = 10000
         TOPIC_MAX_DEPTH_NON_GD = 1000
         DEPTH_CHECK_FREQ = 100
@@ -1278,7 +1278,9 @@ class LDAP:
         POOL_KEEP_ALIVE = 30
         POOL_LIFETIME = 3600
         POOL_MAX_CYCLES  = 1
-        POOL_SIZE = 10
+        POOL_SIZE = 1
+        Server_List = 'localhost:1389'
+        Username = 'cn=admin,dc=example,dc=org'
 
     class AUTH_TYPE:
         NTLM   = NameId('NTLM', 'NTLM')
