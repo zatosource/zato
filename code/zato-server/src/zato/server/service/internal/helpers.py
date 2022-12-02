@@ -765,7 +765,7 @@ class PubAPIInvoker(Service):
                             'failure_reason': reason,
                         }
                         self.logger.warning('Test failure in %s\n%s', test, reason)
-                        errors.append(_failure)
+                        failures.append(_failure)
 
                     # Serialize all the warnings and errors ..
                     self.response.payload = dumps(response)

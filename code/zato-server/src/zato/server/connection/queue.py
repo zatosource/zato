@@ -27,7 +27,8 @@ from zato.common.util.python_ import get_python_id
 
 if 0:
     from logging import Logger
-    from zato.common.typing_ import any_, callable_, intnone, stranydict, strnone
+    from bunch import Bunch
+    from zato.common.typing_ import any_, callable_, intnone, strnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -319,7 +320,7 @@ class Wrapper:
     has_delete_reasons = False
     supports_reconnections = False
 
-    def __init__(self, config:'stranydict', conn_type:'str', server:'ParallelServer') -> 'None':
+    def __init__(self, config:'Bunch', conn_type:'str', server:'ParallelServer') -> 'None':
         self.conn_type = conn_type
         self.config = config
         self.config['username_pretty'] = self.config['username'] or '(None)'
