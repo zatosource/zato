@@ -6,7 +6,9 @@ code/bin/*
 code/build/*
 code/bundle-ext/python-windows/python-*/Include/
 code/bundle-ext/python-windows/python-*/Lib/
+code/bundle-ext/python-windows/python-*/py.bat
 code/bundle-ext/python-windows/python-*/Scripts/
+code/bundle-ext/python-windows/python-*/zato.bat
 code/develop-eggs/*
 code/docs/*
 code/downloads/*

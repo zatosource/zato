@@ -76,8 +76,9 @@ if __name__ == '__main__':
     sys.exit(main())
 """.strip() # noqa: W605
 
-zato_command_template_windows = """
-#!{bin_dir}\\python.exe
+zato_command_template_windows = r"""
+@echo off
+"{bundled_python_dir}\\python.exe" "{code_dir}\\zato-cli\\src\\zato\\cli\\_run_zato.py" %*
 """.strip() # noqa: W605
 
 # ################################################################################################################################
@@ -208,9 +209,11 @@ class EnvironmentManager:
 
             # Where we keep our own requirements
             self.zato_reqs_path = os.path.join(self.base_dir, '..', '..', 'requirements.txt')
+            self.zato_reqs_path = os.path.abspath(self.zato_reqs_path)
 
             # Where the zato-* packages are (the "code" directory)
             self.code_dir = os.path.join(self.bundle_ext_dir, '..')
+            self.code_dir = os.path.abspath(self.code_dir)
 
         else:
 
@@ -622,20 +625,25 @@ class EnvironmentManager:
         command_name = 'zato.bat' if is_windows else 'zato'
 
         if is_windows:
-            template     = zato_command_template_windows
-            command_name = 'zato.bat'
+            command_name    = 'zato.bat'
+            template        = zato_command_template_windows
+            template_kwargs = {
+                'code_dir': self.code_dir,
+                'bundled_python_dir': self.bundled_python_dir,
+            }
         else:
-            template     = zato_command_template_linux
-            command_name = 'zato'
+            command_name    = 'zato'
+            template        = zato_command_template_linux
+            template_kwargs = {
+                'base_dir': self.base_dir,
+                'bin_dir': self.bin_dir,
+            }
 
         # This is where the command file will be created
         command_path = os.path.join(self.bin_dir, command_name)
 
         # Build the full contents of the command file ..
-        data = template.format(**{
-            'base_dir': self.base_dir,
-            'bin_dir': self.bin_dir
-        })
+        data = template.format(**template_kwargs)
 
         # .. and add the file to the file system.
         self._create_executable(command_path, data)

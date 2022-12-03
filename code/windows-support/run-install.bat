@@ -12,19 +12,13 @@ set python_bin_dir=%curdir%\..\bundle-ext\python-windows\python-%python_version%
 set python_cmd=%python_bin_dir%\python.exe
 
 rem
-rem Install setuptools
-rem
-rem cd %python_bin_dir%
-%python_cmd% %python_bin_dir%\pip.pyz install setuptools==57.4.0 --prefix %python_bin_dir% --no-warn-script-location
-rem %python_cmd% %python_bin_dir%\pip.pyz install --help
-
-rem
 rem Install Zato
 rem
 rem cd %python_bin_dir%\
 %python_cmd% %curdir%\..\util\zato_environment.py install
+if %errorlevel% neq 0 exit /b %errorlevel%
 
 rem
 rem Confirm the version installed
 rem
-rem %python_cmd% %python_bin_dir%\Scripts\zato-bin.py --version
+%python_bin_dir%\zato.bat --version

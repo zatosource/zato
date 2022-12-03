@@ -72,6 +72,9 @@ del /s /q %workdir%\zato-web-admin\*.pyd
 del /s /q %workdir%\zato-cy\*.c
 del /s /q %workdir%\zato-cy\*.html
 
+del /s /q %workdir%\bundle-ext\python-windows\python-%python_version%\py.bat
+del /s /q %workdir%\bundle-ext\python-windows\python-%python_version%\zato.bat
+
 if exist %workdir%\bundle-ext\python-windows\python-%python_version%\Include\ (rmdir /s /q %workdir%\bundle-ext\python-windows\python-%python_version%\Include\)
 if exist %workdir%\bundle-ext\python-windows\python-%python_version%\Lib\ (rmdir /s /q %workdir%\bundle-ext\python-windows\python-%python_version%\Lib\)
 if exist %workdir%\bundle-ext\python-windows\python-%python_version%\Scripts\ (rmdir /s /q %workdir%\bundle-ext\python-windows\python-%python_version%\Scripts\)
