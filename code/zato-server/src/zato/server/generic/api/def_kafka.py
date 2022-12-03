@@ -21,7 +21,6 @@ from zato.server.connection.wrapper import Wrapper
 
 if 0:
     from pykafka.broker import Broker
-    from zato.common.typing_ import any_
     Broker = Broker
 
 # ################################################################################################################################
