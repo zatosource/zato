@@ -3,41 +3,42 @@ rem
 rem Local aliases
 rem
 set curdir=%~dp0
+set workdir=%curdir%\..
 
-if exist %curdir%\bin     (rmdir /s /q %curdir%\bin)
-if exist %curdir%\docs    (rmdir /s /q %curdir%\docs)
-if exist %curdir%\eggs    (rmdir /s /q %curdir%\eggs)
-if exist %curdir%\extlib  (rmdir /s /q %curdir%\extlib)
-if exist %curdir%\include (rmdir /s /q %curdir%\include)
-if exist %curdir%\lib     (rmdir /s /q %curdir%\lib)
-if exist %curdir%\lib64   (rmdir /s /q %curdir%\lib64)
-if exist %curdir%\local   (rmdir /s /q %curdir%\local)
-if exist %curdir%\man     (rmdir /s /q %curdir%\man)
-if exist %curdir%\scripts (rmdir /s /q %curdir%\scripts)
-if exist %curdir%\share   (rmdir /s /q %curdir%\share)
-if exist %curdir%\tests   (rmdir /s /q %curdir%\tests)
-if exist %curdir%\zato_extra_paths (rmdir /s /q %curdir%\zato_extra_paths)
+if exist %workdir%\bin     (rmdir /s /q %workdir%\bin)
+if exist %workdir%\docs    (rmdir /s /q %workdir%\docs)
+if exist %workdir%\eggs    (rmdir /s /q %workdir%\eggs)
+if exist %workdir%\extlib  (rmdir /s /q %workdir%\extlib)
+if exist %workdir%\include (rmdir /s /q %workdir%\include)
+if exist %workdir%\lib     (rmdir /s /q %workdir%\lib)
+if exist %workdir%\lib64   (rmdir /s /q %workdir%\lib64)
+if exist %workdir%\local   (rmdir /s /q %workdir%\local)
+if exist %workdir%\man     (rmdir /s /q %workdir%\man)
+if exist %workdir%\scripts (rmdir /s /q %workdir%\scripts)
+if exist %workdir%\share   (rmdir /s /q %workdir%\share)
+if exist %workdir%\tests   (rmdir /s /q %workdir%\tests)
+if exist %workdir%\zato_extra_paths (rmdir /s /q %workdir%\zato_extra_paths)
 
-if exist %curdir%\zato-agent\build     (rmdir /s /q %curdir%\zato-agent\build)
-if exist %curdir%\zato-broker\build    (rmdir /s /q %curdir%\zato-broker\build)
-if exist %curdir%\zato-cli\build       (rmdir /s /q %curdir%\zato-cli\build)
-if exist %curdir%\zato-client\build    (rmdir /s /q %curdir%\zato-client\build)
-if exist %curdir%\zato-common\build    (rmdir /s /q %curdir%\zato-common\build)
-if exist %curdir%\zato-cy\build        (rmdir /s /q %curdir%\zato-cy\build)
-if exist %curdir%\zato-distlock\build  (rmdir /s /q %curdir%\zato-distlock\build)
-if exist %curdir%\zato-hl7\build       (rmdir /s /q %curdir%\zato-hl7\build)
-if exist %curdir%\zato-lib\build       (rmdir /s /q %curdir%\zato-lib\build)
-if exist %curdir%\zato-scheduler\build (rmdir /s /q %curdir%\zato-scheduler\build)
-if exist %curdir%\zato-server\build    (rmdir /s /q %curdir%\zato-server\build)
-if exist %curdir%\zato-sso\build       (rmdir /s /q %curdir%\zato-sso\build)
-if exist %curdir%\zato-testing\build   (rmdir /s /q %curdir%\zato-testing\build)
-if exist %curdir%\zato-web-admin\build (rmdir /s /q %curdir%\zato-web-admin\build)
+if exist %workdir%\zato-agent\build     (rmdir /s /q %workdir%\zato-agent\build)
+if exist %workdir%\zato-broker\build    (rmdir /s /q %workdir%\zato-broker\build)
+if exist %workdir%\zato-cli\build       (rmdir /s /q %workdir%\zato-cli\build)
+if exist %workdir%\zato-client\build    (rmdir /s /q %workdir%\zato-client\build)
+if exist %workdir%\zato-common\build    (rmdir /s /q %workdir%\zato-common\build)
+if exist %workdir%\zato-cy\build        (rmdir /s /q %workdir%\zato-cy\build)
+if exist %workdir%\zato-distlock\build  (rmdir /s /q %workdir%\zato-distlock\build)
+if exist %workdir%\zato-hl7\build       (rmdir /s /q %workdir%\zato-hl7\build)
+if exist %workdir%\zato-lib\build       (rmdir /s /q %workdir%\zato-lib\build)
+if exist %workdir%\zato-scheduler\build (rmdir /s /q %workdir%\zato-scheduler\build)
+if exist %workdir%\zato-server\build    (rmdir /s /q %workdir%\zato-server\build)
+if exist %workdir%\zato-sso\build       (rmdir /s /q %workdir%\zato-sso\build)
+if exist %workdir%\zato-testing\build   (rmdir /s /q %workdir%\zato-testing\build)
+if exist %workdir%\zato-web-admin\build (rmdir /s /q %workdir%\zato-web-admin\build)
 
-del /s /q %curdir%\*.pyc
-del /s /q %curdir%\*.pyd
+del /s /q %workdir%\*.pyc
+del /s /q %workdir%\*.pyd
 
-del /s /q %curdir%\zato-cy\*.c
-del /s /q %curdir%\zato-cy\*.html
+del /s /q %workdir%\zato-cy\*.c
+del /s /q %workdir%\zato-cy\*.html
 
 for /d /r %%i in (*.egg-info*)    do @rmdir /s /q "%%i"
 for /d /r %%i in (*__pycache__*)  do @rmdir /s /q "%%i"

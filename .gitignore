@@ -4,6 +4,9 @@ code/.installed.cfg
 code/\.vscode/
 code/bin/*
 code/build/*
+code/bundle-ext/python-windows/python-*/Include/
+code/bundle-ext/python-windows/python-*/Lib/
+code/bundle-ext/python-windows/python-*/Scripts/
 code/develop-eggs/*
 code/docs/*
 code/downloads/*
@@ -52,6 +55,7 @@ pidfile
 *.geany*
 *.pyc
 *.pyd
+!code/bundle-ext/*.pyd
 *.pyo
 *.so
 *.swp
