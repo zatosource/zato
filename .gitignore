@@ -15,6 +15,7 @@ code/get-pip.py
 code/include/*
 code/lib/*
 code/lib64
+code/LICENSE.txt
 code/local/*
 code/man/*
 code/mx/*
