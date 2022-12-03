@@ -16,8 +16,12 @@ from logging import captureWarnings, getLogger
 from traceback import format_exc
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
-import cloghandler
-cloghandler = cloghandler # For pyflakes
+try:
+    import cloghandler # type: ignore
+except ImportError:
+    pass
+else:
+    cloghandler = cloghandler # For pyflakes
 
 # Python 2/3 compatibility
 from zato.common.ext.future.utils import iteritems
