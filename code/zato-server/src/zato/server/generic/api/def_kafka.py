@@ -1,39 +1,30 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from logging import getLogger
 from traceback import format_exc
 
 # PyKafka
-try:
-    from pykafka import KafkaClient, SslConfig
-except ImportError:
-    pass
+from pykafka import KafkaClient, SslConfig
 
 # Zato
 from zato.server.connection.wrapper import Wrapper
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
-
-    # PyKafka
+if 0:
     from pykafka.broker import Broker
-
-    # For pyflakes
+    from zato.common.typing_ import any_
     Broker = Broker
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
@@ -44,15 +35,12 @@ logger = getLogger(__name__)
 class DefKafkaWrapper(Wrapper):
     """ Wraps a Kafka connection client.
     """
+    _impl: 'KafkaClient'
     wrapper_type = 'Kafka definition'
-
-    def __init__(self, *args, **kwargs):
-        super(DefKafkaWrapper, self).__init__(*args, **kwargs)
-        self._impl = None  # type: KafkaClient
 
 # ################################################################################################################################
 
-    def _init_client(self):
+    def _init_client(self) -> 'None':
 
         with self.update_lock:
 
@@ -106,15 +94,16 @@ class DefKafkaWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def _init_impl(self):
+    def _init_impl(self) -> 'None':
         try:
             self._init_client()
         except Exception:
             logger.warning('Could not build `%s` client to `%s`; e:`%s`', self.wrapper_type, self.config.name, format_exc())
             raise
+
 # ################################################################################################################################
 
-    def _delete(self):
+    def _delete(self) -> 'None':
         for elem in self._impl.brokers.values(): # type: Broker
             try:
                 elem._connection.disconnect()
@@ -123,7 +112,7 @@ class DefKafkaWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def _ping(self):
+    def _ping(self) -> 'None':
         self._impl.cluster.fetch_api_versions()
 
 # ################################################################################################################################
