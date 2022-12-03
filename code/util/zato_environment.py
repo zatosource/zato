@@ -48,7 +48,7 @@ pip_deps = pip_deps_windows if is_windows else pip_deps_non_windows
 # ################################################################################################################################
 # ################################################################################################################################
 
-zato_command_template = """
+zato_command_template_linux = """
 #!{bin_dir}/python
 
 # To prevent an attribute error in pyreadline\py3k_compat.py
@@ -74,6 +74,10 @@ if __name__ == '__main__':
 
     sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
     sys.exit(main())
+""".strip() # noqa: W605
+
+zato_command_template_windows = """
+#!{bin_dir}\\python.exe
 """.strip() # noqa: W605
 
 # ################################################################################################################################
@@ -245,8 +249,7 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def _create_symlink(self, from_, to) -> 'None':
-        # type: (str, str) -> None
+    def _create_symlink(self, from_:'str', to:'str') -> 'None':
 
         try:
             os.symlink(from_, to)
@@ -509,11 +512,11 @@ class EnvironmentManager:
 # ################################################################################################################################
 
     def pip_install(self) -> 'None':
-        # self.pip_install_core_pip()
-        # self.pip_install_standalone_requirements()
-        # self.pip_install_zato_requirements()
+        self.pip_install_core_pip()
+        self.pip_install_standalone_requirements()
+        self.pip_install_zato_requirements()
         self.pip_install_zato_packages()
-        # self.pip_uninstall()
+        self.pip_uninstall()
 
 # ################################################################################################################################
 
@@ -586,7 +589,8 @@ class EnvironmentManager:
     def add_py_command(self) -> 'None':
 
         # This is where will will save it
-        py_command_path = os.path.join(self.bin_dir, 'py')
+        command_name = 'py.bat' if is_windows else 'py'
+        py_command_path = os.path.join(self.bin_dir, command_name)
 
         # There will be two versions, one for Windows and one for other systems
 
@@ -615,13 +619,20 @@ class EnvironmentManager:
     def add_zato_command(self) -> 'None':
 
         # Differentiate between Windows and other systems as the extension is needed under the former
-        command_name = 'zato.py' if is_windows else 'zato'
+        command_name = 'zato.bat' if is_windows else 'zato'
+
+        if is_windows:
+            template     = zato_command_template_windows
+            command_name = 'zato.bat'
+        else:
+            template     = zato_command_template_linux
+            command_name = 'zato'
 
         # This is where the command file will be created
         command_path = os.path.join(self.bin_dir, command_name)
 
         # Build the full contents of the command file ..
-        data = zato_command_template.format(**{
+        data = template.format(**{
             'base_dir': self.base_dir,
             'bin_dir': self.bin_dir
         })
