@@ -14,6 +14,7 @@ from traceback import format_exc
 from pykafka import KafkaClient, SslConfig
 
 # Zato
+from zato.common.typing_ import cast_
 from zato.server.connection.wrapper import Wrapper
 
 # ################################################################################################################################
@@ -93,6 +94,11 @@ class DefKafkaWrapper(Wrapper):
 
 # ################################################################################################################################
 
+    def get(self) -> 'KafkaClient':
+        return self._impl
+
+# ################################################################################################################################
+
     def _init_impl(self) -> 'None':
         try:
             self._init_client()
@@ -103,7 +109,8 @@ class DefKafkaWrapper(Wrapper):
 # ################################################################################################################################
 
     def _delete(self) -> 'None':
-        for elem in self._impl.brokers.values(): # type: Broker
+        for elem in self._impl.brokers.values():
+            elem = cast_('Broker', elem)
             try:
                 elem._connection.disconnect()
             except Exception:
