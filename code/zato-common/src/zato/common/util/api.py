@@ -1128,6 +1128,7 @@ def get_kvdb_config_for_log(config):
 # ################################################################################################################################
 
 def validate_tls_from_payload(payload, is_key=False):
+
     with NamedTemporaryFile(prefix='zato-tls-') as tf:
         payload = payload.encode('utf8') if isinstance(payload, unicode) else payload
         tf.write(payload)

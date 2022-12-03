@@ -12,7 +12,6 @@ click==1.1
 codegen==1.0
 configparser==3.7.1
 convertdate==2.0.3.1
-confluent-kafka==1.9.2
 coverage==3.7.1
 crontab==0.22.9
 cryptography==37.0.4
@@ -57,7 +56,7 @@ ipaddress==1.0.16
 iso8601==0.1.10
 jsonpatch==1.23
 jsonpointer==2.0
-jsonschema==4.17.3
+jsonschema==4.17.0
 keyring==23.0.0
 kombu==5.0.2
 ldap3==2.8.1
@@ -91,7 +90,6 @@ pyflakes==2.2.0
 pyftpdlib==1.5.6
 pygments==2.10.0
 PyJWT==2.0.1
-pykafka==2.8.0
 pymongo==4.2.0
 PyMySQL==1.0.2
 pyotp==2.6.0
@@ -129,7 +127,6 @@ suds==1.0.0
 stevedore==3.5.0
 texttable==1.6.1
 twilio==7.15.3
-typing==3.5.3.0
 typing-extensions==4.0.1
 typing-utils==0.1.0
 tzlocal==4.0
