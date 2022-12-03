@@ -1,5 +1,10 @@
 
 rem
+rem The embedded Python version
+rem
+set python_version=3.10.8
+
+rem
 rem Local aliases
 rem
 set curdir=%~dp0
@@ -66,6 +71,10 @@ del /s /q %workdir%\zato-web-admin\*.pyd
 
 del /s /q %workdir%\zato-cy\*.c
 del /s /q %workdir%\zato-cy\*.html
+
+if exist %workdir%\bundle-ext\python-windows\python-%python_version%\Include\ (rmdir /s /q %workdir%\bundle-ext\python-windows\python-%python_version%\Include\)
+if exist %workdir%\bundle-ext\python-windows\python-%python_version%\Lib\ (rmdir /s /q %workdir%\bundle-ext\python-windows\python-%python_version%\Lib\)
+if exist %workdir%\bundle-ext\python-windows\python-%python_version%\Scripts\ (rmdir /s /q %workdir%\bundle-ext\python-windows\python-%python_version%\Scripts\)
 
 for /d /r %%i in (*.egg-info*)    do @rmdir /s /q "%%i"
 for /d /r %%i in (*__pycache__*)  do @rmdir /s /q "%%i"
