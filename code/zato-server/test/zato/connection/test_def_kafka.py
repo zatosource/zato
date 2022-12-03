@@ -29,6 +29,7 @@ from zato.server.generic.api.def_kafka import DefKafkaWrapper
 if 0:
     from bunch import Bunch
     from pykafka import KafkaClient
+    KafkaClient = KafkaClient
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,17 +99,17 @@ class DefKafkaTestCase(TestCase):
 
         topic = client.topics['my.test']
 
-        '''
+        """
         with topic.get_sync_producer() as producer:
             for x in range(40000):
                 msg = f'Test message #{x}'
                 msg = msg.encode('utf8')
                 producer.produce(msg)
-        '''
+        """
 
         consumer = topic.get_simple_consumer()
         print(111, consumer)
-        #for message in consumer:
+        # for message in consumer:
         #    print(111, message.offset, message.value)
 
 # ################################################################################################################################
