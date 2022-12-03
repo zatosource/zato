@@ -1384,7 +1384,7 @@ class MONGODB:
 class Kafka:
 
     class Default:
-        Broker_Version = '0.9.0'
+        Broker_Version = '3.3'
         Server_List    = '127.0.0.1:2181'
         Username = 'admin'
 
