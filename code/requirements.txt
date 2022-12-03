@@ -91,6 +91,7 @@ pyflakes==2.2.0
 pyftpdlib==1.5.6
 pygments==2.10.0
 PyJWT==2.0.1
+pykafka==2.8.0
 pymongo==4.2.0
 PyMySQL==1.0.2
 pyotp==2.6.0
