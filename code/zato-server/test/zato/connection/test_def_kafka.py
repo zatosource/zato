@@ -6,7 +6,12 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Must come first
+from gevent.monkey import patch_all
+_ = patch_all()
+
 # stdlib
+import logging
 import os
 from unittest import main, TestCase
 
@@ -14,93 +19,97 @@ from unittest import main, TestCase
 from bunch import bunchify
 
 # Zato
-from zato.server.generic.api.outconn_ldap import LDAPClient
+from zato.common import Kafka
+from zato.common.typing_ import cast_
+from zato.server.generic.api.def_kafka import DefKafkaWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from bunch import Bunch
+    from pykafka import KafkaClient
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+logging.basicConfig(level=logging.INFO, format=log_format)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+default = Kafka.Default
+timeout = default.Timeout
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ModuleCtx:
-    Env_Key_Should_Test = 'Zato_Test_LDAP'
+    Env_Key_Should_Test = 'Zato_Test_Kafka'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class OutconnLDAPTestCase(TestCase):
+class DefKafkaTestCase(TestCase):
 
     def get_config(self, conn_name:'str') -> 'Bunch':
 
         config = bunchify({
             'name': conn_name,
             'is_active': True,
-            'server_list': ['localhost:1389'],
-            'username': 'cn=admin,dc=example,dc=org',
-            'secret': 'adminpassword',
+            'username': 'kafka_user',
+            'secret': 'kafka_password',
+            'server_list': default.Server_List,
+            'should_use_zookeeper': True,
+            'socket_timeout': timeout.Socket,
+            'offset_timeout': timeout.Offsets,
+            'should_exclude_internal_topics': True,
+            'source_address': None,
+            'broker_version': default.Broker_Version,
             'is_tls_enabled': False,
-            'get_info': None,
-            'connect_timeout': 5,
-            'ip_mode': 'IP_SYSTEM_DEFAULT',
-            'tls': None,
-            'sasl_mechanism': None,
-            'pool_name': None,
-            'pool_ha_strategy': 'ROUND_ROBIN',
-            'pool_max_cycles': None,
-            'pool_exhaust_timeout': None,
-            'auto_bind': None,
-            'use_auto_range': None,
-            'should_check_names': None,
-            'is_stats_enabled': None,
-            'is_read_only': None,
-            'pool_lifetime': None,
-            'should_return_empty_attrs': None,
-            'pool_keep_alive': None,
         })
 
         return config
 
 # ################################################################################################################################
 
-    def test_ping(self):
+    def xtest_ping(self):
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
 
-        conn_name = 'OutconnLDAPTestCase.test_ping'
+        conn_name = 'DefKafkaTestCase.test_ping'
         config = self.get_config(conn_name)
 
-        client = LDAPClient(config)
-        client.ping()
+        wrapper = DefKafkaWrapper(config)
+        wrapper.ping()
 
 # ################################################################################################################################
 
-    def test_query(self):
+    def test_publish(self):
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
 
-        conn_name = 'OutconnLDAPTestCase.test_ping'
+        conn_name = 'DefKafkaTestCase.test_publish'
         config = self.get_config(conn_name)
-        client = LDAPClient(config)
 
-        # Where in the directory we expect to find the user
-        search_base = 'dc=example, dc=org'
+        wrapper = DefKafkaWrapper(config)
+        client = cast_('KafkaClient', wrapper.client)
 
-        # Look up users up by either username or email
-        # search_filter = '(uid=*)'
-        search_filter = '(&(|(uid={user_info})(mail={user_info})))'
-        user_filter = search_filter.format(user_info='user01')
+        topic = client.topics['my.test']
 
-        # We are looking up these attributes
-        query_attributes = ['uid', 'givenName', 'sn', 'mail']
+        '''
+        with topic.get_sync_producer() as producer:
+            for x in range(40000):
+                msg = f'Test message #{x}'
+                msg = msg.encode('utf8')
+                producer.produce(msg)
+        '''
 
-        with client.get() as conn:
-
-            has_result = conn.search(search_base, user_filter, attributes=query_attributes)
-            if not has_result:
-                self.fail('Expected for results to be available')
+        consumer = topic.get_simple_consumer()
+        print(111, consumer)
+        #for message in consumer:
+        #    print(111, message.offset, message.value)
 
 # ################################################################################################################################
 # ################################################################################################################################
