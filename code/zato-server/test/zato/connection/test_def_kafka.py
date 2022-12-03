@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import os
 from unittest import main, TestCase
 
@@ -15,6 +16,7 @@ from bunch import bunchify
 
 # Zato
 from zato.common import Kafka
+from zato.common.typing_ import cast_
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
 
 # ################################################################################################################################
@@ -22,6 +24,13 @@ from zato.server.generic.api.def_kafka import DefKafkaWrapper
 
 if 0:
     from bunch import Bunch
+    from pykafka import KafkaClient
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+logging.basicConfig(level=logging.INFO, format=log_format)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,7 +54,8 @@ class DefKafkaTestCase(TestCase):
         config = bunchify({
             'name': conn_name,
             'is_active': True,
-            'username': 'user',
+            'username': 'kafka_user',
+            'secret': 'kafka_password',
             'server_list': default.Server_List,
             'should_use_zookeeper': True,
             'socket_timeout': timeout.Socket,
@@ -60,15 +70,15 @@ class DefKafkaTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_ping(self):
+    def xtest_ping(self):
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
 
         conn_name = 'DefKafkaTestCase.test_ping'
         config = self.get_config(conn_name)
 
-        client = DefKafkaWrapper(config)
-        client.ping()
+        wrapper = DefKafkaWrapper(config)
+        wrapper.ping()
 
 # ################################################################################################################################
 
@@ -76,9 +86,19 @@ class DefKafkaTestCase(TestCase):
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
 
-        # conn_name = 'DefKafkaTestCase.test_publish'
-        # config = self.get_config(conn_name)
-        # client = DefKafkaWrapper(config)
+        conn_name = 'DefKafkaTestCase.test_publish'
+        config = self.get_config(conn_name)
+
+        wrapper = DefKafkaWrapper(config)
+        client = cast_('KafkaClient', wrapper.client)
+
+        topic = client.topics['my.test']
+
+        with topic.get_sync_producer() as producer:
+            for x in range(4):
+                msg = f'Test message #{x}'
+                msg = msg.encode('utf8')
+                producer.produce(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
