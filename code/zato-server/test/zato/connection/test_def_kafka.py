@@ -6,6 +6,10 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Must come first
+from gevent.monkey import patch_all
+_ = patch_all()
+
 # stdlib
 import logging
 import os
@@ -94,11 +98,18 @@ class DefKafkaTestCase(TestCase):
 
         topic = client.topics['my.test']
 
+        '''
         with topic.get_sync_producer() as producer:
-            for x in range(4):
+            for x in range(40000):
                 msg = f'Test message #{x}'
                 msg = msg.encode('utf8')
                 producer.produce(msg)
+        '''
+
+        consumer = topic.get_simple_consumer()
+        print(111, consumer)
+        #for message in consumer:
+        #    print(111, message.offset, message.value)
 
 # ################################################################################################################################
 # ################################################################################################################################
