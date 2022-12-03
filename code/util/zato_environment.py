@@ -215,6 +215,9 @@ class EnvironmentManager:
             self.python_command = os.path.join(self.bin_dir, 'python')
             self.code_dir = self.base_dir
 
+            # This is not used under Linux
+            self.pip_install_prefix = ''
+
 # ################################################################################################################################
 
     def get_bundled_python_version(self, bundle_ext_dir:'str', os_type:'str') -> 'str':
