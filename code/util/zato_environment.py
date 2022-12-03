@@ -92,6 +92,8 @@ class EnvironmentManager:
         self.python_command = 'invalid-python_command'
         self.pip_command = 'invalid-pip_command'
         self.bundled_python_dir = 'invalid-bundled_python_dir'
+        self.zato_reqs_path = 'invalid-zato_reqs_path'
+        self.code_dir = 'invalid-code_dir'
 
         self._set_up_pip_flags()
         self._set_up_dir_and_attr_names()
@@ -157,13 +159,23 @@ class EnvironmentManager:
         logger.info('Python version maj.min -> %s', py_version)
         logger.info('Python self.base_dir -> %s', self.base_dir)
 
+        self.bundle_ext_dir = os.path.join(self.base_dir, '..')
+        self.bundle_ext_dir = os.path.abspath(self.bundle_ext_dir)
+        logger.info('Bundle ext. dir -> %s', self.bundle_ext_dir)
+
+        # This will exist only under Windows
+        if is_windows:
+
+            # Dynamically check what our current embedded Python's directory is ..
+            self.bundled_python_dir = self.get_bundled_python_version(self.bundle_ext_dir, 'windows')
+
         # Under Linux, the path to site-packages contains the Python version but it does not under Windows.
         # E.g. ~/src-zato/lib/python3.8/site-packages vs. C:\src-zato\lib\site-packages
         if is_linux:
             python_version_dir = 'python' + py_version
             py_lib_dir = os.path.join('lib', python_version_dir)
         else:
-            py_lib_dir = os.path.join(self.base_dir, 'windows-python-embedded-3.10.8', 'lib')
+            py_lib_dir = os.path.join(self.bundled_python_dir, 'lib')
 
         py_lib_dir = os.path.abspath(py_lib_dir)
         logger.info('Python lib dir -> %s', py_lib_dir)
@@ -176,17 +188,10 @@ class EnvironmentManager:
         self.eggs_dir = os.path.abspath(self.eggs_dir)
         logger.info('Python eggs dir -> %s', self.eggs_dir)
 
-        self.bundle_ext_dir = os.path.join(self.base_dir, 'bundle-ext')
-        self.bundle_ext_dir = os.path.abspath(self.bundle_ext_dir)
-        logger.info('Bundle ext. dir -> %s', self.bundle_ext_dir)
-
         if is_windows:
 
             # This is always in the same location
             self.pip_pyz_path = os.path.join(self.bundle_ext_dir, 'pip', 'pip.pyz')
-
-            # Dynamically check what our current embedded Python's directory is ..
-            self.bundled_python_dir = self.get_bundled_python_version(self.bundle_ext_dir, 'windows')
 
             # .. and build the full Python command now.
             self.python_command = os.path.join(self.bundled_python_dir, 'python.exe')
@@ -197,11 +202,18 @@ class EnvironmentManager:
             # .. and the install prefix as well.
             self.pip_install_prefix = f'--prefix {self.bundled_python_dir}'
 
+            # Where we keep our own requirements
+            self.zato_reqs_path = os.path.join(self.base_dir, '..', '..', 'requirements.txt')
+
+            # Where the zato-* packages are (the "code" directory)
+            self.code_dir = os.path.join(self.bundle_ext_dir, '..')
+
         else:
 
             # These are always in the same location
             self.pip_command = os.path.join(self.bin_dir, 'pip')
             self.python_command = os.path.join(self.bin_dir, 'python')
+            self.code_dir = self.base_dir
 
 # ################################################################################################################################
 
@@ -399,22 +411,19 @@ class EnvironmentManager:
 
     def pip_install_zato_requirements(self) -> 'None':
 
-        # Always use full paths to resolve any doubts
-        reqs_path = os.path.join(self.base_dir, 'requirements.txt')
-
-        # Install the requirements
-        self.pip_install_requirements_by_path(reqs_path)
+        # Install our own requirements
+        self.pip_install_requirements_by_path(self.zato_reqs_path)
 
 # ################################################################################################################################
 
-    def pip_install_packages(self, packages) -> 'None':
+    def run_pip_install_zato_packages(self, packages) -> 'None':
 
         # All the -e arguments that pip will receive
         pip_args = []
 
         # Build the arguments
         for name in packages:
-            package_path = os.path.join(self.base_dir, name)
+            package_path = os.path.join(self.code_dir, name)
             arg = '-e {}'.format(package_path)
             pip_args.append(arg)
 
@@ -475,7 +484,7 @@ class EnvironmentManager:
             'zato-testing',
         ]
 
-        self.pip_install_packages(packages)
+        self.run_pip_install_zato_packages(packages)
 
 # ################################################################################################################################
 
@@ -497,11 +506,11 @@ class EnvironmentManager:
 # ################################################################################################################################
 
     def pip_install(self) -> 'None':
-        self.pip_install_core_pip()
-        self.pip_install_standalone_requirements()
-        self.pip_install_zato_requirements()
+        # self.pip_install_core_pip()
+        # self.pip_install_standalone_requirements()
+        # self.pip_install_zato_requirements()
         self.pip_install_zato_packages()
-        self.pip_uninstall()
+        # self.pip_uninstall()
 
 # ################################################################################################################################
 
@@ -622,7 +631,7 @@ class EnvironmentManager:
     def copy_patches(self) -> 'None':
 
         # Where our patches can be found
-        patches_dir = os.path.join(self.base_dir, 'patches')
+        patches_dir = os.path.join(self.code_dir, 'patches')
 
         # Where to copy them to
         dest_dir = self.site_packages_dir
