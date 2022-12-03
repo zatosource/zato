@@ -14,7 +14,7 @@ from unittest import main, TestCase
 from bunch import bunchify
 
 # Zato
-from zato.common import KAFKA
+from zato.common import Kafka
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
 
 # ################################################################################################################################
@@ -22,6 +22,12 @@ from zato.server.generic.api.def_kafka import DefKafkaWrapper
 
 if 0:
     from bunch import Bunch
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+default = Kafka.Default
+timeout = default.Timeout
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,13 +46,13 @@ class DefKafkaTestCase(TestCase):
             'name': conn_name,
             'is_active': True,
             'username': 'user',
-            'server_list': KAFKA.DEFAULT.SERVER_LIST,
+            'server_list': default.Server_List,
             'should_use_zookeeper': True,
-            'socket_timeout': KAFKA.DEFAULT.TIMEOUT.SOCKET,
-            'offset_timeout': KAFKA.DEFAULT.TIMEOUT.OFFSETS,
+            'socket_timeout': timeout.Socket,
+            'offset_timeout': timeout.Offsets,
             'should_exclude_internal_topics': True,
             'source_address': None,
-            'broker_version': KAFKA.DEFAULT.BROKER_VERSION,
+            'broker_version': default.Broker_Version,
             'is_tls_enabled': False,
         })
 
