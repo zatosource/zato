@@ -34,8 +34,35 @@ if exist %workdir%\zato-sso\build       (rmdir /s /q %workdir%\zato-sso\build)
 if exist %workdir%\zato-testing\build   (rmdir /s /q %workdir%\zato-testing\build)
 if exist %workdir%\zato-web-admin\build (rmdir /s /q %workdir%\zato-web-admin\build)
 
-del /s /q %workdir%\*.pyc
-del /s /q %workdir%\*.pyd
+del /s /q %workdir%\zato-agent\*.pyc
+del /s /q %workdir%\zato-broker\*.pyc
+del /s /q %workdir%\zato-cli\*.pyc
+del /s /q %workdir%\zato-client\*.pyc
+del /s /q %workdir%\zato-common\*.pyc
+del /s /q %workdir%\zato-cy\*.pyc
+del /s /q %workdir%\zato-distlock\*.pyc
+del /s /q %workdir%\zato-hl7\*.pyc
+del /s /q %workdir%\zato-lib\*.pyc
+del /s /q %workdir%\zato-scheduler\*.pyc
+del /s /q %workdir%\zato-server\*.pyc
+del /s /q %workdir%\zato-sso\*.pyc
+del /s /q %workdir%\zato-testing\*.pyc
+del /s /q %workdir%\zato-web-admin\*.pyc
+
+del /s /q %workdir%\zato-agent\*.pyd
+del /s /q %workdir%\zato-broker\*.pyd
+del /s /q %workdir%\zato-cli\*.pyd
+del /s /q %workdir%\zato-client\*.pyd
+del /s /q %workdir%\zato-common\*.pyd
+del /s /q %workdir%\zato-cy\*.pyd
+del /s /q %workdir%\zato-distlock\*.pyd
+del /s /q %workdir%\zato-hl7\*.pyd
+del /s /q %workdir%\zato-lib\*.pyd
+del /s /q %workdir%\zato-scheduler\*.pyd
+del /s /q %workdir%\zato-server\*.pyd
+del /s /q %workdir%\zato-sso\*.pyd
+del /s /q %workdir%\zato-testing\*.pyd
+del /s /q %workdir%\zato-web-admin\*.pyd
 
 del /s /q %workdir%\zato-cy\*.c
 del /s /q %workdir%\zato-cy\*.html
