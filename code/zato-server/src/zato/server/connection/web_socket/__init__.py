@@ -42,12 +42,6 @@ from gevent import sleep, socket, spawn
 from gevent.lock import RLock
 from gevent.pywsgi import WSGIServer as _Gevent_WSGIServer
 
-# pysimdjson
-try:
-    from simdjson import Parser as SIMDJSONParser
-except ImportError:
-    pass
-
 # ws4py
 from ws4py.exc import HandshakeError
 from ws4py.websocket import WebSocket as _WebSocket
@@ -62,6 +56,7 @@ from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid
 from zato.common.util.hook import HookTool
+from zato.common.util.json_ import JSONParser
 from zato.common.util.python_ import get_python_id
 from zato.common.util.wsx import cleanup_wsx_client, ContextHandler
 from zato.common.vault_ import VAULT
@@ -238,7 +233,7 @@ class WebSocket(_WebSocket):
         self._json_dump_func = self._set_json_dump_func()
 
         # A reusable JSON parser
-        self._json_parser = SIMDJSONParser()
+        self._json_parser = JSONParser()
 
         if config.extra_properties:
             self.extra_properties = stdlib_loads(config.extra_properties) # type: stranydict
