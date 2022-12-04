@@ -13,12 +13,7 @@ import itertools
 from ipaddress import ip_address, ip_network
 
 # netifaces
-try:
-    from netifaces import AF_INET, ifaddresses as net_ifaddresses, interfaces as net_ifaces
-except ImportError:
-    has_netifaces = False
-else:
-    has_netifaces = True
+from netifaces import AF_INET, ifaddresses as net_ifaddresses, interfaces as net_ifaces
 
 # Python 2/3 compatibility
 from builtins import bytes
