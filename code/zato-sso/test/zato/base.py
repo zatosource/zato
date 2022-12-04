@@ -14,7 +14,10 @@ from itertools import count
 # Bunch
 
 # ciso8601
-from ciso8601 import parse_datetime
+try:
+    from zato.common.util.api import parse_datetime
+except ImportError:
+    from dateutil.parser import parse as parse_datetime
 
 # sh
 import sh

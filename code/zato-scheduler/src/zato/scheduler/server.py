@@ -19,7 +19,10 @@ from bunch import Bunch
 from gevent.pywsgi import WSGIServer
 
 # simdjson
-from simdjson import loads
+try:
+    from simdjson import loads # type: ignore
+except ImportError:
+    from json import loads
 
 # Zato
 from zato.broker.client import BrokerClient
