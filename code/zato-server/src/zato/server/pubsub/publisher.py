@@ -17,8 +17,7 @@ from traceback import format_exc
 try:
     from ciso8601 import parse_datetime_as_naive
 except ImportError:
-    from dateparser.parser import parse as parse_datetime_as_naive
-    pass
+    from dateparser.parser import parse as parse_datetime_as_naive # type: ignore
 
 # gevent
 from gevent import spawn

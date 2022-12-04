@@ -48,7 +48,7 @@ pip_deps = pip_deps_windows if is_windows else pip_deps_non_windows
 # ################################################################################################################################
 # ################################################################################################################################
 
-zato_command_template_linux = """
+zato_command_template_linux = r"""
 #!{bin_dir}/python
 
 # To prevent an attribute error in pyreadline\py3k_compat.py
@@ -221,6 +221,7 @@ class EnvironmentManager:
             self.pip_command = os.path.join(self.bin_dir, 'pip')
             self.python_command = os.path.join(self.bin_dir, 'python')
             self.code_dir = self.base_dir
+            self.zato_reqs_path = os.path.join(self.base_dir, 'requirements.txt')
 
             # This is not used under Linux
             self.pip_install_prefix = ''
@@ -267,7 +268,7 @@ class EnvironmentManager:
     def _create_executable(self, path:'str', data:'str') -> 'None':
 
         f = open(path, 'w')
-        f.write(data)
+        _ = f.write(data)
         f.close()
 
         logger.info('Created file `%s`', path)
@@ -388,11 +389,11 @@ class EnvironmentManager:
         })
 
         # .. and run it.
-        self.run_command(command, exit_on_error=False)
+        _ = self.run_command(command, exit_on_error=True)
 
 # ################################################################################################################################
 
-    def pip_install_requirements_by_path(self, reqs_path:'str') -> 'None':
+    def pip_install_requirements_by_path(self, reqs_path:'str', exit_on_error:'bool'=False) -> 'None':
 
         if not os.path.exists(reqs_path):
             logger.info('Skipped user-defined requirements.txt. No such path `%s`.', reqs_path)
@@ -414,18 +415,18 @@ class EnvironmentManager:
             })
 
         # .. and run it.
-        self.run_command(command, exit_on_error=False)
+        _ = self.run_command(command, exit_on_error=exit_on_error)
 
 # ################################################################################################################################
 
     def pip_install_zato_requirements(self) -> 'None':
 
         # Install our own requirements
-        self.pip_install_requirements_by_path(self.zato_reqs_path)
+        self.pip_install_requirements_by_path(self.zato_reqs_path, exit_on_error=False)
 
 # ################################################################################################################################
 
-    def run_pip_install_zato_packages(self, packages) -> 'None':
+    def run_pip_install_zato_packages(self, packages:'strlist') -> 'None':
 
         # All the -e arguments that pip will receive
         pip_args = []
@@ -444,7 +445,7 @@ class EnvironmentManager:
         })
 
         # .. and run it.
-        self.run_command(command, exit_on_error=False)
+        _ = self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
 
@@ -468,7 +469,7 @@ class EnvironmentManager:
             })
 
             # .. and run it.
-            self.run_command(command, exit_on_error=False)
+            _ = self.run_command(command, exit_on_error=True)
 
 # ################################################################################################################################
 
@@ -510,7 +511,7 @@ class EnvironmentManager:
         command = '{} uninstall -y -qq {}'.format(self.pip_command, ' '.join(packages))
 
         # .. and run it.
-        self.run_command(command, exit_on_error=False)
+        _ = self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
 
@@ -560,8 +561,8 @@ class EnvironmentManager:
 
         # .. add the path to easy_install ..
         f = open(easy_install_path, 'a')
-        f.write(extlib_dir.as_posix())
-        f.write(os.linesep)
+        _ = f.write(extlib_dir.as_posix())
+        _ = f.write(os.linesep)
         f.close()
 
 # ################################################################################################################################
@@ -661,7 +662,7 @@ class EnvironmentManager:
         logger.info('Copying patches from %s -> %s', patches_dir, dest_dir)
 
         # Recursively copy all the patches, overwriting any files found
-        copy_tree(patches_dir, dest_dir, preserve_symlinks=True, verbose=1)
+        _ = copy_tree(patches_dir, dest_dir, preserve_symlinks=True, verbose=1)
 
         logger.info('Copied patches from %s -> %s', patches_dir, dest_dir)
 
