@@ -88,7 +88,14 @@ def main():
     call_command('loaddata', os.path.join(repo_dir, 'initial-data.json'))
 
     RepoManager(repo_dir).ensure_repo_consistency()
-    execute_from_command_line(['zato-web-admin', 'runserver', '--noreload', '--nothreading', '{host}:{port}'.format(**config)])
+    execute_from_command_line([
+        'zato-web-admin',
+        'runserver',
+        '--noreload',
+        '--nothreading',
+        '--skip-checks',
+        '{host}:{port}'.format(**config)
+    ])
 
 if __name__ == '__main__':
     main()
