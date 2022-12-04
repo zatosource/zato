@@ -17,7 +17,10 @@ from gevent.lock import RLock
 from orjson import dumps as json_dumps
 
 # simdjson
-from simdjson import loads as json_loads
+try:
+    from simdjson import loads # type: ignore
+except ImportError:
+    from json import loads
 
 # Zato
 from zato.common.api import ZatoKVDB

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -36,7 +36,7 @@ from logging.config import dictConfig
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 try:
-    import cloghandler
+    import cloghandler # type: ignore
 except ImportError:
     pass
 else:
@@ -45,7 +45,7 @@ else:
 # Update logging.Logger._log to make it a bit faster
 from zato.common.microopt import logging_Logger_log
 from logging import Logger
-Logger._log = logging_Logger_log
+Logger._log = logging_Logger_log # type: ignore
 
 # YAML
 import yaml
@@ -256,7 +256,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     # Go ahead only if we actually have anything to greenify
     if to_greenify:
-        import greenify
+        import greenify # type: ignore
         greenify.greenify()
         for name in to_greenify:
             result = greenify.patch_lib(name)
@@ -290,9 +290,9 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         'base_dir': base_dir,
     })
 
-    # New in 2.0 - Start monitoring as soon as possible
+    # Start monitoring as soon as possible
     if server_config.get('newrelic', {}).get('config'):
-        import newrelic.agent
+        import newrelic.agent # type: ignore
         newrelic.agent.initialize(
             server_config.newrelic.config, server_config.newrelic.environment or None, server_config.newrelic.ignore_errors or None,
             server_config.newrelic.log_file or None, server_config.newrelic.log_level or None)
@@ -370,23 +370,19 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.env_manager = env_manager
     server.jwt_secret = server.fs_server_config.misc.jwt_secret.encode('utf8')
     server.startup_callable_tool = startup_callable_tool
-    server.stop_after = stop_after
+    server.stop_after = stop_after # type: ignore
     server.is_sso_enabled = server.fs_server_config.component_enabled.sso
     if server.is_sso_enabled:
         server.sso_api = SSOAPI(server, sso_config, None, crypto_manager.encrypt, server.decrypt,
             crypto_manager.hash_secret, crypto_manager.verify_hash, new_user_id)
 
-    # New in 2.0.8
     server.return_tracebacks = asbool(server_config.misc.get('return_tracebacks', True))
     server.default_error_message = server_config.misc.get('default_error_message', 'An error has occurred')
 
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
 
-    # New in 2.0 so it's optional.
     profiler_enabled = server_config.get('profiler', {}).get('enabled', False)
-
-    # New in 2.0 so it's optional.
     sentry_config = server_config.get('sentry') or {}
 
     dsn = sentry_config.pop('dsn', None)
@@ -424,7 +420,6 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
             path = server_config.profiler.url_path,
             unwind = server_config.profiler.unwind)
 
-    # New in 2.0 - set environmet variables for servers to inherit
     os_environ = server_config.get('os_environ', {})
     for key, value in os_environ.items():
         os.environ[key] = value
@@ -444,7 +439,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         from tempfile import mkdtemp
 
         # memray
-        import memray
+        import memray # type: ignore
 
         # Create an empty directory to store the output in ..
         dir_name = mkdtemp(prefix='zato-memory-profiler-')

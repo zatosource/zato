@@ -48,6 +48,16 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch, bunchify
 
+# ciso8601
+try:
+    from ciso8601 import parse_datetime # type: ignore
+except ImportError:
+    from dateutil.parser import parse as parse_datetime
+
+# This is a forward declaration added for the benefit of other callers
+parse_datetime = parse_datetime
+
+# datetutil
 from dateutil.parser import parse as dt_parse
 
 # gevent
