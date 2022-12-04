@@ -16,16 +16,11 @@ from gevent.lock import RLock
 # orjson
 from orjson import dumps as json_dumps
 
-# simdjson
-try:
-    from simdjson import loads # type: ignore
-except ImportError:
-    from json import loads
-
 # Zato
 from zato.common.api import ZatoKVDB
 from zato.common.in_ram import InRAMStore
 from zato.common.ext.dataclasses import dataclass
+from zato.common.util.json_ import json_loads
 
 # ################################################################################################################################
 # ################################################################################################################################
