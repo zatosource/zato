@@ -45,7 +45,6 @@ class Create(ZatoCommand):
 
     def execute(self, args, show_output=True):
 
-
         # Alembic
         try:
             from alembic.migration import MigrationContext
