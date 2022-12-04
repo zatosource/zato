@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 try:
-    import cloghandler
+    import cloghandler # type: ignore
 except ImportError:
     pass
 else:
