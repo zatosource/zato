@@ -62,7 +62,7 @@ from zato.common.simpleio_ import get_sio_server_config
 from zato.common.util.api import absjoin, asbool, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.env import populate_environment_from_file
-from zato.common.util.platform_ import is_linux
+from zato.common.util.platform_ import is_linux, is_windows
 from zato.common.util.open_ import open_r
 from zato.server.base.parallel import ParallelServer
 from zato.server.ext import zunicorn
@@ -149,6 +149,45 @@ class ZatoGunicornApplication(Application):
 
 # ################################################################################################################################
 
+def get_bin_dir() -> 'str':
+
+    # This is where the py or python.exe command is
+    bin_dir = os.path.dirname(sys.executable)
+
+    return bin_dir
+
+# ################################################################################################################################
+
+def get_code_dir(bin_dir:'str') -> 'str':
+
+    # Now, built the path up to the code_dir, which is is the directory with our code, not the directory where the server is.
+    if is_linux:
+        levels = ['..']
+    else:
+        levels = ['..', '..', '..']
+
+    code_dir = os.path.join(bin_dir, *levels)
+    code_dir = os.path.abspath(code_dir)
+
+    return code_dir
+
+# ################################################################################################################################
+
+def get_util_dir(code_dir:'str') -> 'str':
+    util_dir = os.path.join(code_dir, 'util')
+    return util_dir
+
+# ################################################################################################################################
+
+def get_env_manager_base_dir(code_dir:'str') -> 'str':
+    if is_windows:
+        base_dir = os.path.join(code_dir, 'bundle-ext', 'python-windows')
+        return base_dir
+    else:
+        return code_dir
+
+# ################################################################################################################################
+
 def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None) -> 'ParallelServer | None':
 
     # Zato
@@ -179,27 +218,24 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     # need to add its path here explicitly.
     #
 
-    # This is where the 'py' command is ..
-    bin_dir = os.path.dirname(sys.executable)
-
-    # .. this is the directory with our code, not the directory where the server is ..
-    py_base_dir = os.path.join(bin_dir, '..')
-
-    # .. the relative path from the base bin directory to the one with zato_environment.py
-    env_mod_relative_path = [py_base_dir, 'util']
-
-    # .. build the absolute path to it ..
-    env_mod_dir_path = os.path.join(bin_dir, *env_mod_relative_path)
-    env_mod_dir_path = os.path.abspath(env_mod_dir_path)
+    bin_dir  = get_bin_dir()
+    code_dir = get_code_dir(bin_dir)
+    util_dir = get_util_dir(code_dir)
+    env_manager_base_dir = get_env_manager_base_dir(code_dir)
 
     # .. make it importable ..
-    sys.path.insert(0, env_mod_dir_path)
+    sys.path.insert(0, util_dir)
 
     # .. now, we can import the environment manager class ..
     from zato_environment import EnvironmentManager # type: ignore
 
+    print()
+    print(111, code_dir)
+    print(222, bin_dir)
+    print()
+
     # .. build the object that we now have access to ..
-    env_manager = EnvironmentManager(py_base_dir, bin_dir) # type: any_
+    env_manager = EnvironmentManager(env_manager_base_dir, bin_dir) # type: any_
 
     # .. and run the initial runtime setup, based on environment variables.
     env_manager.runtime_setup_with_env_variables()
