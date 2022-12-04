@@ -13,7 +13,10 @@ from logging import getLogger
 from requests import get as requests_get
 
 # simdjson
-from simdjson import loads
+try:
+    from simdjson import loads # type: ignore
+except ImportError:
+    from json import loads
 
 # Zato
 from zato.client import AnyServiceInvoker

@@ -15,9 +15,9 @@ from traceback import format_exc
 
 # ciso8601
 try:
-    from ciso8601 import parse_datetime
+    from zato.common.util.api import parse_datetime
 except ImportError:
-    pass
+    from dateutil.parser import parse as parse_datetime
 
 # Zato
 from zato.common.json_ import dumps

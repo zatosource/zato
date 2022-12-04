@@ -19,7 +19,10 @@ from gevent.lock import RLock
 from orjson import dumps
 
 # simdjson
-from simdjson import loads
+try:
+    from simdjson import loads # type: ignore
+except ImportError:
+    from json import loads
 
 # Zato
 from zato.common.events.common import Action
