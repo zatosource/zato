@@ -229,11 +229,6 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     # .. now, we can import the environment manager class ..
     from zato_environment import EnvironmentManager # type: ignore
 
-    print()
-    print(111, code_dir)
-    print(222, bin_dir)
-    print()
-
     # .. build the object that we now have access to ..
     env_manager = EnvironmentManager(env_manager_base_dir, bin_dir) # type: any_
 
