@@ -57,7 +57,7 @@ pidfile
 *.geany*
 *.pyc
 *.pyd
-!code/bundle-ext/*.pyd
+!code/bundle-ext/**/*.pyd
 *.pyo
 *.so
 *.swp
