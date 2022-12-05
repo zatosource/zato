@@ -9,9 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 
-# Zato
-from zato.common.typing_ import cast_
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -23,9 +20,10 @@ logger = getLogger(__name__)
 def start_cleanup(path:'str') -> 'None':
 
     # sh
-    from sh import ErrorReturnCode
+    from sh import ErrorReturnCode # type: ignore
 
     # Zato
+    from zato.common.typing_ import cast_
     from zato.common.util.cli import CommandLineInvoker
 
     # Build the base invoker object
@@ -69,11 +67,17 @@ if __name__ == '__main__':
     # stdlib
     import os
 
-    # Look up the path through an environment variable ..
-    path = os.environ['ZATO_SCHEDULER_BASE_DIR']
+    # Zato
+    from zato.common.util.platform_ import is_windows
 
-    # .. and run the cleanup job.
-    start_cleanup(path)
+    # We do not run on Windows
+    if not is_windows:
+
+        # Look up the path through an environment variable ..
+        path = os.environ['ZATO_SCHEDULER_BASE_DIR']
+
+        # .. and run the cleanup job.
+        start_cleanup(path)
 
 # ################################################################################################################################
 # ################################################################################################################################
