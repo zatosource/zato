@@ -11,7 +11,12 @@ from logging import getLogger
 from traceback import format_exc
 
 # PyKafka
-from pykafka import KafkaClient, SslConfig
+try:
+    from pykafka import KafkaClient, SslConfig # type: ignore
+except ImportError:
+    has_kafka = False
+else:
+    has_kafka = True
 
 # Zato
 from zato.common.typing_ import cast_
@@ -21,7 +26,7 @@ from zato.server.connection.wrapper import Wrapper
 # ################################################################################################################################
 
 if 0:
-    from pykafka.broker import Broker
+    from pykafka.broker import Broker # type: ignore
     Broker = Broker
 
 # ################################################################################################################################
@@ -100,6 +105,8 @@ class DefKafkaWrapper(Wrapper):
 # ################################################################################################################################
 
     def _init_impl(self) -> 'None':
+        if not has_kafka:
+            return
         try:
             self._init_client()
         except Exception:

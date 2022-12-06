@@ -12,7 +12,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from unittest import main
 
 # ciso8601
-from ciso8601 import parse_datetime
+try:
+    from zato.common.util.api import parse_datetime
+except ImportError:
+    from dateutil.parser import parse as parse_datetime
 
 # Zato
 from base import BaseTest

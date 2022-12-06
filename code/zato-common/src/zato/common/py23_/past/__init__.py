@@ -120,7 +120,5 @@ Copyright 2013-2019 Python Charmers Pty Ltd, Australia.
 The software is distributed under an MIT licence. See LICENSE.txt.
 """
 
-from future import __version__, __copyright__, __license__
-
 __title__ = 'past'
 __author__ = 'Ed Schofield'

@@ -25,7 +25,7 @@ from zato.common.odb.query.rate_limiting import current_period_list, current_sta
 from zato.common.rate_limiting.common import Const, AddressNotAllowed, RateLimitReached
 
 # Python 2/3 compatibility
-from future.utils import iterkeys
+from zato.common.ext.future.utils import iterkeys
 
 # ################################################################################################################################
 

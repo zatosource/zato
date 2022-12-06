@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Python 2/3 compatibility
-from future.utils import iteritems
+from zato.common.ext.future.utils import iteritems
 from zato.common.py23_.past.builtins import basestring
 
 # Zato

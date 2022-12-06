@@ -76,7 +76,7 @@ This module provides the following:
 
 """
 
-from future.utils import PY3
+from zato.common.ext.future.utils import PY3
 from zato.common.py23_.past.builtins.noniterators import (filter, map, range, reduce, zip)
 # from zato.common.py23_.past.builtins.misc import (ascii, hex, input, oct, open)
 if PY3:
