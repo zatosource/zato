@@ -13,8 +13,11 @@ from logging import DEBUG, getLogger
 from operator import itemgetter
 from traceback import format_exc
 
-# ciso8601
-from ciso8601 import parse_datetime_as_naive
+# ciso8601 / dateparser
+try:
+    from ciso8601 import parse_datetime_as_naive
+except ImportError:
+    from dateparser.parser import parse as parse_datetime_as_naive # type: ignore
 
 # gevent
 from gevent import spawn

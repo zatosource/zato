@@ -18,13 +18,11 @@ from gevent.lock import RLock
 # orjson
 from orjson import dumps
 
-# simdjson
-from simdjson import loads
-
 # Zato
 from zato.common.events.common import Action
 from zato.common.typing_ import asdict
 from zato.common.util.api import new_cid
+from zato.common.util.json_ import json_loads
 from zato.common.util.tcp import read_from_socket, SocketReaderCtx, wait_until_port_taken
 
 # ################################################################################################################################
@@ -168,7 +166,7 @@ class Client:
             raise ValueError('Unexpected response received from `{}` -> `{}`'.format(self.peer_name, response))
 
         table = response[Action.LenAction:]
-        return loads(table) if table else None
+        return json_loads(table) if table else None
 
 # ################################################################################################################################
 

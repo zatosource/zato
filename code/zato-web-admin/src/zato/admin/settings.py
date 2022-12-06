@@ -59,6 +59,7 @@ USE_I18N = True
 
 DEBUG = True
 APPEND_SLASH = True
+SECURE_CONTENT_TYPE_NOSNIFF = False
 
 # Absolute path to the directory that holds media.
 # Example: '/home/media/media.lawrence.com/'

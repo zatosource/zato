@@ -55,9 +55,9 @@ windows_qs_start_template = """
 set zato_cmd={zato_cmd}
 set env_dir="{env_dir}"
 
-start /b %zato_cmd% start %env_dir%\server1
-start /b %zato_cmd% start %env_dir%\web-admin
-start /b %zato_cmd% start %env_dir%\scheduler
+start /b %zato_cmd% start %env_dir%\\server1
+start /b %zato_cmd% start %env_dir%\\web-admin
+start /b %zato_cmd% start %env_dir%\\scheduler
 """.strip() # noqa: W605
 
 # ################################################################################################################################
@@ -568,7 +568,7 @@ class Create(ZatoCommand):
         #
         # 8) Scripts
         #
-        zato_bin = 'zato.py' if is_windows else 'zato'
+        zato_bin = 'zato.bat' if is_windows else 'zato'
 
         # Visual Studio integration
         vscode_dir = os.path.join(args_path, '.vscode')
