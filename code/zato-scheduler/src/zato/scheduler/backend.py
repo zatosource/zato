@@ -22,7 +22,7 @@ from gevent import lock, sleep
 from paodate import Delta
 
 # Python 2/3 compatibility
-from future.utils import iterkeys, itervalues
+from zato.common.ext.future.utils import iterkeys, itervalues
 
 # Zato
 from zato.common.api import FILE_TRANSFER, SCHEDULER

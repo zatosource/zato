@@ -11,7 +11,7 @@ import bz2
 from base64 import b64decode
 
 # Python 2/3 compatibility
-from future.utils import iteritems, iterkeys
+from zato.common.ext.future.utils import iteritems, iterkeys
 from zato.common.py23_.past.builtins import unicode
 
 # Zato

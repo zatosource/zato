@@ -28,9 +28,6 @@ gevent.monkey        # type: ignore
 # Paste
 from paste.util.converters import asbool
 
-# pysimdjson
-from simdjson import Parser as SIMDJSONParser
-
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
@@ -57,6 +54,7 @@ from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_conf
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
     register_diag_handlers
 from zato.common.util.file_transfer import path_string_list_to_list
+from zato.common.util.json_ import JSONParser
 from zato.common.util.platform_ import is_posix
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
@@ -78,6 +76,7 @@ from zato.server.base.parallel.subprocess_.zato_events import ZatoEventsIPC
 from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
 from zato.server.sso import SSOTool
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
@@ -104,13 +103,15 @@ if 0:
     SubprocessIPC = SubprocessIPC
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 kvdb_logger = logging.getLogger('zato_kvdb')
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-megabyte = 10**6
+megabyte = 10 ** 6
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -212,13 +213,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.has_posix_ipc = is_posix
         self.user_config = Bunch()
         self.stderr_path = ''
-        self.json_parser = SIMDJSONParser()
         self.work_dir = 'ParallelServer-work_dir'
         self.events_dir = 'ParallelServer-events_dir'
         self.kvdb_dir = 'ParallelServer-kvdb_dir'
         self.marshal_api = MarshalAPI()
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
         self.enforce_service_invokes = False
+        self.json_parser = JSONParser()
 
         # A server-wide publication counter, indicating which one the current publication is,
         # increased after each successful publication.

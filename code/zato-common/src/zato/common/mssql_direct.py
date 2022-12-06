@@ -10,9 +10,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 from traceback import format_exc
 
-# PyTDS
-import pytds
-
 # SQLAlchemy
 from sqlalchemy.pool import QueuePool as SAQueuePool
 from sqlalchemy.pool.dbapi_proxy import _DBProxy
@@ -75,6 +72,9 @@ class MSSQLDirectAPI:
         connect_kwargs, # type: stranydict
         extra           # type: stranydict
     ) -> 'None':
+
+        # PyTDS
+        import pytds
 
         # Max. overflow is user-configurable
         max_overflow = extra.get('max_overflow', 0)
