@@ -26,19 +26,17 @@ def get_api_list() -> 'list_[GoogleAPIDescription]':
     # google-api-client
     from googleapiclient.discovery_cache import DISCOVERY_DOC_DIR as root_dir
 
-    # pysimdjson
-    from simdjson import Parser as SIMDJSONParser
-
     # Zato
     from zato.common.model.google import GoogleAPIDescription
     from zato.common.typing_ import cast_
     from zato.common.util.open_ import open_r
+    from zato.common.util.json_ import JSONParser
 
     # Response to produce
     out = []
 
     # A reusable parser
-    parser = SIMDJSONParser()
+    parser = JSONParser()
 
     # A cache to make it easier to find out which APIs
     # have only non-GA APIs.

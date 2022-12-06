@@ -15,7 +15,10 @@ from tempfile import gettempdir
 from unittest import main
 
 # ciso8601
-from ciso8601 import parse_datetime
+try:
+    from zato.common.util.api import parse_datetime
+except ImportError:
+    from dateutil.parser import parse as parse_datetime
 
 # Zato
 from zato.common.pubsub import MSG_PREFIX, PUBSUB

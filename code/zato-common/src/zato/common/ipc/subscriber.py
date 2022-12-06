@@ -12,9 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from errno import ENOTSOCK
 from traceback import format_exc
 
-# ZeroMQ
-import zmq.green as zmq
-
 # Zato
 from zato.common.ipc import IPCEndpoint, Request
 
@@ -34,6 +31,10 @@ class Subscriber(IPCEndpoint):
         super(Subscriber, self).__init__(*args, **kwargs)
 
     def serve_forever(self):
+
+        # ZeroMQ
+        import zmq.green as zmq
+
         self.socket.setsockopt(zmq.SUBSCRIBE, b'')
 
         while self.keep_running:

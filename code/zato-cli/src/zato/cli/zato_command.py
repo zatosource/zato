@@ -8,8 +8,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
-import cloghandler
-cloghandler = cloghandler # For pyflakes
+try:
+    import cloghandler # type: ignore
+except ImportError:
+    pass
+else:
+    cloghandler = cloghandler # For pyflakes
 
 # Zato
 from zato.common.typing_ import cast_

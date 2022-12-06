@@ -13,6 +13,9 @@ from setuptools import Extension, find_packages, setup
 from Cython.Build import cythonize
 from setuptools import setup, find_packages
 
+import os
+os.environ['PYTHONPATH'] = 'c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8\\Lib\\site-packages'
+
 version = '3.2'
 
 setup(
