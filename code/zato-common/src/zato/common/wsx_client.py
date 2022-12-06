@@ -24,15 +24,13 @@ from types import GeneratorType
 # gevent
 from gevent import sleep, spawn
 
-# pysimdjson
-from simdjson import Parser as SIMDJSONParser
-
 # ws4py
 from ws4py.client.geventclient import WebSocketClient
 from ws4py.messaging import Message as ws4py_Message
 
 # Zato
 from zato.common.marshal_.api import MarshalAPI, Model
+from zato.common.util.json_ import JSONParser
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -489,7 +487,7 @@ class Client:
     def on_message(self, msg:'TextMessage') -> 'None':
         """ Invoked for each message received from Zato, both for responses to previous requests and for incoming requests.
         """
-        _msg_parsed = SIMDJSONParser().parse(msg.data) # type: any_
+        _msg_parsed = JSONParser().parse(msg.data) # type: any_
         _msg = _msg_parsed.as_dict() # type: anydict
         self.logger.info('Received message `%s`', _msg)
 

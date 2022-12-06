@@ -31,7 +31,7 @@ from getpass import getuser as getpass_getuser
 from glob import glob
 from hashlib import sha256
 from inspect import isfunction, ismethod
-from itertools import tee
+from itertools import tee, zip_longest
 from io import StringIO
 from logging.config import dictConfig
 from operator import itemgetter
@@ -48,6 +48,16 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch, bunchify
 
+# ciso8601
+try:
+    from ciso8601 import parse_datetime # type: ignore
+except ImportError:
+    from dateutil.parser import parse as parse_datetime
+
+# This is a forward declaration added for the benefit of other callers
+parse_datetime = parse_datetime
+
+# datetutil
 from dateutil.parser import parse as dt_parse
 
 # gevent
@@ -62,10 +72,11 @@ from lxml import etree
 from OpenSSL import crypto
 
 # portalocker
-import portalocker
-
-# psutil
-import psutil
+try:
+    import portalocker
+    has_portalocker = True
+except ImportError:
+    has_portalocker = False
 
 # pytz
 import pytz
@@ -85,8 +96,7 @@ import yaml
 
 # Python 2/3 compatibility
 from builtins import bytes
-from future.moves.itertools import zip_longest
-from future.utils import iteritems, raise_
+from zato.common.ext.future.utils import iteritems, raise_
 from zato.common.py23_.past.builtins import basestring, cmp, reduce, unicode
 from six import PY3
 from six.moves.urllib.parse import urlparse
@@ -118,11 +128,8 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 
 if 0:
     from typing import Iterable as iterable
-    from simdjson import Parser as SIMDJSONParser
     from zato.common.typing_ import any_, anydict, callable_, dictlist, listnone, strlistnone
-
     iterable = iterable
-    SIMDJSONParser = SIMDJSONParser
 
 # ################################################################################################################################
 
@@ -1128,6 +1135,7 @@ def get_kvdb_config_for_log(config):
 # ################################################################################################################################
 
 def validate_tls_from_payload(payload, is_key=False):
+
     with NamedTemporaryFile(prefix='zato-tls-') as tf:
         payload = payload.encode('utf8') if isinstance(payload, unicode) else payload
         tf.write(payload)
@@ -1173,8 +1181,16 @@ def store_tls(root_dir, payload, is_key=False):
     pem_file_path = get_tls_full_path(root_dir, TLS.DIR_KEYS_CERTS if is_key else TLS.DIR_CA_CERTS, info)
     pem_file = open(pem_file_path, 'w', encoding='utf8')
 
+    if has_portalocker:
+        exception_to_catch = portalocker.LockException
+    else:
+        # Purposefully, catch an exception that will never be raised
+        # so that we can actually get the traceback.
+        exception_to_catch = ZeroDivisionError
+
     try:
-        portalocker.lock(pem_file, portalocker.LOCK_EX)
+        if has_portalocker:
+            portalocker.lock(pem_file, portalocker.LOCK_EX)
 
         pem_file.write(payload)
         pem_file.close()
@@ -1183,7 +1199,7 @@ def store_tls(root_dir, payload, is_key=False):
 
         return pem_file_path
 
-    except portalocker.LockException:
+    except exception_to_catch:
         pass # It's OK, something else is doing the same thing right now
 
 # ################################################################################################################################
@@ -1702,6 +1718,9 @@ def get_logger_for_class(class_):
 def get_worker_pids():
     """ Returns all sibling worker PIDs of the server process we are being invoked on, including our own worker too.
     """
+    # psutil
+    import psutil
+
     return sorted(elem.pid for elem in psutil.Process(psutil.Process().ppid()).children())
 
 # ################################################################################################################################

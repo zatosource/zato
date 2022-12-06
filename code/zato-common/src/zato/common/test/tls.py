@@ -16,9 +16,6 @@ from tempfile import NamedTemporaryFile
 from threading import Thread
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
-# psutil
-import psutil
-
 # Python 2/3 compatibility
 from zato.common.py23_.past.builtins import xrange
 
@@ -27,6 +24,10 @@ from zato.common.api import ZATO_OK
 from zato.common.test.tls_material import ca_cert, server1_cert, server1_key
 
 def get_free_port(start=20001, end=50000):
+
+    # psutil
+    import psutil
+
     taken = []
     for c in psutil.net_connections(kind='inet'):
         if c.status == psutil.CONN_LISTEN:
