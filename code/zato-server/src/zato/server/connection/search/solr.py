@@ -12,7 +12,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 
 # pysolr
-from pysolr import Solr
+try:
+    from pysolr import Solr
+except ImportError:
+    pass
 
 # Zato
 from zato.common.util.api import ping_solr

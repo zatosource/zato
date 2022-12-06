@@ -22,7 +22,7 @@ from zato.common.api import SECRET_SHADOW, TRACE1
 from zato.common.exception import Inactive
 
 # Python2/3 compatibility
-from future.utils import PY2
+from zato.common.ext.future.utils import PY2
 
 # ################################################################################################################################
 # ################################################################################################################################

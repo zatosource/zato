@@ -25,7 +25,7 @@ from kombu import Connection, Consumer as _Consumer, pools, Queue
 from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport, Transport
 
 # Python 2/3 compatibility
-from future.utils import itervalues
+from zato.common.ext.future.utils import itervalues
 from zato.common.py23_.past.builtins import xrange
 
 # Zato

@@ -37,7 +37,7 @@ from traceback import format_exc
 import xml.etree.ElementTree as etree
 
 # Python 2/3 compatibility
-from future.utils import iteritems
+from zato.common.ext.future.utils import iteritems
 from zato.common.py23_.past.builtins import basestring, long, unicode
 
 # Zato

@@ -17,8 +17,12 @@ from traceback import format_exc
 from bunch import Bunch, bunchify
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
-import cloghandler
-cloghandler = cloghandler # For pyflakes
+try:
+    import cloghandler
+except ImportError:
+    pass
+else:
+    cloghandler = cloghandler # For pyflakes
 
 # Zato
 from zato.common.api import SECRET_SHADOW

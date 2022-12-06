@@ -15,7 +15,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from json import load, loads
 
 # uJSON
-from ujson import dump, dumps
+try:
+    from ujson import dump, dumps
+except ImportError:
+    from json import dump, dumps
 
 load = load
 dump = dump
