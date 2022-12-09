@@ -69,7 +69,13 @@ class GenericIMAPMessage(IMAPMessage):
 # ################################################################################################################################
 
 class Microsoft365IMAPMessage(IMAPMessage):
-    pass
+    impl: 'MS365Message'
+
+    def delete(self):
+        _ = self.impl.delete()
+
+    def mark_seen(self):
+        _ = self.impl.mark_as_read()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -364,6 +370,7 @@ class Microsoft365IMAPConnection(_IMAPConnection):
 
         # .. now, construct the response ..
         out = Microsoft365IMAPMessage(msg_id, self, data)
+        out.impl = native_message
 
         # .. and return it to our caller.
         return out
