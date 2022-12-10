@@ -17,6 +17,12 @@ from shutil import copy as shutil_copy
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from typing import Any as any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
 logging.basicConfig(level=logging.DEBUG, format=log_format)
 
@@ -138,8 +144,7 @@ class WindowsPostInstall:
 
 # ################################################################################################################################
 
-    def update_files(self, files_dir, patterns, to_ignore):
-        # type: (list, list, list) -> None
+    def update_files(self, files_dir:'any_', patterns:'any_', to_ignore:'any_') -> 'None':
 
         # To be sorted later
         file_names = []
@@ -194,12 +199,12 @@ class WindowsPostInstall:
 
                     # .. and save the data on disk.
                     f = open(name, 'w')
-                    f.write(data)
+                    _ = f.write(data)
                     f.close()
 
 # ################################################################################################################################
 
-    def update_site_packages_files(self):
+    def update_site_packages_files(self) -> 'None':
 
         # File types that we are going to modify
         patterns = ['*.pth', '*.egg-link']
@@ -215,7 +220,7 @@ class WindowsPostInstall:
 
 # ################################################################################################################################
 
-    def update_bin_files(self):
+    def update_bin_files(self) -> 'None':
 
         # In the 'bin' directory, we update all the files
         patterns = ['*']
@@ -231,7 +236,7 @@ class WindowsPostInstall:
 
 # ################################################################################################################################
 
-    def copy_zato_binary(self):
+    def copy_zato_binary(self) -> 'None':
 
         # This is the path that 'zato.py' was saved to by default
         zato_py_path = os.path.join(self.bin_dir, 'zato.py')
@@ -241,7 +246,7 @@ class WindowsPostInstall:
 
 # ################################################################################################################################
 
-    def set_git_root_dir_config(self):
+    def set_git_root_dir_config(self) -> 'None':
 
         git_root_dir = os.path.join(self.base_dir, '..')
         git_root_dir = os.path.abspath(git_root_dir)
@@ -249,30 +254,30 @@ class WindowsPostInstall:
 
         try:
             command = f'git config --global --add safe.directory {git_root_dir}'
-            os.system(command)
+            _ = os.system(command)
         except Exception:
+            # This system may not have git
             pass
 
 # ################################################################################################################################
 
-    def update_windows_registry(self):
+    def update_windows_registry(self) -> 'None':
 
         # stdlib
-        from winreg import                           \
-             HKEY_CURRENT_USER as hkey_current_user, \
-             KEY_ALL_ACCESS    as key_all_access,    \
-             REG_EXPAND_SZ     as reg_expand_sz,     \
-             OpenKey,                                \
-             QueryValueEx,                           \
-             SetValueEx # noqa: E272
+        from winreg import OpenKey         # type: ignore
+        from winreg import QueryValueEx    # type: ignore
+        from winreg import SetValueEx      # type: ignore
+
+        from winreg import HKEY_CURRENT_USER as hkey_current_user # type: ignore
+        from winreg import KEY_ALL_ACCESS    as key_all_access    # type: ignore
+        from winreg import REG_EXPAND_SZ     as reg_expand_sz     # type: ignore
 
         # pywin32
-        from win32con import                         \
-             HWND_BROADCAST as hwnd_broadcast,       \
-             WM_SETTINGCHANGE as wm_settingchange
+        from win32con import HWND_BROADCAST as hwnd_broadcast     # type: ignore
+        from win32con import WM_SETTINGCHANGE as wm_settingchange # type: ignore
 
         # pywin32 as well
-        from win32gui import SendMessage
+        from win32gui import SendMessage # type: ignore
 
         # We look up environment variables for current user
         root = hkey_current_user
@@ -299,7 +304,7 @@ class WindowsPostInstall:
 
 # ################################################################################################################################
 
-    def update_paths(self):
+    def update_paths(self) -> 'None':
         self.update_site_packages_files()
         self.update_bin_files()
         self.copy_zato_binary()
@@ -307,7 +312,7 @@ class WindowsPostInstall:
 
 # ################################################################################################################################
 
-    def update_registry(self):
+    def update_registry(self) -> 'None':
         self.update_windows_registry()
 
 # ################################################################################################################################
