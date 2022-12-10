@@ -563,7 +563,7 @@ def to_bytestring(value, encoding="utf8"):
     if not isinstance(value, text_type):
         raise TypeError('%r is not a string' % value)
 
-    return value.encode(encoding)
+    return value.encode('utf8')
 
 def has_fileno(obj):
     if not hasattr(obj, "fileno"):
