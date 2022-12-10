@@ -38,7 +38,6 @@ if 0:
 template = """
 
 channel_plain_http:
-
   - connection: channel
     is_active: true
     is_internal: false
@@ -50,7 +49,6 @@ channel_plain_http:
     service_name: pub.zato.ping
     transport: plain_http
     url_path: /test/enmasse1/{test_suffix}
-
   - connection: channel
     is_active: true
     is_internal: false
@@ -80,11 +78,19 @@ zato_generic_connection:
       security_def: ZATO_NONE
       subscription_list:
       type_: outconn-wsx
-
       # These are taken from generic.connection.py -> extra_secret_keys
       oauth2_access_token: null
       consumer_key: null
       consumer_secret: null
+
+def_sec:
+  - name: "Test Basic Auth {test_suffix}"
+    is_active: true
+    type: basic_auth
+    username: "MyUser {test_suffix}"
+    password: "MyPassword"
+    realm: "My Realm"
+
 """
 
 # ################################################################################################################################
@@ -175,15 +181,15 @@ class EnmasseTestCase(TestCase):
         data = template.format(test_suffix=test_suffix)
 
         f = open_w(config_path)
-        f.write(data)
+        _ = f.write(data)
         f.close()
 
         try:
             # Invoke enmasse to create objects ..
-            self._invoke_command(config_path)
+            _ = self._invoke_command(config_path)
 
             # .. now invoke it again to edit them in place.
-            self._invoke_command(config_path)
+            _ = self._invoke_command(config_path)
 
         except ErrorReturnCode as e:
             stdout = e.stdout # type: bytes
@@ -211,7 +217,7 @@ class EnmasseTestCase(TestCase):
         data = data.format(test_suffix=test_suffix)
 
         f = open_w(config_path)
-        f.write(data)
+        _ = f.write(data)
         f.close()
 
         # Invoke enmasse to create objects (which will fail because the service used above does not exist)
@@ -229,6 +235,6 @@ class EnmasseTestCase(TestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    _ = main()
 
 # ################################################################################################################################
