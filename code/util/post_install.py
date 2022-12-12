@@ -244,7 +244,7 @@ class PostInstall:
     def update_paths(self) -> 'None':
         self.update_site_packages_files()
         self.update_bin_files()
-        # self.set_git_root_dir_config()
+        self.set_git_root_dir_config()
 
 # ################################################################################################################################
 
