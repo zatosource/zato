@@ -73,6 +73,8 @@ class PostInstall:
     # Full path to 'zato.bat'
     zato_windows_bin_path: 'str'
 
+    lib_dir_elems = None # type: any_
+
 # ################################################################################################################################
 
     def init(self, base_dir:'str', bin_dir:'str') -> 'None':
@@ -253,6 +255,35 @@ class PostInstall:
 
 # ################################################################################################################################
 
+    def get_python_dir(self) -> 'any_':
+
+        python_dir = 'default-python_dir'
+
+        # This the directory where the Python directory will be found ..
+        lib_dir = os.path.join(self.base_dir, *self.lib_dir_elems)
+
+        # .. list all the directories in the lib dir ..
+        for item in sorted(os.listdir(lib_dir)):
+
+            # .. accept the one that is a Python one ..
+            if item.startswith('python'):
+                python_dir = item
+                break
+
+        # .. and return the result to the caller.
+        return python_dir
+
+# ################################################################################################################################
+
+    def get_python_dir_full(self) -> 'str':
+
+        python_dir_full = os.path.join(self.base_dir, *self.lib_dir_elems, self.python_dir)
+        python_dir_full = os.path.abspath(python_dir_full)
+
+        return python_dir_full
+
+# ################################################################################################################################
+
     def get_impl_base_dir(self) -> 'str':
         raise NotImplementedError('Must be implemented by subclasses')
 
@@ -264,16 +295,6 @@ class PostInstall:
 # ################################################################################################################################
 
     def get_orig_build_dir(self) -> 'str':
-        raise NotImplementedError('Must be implemented by subclasses')
-
-# ################################################################################################################################
-
-    def get_python_dir(self) -> 'str':
-        raise NotImplementedError('Must be implemented by subclasses')
-
-# ################################################################################################################################
-
-    def get_python_dir_full(self) -> 'str':
         raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
@@ -303,6 +324,23 @@ class PostInstall:
 
         # Prepare paths ..
         self.base_dir         = self.get_base_dir()
+        self.python_dir       = self.get_python_dir()
+        self.python_dir_full  = self.get_python_dir_full()
+
+        print()
+        print(111, self.base_dir)
+        print()
+
+        print()
+        print(222, self.python_dir)
+        print()
+
+        print()
+        print(333, self.python_dir_full)
+        print()
+
+        return
+
         self.orig_build_dir   = self.get_orig_build_dir()
 
         # .. if these are the same, it means that we do not have anything to do.
@@ -314,8 +352,6 @@ class PostInstall:
             # .. prepare the rest of the configuration ..
 
             self.bin_dir           = self.get_bin_dir()
-            self.python_dir        = self.get_python_dir()
-            self.python_dir_full   = self.get_python_dir_full()
             self.site_packages_dir = self.get_site_packages_dir()
 
             # .. and actually run the process.
@@ -325,13 +361,13 @@ class PostInstall:
 # ################################################################################################################################
 
 class WindowsPostInstall(PostInstall):
-    pass
+    lib_dir_elems = ['bundle-ext', 'python-windows']
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class NonWindowsPostInstall(PostInstall):
-
+    lib_dir_elems = ['lib']
     build_dir_to_base_depth = 2
 
 # ################################################################################################################################
@@ -346,35 +382,6 @@ class NonWindowsPostInstall(PostInstall):
         base_dir = os.path.join(curdir, '..')
         base_dir = os.path.abspath(base_dir)
         return base_dir
-
-# ################################################################################################################################
-
-    def get_python_dir(self) -> 'any_':
-
-        python_dir = 'default-python_dir'
-
-        # This the directory where the Python directory will be found ..
-        lib_dir = os.path.join(self.base_dir, 'lib')
-
-        # .. list all the directories in the lib dir ..
-        for item in sorted(os.listdir(lib_dir)):
-
-            # .. accept the one that is a Python one ..
-            if item.startswith('python'):
-                python_dir = item
-                break
-
-        # .. and return the result to the caller.
-        return python_dir
-
-# ################################################################################################################################
-
-    def get_python_dir_full(self) -> 'str':
-
-        python_dir_full = os.path.join(self.base_dir, 'lib', self.python_dir)
-        python_dir_full = os.path.abspath(python_dir_full)
-
-        return python_dir_full
 
 # ################################################################################################################################
 
