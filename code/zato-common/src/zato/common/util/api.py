@@ -1898,7 +1898,7 @@ def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, 
     # type: (object, int, float, *object, **object) -> bool
 
     # Try out first, perhaps it already fulfilled
-    is_fulfilled = predicate_func(*args, **kwargs)
+    is_fulfilled = bool(predicate_func(*args, **kwargs))
 
     # Use an explicit loop index for reporting
     loop_idx = 0
@@ -1925,7 +1925,12 @@ def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, 
 
 # ################################################################################################################################
 
-def wait_for_dict_key(_dict:'anydict', key:'any_', timeout:'int'=30, interval:'float'=0.01) -> 'any_':
+def wait_for_dict_key(
+    _dict,        # type: anydict
+    key,          # type: any_
+    timeout=30,   # type: int
+    interval=0.01 # type: float
+) -> 'any_':
 
     def _predicate_dict_key(*_ignored_args, **_ignored_kwargs):
         return _dict.get(key)
