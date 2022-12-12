@@ -77,6 +77,7 @@ class PostInstall:
     bin_path_prefix_elems = None # type: any_
     bin_path_needs_python_dir = None # type: any_
 
+    zato_bin_line:    'int | None' = None
     zato_bin_command: 'str | None' = None
 
 # ################################################################################################################################
@@ -300,19 +301,15 @@ class PostInstall:
         zato_bin_path.append(self.zato_bin_command)
         zato_bin_path = os.sep.join(zato_bin_path)
 
-        print()
-        print(444, zato_bin_path)
-        print()
-
-        return
-
         # .. read the whole contents ..
         lines = open(zato_bin_path).readlines()
 
         # .. our path will be in the first line ..
-        bin_line = lines[0]
+        bin_line = lines[self.zato_bin_line]
         bin_line = bin_line.strip()
-        bin_line = bin_line.replace('#!', '')
+
+
+        bin_path = self.extract_bin_path_from_bin_line(bin_line)
 
         #
         # .. Now, we have something like this in bin_line:
@@ -324,21 +321,25 @@ class PostInstall:
         # .. which is why it is our subclasses that tell it to us below.
 
         # Turn what we have so far into a Path object so it is easier to process it ..
-        bin_path = Path(bin_line)
+        bin_path = Path(bin_path)
 
         # .. extract the original build directory now ..
         orig_build_dir = bin_path.parts[:-self.build_dir_to_base_depth]
-
-        # We need to remove the leading slash character
-        # because we are going to use os.sep to join all the remaining parts.
         orig_build_dir = list(orig_build_dir)
-        try:
-            orig_build_dir.remove('/')
-        except ValueError:
-            pass
+
+        # If we are not on Windows, we need to remove the leading slash character
+        # because we are going to use os.sep to join all the remaining parts.
+        if not is_windows:
+            try:
+                orig_build_dir.remove('/')
+            except ValueError:
+                pass
+
+        # Prepend a slahs character, unless we are on Windows
+        prefix = '' if is_windows else '/'
 
         # .. turn it into a list ..
-        orig_build_dir = '/' + os.sep.join(orig_build_dir)
+        orig_build_dir = prefix + os.sep.join(orig_build_dir)
 
         # .. and return it to our caller.
         return orig_build_dir
@@ -361,6 +362,11 @@ class PostInstall:
 # ################################################################################################################################
 
     def get_bin_dir(self) -> 'str':
+        raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+
+    def extract_bin_path_from_bin_line(self, bin_line:'str') -> 'str':
         raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
@@ -396,7 +402,9 @@ class PostInstall:
         print(333, self.python_dir_full)
         print()
 
-        return
+        print()
+        print(444, self.orig_build_dir)
+        print()
 
         # .. if these are the same, it means that we do not have anything to do.
         if self.base_dir == self.orig_build_dir:
@@ -419,7 +427,19 @@ class WindowsPostInstall(PostInstall):
     lib_dir_elems         = ['bundle-ext', 'python-windows']
     bin_path_prefix_elems = ['bundle-ext', 'python-windows']
     bin_path_needs_python_dir = True
+    zato_bin_line    = 1
     zato_bin_command = 'zato.bat'
+    build_dir_to_base_depth = 4
+
+# ################################################################################################################################
+
+    def extract_bin_path_from_bin_line(self, bin_line:'str') -> 'str':
+
+        bin_line = bin_line.split()
+        bin_path = bin_line[0]
+        bin_path = bin_path.replace('"', '')
+
+        return bin_path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -428,6 +448,7 @@ class NonWindowsPostInstall(PostInstall):
     lib_dir_elems = ['lib']
     bin_path_prefix_elems = ['bin']
     bin_path_needs_python_dir = False
+    zato_bin_line    = 0
     zato_bin_command = 'zato'
     build_dir_to_base_depth = 2
 
@@ -459,6 +480,12 @@ class NonWindowsPostInstall(PostInstall):
 
         site_packages_dir = os.path.join(self.python_dir_full, 'site-packages')
         return site_packages_dir
+
+# ################################################################################################################################
+
+    def extract_bin_path_from_bin_line(self, bin_line:'str') -> 'str':
+        bin_path = bin_line.replace('#!', '')
+        return bin_path
 
 # ################################################################################################################################
 # ################################################################################################################################
