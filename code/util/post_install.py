@@ -73,7 +73,11 @@ class PostInstall:
     # Full path to 'zato.bat'
     zato_windows_bin_path: 'str'
 
-    lib_dir_elems = None # type: any_
+    lib_dir_elems         = None # type: any_
+    bin_path_prefix_elems = None # type: any_
+    bin_path_needs_python_dir = None # type: any_
+
+    zato_bin_command: 'str | None' = None
 
 # ################################################################################################################################
 
@@ -284,127 +288,23 @@ class PostInstall:
 
 # ################################################################################################################################
 
-    def get_impl_base_dir(self) -> 'str':
-        raise NotImplementedError('Must be implemented by subclasses')
-
-# ################################################################################################################################
-
-    def run_impl(self) -> 'None':
-        raise NotImplementedError('Must be implemented by subclasses')
-
-# ################################################################################################################################
-
     def get_orig_build_dir(self) -> 'str':
-        raise NotImplementedError('Must be implemented by subclasses')
 
-# ################################################################################################################################
+        # Build a full path to the zato command ..
+        zato_bin_path = [self.base_dir]
+        zato_bin_path.extend(self.bin_path_prefix_elems)
 
-    def get_site_packages_dir(self) -> 'str':
-        raise NotImplementedError('Must be implemented by subclasses')
+        if self.bin_path_needs_python_dir:
+            zato_bin_path.append(self.python_dir)
 
-# ################################################################################################################################
-
-    def get_bin_dir(self) -> 'str':
-        raise NotImplementedError('Must be implemented by subclasses')
-
-# ################################################################################################################################
-
-    def get_base_dir(self) -> 'str':
-
-        # Base directory may be given explicitly or we will need build it in relation to our own location
-        if len(sys.argv) > 1:
-            base_dir = sys.argv[1]
-            return base_dir
-        else:
-            return self.get_impl_base_dir()
-
-# ################################################################################################################################
-
-    def run(self) -> 'None':
-
-        # Prepare paths ..
-        self.base_dir         = self.get_base_dir()
-        self.python_dir       = self.get_python_dir()
-        self.python_dir_full  = self.get_python_dir_full()
+        zato_bin_path.append(self.zato_bin_command)
+        zato_bin_path = os.sep.join(zato_bin_path)
 
         print()
-        print(111, self.base_dir)
-        print()
-
-        print()
-        print(222, self.python_dir)
-        print()
-
-        print()
-        print(333, self.python_dir_full)
+        print(444, zato_bin_path)
         print()
 
         return
-
-        self.orig_build_dir   = self.get_orig_build_dir()
-
-        # .. if these are the same, it means that we do not have anything to do.
-        if self.base_dir == self.orig_build_dir:
-            logger.info('Returning as base_dir and orig_build_dir are the same (%s)', self.base_dir)
-            return
-        else:
-
-            # .. prepare the rest of the configuration ..
-
-            self.bin_dir           = self.get_bin_dir()
-            self.site_packages_dir = self.get_site_packages_dir()
-
-            # .. and actually run the process.
-            self.run_impl()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class WindowsPostInstall(PostInstall):
-    lib_dir_elems = ['bundle-ext', 'python-windows']
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class NonWindowsPostInstall(PostInstall):
-    lib_dir_elems = ['lib']
-    build_dir_to_base_depth = 2
-
-# ################################################################################################################################
-
-    def run_impl(self) -> 'None':
-        self.update_paths()
-
-# ################################################################################################################################
-
-    def get_impl_base_dir(self) -> 'str':
-        curdir = os.path.dirname(os.path.abspath(__file__))
-        base_dir = os.path.join(curdir, '..')
-        base_dir = os.path.abspath(base_dir)
-        return base_dir
-
-# ################################################################################################################################
-
-    def get_bin_dir(self) -> 'str':
-
-        bin_dir = os.path.join(self.base_dir, 'bin')
-        bin_dir = os.path.abspath(bin_dir)
-
-        return bin_dir
-
-# ################################################################################################################################
-
-    def get_site_packages_dir(self) -> 'str':
-
-        site_packages_dir = os.path.join(self.python_dir_full, 'site-packages')
-        return site_packages_dir
-
-# ################################################################################################################################
-
-    def get_orig_build_dir(self) -> 'str':
-
-        # Full path to the zato command ..
-        zato_bin_path = os.path.join(self.base_dir, 'bin', 'zato')
 
         # .. read the whole contents ..
         lines = open(zato_bin_path).readlines()
@@ -442,6 +342,123 @@ class NonWindowsPostInstall(PostInstall):
 
         # .. and return it to our caller.
         return orig_build_dir
+
+# ################################################################################################################################
+
+    def get_impl_base_dir(self) -> 'str':
+        raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+
+    def run_impl(self) -> 'None':
+        raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+
+    def get_site_packages_dir(self) -> 'str':
+        raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+
+    def get_bin_dir(self) -> 'str':
+        raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+
+    def get_base_dir(self) -> 'str':
+
+        # Base directory may be given explicitly or we will need build it in relation to our own location
+        if len(sys.argv) > 1:
+            base_dir = sys.argv[1]
+            return base_dir
+        else:
+            return self.get_impl_base_dir()
+
+# ################################################################################################################################
+
+    def run(self) -> 'None':
+
+        # Prepare paths ..
+        self.base_dir         = self.get_base_dir()
+        self.python_dir       = self.get_python_dir()
+        self.python_dir_full  = self.get_python_dir_full()
+        self.orig_build_dir   = self.get_orig_build_dir()
+
+        print()
+        print(111, self.base_dir)
+        print()
+
+        print()
+        print(222, self.python_dir)
+        print()
+
+        print()
+        print(333, self.python_dir_full)
+        print()
+
+        return
+
+        # .. if these are the same, it means that we do not have anything to do.
+        if self.base_dir == self.orig_build_dir:
+            logger.info('Returning as base_dir and orig_build_dir are the same (%s)', self.base_dir)
+            return
+        else:
+
+            # .. prepare the rest of the configuration ..
+
+            self.bin_dir           = self.get_bin_dir()
+            self.site_packages_dir = self.get_site_packages_dir()
+
+            # .. and actually run the process.
+            self.run_impl()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WindowsPostInstall(PostInstall):
+    lib_dir_elems         = ['bundle-ext', 'python-windows']
+    bin_path_prefix_elems = ['bundle-ext', 'python-windows']
+    bin_path_needs_python_dir = True
+    zato_bin_command = 'zato.bat'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class NonWindowsPostInstall(PostInstall):
+    lib_dir_elems = ['lib']
+    bin_path_prefix_elems = ['bin']
+    bin_path_needs_python_dir = False
+    zato_bin_command = 'zato'
+    build_dir_to_base_depth = 2
+
+# ################################################################################################################################
+
+    def run_impl(self) -> 'None':
+        self.update_paths()
+
+# ################################################################################################################################
+
+    def get_impl_base_dir(self) -> 'str':
+        curdir = os.path.dirname(os.path.abspath(__file__))
+        base_dir = os.path.join(curdir, '..')
+        base_dir = os.path.abspath(base_dir)
+        return base_dir
+
+# ################################################################################################################################
+
+    def get_bin_dir(self) -> 'str':
+
+        bin_dir = os.path.join(self.base_dir, 'bin')
+        bin_dir = os.path.abspath(bin_dir)
+
+        return bin_dir
+
+# ################################################################################################################################
+
+    def get_site_packages_dir(self) -> 'str':
+
+        site_packages_dir = os.path.join(self.python_dir_full, 'site-packages')
+        return site_packages_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
