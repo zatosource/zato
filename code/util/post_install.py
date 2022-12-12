@@ -132,6 +132,12 @@ class PostInstall:
         # To make it easier to recognise what we are working with currently
         file_names.sort()
 
+        print()
+        print(111, file_names)
+        print(222, self.orig_build_dir)
+        print(333, self.base_dir)
+        print()
+
         for name in file_names:
 
             # Prepare a backup file's name ..
@@ -325,6 +331,8 @@ class PostInstall:
 
         # .. extract the original build directory now ..
         orig_build_dir = bin_path.parts[:-self.build_dir_to_base_depth]
+
+        # Turn what we have so far into a list ..
         orig_build_dir = list(orig_build_dir)
 
         # If we are not on Windows, we need to remove the leading slash character
@@ -341,8 +349,19 @@ class PostInstall:
         # .. turn it into a list ..
         orig_build_dir = prefix + os.sep.join(orig_build_dir)
 
+        # Correct the path separator on Windows
+        if is_windows:
+            orig_build_dir = orig_build_dir.replace('\\\\', '\\')
+
         # .. and return it to our caller.
         return orig_build_dir
+
+# ################################################################################################################################
+
+    def get_site_packages_dir(self) -> 'str':
+
+        site_packages_dir = os.path.join(self.python_dir_full, 'site-packages')
+        return site_packages_dir
 
 # ################################################################################################################################
 
@@ -352,11 +371,6 @@ class PostInstall:
 # ################################################################################################################################
 
     def run_impl(self) -> 'None':
-        raise NotImplementedError('Must be implemented by subclasses')
-
-# ################################################################################################################################
-
-    def get_site_packages_dir(self) -> 'str':
         raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
@@ -376,6 +390,8 @@ class PostInstall:
         # Base directory may be given explicitly or we will need build it in relation to our own location
         if len(sys.argv) > 1:
             base_dir = sys.argv[1]
+            if base_dir.endswith('\\'):
+                base_dir = base_dir[:1]
             return base_dir
         else:
             return self.get_impl_base_dir()
@@ -390,6 +406,7 @@ class PostInstall:
         self.python_dir_full  = self.get_python_dir_full()
         self.orig_build_dir   = self.get_orig_build_dir()
 
+        """
         print()
         print(111, self.base_dir)
         print()
@@ -405,6 +422,7 @@ class PostInstall:
         print()
         print(444, self.orig_build_dir)
         print()
+        """
 
         # .. if these are the same, it means that we do not have anything to do.
         if self.base_dir == self.orig_build_dir:
@@ -430,6 +448,16 @@ class WindowsPostInstall(PostInstall):
     zato_bin_line    = 1
     zato_bin_command = 'zato.bat'
     build_dir_to_base_depth = 4
+
+# ################################################################################################################################
+
+    def run_impl(self) -> 'None':
+        self.update_paths()
+
+# ################################################################################################################################
+
+    def get_bin_dir(self) -> 'str':
+        return self.python_dir_full
 
 # ################################################################################################################################
 
@@ -473,13 +501,6 @@ class NonWindowsPostInstall(PostInstall):
         bin_dir = os.path.abspath(bin_dir)
 
         return bin_dir
-
-# ################################################################################################################################
-
-    def get_site_packages_dir(self) -> 'str':
-
-        site_packages_dir = os.path.join(self.python_dir_full, 'site-packages')
-        return site_packages_dir
 
 # ################################################################################################################################
 
