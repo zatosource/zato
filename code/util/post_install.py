@@ -243,7 +243,7 @@ class PostInstall:
 
     def update_paths(self) -> 'None':
         self.update_site_packages_files()
-        # self.update_bin_files()
+        self.update_bin_files()
         # self.set_git_root_dir_config()
 
 # ################################################################################################################################
@@ -283,6 +283,11 @@ class PostInstall:
 
 # ################################################################################################################################
 
+    def get_bin_dir(self) -> 'str':
+        raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+
     def get_base_dir(self) -> 'str':
 
         # Base directory may be given explicitly or we will need build it in relation to our own location
@@ -299,24 +304,22 @@ class PostInstall:
         # Prepare paths ..
         self.base_dir         = self.get_base_dir()
         self.orig_build_dir   = self.get_orig_build_dir()
-        self.python_dir       = self.get_python_dir()
-        self.python_dir_full  = self.get_python_dir_full()
-        self.site_packages_dir = self.get_site_packages_dir()
 
-        # .. and actually run the process.
-        self.run_impl()
+        # .. if these are the same, it means that we do not have anything to do.
+        if self.base_dir == self.orig_build_dir:
+            logger.info('Returning as base_dir and orig_build_dir are the same (%s)', self.base_dir)
+            return
+        else:
 
-        """
-        curdir = os.path.dirname(os.path.abspath(__file__))
+            # .. prepare the rest of the configuration ..
 
-        base_dir = os.path.join(curdir, '..')
-        base_dir = os.path.abspath(base_dir)
+            self.bin_dir           = self.get_bin_dir()
+            self.python_dir        = self.get_python_dir()
+            self.python_dir_full   = self.get_python_dir_full()
+            self.site_packages_dir = self.get_site_packages_dir()
 
-        base_dir = base_dir.replace('\\', '\\\\')
-
-        bin_dir = os.path.join(base_dir, 'Scripts')
-        bin_dir = os.path.abspath(bin_dir)
-        """
+            # .. and actually run the process.
+            self.run_impl()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -375,6 +378,15 @@ class NonWindowsPostInstall(PostInstall):
 
 # ################################################################################################################################
 
+    def get_bin_dir(self) -> 'str':
+
+        bin_dir = os.path.join(self.base_dir, 'bin')
+        bin_dir = os.path.abspath(bin_dir)
+
+        return bin_dir
+
+# ################################################################################################################################
+
     def get_site_packages_dir(self) -> 'str':
 
         site_packages_dir = os.path.join(self.python_dir_full, 'site-packages')
@@ -419,7 +431,7 @@ class NonWindowsPostInstall(PostInstall):
             pass
 
         # .. turn it into a list ..
-        orig_build_dir = os.sep.join(orig_build_dir)
+        orig_build_dir = '/' + os.sep.join(orig_build_dir)
 
         # .. and return it to our caller.
         return orig_build_dir
