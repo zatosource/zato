@@ -138,15 +138,16 @@ class PostInstall:
 
             if self.orig_build_dir in data:
 
+                # Log what we are about to do
+                logger.info('Replacing `%s` in %s', self.orig_build_dir, name)
+
                 # Replace the build directory with the actual installation directory ..
                 data = data.replace(self.orig_build_dir, self.base_dir)
 
                 # .. and save the data on disk.
-                # f = open(name, 'w')
-                # _ = f.write(data)
-                # f.close()
-
-                print(333, name)
+                f = open(name, 'w')
+                _ = f.write(data)
+                f.close()
 
 # ################################################################################################################################
 
@@ -408,6 +409,14 @@ class NonWindowsPostInstall(PostInstall):
 
         # .. extract the original build directory now ..
         orig_build_dir = bin_path.parts[:-self.build_dir_to_base_depth]
+
+        # We need to remove the leading slash character
+        # because we are going to use os.sep to join all the remaining parts.
+        orig_build_dir = list(orig_build_dir)
+        try:
+            orig_build_dir.remove('/')
+        except ValueError:
+            pass
 
         # .. turn it into a list ..
         orig_build_dir = os.sep.join(orig_build_dir)
