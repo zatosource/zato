@@ -25,7 +25,7 @@ from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, MISC, RATE_LIMIT, 
 from zato.common.vault_ import VAULT
 from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
-from zato.common.util.api import parse_tls_channel_security_definition, update_apikey_username_to_channel
+from zato.common.util.api import parse_tls_channel_security_definition, update_apikey_username_to_channel, wait_for_dict_key
 from zato.common.util.auth import on_basic_auth
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.connection.http_soap import Forbidden, Unauthorized
@@ -648,6 +648,7 @@ class URLData(CyURLData, OAuthDataStore):
     def on_broker_msg_SECURITY_APIKEY_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an API key security definition.
         """
+        wait_for_dict_key(self.apikey_config, msg.name)
         with self.url_sec_lock:
             self.apikey_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.APIKEY)
@@ -687,6 +688,7 @@ class URLData(CyURLData, OAuthDataStore):
     def on_broker_msg_SECURITY_AWS_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an AWS security definition.
         """
+        wait_for_dict_key(self.aws_config, msg.name)
         with self.url_sec_lock:
             self.aws_config[msg.name]['config']['password'] = msg.password
 
@@ -748,6 +750,7 @@ class URLData(CyURLData, OAuthDataStore):
     def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
         """
+        wait_for_dict_key(self.basic_auth_config, msg.name)
         with self.url_sec_lock:
             self.basic_auth_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH)
@@ -834,6 +837,7 @@ class URLData(CyURLData, OAuthDataStore):
     def on_broker_msg_SECURITY_JWT_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of a JWT security definition.
         """
+        wait_for_dict_key(self.jwt_config, msg.name)
         with self.url_sec_lock:
             self.jwt_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.JWT)
@@ -875,6 +879,7 @@ class URLData(CyURLData, OAuthDataStore):
     def on_broker_msg_SECURITY_NTLM_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an NTLM security definition.
         """
+        wait_for_dict_key(self.ntlm_config, msg.name)
         with self.url_sec_lock:
             self.ntlm_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.NTLM)
@@ -922,6 +927,7 @@ class URLData(CyURLData, OAuthDataStore):
     def on_broker_msg_SECURITY_OAUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of an OAuth account.
         """
+        wait_for_dict_key(self.oauth_config, msg.name)
         with self.url_sec_lock:
             self.oauth_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH)
