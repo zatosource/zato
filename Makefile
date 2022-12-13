@@ -57,6 +57,7 @@ flake8:
 	echo "Flake8 checks OK"
 
 static-check:
+	$(CURDIR)/code/bin/flake8 --config=$(CURDIR)/code/tox.ini $(CURDIR)/code/util
 	cd $(CURDIR)/code/zato-agent     && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-broker    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-cli       && $(MAKE) static-check
@@ -72,7 +73,6 @@ static-check:
 	cd $(CURDIR)/code/zato-testing   && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-zmq       && $(MAKE) static-check
-	$(CURDIR)/code/bin/flake8 --config=$(CURDIR)/code/tox.ini $(CURDIR)/code/util
 	echo "Static checks OK"
 
 type-check:
