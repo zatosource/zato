@@ -627,7 +627,7 @@ def visit_py_source(
         '  util*.py',
         '*_util*.py',
 
-        '  pri*.py',
+        '  pri_*.py',
         '*_pri*.py',
     ]
 
