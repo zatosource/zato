@@ -70,9 +70,6 @@ class PostInstall:
     # This is the path to the directory that 'zato.bat' command is in
     zato_windows_bin_dir: 'str'
 
-    # Full path to 'zato.bat'
-    zato_windows_bin_path: 'str'
-
     lib_dir_elems         = None # type: any_
     bin_path_prefix_elems = None # type: any_
     bin_path_needs_python_dir = None # type: any_
@@ -89,12 +86,6 @@ class PostInstall:
 
         # Packages are installed here
         self.site_packages_dir = os.path.join(self.base_dir, *site_packages_relative)
-
-        # This is the path to the directory that 'zato.bat' command is in
-        # self.zato_windows_bin_dir = os.path.join(self.base_dir, 'windows-bin')
-
-        # Full path to 'zato.py'
-        # self.zato_windows_bin_path = os.path.join(self.zato_windows_bin_dir, 'zato.bat')
 
 # ################################################################################################################################
 
@@ -391,10 +382,11 @@ class PostInstall:
         if len(sys.argv) > 1:
             base_dir = sys.argv[1]
             if base_dir.endswith('\\'):
-                base_dir = base_dir[:1]
-            return base_dir
+                base_dir = base_dir[:-1]
         else:
-            return self.get_impl_base_dir()
+            base_dir = self.get_impl_base_dir()
+
+        return base_dir
 
 # ################################################################################################################################
 
@@ -463,7 +455,7 @@ class WindowsPostInstall(PostInstall):
 
     def extract_bin_path_from_bin_line(self, bin_line:'str') -> 'str':
 
-        bin_line = bin_line.split()
+        bin_line = bin_line.split() # type: ignore
         bin_path = bin_line[0]
         bin_path = bin_path.replace('"', '')
 
