@@ -52,6 +52,7 @@ class PostInstall:
     build_dir_to_base_depth: 'int'
 
     base_dir: 'str'
+    code_dir: 'str'
     bin_dir:  'str'
 
     # A directory where Python binaries are in, e.g. python3.11, python3.12 etc.
@@ -123,11 +124,13 @@ class PostInstall:
         # To make it easier to recognise what we are working with currently
         file_names.sort()
 
+        """
         print()
         print(111, file_names)
         print(222, self.orig_build_dir)
         print(333, self.base_dir)
         print()
+        """
 
         for name in file_names:
 
@@ -146,7 +149,7 @@ class PostInstall:
                 logger.info('Replacing `%s` in %s', self.orig_build_dir, name)
 
                 # Replace the build directory with the actual installation directory ..
-                data = data.replace(self.orig_build_dir, self.base_dir)
+                data = data.replace(self.orig_build_dir, self.code_dir)
 
                 # .. and save the data on disk.
                 f = open(name, 'w')
@@ -295,16 +298,15 @@ class PostInstall:
         if self.bin_path_needs_python_dir:
             zato_bin_path.append(self.python_dir)
 
-        zato_bin_path.append(self.zato_bin_command)
+        zato_bin_path.append(self.zato_bin_command) # type: ignore
         zato_bin_path = os.sep.join(zato_bin_path)
 
         # .. read the whole contents ..
         lines = open(zato_bin_path).readlines()
 
         # .. our path will be in the first line ..
-        bin_line = lines[self.zato_bin_line]
+        bin_line = lines[self.zato_bin_line] # type: ignore
         bin_line = bin_line.strip()
-
 
         bin_path = self.extract_bin_path_from_bin_line(bin_line)
 
@@ -394,6 +396,7 @@ class PostInstall:
 
         # Prepare paths ..
         self.base_dir         = self.get_base_dir()
+        self.code_dir         = os.path.join(self.base_dir, 'code')
         self.python_dir       = self.get_python_dir()
         self.python_dir_full  = self.get_python_dir_full()
         self.orig_build_dir   = self.get_orig_build_dir()
@@ -434,8 +437,8 @@ class PostInstall:
 # ################################################################################################################################
 
 class WindowsPostInstall(PostInstall):
-    lib_dir_elems         = ['bundle-ext', 'python-windows']
-    bin_path_prefix_elems = ['bundle-ext', 'python-windows']
+    lib_dir_elems         = ['code', 'bundle-ext', 'python-windows']
+    bin_path_prefix_elems = ['code', 'bundle-ext', 'python-windows']
     bin_path_needs_python_dir = True
     zato_bin_line    = 1
     zato_bin_command = 'zato.bat'
@@ -465,8 +468,8 @@ class WindowsPostInstall(PostInstall):
 # ################################################################################################################################
 
 class NonWindowsPostInstall(PostInstall):
-    lib_dir_elems = ['lib']
-    bin_path_prefix_elems = ['bin']
+    lib_dir_elems = ['code', 'lib']
+    bin_path_prefix_elems = ['code', 'bin']
     bin_path_needs_python_dir = False
     zato_bin_line    = 0
     zato_bin_command = 'zato'
