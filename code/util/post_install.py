@@ -86,7 +86,7 @@ class PostInstall:
         self.bin_dir = bin_dir
 
         # Packages are installed here
-        self.site_packages_dir = os.path.join(self.base_dir, *site_packages_relative)
+        self.site_packages_dir = os.path.join(self.code_dir, *site_packages_relative)
 
 # ################################################################################################################################
 
@@ -169,6 +169,8 @@ class PostInstall:
         # In site-packages, there are no files to ignore except for backup ones
         to_ignore = ['-bak']
 
+        logger.info('Updating site-packages: %s -> %s -> %s', files_dir, patterns, to_ignore)
+
         # Actually updates the files now
         self.update_files(files_dir, patterns, to_ignore)
 
@@ -184,6 +186,8 @@ class PostInstall:
 
         # Ignore binary files in addition to the backup ones
         to_ignore = ['-bak', '.exe', 'python']
+
+        logger.info('Updating bin: %s -> %s -> %s', files_dir, patterns, to_ignore)
 
         # Actually updates the files now
         self.update_files(files_dir, patterns, to_ignore)
@@ -420,7 +424,7 @@ class PostInstall:
         """
 
         # .. if these are the same, it means that we do not have anything to do.
-        if self.base_dir == self.orig_build_dir:
+        if 0: #self.base_dir == self.orig_build_dir:
             logger.info('Returning as base_dir and orig_build_dir are the same (%s)', self.base_dir)
             return
         else:
@@ -492,7 +496,7 @@ class NonWindowsPostInstall(PostInstall):
 
     def get_bin_dir(self) -> 'str':
 
-        bin_dir = os.path.join(self.base_dir, 'bin')
+        bin_dir = os.path.join(self.code_dir, 'bin')
         bin_dir = os.path.abspath(bin_dir)
 
         return bin_dir
