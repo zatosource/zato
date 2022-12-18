@@ -20,5 +20,5 @@ set pip_cmd=%pip_dir%\pip.pyz
 rem
 rem Run pip
 rem
-%python_cmd% %pip_cmd%
+%python_cmd% %pip_cmd% %*
 if %errorlevel% neq 0 exit /b %errorlevel%
