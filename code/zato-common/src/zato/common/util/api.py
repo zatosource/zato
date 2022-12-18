@@ -627,8 +627,8 @@ def visit_py_source(
         '  util*.py',
         '*_util*.py',
 
-        '  pri*.py',
-        '*_pri*.py',
+        '  pri_*.py',
+        '*_pri.py',
     ]
 
     # For storing names of files that we have already deployed,
