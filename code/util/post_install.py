@@ -52,6 +52,7 @@ class PostInstall:
     build_dir_to_base_depth: 'int'
 
     base_dir: 'str'
+    code_dir: 'str'
     bin_dir:  'str'
 
     # A directory where Python binaries are in, e.g. python3.11, python3.12 etc.
@@ -70,8 +71,12 @@ class PostInstall:
     # This is the path to the directory that 'zato.bat' command is in
     zato_windows_bin_dir: 'str'
 
-    # Full path to 'zato.bat'
-    zato_windows_bin_path: 'str'
+    lib_dir_elems         = None # type: any_
+    bin_path_prefix_elems = None # type: any_
+    bin_path_needs_python_dir = None # type: any_
+
+    zato_bin_line:    'int | None' = None
+    zato_bin_command: 'str | None' = None
 
 # ################################################################################################################################
 
@@ -81,13 +86,7 @@ class PostInstall:
         self.bin_dir = bin_dir
 
         # Packages are installed here
-        self.site_packages_dir = os.path.join(self.base_dir, *site_packages_relative)
-
-        # This is the path to the directory that 'zato.bat' command is in
-        # self.zato_windows_bin_dir = os.path.join(self.base_dir, 'windows-bin')
-
-        # Full path to 'zato.py'
-        # self.zato_windows_bin_path = os.path.join(self.zato_windows_bin_dir, 'zato.bat')
+        self.site_packages_dir = os.path.join(self.code_dir, *site_packages_relative)
 
 # ################################################################################################################################
 
@@ -125,6 +124,14 @@ class PostInstall:
         # To make it easier to recognise what we are working with currently
         file_names.sort()
 
+        """
+        print()
+        print(111, file_names)
+        print(222, self.orig_build_dir)
+        print(333, self.base_dir)
+        print()
+        """
+
         for name in file_names:
 
             # Prepare a backup file's name ..
@@ -142,7 +149,7 @@ class PostInstall:
                 logger.info('Replacing `%s` in %s', self.orig_build_dir, name)
 
                 # Replace the build directory with the actual installation directory ..
-                data = data.replace(self.orig_build_dir, self.base_dir)
+                data = data.replace(self.orig_build_dir, self.code_dir)
 
                 # .. and save the data on disk.
                 f = open(name, 'w')
@@ -162,6 +169,8 @@ class PostInstall:
         # In site-packages, there are no files to ignore except for backup ones
         to_ignore = ['-bak']
 
+        logger.info('Updating site-packages: %s -> %s -> %s', files_dir, patterns, to_ignore)
+
         # Actually updates the files now
         self.update_files(files_dir, patterns, to_ignore)
 
@@ -177,6 +186,8 @@ class PostInstall:
 
         # Ignore binary files in addition to the backup ones
         to_ignore = ['-bak', '.exe', 'python']
+
+        logger.info('Updating bin: %s -> %s -> %s', files_dir, patterns, to_ignore)
 
         # Actually updates the files now
         self.update_files(files_dir, patterns, to_ignore)
@@ -253,6 +264,104 @@ class PostInstall:
 
 # ################################################################################################################################
 
+    def get_python_dir(self) -> 'any_':
+
+        python_dir = 'default-python_dir'
+
+        # This the directory where the Python directory will be found ..
+        lib_dir = os.path.join(self.base_dir, *self.lib_dir_elems)
+
+        # .. list all the directories in the lib dir ..
+        for item in sorted(os.listdir(lib_dir)):
+
+            # .. accept the one that is a Python one ..
+            if item.startswith('python'):
+                python_dir = item
+                break
+
+        # .. and return the result to the caller.
+        return python_dir
+
+# ################################################################################################################################
+
+    def get_python_dir_full(self) -> 'str':
+
+        python_dir_full = os.path.join(self.base_dir, *self.lib_dir_elems, self.python_dir)
+        python_dir_full = os.path.abspath(python_dir_full)
+
+        return python_dir_full
+
+# ################################################################################################################################
+
+    def get_orig_build_dir(self) -> 'str':
+
+        # Build a full path to the zato command ..
+        zato_bin_path = [self.base_dir]
+        zato_bin_path.extend(self.bin_path_prefix_elems)
+
+        if self.bin_path_needs_python_dir:
+            zato_bin_path.append(self.python_dir)
+
+        zato_bin_path.append(self.zato_bin_command) # type: ignore
+        zato_bin_path = os.sep.join(zato_bin_path)
+
+        # .. read the whole contents ..
+        lines = open(zato_bin_path).readlines()
+
+        # .. our path will be in the first line ..
+        bin_line = lines[self.zato_bin_line] # type: ignore
+        bin_line = bin_line.strip()
+
+        bin_path = self.extract_bin_path_from_bin_line(bin_line)
+
+        #
+        # .. Now, we have something like this in bin_line:
+        # .. /home/user/projects/zatosource-zato/3.2/code/bin/python
+        # .. and we would like to remove the trailing parts to have this:
+        # .. /home/user/projects/zatosource-zato/3.2/code/
+        #
+        # .. How many parts to remove will depend on what operating system we are on
+        # .. which is why it is our subclasses that tell it to us below.
+
+        # Turn what we have so far into a Path object so it is easier to process it ..
+        bin_path = Path(bin_path)
+
+        # .. extract the original build directory now ..
+        orig_build_dir = bin_path.parts[:-self.build_dir_to_base_depth]
+
+        # Turn what we have so far into a list ..
+        orig_build_dir = list(orig_build_dir)
+
+        # If we are not on Windows, we need to remove the leading slash character
+        # because we are going to use os.sep to join all the remaining parts.
+        if not is_windows:
+            try:
+                orig_build_dir.remove('/')
+            except ValueError:
+                pass
+
+        # Prepend a slahs character, unless we are on Windows
+        prefix = '' if is_windows else '/'
+
+        # .. turn it into a list ..
+        orig_build_dir = prefix + os.sep.join(orig_build_dir)
+
+        # Correct the path separator on Windows
+        if is_windows:
+            orig_build_dir = orig_build_dir.replace('\\\\', '\\')
+
+        # .. and return it to our caller.
+        return orig_build_dir
+
+# ################################################################################################################################
+
+    def get_site_packages_dir(self) -> 'str':
+
+        site_packages_dir = os.path.join(self.python_dir_full, 'site-packages')
+        return site_packages_dir
+
+# ################################################################################################################################
+
     def get_impl_base_dir(self) -> 'str':
         raise NotImplementedError('Must be implemented by subclasses')
 
@@ -263,27 +372,12 @@ class PostInstall:
 
 # ################################################################################################################################
 
-    def get_orig_build_dir(self) -> 'str':
-        raise NotImplementedError('Must be implemented by subclasses')
-
-# ################################################################################################################################
-
-    def get_python_dir(self) -> 'str':
-        raise NotImplementedError('Must be implemented by subclasses')
-
-# ################################################################################################################################
-
-    def get_python_dir_full(self) -> 'str':
-        raise NotImplementedError('Must be implemented by subclasses')
-
-# ################################################################################################################################
-
-    def get_site_packages_dir(self) -> 'str':
-        raise NotImplementedError('Must be implemented by subclasses')
-
-# ################################################################################################################################
-
     def get_bin_dir(self) -> 'str':
+        raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+
+    def extract_bin_path_from_bin_line(self, bin_line:'str') -> 'str':
         raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
@@ -293,17 +387,41 @@ class PostInstall:
         # Base directory may be given explicitly or we will need build it in relation to our own location
         if len(sys.argv) > 1:
             base_dir = sys.argv[1]
-            return base_dir
+            if base_dir.endswith('\\'):
+                base_dir = base_dir[:-1]
         else:
-            return self.get_impl_base_dir()
+            base_dir = self.get_impl_base_dir()
+
+        return base_dir
 
 # ################################################################################################################################
 
     def run(self) -> 'None':
 
         # Prepare paths ..
-        self.base_dir         = self.get_base_dir()
-        self.orig_build_dir   = self.get_orig_build_dir()
+        self.base_dir        = self.get_base_dir()
+        self.code_dir        = os.path.join(self.base_dir, 'code')
+        self.python_dir      = self.get_python_dir()
+        self.python_dir_full = self.get_python_dir_full()
+        self.orig_build_dir  = self.get_orig_build_dir()
+
+        """
+        print()
+        print(111, self.base_dir)
+        print()
+
+        print()
+        print(222, self.python_dir)
+        print()
+
+        print()
+        print(333, self.python_dir_full)
+        print()
+
+        print()
+        print(444, self.orig_build_dir)
+        print()
+        """
 
         # .. if these are the same, it means that we do not have anything to do.
         if self.base_dir == self.orig_build_dir:
@@ -314,8 +432,6 @@ class PostInstall:
             # .. prepare the rest of the configuration ..
 
             self.bin_dir           = self.get_bin_dir()
-            self.python_dir        = self.get_python_dir()
-            self.python_dir_full   = self.get_python_dir_full()
             self.site_packages_dir = self.get_site_packages_dir()
 
             # .. and actually run the process.
@@ -325,13 +441,42 @@ class PostInstall:
 # ################################################################################################################################
 
 class WindowsPostInstall(PostInstall):
-    pass
+    lib_dir_elems         = ['code', 'bundle-ext', 'python-windows']
+    bin_path_prefix_elems = ['code', 'bundle-ext', 'python-windows']
+    bin_path_needs_python_dir = True
+    zato_bin_line    = 1
+    zato_bin_command = 'zato.bat'
+    build_dir_to_base_depth = 4
+
+# ################################################################################################################################
+
+    def run_impl(self) -> 'None':
+        self.update_paths()
+
+# ################################################################################################################################
+
+    def get_bin_dir(self) -> 'str':
+        return self.python_dir_full
+
+# ################################################################################################################################
+
+    def extract_bin_path_from_bin_line(self, bin_line:'str') -> 'str':
+
+        bin_line = bin_line.split() # type: ignore
+        bin_path = bin_line[0]
+        bin_path = bin_path.replace('"', '')
+
+        return bin_path
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class NonWindowsPostInstall(PostInstall):
-
+    lib_dir_elems = ['code', 'lib']
+    bin_path_prefix_elems = ['code', 'bin']
+    bin_path_needs_python_dir = False
+    zato_bin_line    = 0
+    zato_bin_command = 'zato'
     build_dir_to_base_depth = 2
 
 # ################################################################################################################################
@@ -349,92 +494,18 @@ class NonWindowsPostInstall(PostInstall):
 
 # ################################################################################################################################
 
-    def get_python_dir(self) -> 'any_':
-
-        python_dir = 'default-python_dir'
-
-        # This the directory where the Python directory will be found ..
-        lib_dir = os.path.join(self.base_dir, 'lib')
-
-        # .. list all the directories in the lib dir ..
-        for item in sorted(os.listdir(lib_dir)):
-
-            # .. accept the one that is a Python one ..
-            if item.startswith('python'):
-                python_dir = item
-                break
-
-        # .. and return the result to the caller.
-        return python_dir
-
-# ################################################################################################################################
-
-    def get_python_dir_full(self) -> 'str':
-
-        python_dir_full = os.path.join(self.base_dir, 'lib', self.python_dir)
-        python_dir_full = os.path.abspath(python_dir_full)
-
-        return python_dir_full
-
-# ################################################################################################################################
-
     def get_bin_dir(self) -> 'str':
 
-        bin_dir = os.path.join(self.base_dir, 'bin')
+        bin_dir = os.path.join(self.code_dir, 'bin')
         bin_dir = os.path.abspath(bin_dir)
 
         return bin_dir
 
 # ################################################################################################################################
 
-    def get_site_packages_dir(self) -> 'str':
-
-        site_packages_dir = os.path.join(self.python_dir_full, 'site-packages')
-        return site_packages_dir
-
-# ################################################################################################################################
-
-    def get_orig_build_dir(self) -> 'str':
-
-        # Full path to the zato command ..
-        zato_bin_path = os.path.join(self.base_dir, 'bin', 'zato')
-
-        # .. read the whole contents ..
-        lines = open(zato_bin_path).readlines()
-
-        # .. our path will be in the first line ..
-        bin_line = lines[0]
-        bin_line = bin_line.strip()
-        bin_line = bin_line.replace('#!', '')
-
-        #
-        # .. Now, we have something like this in bin_line:
-        # .. /home/user/projects/zatosource-zato/3.2/code/bin/python
-        # .. and we would like to remove the trailing parts to have this:
-        # .. /home/user/projects/zatosource-zato/3.2/code/
-        #
-        # .. How many parts to remove will depend on what operating system we are on
-        # .. which is why it is our subclasses that tell it to us below.
-
-        # Turn what we have so far into a Path object so it is easier to process it ..
-        bin_path = Path(bin_line)
-
-        # .. extract the original build directory now ..
-        orig_build_dir = bin_path.parts[:-self.build_dir_to_base_depth]
-
-        # We need to remove the leading slash character
-        # because we are going to use os.sep to join all the remaining parts.
-        orig_build_dir = list(orig_build_dir)
-        try:
-            orig_build_dir.remove('/')
-        except ValueError:
-            pass
-
-        # .. turn it into a list ..
-        orig_build_dir = '/' + os.sep.join(orig_build_dir)
-
-        # .. and return it to our caller.
-        return orig_build_dir
+    def extract_bin_path_from_bin_line(self, bin_line:'str') -> 'str':
+        bin_path = bin_line.replace('#!', '')
+        return bin_path
 
 # ################################################################################################################################
 # ################################################################################################################################
