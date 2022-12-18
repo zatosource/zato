@@ -399,11 +399,11 @@ class PostInstall:
     def run(self) -> 'None':
 
         # Prepare paths ..
-        self.base_dir         = self.get_base_dir()
-        self.code_dir         = os.path.join(self.base_dir, 'code')
-        self.python_dir       = self.get_python_dir()
-        self.python_dir_full  = self.get_python_dir_full()
-        self.orig_build_dir   = self.get_orig_build_dir()
+        self.base_dir        = self.get_base_dir()
+        self.code_dir        = os.path.join(self.base_dir, 'code')
+        self.python_dir      = self.get_python_dir()
+        self.python_dir_full = self.get_python_dir_full()
+        self.orig_build_dir  = self.get_orig_build_dir()
 
         """
         print()
@@ -424,7 +424,7 @@ class PostInstall:
         """
 
         # .. if these are the same, it means that we do not have anything to do.
-        if 0: #self.base_dir == self.orig_build_dir:
+        if self.base_dir == self.orig_build_dir:
             logger.info('Returning as base_dir and orig_build_dir are the same (%s)', self.base_dir)
             return
         else:
