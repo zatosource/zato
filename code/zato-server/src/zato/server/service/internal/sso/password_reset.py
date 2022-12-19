@@ -140,6 +140,7 @@ class PasswordExpiryHandler(Service):
                 UserModelTable.c.display_name,
                 UserModelTable.c.password_expiry,
             )).\
+            where(UserModelTable.c.is_locked.is_(False)).\
             order_by(UserModelTable.c.username)
 
         # Obtain a new SQL session ..
@@ -170,6 +171,8 @@ class PasswordExpiryHandler(Service):
         if to_process:
             self.logger.info('Sending %s result(s) to service `%s`', len(to_process), processor_service)
             self.invoke(processor_service, to_process)
+        else:
+            self.logger.info('No results to send to service `%s`', processor_service)
 
 # ################################################################################################################################
 # ################################################################################################################################
