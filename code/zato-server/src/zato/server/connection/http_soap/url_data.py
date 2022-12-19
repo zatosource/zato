@@ -1126,7 +1126,7 @@ class URLData(CyURLData, OAuthDataStore):
         # Set up rate limiting, if it is enabled
         if channel_item.get('is_rate_limit_active'):
             self.worker.server.set_up_object_rate_limiting(
-                RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['name'], config=channel_item)
+                RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['name'], config_=channel_item)
 
         # Set up audit log
         self._set_up_audit_log(channel_item, is_edit)
