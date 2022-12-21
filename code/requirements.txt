@@ -131,7 +131,7 @@ twilio==7.15.3
 typing-extensions==4.0.1
 typing-utils==0.1.0
 tzlocal==4.0
-ujson==5.5.0
+ujson==3.2.0
 umalqurra==0.2
 urllib3==1.26.7
 vine==5.0.0
