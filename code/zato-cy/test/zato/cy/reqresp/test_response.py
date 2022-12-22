@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from copy import deepcopy
 from http.client import OK
+from unittest import main as unittest_main
 
 # Zato
 from zato.common.api import DATA_FORMAT, ZATO_OK
@@ -155,6 +156,12 @@ class ResponseTestCase(BaseSIOTestCase):
             self.assertEqual(e.args[0], 'Cannot serialise value without SimpleIO ouput declaration (<MyCustomPayloadType>)')
         else:
             self.fail('Expected for an exception to be raised')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+    _ = unittest_main()
 
 # ################################################################################################################################
 # ################################################################################################################################

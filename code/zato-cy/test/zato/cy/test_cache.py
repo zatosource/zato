@@ -421,7 +421,7 @@ class CacheTestCace(TestCase):
         try:
             c.set(key3, expected3, 0.0, None)
         except ValueError as e:
-            self.assertEqual(e.message, 'Value too long 7 > 6')
+            self.assertEqual(e.args[0], 'Value too long 7 > 6')
         else:
             self.fail('Expected aValueError to be raised')
 
