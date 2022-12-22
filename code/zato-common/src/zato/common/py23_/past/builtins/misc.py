@@ -79,7 +79,6 @@ if PY3:
         return '0' + builtins.oct(number)[2:]
 
     raw_input = input
-    from imp import reload
     unicode = str
     unichr = chr
     xrange = range
@@ -93,7 +92,6 @@ else:
     intern = __builtin__.intern
     oct = __builtin__.oct
     raw_input = __builtin__.raw_input
-    reload = __builtin__.reload
     unicode = __builtin__.unicode
     unichr = __builtin__.unichr
     xrange = __builtin__.xrange
