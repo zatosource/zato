@@ -1411,6 +1411,9 @@ class WebSocket(_WebSocket):
             if use_send:
                 self.send(serialized, cid, msg.in_reply_to)
             else:
+                # Do not send whitespace so as not to the exceed the 125 bytes length limit
+                # that each ping message has to be contained within.
+                serialized = serialized.replace(' ', '').replace('\n', '')
                 self.ping(serialized)
 
         except RuntimeError as e:
