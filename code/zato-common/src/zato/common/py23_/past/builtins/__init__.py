@@ -89,7 +89,7 @@ else:
     from __builtin__ import (basestring, dict, str, long, unicode)
 
 from zato.common.py23_.past.builtins.misc import (apply, chr, cmp, execfile, intern, oct,
-                                raw_input, reload, unichr, unicode, xrange)
+                                raw_input, unichr, unicode, xrange)
 from zato.common.py23_.past import utils
 
 
@@ -101,7 +101,7 @@ if utils.PY3:
     __all__ = ['filter', 'map', 'range', 'reduce', 'zip',
                'basestring', 'dict', 'str', 'long', 'unicode',
                'apply', 'chr', 'cmp', 'execfile', 'intern', 'raw_input',
-               'reload', 'unichr', 'xrange'
+               'unichr', 'xrange'
               ]
 
 else:
