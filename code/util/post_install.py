@@ -14,6 +14,7 @@ from glob import glob
 from pathlib import Path
 from platform import system as platform_system
 from shutil import copy as shutil_copy
+from typing import Any as any_, cast as cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,7 +103,7 @@ class PostInstall:
             full_pattern = os.path.join(files_dir, name)
 
             # .. consult all the file names in the directory ..
-            for full_path in glob(full_pattern): # type: str
+            for full_path in glob(full_pattern):
 
                 # .. ignore sub-directories ..
                 if os.path.isdir(full_path):
@@ -124,14 +125,6 @@ class PostInstall:
         # To make it easier to recognise what we are working with currently
         file_names.sort()
 
-        """
-        print()
-        print(111, file_names)
-        print(222, self.orig_build_dir)
-        print(333, self.base_dir)
-        print()
-        """
-
         for name in file_names:
 
             # Prepare a backup file's name ..
@@ -141,7 +134,7 @@ class PostInstall:
             shutil_copy(name, backup_name)
 
             # Now, we can get the contents of the original file
-            data = open(name, 'r').read() # type: str
+            data = open(name, 'r', encoding='utf8').read() # type: str
 
             if self.orig_build_dir in data:
 
@@ -185,7 +178,7 @@ class PostInstall:
         files_dir = self.bin_dir
 
         # Ignore binary files in addition to the backup ones
-        to_ignore = ['-bak', '.exe', 'python']
+        to_ignore = ['python', '-bak', '.dll', '.exe', '.pyd', '.zip']
 
         logger.info('Updating bin: %s -> %s -> %s', files_dir, patterns, to_ignore)
 
@@ -248,7 +241,7 @@ class PostInstall:
             SetValueEx(reg_key_handle, 'path', 0, reg_expand_sz, env_path)
 
         # .. finally, we can notify the system of the change.
-        SendMessage(hwnd_broadcast, wm_settingchange, 0, sub_key)
+        _ = SendMessage(hwnd_broadcast, wm_settingchange, 0, cast_('any_', sub_key))
 
 # ################################################################################################################################
 
