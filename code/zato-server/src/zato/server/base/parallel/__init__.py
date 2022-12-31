@@ -334,7 +334,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
                         # Save the source code only once here
                         f = open(tmp_full_path, 'wb')
-                        f.write(source)
+                        _ = f.write(source)
                         f.close()
 
                     else:
@@ -386,7 +386,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     internal_service_modules.append(module_name)
 
             locally_deployed.extend(self.service_store.import_internal_services(
-                internal_service_modules, self.base_dir, self.sync_internal, self.is_starting_first))
+                internal_service_modules, self.base_dir, self.sync_internal, cast_('bool', self.is_starting_first)))
 
             logger.info('Deploying user-defined services (%s)', self.name)
 
@@ -566,7 +566,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             wsx_gateway_service_allowed = wsx_gateway_service_allowed.split(',')
             wsx_gateway_service_allowed = [elem.strip() for elem in wsx_gateway_service_allowed if elem]
-            self.fs_server_config.pubsub.wsx_gateway_service_allowed.extend(wsx_gateway_service_allowed)
+            _ = self.fs_server_config.pubsub.wsx_gateway_service_allowed.extend(wsx_gateway_service_allowed)
 
 # ################################################################################################################################
 
@@ -661,7 +661,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             conf = get_config_from_file(user_conf_full_path, file_name)
 
             # Not used at all in this type of configuration
-            conf.pop('user_config_items', None)
+            _ = conf.pop('user_config_items', None)
 
             self.user_config[user_config_name] = conf
 
@@ -815,7 +815,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
 
         # Set up SQL-based key/value API
-        self.kv_data_api = KVDataAPI(self.cluster_id, self.odb)
+        self.kv_data_api = KVDataAPI(cast_('int', self.cluster_id), self.odb)
 
         # Looked up upfront here and assigned to services in their store
         self.enforce_service_invokes = asbool(self.fs_server_config.misc.enforce_service_invokes)
@@ -868,7 +868,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Rate limiting
         self.rate_limiting = RateLimiting()
-        self.rate_limiting.cluster_id = self.cluster_id
+        self.rate_limiting.cluster_id = cast_('int', self.cluster_id)
         self.rate_limiting.global_lock_func = self.zato_lock_manager
         self.rate_limiting.sql_session_func = self.odb.session
 
@@ -983,10 +983,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Stops the environment after N seconds
         if self.stop_after:
-            spawn_greenlet(self._stop_after_timeout)
+            _ = spawn_greenlet(self._stop_after_timeout)
 
         if is_posix:
-            spawn_greenlet(self.ipc_api.run)
+            _ = spawn_greenlet(self.ipc_api.run)
             connector_config_ipc = cast_('ConnectorConfigIPC', self.connector_config_ipc)
 
             if self.component_enabled['stats']:
@@ -1132,16 +1132,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         }
 
         if self.component_enabled['stats']:
-            self.connector_events.start_zato_events_connector(ipc_tcp_start_port, extra_options_kwargs=extra_options_kwargs)
+            _ = self.connector_events.start_zato_events_connector(ipc_tcp_start_port, extra_options_kwargs=extra_options_kwargs)
 
             # Wait until the events connector started - this will let other parts
             # of the server assume that it is always available.
-            wait_until_port_taken(self.connector_events.ipc_tcp_port, timeout=5)
+            _ = wait_until_port_taken(self.connector_events.ipc_tcp_port, timeout=5)
 
 # ################################################################################################################################
 
     def set_up_sso_rate_limiting(self) -> 'None':
         for item in self.odb.get_sso_user_rate_limiting_info():
+            item = cast_('any_', item)
             self._create_sso_user_rate_limiting(item.user_id, True, item.rate_limit_def)
 
 # ################################################################################################################################
@@ -1325,7 +1326,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """ A callback method invoked by pub/sub delivery tasks for each messages that is to be delivered.
         """
         subscription = self.worker_store.pubsub.subscriptions_by_sub_key[msg.sub_key]
-        topic = self.worker_store.pubsub.topics[subscription.config['topic_id']]
+        topic = self.worker_store.pubsub.topics[subscription.config['topic_id']] # type: ignore
 
         if topic.before_delivery_hook_service_invoker:
             response = topic.before_delivery_hook_service_invoker(topic, msg)
