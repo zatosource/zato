@@ -840,7 +840,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.worker_store = WorkerStore(self.config, self)
         self.worker_store.invoke_matcher.read_config(self.fs_server_config.invoke_patterns_allowed)
         self.worker_store.target_matcher.read_config(self.fs_server_config.invoke_target_patterns_allowed)
-        self.set_up_config(server)
+        self.set_up_config(server) # type: ignore
 
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()
@@ -885,7 +885,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.worker_store.early_init()
 
         # Deploys services
-        locally_deployed = self._after_init_common(server)
+        locally_deployed = self._after_init_common(server) # type: ignore
 
         # Initializes worker store, including connectors
         self.worker_store.init()
@@ -1011,7 +1011,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         import psutil
 
         now = datetime.utcnow()
-        stop_at = now + timedelta(seconds=self.stop_after)
+        stop_at = now + timedelta(seconds=cast_('int', self.stop_after))
 
         while now < stop_at:
             logger.info(f'Now is {now}; waiting to stop until {stop_at}')
@@ -1322,7 +1322,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def deliver_pubsub_msg(self, msg:'Bunch') -> 'None':
+    def deliver_pubsub_msg(self, msg:'any_') -> 'None':
         """ A callback method invoked by pub/sub delivery tasks for each messages that is to be delivered.
         """
         subscription = self.worker_store.pubsub.subscriptions_by_sub_key[msg.sub_key]
@@ -1567,7 +1567,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """ Publishes a message on the broker so all the servers (this one including
         can deploy a new package).
         """
-        msg = {'action': HOT_DEPLOY.CREATE_SERVICE.value, 'package_id': package_id}
+        msg = {'action': HOT_DEPLOY.CREATE_SERVICE.value, 'package_id': package_id} # type: ignore
         self.broker_client.publish(msg)
 
 # ################################################################################################################################
