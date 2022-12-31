@@ -33,7 +33,7 @@ from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
 from zato.common.api import DATA_FORMAT, default_internal_modules, HotDeploy, KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, \
-    SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
+    SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
@@ -959,6 +959,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             # Startup services
             self.invoke_startup_services()
 
+            # Local file-based configuration to apply
+            try:
+                self.apply_local_config()
+            except Exception as e:
+                logger.info('Exception while applying local config -> %s', e)
+
             # Subprocess-based connectors
             if self.has_posix_ipc:
                 self.init_subprocess_connectors(subprocess_start_config)
@@ -1195,6 +1201,47 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         _invoke_startup_services('Parallel', stanza,
             self.fs_server_config, self.repo_location, self.broker_client, None,
             is_sso_enabled=self.is_sso_enabled)
+
+# ################################################################################################################################
+
+    def _set_ide_password(self, ide_username:'str', ide_password:'str') -> 'None':
+        service_name = 'zato.security.basic-auth.change-password'
+        request = {
+            'name': ide_username,
+            'is_active': True,
+            'type_': SEC_DEF_TYPE.BASIC_AUTH,
+            'password1': ide_password,
+            'password2': ide_password,
+        }
+        _ = self.invoke(service_name, request)
+
+# ################################################################################################################################
+
+    def apply_local_config(self) -> 'None':
+
+        # A quickstart environment directory we are potentially in
+        env_dir  = os.path.join(self.base_dir, '..')
+        env_dir = os.path.abspath(env_dir)
+
+        # A configuration file that may potentially exist
+        env_json = os.path.join(env_dir, 'env.json')
+
+        # Proceed only if the config file exists at all
+        if os.path.exists(env_json):
+
+            # Log what we are about to do
+            self.logger.info('Found local config file -> %s', env_json)
+
+            with open(env_json) as f:
+                data = f.read()
+                conf = loads(data)
+
+                ide_username = conf.get('ide_username')
+                ide_password = conf.get('ide_password')
+
+                if ide_username and ide_password:
+                    self.logger.info('Setting password for IDE user `%s`', ide_username)
+                    self._set_ide_password(ide_username, ide_password)
 
 # ################################################################################################################################
 
