@@ -33,6 +33,14 @@ logger = logging.getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ModuleCtx:
+    Long_File_Pattern         = r'\\?\%s'
+    Long_File_Prefix          = '\\\\?\\'
+    Long_File_Prefix_Escaped  = r'\\\?\\'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 is_windows = 'windows' in platform_system().lower()
 
 # ################################################################################################################################
@@ -93,6 +101,10 @@ class PostInstall:
 
     def update_files(self, files_dir:'any_', patterns:'any_', to_ignore:'any_') -> 'None':
 
+        # Support long paths under Windows
+        if is_windows:
+            files_dir = ModuleCtx.Long_File_Pattern % files_dir
+
         # To be sorted later
         file_names = []
 
@@ -125,7 +137,7 @@ class PostInstall:
         # To make it easier to recognise what we are working with currently
         file_names.sort()
 
-        for name in file_names:
+        for idx, name in enumerate(file_names, 1):
 
             # Prepare a backup file's name ..
             backup_name = name + '-bak'
@@ -139,7 +151,7 @@ class PostInstall:
             if self.orig_build_dir in data:
 
                 # Log what we are about to do
-                logger.info('Replacing `%s` in %s', self.orig_build_dir, name)
+                logger.info('#%s Replacing `%s` in %s', idx, self.orig_build_dir, name)
 
                 # Replace the build directory with the actual installation directory ..
                 data = data.replace(self.orig_build_dir, self.code_dir)
@@ -148,6 +160,8 @@ class PostInstall:
                 f = open(name, 'w')
                 _ = f.write(data)
                 f.close()
+
+                logger.info('#%s Finished replacing', idx)
 
 # ################################################################################################################################
 
@@ -225,7 +239,7 @@ class PostInstall:
         sub_key = 'Environment'
 
         # Open the registry key ..
-        with OpenKey(root, sub_key, 0, key_all_access) as reg_key_handle:
+        with OpenKey(root, sub_key, 0, key_all_access) as reg_key_handle: # type: ignore
 
             # .. look up the current value of %path% ..
             env_path, _ = QueryValueEx(reg_key_handle, 'path')
@@ -297,6 +311,9 @@ class PostInstall:
 
         zato_bin_path.append(self.zato_bin_command) # type: ignore
         zato_bin_path = os.sep.join(zato_bin_path)
+
+        if is_windows:
+            zato_bin_path = ModuleCtx.Long_File_Pattern % zato_bin_path
 
         # .. read the whole contents ..
         lines = open(zato_bin_path).readlines()
