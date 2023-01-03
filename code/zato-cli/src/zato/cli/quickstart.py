@@ -560,7 +560,7 @@ class Create(ZatoCommand):
             create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path
             create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path
 
-        create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True)
+        _ = create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True)
         self.logger.info('[{}/{}] Scheduler created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
@@ -576,8 +576,8 @@ class Create(ZatoCommand):
         vscode_settings_json_path = os.path.join(vscode_dir, 'settings.json')
 
         os.mkdir(vscode_dir)
-        open_w(vscode_launch_json_path).write(vscode_launch_json)
-        open_w(vscode_settings_json_path).write(vscode_settings_json)
+        _ = open_w(vscode_launch_json_path).write(vscode_launch_json)
+        _ = open_w(vscode_settings_json_path).write(vscode_settings_json)
 
         # This will exist for Windows and other systems
         zato_qs_start_path = 'zato-qs-start.bat' if is_windows else 'zato-qs-start.sh'
@@ -635,12 +635,12 @@ class Create(ZatoCommand):
                 zato_cmd=zato_cmd,
                 env_dir=args_path)
 
-            open_w(zato_qs_start_path).write(windows_qs_start)
+            _ = open_w(zato_qs_start_path).write(windows_qs_start)
 
         else:
-            open_w(zato_qs_start_path).write(zato_qs_start)
-            open_w(zato_qs_stop_path).write(zato_qs_stop)
-            open_w(zato_qs_restart_path).write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
+            _ = open_w(zato_qs_start_path).write(zato_qs_start)
+            _ = open_w(zato_qs_stop_path).write(zato_qs_stop)
+            _ = open_w(zato_qs_restart_path).write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
 
             file_mod = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP
 
