@@ -52,7 +52,7 @@ vscode_settings_json = """
 # ################################################################################################################################
 
 windows_qs_start_template = """
-set zato_cmd={zato_cmd}
+set zato_cmd=zato
 set env_dir="{env_dir}"
 
 start /b %zato_cmd% start %env_dir%\\server1
@@ -631,9 +631,7 @@ class Create(ZatoCommand):
             zato_bin_dir = os.path.dirname(sys.executable)
             zato_cmd = os.path.join(zato_bin_dir, zato_bin)
 
-            windows_qs_start = windows_qs_start_template.format(
-                zato_cmd=zato_cmd,
-                env_dir=args_path)
+            windows_qs_start = windows_qs_start_template.format(env_dir=args_path)
 
             _ = open_w(zato_qs_start_path).write(windows_qs_start)
 
