@@ -1,5 +1,9 @@
 python310.zip
 .\Lib\site-packages\
+.\Lib\site-packages\
+.\Lib\site-packages\win32
+.\Lib\site-packages\win32\lib
+.\Lib\site-packages\win32\pythonwin
 ..\..\..\zato-agent\src\
 ..\..\..\zato-broker\src\
 ..\..\..\zato-cli\src\
