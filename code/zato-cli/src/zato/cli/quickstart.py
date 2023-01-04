@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 import os
-import sys
 from copy import deepcopy
 
 # Zato
@@ -628,11 +627,7 @@ class Create(ZatoCommand):
 
         if is_windows:
 
-            zato_bin_dir = os.path.dirname(sys.executable)
-            zato_cmd = os.path.join(zato_bin_dir, zato_bin)
-
             windows_qs_start = windows_qs_start_template.format(env_dir=args_path)
-
             _ = open_w(zato_qs_start_path).write(windows_qs_start)
 
         else:
