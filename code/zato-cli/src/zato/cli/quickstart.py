@@ -51,12 +51,18 @@ vscode_settings_json = """
 # ################################################################################################################################
 
 windows_qs_start_template = """
+@echo off
+
 set zato_cmd=zato
 set env_dir="{env_dir}"
 
 start /b %zato_cmd% start %env_dir%\\server1
 start /b %zato_cmd% start %env_dir%\\web-admin
 start /b %zato_cmd% start %env_dir%\\scheduler
+
+echo:
+echo *** Starting Zato in %env_dir%  ***
+echo:
 """.strip() # noqa: W605
 
 # ################################################################################################################################
