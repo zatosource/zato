@@ -29,7 +29,7 @@ from zato.url_dispatcher import Matcher
 if 0:
     from zato.common.model.wsx import WSXConnectorConfig
     from zato.common.odb.model import Server as ServerModel
-    from zato.common.typing_ import anydict, anydictnone, anylist
+    from zato.common.typing_ import anydict, anydictnone, anyset
     from zato.server.base.parallel import ParallelServer
     WSXConnectorConfig = WSXConnectorConfig
 
@@ -529,7 +529,7 @@ class ConfigLoader:
 
     def _after_init_accepted(
         self: 'ParallelServer', # type: ignore
-        locally_deployed        # type: anylist
+        locally_deployed        # type: anyset
     ) -> 'None':
 
         # Deploy missing services found on other servers
