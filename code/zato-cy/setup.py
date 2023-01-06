@@ -14,7 +14,7 @@ from Cython.Build import cythonize
 from setuptools import setup, find_packages
 
 import os
-os.environ['PYTHONPATH'] = 'c:\\Users\\dsuch\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8\\Lib\\site-packages'
+os.environ['PYTHONPATH'] = 'c:\\Users\\dsuch\\Documents\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8\\Lib\\site-packages'
 
 version = '3.2'
 
@@ -28,6 +28,10 @@ setup(
 
       package_dir = {'':'src'},
       packages = find_packages('src'),
+
+      include_dirs = [
+        'c:\\Users\\dsuch\\Documents\\projects\\zatosource-zato\\3.2\\zato\\code\\windows-python-embedded-3.10.8\\Include',
+      ],
 
       namespace_packages = ['zato'],
       ext_modules = cythonize([
