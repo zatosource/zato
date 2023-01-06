@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
 zato_command_template_windows = r"""
 @echo off
-"{bundled_python_dir}\python.exe" "{code_dir}\\zato-cli\\src\\zato\\cli\\_run_zato.py" %*
+"{bundled_python_dir}\python.exe" "\\?\{code_dir}\\zato-cli\\src\\zato\\cli\\_run_zato.py" %*
 """.strip() # noqa: W605
 
 # ################################################################################################################################

@@ -241,7 +241,7 @@ class ChangePasswordBase(AdminService):
     def _handle(self, class_, auth_func, action, name_func=None, instance_id=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL,
         *args, **kwargs):
 
-        instance_id = instance_id or self.request.input.id
+        instance_id = instance_id or self.request.input.get('id')
         instance_name = self.request.input.name
 
         with closing(self.odb.session()) as session:
