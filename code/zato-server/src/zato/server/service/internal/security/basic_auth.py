@@ -103,8 +103,9 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_basic_auth_edit_request'
         response_elem = 'zato_security_basic_auth_edit_response'
-        input_required = 'id', 'cluster_id', 'name', 'is_active', 'username', 'realm'
-        input_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+        input_required = 'name', 'is_active', 'username', 'realm'
+        input_optional = 'id', 'cluster_id', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
+            Boolean('rate_limit_check_parent_def')
         output_required = 'id', 'name'
 
     def handle(self):
@@ -112,19 +113,32 @@ class Edit(AdminService):
         # If we have a rate limiting definition, let's check it upfront
         DefinitionParser.check_definition_from_input(self.request.input)
 
+        # Local aliases
         input = self.request.input
-        with closing(self.odb.session()) as session:
+        input_id = input.get('id')
+        cluster_id = input.get('cluster_id') or self.server.cluster_id
+
+        with closing(self.odb.session()) as session: # type: ignore
             try:
                 existing_one = session.query(HTTPBasicAuth).\
-                    filter(Cluster.id==input.cluster_id).\
-                    filter(HTTPBasicAuth.name==input.name).\
-                    filter(HTTPBasicAuth.id!=input.id).\
-                    first()
+                    filter(Cluster.id==cluster_id).\
+                    filter(HTTPBasicAuth.name==input.name)
+
+                if input_id:
+                    existing_one = existing_one.filter(HTTPBasicAuth.id!=input.id)
+                    existing_one = existing_one.first()
 
                 if existing_one:
                     raise Exception('HTTP Basic Auth definition `{}` already exists on this cluster'.format(input.name))
 
-                definition = session.query(HTTPBasicAuth).filter_by(id=input.id).one()
+                definition = session.query(HTTPBasicAuth)
+
+                if input_id:
+                    definition = definition.filter_by(id=input.id)
+                else:
+                    definition = definition.filter_by(name=input.name)
+                definition = definition.one()
+
                 old_name = definition.name
 
                 set_instance_opaque_attrs(definition, input)

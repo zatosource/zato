@@ -164,4 +164,4 @@ psycopg2==2.8.6; sys_platform == 'linux'
 pysimdjson==5.0.2; sys_platform == 'linux'
 pysolr==3.9.0; sys_platform == 'linux'
 python-ldap==3.4.0; sys_platform == 'linux'
-pywin32==304; platform_system == "Windows"
+pywin32==305; platform_system == "Windows"
