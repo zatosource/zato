@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,6 +18,12 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 def start_cleanup(path:'str') -> 'None':
+
+    # Zato
+    from zato.common.util.platform_ import is_windows
+
+    if is_windows:
+        return
 
     # sh
     from sh import ErrorReturnCode # type: ignore
