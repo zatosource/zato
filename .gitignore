@@ -4,6 +4,11 @@ code/.installed.cfg
 code/\.vscode/
 code/bin/*
 code/build/*
+code/bundle-ext/python-windows/python-*/Lib/
+code/bundle-ext/python-windows/python-*/py.bat
+code/bundle-ext/python-windows/python-*/Scripts/
+code/bundle-ext/python-windows/python-*/zato.bat
+code/bundle-ext/python-windows/python-*/Include/greenlet/
 code/develop-eggs/*
 code/docs/*
 code/downloads/*
@@ -14,7 +19,9 @@ code/extlib
 code/get-pip.py
 code/include/*
 code/lib/*
+code/LICENSE.txt
 code/lib64
+code/LICENSE.txt
 code/local/*
 code/man/*
 code/mx/*
@@ -29,6 +36,7 @@ code/release-info/revision.txt
 code/Scripts/*
 code/sec-wall-trunk-src/*
 code/share/*
+code/src/*
 code/tests/*
 code/windows-bin/zato.py
 code/zato-cy/src/zato/cy/*.c
@@ -49,6 +57,7 @@ pidfile
 *.geany*
 *.pyc
 *.pyd
+!code/bundle-ext/**/*.pyd
 *.pyo
 *.so
 *.swp

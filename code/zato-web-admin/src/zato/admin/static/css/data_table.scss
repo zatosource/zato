@@ -2,9 +2,9 @@
     width:100%;
     margin-top: 8px;
     margin-left: 2%;
-    border:1px solid #ccc;  
+    border:1px solid #ccc;
     font-size:12px;
-	
+
 	counter-reset: data_table_counter;
 
     a {
@@ -14,41 +14,41 @@
     tr.odd {
         background-color:#fff;
     }
-    
+
     tr.even {
         background-color:#e8e8e8;
     }
-	
+
     tr.updated {
         background-color: $attention
     }
-	
+
     tr.attention td, tr.updated td {
         border-bottom:1px solid #a9a244;
     }
-    
+
     td, th {
         padding:6px
     }
-    
+
     th {
 		background: #ddd;
         font-size:11px;
     }
-    
+
     td {
-        vertical-align:base
+        vertical-align:middle !important
     }
-	
+
     td.inline_header {
 		background: #ddd;
     }
-	
-	td.numbering:before { 
+
+	td.numbering:before {
 		content: counter(data_table_counter);
 		counter-increment: data_table_counter;
 	}
-	
+
 	/* This two below are because of https://github.com/zatosource/zato/issues/22 (Add import/export) */
 	td.impexp {
 		width:1px;
@@ -57,7 +57,7 @@
 		display:none;
 		width:1px;
 	}
-    
+
 }
 
 .form-data{

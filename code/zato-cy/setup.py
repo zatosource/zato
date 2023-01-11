@@ -1,26 +1,39 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function
-
 # flake8: noqa
-import os
+from platform import system as platform_system
 from setuptools import Extension, find_packages, setup
 from Cython.Build import cythonize
 
-# Python 2/3 compatibility
-from past.builtins import execfile
+version = '3.2'
 
-curdir = os.path.dirname(os.path.abspath(__file__))
-_version_py = os.path.normpath(os.path.join(curdir, '..', '.version.py'))
-_locals = {}
-execfile(_version_py, _locals)
-version = _locals['version']
+is_windows = 'windows' in platform_system().lower()
+
+if is_windows:
+
+    # stdlib
+    import os
+
+    # Our Python version
+    python_version = '3.10.8'
+
+    curdir = os.path.dirname(__file__)
+    python_embedded_dir = os.path.join(curdir, '..', 'bundle-ext', 'python-windows', f'python-{python_version}')
+    python_embedded_dir = os.path.abspath(python_embedded_dir)
+
+    include_dirs = os.path.join(python_embedded_dir, 'Include')
+    include_dirs = [os.path.join(python_embedded_dir, 'Include')]
+
+    os.environ['PYTHONPATH'] = os.path.join(python_embedded_dir, 'Lib', 'site-packages')
+
+else:
+    include_dirs = []
 
 setup(
       name = 'zato-cy',
@@ -32,6 +45,8 @@ setup(
 
       package_dir = {'':'src'},
       packages = find_packages('src'),
+
+      include_dirs = include_dirs,
 
       namespace_packages = ['zato'],
       ext_modules = cythonize([

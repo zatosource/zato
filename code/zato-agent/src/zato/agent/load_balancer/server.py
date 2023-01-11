@@ -24,7 +24,7 @@ from pytz import utc
 import yaml
 
 # Python 2/3 compatibility
-from future.moves.urllib.request import urlopen
+from zato.common.ext.future.moves.urllib.request import urlopen
 from six import PY2
 
 # Zato

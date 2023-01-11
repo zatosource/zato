@@ -9,19 +9,17 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 # stdlib
-from calendar import timegm
 from importlib import import_module
 from logging import getLogger
-from time import gmtime
 
 # Cryptography
 from cryptography.fernet import InvalidToken
 
 # Python 2/3 compatibility
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 
 # Zato
-from zato.common.api import KVDB as _KVDB, NONCE_STORE
+from zato.common.api import KVDB as _KVDB
 from zato.common.const import SECRETS
 from zato.common.util import spawn_greenlet
 from zato.common.util.kvdb import has_redis_sentinels
@@ -237,27 +235,6 @@ class KVDB:
         """
         # type: (dict) -> bool
         return config.get('host') and config.get('port')
-
-# ################################################################################################################################
-
-    # OAuth
-
-    def add_oauth_nonce(self, username, nonce, max_nonce_log):
-        """ Adds an OAuth to the set containing last N used ones for a given username.
-        """
-        key = NONCE_STORE.KEY_PATTERN.format('oauth', username)
-
-        # This lets us trim the set to top (last) N nonces
-        score = timegm(gmtime())
-
-        self.conn.zadd(key, score, nonce)
-        self.conn.zremrangebyrank(key, 0, -max_nonce_log)
-
-    def has_oauth_nonce(self, username, nonce):
-        """ Returns a boolean flag indicating if there's an OAuth nonce for a given
-        username stored in KVDB.
-        """
-        return self.conn.zscore(NONCE_STORE.KEY_PATTERN.format('oauth', username), nonce)
 
 # ################################################################################################################################
 # ################################################################################################################################

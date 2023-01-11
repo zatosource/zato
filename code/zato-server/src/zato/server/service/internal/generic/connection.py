@@ -11,9 +11,10 @@ from contextlib import closing
 from copy import deepcopy
 from datetime import datetime
 from traceback import format_exc
+from uuid import uuid4
 
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs, ZATO_NONE
+from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, ZATO_NONE
 from zato.common.broker_message import GENERIC
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
@@ -27,7 +28,7 @@ from zato.server.service.internal.generic import _BaseService
 from zato.server.service.meta import DeleteMeta
 
 # Python 2/3 compatibility
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 from six import add_metaclass
 
 # ################################################################################################################################
@@ -61,6 +62,8 @@ config_dict_id_name_outconnn = {
     'sftp_source': 'out_sftp',
 }
 
+sec_def_sep = '/'
+
 # ################################################################################################################################
 
 extra_secret_keys = (
@@ -73,6 +76,7 @@ extra_secret_keys = (
     # Salesforce
     'consumer_key',
     'consumer_secret',
+
 )
 
 # Note that this is a set, unlike extra_secret_keys, because we do not make it part of SIO.
@@ -91,8 +95,8 @@ class _CreateEditSIO(AdminSIO):
     input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'),
         Bool('sec_use_rbac'))
     input_optional = ('cluster_id', 'id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
-        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id', AsIs('client_id')) + \
-        extra_secret_keys + generic_attrs
+        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id', AsIs('tenant_id'),
+        AsIs('client_id'), AsIs('security_id'), AsIs('sec_tls_ca_cert_id')) + extra_secret_keys + generic_attrs
     force_empty_keys = True
 
 # ################################################################################################################################
@@ -101,7 +105,8 @@ class _CreateEditSIO(AdminSIO):
 class _CreateEdit(_BaseService):
     """ Creates a new or updates an existing generic connection in ODB.
     """
-    is_edit = None
+    is_create: 'bool'
+    is_edit:   'bool'
 
     class SimpleIO(_CreateEditSIO):
         output_required = ('id', 'name')
@@ -116,7 +121,7 @@ class _CreateEdit(_BaseService):
 
         # Build a reusable flag indicating that a secret was sent on input.
         secret = data.get('secret', ZATO_NONE)
-        if secret == ZATO_NONE:
+        if (secret is None) or (secret == ZATO_NONE):
             has_input_secret  = False
             input_secret = ''
         else:
@@ -138,6 +143,8 @@ class _CreateEdit(_BaseService):
                 value = self._sio.eval_(key, value, self.server.encrypt)
 
             if key in extra_secret_keys:
+                if value is None:
+                    value = 'auto.generic.{}'.format(uuid4().hex)
                 value = self.crypto.encrypt(value)
                 value = value.decode('utf8')
 
@@ -151,6 +158,50 @@ class _CreateEdit(_BaseService):
         if 'is_active' in data:
             if data['is_active'] is None:
                 data['is_active'] = False
+
+        # If we have a pool size on input, we want to ensure that it is an integer
+        pool_size = data.get('pool_size')
+        try:
+            pool_size = int(pool_size) if pool_size else pool_size
+        except ValueError:
+            pass # Not an integer
+        else:
+            data['pool_size'] = pool_size
+
+        # Break down security definitions into components
+        security_id = data.get('security_id') or ''
+        if sec_def_sep in security_id:
+
+            # Extract the components ..
+            sec_def_type, security_id = security_id.split(sec_def_sep)
+            sec_def_type_name = SEC_DEF_TYPE_NAME[sec_def_type]
+
+            security_id = int(security_id)
+
+            # .. look the security name by its ID ..
+            if sec_def_type == SEC_DEF_TYPE.BASIC_AUTH:
+                func = self.server.worker_store.basic_auth_get_by_id
+            elif sec_def_type == SEC_DEF_TYPE.OAUTH:
+                func = self.server.worker_store.oauth_get_by_id
+            else:
+                func = None
+
+            if func:
+                sec_def = func(security_id)
+                security_name = sec_def.name
+            else:
+                security_name = 'unset'
+
+            # .. potentially overwrites the security type with what we have here ..
+            data['auth_type'] = sec_def_type
+
+            # .. turns the ID into an integer but also remove the sec_type prefix,
+            # .. e.g. 17 instead of 'oauth/17'.
+            data['security_id'] = int(security_id)
+
+            # .. and store everything else now.
+            data['sec_def_type_name'] = sec_def_type_name
+            data['security_name'] = security_name
 
         conn = GenericConnection.from_dict(data)
 
@@ -169,7 +220,9 @@ class _CreateEdit(_BaseService):
                 else:
                     secret = model.secret
 
+                secret = self.server.decrypt(secret)
                 conn.secret = secret
+                data.secret = secret # We need to set it here because we also publish this message to other servers
 
             # .. but if it is the create action, we need to create a new instance
             # .. and ensure that its secret is auto-generated.
@@ -187,9 +240,12 @@ class _CreateEdit(_BaseService):
 
             for key, value in sorted(conn_dict.items()):
 
-                # Do not set the field unless a secret was sent on input.
-                if key == 'secret' and not (has_input_secret):
-                    continue
+                # If we are merely creating this connection, do not set the field unless a secret was sent on input.
+                # If it is an edit, then we will have the secret either from the input or from the model,
+                # which is why we do to enter this branch.
+                if self.is_create:
+                    if key == 'secret' and not (has_input_secret):
+                        continue
 
                 setattr(model, key, value)
 
@@ -216,7 +272,8 @@ class _CreateEdit(_BaseService):
 class Create(_CreateEdit):
     """ Creates a new generic connection.
     """
-    is_edit = False
+    is_create = True
+    is_edit   = False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -224,7 +281,8 @@ class Create(_CreateEdit):
 class Edit(_CreateEdit):
     """ Updates an existing generic connection.
     """
-    is_edit = True
+    is_create = False
+    is_edit   = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -254,27 +312,8 @@ class GetList(AdminService):
 
 # ################################################################################################################################
 
-    def _set_conn_dict_value_reset_oauth2_scopes_url(self, conn_dict:'anydict') -> 'None':
-        scopes = (conn_dict['scopes'] or '').splitlines()
-        auth_redirect_url = conn_dict['auth_redirect_url']
-
-        client_id = conn_dict['client_id']
-        secret_value = conn_dict['secret_value']
-
-        # Office-365
-        from O365 import Account
-
-        credentials = (client_id, secret_value)
-        account = Account(credentials)
-        reset_oauth2_scopes_url, _ = account.con.get_authorization_url(requested_scopes=scopes, redirect_uri=auth_redirect_url)
-
-        conn_dict['reset_oauth2_scopes_url'] = reset_oauth2_scopes_url
-
-# ################################################################################################################################
-
     def _add_custom_conn_dict_fields(self, conn_dict:'anydict') -> 'None':
-        if conn_dict['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365:
-            self._set_conn_dict_value_reset_oauth2_scopes_url(conn_dict)
+        pass
 
 # ################################################################################################################################
 

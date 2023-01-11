@@ -19,6 +19,7 @@ from watchdog.events import FileCreatedEvent, FileModifiedEvent
 
 # Zato
 from zato.common.api import FILE_TRANSFER
+from zato.common.typing_ import cast_
 from zato.common.util.api import spawn_greenlet
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.server.file_transfer.snapshot import default_interval, DirSnapshotDiff
@@ -27,6 +28,7 @@ from zato.server.file_transfer.snapshot import default_interval, DirSnapshotDiff
 
 if 0:
     from bunch import Bunch
+    from zato.common.typing_ import any_, anylist, anytuple
     from zato.server.file_transfer.api import FileTransferAPI
     from zato.server.file_transfer.snapshot import BaseRemoteSnapshotMaker
 
@@ -43,9 +45,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class PathCreatedEvent:
-    __slots__ = 'src_path'
-
-    def __init__(self, src_path):
+    def __init__(self, src_path:'str') -> 'None':
         self.src_path = src_path
 
 # ################################################################################################################################
@@ -57,8 +57,7 @@ class BaseObserver:
     observer_type_name_title = observer_type_name.upper()
     should_wait_for_deleted_paths = False
 
-    def __init__(self, manager, channel_config):
-        # type: (FileTransferAPI, Bunch) -> None
+    def __init__(self, manager:'FileTransferAPI', channel_config:'Bunch') -> 'None':
         self.manager = manager
         self.channel_config = channel_config
         self.channel_id = channel_config.id
@@ -75,23 +74,22 @@ class BaseObserver:
 
 # ################################################################################################################################
 
-    def set_up(self, event_handler, path_list, recursive):
-        # type: (object, list, bool) -> None
+    def set_up(self, event_handler:'any_', path_list:'anylist', recursive:'bool') -> 'None':
         self.event_handler = event_handler
         self.path_list = path_string_list_to_list('.', path_list)
         self.is_recursive = recursive
 
 # ################################################################################################################################
 
-    def start(self, observer_start_args):
+    def start(self, observer_start_args:'anytuple') -> 'None':
         if self.is_active:
-            spawn_greenlet(self._start, observer_start_args)
+            _ = spawn_greenlet(self._start, observer_start_args)
         else:
             logger.info('Skipping an inactive file transfer channel `%s` (%s)', self.name, self.path_list)
 
 # ################################################################################################################################
 
-    def stop(self, needs_log=True):
+    def stop(self, needs_log:'bool'=True) -> 'None':
         if needs_log:
             logger.info('Stopping %s file transfer observer `%s`', self.observer_type_name, self.name)
         self.keep_running = False
@@ -100,7 +98,8 @@ class BaseObserver:
 
     def _start(self, observer_start_args):
 
-        for path in self.path_list: # type: str
+        for path in self.path_list:
+            path = cast_('str', path)
 
             # Start only for paths that are valid - all invalid ones
             # are handled by a background path inspector.
@@ -113,50 +112,49 @@ class BaseObserver:
 
 # ################################################################################################################################
 
-    def is_path_valid(self, *args, **kwargs):
+    def is_path_valid(self, *args:'any_', **kwargs:'any_') -> 'bool':
         """ Returns True if path can be used as a source for file transfer (e.g. it exists and it is a directory).
         """
         raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
 
-    def path_exists(self, path, snapshot_maker):
+    def path_exists(self, path:'str', snapshot_maker:'BaseRemoteSnapshotMaker') -> 'bool':
         """ Returns True if path exists, False otherwise.
         """
         raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
 
-    def path_is_directory(self, path, snapshot_maker):
+    def path_is_directory(self, path:'str', snapshot_maker:'BaseRemoteSnapshotMaker') -> 'bool':
         """ Returns True if path is a directory, False otherwise.
         """
         raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
 
-    def get_dir_snapshot(path, is_recursive):
+    def get_dir_snapshot(path, is_recursive:'bool') -> 'str':
         """ Returns an implementation-specific snapshot of a directory.
         """
         raise NotImplementedError()
 
 # ################################################################################################################################
 
-    def move_file(self, path_from, path_to, event, snapshot_maker):
+    def move_file(self, path_from:'str', path_to:'str', event:'any_', snapshot_maker:'BaseRemoteSnapshotMaker') -> 'None':
         """ Moves a file to a selected directory.
         """
         raise NotImplementedError()
 
 # ################################################################################################################################
 
-    def delete_file(self, path, snapshot_maker):
+    def delete_file(self, path:'str', snapshot_maker:'BaseRemoteSnapshotMaker') -> 'None':
         """ Deletes a file pointed to by path.
         """
         raise NotImplementedError()
 
 # ################################################################################################################################
 
-    def wait_for_path(self, path, observer_start_args):
-        # type: (str, BaseObserver, object, tuple) -> None
+    def wait_for_path(self, path:'str', observer_start_args:'anytuple') -> 'None':
 
         # Local aliases
         utcnow = datetime.utcnow
@@ -235,11 +233,17 @@ class BaseObserver:
 
 # ################################################################################################################################
 
-    def observe_with_snapshots(self, snapshot_maker, path, max_iters, log_stop_event=True, *args, **kwargs):
+    def observe_with_snapshots(
+        self,
+        snapshot_maker,      # type: BaseRemoteSnapshotMaker
+        path,                # type: str
+        max_iters,           # type: int
+        log_stop_event=True, # type: bool
+        *args,               # type: any_
+        **kwargs             # type: any_
+    ) -> 'None':
         """ An observer's main loop that uses snapshots.
         """
-        # type: (BaseRemoteSnapshotMaker, str, int) -> None
-
         try:
 
             # Local aliases to avoid namespace lookups in self
@@ -314,8 +318,12 @@ class BaseObserver:
 # ################################################################################################################################
 
 class BackgroundPathInspector:
-    def __init__(self, path, observer, observer_start_args=None):
-        # type: (str, BaseObserver, tuple) -> None
+    def __init__(
+        self,
+        path,     # type: str
+        observer, # type: BaseObserver
+        observer_start_args=None # type: anytuple | None
+    ) -> 'None':
         self.path = path
         self.observer = observer
         self.observer_start_args = observer_start_args

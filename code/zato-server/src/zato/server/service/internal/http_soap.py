@@ -49,7 +49,7 @@ class _HTTPSOAPService:
         """ First checks whether the security type is correct for the given
         connection type. If it is, returns a dictionary of security-related information.
         """
-        info = {'security_name':None, 'sec_type':None}
+        info = {'security_id': None, 'security_name':None, 'sec_type':None}
 
         if security_id:
 
@@ -57,14 +57,14 @@ class _HTTPSOAPService:
                 filter(SecurityBase.id==security_id).\
                 one()
 
-            # Outgoing plain HTTP connections may use HTTP Basic Auth only,
-            # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
             if connection == 'outgoing':
 
                 if transport == URL_TYPE.PLAIN_HTTP and \
-                   sec_def.sec_type not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT, SEC_DEF_TYPE.APIKEY):
+                   sec_def.sec_type not in (SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT,
+                        SEC_DEF_TYPE.APIKEY, SEC_DEF_TYPE.OAUTH):
                     raise Exception('Unsupported sec_type `{}`'.format(sec_def.sec_type))
 
+            info['security_id'] = security_id
             info['security_name'] = sec_def.name
             info['sec_type'] = sec_def.sec_type
 
@@ -90,6 +90,23 @@ class _BaseGet(AdminService):
 
 # ################################################################################################################################
 
+    def _get_sec_tls_ca_cert_id_from_item(self, item):
+
+        sec_tls_ca_cert_id = item.get('sec_tls_ca_cert_id')
+        sec_tls_ca_cert_verify_strategy = item.get('sec_tls_ca_cert_verify_strategy')
+
+        if sec_tls_ca_cert_id is None:
+            if sec_tls_ca_cert_verify_strategy is False:
+                out = ZATO_NONE
+            else:
+                out = ZATO_DEFAULT
+        else:
+            out = sec_tls_ca_cert_id
+
+        return out
+
+# ################################################################################################################################
+
 class Get(_BaseGet):
     """ Returns information about an individual HTTP/SOAP object by its ID.
     """
@@ -104,6 +121,7 @@ class Get(_BaseGet):
             self.request.input.require_any('id', 'name')
             item = http_soap(session, self.request.input.cluster_id, self.request.input.id, self.request.input.name)
             out = get_dict_with_opaque(item)
+            out['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(out)
             self.response.payload = out
 
 # ################################################################################################################################
@@ -128,11 +146,18 @@ class GetList(_BaseGet):
             self.request.input.get('data_format'),
             False,
             )
-        return elems_with_opaque(result)
+
+        data = elems_with_opaque(result)
+
+        for item in data:
+            item['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(item)
+
+        return data
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            data = self.get_data(session)
+            self.response.payload[:] = data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -647,6 +672,8 @@ class Ping(AdminService):
                 result = config_dict.get(item.name).ping(self.cid)
                 is_success = True
             except Exception as e:
+                from traceback import format_exc
+                self.logger.warn('QQQ-1 -> %s', format_exc())
                 result = e.args[0]
                 is_success = False
             finally:

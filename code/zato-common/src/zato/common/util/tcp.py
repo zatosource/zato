@@ -60,11 +60,14 @@ def get_free_port(start=30000):
 # Taken from http://grodola.blogspot.com/2014/04/reimplementing-netstat-in-cpython.html
 def is_port_taken(port):
 
-    # psutil
-    import psutil
-
     # Zato
     from .platform_ import is_linux
+
+    if not is_linux:
+        return False
+
+    # psutil
+    import psutil
 
     # Shortcut for Linux so as not to bind to a socket which in turn means waiting until it's closed by OS
     if is_linux:
@@ -164,11 +167,13 @@ def get_fqdn_by_ip(ip_address, default, log_msg_prefix):
 
 # ################################################################################################################################
 
-def read_from_socket(ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
+def read_from_socket(
+    ctx, # type: SocketReaderCtx
+    _utcnow=datetime.utcnow,
+    _timedelta=timedelta
+) -> 'bytes':
     """ Reads data from an already connected TCP socket.
     """
-    # type: (SocketReaderCtx) -> bytes
-
     # Local aliases
     _should_log_messages = ctx.should_log_messages
 

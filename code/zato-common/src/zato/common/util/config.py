@@ -16,7 +16,7 @@ from bunch import Bunch
 
 # Python 2/3 compatibility
 from builtins import bytes
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 
 # Zato
 from zato.common.const import SECRETS

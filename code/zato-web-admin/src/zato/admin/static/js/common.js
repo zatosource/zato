@@ -600,14 +600,25 @@ $.fn.zato.data_table.on_change_password_submit = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.data_table.change_password = function(id, title) {
+$.fn.zato.data_table.change_password = function(id, title, label, _label_lower) {
 
     var _title = title;
+    var _label = label;
+    var _label_lower = _label_lower;
     var name = $.fn.zato.data_table.data[id].name
 
     if(!_title) {
         _title = 'Change password ';
     }
+
+    if(!_label) {
+        _label = 'Password';
+        _label_lower = 'password';
+    }
+
+    $('#secret_type_id').val(_label_lower);
+    $('#secret_label1').text(_label);
+    $('#secret_label2').text(_label_lower);
 
     $('#change-password-name').text(name);
     $('#id_change_password-id').val(id);

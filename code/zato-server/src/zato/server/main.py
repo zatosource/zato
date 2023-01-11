@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -35,13 +35,17 @@ import sys
 from logging.config import dictConfig
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
-import cloghandler
-cloghandler = cloghandler # For pyflakes
+try:
+    import cloghandler # type: ignore
+except ImportError:
+    pass
+else:
+    cloghandler = cloghandler # For pyflakes
 
 # Update logging.Logger._log to make it a bit faster
 from zato.common.microopt import logging_Logger_log
 from logging import Logger
-Logger._log = logging_Logger_log
+Logger._log = logging_Logger_log # type: ignore
 
 # YAML
 import yaml
@@ -57,9 +61,8 @@ from zato.common.repo import RepoManager
 from zato.common.simpleio_ import get_sio_server_config
 from zato.common.util.api import absjoin, asbool, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
-from zato.common.util.cli import read_stdin_data
 from zato.common.util.env import populate_environment_from_file
-from zato.common.util.platform_ import is_linux
+from zato.common.util.platform_ import is_linux, is_windows
 from zato.common.util.open_ import open_r
 from zato.server.base.parallel import ParallelServer
 from zato.server.ext import zunicorn
@@ -146,7 +149,49 @@ class ZatoGunicornApplication(Application):
 
 # ################################################################################################################################
 
+def get_bin_dir() -> 'str':
+
+    # This is where the py or python.exe command is
+    bin_dir = os.path.dirname(sys.executable)
+
+    return bin_dir
+
+# ################################################################################################################################
+
+def get_code_dir(bin_dir:'str') -> 'str':
+
+    # Now, built the path up to the code_dir, which is is the directory with our code, not the directory where the server is.
+    if is_linux:
+        levels = ['..']
+    else:
+        levels = ['..', '..', '..']
+
+    code_dir = os.path.join(bin_dir, *levels)
+    code_dir = os.path.abspath(code_dir)
+
+    return code_dir
+
+# ################################################################################################################################
+
+def get_util_dir(code_dir:'str') -> 'str':
+    util_dir = os.path.join(code_dir, 'util')
+    return util_dir
+
+# ################################################################################################################################
+
+def get_env_manager_base_dir(code_dir:'str') -> 'str':
+    if is_windows:
+        base_dir = os.path.join(code_dir, 'bundle-ext', 'python-windows')
+        return base_dir
+    else:
+        return code_dir
+
+# ################################################################################################################################
+
 def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None) -> 'ParallelServer | None':
+
+    # Zato
+    from zato.common.util.cli import read_stdin_data
 
     # Type hints
     preferred_address: 'str'
@@ -173,27 +218,19 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     # need to add its path here explicitly.
     #
 
-    # This is where the 'py' command is ..
-    bin_dir = os.path.dirname(sys.executable)
-
-    # .. this is the directory with our code, not the directory where the server is ..
-    py_base_dir = os.path.join(bin_dir, '..')
-
-    # .. the relative path from the base bin directory to the one with zato_environment.py
-    env_mod_relative_path = [py_base_dir, 'util']
-
-    # .. build the absolute path to it ..
-    env_mod_dir_path = os.path.join(bin_dir, *env_mod_relative_path)
-    env_mod_dir_path = os.path.abspath(env_mod_dir_path)
+    bin_dir  = get_bin_dir()
+    code_dir = get_code_dir(bin_dir)
+    util_dir = get_util_dir(code_dir)
+    env_manager_base_dir = get_env_manager_base_dir(code_dir)
 
     # .. make it importable ..
-    sys.path.insert(0, env_mod_dir_path)
+    sys.path.insert(0, util_dir)
 
     # .. now, we can import the environment manager class ..
     from zato_environment import EnvironmentManager # type: ignore
 
     # .. build the object that we now have access to ..
-    env_manager = EnvironmentManager(py_base_dir, bin_dir) # type: any_
+    env_manager = EnvironmentManager(env_manager_base_dir, bin_dir) # type: any_
 
     # .. and run the initial runtime setup, based on environment variables.
     env_manager.runtime_setup_with_env_variables()
@@ -250,7 +287,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     # Go ahead only if we actually have anything to greenify
     if to_greenify:
-        import greenify
+        import greenify # type: ignore
         greenify.greenify()
         for name in to_greenify:
             result = greenify.patch_lib(name)
@@ -284,9 +321,9 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         'base_dir': base_dir,
     })
 
-    # New in 2.0 - Start monitoring as soon as possible
+    # Start monitoring as soon as possible
     if server_config.get('newrelic', {}).get('config'):
-        import newrelic.agent
+        import newrelic.agent # type: ignore
         newrelic.agent.initialize(
             server_config.newrelic.config, server_config.newrelic.environment or None, server_config.newrelic.ignore_errors or None,
             server_config.newrelic.log_file or None, server_config.newrelic.log_level or None)
@@ -333,6 +370,10 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     # Assigned here because it is a circular dependency
     odb_manager.parallel_server = server
 
+    stop_after = options.get('stop_after') or os.environ.get('ZATO_STOP_AFTER')
+    if stop_after:
+        stop_after = int(stop_after)
+
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
     server.has_fg = options.get('fg') or False
@@ -360,22 +401,19 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.env_manager = env_manager
     server.jwt_secret = server.fs_server_config.misc.jwt_secret.encode('utf8')
     server.startup_callable_tool = startup_callable_tool
+    server.stop_after = stop_after # type: ignore
     server.is_sso_enabled = server.fs_server_config.component_enabled.sso
     if server.is_sso_enabled:
         server.sso_api = SSOAPI(server, sso_config, None, crypto_manager.encrypt, server.decrypt,
             crypto_manager.hash_secret, crypto_manager.verify_hash, new_user_id)
 
-    # New in 2.0.8
     server.return_tracebacks = asbool(server_config.misc.get('return_tracebacks', True))
     server.default_error_message = server_config.misc.get('default_error_message', 'An error has occurred')
 
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
 
-    # New in 2.0 so it's optional.
     profiler_enabled = server_config.get('profiler', {}).get('enabled', False)
-
-    # New in 2.0 so it's optional.
     sentry_config = server_config.get('sentry') or {}
 
     dsn = sentry_config.pop('dsn', None)
@@ -413,7 +451,6 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
             path = server_config.profiler.url_path,
             unwind = server_config.profiler.unwind)
 
-    # New in 2.0 - set environmet variables for servers to inherit
     os_environ = server_config.get('os_environ', {})
     for key, value in os_environ.items():
         os.environ[key] = value
@@ -433,7 +470,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         from tempfile import mkdtemp
 
         # memray
-        import memray
+        import memray # type: ignore
 
         # Create an empty directory to store the output in ..
         dir_name = mkdtemp(prefix='zato-memory-profiler-')
@@ -478,6 +515,7 @@ if __name__ == '__main__':
             'secret_key': '',
             'stderr_path': None,
             'env_file': '',
+            'stop_after': None,
         }
     else:
         server_base_dir = sys.argv[1]

@@ -14,7 +14,7 @@ from django.contrib.auth import authenticate, login as django_login, logout as d
 from django.http import HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.template.response import TemplateResponse
-from django.utils.http import is_safe_url
+from django.utils.http import url_has_allowed_host_and_scheme as is_safe_url
 
 # PyOTP
 import pyotp
@@ -124,7 +124,7 @@ def login(req):
 
             # Make sure the redirect-to address is valid
             redirect_to = req.POST.get('next', '') or req.GET.get('next', '')
-            if not is_safe_url(url=redirect_to, host=req.get_host()):
+            if not is_safe_url(url=redirect_to, allowed_hosts=req.get_host()):
                 redirect_to = resolve_url(LOGIN_REDIRECT_URL)
 
             # At this point we know that all the possible credentials are valid

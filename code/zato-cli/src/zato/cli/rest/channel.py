@@ -14,7 +14,6 @@ from uuid import uuid4
 from zato.cli import ServerAwareCommand
 from zato.common.api import CONNECTION, ZATO_NONE
 from zato.common.util.api import fs_safe_now
-from zato.common.util.cli import APIKeyManager, BasicAuthManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,6 +69,9 @@ class SecurityAwareCommand(ServerAwareCommand):
 # ################################################################################################################################
 
     def _get_security_id(self, *, name:'str', basic_auth:'str', api_key:'str') -> 'stranydict':
+
+        # Zato
+        from zato.common.util.cli import APIKeyManager, BasicAuthManager
 
         out = {}
 

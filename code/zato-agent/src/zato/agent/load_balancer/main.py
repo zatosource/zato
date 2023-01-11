@@ -12,8 +12,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, sys
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
-import cloghandler
-cloghandler = cloghandler # For pyflakes
+try:
+    import cloghandler # type: ignore
+except ImportError:
+    pass
+else:
+    cloghandler = cloghandler # For pyflakes
 
 # Zato
 from zato.agent.load_balancer.server import LoadBalancerAgent, TLSLoadBalancerAgent

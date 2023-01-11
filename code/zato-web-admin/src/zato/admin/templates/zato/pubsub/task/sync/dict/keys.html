@@ -21,9 +21,9 @@
             '_key',
             '_length',
             '_id_list',
-            {% ifequal dict_name "topics" %}
+            {% if dict_name == "topics" %}
             '_events',
-            {% endifequal %}
+            {% endif %}
         ]
     }
     </script>
@@ -50,9 +50,9 @@
                         <th><a href="#">Length</a></th>
                         <th><a href="#">ID list</a></th>
 
-                        {% ifequal dict_name "topics" %}
+                        {% if dict_name == "topics" %}
                         <th></th>
-                        {% endifequal %}
+                        {% endif %}
 
                 </thead>
 
@@ -82,11 +82,11 @@
                             {% endfor %}
                         </td>
 
-                        {% ifequal dict_name "topics" %}
+                        {% if dict_name == "topics" %}
                         <td>
                             <a href="#">Events</a>
                         </td>
-                        {% endifequal %}
+                        {% endif %}
 
                     </tr>
                 {% endfor %}

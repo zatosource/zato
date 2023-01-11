@@ -21,6 +21,12 @@ from .base import BaseObserver
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, anytuple
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -33,7 +39,7 @@ class LocalObserver(BaseObserver):
     observer_type_name_title = observer_type_name.title()
     should_wait_for_deleted_paths = True
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
         super().__init__(*args, **kwargs)
 
         if self.manager.is_notify_preferred(self.channel_config):
@@ -55,34 +61,33 @@ class LocalObserver(BaseObserver):
 
 # ################################################################################################################################
 
-    def path_exists(self, path, _ignored_snapshot_maker=None):
+    def path_exists(self, path:'str', _ignored_snapshot_maker:'any_'=None) -> 'bool':
         return os.path.exists(path)
 
 # ################################################################################################################################
 
-    def path_is_directory(self, path, _ignored_snapshot_maker=None):
+    def path_is_directory(self, path:'str', _ignored_snapshot_maker:'any_'=None) -> 'bool':
         return os.path.isdir(path)
 
 # ################################################################################################################################
 
-    def move_file(self, path_from, path_to, _ignored_event, _ignored_snapshot_maker):
+    def move_file(self, path_from:'str', path_to:'str', _ignored_event:'any_', _ignored_snapshot_maker:'any_') -> 'bool':
         """ Moves a file to a selected directory.
         """
         shutil_copy(path_from, path_to)
 
 # ################################################################################################################################
 
-    def delete_file(self, path, _ignored_snapshot_maker):
+    def delete_file(self, path:'str', _ignored_snapshot_maker:'any_') -> 'None':
         """ Deletes a file pointed to by path.
         """
         os.remove(path)
 
 # ################################################################################################################################
 
-    def observe_with_inotify(self, path, observer_start_args):
+    def observe_with_inotify(self, path:'str', observer_start_args:'anytuple') -> 'None':
         """ Local observer's main loop for Linux, uses inotify.
         """
-        # type: (str, tuple) -> None
         try:
 
             inotify, inotify_flags, lock_func, wd_to_path_map = observer_start_args

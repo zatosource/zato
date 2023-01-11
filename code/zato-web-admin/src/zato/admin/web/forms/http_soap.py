@@ -10,10 +10,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_security_select, add_select, add_services, SearchForm as _ChooseClusterForm, \
-     DataFormatForm, INITIAL_CHOICES, WithAuditLog
+from zato.admin.web.forms import add_sec_tls_ca_cert_id_select, add_security_select, add_select, add_services, \
+    SearchForm as _ChooseClusterForm, DataFormatForm, WithAuditLog
 from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MISC, PARAMS_PRIORITY, RATE_LIMIT, SIMPLE_IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_DEFAULT, ZATO_NONE
+     MISC, PARAMS_PRIORITY, RATE_LIMIT, SIMPLE_IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY
 
 # ################################################################################################################################
 
@@ -97,18 +97,12 @@ class CreateForm(DataFormatForm, WithAuditLog):
         for name in sorted(soap_versions):
             self.fields['soap_version'].choices.append([name, name])
 
-        self.fields['sec_tls_ca_cert_id'].choices = []
-        self.fields['sec_tls_ca_cert_id'].choices.append(INITIAL_CHOICES)
-        self.fields['sec_tls_ca_cert_id'].choices.append([ZATO_NONE, 'Skip validation'])
-        self.fields['sec_tls_ca_cert_id'].choices.append([ZATO_DEFAULT, 'Default bundle'])
-
-        for value, label in sec_tls_ca_cert_list.items():
-            self.fields['sec_tls_ca_cert_id'].choices.append([value, label])
-
         self.fields['ping_method'].initial = DEFAULT_HTTP_PING_METHOD
         self.fields['pool_size'].initial = DEFAULT_HTTP_POOL_SIZE
 
         add_security_select(self, security_list)
+        add_sec_tls_ca_cert_id_select(req, self)
+
         add_services(self, req)
         add_select(self, 'cache_id', cache_list)
         add_select(self, 'rate_limit_type', RATE_LIMIT.TYPE(), needs_initial_select=False)

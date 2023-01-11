@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from datetime import datetime
 
 # Python 2/3 compatibility
-from future.utils import iteritems
+from zato.common.ext.future.utils import iteritems
 
 # Zato
 from zato.common.api import ZATO_NOT_GIVEN

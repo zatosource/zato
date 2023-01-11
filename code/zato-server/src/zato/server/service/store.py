@@ -25,6 +25,7 @@ from typing import Any, List
 from dill import load as dill_load
 
 # gevent
+from gevent import sleep as gevent_sleep
 from gevent.lock import RLock
 
 # humanize
@@ -496,7 +497,6 @@ class ServiceStore:
 
                 class_._worker_store = self._testing_worker_store
                 class_._worker_config = self._testing_worker_store.worker_config
-                class_.component_enabled_cassandra = True
                 class_.component_enabled_email = True
                 class_.component_enabled_search = True
                 class_.component_enabled_msg_path = True
@@ -535,7 +535,6 @@ class ServiceStore:
 
                 class_._worker_config = service_store.server.worker_store.worker_config
 
-                class_.component_enabled_cassandra = service_store.server.fs_server_config.component_enabled.cassandra
                 class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
                 class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
                 class_.component_enabled_msg_path = service_store.server.fs_server_config.component_enabled.msg_path
@@ -1240,6 +1239,7 @@ class ServiceStore:
 
         for py_path in visit_py_source(dir_name):
             to_process.extend(self.import_services_from_file(py_path, False, base_dir))
+            gevent_sleep(0.03)
 
         return to_process
 

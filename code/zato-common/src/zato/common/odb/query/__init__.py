@@ -355,11 +355,17 @@ def oauth_list(session, cluster_id, needs_columns=False):
     """ All the OAuth definitions.
     """
     return session.query(
-        OAuth.id, OAuth.name,
+        OAuth.id,
+        OAuth.name,
         OAuth.is_active,
-        OAuth.username, OAuth.password,
-        OAuth.proto_version, OAuth.sig_method,
-        OAuth.max_nonce_log, OAuth.sec_type).\
+        OAuth.username,
+        OAuth.password,
+        OAuth.proto_version,
+        OAuth.sig_method,
+        OAuth.max_nonce_log,
+        OAuth.sec_type,
+        OAuth.opaque1,
+        ).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==OAuth.cluster_id).\
         filter(SecurityBase.id==OAuth.id).\

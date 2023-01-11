@@ -16,7 +16,7 @@ from base64 import b64decode, b64encode
 from bunch import Bunch
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 
 # Zato
 from zato.admin.web import from_utc_to_user
@@ -85,6 +85,7 @@ class Index(_Index):
 
         item.key_escaped = item.key.encode('utf8') if isinstance(item.key, unicode) else item.key
         item.key_escaped = b64encode(item.key_escaped)
+        item.key_escaped = item.key_escaped.decode('utf8')
 
         for name in _to_user_dt:
             value = getattr(item, name)

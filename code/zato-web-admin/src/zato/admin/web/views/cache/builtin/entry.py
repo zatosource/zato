@@ -23,7 +23,7 @@ from zato.admin.web.forms.cache.builtin.entry import CreateForm, EditForm
 from zato.common.api import CACHE
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 
 # ################################################################################################################################
 
@@ -34,7 +34,10 @@ def _create_edit(req, action, cache_id, cluster_id, _KV_DATATYPE=CACHE.BUILTIN_K
     if action == 'create':
         form = CreateForm()
     else:
+
         key = b64decode(req.GET['key'])
+        key = key.decode('utf8')
+
         entry = bunchify(req.zato.client.invoke('zato.cache.builtin.entry.get', {
                 'cluster_id': req.zato.cluster_id,
                 'cache_id': cache_id,

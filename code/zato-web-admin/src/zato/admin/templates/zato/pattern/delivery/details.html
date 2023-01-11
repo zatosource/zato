@@ -25,7 +25,7 @@
 {% if has_item %}
 
     {% include "zato/user-message.html" %}
-    
+
     <div id="markup">
         <table id="data-table">
             <tr>
@@ -39,7 +39,7 @@
                     <button id="delete1" name="delete1" type="submit">Delete</button>
                 </td>
             </tr>
-            
+
             <tr>
                 <td colspan="2" style="padding-top:0px">
                     <hr/>
@@ -68,7 +68,7 @@
                                             <td>
                                                 {{ item.creation_time }}
                                                 <br/>
-                                                {% ifequal item.state 'in-doubt' %}{{ item.last_used }}{% else %}<span class="form_hint">n/a</a>{% endifequal %}
+                                                {% if item.state == 'in-doubt' %}{{ item.last_used }}{% else %}<span class="form_hint">n/a</a>{% endif %}
                                             </td>
                                         </tr>
                                         <tr>
@@ -89,7 +89,7 @@
                                         </tr>
                                     </table>
                                 </td>
-    
+
                                 <td>
                                     <table style="width:100%">
                                         <tr>
@@ -124,16 +124,16 @@
                     </div> <!-- class="item-details-body" -->
                 </td>
             </tr>
-            
+
             <tr>
-                <td class='inline_header' colspan="2">Payload - {{ item.payload_len|filesizeformat }} {% if item.payload_len > 1024 %}({{ item.payload_len }} bytes){% endif %}</td> 
+                <td class='inline_header' colspan="2">Payload - {{ item.payload_len|filesizeformat }} {% if item.payload_len > 1024 %}({{ item.payload_len }} bytes){% endif %}</td>
             </tr>
             <tr>
                 <td colspan="2">
                     <textarea id="payload" style="width:100%; height:520px">{{ item.payload }}</textarea>
                 </td>
             </tr>
-            
+
             <tr>
                 <td class='inline_header' colspan="2">Args</td>
             </tr>
@@ -142,7 +142,7 @@
                     <textarea id="args" style="width:100%; height:120px">{{ item.args }}</textarea>
                 </td>
             </tr>
-            
+
             <tr>
                 <td class='inline_header' colspan="2">Kwargs</td>
             </tr>
@@ -151,27 +151,27 @@
                     <textarea id="kwargs" style="width:100%; height:120px">{{ item.kwargs }}</textarea>
                 </td>
             </tr>
-            
+
             <tr>
                 <td class='inline_header' colspan="2">Payload SHA1</td>
             </tr>
             <tr>
                 <td colspan="2">{{ item.payload_sha1 }}</td>
             </tr>
-            
+
             <tr>
                 <td class='inline_header' colspan="2">Payload SHA256</td>
             </tr>
             <tr>
                 <td colspan="2">{{ item.payload_sha256 }}</td>
             </tr>
-            
+
             <tr>
                 <td colspan="2">
                     <hr/>
                 </td>
             </tr>
-            
+
             <tr>
                 <td style="text-align:right;padding-top:0px" colspan="2">
                     {% if show_resubmit_button %}<button id="resubmit1" name="resubmit1" type="submit">Resubmit</button>{% endif %}
@@ -180,10 +180,10 @@
                     <button id="delete2" name="delete2" type="submit">Delete</button>
                 </td>
             </tr>
-            
+
         </table>
     </div>
-    
+
     <input type="hidden" name="task_id" id="task_id" value="{{ item.task_id }}" />
 
 {% else %}
@@ -191,9 +191,9 @@
     <div id="user-message-div">
         <pre id="user-message" class="user-message user-message-failure">No such task [{{ req.zato.args.task_id }}]</pre>
     </div>
-    
+
 {% endif %} {% comment %}has_item{% endcomment %}
-    
+
 <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
 
 {% include "zato/pattern/delivery/look-up-task.html" %}

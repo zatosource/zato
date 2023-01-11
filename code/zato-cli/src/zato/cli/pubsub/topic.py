@@ -130,7 +130,7 @@ class GetTopics(ServerAwareCommand):
         def hook_func(data:'anydict') -> 'anylist':
 
             # Response to produce ..
-            out = []
+            out = [] # type: anylist
 
             # .. extract the top-level element ..
             data = data['zato_pubsub_topic_get_list_response']

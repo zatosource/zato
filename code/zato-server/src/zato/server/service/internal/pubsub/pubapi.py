@@ -7,14 +7,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from json import dumps
 from traceback import format_exc
-
-# rapidjson
-from rapidjson import dumps
 
 # Zato
 from zato.common.api import CHANNEL, ContentType, CONTENT_TYPE, PUBSUB, ZATO_NONE
 from zato.common.exception import BadRequest, Forbidden, PubSubSubscriptionExists
+from zato.common.typing_ import cast_
 from zato.common.util.auth import parse_basic_auth
 from zato.server.service import AsIs, Int, Service
 from zato.server.service.internal.pubsub.subscription import CreateWSXSubscription
@@ -23,7 +22,7 @@ from zato.server.service.internal.pubsub.subscription import CreateWSXSubscripti
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anylist, anytuple, stranydict
     from zato.server.connection.http_soap.url_data import URLData
     from zato.server.connection.web_socket import WebSocket
     URLData = URLData
@@ -46,22 +45,30 @@ class BaseSIO:
 # ################################################################################################################################
 
 class TopicSIO(BaseSIO):
-    input_optional = ('data', AsIs('msg_id'), 'has_gd', Int('priority'),
+    input_optional = ('data', AsIs('msg_id'), 'has_gd', Int('priority'), # type: any_
         Int('expiration'), 'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time',
-        'sub_key', AsIs('wsx'))
-    output_optional = AsIs('msg_id')
+        'sub_key', AsIs('wsx'))       # type: any_
+    output_optional = AsIs('msg_id'), # type: anytuple
 
 # ################################################################################################################################
 
 class SubSIO(BaseSIO):
     input_optional  = 'sub_key', 'delivery_method'
-    output_optional = 'sub_key', Int('queue_depth')
+    output_optional = 'sub_key', Int('queue_depth') # type: anytuple
 
 # ################################################################################################################################
 
 class _PubSubService(Service):
 
     def _pubsub_check_credentials(self) -> 'int':
+
+        # If it is a WebSocket channel that invokes us, it means that it has already been authenticated
+        # and we can get its underlying endpoint directly.
+        wsx = self.wsgi_environ.get('zato.wsx') # type: WebSocket | None
+        if wsx:
+            channel_id = wsx.config.id
+            endpoint_id = self.pubsub.get_endpoint_id_by_ws_channel_id(channel_id)
+            return cast_('int', endpoint_id)
 
         # If we are being through a CHANNEL.INVOKE* channel, it means that our caller used self.invoke
         # or self.invoke_async, so there will never by any credentials in HTTP headers (there is no HTTP request after all),
@@ -79,7 +86,7 @@ class _PubSubService(Service):
             raise Forbidden(self.cid)
 
         url_data = self.server.worker_store.request_dispatcher.url_data
-        basic_auth = url_data.basic_auth_config.values()
+        basic_auth = url_data.basic_auth_config.values() # type: any_
 
         # Assume we are not allowed by default
         auth_ok = False
@@ -129,7 +136,8 @@ class TopicService(_PubSubService):
 
         # Ignore the header set by curl and similar tools
         mime_type = self.wsgi_environ.get('CONTENT_TYPE')
-        mime_type = mime_type if mime_type != ContentType.FormURLEncoded else CONTENT_TYPE.JSON
+        if (not mime_type) or (mime_type == ContentType.FormURLEncoded):
+            mime_type = CONTENT_TYPE.JSON
 
         input = self.request.input
 
@@ -138,14 +146,14 @@ class TopicService(_PubSubService):
             'data': input.data,
             'priority': input.priority,
             'expiration': input.expiration,
-            'correl_id': input.correl_id,
+            'correl_id': input.correl_id or self.cid,
             'in_reply_to': input.in_reply_to,
             'ext_client_id': input.ext_client_id,
             'has_gd': input.has_gd or ZATO_NONE,
             'endpoint_id': endpoint_id,
-        }
+        } # type: stranydict
 
-        return self.pubsub.publish(input.topic_name, **ctx)
+        return self.pubsub.publish(input.topic_name, service=self, **ctx)
 
 # ################################################################################################################################
 
@@ -167,7 +175,7 @@ class TopicService(_PubSubService):
                 raise BadRequest(self.cid, 'You are not subscribed to topic `{}`'.format(topic_name), needs_msg=True)
 
         try:
-            self.pubsub.get_subscription_by_sub_key(sub_key)
+            _ = self.pubsub.get_subscription_by_sub_key(sub_key)
         except KeyError:
             self.logger.warning('Could not find sub_key:`%s`, e:`%s`', sub_key, format_exc())
             raise Forbidden(self.cid)
@@ -353,7 +361,12 @@ class PublishMessage(Service):
     SimpleIO = TopicSIO
 
     def handle(self) -> 'None':
-        response = self.invoke(TopicService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'POST'})
+        response = self.invoke(TopicService.get_name(), self.request.input,
+            wsgi_environ={
+                'REQUEST_METHOD':'POST',
+                'zato.wsx': self.wsgi_environ.get('zato.wsx'),
+                'zato.request_ctx.async_msg': self.wsgi_environ.get('zato.request_ctx.async_msg') or {},
+            })
         self.response.payload = response
 
 # ################################################################################################################################

@@ -14,7 +14,7 @@ from logging import getLogger
 from bunch import Bunch
 
 # Django
-from django.core.urlresolvers import resolve
+from django.urls import resolve
 
 # Zato
 from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH, lb_tls_verify, \
@@ -116,6 +116,14 @@ class Client(AnyServiceInvoker):
 
 class ZatoMiddleware:
 
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, req):
+        self.process_request(req)
+        response = self.get_response(req)
+        return response
+
     def process_request(self, req):
 
         # Makes each Django view have an access to 'zato.odb' and 'zato.setttings_db' attributes
@@ -163,7 +171,7 @@ class ZatoMiddleware:
             req.zato.clusters = req.zato.odb.query(Cluster).order_by(Cluster.name).all()
             req.zato.search_form = SearchForm(req.zato.clusters, req.GET)
 
-            if not req.user.is_anonymous():
+            if not req.user.is_anonymous:
                 needs_logging = not req.get_full_path().endswith(('.js', '.css', '.png'))
                 req.zato.user_profile = get_user_profile(req.user, needs_logging)
             else:

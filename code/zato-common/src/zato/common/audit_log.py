@@ -48,7 +48,7 @@ class DataEvent:
     def __init__(self, direction, _utcnow=datetime.utcnow, _new_event_id=new_event_id):
         self.direction = direction
         self.event_id = _new_event_id()
-        self.data = ''
+        self.data = b''
         self.timestamp = _utcnow()
         self.msg_id = ''
         self.in_reply_to = ''

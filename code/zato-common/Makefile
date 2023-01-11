@@ -20,6 +20,7 @@ pylint:
 
 pyright:
 	$(Zato_Python_Dir)/pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/common/pubsub.py
+	$(Zato_Python_Dir)/pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/common/util/pubsub.py
 
 mypy:
 	$(Zato_Python_Dir)/mypy --show-error-codes --ignore-missing-imports $(CURDIR)/src/zato/common/pubsub.py

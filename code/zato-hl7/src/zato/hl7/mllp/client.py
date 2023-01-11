@@ -18,9 +18,9 @@ from zato.common.util.tcp import parse_address, read_from_socket, SocketReaderCt
 # ################################################################################################################################
 
 if 0:
+    from socket import AddressFamily, socket as Socket, SocketKind
     from bunch import Bunch
-
-    Bunch = Bunch
+    from zato.common.typing_ import any_, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,11 +33,19 @@ logger = getLogger('zato')
 class HL7MLLPClient:
     """ An HL7 MLLP client for sending data to remote endpoints.
     """
-    __slots__ = 'config', 'name', 'address', 'max_wait_time', 'max_msg_size', 'read_buffer_size', 'recv_timeout', \
-        'should_log_messages', 'start_seq', 'end_seq', 'host', 'port', 'reader'
+    config: 'Bunch'
+    name: 'str'
+    address: 'str'
+    max_wait_time: 'int'
+    max_msg_size: 'int'
+    read_buffer_size: 'int'
+    recv_timeout: 'float'
+    should_log_messages: 'bool'
 
-    def __init__(self, config):
-        # type: (Bunch) -> None
+    host: 'str'
+    port: 'str'
+
+    def __init__(self, config:'any_') -> 'None':
 
         # Zato
         from zato.common.util.api import hex_sequence_to_bytes
@@ -45,19 +53,26 @@ class HL7MLLPClient:
         self.config = config
         self.name = config.name
         self.address = config.address
-        self.max_wait_time = int(config.max_wait_time) # type: float
-        self.max_msg_size = int(config.max_msg_size) # type: int
-        self.read_buffer_size = int(config.read_buffer_size) # type: int
-        self.recv_timeout = int(config.recv_timeout) / 1000.0 # type: float
-        self.should_log_messages = config.should_log_messages # type: bool
+        self.max_wait_time = int(config.max_wait_time)
+        self.max_msg_size = int(config.max_msg_size)
+        self.read_buffer_size = int(config.read_buffer_size)
+        self.recv_timeout = int(config.recv_timeout) / 1000.0
+        self.should_log_messages = config.should_log_messages
 
         self.start_seq = hex_sequence_to_bytes(config.start_seq)
         self.end_seq   = hex_sequence_to_bytes(config.end_seq)
 
-        self.host, self.port = parse_address(self.address) # type (str, int)
+        self.host, self.port = parse_address(self.address)
 
-    def send(self, data, _socket_socket=socket.socket, _family=socket.AF_INET, _type=socket.SOCK_STREAM):
-        # type: (bytes) -> bytes
+# ################################################################################################################################
+
+    def send(
+        self,
+        data, # type: bytes | str
+        _socket_socket=socket.socket, # type: type_[Socket]
+        _family=socket.AF_INET,       # type: AddressFamily
+        _type=socket.SOCK_STREAM      # type: SocketKind
+    ) -> 'bytes':
 
         try:
 
@@ -73,7 +88,7 @@ class HL7MLLPClient:
                 sock.connect((self.host, self.port))
 
                 # .. send our data ..
-                sock.send(msg)
+                _ = sock.send(msg)
 
                 # .. encapsulate configuration for our socket reader function ..
                 ctx = SocketReaderCtx(
@@ -102,11 +117,9 @@ class HL7MLLPClient:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def send_data(address, data):
+def send_data(address:'str', data:'bytes') -> 'bytes':
     """ Sends input data to a remote address by its configuration.
     """
-    # type: (bytes, str) -> bytes
-
     # Bunch
     from bunch import bunchify
 
@@ -127,4 +140,27 @@ def send_data(address, data):
 
     return response
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+
+    import logging
+    from zato.common.api import HL7
+    from zato.common.test.hl7_ import test_data
+
+    log_level = logging.DEBUG
+    log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+    logging.basicConfig(level=log_level, format=log_format)
+
+    logger = logging.getLogger(__name__)
+
+    channel_port = HL7.Default.channel_port
+    address = f'localhost:{channel_port}'
+
+    logger.info('Sending HL7v2 to %s', address)
+
+    _ = send_data(address, test_data)
+
+# ################################################################################################################################
 # ################################################################################################################################

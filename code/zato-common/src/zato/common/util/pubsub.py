@@ -95,9 +95,9 @@ def get_last_topics(topic_list:'dictlist', as_list:'bool'=True) -> 'dictorlist':
     # Response to produce if as_list is not True.
     out = {} # type: anydict
 
-    for item in topic_list: # type: (anydict)
+    for item in topic_list:
 
-        for _ignored_topic_key, topic_data in item.items(): # type: (str, anydict)
+        for _ignored_topic_key, topic_data in item.items():
 
             # Local alias
             topic_id = topic_data['topic_id'] # type: int
@@ -160,9 +160,9 @@ def get_endpoint_metadata(server:'ParallelServer', endpoint_id:'int') -> 'dictor
 
     response = server.rpc.invoke_all('zato.pubsub.endpoint.get-endpoint-metadata', {'endpoint_id':endpoint_id})
 
-    for pid_response in response.data: # type: dict
-        for pid_topic_list in pid_response.values(): # type: list
-            for topic_data in pid_topic_list: # type: dict
+    for pid_response in response.data:
+        for pid_topic_list in pid_response.values():
+            for topic_data in pid_topic_list:
                 topic_id = topic_data['topic_id']
                 topic_dict[topic_id] = topic_data
                 topic_list.append(topic_dict)

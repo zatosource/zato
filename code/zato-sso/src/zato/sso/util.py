@@ -25,7 +25,7 @@ from sqlalchemy import update
 from zxcvbn import zxcvbn
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 
 # Zato
 from zato.common.crypto.api import CryptoManager

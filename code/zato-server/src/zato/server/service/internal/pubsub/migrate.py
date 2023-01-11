@@ -64,11 +64,24 @@ class MigrateDeliveryServer(AdminService):
         self.logger.info('Notifying server `%s` to start delivery task for `%s` (%s)', new_delivery_server_name,
                 sub_key, endpoint_type)
 
-        self.server.rpc[new_delivery_server_name].invoke('zato.pubsub.delivery.create-delivery-task', {
-            'sub_key': sub_key,
-            'endpoint_type': endpoint_type,
-            'task_delivery_interval': self.pubsub.get_subscription_by_sub_key(sub_key).task_delivery_interval
-        })
+        # Name of the service we are to invoke
+        service_name = 'zato.pubsub.delivery.create-delivery-task'
+
+        # Try to look up that subscription ..
+        sub = self.pubsub.get_subscription_by_sub_key(sub_key)
+
+        # .. create a new task if the subscription exists ..
+        if sub:
+            self.server.rpc[new_delivery_server_name].invoke(service_name, {
+                'sub_key': sub_key,
+                'endpoint_type': endpoint_type,
+                'task_delivery_interval': sub.task_delivery_interval
+            })
+
+        # .. or log an exception otherwise.
+        else:
+            msg = 'Could not find sub_key `%s` to invoke service `%s` with'
+            self.logger.info(msg, sub_key, service_name)
 
 # ################################################################################################################################
 

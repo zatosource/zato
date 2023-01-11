@@ -3,7 +3,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,9 +15,6 @@ from traceback import format_exc
 
 # Bunch
 from bunch import bunchify
-
-# sh
-from sh import Command, ErrorReturnCode
 
 # Zato
 from zato.common.api import SFTP
@@ -113,6 +110,10 @@ class SFTPConnection:
     def get_command(self):
         """ Returns a reusable sh.Command object that can execute multiple different SFTP commands.
         """
+
+        # sh
+        from sh import Command
+
         # A list of arguments that will be added to the base command
         args = []
 
@@ -303,6 +304,10 @@ class SFTPConnectionContainer(BaseConnectionContainer):
 # ################################################################################################################################
 
     def _on_OUTGOING_SFTP_EXECUTE(self, msg, is_reconnect=False, _utcnow=datetime.utcnow):
+
+        # sh
+        from sh import ErrorReturnCode
+
         out = {}
         connection = self.connections[msg.id] # type: SFTPConnection
         start_time = _utcnow()

@@ -39,7 +39,7 @@ from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
      HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, \
-     TRACE1, WEB_SOCKET, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+     WEB_SOCKET, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -58,7 +58,6 @@ from zato.server.base.parallel.subprocess_.api import StartConfig as SubprocessS
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
-from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
@@ -93,7 +92,6 @@ from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 from zato.server.pubsub import PubSub
 from zato.server.pubsub.delivery.tool import PubSubTool
-from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
 from zato.zmq_.channel import MDPv01 as ChannelZMQMDPv01, Simple as ChannelZMQSimple
 from zato.zmq_.outgoing import Simple as OutZMQSimple
@@ -250,11 +248,6 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def init(self):
-
-        # Cassandra
-        self.cassandra_api = CassandraAPI(CassandraConnStore())
-        self.cassandra_query_store = CassandraQueryStore()
-        self.cassandra_query_api = CassandraQueryAPI(self.cassandra_query_store)
 
         # Search
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
@@ -487,12 +480,13 @@ class WorkerStore(_WorkerStoreBase):
         """
         security_name = config.get('security_name')
         sec_config = {
-            'security_name':security_name,
-            'sec_type':None,
-            'username':None,
-            'password':None,
-            'password_type':None,
-            'orig_username':None
+            'security_name': security_name,
+            'security_id': None,
+            'sec_type': None,
+            'username': None,
+            'password': None,
+            'password_type': None,
+            'orig_username': None
         }
         _sec_config = None
 
@@ -508,11 +502,9 @@ class WorkerStore(_WorkerStoreBase):
                 func = getattr(self.request_dispatcher.url_data, sec_type + '_get')
                 _sec_config = func(security_name).config
 
-        if logger.isEnabledFor(TRACE1):
-            logger.log(TRACE1, 'has_sec_config:[{}], security_name:[{}], _sec_config:[{}]'.format(
-                has_sec_config, security_name, _sec_config))
-
         if _sec_config:
+            _sec_config_id = _sec_config.get('id') or _sec_config.get('security_id')
+            sec_config['security_id'] = _sec_config_id
             sec_config['sec_type'] = _sec_config['sec_type']
             sec_config['username'] = _sec_config.get('username')
             sec_config['orig_username'] = _sec_config.get('orig_username')
@@ -1514,6 +1506,18 @@ class WorkerStore(_WorkerStoreBase):
         """
         return self.request_dispatcher.url_data.oauth_get(name)
 
+    def oauth_get_by_id(self, def_id:'int') -> 'Bunch':
+        """ Same as oauth_get but by definition ID.
+        """
+        return self.request_dispatcher.url_data.oauth_get_by_id(def_id)
+
+    def oauth_get_all_id_list(self) -> 'Bunch':
+        """ Returns IDs of all OAuth definitions.
+        """
+        for item in self.request_dispatcher.url_data.oauth_config.values():
+            config = item.config
+            yield config['id']
+
     def on_broker_msg_SECURITY_OAUTH_CREATE(self, msg:'Bunch', *args:'any_') -> 'None':
         """ Creates a new OAuth security definition
         """
@@ -1702,6 +1706,9 @@ class WorkerStore(_WorkerStoreBase):
             'zato.request_ctx.fanout_cid':zato_ctx.get('fanout_cid'),
             'zato.request_ctx.parallel_exec_cid':zato_ctx.get('parallel_exec_cid'),
         }
+
+        if 'wsx' in msg:
+            wsgi_environ['zato.wsx'] = msg['wsx']
 
         if zato_ctx:
             wsgi_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')

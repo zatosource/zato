@@ -6,8 +6,6 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from logging import getLogger
 
@@ -40,28 +38,30 @@ class SFTPObserver(BaseObserver):
 
 # ################################################################################################################################
 
-    def path_exists(self, path, snapshot_maker):
-        # type: (str, BaseRemoteSnapshotMaker) -> bool
+    def path_exists(self, path:'str', snapshot_maker:'BaseRemoteSnapshotMaker') -> 'bool':
         return snapshot_maker.file_client.path_exists(path)
 
 # ################################################################################################################################
 
-    def path_is_directory(self, path, snapshot_maker):
-        # type: (str, BaseRemoteSnapshotMaker) -> bool
+    def path_is_directory(self, path:'str', snapshot_maker:'BaseRemoteSnapshotMaker') -> 'bool':
         raise NotImplementedError()
 
 # ################################################################################################################################
 
-    def is_path_valid(self, path):
-        # type: (str) -> bool
+    def is_path_valid(self, path:'str') -> 'bool':
         raise NotImplementedError()
 
 # ################################################################################################################################
 
-    def move_file(self, path_from, path_to, event, snapshot_maker):
+    def move_file(
+        self,
+        path_from, # type: str
+        path_to,   # type: str
+        event,     # type: FileTransferEvent
+        snapshot_maker # type: BaseRemoteSnapshotMaker
+    ) -> 'None':
         """ Moves a file to a selected directory.
         """
-        # type: (str, str, FileTransferEvent, BaseRemoteSnapshotMaker)
 
         #
         # 1) If we have the data to be moved in the event, we can just store it
@@ -86,10 +86,9 @@ class SFTPObserver(BaseObserver):
 
 # ################################################################################################################################
 
-    def delete_file(self, path, snapshot_maker):
+    def delete_file(self, path:'str', snapshot_maker:'BaseRemoteSnapshotMaker') -> 'None':
         """ Deletes a file pointed to by path.
         """
-        # type: (str, BaseRemoteSnapshotMaker)
         snapshot_maker.file_client.delete_file(path)
 
 # ################################################################################################################################

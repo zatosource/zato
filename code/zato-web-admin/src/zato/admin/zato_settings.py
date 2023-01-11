@@ -15,7 +15,6 @@ import os
 from zato.common.api import SCHEDULER
 from zato.common.crypto.api import WebAdminCryptoManager
 from zato.common.crypto.secret_key import resolve_secret_key
-from zato.common.util.cli import read_stdin_data
 
 # ################################################################################################################################
 
@@ -28,6 +27,10 @@ LB_AGENT_CONNECT_TIMEOUT=500 # In milliseconds
 # ################################################################################################################################
 
 def update_globals(config, base_dir='.', needs_crypto=True):
+
+    # Zato
+    from zato.common.util.cli import read_stdin_data
+
     globals()['DATABASES'] = {'default': {}}
 
     for name in 'zato_secret_key', 'well_known_data', 'DATABASE_PASSWORD', 'SECRET_KEY', 'ADMIN_INVOKE_PASSWORD':

@@ -23,7 +23,7 @@ if 0:
     from bunch import Bunch
 
     # Python 2/3 compatibility
-    from past.builtins import unicode
+    from zato.common.py23_.past.builtins import unicode
 
     # Zato
     from zato.common.odb.model import SSOUser

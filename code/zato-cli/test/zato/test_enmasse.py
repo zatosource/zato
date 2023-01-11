@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,13 +14,9 @@ from traceback import format_exc
 
 from unittest import main, TestCase
 
-# sh
-from sh import ErrorReturnCode
-
 # Zato
 from zato.common.test.config import TestConfig
 from zato.common.test import rand_string, rand_unicode
-from zato.common.util.cli import get_zato_sh_command
 from zato.common.util.open_ import open_w
 
 # ################################################################################################################################
@@ -42,7 +38,6 @@ if 0:
 template = """
 
 channel_plain_http:
-
   - connection: channel
     is_active: true
     is_internal: false
@@ -54,7 +49,6 @@ channel_plain_http:
     service_name: pub.zato.ping
     transport: plain_http
     url_path: /test/enmasse1/{test_suffix}
-
   - connection: channel
     is_active: true
     is_internal: false
@@ -84,6 +78,19 @@ zato_generic_connection:
       security_def: ZATO_NONE
       subscription_list:
       type_: outconn-wsx
+      # These are taken from generic.connection.py -> extra_secret_keys
+      oauth2_access_token: null
+      consumer_key: null
+      consumer_secret: null
+
+def_sec:
+  - name: "Test Basic Auth {test_suffix}"
+    is_active: true
+    type: basic_auth
+    username: "MyUser {test_suffix}"
+    password: "MyPassword"
+    realm: "My Realm"
+
 """
 
 # ################################################################################################################################
@@ -119,6 +126,9 @@ class EnmasseTestCase(TestCase):
 
     def _invoke_command(self, config_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
 
+        # Zato
+        from zato.common.util.cli import get_zato_sh_command
+
         # A shortcut
         command = get_zato_sh_command()
 
@@ -135,6 +145,9 @@ class EnmasseTestCase(TestCase):
 # ################################################################################################################################
 
     def _cleanup(self, test_suffix:'str') -> 'None':
+
+        # Zato
+        from zato.common.util.cli import get_zato_sh_command
 
         # A shortcut
         command = get_zato_sh_command()
@@ -156,6 +169,9 @@ class EnmasseTestCase(TestCase):
 
     def test_enmasse_ok(self) -> 'None':
 
+        # sh
+        from sh import ErrorReturnCode
+
         tmp_dir = gettempdir()
         test_suffix = rand_unicode() + '.' + rand_string()
 
@@ -165,15 +181,15 @@ class EnmasseTestCase(TestCase):
         data = template.format(test_suffix=test_suffix)
 
         f = open_w(config_path)
-        f.write(data)
+        _ = f.write(data)
         f.close()
 
         try:
             # Invoke enmasse to create objects ..
-            self._invoke_command(config_path)
+            _ = self._invoke_command(config_path)
 
             # .. now invoke it again to edit them in place.
-            self._invoke_command(config_path)
+            _ = self._invoke_command(config_path)
 
         except ErrorReturnCode as e:
             stdout = e.stdout # type: bytes
@@ -181,7 +197,7 @@ class EnmasseTestCase(TestCase):
             stderr = e.stderr
 
             self._warn_on_error(stdout, stderr)
-            self.fail('Caught an exception while invoking enmasse')
+            self.fail(f'Caught an exception while invoking enmasse; stdout -> {stdout}')
 
         finally:
             self._cleanup(test_suffix)
@@ -201,7 +217,7 @@ class EnmasseTestCase(TestCase):
         data = data.format(test_suffix=test_suffix)
 
         f = open_w(config_path)
-        f.write(data)
+        _ = f.write(data)
         f.close()
 
         # Invoke enmasse to create objects (which will fail because the service used above does not exist)
@@ -219,6 +235,6 @@ class EnmasseTestCase(TestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    _ = main()
 
 # ################################################################################################################################

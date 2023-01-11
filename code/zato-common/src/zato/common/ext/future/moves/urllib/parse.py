@@ -1,0 +1,52 @@
+"""
+This module is a modified vendor copy of the python-future package from https://github.com/PythonCharmers/python-future
+
+Copyright (c) 2013-2019 Python Charmers Pty Ltd, Australia
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+"""
+
+from __future__ import absolute_import
+from zato.common.ext.future.standard_library import suspend_hooks
+
+from zato.common.ext.future.utils import PY3
+
+if PY3:
+    from urllib.parse import *
+else:
+    __future_module__ = True
+    from urlparse import (ParseResult, SplitResult, parse_qs, parse_qsl,
+                          urldefrag, urljoin, urlparse, urlsplit,
+                          urlunparse, urlunsplit)
+
+    # we use this method to get at the original py2 urllib before any renaming
+    # quote = sys.py2_modules['urllib'].quote
+    # quote_plus = sys.py2_modules['urllib'].quote_plus
+    # unquote = sys.py2_modules['urllib'].unquote
+    # unquote_plus = sys.py2_modules['urllib'].unquote_plus
+    # urlencode = sys.py2_modules['urllib'].urlencode
+    # splitquery = sys.py2_modules['urllib'].splitquery
+
+    with suspend_hooks():
+        from urllib import (quote,
+                            quote_plus,
+                            unquote,
+                            unquote_plus,
+                            urlencode,
+                            splitquery)

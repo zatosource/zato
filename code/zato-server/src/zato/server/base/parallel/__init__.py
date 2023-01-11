@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from logging import DEBUG, INFO, WARN
 from platform import system as platform_system
 from random import seed as random_seed
@@ -18,6 +18,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # gevent
+from gevent import sleep
 from gevent.lock import RLock
 
 # Needed for Cassandra
@@ -27,15 +28,12 @@ gevent.monkey        # type: ignore
 # Paste
 from paste.util.converters import asbool
 
-# pysimdjson
-from simdjson import Parser as SIMDJSONParser
-
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
 from zato.common.api import DATA_FORMAT, default_internal_modules, HotDeploy, KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, \
-    SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
+    SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
@@ -46,15 +44,17 @@ from zato.common.json_internal import dumps, loads
 from zato.common.kv_data import KVDataAPI
 from zato.common.kvdb.api import KVDB
 from zato.common.marshal_.api import MarshalAPI
+from zato.common.oauth import OAuthStore, OAuthTokenClient
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
-from zato.common.typing_ import cast_, optional
+from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
     register_diag_handlers
-from zato.common.util.file_transfer import path_string_to_list
+from zato.common.util.file_transfer import path_string_list_to_list
+from zato.common.util.json_ import JSONParser
 from zato.common.util.platform_ import is_posix
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
@@ -76,6 +76,7 @@ from zato.server.base.parallel.subprocess_.zato_events import ZatoEventsIPC
 from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
 from zato.server.sso import SSOTool
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
@@ -102,13 +103,15 @@ if 0:
     SubprocessIPC = SubprocessIPC
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 kvdb_logger = logging.getLogger('zato_kvdb')
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-megabyte = 10**6
+megabyte = 10 ** 6
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -134,6 +137,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     broker_client: 'BrokerClient'
     zato_lock_manager: 'LockManager'
     startup_callable_tool: 'StartupCallableTool'
+    oauth_store: 'OAuthStore'
+
+    stop_after: 'intnone'
 
     def __init__(self) -> 'None':
         self.logger = logger
@@ -207,13 +213,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.has_posix_ipc = is_posix
         self.user_config = Bunch()
         self.stderr_path = ''
-        self.json_parser = SIMDJSONParser()
         self.work_dir = 'ParallelServer-work_dir'
         self.events_dir = 'ParallelServer-events_dir'
         self.kvdb_dir = 'ParallelServer-kvdb_dir'
         self.marshal_api = MarshalAPI()
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
         self.enforce_service_invokes = False
+        self.json_parser = JSONParser()
 
         # A server-wide publication counter, indicating which one the current publication is,
         # increased after each successful publication.
@@ -328,7 +334,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
                         # Save the source code only once here
                         f = open(tmp_full_path, 'wb')
-                        f.write(source)
+                        _ = f.write(source)
                         f.close()
 
                     else:
@@ -380,7 +386,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     internal_service_modules.append(module_name)
 
             locally_deployed.extend(self.service_store.import_internal_services(
-                internal_service_modules, self.base_dir, self.sync_internal, self.is_starting_first))
+                internal_service_modules, self.base_dir, self.sync_internal, cast_('bool', self.is_starting_first)))
 
             logger.info('Deploying user-defined services (%s)', self.name)
 
@@ -560,7 +566,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             wsx_gateway_service_allowed = wsx_gateway_service_allowed.split(',')
             wsx_gateway_service_allowed = [elem.strip() for elem in wsx_gateway_service_allowed if elem]
-            self.fs_server_config.pubsub.wsx_gateway_service_allowed.extend(wsx_gateway_service_allowed)
+            _ = self.fs_server_config.pubsub.wsx_gateway_service_allowed.extend(wsx_gateway_service_allowed)
 
 # ################################################################################################################################
 
@@ -655,7 +661,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             conf = get_config_from_file(user_conf_full_path, file_name)
 
             # Not used at all in this type of configuration
-            conf.pop('user_config_items', None)
+            _ = conf.pop('user_config_items', None)
 
             self.user_config[user_config_name] = conf
 
@@ -678,7 +684,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def set_up_user_config_location(self) -> 'strlist':
 
         user_conf_location = self.pickup_config.get('user_conf', {}).get('pickup_from', '')
-        return path_string_to_list(self.base_dir, user_conf_location)
+        return path_string_list_to_list(self.base_dir, user_conf_location)
 
 # ################################################################################################################################
 
@@ -809,7 +815,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
 
         # Set up SQL-based key/value API
-        self.kv_data_api = KVDataAPI(self.cluster_id, self.odb)
+        self.kv_data_api = KVDataAPI(cast_('int', self.cluster_id), self.odb)
 
         # Looked up upfront here and assigned to services in their store
         self.enforce_service_invokes = asbool(self.fs_server_config.misc.enforce_service_invokes)
@@ -834,7 +840,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.worker_store = WorkerStore(self.config, self)
         self.worker_store.invoke_matcher.read_config(self.fs_server_config.invoke_patterns_allowed)
         self.worker_store.target_matcher.read_config(self.fs_server_config.invoke_target_patterns_allowed)
-        self.set_up_config(server)
+        self.set_up_config(server) # type: ignore
 
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()
@@ -862,7 +868,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Rate limiting
         self.rate_limiting = RateLimiting()
-        self.rate_limiting.cluster_id = self.cluster_id
+        self.rate_limiting.cluster_id = cast_('int', self.cluster_id)
         self.rate_limiting.global_lock_func = self.zato_lock_manager
         self.rate_limiting.sql_session_func = self.odb.session
 
@@ -879,7 +885,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.worker_store.early_init()
 
         # Deploys services
-        locally_deployed = self._after_init_common(server)
+        locally_deployed = self._after_init_common(server) # type: ignore
 
         # Initializes worker store, including connectors
         self.worker_store.init()
@@ -887,6 +893,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Configure remaining parts of SSO
         self.configure_sso()
+
+        # Configure the store to obtain OAuth tokens through
+        self.set_up_oauth_store()
 
         # Cannot be done in __init__ because self.sso_config is not available there yet
         salt_size = self.sso_config.hash_secret.salt_size
@@ -950,6 +959,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             # Startup services
             self.invoke_startup_services()
 
+            # Local file-based configuration to apply
+            try:
+                self.apply_local_config()
+            except Exception as e:
+                logger.info('Exception while applying local config -> %s', e)
+
             # Subprocess-based connectors
             if self.has_posix_ipc:
                 self.init_subprocess_connectors(subprocess_start_config)
@@ -972,8 +987,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.ipc_api.pid = self.pid
         self.ipc_api.on_message_callback = self.worker_store.on_ipc_message
 
+        # Stops the environment after N seconds
+        if self.stop_after:
+            _ = spawn_greenlet(self._stop_after_timeout)
+
         if is_posix:
-            spawn_greenlet(self.ipc_api.run)
+            _ = spawn_greenlet(self.ipc_api.run)
             connector_config_ipc = cast_('ConnectorConfigIPC', self.connector_config_ipc)
 
             if self.component_enabled['stats']:
@@ -989,6 +1008,59 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         })
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def _stop_after_timeout(self):
+
+        # psutil
+        import psutil
+
+        now = datetime.utcnow()
+        stop_at = now + timedelta(seconds=cast_('int', self.stop_after))
+
+        while now < stop_at:
+            logger.info(f'Now is {now}; waiting to stop until {stop_at}')
+            now = datetime.utcnow()
+            sleep(1)
+
+        logger.info(f'Stopping Zato after {self.stop_after}s')
+
+        # All the pids that we will stop
+        to_stop = set()
+
+        # Details of each process
+        details = {}
+
+        # Our own PID
+        our_pid = os.getpid()
+
+        # If a pid has any of these names in its name or command line,
+        # we consider it a process that will be stopped.
+        to_include = ['zato', 'gunicorn']
+
+        for proc in list(psutil.process_iter(['pid', 'name'])):
+            proc_name = proc.name()
+            proc_cmd_line = ' '.join(proc.cmdline())
+            for item in to_include:
+                if (item in proc_name) or (item in proc_cmd_line):
+                    to_stop.add(proc.pid)
+                    details[proc.pid] = f'{proc_name}; {proc_cmd_line}'
+                    logger.info('Found PID: %s; Name: %s; Cmd. line: %s', proc.pid, proc_name, proc_cmd_line)
+                    break
+
+        logger.info('Pids collected: %s; our PID: %s', to_stop, our_pid)
+
+        # Remove our PID so that we do not stop ourselves too early
+        to_stop.remove(our_pid)
+
+        # Now, we can stop all the other processes
+        for pid in to_stop:
+            logger.info('Stopping PID %s (%s)', pid, details[pid])
+            os.kill(pid, 9)
+
+        # Finally, we can stop ourselves
+        os.kill(our_pid, 9)
 
 # ################################################################################################################################
 
@@ -1066,16 +1138,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         }
 
         if self.component_enabled['stats']:
-            self.connector_events.start_zato_events_connector(ipc_tcp_start_port, extra_options_kwargs=extra_options_kwargs)
+            _ = self.connector_events.start_zato_events_connector(ipc_tcp_start_port, extra_options_kwargs=extra_options_kwargs)
 
             # Wait until the events connector started - this will let other parts
             # of the server assume that it is always available.
-            wait_until_port_taken(self.connector_events.ipc_tcp_port, timeout=5)
+            _ = wait_until_port_taken(self.connector_events.ipc_tcp_port, timeout=5)
 
 # ################################################################################################################################
 
     def set_up_sso_rate_limiting(self) -> 'None':
         for item in self.odb.get_sso_user_rate_limiting_info():
+            item = cast_('any_', item)
             self._create_sso_user_rate_limiting(item.user_id, True, item.rate_limit_def)
 
 # ################################################################################################################################
@@ -1128,6 +1201,47 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         _invoke_startup_services('Parallel', stanza,
             self.fs_server_config, self.repo_location, self.broker_client, None,
             is_sso_enabled=self.is_sso_enabled)
+
+# ################################################################################################################################
+
+    def _set_ide_password(self, ide_username:'str', ide_password:'str') -> 'None':
+        service_name = 'zato.security.basic-auth.change-password'
+        request = {
+            'name': ide_username,
+            'is_active': True,
+            'type_': SEC_DEF_TYPE.BASIC_AUTH,
+            'password1': ide_password,
+            'password2': ide_password,
+        }
+        _ = self.invoke(service_name, request)
+
+# ################################################################################################################################
+
+    def apply_local_config(self) -> 'None':
+
+        # A quickstart environment directory we are potentially in
+        env_dir  = os.path.join(self.base_dir, '..')
+        env_dir = os.path.abspath(env_dir)
+
+        # A configuration file that may potentially exist
+        env_json = os.path.join(env_dir, 'env.json')
+
+        # Proceed only if the config file exists at all
+        if os.path.exists(env_json):
+
+            # Log what we are about to do
+            self.logger.info('Found local config file -> %s', env_json)
+
+            with open(env_json) as f:
+                data = f.read()
+                conf = loads(data)
+
+                ide_username = conf.get('ide_username')
+                ide_password = conf.get('ide_password')
+
+                if ide_username and ide_password:
+                    self.logger.info('Setting password for IDE user `%s`', ide_username)
+                    self._set_ide_password(ide_username, ide_password)
 
 # ################################################################################################################################
 
@@ -1255,11 +1369,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def deliver_pubsub_msg(self, msg:'Bunch') -> 'None':
+    def deliver_pubsub_msg(self, msg:'any_') -> 'None':
         """ A callback method invoked by pub/sub delivery tasks for each messages that is to be delivered.
         """
         subscription = self.worker_store.pubsub.subscriptions_by_sub_key[msg.sub_key]
-        topic = self.worker_store.pubsub.topics[subscription.config['topic_id']]
+        topic = self.worker_store.pubsub.topics[subscription.config['topic_id']] # type: ignore
 
         if topic.before_delivery_hook_service_invoker:
             response = topic.before_delivery_hook_service_invoker(topic, msg)
@@ -1298,7 +1412,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if isinstance(data, bytes):
             data = data.decode('utf8')
 
-        if data.startswith((_prefix, _marker)):
+        if data and data.startswith((_prefix, _marker)):
             return self.decrypt_no_prefix(data.replace(_prefix, '', 1))
         else:
             return data # Already decrypted, return as is
@@ -1330,6 +1444,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             os.makedirs(self.kvdb_dir, exist_ok=True)
 
         self.load_zato_kvdb_data()
+
+# ################################################################################################################################
+
+    def set_up_oauth_store(self) -> 'None':
+
+        # Create the base object ..
+        self.oauth_store = OAuthStore(
+            self.worker_store.oauth_get_by_id,
+            OAuthTokenClient.obtain_from_config
+        )
+
+        # .. and populate it with initial data now.
+        for item_id in self.worker_store.oauth_get_all_id_list():
+            self.oauth_store.create(item_id)
 
 # ################################################################################################################################
 
@@ -1486,7 +1614,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """ Publishes a message on the broker so all the servers (this one including
         can deploy a new package).
         """
-        msg = {'action': HOT_DEPLOY.CREATE_SERVICE.value, 'package_id': package_id}
+        msg = {'action': HOT_DEPLOY.CREATE_SERVICE.value, 'package_id': package_id} # type: ignore
         self.broker_client.publish(msg)
 
 # ################################################################################################################################

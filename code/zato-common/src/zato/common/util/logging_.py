@@ -106,6 +106,7 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
+        encoding: 'utf8'
     stdout:
         formatter: colour
         class: logging.StreamHandler
@@ -117,6 +118,7 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
+        encoding: 'utf8'
     admin:
         formatter: default
         class: {log_handler_class}
@@ -124,6 +126,7 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
+        encoding: 'utf8'
     audit_pii:
         formatter: default
         class: logging.handlers.RotatingFileHandler
@@ -131,6 +134,7 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
+        encoding: 'utf8'
     connector:
         formatter: default
         class: {log_handler_class}
@@ -138,6 +142,7 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
+        encoding: 'utf8'
     hl7:
         formatter: default
         class: {log_handler_class}
@@ -145,6 +150,7 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
+        encoding: 'utf8'
     kvdb:
         formatter: default
         class: {log_handler_class}
@@ -152,6 +158,7 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
+        encoding: 'utf8'
     pubsub:
         formatter: default
         class: {log_handler_class}
@@ -159,6 +166,7 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
+        encoding: 'utf8'
     pubsub_overflow:
         formatter: default
         class: {log_handler_class}
@@ -166,6 +174,7 @@ handlers:
         mode: 'a'
         maxBytes: 200000000
         backupCount: 50
+        encoding: 'utf8'
     pubsub_audit:
         formatter: default
         class: {log_handler_class}
@@ -173,6 +182,7 @@ handlers:
         mode: 'a'
         maxBytes: 200000000
         backupCount: 50
+        encoding: 'utf8'
     rbac:
         formatter: default
         class: {log_handler_class}
@@ -180,6 +190,7 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
+        encoding: 'utf8'
     scheduler:
         formatter: default
         class: {log_handler_class}
@@ -187,6 +198,7 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
+        encoding: 'utf8'
     web_socket:
         formatter: default
         class: {log_handler_class}
@@ -194,6 +206,7 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
+        encoding: 'utf8'
     ibm_mq:
         formatter: default
         class: logging.handlers.RotatingFileHandler
@@ -201,6 +214,7 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
+        encoding: 'utf8'
     notif_sql:
         formatter: default
         class: logging.handlers.RotatingFileHandler
@@ -208,6 +222,7 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
+        encoding: 'utf8'
 
 formatters:
     audit_pii:

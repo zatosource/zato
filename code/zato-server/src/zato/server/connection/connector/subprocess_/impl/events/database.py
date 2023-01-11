@@ -14,9 +14,6 @@ from typing import Optional as optional
 # Humanize
 from humanize import intcomma as int_to_comma
 
-# Numpy
-import numpy as np
-
 # Pandas
 import pandas as pd
 
@@ -184,6 +181,9 @@ class EventsDatabase(InRAMStore):
     def __init__(self, logger, fs_data_path, sync_threshold, sync_interval, max_retention=Stats.MaxRetention):
         # type: (Logger, int, int) -> None
         super().__init__(sync_threshold, sync_interval)
+
+        # Numpy
+        import numpy as np
 
         # Our self.logger object
         self.logger = logger

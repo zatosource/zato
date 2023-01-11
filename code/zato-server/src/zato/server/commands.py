@@ -268,7 +268,7 @@ class CommandsFacade:
 
         # This is a function or another callable, but not a service, and we can invoke that callable as is
         if callable(callback) and (not is_service):
-            callback(result)
+            _ = callback(result)
 
         else:
 

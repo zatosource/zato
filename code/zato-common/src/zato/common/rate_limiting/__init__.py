@@ -26,7 +26,7 @@ from zato.common.rate_limiting.common import Const, DefinitionItem, ObjectInfo
 from zato.common.rate_limiting.limiter import Approximate, Exact, RateLimitStateDelete, RateLimitStateTable
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 
 # ################################################################################################################################
 
