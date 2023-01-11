@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 
 # ujson
-from ujson import dumps
+from json import dumps
 
 # Zato
 from zato.common.api import GENERIC, PUBSUB

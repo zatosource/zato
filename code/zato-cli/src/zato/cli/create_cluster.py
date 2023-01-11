@@ -224,7 +224,7 @@ class Create(ZatoCommand):
         #
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         # Zato
         from zato.common.api import DATA_FORMAT
@@ -495,7 +495,7 @@ class Create(ZatoCommand):
         from zato.common.api import DATA_FORMAT
         from zato.common.odb.model import HTTPSOAP
 
-        data_formats = [DATA_FORMAT.JSON, DATA_FORMAT.XML]
+        data_formats = [DATA_FORMAT.JSON]
         for data_format in data_formats:
 
             name = 'zato.checks.{}.{}'.format(data_format, service.name)
@@ -510,7 +510,7 @@ class Create(ZatoCommand):
     def add_cache_endpoints(self, session, cluster):
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         # Zato
         from zato.common.api import DATA_FORMAT
@@ -622,7 +622,7 @@ class Create(ZatoCommand):
     def add_crypto_endpoints(self, session, cluster):
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         # Zato
         from zato.common.api import DATA_FORMAT

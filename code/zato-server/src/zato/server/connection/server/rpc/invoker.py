@@ -12,13 +12,11 @@ from logging import getLogger
 # Requests
 from requests import get as requests_get
 
-# simdjson
-from simdjson import loads
-
 # Zato
 from zato.client import AnyServiceInvoker
 from zato.common.ext.dataclasses import dataclass
 from zato.common.typing_ import any_, cast_, dict_field, from_dict, strordictnone
+from zato.common.util.json_ import json_loads
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -227,7 +225,7 @@ class RemoteServerInvoker(ServerInvoker):
                                 # Here, we also need a cast for the same reason as above.
                                 if per_pid_data_is_dict:
                                     pid_data = cast_('anydict', pid_data)
-                                    pid_data['pid_data'] = loads(per_pid_data)
+                                    pid_data['pid_data'] = json_loads(per_pid_data)
 
                         if isinstance(pid_data, dict):
                             per_pid_response = from_dict(PerPIDResponse, pid_data) # type: PerPIDResponse

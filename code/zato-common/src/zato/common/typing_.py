@@ -31,15 +31,15 @@ from typing import           \
     Set as set_,             \
     Union as union_
 
-# dacite
-from dacite import from_dict
-
 # typing-extensions
 from typing_extensions import \
-    TypeAlias as typealias_
+    TypeAlias as typealias_ # type: ignore
+
+# dacite
+from dacite.core import from_dict
 
 # stdlib
-from dataclasses import * # noqa: F401
+from dataclasses import * # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,8 +67,8 @@ TypedDict = TypedDict
 # ################################################################################################################################
 
 # Some basic types are defined upfront to make sure that none of the later definitions results in the type "Unknown".
-intnone       = union_[int,  None]
-strnone       = union_[str_, None]
+intnone       = optional[int]
+strnone       = optional[str]
 
 anydict       = dict_[any_, any_]
 anydictnone   = optional[anydict]
@@ -79,6 +79,8 @@ anyset        = set_[any_]
 anytuple      = tuple_[any_, ...]
 binaryio_     = binaryio_
 boolnone      = optional[bool]
+byteslist     = list_[bytes]
+bytesnone     = optional[bytes]
 callable_     = callable_[..., any_]
 callnone      = optional[callable_]
 cast_         = cast_
@@ -107,9 +109,10 @@ stranydict    = dict_[str, any_]
 strcalldict   = dict_[str, callable_]
 strdict       = stranydict
 strbytes      = union_[str_, bytes]
-strlistdict   = dict_[str, anylist]
+strbooldict   = dict_[str, bool]
 strdictdict   = dict_[str, anydict]
 strdictlist   = list_[stranydict]
+strdictnone   = union_[stranydict, None]
 strint        = union_[str_, int]
 strintbool    = union_[str_, int, bool]
 strintdict    = dict_[str, int]
@@ -139,7 +142,7 @@ union_        = union_
 # ################################################################################################################################
 # ################################################################################################################################
 
-def instance_from_dict(class_:'any_', data:'dict') -> 'any_':
+def instance_from_dict(class_:'any_', data:'anydict') -> 'any_':
     instance = class_()
     for key, value in data.items():
         setattr(instance, key, value)
@@ -162,12 +165,12 @@ def extract_from_union(elem:'any_') -> 'anytuple':
 
 # ################################################################################################################################
 
-def list_field() -> 'callable_[anylist]':
+def list_field() -> 'callable_[anylist]': # type: ignore
     return field(default_factory=list) # noqa: F405
 
 # ################################################################################################################################
 
-def dict_field() -> 'callable_[anydict]':
+def dict_field() -> 'callable_[anydict]': # type: ignore
     return field(default_factory=dict) # noqa: F405
 
 # ################################################################################################################################

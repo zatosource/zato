@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from dataclasses import asdict, _FIELDS, MISSING, _PARAMS
+from dataclasses import asdict, _FIELDS, MISSING, _PARAMS # type: ignore
 from http.client import BAD_REQUEST
 from inspect import isclass
 from typing import Any
@@ -30,7 +30,7 @@ from typing_utils import issubtype
 
 # Zato
 from zato.common.api import ZatoNotGiven
-from zato.common.typing_ import extract_from_union, is_union
+from zato.common.typing_ import cast_, extract_from_union, is_union
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,8 +75,7 @@ def is_list(field_type, is_class):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def extract_model_class(field_type):
-    # type: (Field) -> Model
+def extract_model_class(field_type:'Field') -> 'Model | None':
 
     # The attribute is defined by typing.List but not by list elements,
     # hence the getattr call ..
@@ -106,7 +105,7 @@ class Model:
     @classmethod
     def _zato_from_dict(class_, data, extra=None):
         api = MarshalAPI()
-        return api.from_dict(None, data, class_, extra=extra)
+        return api.from_dict(cast_('Service', None), data, class_, extra=extra)
 
     def to_dict(self):
         return asdict(self)
@@ -135,10 +134,9 @@ class Model:
 # ################################################################################################################################
 
 class ModelCtx:
-    def __init__(self):
-        self.service = None   # type: Service
-        self.data = None      # type: dict
-        self.DataClass = None # type: object
+    service: 'Service'
+    data: 'anydict | Model'
+    DataClass: 'any_'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,8 +144,7 @@ class ModelCtx:
 class ModelValidationError(Exception):
     """ Base class for model validation errors.
     """
-    def __init__(self, elem_path):
-        # type: (str)
+    def __init__(self, elem_path:'str'):
         self.elem_path   = elem_path
         self.reason = self.msg = self.get_reason()
         self.status = BAD_REQUEST
@@ -171,6 +168,11 @@ class ElementMissing(ModelValidationError):
     def get_reason(self):
         return 'Element missing: {}'.format(self.elem_path)
 
+class ElementIsNotAList(ElementMissing):
+
+    def get_reason(self):
+        return 'Element is not a list: {}'.format(self.elem_path)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -178,7 +180,7 @@ class DictCtx:
     def __init__(
         self,
         service:      'Service',
-        current_dict: 'anydict',
+        current_dict: 'anydict | Model',
         DataClass:    'any_',
         extra:        'dictnone',
         list_idx:     'intnone',
@@ -207,7 +209,7 @@ class DictCtx:
         self.setattr_attrs = {}
 
         # We can check it once upfront and make it point to either init_attrs or setattr_attrs
-        self.attrs_container = None # type: dictnone
+        self.attrs_container = cast_('dict', None) # type: dictnone
 
 # ################################################################################################################################
 
@@ -274,14 +276,17 @@ class FieldCtx:
         # If we do not have a value here, it means that we have no extra,
         # or that it did not contain the expected value so we look it up in the current dictionary.
         if value == ZatoNotGiven:
-            value = self.dict_ctx.current_dict.get(self.name, ZatoNotGiven)
+            if isinstance(self.dict_ctx.current_dict, dict):
+                value = self.dict_ctx.current_dict.get(self.name, ZatoNotGiven)
+            elif isinstance(self.dict_ctx.current_dict, Model): # type: ignore
+                value = getattr(self.dict_ctx.current_dict, self.name, ZatoNotGiven)
 
         # At this point, we know there will be something to assign although it still may be ZatoNotGiven.
         self.value = value
 
         self.is_class = isclass(self.field.type)
         self.is_model = self.is_class and issubclass(self.field.type, Model)
-        self.is_list = is_list(self.field.type, self.is_class)
+        self.is_list = is_list(self.field.type, self.is_class) # type: ignore
 
         #
         # This is a list and we need to check if its definition
@@ -291,7 +296,7 @@ class FieldCtx:
         # Otherwise, we will just pass this list on as it is.
         #
         if self.is_list:
-            self.model_class = extract_model_class(self.field.type)
+            self.model_class = extract_model_class(self.field.type) # type: ignore
             self.contains_model = bool(self.model_class and hasattr(self.model_class, _FIELDS))
 
 # ################################################################################################################################
@@ -312,8 +317,11 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def get_validation_error(self, field_ctx):
-        # type: (FieldCtx) -> ModelValidationError
+    def get_validation_error(
+        self,
+        field_ctx,                 # type: FieldCtx
+        error_class=ElementMissing # type: any_
+    ) -> 'ModelValidationError':
 
         # This will always exist
         elem_path = [field_ctx.name]
@@ -329,7 +337,7 @@ class MarshalAPI:
         # Now, join it with a elem_path separator
         elem_path = '/' + '/'.join(elem_path)
 
-        return ElementMissing(elem_path)
+        return error_class(elem_path)
 
 # ################################################################################################################################
 
@@ -374,6 +382,12 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
+    def _ensure_value_is_a_list(self, field_ctx:'FieldCtx', value:'any_') -> 'None':
+        if not isinstance(value, list):
+            raise self.get_validation_error(field_ctx, error_class=ElementIsNotAList)
+
+# ################################################################################################################################
+
     def from_dict(
         self,
         service:      'Service',
@@ -388,7 +402,7 @@ class MarshalAPI:
         dict_ctx.init()
 
         # All fields that we will visit
-        field_items = sorted(dict_ctx.fields.items()) # type: (str, Field)
+        field_items = sorted(dict_ctx.fields.items()) # type: any_
 
         for _ignored_name, _field in field_items:
 
@@ -432,14 +446,45 @@ class MarshalAPI:
                 # we need to visit each of them now.
                 if field_ctx.model_class:
 
-                    # Enter further only if we have any value at all to check
-                    if field_ctx.value and field_ctx.value != ZatoNotGiven:
+                    # Enter further only if we have any value at all to check ..
+                    if field_ctx.value and field_ctx.value != ZatoNotGiven: # type: ignore
+
+                        # .. if the field is required, make sure that what we have on input really is a list object ..
+                        if field_ctx.is_required:
+                            self._ensure_value_is_a_list(field_ctx, field_ctx.value)
 
                         # However, that model class may actually point to <type 'str'> types
                         # in case of fields like strlist, and we need to take that into account
                         # before entering the _visit_list method below.
                         if field_ctx.is_model or field_ctx.contains_model:
                             field_ctx.value = self._visit_list(field_ctx)
+
+                    # .. if we are here, it may be because the value is a dictlist instance
+                    # .. for which there will be no underlying model and we can just assign it as is ..
+                    else:
+
+                        #
+                        # Object current_field may be returned by a default factory
+                        # in declarations, such as the one below. This is why we need to
+                        # ensure that this name exist in current_dict before we extract its value.
+                        #
+                        #
+                        # @dataclass(init=False, repr=False)
+                        # class MyModel(Model):
+                        #     my_list: anylistnone = list_field()
+                        #     my_dict: anydictnone = dict_field()
+                        #
+                        if field_ctx.name in current_dict:
+
+                            # .. extract the value first ..
+                            value = current_dict[field_ctx.name]
+
+                            # .. if the field is required, make sure that what we have on input really is a list object ..
+                            if field_ctx.is_required:
+                                self._ensure_value_is_a_list(field_ctx, value)
+
+                            # .. assign the list now.
+                            field_ctx.value = value
 
             # If we do not have a value yet, perhaps we will find a default one
             if field_ctx.value == ZatoNotGiven:
@@ -479,7 +524,7 @@ class MarshalAPI:
                         value = None
 
             # Assign the value now
-            dict_ctx.attrs_container[field_ctx.name] = value
+            dict_ctx.attrs_container[field_ctx.name] = value # type: ignore
 
         # Create a new instance, potentially with attributes ..
         instance = DataClass(**dict_ctx.init_attrs) # type: Model
@@ -506,7 +551,7 @@ class MarshalAPI:
     def unmarshall(self, data:'dict', class_:'any_') -> 'any_':
         """ A publicly available convenience method to unmarshall arbitrary dicts into model classes.
         """
-        return self.from_dict(None, data, class_)
+        return self.from_dict(cast_('Service', None), data, class_)
 
 # ################################################################################################################################
 # ################################################################################################################################

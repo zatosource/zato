@@ -11,7 +11,10 @@ import logging
 from traceback import format_exc
 
 # ciso8601
-from ciso8601 import parse_datetime
+try:
+    from zato.common.util.api import parse_datetime
+except ImportError:
+    from dateutil.parser import parse as parse_datetime
 
 # crontab
 from crontab import CronTab
@@ -20,7 +23,7 @@ from crontab import CronTab
 from gevent import sleep
 
 # Python 2/3 compatibility
-from past.builtins import basestring
+from zato.common.py23_.past.builtins import basestring
 
 # Zato
 from zato.common.api import SCHEDULER, ZATO_NONE

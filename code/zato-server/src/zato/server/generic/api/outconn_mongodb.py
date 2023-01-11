@@ -44,11 +44,11 @@ class OutconnMongoDBWrapper(Wrapper):
         with self.update_lock:
 
             write_to_replica = self.config.write_to_replica
-            if not isinstance(write_to_replica, int):
+            if not isinstance(write_to_replica, int) or isinstance(write_to_replica, bool):
                 try:
                     write_to_replica = int(write_to_replica)
                 except(ValueError, TypeError):
-                    write_to_replica = ''
+                    write_to_replica = 0
 
             # Configuration of the underlying client
             client_config = bunchify({
@@ -67,8 +67,8 @@ class OutconnMongoDBWrapper(Wrapper):
                 'retryWrites': self.config.should_retry_write,
                 'zlibCompressionLevel': self.config.zlib_level,
                 'w': write_to_replica,
-                'wtimeout': self.config.write_timeout,
-                'j': self.config.is_write_journal_enabled,
+                'wTimeoutMS': self.config.write_timeout,
+                'journal': self.config.is_write_journal_enabled,
                 'fsync': self.config.is_write_fsync_enabled,
                 'replicaSet': self.config.replica_set or None,
                 'readPreference': self.config.read_pref_type,

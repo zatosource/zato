@@ -174,7 +174,7 @@ def index(req):
         for def_item in req.zato.client.invoke('zato.security.get-list', {'cluster_id': req.zato.cluster.id}):
             if connection == 'outgoing':
                 if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type not in (
-                    SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT, SEC_DEF_TYPE.APIKEY):
+                    SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT, SEC_DEF_TYPE.APIKEY, SEC_DEF_TYPE.OAUTH):
                     continue
 
             _security.append(def_item)
@@ -212,7 +212,11 @@ def index(req):
 
             _security_name = item.security_name
             if _security_name:
-                security_name = '{0}<br/>{1}'.format(SEC_DEF_TYPE_NAME[item.sec_type], _security_name)
+                sec_type_name = SEC_DEF_TYPE_NAME[item.sec_type]
+                sec_type_as_link = item.sec_type.replace('_', '-')
+                security_href = f'/zato/security/{sec_type_as_link}/?cluster={req.zato.cluster_id}&amp;query={_security_name}'
+                security_link = f'<a href="{security_href}">{_security_name}</a>'
+                security_name = f'{sec_type_name}<br/>{security_link}'
             else:
                 if item.sec_use_rbac:
                     security_name = DELEGATED_TO_RBAC

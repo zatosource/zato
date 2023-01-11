@@ -22,8 +22,8 @@ from bson.json_util import dumps as bson_dumps
 
 # Python 2/3 compatibility
 from builtins import bytes
-from future.utils import iterkeys
-from past.builtins import basestring
+from zato.common.ext.future.utils import iterkeys
+from zato.common.py23_.past.builtins import basestring
 
 # Zato
 from zato.common.api import BROKER, SCHEDULER, StatsKey

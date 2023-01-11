@@ -1,0 +1,25 @@
+python310.zip
+.\Lib\site-packages\
+.\Lib\site-packages\
+.\Lib\site-packages\win32
+.\Lib\site-packages\win32\lib
+.\Lib\site-packages\win32\pythonwin
+..\..\..\zato-agent\src\
+..\..\..\zato-broker\src\
+..\..\..\zato-cli\src\
+..\..\..\zato-client\src\
+..\..\..\zato-common\src\
+..\..\..\zato-cy\src\
+..\..\..\zato-distlock\src\
+..\..\..\zato-hl7\src\
+..\..\..\zato-lib\src\
+..\..\..\zato-scheduler\src\
+..\..\..\zato-server\src\
+..\..\..\zato-sso\src\
+..\..\..\zato-testing\src\
+..\..\..\zato-web-admin\src\
+..\..\..\zato-zmq\src\
+.
+
+# Uncomment to run site.main() automatically
+# import site

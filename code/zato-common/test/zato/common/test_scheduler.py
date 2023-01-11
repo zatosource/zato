@@ -21,7 +21,10 @@ from bunch import Bunch
 from crontab import CronTab
 
 # ciso8601
-from ciso8601 import parse_datetime
+try:
+    from zato.common.util.api import parse_datetime
+except ImportError:
+    from dateutil.parser import parse as parse_datetime
 
 # gevent
 from gevent import sleep, spawn

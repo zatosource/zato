@@ -13,7 +13,7 @@ from operator import itemgetter
 from django import forms
 
 # Python 2/3 compatibility
-from future.utils import iteritems
+from zato.common.ext.future.utils import iteritems
 
 # Zato
 from zato.admin.web.forms import INITIAL_CHOICES_DICT

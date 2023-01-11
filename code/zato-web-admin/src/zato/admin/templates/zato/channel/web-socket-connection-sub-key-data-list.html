@@ -23,12 +23,15 @@
     <script>
     $.fn.zato.data_table.get_columns = function() {
         return [
+
             '_numbering',
             '_selection',
             '_creation_time',
+
             'ext_client_id',
             '_sub_key',
             '_topic',
+
             'sub_pattern_matched',
             'id',
         ]
@@ -60,11 +63,12 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Creation time</a></th>
+
                         <th><a href="#">EXTCLI</a></th>
                         <th><a href="#">Sub key</a></th>
                         <th><a href="#">Topic</a></th>
+
                         <th><a href="#">Pattern matched</a></th>
-                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -74,7 +78,6 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering' style="width:10px">&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-
                         <td style="width:175px">
                             <a
                                 id="a_creation_time_{{ item.id }}"
@@ -85,11 +88,9 @@
                         <td>
                             {{ item.ext_client_id }}
                         </td>
-
                         <td style="width:270px">
 <a href="{% url "pubsub-endpoint-queues" cluster_id item.endpoint_id item.endpoint_name|slugify %}?cluster={{ cluster_id }}&amp;query={{ item.topic_name }}&amp;highlight={{ item.sub_id }}">{{ item.sub_key}} </a>
                         </td>
-
                         <td style="vertical-align:middle; text-align:left">
                             <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.topic_name }}</a>
 
@@ -98,7 +99,6 @@
                         <td style="vertical-align:middle; text-align:left">
                             {{ item.sub_pattern_matched }}
                         </td>
-
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                     </tr>
                 {% endfor %}

@@ -49,6 +49,7 @@ default_services_allowed = (
     'zato.pubsub.pubapi.subscribe-wsx',
     'zato.pubsub.pubapi.unsubscribe',
     'zato.pubsub.resume-wsx-subscription',
+    'zato.pubsub.subscription.create-wsx-subscription',
     'zato.ping'
 )
 
@@ -288,8 +289,8 @@ class WebSocketsGateway(Service):
     services_allowed = []
 
     class SimpleIO:
-        input_required = 'service',
-        input_optional = AsIs('request'),
+        input_required = 'service'
+        input_optional = AsIs('request')
         output_optional = 'sub_key', AsIs(wsx_gateway_response_elem)
         skip_empty_keys = True
 
@@ -299,9 +300,17 @@ class WebSocketsGateway(Service):
         input = self.request.input
         service = input.service
 
-        if service \
-           and service not in _default_allowed \
-           and service not in self.services_allowed:
+        # Make sure that the service can be invoked if we have one on input
+        if service:
+
+            # These services can be always invoked
+            is_allowed_by_default = service in _default_allowed
+
+            # Our subclasses may add more services that they allow
+            is_allowed_by_self_service = service in self.services_allowed
+
+            # Ensure that the input service is allowed
+            if not (is_allowed_by_default or is_allowed_by_self_service):
                 self.logger.warning('Service `%s` is not among %s', service, self.services_allowed) # noqa: E117
                 raise Forbidden(self.cid)
 
@@ -314,7 +323,8 @@ class WebSocketsGateway(Service):
                 topic_name,
                 use_current_wsx=True,
                 unsub_on_wsx_close=unsub_on_wsx_close,
-                service=self
+                service=self,
+                cid=input.cid,
             )
             self.response.payload.sub_key = sub_key
 
@@ -325,7 +335,11 @@ class WebSocketsGateway(Service):
 
             # Invoke the underlying service and get its response
             response = self.invoke(
-                service, self.request.input.request, wsgi_environ=self.wsgi_environ, skip_response_elem=True
+                service,
+                self.request.input.request,
+                wsgi_environ=self.wsgi_environ,
+                skip_response_elem=True,
+                cid=self.cid,
             )
 
             # Use setattr to attach the response because we keep the response element's name in a variable
@@ -739,7 +753,7 @@ class PubAPIInvoker(Service):
                             'error_test': test,
                             'error_reason': reason,
                         }
-                        self.logger.warning('Test error -> %s', result.errors)
+                        self.logger.warning('Test error in %s\n%s', test, reason)
                         errors.append(_error)
 
                     for failure in result.failures:
@@ -750,8 +764,8 @@ class PubAPIInvoker(Service):
                             'failure_test': test,
                             'failure_reason': reason,
                         }
-                        self.logger.warning('Test Failure -> %s', result.errors)
-                        errors.append(_failure)
+                        self.logger.warning('Test failure in %s\n%s', test, reason)
+                        failures.append(_failure)
 
                     # Serialize all the warnings and errors ..
                     self.response.payload = dumps(response)

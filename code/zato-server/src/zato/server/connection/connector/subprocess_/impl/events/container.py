@@ -11,11 +11,9 @@ from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
 
-# pysimdjson
-from simdjson import Parser as SIMDJSONParser
-
 # Zato
 from zato.common.events.common import Action
+from zato.common.util.json_ import JSONParser
 from zato.common.util.tcp import ZatoStreamServer
 from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer
 from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase, OpCode
@@ -62,7 +60,7 @@ class EventsConnectionContainer(BaseConnectionContainer):
         self.keep_running = True
 
         # A reusable JSON parser
-        self._json_parser = SIMDJSONParser()
+        self._json_parser = JSONParser()
 
         # Map handler names to actual handler methods
         self._action_map = {

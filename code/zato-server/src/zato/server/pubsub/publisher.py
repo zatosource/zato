@@ -13,8 +13,11 @@ from logging import DEBUG, getLogger
 from operator import itemgetter
 from traceback import format_exc
 
-# ciso8601
-from ciso8601 import parse_datetime_as_naive
+# ciso8601 / dateparser
+try:
+    from ciso8601 import parse_datetime_as_naive
+except ImportError:
+    from dateparser.parser import parse as parse_datetime_as_naive # type: ignore
 
 # gevent
 from gevent import spawn
@@ -30,8 +33,8 @@ from zato.common.marshal_.api import Model
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import new_msg_id, PubSubMessage
-from zato.common.typing_ import any_, anydict, anylistnone, anynone, boolnone, cast_, dict_field, intnone, list_field, \
-     strlistempty, strnone
+from zato.common.typing_ import any_, anydict, anydictnone, anylistnone, anynone, boolnone, cast_, dict_field, intnone, \
+    list_field, strlistnone, strnone
 from zato.common.util.pubsub import get_expiration, get_priority
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_ms
@@ -175,11 +178,11 @@ class PubRequest(Model):
     group_id:          strnone = ''
     position_in_group: intnone = PUBSUB.DEFAULT.PositionInGroup
 
-    reply_to_sk:   strlistempty = list_field()
-    deliver_to_sk: strlistempty = list_field()
+    reply_to_sk:   strlistnone = list_field()
+    deliver_to_sk: strlistnone = list_field()
 
     user_ctx:      anynone    = None
-    zato_ctx:      anydict = dict_field()
+    zato_ctx:      anydictnone = dict_field()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -590,11 +593,9 @@ class Publisher:
             # for whom no one is waiting or continue and place them in the topic directly.
             if ctx.topic.config.get('on_no_subs_pub') == PUBSUB.ON_NO_SUBS_PUB.DROP.id:
                 log_msg_drop = 'Dropping messages. ' + log_msg
-                logger.info(log_msg_drop, *log_msg_args)
                 logger_pubsub.info(log_msg_drop, *log_msg_args)
                 return None
             else:
-                logger.info(log_msg, *log_msg_args)
                 logger_pubsub.info(log_msg, *log_msg_args)
 
         # Local aliases
@@ -672,7 +673,7 @@ class Publisher:
         # optionally, store data in pub/sub audit log.
         if has_pubsub_audit_log:
 
-            log_msg = 'Message published. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' \
+            log_msg = 'Message published. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' + \
                   ', GD data:`%s`, non-GD data:`%s`'
 
             logger_audit.info(log_msg, ctx.cid, ctx.topic.name, self.pubsub.endpoints[ctx.endpoint_id].name,
@@ -724,13 +725,13 @@ class Publisher:
             else:
                 has_topic = False
 
-            if ctx.pubsub.has_meta_endpoint and ctx.pubsub.needs_endpoint_meta_update:
+            if ctx.pubsub.has_meta_endpoint and ctx.pubsub.needs_endpoint_meta_update(ctx.endpoint_id):
                 has_endpoint = True
             else:
                 has_endpoint = False
 
             if has_topic or has_endpoint:
-                spawn(self.update_pub_metadata, ctx, has_topic, has_endpoint,
+                _ = spawn(self.update_pub_metadata, ctx, has_topic, has_endpoint,
                     ctx.pubsub.endpoint_meta_data_len, ctx.pubsub.endpoint_meta_max_history)
 
         # Build and return a response for our caller.
@@ -808,7 +809,7 @@ class Publisher:
                             idx_found = idx
                             break
                     if idx_found is not None:
-                        endpoint_topic_list.pop(idx_found)
+                        _ = endpoint_topic_list.pop(idx_found)
 
                 # Newest information about this endpoint's publication to this topic
                 endpoint_data = {

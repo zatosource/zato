@@ -67,6 +67,7 @@ ZATO_WARNING = 'ZATO_WARNING'
 ZATO_NONE = 'ZATO_NONE'
 ZATO_DEFAULT = 'ZATO_DEFAULT'
 ZATO_SEC_USE_RBAC = 'ZATO_SEC_USE_RBAC'
+Zato_None = ZATO_NONE
 
 DELEGATED_TO_RBAC = 'Delegated to RBAC'
 
@@ -100,7 +101,7 @@ generic_attrs = (
     'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
     'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding',
     'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq',
-    'max_wait_time'
+    'max_wait_time', 'oauth_def'
 )
 
 # ################################################################################################################################
@@ -260,7 +261,7 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.BASIC_AUTH: 'Basic Auth',
     SEC_DEF_TYPE.JWT: 'JWT',
     SEC_DEF_TYPE.NTLM: 'NTLM',
-    SEC_DEF_TYPE.OAUTH: 'OAuth 1.0',
+    SEC_DEF_TYPE.OAUTH: 'OAuth',
     SEC_DEF_TYPE.TLS_CHANNEL_SEC: 'TLS channel',
     SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
     SEC_DEF_TYPE.VAULT: 'Vault',
@@ -713,13 +714,6 @@ class PARAMS_PRIORITY:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class NONCE_STORE:
-    KEY_PATTERN = 'zato:nonce-store:{}:{}' # E.g. zato:nonce-store:oauth:27
-    DEFAULT_MAX_LOG = 25000
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class HTTP_SOAP_SERIALIZATION_TYPE:
     STRING_VALUE = NameId('String', 'string')
     SUDS = NameId('Suds', 'suds')
@@ -778,7 +772,7 @@ class PUBSUB:
 
     class DEFAULT:
         DATA_FORMAT = 'text'
-        MIME_TYPE = 'text/plain'
+        MIME_TYPE = 'application/json'
         TOPIC_MAX_DEPTH_GD = 10000
         TOPIC_MAX_DEPTH_NON_GD = 1000
         DEPTH_CHECK_FREQ = 100
@@ -945,15 +939,26 @@ class EMAIL:
         TIMEOUT = 10
         PING_ADDRESS = 'invalid@invalid'
         GET_CRITERIA = 'UNSEEN'
+        FILTER_CRITERIA = 'isRead ne true'
         IMAP_DEBUG_LEVEL = 0
 
     class IMAP:
+
         class MODE:
             PLAIN = 'plain'
             SSL = 'ssl'
 
             def __iter__(self):
-                return iter((self.PLAIN, self.SSL))
+                return iter((self.SSL, self.PLAIN))
+
+        class ServerType:
+            Generic = 'generic-imap'
+            Microsoft365 = 'microsoft-365'
+
+        ServerTypeHuman = {
+            ServerType.Generic: 'Generic IMAP',
+            ServerType.Microsoft365: 'Microsoft 365',
+        }
 
     class SMTP:
         class MODE:
@@ -1093,7 +1098,7 @@ CONTENT_TYPE = Bunch(
     PLAIN_XML = 'application/xml',
     SOAP11 = 'text/xml',
     SOAP12 = 'application/soap+xml; charset=utf-8',
-)
+) # type: Bunch
 
 class ContentType:
     FormURLEncoded = 'application/x-www-form-urlencoded'
@@ -1273,7 +1278,9 @@ class LDAP:
         POOL_KEEP_ALIVE = 30
         POOL_LIFETIME = 3600
         POOL_MAX_CYCLES  = 1
-        POOL_SIZE = 10
+        POOL_SIZE = 1
+        Server_List = 'localhost:1389'
+        Username = 'cn=admin,dc=example,dc=org'
 
     class AUTH_TYPE:
         NTLM   = NameId('NTLM', 'NTLM')
@@ -1374,15 +1381,16 @@ class MONGODB:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class KAFKA:
+class Kafka:
 
-    class DEFAULT:
-        BROKER_VERSION = '0.9.0'
-        SERVER_LIST    = '127.0.0.1:2181'
+    class Default:
+        Broker_Version = '3.3'
+        Server_List    = '127.0.0.1:2181'
+        Username = 'admin'
 
-        class TIMEOUT:
-            SOCKET = 1
-            OFFSETS = 10
+        class Timeout:
+            Socket  = 1
+            Offsets = 10
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1519,14 +1527,18 @@ class Microsoft365:
     class Default:
         Auth_Redirect_URL = 'https://zato.io/ext/redirect/oauth2'
         Scopes = [
-            'offline_access',
-            'User.Read',
-            'Mail.Read',
-            'Mail.ReadBasic',
-            'Mail.ReadWrite',
-            'Mail.Send',
-            'IMAP.AccessAsUser.All',
-            'SMTP.Send'
+            'https://graph.microsoft.com/.default'
+        ]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OAuth:
+
+    class Default:
+        Auth_Server_URL = 'https://example.com/oauth2/default/v1/token'
+        Scopes = [
+            'zato.access',
         ]
 
 # ################################################################################################################################
@@ -1540,8 +1552,9 @@ class HL7:
         # Default address for FHIR connections
         address_fhir = 'https://fhir.simplifier.net/zato'
 
-        # Default address for MLLP connections
-        address = '0.0.0.0:30901'
+        # Default address and port for MLLP connections
+        channel_host = '0.0.0.0'
+        channel_port = 30901
 
         # Assume that UTF-8 is sent in by default
         data_encoding = 'utf-8'
@@ -1598,10 +1611,10 @@ class HL7:
 
         class FHIR_Auth_Type:
             Basic_Auth = NameId('Basic Auth', 'basic-auth')
-            JWT = NameId('JWT', 'jwt')
+            OAuth = NameId('OAuth', 'oauth')
 
             def __iter__(self):
-                return iter((self.Basic_Auth, self.JWT))
+                return iter((self.Basic_Auth, self.OAuth))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1871,14 +1884,15 @@ class IMAPMessage:
         self.data = data
 
     def __repr__(self):
-        return '<{} at {}, uid:`{}`, conn.config:`{}`>'.format(
-            self.__class__.__name__, hex(id(self)), self.uid, self.conn.config_no_sensitive)
+        class_name = self.__class__.__name__
+        self_id = hex(id(self))
+        return '<{} at {}, uid:`{}`, conn.config:`{}`>'.format(class_name, self_id, self.uid, self.conn.config_no_sensitive)
 
     def delete(self):
-        self.conn.delete(self.uid)
+        raise NotImplementedError('Must be implemented by subclasses')
 
     def mark_seen(self):
-        self.conn.mark_seen(self.uid)
+        raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
 # ################################################################################################################################

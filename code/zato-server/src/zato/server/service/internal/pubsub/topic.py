@@ -23,7 +23,7 @@ from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, 
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_gd_depth_topic_list, get_topic_list_by_id_list, \
     get_topic_list_by_name_list, get_topic_list_by_name_pattern, get_topics_by_sub_keys
-from zato.common.typing_ import anylist, intlistnone, intnone, strlistnone, strnone
+from zato.common.typing_ import anylist, cast_, intlistnone, intnone, strlistnone, strnone
 from zato.common.util.api import ensure_pubsub_hook_is_valid
 from zato.common.util.pubsub import get_last_pub_metadata
 from zato.common.util.time_ import datetime_from_ms
@@ -39,8 +39,9 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 if 0:
     from bunch import Bunch
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, stranydict, strlist
     Bunch = Bunch
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -157,7 +158,7 @@ def response_hook(self:'Service', input:'stranydict', instance:'PubSubTopic', at
 
                     # PIDs are integers
                     if item.last_pub_server_pid:
-                        item.last_pub_server_pid = int(item.last_pub_server_pid)
+                        item.last_pub_server_pid = int(item.last_pub_server_pid) # type: ignore
 
 # ################################################################################################################################
 
@@ -307,6 +308,9 @@ class DeleteTopics(Service):
 
     def handle(self) -> 'None':
 
+        # Type checks
+        topic_id_list:'anylist'
+
         # Local aliases
         input = self.request.input # type: DeleteTopicRequest
 
@@ -374,7 +378,7 @@ class Get(AdminService):
         topic_name = self.request.input.name
 
         with closing(self.odb.session()) as session:
-            topic = pubsub_topic(session, cluster_id, topic_id, topic_name)
+            topic = pubsub_topic(session, cluster_id, topic_id, topic_name) # type: PubSubTopic
             topic['current_depth_gd'] = get_gd_depth_topic(session, cluster_id, topic.id)
 
         # Now, we know that we have this object so we can just make use of its ID
@@ -424,13 +428,13 @@ class Clear(AdminService):
             self.logger.info('Clearing topic `%s` (id:%s)', self.pubsub.get_topic_by_id(topic_id).name, topic_id)
 
             # Remove all GD messages
-            session.query(PubSubMessage).\
+            _ = session.query(PubSubMessage).\
                 filter(PubSubMessage.cluster_id==cluster_id).\
                 filter(PubSubMessage.topic_id==topic_id).\
                 delete()
 
             # Remove all references to topic messages from target queues
-            session.query(PubSubEndpointEnqueuedMessage).\
+            _ = session.query(PubSubEndpointEnqueuedMessage).\
                 filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id).\
                 filter(PubSubEndpointEnqueuedMessage.topic_id==topic_id).\
                 delete()
@@ -439,7 +443,7 @@ class Clear(AdminService):
             session.commit()
 
         # Delete non-GD messages for that topic on all servers
-        self.server.rpc.invoke_all(ClearTopicNonGD.get_name(), {
+        _ = self.server.rpc.invoke_all(ClearTopicNonGD.get_name(), {
             'topic_id': topic_id,
         }, timeout=90)
 
@@ -459,6 +463,9 @@ class GetPublisherList(AdminService):
 
     def handle(self) -> 'None':
 
+        # Type checks
+        item:'Bunch'
+
         # Local aliases
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
 
@@ -470,8 +477,8 @@ class GetPublisherList(AdminService):
             last_data = pubsub_publishers_for_topic(session, cluster_id, self.request.input.topic_id).all()
 
             for item in last_data:
-                item.last_seen = datetime_from_ms(item.last_seen)
-                item.last_pub_time = datetime_from_ms(item.last_pub_time)
+                item.last_seen = datetime_from_ms(cast_('float', item.last_seen))
+                item.last_pub_time = datetime_from_ms(cast_('float', item.last_pub_time))
                 response.append(item)
 
         self.response.payload[:] = response
@@ -602,7 +609,10 @@ class GetInRAMMessageList(AdminService):
         for topic_id, sub_keys in topic_sub_keys.items():
 
             # This is a dictionary of sub_key -> msg_id -> message data ..
-            data = self.pubsub.sync_backlog.retrieve_messages_by_sub_keys(topic_id, sub_keys)
+            data = self.pubsub.sync_backlog.retrieve_messages_by_sub_keys(
+                cast_('int', topic_id),
+                cast_('strlist', sub_keys)
+            )
 
             # .. which is why we can extend out directly - sub_keys are always unique
             out.extend(data)

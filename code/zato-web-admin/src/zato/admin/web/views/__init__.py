@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -40,12 +40,8 @@ from zato.common.util.api import get_lb_client as _get_lb_client
 
 # ################################################################################################################################
 
-try:
-    from django.core.urlresolvers import reverse as django_url_reverse # Django < 1.10
-    from django.utils.text import slugify
-except ImportError:
-    from django.urls import reverse as django_url_reverse              # Django >= 1.10
-    from django.utils import slugify
+from django.urls import reverse as django_url_reverse
+from django.utils.text import slugify
 
 # For pyflakes
 django_url_reverse = django_url_reverse
@@ -77,10 +73,12 @@ def parse_response_data(response):
 
 # ################################################################################################################################
 
-def _get_list(client, cluster, service):
+def invoke_list_service(client, cluster, service, extra=None):
 
     out = {}
-    for item in client.invoke(service, {'cluster_id':cluster.id}):
+    request = {'cluster_id':cluster.id}
+    request.update(extra or {})
+    for item in client.invoke(service, request):
         out[item.id] = item.name
 
     return out
@@ -90,7 +88,7 @@ def _get_list(client, cluster, service):
 def get_definition_list(client, cluster, def_type):
     """ Returns all definitions of a given type existing on a given cluster.
     """
-    return _get_list(client, cluster, 'zato.definition.{}.get-list'.format(def_type))
+    return invoke_list_service(client, cluster, 'zato.definition.{}.get-list'.format(def_type))
 
 # ################################################################################################################################
 
@@ -122,7 +120,7 @@ def get_outconn_rest_list(req, name_to_id=False):
 def get_tls_ca_cert_list(client, cluster):
     """ Returns all TLS CA certs on a given cluster.
     """
-    return _get_list(client, cluster, 'zato.security.tls.ca-cert.get-list')
+    return invoke_list_service(client, cluster, 'zato.security.tls.ca-cert.get-list')
 
 # ################################################################################################################################
 
@@ -209,6 +207,10 @@ def set_servers_state(cluster, client):
 def change_password(req, service_name, field1='password1', field2='password2', success_msg='Password updated', data=None):
 
     data = data or req.POST
+    secret_type = data.get('secret_type')
+
+    if secret_type == 'secret':
+        success_msg = 'Secret updated'
 
     try:
         input_dict = {
@@ -738,27 +740,35 @@ class Delete(BaseCallView):
 # ################################################################################################################################
 
 class SecurityList:
-    def __init__(self):
+    def __init__(self, needs_def_type_name_label=True):
+        self.needs_def_type_name_label = needs_def_type_name_label
         self.def_items = []
 
     def __iter__(self):
         return iter(self.def_items)
 
     def append(self, def_item):
-        value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
-        label = '{0}/{1}'.format(SEC_DEF_TYPE_NAME[def_item.sec_type], def_item.name)
+        value = '{}/{}'.format(def_item.sec_type, def_item.id)
+        if self.needs_def_type_name_label:
+            label = '{}/{}'.format(SEC_DEF_TYPE_NAME[def_item.sec_type], def_item.name)
+        else:
+            label = def_item.name
         self.def_items.append((value, label))
 
     @staticmethod
-    def from_service(client, cluster_id, sec_type=None):
-        sec_list = SecurityList()
+    def from_service(client, cluster_id, sec_type=None, needs_def_type_name_label=True):
 
-        result = client.invoke('zato.security.get-list', {'cluster_id': cluster_id, 'sec_type':sec_type})
+        out = SecurityList(needs_def_type_name_label=needs_def_type_name_label)
+        sec_type = sec_type if isinstance(sec_type, list) else [sec_type]
+
+        result = client.invoke('zato.security.get-list', {
+            'cluster_id': cluster_id,
+        })
 
         for def_item in result:
-            sec_list.append(def_item)
+            out.append(def_item)
 
-        return sec_list
+        return out
 
 # ################################################################################################################################
 

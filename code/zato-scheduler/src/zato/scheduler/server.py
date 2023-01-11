@@ -18,9 +18,6 @@ from bunch import Bunch
 # gevent
 from gevent.pywsgi import WSGIServer
 
-# simdjson
-from simdjson import loads
-
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common.api import ZATO_ODB_POOL_NAME
@@ -28,7 +25,7 @@ from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.util.api import as_bool, absjoin, get_config, new_cid
-from zato.common.util.cli import read_stdin_data
+from zato.common.util.json_ import json_loads
 from zato.scheduler.api import SchedulerAPI
 from zato.scheduler.util import set_up_zato_client
 
@@ -72,6 +69,9 @@ class Config:
 
     @staticmethod
     def from_repo_location(repo_location:'str') -> 'Config':
+
+        # Zato
+        from zato.common.util.cli import read_stdin_data
 
         # Response to produce
         config = Config()
@@ -164,7 +164,7 @@ class SchedulerServer:
         logger.info('Handling API request -> `%s`', request)
 
         # Convert to a Python dict ..
-        request = loads(request)
+        request = json_loads(request)
 
         # .. callback functions expect Bunch instances on input ..
         request = Bunch(request) # type: ignore
