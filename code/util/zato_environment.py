@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import glob
 import logging
 import os
 import platform
@@ -47,8 +48,17 @@ pip_deps = pip_deps_windows if is_windows else pip_deps_non_windows
 # ################################################################################################################################
 # ################################################################################################################################
 
-zato_command_template = """
+zato_command_template_linux = r"""
 #!{bin_dir}/python
+
+# To prevent an attribute error in pyreadline\py3k_compat.py
+# AttributeError: module 'collections' has no attribute 'Callable'
+
+try:
+    import collections
+    collections.Callable = collections.abc.Callable
+except AttributeError:
+    pass
 
 # Zato
 from zato.cli.zato_command import main
@@ -66,6 +76,11 @@ if __name__ == '__main__':
     sys.exit(main())
 """.strip() # noqa: W605
 
+zato_command_template_windows = r"""
+@echo off
+"{bundled_python_dir}\python.exe" "\\?\{code_dir}\\zato-cli\\src\\zato\\cli\\_run_zato.py" %*
+""".strip() # noqa: W605
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -74,15 +89,19 @@ class EnvironmentManager:
     def __init__(self, base_dir:'str', bin_dir:'str') -> 'None':
         self.base_dir = base_dir
         self.bin_dir = bin_dir
-        self.pip_command = os.path.join(self.bin_dir, 'pip')
-        self.python_command = os.path.join(self.bin_dir, 'python')
         self.pip_options = ''
-
-        self.site_packages_dir = 'invalid-site_packages_dir'
         self.eggs_dir = 'invalid-self.eggs_dir'
+        self.bundle_ext_dir = 'invalid-bundle_ext_dir'
+        self.site_packages_dir = 'invalid-site_packages_dir'
+        self.pip_pyz_path = 'invalid-pip_pyz_path'
+        self.python_command = 'invalid-python_command'
+        self.pip_command = 'invalid-pip_command'
+        self.bundled_python_dir = 'invalid-bundled_python_dir'
+        self.zato_reqs_path = 'invalid-zato_reqs_path'
+        self.code_dir = 'invalid-code_dir'
 
         self._set_up_pip_flags()
-        self._set_up_dir_names()
+        self._set_up_dir_and_attr_names()
 
 # ################################################################################################################################
 
@@ -137,21 +156,32 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def _set_up_dir_names(self) -> 'None':
+    def _set_up_dir_and_attr_names(self) -> 'None':
 
         # This needs to be checked in runtime because we do not know
         # under what Python version we are are going to run.
         py_version = '{}.{}'.format(sys.version_info.major, sys.version_info.minor)
         logger.info('Python version maj.min -> %s', py_version)
+        logger.info('Python self.base_dir -> %s', self.base_dir)
+
+        self.bundle_ext_dir = os.path.join(self.base_dir, '..')
+        self.bundle_ext_dir = os.path.abspath(self.bundle_ext_dir)
+        logger.info('Bundle ext. dir -> %s', self.bundle_ext_dir)
+
+        # This will exist only under Windows
+        if is_windows:
+
+            # Dynamically check what our current embedded Python's directory is ..
+            self.bundled_python_dir = self.get_bundled_python_version(self.bundle_ext_dir, 'windows')
 
         # Under Linux, the path to site-packages contains the Python version but it does not under Windows.
         # E.g. ~/src-zato/lib/python3.8/site-packages vs. C:\src-zato\lib\site-packages
         if is_linux:
-            py_lib_dir = 'python' + py_version
+            python_version_dir = 'python' + py_version
+            py_lib_dir = os.path.join('lib', python_version_dir)
         else:
-            py_lib_dir = ''
+            py_lib_dir = os.path.join(self.bundled_python_dir, 'lib')
 
-        py_lib_dir = os.path.join(self.base_dir, 'lib', py_lib_dir)
         py_lib_dir = os.path.abspath(py_lib_dir)
         logger.info('Python lib dir -> %s', py_lib_dir)
 
@@ -163,10 +193,67 @@ class EnvironmentManager:
         self.eggs_dir = os.path.abspath(self.eggs_dir)
         logger.info('Python eggs dir -> %s', self.eggs_dir)
 
+        if is_windows:
+
+            # This is always in the same location
+            self.pip_pyz_path = os.path.join(self.bundle_ext_dir, 'pip', 'pip.pyz')
+
+            # .. and build the full Python command now.
+            self.python_command = os.path.join(self.bundled_python_dir, 'python.exe')
+
+            # We are now ready to build the full pip command ..
+            self.pip_command = f'{self.python_command} {self.pip_pyz_path}'
+
+            # .. and the install prefix as well.
+            self.pip_install_prefix = f'--prefix {self.bundled_python_dir}'
+
+            # Where we keep our own requirements
+            self.zato_reqs_path = os.path.join(self.base_dir, '..', '..', 'requirements.txt')
+            self.zato_reqs_path = os.path.abspath(self.zato_reqs_path)
+
+            # Where the zato-* packages are (the "code" directory)
+            self.code_dir = os.path.join(self.bundle_ext_dir, '..')
+            self.code_dir = os.path.abspath(self.code_dir)
+
+        else:
+
+            # These are always in the same location
+            self.pip_command = os.path.join(self.bin_dir, 'pip')
+            self.python_command = os.path.join(self.bin_dir, 'python')
+            self.code_dir = self.base_dir
+            self.zato_reqs_path = os.path.join(self.base_dir, 'requirements.txt')
+
+            # This is not used under Linux
+            self.pip_install_prefix = ''
+
 # ################################################################################################################################
 
-    def _create_symlink(self, from_, to) -> 'None':
-        # type: (str, str) -> None
+    def get_bundled_python_version(self, bundle_ext_dir:'str', os_type:'str') -> 'str':
+
+        python_parent_dir = f'python-{os_type}'
+        python_parent_dir = os.path.join(bundle_ext_dir, python_parent_dir)
+
+        # We want to ignore any names other than ones matching this pattern
+        pattern = os.path.join(python_parent_dir, 'python-*')
+
+        results = []
+
+        for item in glob.glob(pattern):
+            results.append(item)
+
+        if not results:
+            raise Exception(f'No bundled Python version found matching pattern: `{pattern}`')
+
+        if len(results) > 1:
+            raise Exception(f'Too many results found matching pattern: `{pattern}` -> `{results}`')
+
+        # If we are here, it means that we have exactly one result that we can return to our caller
+        result = results[0]
+        return result
+
+# ################################################################################################################################
+
+    def _create_symlink(self, from_:'str', to:'str') -> 'None':
 
         try:
             os.symlink(from_, to)
@@ -181,7 +268,7 @@ class EnvironmentManager:
     def _create_executable(self, path:'str', data:'str') -> 'None':
 
         f = open(path, 'w')
-        f.write(data)
+        _ = f.write(data)
         f.close()
 
         logger.info('Created file `%s`', path)
@@ -294,18 +381,19 @@ class EnvironmentManager:
     def pip_install_core_pip(self) -> 'None':
 
         # Set up the command ..
-        command = '{pip_command} install {pip_options} -U {pip_deps}'.format(**{
+        command = '{pip_command} install {pip_install_prefix} {pip_options} -U {pip_deps}'.format(**{
             'pip_command': self.pip_command,
+            'pip_install_prefix': self.pip_install_prefix,
             'pip_options': self.pip_options,
             'pip_deps':    pip_deps,
         })
 
         # .. and run it.
-        self.run_command(command, exit_on_error=False)
+        _ = self.run_command(command, exit_on_error=True)
 
 # ################################################################################################################################
 
-    def pip_install_requirements_by_path(self, reqs_path:'str') -> 'None':
+    def pip_install_requirements_by_path(self, reqs_path:'str', exit_on_error:'bool'=False) -> 'None':
 
         if not os.path.exists(reqs_path):
             logger.info('Skipped user-defined requirements.txt. No such path `%s`.', reqs_path)
@@ -314,27 +402,74 @@ class EnvironmentManager:
         # Set up the command ..
         command = """
             {pip_command}
+            -v
             install
+            {pip_install_prefix}
             {pip_options}
             -r {reqs_path}
         """.format(**{
                'pip_command': self.pip_command,
+               'pip_install_prefix': self.pip_install_prefix,
                'pip_options': self.pip_options,
                'reqs_path':   reqs_path
             })
 
         # .. and run it.
-        self.run_command(command, exit_on_error=False)
+        _ = self.run_command(command, exit_on_error=exit_on_error)
 
 # ################################################################################################################################
 
     def pip_install_zato_requirements(self) -> 'None':
 
-        # Always use full paths to resolve any doubts
-        reqs_path = os.path.join(self.base_dir, 'requirements.txt')
+        # Install our own requirements
+        self.pip_install_requirements_by_path(self.zato_reqs_path, exit_on_error=False)
 
-        # Install the requirements
-        self.pip_install_requirements_by_path(reqs_path)
+# ################################################################################################################################
+
+    def run_pip_install_zato_packages(self, packages:'strlist') -> 'None':
+
+        # All the -e arguments that pip will receive
+        pip_args = []
+
+        # Build the arguments
+        for name in packages:
+            package_path = os.path.join(self.code_dir, name)
+            arg = '-e {}'.format(package_path)
+            pip_args.append(arg)
+
+        # Build the command ..
+        command = '{pip_command} install {pip_install_prefix} --no-warn-script-location {pip_args}'.format(**{
+            'pip_command': self.pip_command,
+            'pip_install_prefix': self.pip_install_prefix,
+            'pip_args': ' '.join(pip_args)
+        })
+
+        # .. and run it.
+        _ = self.run_command(command, exit_on_error=False)
+
+# ################################################################################################################################
+
+    def pip_install_standalone_requirements(self) -> 'None':
+
+        # These cannot be installed via requirements.txt
+        packages = [
+            'cython==0.29.32',
+            'numpy==1.22.3',
+            'pyOpenSSL==23.0.0',
+            'zato-ext-bunch==1.2'
+        ]
+
+        for package in packages:
+
+            # Set up the command ..
+            command = '{pip_command} install {pip_install_prefix} --no-warn-script-location {package}'.format(**{
+                'pip_command': self.pip_command,
+                'pip_install_prefix': self.pip_install_prefix,
+                'package': package,
+            })
+
+            # .. and run it.
+            _ = self.run_command(command, exit_on_error=True)
 
 # ################################################################################################################################
 
@@ -359,20 +494,7 @@ class EnvironmentManager:
             'zato-testing',
         ]
 
-        # All the -e arguments that pip will receive
-        pip_args = []
-
-        # Build the arguments
-        for name in packages:
-            package_path = os.path.join(self.base_dir, name)
-            arg = '-e {}'.format(package_path)
-            pip_args.append(arg)
-
-        # Build the command ..
-        command = '{} install {}'.format(self.pip_command, ' '.join(pip_args))
-
-        # .. and run it.
-        self.run_command(command, exit_on_error=False)
+        self.run_pip_install_zato_packages(packages)
 
 # ################################################################################################################################
 
@@ -389,12 +511,13 @@ class EnvironmentManager:
         command = '{} uninstall -y -qq {}'.format(self.pip_command, ' '.join(packages))
 
         # .. and run it.
-        self.run_command(command, exit_on_error=False)
+        _ = self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
 
     def pip_install(self) -> 'None':
         self.pip_install_core_pip()
+        self.pip_install_standalone_requirements()
         self.pip_install_zato_requirements()
         self.pip_install_zato_packages()
         self.pip_uninstall()
@@ -438,8 +561,8 @@ class EnvironmentManager:
 
         # .. add the path to easy_install ..
         f = open(easy_install_path, 'a')
-        f.write(extlib_dir.as_posix())
-        f.write(os.linesep)
+        _ = f.write(extlib_dir.as_posix())
+        _ = f.write(os.linesep)
         f.close()
 
 # ################################################################################################################################
@@ -462,14 +585,16 @@ class EnvironmentManager:
         self.add_extlib_to_sys_path(extlib_dir)
 
         # .. and symlink it for backward compatibility.
-        self._create_symlink(extlib_dir_path, extra_paths_dir)
+        if not is_windows:
+            self._create_symlink(extlib_dir_path, extra_paths_dir)
 
 # ################################################################################################################################
 
     def add_py_command(self) -> 'None':
 
         # This is where will will save it
-        py_command_path = os.path.join(self.bin_dir, 'py')
+        command_name = 'py.bat' if is_windows else 'py'
+        py_command_path = os.path.join(self.bin_dir, command_name)
 
         # There will be two versions, one for Windows and one for other systems
 
@@ -498,16 +623,28 @@ class EnvironmentManager:
     def add_zato_command(self) -> 'None':
 
         # Differentiate between Windows and other systems as the extension is needed under the former
-        command_name = 'zato.py' if is_windows else 'zato'
+        command_name = 'zato.bat' if is_windows else 'zato'
+
+        if is_windows:
+            command_name    = 'zato.bat'
+            template        = zato_command_template_windows
+            template_kwargs = {
+                'code_dir': self.code_dir,
+                'bundled_python_dir': self.bundled_python_dir,
+            }
+        else:
+            command_name    = 'zato'
+            template        = zato_command_template_linux
+            template_kwargs = {
+                'base_dir': self.base_dir,
+                'bin_dir': self.bin_dir,
+            }
 
         # This is where the command file will be created
         command_path = os.path.join(self.bin_dir, command_name)
 
         # Build the full contents of the command file ..
-        data = zato_command_template.format(**{
-            'base_dir': self.base_dir,
-            'bin_dir': self.bin_dir
-        })
+        data = template.format(**template_kwargs)
 
         # .. and add the file to the file system.
         self._create_executable(command_path, data)
@@ -517,7 +654,7 @@ class EnvironmentManager:
     def copy_patches(self) -> 'None':
 
         # Where our patches can be found
-        patches_dir = os.path.join(self.base_dir, 'patches')
+        patches_dir = os.path.join(self.code_dir, 'patches')
 
         # Where to copy them to
         dest_dir = self.site_packages_dir
@@ -525,7 +662,7 @@ class EnvironmentManager:
         logger.info('Copying patches from %s -> %s', patches_dir, dest_dir)
 
         # Recursively copy all the patches, overwriting any files found
-        copy_tree(patches_dir, dest_dir, preserve_symlinks=True, verbose=1)
+        _ = copy_tree(patches_dir, dest_dir, preserve_symlinks=True, verbose=1)
 
         logger.info('Copied patches from %s -> %s', patches_dir, dest_dir)
 
@@ -533,8 +670,9 @@ class EnvironmentManager:
 
     def install(self) -> 'None':
 
-        self.update_git_revision()
+        # self.update_git_revision()
         self.pip_install()
+
         self.add_eggs_symlink()
         self.add_extlib()
         self.add_py_command()

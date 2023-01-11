@@ -13,7 +13,7 @@ from logging import getLogger
 from base64 import b64decode
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 from six import PY2
 
 # Zato
@@ -45,7 +45,7 @@ def parse_basic_auth(auth, prefix='Basic '):
 # ################################################################################################################################
 
 # Python 2/3 compatibility
-from future.moves.urllib.parse import quote_plus
+from zato.common.ext.future.moves.urllib.parse import quote_plus
 
 # lxml
 from lxml import etree

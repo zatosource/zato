@@ -13,7 +13,7 @@ import sys
 from threading import Thread
 
 # Python2/3 compatibility
-from future.utils import PY2
+from zato.common.ext.future.utils import PY2
 
 if PY2:
     maxint = sys.maxint

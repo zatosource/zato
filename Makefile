@@ -57,6 +57,7 @@ flake8:
 	echo "Flake8 checks OK"
 
 static-check:
+	$(CURDIR)/code/bin/flake8 --config=$(CURDIR)/code/tox.ini $(CURDIR)/code/util
 	cd $(CURDIR)/code/zato-agent     && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-broker    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-cli       && $(MAKE) static-check
@@ -72,13 +73,21 @@ static-check:
 	cd $(CURDIR)/code/zato-testing   && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-zmq       && $(MAKE) static-check
-	$(CURDIR)/code/bin/flake8 --config=$(CURDIR)/code/tox.ini $(CURDIR)/code/util
 	echo "Static checks OK"
 
 type-check:
 	cd $(CURDIR)/code/zato-common && $(MAKE) type-check
 	cd $(CURDIR)/code/zato-server && $(MAKE) type-check
 	echo "Type checks OK"
+
+type-check-pubsub:
+	cd $(CURDIR)/code/zato-server && $(MAKE) pyright-pubsub
+	echo "Type checks OK"
+
+mypy:
+	cd $(CURDIR)/code/zato-common && $(MAKE) mypy
+	cd $(CURDIR)/code/zato-server && $(MAKE) mypy
+	echo "Mypy checks OK"
 
 web-admin-tests:
 	cd $(CURDIR)/code/zato-web-admin && make run-tests
@@ -88,17 +97,20 @@ scheduler-tests:
 
 install-qa-reqs:
 	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
+	$(CURDIR)/code/bin/pip install -U nose --use-feature=no-binary-enable-wheel-cache --no-binary :all:
 	npx -y playwright install
+	mkdir -p $(CURDIR)/code/eggs/requests/ || true
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 
 run-tests:
 	$(MAKE) install-qa-reqs
+	$(CURDIR)/code/bin/playwright install
 	$(MAKE) static-check
 	$(MAKE) type-check
+	$(MAKE) web-admin-tests
 	$(MAKE) common-tests
 	$(MAKE) server-tests
 	$(MAKE) cli-tests
 	$(MAKE) scheduler-tests
-	$(MAKE) web-admin-tests
 	$(MAKE) cy-tests
 	@if [ "$(ZATO_TEST_SSO)" = "true" ]; then $(MAKE) sso-tests; fi

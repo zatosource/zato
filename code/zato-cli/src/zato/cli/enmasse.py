@@ -67,7 +67,7 @@ def dict_match(haystack, needle):
     """
 
     # Python 2/3 compatibility
-    from future.utils import iteritems
+    from zato.common.ext.future.utils import iteritems
 
     return all(haystack.get(key) == value for key, value in iteritems(needle))
 
@@ -84,7 +84,7 @@ def populate_services_from_apispec(client, logger):
     """
 
     # Python 2/3 compatibility
-    from future.utils import iteritems
+    from zato.common.ext.future.utils import iteritems
 
     response = client.invoke('zato.apispec.get-api-spec', {
         'return_internal': True,
@@ -481,7 +481,7 @@ class InputValidator:
         # type: () -> Results
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         for item_type, items in iteritems(self.json):
             for item in items:
@@ -538,7 +538,7 @@ class DependencyScanner:
         # type: (str, dict, Results)
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         service_info = SERVICE_BY_NAME[item_type] # type: ServiceInfo
 
@@ -568,7 +568,7 @@ class DependencyScanner:
         # type: () -> Results
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         results = Results()
         for item_type, items in iteritems(self.json):
@@ -616,7 +616,7 @@ class ObjectImporter:
     def validate_service_required(self, item_type, item):
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         service_info = SERVICE_BY_NAME[item_type]
         item_dict = dict(item)
@@ -637,7 +637,7 @@ class ObjectImporter:
     def validate_import_data(self):
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         results = Results()
         dep_scanner = DependencyScanner(self.json, ignore_missing=self.ignore_missing)
@@ -794,7 +794,7 @@ class ObjectImporter:
     def find_already_existing_odb_objects(self):
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         results = Results()
         for item_type, items in iteritems(self.json):
@@ -840,7 +840,7 @@ class ObjectImporter:
         from time import sleep
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         rbac_sleep = float(self.args.rbac_sleep)
 
@@ -946,7 +946,7 @@ class ObjectImporter:
     def _import_object(self, def_type, item, is_edit):
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         service_info = SERVICE_BY_NAME[def_type]
 
@@ -1085,7 +1085,7 @@ class ObjectManager:
         """
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         normalize_service_name(item)
         service_info = SERVICE_BY_NAME[item_type]
@@ -1119,8 +1119,8 @@ class ObjectManager:
 
             if dep_id != 'ZATO_SEC_USE_RBAC':
                 if not dep:
-                    raise Exception('Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, ' \
-                        'item:`{}`'.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
+                    msg = 'Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, item:`{}`'
+                    raise Exception(msg.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
                 else:
                     item[field_name] = dep[info['dependent_field']]
 
@@ -1181,7 +1181,7 @@ class ObjectManager:
     def delete_all(self):
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         count = 0
         for item_type, items in iteritems(self.objects):
@@ -1216,8 +1216,8 @@ class ObjectManager:
         from zato.common.const import SECRETS
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
-        from past.builtins import basestring
+        from zato.common.ext.future.utils import iteritems
+        from zato.common.py23_.past.builtins import basestring
 
         service_info = SERVICE_BY_NAME[item_type]
 
@@ -1268,7 +1268,7 @@ class ObjectManager:
         from bunch import Bunch
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         self.objects = Bunch()
         for service_info in SERVICES:
@@ -1358,7 +1358,7 @@ class InputParser:
     def is_include(self, value):
 
         # Python 2/3 compatibility
-        from past.builtins import basestring
+        from zato.common.py23_.past.builtins import basestring
 
         return isinstance(value, basestring)
 
@@ -1443,7 +1443,7 @@ class InputParser:
     def parse_items(self, dict_, results):
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         for item_type, items in iteritems(dict_):
             if item_type not in SERVICE_BY_NAME and item_type not in HTTP_SOAP_ITEM_TYPES:
@@ -1657,7 +1657,7 @@ class Enmasse(ManageCommand):
         from zato.bunch import debunchify
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         # Make a copy and remove Bunch; pyaml does not like Bunch instances.
         output = debunchify(self.json)
@@ -1746,7 +1746,7 @@ class Enmasse(ManageCommand):
         import texttable
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         cols_width = self.args.cols_width if self.args.cols_width else DEFAULT_COLS_WIDTH
         cols_width = (elem.strip() for elem in cols_width.split(','))
@@ -1773,7 +1773,7 @@ class Enmasse(ManageCommand):
         import copy
 
         # Python 2/3 compatibility
-        from future.utils import iteritems
+        from zato.common.ext.future.utils import iteritems
 
         results = Results()
         merged = copy.deepcopy(self.object_mgr.objects)

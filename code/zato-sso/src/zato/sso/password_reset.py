@@ -309,7 +309,7 @@ class PasswordResetAPI:
             # .. now, check if the user is still allowed to access the system;
             # we make an assuption that it is true (the user is still allowed),
             # which is why we conduct this check under the same SQL session ..
-            self.user_checker.check(sso_ctx, user_info)
+            self.user_checker.check(sso_ctx, user_info, check_if_password_expired=False)
 
             # .. if we are here, it means that the user checks above succeeded
             # and we can update the user's password too ..

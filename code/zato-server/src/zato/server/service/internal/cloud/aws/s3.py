@@ -72,6 +72,7 @@ class Create(AdminService):
                 session.commit()
 
                 input.action = CLOUD.AWS_S3_CREATE_EDIT.value
+                input.id = item.id
                 input.username = item.security.username
                 input.password = item.security.password
 
@@ -121,6 +122,7 @@ class Edit(AdminService):
 
                 input.action = CLOUD.AWS_S3_CREATE_EDIT.value
                 input.old_name = old_name
+                input.id = item.id
                 input.username = item.security.username
                 input.password = item.security.password
 

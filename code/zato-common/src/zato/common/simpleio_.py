@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from zato.simpleio import BoolConfig, Elem, IntConfig, SecretConfig, SIOServerConfig
 
 # Python 2/3 compatibility
-from past.builtins import basestring, unicode
+from zato.common.py23_.past.builtins import basestring, unicode
 
 # ################################################################################################################################
 

@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
-"""
-
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-""" Views related to the management of server's scheduler jobs.
 """
 
 # stdlib
@@ -18,7 +13,10 @@ from io import StringIO
 from traceback import format_exc
 
 # ciso8601
-from ciso8601 import parse_datetime
+try:
+    from zato.common.util.api import parse_datetime
+except ImportError:
+    from dateutil.parser import parse as parse_datetime
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -39,7 +37,7 @@ from zato.common.odb.model import CronStyleJob, IntervalBasedJob, Job
 from zato.common.util.api import pprint
 
 # Python 2/3 compatibility
-from past.builtins import unicode
+from zato.common.py23_.past.builtins import unicode
 
 # ################################################################################################################################
 # ################################################################################################################################

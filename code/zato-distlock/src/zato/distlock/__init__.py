@@ -22,7 +22,10 @@ from traceback import format_exc
 from gevent import sleep, spawn
 
 # portalocker
-from portalocker import lock as portalocker_lock, LockException, LOCK_NB, LOCK_EX, unlock
+try:
+    from portalocker import lock as portalocker_lock, LockException, LOCK_NB, LOCK_EX, unlock
+except ImportError:
+    pass
 
 # SQLAlchemy
 from sqlalchemy import func
@@ -271,8 +274,8 @@ user={}
         super().__init__(*args, **kwargs)
         self.tmp_file_name = None
 
-    def _acquire_impl(self, _flags=LOCK_EX | LOCK_NB, tmp_dir=gettempdir(), _utcnow=datetime.utcnow, _has_debug=has_debug):
-
+    def _acquire_impl(self, _flags=None, tmp_dir=gettempdir(), _utcnow=datetime.utcnow, _has_debug=has_debug):
+        _flags = _flags or LOCK_EX | LOCK_NB
         current = current_thread()
 
         self.tmp_file_name = os.path.join(tmp_dir, 'zato-lock-{}'.format(self.pub_id))

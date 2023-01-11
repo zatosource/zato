@@ -2,8 +2,7 @@
   <a href="https://zato.io?gh1"><img alt="" src="https://zato.io/static/img/platform2.webp" /></a>
 </p>
 
-Zato /zɑːtəʊ/
--------------
+# Zato /zɑːtəʊ/
 
 ESB, SOA, API and Cloud Integrations in Python.
 
@@ -17,6 +16,8 @@ and more.
 <p align="center">
   <a href="https://zato.io?gh2"><img alt="" src="https://zato.io/static/img/platform.webp" /></a>
 </p>
+
+## Learn more
 
 Visit https://zato.io for details, including:
 

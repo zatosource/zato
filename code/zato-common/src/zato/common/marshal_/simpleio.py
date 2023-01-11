@@ -23,6 +23,7 @@ from zato.common.pubsub import PubSubMessage
 
 if 0:
     from dataclasses import Field
+    from zato.common.typing_ import any_
     from zato.cy.simpleio import SIOServerConfig
     from zato.server.base.parallel import ParallelServer
     from zato.server.service import Service
@@ -44,22 +45,20 @@ _dict_like = {DATA_FORMAT.DICT, DATA_FORMAT.JSON}
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ModelCtx:
-    def __init__(self):
-        self.service = None   # type: Service
-        self.data = None      # type: dict
-        self.DataClass = None # type: object
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class DataClassSimpleIO:
+
+    service_class: 'Service'
 
     # We are based on dataclasses, unlike CySimpleIO
     is_dataclass = True
 
-    def __init__(self, server, server_config, user_declaration):
-        # type: (ParallelServer, SIOServerConfig, object) -> None
+    def __init__(
+        self,
+        server,          # type: ParallelServer
+        server_config,   # type: SIOServerConfig
+        user_declaration # type: any_
+    ) -> 'None':
+
         self.server = server
         self.server_config = server_config
         self.user_declaration = user_declaration
@@ -90,8 +89,13 @@ class DataClassSimpleIO:
 
 # ################################################################################################################################
 
-    def parse_input(self, data, data_format, service, extra):
-        # type: (dict, object, Service, object)
+    def parse_input(
+        self,
+        data,        # type: any_
+        data_format, # type: any_
+        service,     # type: Service
+        extra        # type: any_
+    ) -> 'any_':
 
         # If we have a SimpleIO input declared ..
         if getattr(self.user_declaration, 'input', None):
@@ -103,9 +107,10 @@ class DataClassSimpleIO:
             elif isinstance(data, PubSubMessage):
                 data = data.data
 
-            # .. otherwise, it must be a dict and we extract its contents.
-            if data_format in _dict_like and (not isinstance(data, dict)):
-                data = loads(data)
+            # .. otherwise, it can be a dict and we extract its contents.
+            if data_format in _dict_like and (not isinstance(data, (dict))):
+                if not isinstance(data, list):
+                    data = loads(data)
             return self.server.marshal_api.from_dict(service, data, self.user_declaration.input, extra)
 
 # ################################################################################################################################

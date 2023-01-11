@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 import os
-import sys
 from copy import deepcopy
 
 # Zato
@@ -52,12 +51,18 @@ vscode_settings_json = """
 # ################################################################################################################################
 
 windows_qs_start_template = """
-set zato_cmd={zato_cmd}
+@echo off
+
+set zato_cmd=zato
 set env_dir="{env_dir}"
 
-start /b %zato_cmd% start %env_dir%\server1
-start /b %zato_cmd% start %env_dir%\web-admin
-start /b %zato_cmd% start %env_dir%\scheduler
+start /b %zato_cmd% start %env_dir%\\server1
+start /b %zato_cmd% start %env_dir%\\web-admin
+start /b %zato_cmd% start %env_dir%\\scheduler
+
+echo:
+echo *** Starting Zato in %env_dir%  ***
+echo:
 """.strip() # noqa: W605
 
 # ################################################################################################################################
@@ -560,7 +565,7 @@ class Create(ZatoCommand):
             create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path
             create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path
 
-        create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True)
+        _ = create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True)
         self.logger.info('[{}/{}] Scheduler created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
@@ -568,7 +573,7 @@ class Create(ZatoCommand):
         #
         # 8) Scripts
         #
-        zato_bin = 'zato'
+        zato_bin = 'zato.bat' if is_windows else 'zato'
 
         # Visual Studio integration
         vscode_dir = os.path.join(args_path, '.vscode')
@@ -576,8 +581,8 @@ class Create(ZatoCommand):
         vscode_settings_json_path = os.path.join(vscode_dir, 'settings.json')
 
         os.mkdir(vscode_dir)
-        open_w(vscode_launch_json_path).write(vscode_launch_json)
-        open_w(vscode_settings_json_path).write(vscode_settings_json)
+        _ = open_w(vscode_launch_json_path).write(vscode_launch_json)
+        _ = open_w(vscode_settings_json_path).write(vscode_settings_json)
 
         # This will exist for Windows and other systems
         zato_qs_start_path = 'zato-qs-start.bat' if is_windows else 'zato-qs-start.sh'
@@ -628,19 +633,13 @@ class Create(ZatoCommand):
 
         if is_windows:
 
-            zato_bin_dir = os.path.dirname(sys.executable)
-            zato_cmd = os.path.join(zato_bin_dir, zato_bin)
-
-            windows_qs_start = windows_qs_start_template.format(
-                zato_cmd=zato_cmd,
-                env_dir=args_path)
-
-            open_w(zato_qs_start_path).write(windows_qs_start)
+            windows_qs_start = windows_qs_start_template.format(env_dir=args_path)
+            _ = open_w(zato_qs_start_path).write(windows_qs_start)
 
         else:
-            open_w(zato_qs_start_path).write(zato_qs_start)
-            open_w(zato_qs_stop_path).write(zato_qs_stop)
-            open_w(zato_qs_restart_path).write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
+            _ = open_w(zato_qs_start_path).write(zato_qs_start)
+            _ = open_w(zato_qs_stop_path).write(zato_qs_stop)
+            _ = open_w(zato_qs_restart_path).write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
 
             file_mod = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP
 

@@ -296,7 +296,7 @@ pickup_conf = """[json]
 pickup_from=./pickup/incoming/json
 move_processed_to=./pickup/processed/json
 patterns=*.json
-parse_with=py:rapidjson.loads
+parse_with=py:json.loads
 services=zato.pickup.log-json
 topics=
 

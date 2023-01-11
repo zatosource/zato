@@ -20,7 +20,10 @@ from json import load, loads
 from bson import ObjectId
 
 # uJSON
-from ujson import dump, dumps as json_dumps
+try:
+    from ujson import dump, dumps as json_dumps
+except ImportError:
+    from json import dump, dumps as json_dumps
 
 # ################################################################################################################################
 
