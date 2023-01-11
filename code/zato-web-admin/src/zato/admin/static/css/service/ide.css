@@ -1,3 +1,13 @@
+/********************
+        FONTS
+*********************/
+
+@font-face {
+    font-family: Zato_IDE_Font;
+    src: url("/static/fonts//SourceCodePro-Regular.ttf");
+    font-weight: normal;
+    font-style: normal;
+}
 
 #main-area-container {
     display: grid;
@@ -50,7 +60,7 @@ a.img-button {
 }
 
 span.header-text {
-    font-family: monospace;
+    font-family: Zato_IDE_Font;
 }
 
 .side-buttons a.img-button:hover {
@@ -142,8 +152,9 @@ span.header-text {
 
 .file-system-listing td.item-name a {
     text-decoration: none !important;
-    font-family: monospace !important;
-    font-size: 1.0em;
+    font-family: "Tahoma" !important;
+    font-size: 0.7rem;
+    letter-spacing: 0.06rem;
 }
 
 .file-system-listing td.item-name a.current {
