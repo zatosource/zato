@@ -455,7 +455,7 @@ class EnvironmentManager:
         packages = [
             'cython==0.29.32',
             'numpy==1.22.3',
-            'pyOpenSSL==22.0.0',
+            'pyOpenSSL==23.0.0',
             'zato-ext-bunch==1.2'
         ]
 

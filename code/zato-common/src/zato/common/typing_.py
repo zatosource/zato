@@ -33,7 +33,7 @@ from typing import           \
 
 # typing-extensions
 from typing_extensions import \
-    TypeAlias as typealias_
+    TypeAlias as typealias_ # type: ignore
 
 # dacite
 from dacite.core import from_dict
