@@ -21,7 +21,8 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         enableSnippets: true,
         enableLiveAutocompletion: true,
         newLineMode: "unix",
-        fontSize: 17,
+        fontSize: 15,
+        fontFamily: "Ubuntu Mono",
         cursorStyle: "ace"
     });
 
