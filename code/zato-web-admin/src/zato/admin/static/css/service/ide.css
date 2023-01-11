@@ -68,17 +68,13 @@ span.header-text {
     border-bottom: 1px solid #ddd;
 }
 
-textarea.ace_text-input {
-    font-family: "Ubuntu Mono" !important;
-    font-size: 0.4rem !important;
-}
-
 #file-system-listing-div {
     overflow-y:scroll;
-    height: 77vh;
+    height: 75vh;
 }
 
 #action-area {
+    height: 82vh;
     background-color: #fff;
 }
 
