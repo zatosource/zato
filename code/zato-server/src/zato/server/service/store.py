@@ -1194,6 +1194,20 @@ class ServiceStore:
 
 # ################################################################################################################################
 
+    def _should_ignore_file(self, file_name:'str', base_dir:'str') -> 'bool':
+
+        if file_name.endswith('store.py') and 'current' in base_dir:
+            with open(file_name) as f:
+                data = f.read()
+                if 'Zato Source' in data:
+                    return True
+                else:
+                    return False
+        else:
+            return False
+
+# ################################################################################################################################
+
     def import_objects_from_file(
         self,
         file_name,   # type: str
@@ -1203,7 +1217,13 @@ class ServiceStore:
     ) -> 'anylist':
         """ Imports all the services or models from the path to a file.
         """
+
+        # Our response to return
         to_process = []
+
+        # Exit early if we are not to process this file
+        if self._should_ignore_file(file_name, base_dir):
+            return to_process
 
         try:
             mod_info = import_module_from_path(file_name, base_dir)
