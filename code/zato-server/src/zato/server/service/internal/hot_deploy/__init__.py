@@ -154,6 +154,9 @@ class Create(AdminService):
     def _deploy_models(self, current_work_dir, file_name):
         # type: (str, str) -> list
 
+        # Reusable
+        from zato.server.service import store as service_store_mod
+
         # This returns names of all the model classes deployed from the file
         model_name_list = set(self.server.service_store.import_models_from_file(file_name, False, current_work_dir))
 
@@ -184,7 +187,15 @@ class Create(AdminService):
                     mod_name = ref.get('__module__')
                     if mod_name:
 
+                        # Import the live Python module object ..
                         mod = import_module(mod_name)
+
+                        # .. the store module itself may have a reference
+                        # .. to the model, in which case we need to ignore this reference.
+                        if mod is service_store_mod:
+                            continue
+
+                        # .. proceed otherwise.
                         module_path = getsourcefile(mod)
 
                         # It is possible that the model class is deployed along
