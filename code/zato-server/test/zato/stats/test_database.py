@@ -17,9 +17,6 @@ from unittest import main, TestCase
 # dateutil
 from dateutil.rrule import SECONDLY, rrule
 
-# Pandas
-import pandas as pd
-
 # Zato
 from zato.common.api import Stats
 from zato.common.events.common import EventInfo, PushCtx
@@ -542,6 +539,9 @@ class EventsDatabaseTestCase(TestCase):
 
     def xtest_get_data_from_storage_path_exists(self):
 
+        # Pandas
+        import pandas as pd
+
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
 
@@ -568,6 +568,9 @@ class EventsDatabaseTestCase(TestCase):
 # ################################################################################################################################
 
     def xtest_sync_state(self):
+
+        # Pandas
+        import pandas as pd
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -723,6 +726,9 @@ class EventsDatabaseTestCase(TestCase):
 # ################################################################################################################################
 
     def xtest_aggregate(self):
+
+        # Pandas
+        import pandas as pd
 
         # Generate test events ..
         data = self.yield_scenario_events()
