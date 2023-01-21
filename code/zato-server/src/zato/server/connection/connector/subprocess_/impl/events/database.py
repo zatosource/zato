@@ -14,9 +14,6 @@ from typing import Optional as optional
 # Humanize
 from humanize import intcomma as int_to_comma
 
-# Pandas
-import pandas as pd
-
 # Zato
 from zato.common.api import Stats
 from zato.common.ext.dataclasses import dataclass
@@ -185,6 +182,9 @@ class EventsDatabase(InRAMStore):
         # Numpy
         import numpy as np
 
+        # Pandas
+        import pandas as pd
+
         # Our self.logger object
         self.logger = logger
 
@@ -253,6 +253,10 @@ class EventsDatabase(InRAMStore):
 
     def get_group_by(self, time_freq):
         # type: (str) -> list
+
+        # Pandas
+        import pandas as pd
+
         return [
             pd.Grouper(key='timestamp', freq=time_freq),
             pd.Grouper(key='object_id'),
@@ -269,6 +273,9 @@ class EventsDatabase(InRAMStore):
     def load_data_from_storage(self):
         """ Reads existing data from persistent storage and returns it as a DataFrame.
         """
+
+        # Pandas
+        import pandas as pd
 
         # Let's check if we already have anything in storage ..
         if os.path.exists(self.fs_data_path):
@@ -304,6 +311,9 @@ class EventsDatabase(InRAMStore):
         """
         # type: () -> None
 
+        # Pandas
+        import pandas as pd
+
         #  Let the users know what we are doing ..
         self.logger.info('Building DF out of len_current=%s', int_to_comma(len(self.in_ram_store)))
 
@@ -323,6 +333,9 @@ class EventsDatabase(InRAMStore):
 
     def aggregate(self, data, time_freq=Stats.DefaultAggrTimeFreq):
         # type: (DataFrame) -> DataFrame
+
+        # Pandas
+        import pandas as pd
 
         # Check if we have had this particular frequency before ..
         group_by = self.group_by.get(time_freq)
@@ -347,6 +360,9 @@ class EventsDatabase(InRAMStore):
         """ Combines on disk and in-RAM data.
         """
         # type: (DataFrame, DataFrame) -> DataFrame
+
+        # Pandas
+        import pandas as pd
 
         # Let the user know what we are doing ..
         self.logger.info('Combining existing and current data')

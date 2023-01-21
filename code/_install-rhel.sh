@@ -18,7 +18,7 @@ then
 
     if [ ! "$(type -p lsb_release)" ]
     then
-        sudo ${INSTALL_CMD} install -y redhat-lsb-core
+        sudo ${INSTALL_CMD} install -y redhat-lsb-core > /dev/null 2>&1 || true
     fi
 fi
 
@@ -26,7 +26,7 @@ if [[ "$INSTALL_PYTHON" == "y" ]]; then
     PYTHON_DEPENDENCIES="python3-devel"
 fi
 
-os_version=`lsb_release -sir`
+os_version=`lsb_release -sir > /dev/null 2>&1 || true`
 
 if [[ $os_version == CentOS\ 8* ]]
 then
