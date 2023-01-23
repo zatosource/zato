@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,8 +11,10 @@ import os
 from logging import basicConfig, getLogger, WARN
 from tempfile import gettempdir
 from traceback import format_exc
-
 from unittest import main, TestCase
+
+# Bunch
+from bunch import Bunch
 
 # Zato
 from zato.common.test.config import TestConfig
@@ -43,7 +45,7 @@ channel_plain_http:
     is_internal: false
     merge_url_params_req: true
     name: /test/enmasse1/{test_suffix}
-    params_pri: channel-params-over-msg
+    params_pri: channel -params-over-msg
     sec_def: zato-no-security
     service: pub.zato.ping
     service_name: pub.zato.ping
@@ -91,12 +93,37 @@ def_sec:
     password: "MyPassword"
     realm: "My Realm"
 
+email_smtp:
+  - name: {smtp_config.name}
+    host: {smtp_config.host}
+    is_active: true
+    is_debug: false
+    mode: starttls
+    port: 587
+    timeout: 300
+    username: {smtp_config.username}
+    password: {smtp_config.password}
+    ping_address: {smtp_config.ping_address}
+
 """
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class EnmasseTestCase(TestCase):
+
+# ################################################################################################################################
+
+    def get_smtp_config(self) -> 'Bunch':
+        out = Bunch()
+
+        out.name         = os.environ.get('Zato_Test_Enmasse_SMTP_Name')
+        out.host         = os.environ.get('Zato_Test_Enmasse_SMTP_Host')
+        out.username     = os.environ.get('Zato_Test_Enmasse_SMTP_Username')
+        out.password     = os.environ.get('Zato_Test_Enmasse_SMTP_Password')
+        out.ping_address = os.environ.get('Zato_Test_Enmasse_SMTP_Ping_Address')
+
+        return out
 
 # ################################################################################################################################
 
@@ -178,7 +205,9 @@ class EnmasseTestCase(TestCase):
         file_name = 'zato-enmasse-' + test_suffix + '.yaml'
         config_path = os.path.join(tmp_dir, file_name)
 
-        data = template.format(test_suffix=test_suffix)
+        smtp_config = self.get_smtp_config()
+
+        data = template.format(test_suffix=test_suffix, smtp_config=smtp_config)
 
         f = open_w(config_path)
         _ = f.write(data)
@@ -212,9 +241,11 @@ class EnmasseTestCase(TestCase):
         file_name = 'zato-enmasse-' + test_suffix + '.yaml'
         config_path = os.path.join(tmp_dir, file_name)
 
+        smtp_config = self.get_smtp_config()
+
         # Note that we replace pub.zato.ping with a service that certainly does not exist
         data = template.replace('pub.zato.ping', 'zato-enmasse-service-does-not-exit')
-        data = data.format(test_suffix=test_suffix)
+        data = data.format(test_suffix=test_suffix, smtp_config=smtp_config)
 
         f = open_w(config_path)
         _ = f.write(data)
@@ -236,5 +267,6 @@ class EnmasseTestCase(TestCase):
 
 if __name__ == '__main__':
     _ = main()
+
 
 # ################################################################################################################################
