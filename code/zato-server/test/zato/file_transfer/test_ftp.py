@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -42,8 +42,7 @@ class FTPFileTransferTestCase(TestCase):
         test_data = 'test_data.{}'.format(uuid4()).encode()
         test_file_path = os.path.join(base_test_path, test_file)
 
-        def check_directory(client, should_exist):
-            # type: (FTPFileClient, bool)
+        def check_directory(client:'FTPFileClient', should_exist:'bool') -> 'None':
 
             result = client.list('/')
             directory_list = result['directory_list']
@@ -67,7 +66,7 @@ class FTPFileTransferTestCase(TestCase):
         server.start()
 
         # .. wait a moment to make sure it is started ..
-        wait_until_port_taken(ftp_config.port)
+        _ = wait_until_port_taken(ftp_config.port)
 
         # .. create an underlying FTP connection object ..
         conn = FTPFS('localhost', ftp_config.username, ftp_config.password, port=ftp_config.port)
@@ -112,6 +111,6 @@ class FTPFileTransferTestCase(TestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    _ = main()
 
 # ################################################################################################################################
