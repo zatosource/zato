@@ -235,6 +235,9 @@ class EventsDatabase(InRAMStore):
     def set_up_group_by(self):
         # type: () -> None
 
+        # Pandas
+        import pandas as pd
+
         # This can be added manually
         self.group_by[Stats.TabulateAggr] = pd.Grouper(key=Stats.TabulateAggr)
 
