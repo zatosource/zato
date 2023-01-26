@@ -88,7 +88,7 @@ class Create(AdminService):
         # First make the backup to the special 'last' directory
         last_backup_path = os.path.join(last_backup_work_dir, fs_now)
 
-        shutil.make_archive(last_backup_path, backup_format, current_work_dir, verbose=True, logger=self.logger)
+        shutil.make_archive(last_backup_path, backup_format, current_work_dir, verbose=True, logger=None)
 
         # Delete everything previously found in the last backup directory
         self._delete(last_backup_contents)
@@ -124,7 +124,7 @@ class Create(AdminService):
 
         backup_name = '{}-{}'.format(next_prefix, fs_now)
         backup_path = os.path.join(backup_work_dir, backup_name)
-        shutil.make_archive(backup_path, backup_format, current_work_dir, verbose=True, logger=self.logger)
+        shutil.make_archive(backup_path, backup_format, current_work_dir, verbose=True, logger=None)
 
         if delete_previous_backups:
             self._delete(backup_contents)
