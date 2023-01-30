@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from typing import Optional as optional
-
 # Zato
-from zato.common.typing_ import dataclass
+from zato.common.typing_ import boolnone, dataclass, intnone, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -19,14 +16,14 @@ from zato.common.typing_ import dataclass
 class ConnectorConfig:
     id: int
     name: str
-    port: optional[int]
-    address: str
-    is_active: optional[bool]
-    pool_size: optional[int]
-    def_name: optional[str]
-    old_name: optional[str]
-    password: optional[str]
-    service_name: str
+    port: intnone
+    address: strnone
+    is_active: boolnone
+    pool_size: intnone
+    def_name: strnone
+    old_name: strnone
+    password: strnone
+    service_name: strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
