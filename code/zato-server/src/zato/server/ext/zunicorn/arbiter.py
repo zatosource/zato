@@ -647,7 +647,7 @@ class Arbiter:
             sys.stderr.flush()
             sys.exit(self.APP_LOAD_ERROR)
         except Exception as e:
-            self.log.exception("Exception in worker process -> `%s`", e.args[0])
+            self.log.exception("Exception in worker process -> `%s`", e.args)
             if not worker.booted:
                 sys.exit(self.WORKER_BOOT_ERROR)
             sys.exit(-1)

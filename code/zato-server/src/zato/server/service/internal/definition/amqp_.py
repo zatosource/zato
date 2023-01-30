@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -41,7 +39,8 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
     if service_type == 'create_edit':
         with closing(self.odb.session()) as session:
-            input.password = definition_amqp(session, instance.cluster_id, instance.id).password
+            def_ = definition_amqp(session, instance.cluster_id, instance.id)
+            input.password = def_.password
 
 # ################################################################################################################################
 
