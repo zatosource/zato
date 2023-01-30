@@ -46,6 +46,7 @@ async_keyword = 'async_' if PY2 else 'async_'
 stderr_ignore = [
     'pykafka.rdkafka',
     'Auto-created primary key used when not defining a primary key type',
+    'Linux distribution found',
 ]
 
 # ################################################################################################################################
