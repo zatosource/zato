@@ -1,19 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-# stdlib
-from typing import Callable as callable_, Optional as optional
 
 # dacite
 from dacite.core import from_dict
 
 # Zato
-from zato.common.typing_ import dataclass
+from zato.common.typing_ import callnone, dataclass, intnone, stranydict, strnone
 from zato.common.model.connector import ConnectorConfig
 
 # ################################################################################################################################
@@ -22,19 +19,18 @@ from zato.common.model.connector import ConnectorConfig
 @dataclass
 class AMQPConnectorConfig(ConnectorConfig):
     host: str
-    queue: optional[str]
-    ack_mode: optional[str]
-    conn_url: optional[str]
+    queue: strnone
+    ack_mode: strnone
+    conn_url: strnone
     username: str
     vhost: str
     frame_max: int
-    prefetch_count: optional[int]
-    get_conn_class_func: optional[callable_]
-    consumer_tag_prefix: optional[str]
+    prefetch_count: intnone
+    get_conn_class_func: callnone
+    consumer_tag_prefix: strnone
 
     @staticmethod
-    def from_dict(config_dict):
-        # type: (dict) -> AMQPConnectorConfig
+    def from_dict(config_dict:'stranydict') -> 'AMQPConnectorConfig':
         return from_dict(AMQPConnectorConfig, config_dict)
 
 # ################################################################################################################################
