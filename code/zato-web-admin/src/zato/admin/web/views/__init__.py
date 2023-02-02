@@ -880,6 +880,7 @@ def invoke_action_handler(req, service_name:'str', send_attrs:'any_') -> 'any_':
 
         if response.ok:
             response_data = response.data['response_data']
+            logger.info('Invocation response -> `%s` (`%s`)', response_data, service_name)
             if isinstance(response_data, dict):
                 response_data = dumps(response_data)
                 logger.info('Returning `%s` from `%s`', response_data, service_name)
