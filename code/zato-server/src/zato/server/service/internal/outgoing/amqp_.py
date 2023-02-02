@@ -232,7 +232,7 @@ class Publish(AdminService):
     def handle(self):
         input = self.request.input
         self.out.amqp.send(input.request_data, input.conn_name, input.exchange, input.routing_key)
-        self.response.payload.response_data = 'OK'
+        self.response.payload.response_data = '{"result": "OK"}'
 
 # ################################################################################################################################
 # ################################################################################################################################
