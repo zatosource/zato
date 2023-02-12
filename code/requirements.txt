@@ -14,7 +14,7 @@ configparser==3.7.1
 convertdate==2.0.3.1
 coverage==3.7.1
 crontab==0.22.9
-cryptography==38.0.4
+cryptography==39.0.1
 dacite==1.6.0
 dataclasses-jsonschema==2.15.0
 dateparser==0.7.6
@@ -23,7 +23,7 @@ decorator==5.1.0
 dictalchemy==0.1.2.6
 dill==0.2.5
 distro==1.5.0
-Django==4.1.1
+Django==4.1.6
 docformatter==0.8
 dropbox==10.10.0
 elasticsearch==7.15.2
@@ -61,7 +61,7 @@ keyring==23.0.0
 kombu==5.0.2
 ldap3==2.8.1
 lxml==4.9.1
-Mako==1.1.5
+Mako==1.2.2
 markdown==3.3.4
 MarkupSafe==2.1.1
 mccabe==0.6.1
@@ -90,7 +90,7 @@ pycparser==2.21
 pyflakes==2.2.0
 pyftpdlib==1.5.7
 pygments==2.10.0
-PyJWT==2.0.1
+PyJWT==2.4.0
 pymongo==4.2.0
 PyMySQL==1.0.2
 pyOpenSSL==23.0.0
