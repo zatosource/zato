@@ -176,7 +176,6 @@ class Event:
 class EventsDatabase(InRAMStore):
 
     def __init__(self, logger, fs_data_path, sync_threshold, sync_interval, max_retention=Stats.MaxRetention):
-        # type: (Logger, int, int) -> None
         super().__init__(sync_threshold, sync_interval)
 
         # Numpy
@@ -335,7 +334,6 @@ class EventsDatabase(InRAMStore):
 # ################################################################################################################################
 
     def aggregate(self, data, time_freq=Stats.DefaultAggrTimeFreq):
-        # type: (DataFrame) -> DataFrame
 
         # Pandas
         import pandas as pd
@@ -385,7 +383,6 @@ class EventsDatabase(InRAMStore):
 # ################################################################################################################################
 
     def trim(self, data, utcnow=utcnow, timedelta=timedelta):
-        # type: (DataFrame) -> DataFrame
 
         if len(data):
 
