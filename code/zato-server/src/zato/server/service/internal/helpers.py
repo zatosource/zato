@@ -242,7 +242,7 @@ class HTMLService(Service):
             settings.configure()
             django.setup()
 
-    def set_html_payload(self, ctx:'any_', template:'str') -> 'None':
+    def set_html_payload(self, ctx:'any_', template:'str', content_type:'str'='text/html; charset=utf-8') -> 'None':
 
         # Django
         from django.template import Context, Template
@@ -261,7 +261,7 @@ class HTMLService(Service):
             buff.close()
 
         self.response.payload = payload
-        self.response.content_type = 'text/html; charset=utf-8'
+        self.response.content_type = content_type
 
 # ################################################################################################################################
 # ################################################################################################################################
