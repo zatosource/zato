@@ -9,12 +9,39 @@ $.fn.zato.data_table.Job = new Class({
     }
 });
 
-$(document).ready(function() { 
+// /////////////////////////////////////////////////////////////////////////////
 
-    $('#data-table').tablesorter(); 
+$.fn.zato.scheduler.data_table.before_submit_hook = function(form) {
+    var form = $(form);
+
+    var weeks_field = form.find("input[name$='weeks']");
+    var weeks_field_id = weeks_field.attr('id');
+
+    var weeks   = weeks_field.val();
+    var days    = form.find("input[name$='days']").val();
+    var hours   = form.find("input[name$='hours']").val();
+    var minutes = form.find("input[name$='minutes']").val();
+    var seconds = form.find("input[name$='seconds']").val();
+
+    if(!(weeks || days || hours || minutes || seconds)) {
+        weeks_field.bValidator();
+        var elements = $('#id_create-interval_based-weeks, #id_edit-interval_based-weeks');
+        var msg = 'At least one of these fields is required: Weeks, Days, Hours, Minutes or Seconds';
+        weeks_field.data('bValidator').showMsg(elements, msg);
+        return false
+    }
+
+    return true;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$(document).ready(function() {
+
+    $('#data-table').tablesorter();
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Job;
     $.fn.zato.data_table.parse();
-    
+
     var actions = ['create', 'edit'];
     var job_types = ['one_time', 'interval_based', 'cron_style'];
 
@@ -26,7 +53,7 @@ $(document).ready(function() {
             var div_id = String.format('#{0}-{1}', action, job_type);
             var picker_id = String.format('id_{0}-{1}-start_date', action, job_type);
 
-            // Pop-up                
+            // Pop-up
             $(div_id).dialog({
                 autoOpen: false,
                 width: '40em',
@@ -34,7 +61,7 @@ $(document).ready(function() {
                     $.fn.zato.data_table.reset_form(form_id);
                 }
             });
-            
+
             $('#'+picker_id).datetimepicker(
                 {
                     'dateFormat':$('#js_date_format').val(),
@@ -44,12 +71,12 @@ $(document).ready(function() {
             );
         });
     });
-    
+
     /* Prepare the validators here so that it's all still a valid HTML
        even with bValidator's custom attributes.
     */
 
-    var one_time_attrs = ['name', 'start_date', 'service'];        
+    var one_time_attrs = ['name', 'start_date', 'service'];
     var interval_based_attrs = ['name', 'start_date', 'service'];
     var cron_style_attrs = ['name', 'start_date', 'cron_definition', 'service'];
 
@@ -58,9 +85,9 @@ $(document).ready(function() {
         'interval_based':interval_based_attrs,
         'cron_style':cron_style_attrs
     };
-    
+
     var field_id = null;
-    
+
     $.each(actions, function(ignored, action) {
         $.each(_.keys(job_types_dict), function(ignored, job_type) {
             var attrs = job_types_dict[job_type];
@@ -73,10 +100,10 @@ $(document).ready(function() {
             $(form_id).bValidator();
         });
     });
-    
+
     /* Assign form submition handlers.
     */
-    
+
     $.each(job_types, function(ignored, job_type) {
         $.each(actions, function(ignored, action) {
             $('#'+ action +'-'+ job_type).submit(function() {
@@ -85,7 +112,7 @@ $(document).ready(function() {
             });
         });
     });
-}); 
+});
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -95,46 +122,64 @@ $.fn.zato.scheduler.titles = {
     'cron_style': 'a cron-style',
 }
 
-$.fn.zato.scheduler.data_table.on_submit_complete = function(data, status, 
-    action, job_type) {
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.data_table.on_submit_complete = function(data, status, action, job_type) {
 
     if(status == 'success') {
         var json = $.parseJSON(data.responseText);
         var include_tr = true ? action == 'create' : false;
         var row = $.fn.zato.scheduler.data_table.add_row(json, action, job_type, include_tr);
         if(action == 'create') {
-        
+
             if($('#data-table').data('is_empty')) {
                 $('#data-table tr:last').remove();
             }
-            
+
             $('#data-table').data('is_empty', false);
             $('#data-table > tbody:last').prepend(row);
         }
         else {
             var tr = $.fn.zato.data_table.row_updated(json.id);
             tr.html(row);
-        }    
+        }
     }
 
     $.fn.zato.data_table._on_submit_complete(data, status);
     $.fn.zato.data_table.cleanup('#'+ action +'-form-'+ job_type);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.scheduler.data_table.on_submit = function(action, job_type) {
     var form = $('#' + action +'-form-'+ job_type);
+
+    if(!$.fn.zato.data_table.before_submit_hook(form)) {
+        return false;
+    }
+
     var callback = function(data, status) {
-            return $.fn.zato.scheduler.data_table.on_submit_complete(data, 
+            return $.fn.zato.scheduler.data_table.on_submit_complete(data,
                 status, action, job_type);
         }
     return $.fn.zato.data_table._on_submit(form, callback);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
 
-    var title = String.format('{0} {1} job', 
+    // Remove any potential message displayed previously
+    var id_interval_based_weeks = $('#id_'+ action +'-interval_based-weeks');
+    var validator = id_interval_based_weeks.data('bValidator');
+
+    if(validator) {
+        validator.removeMsg(id_interval_based_weeks);
+    }
+
+    var title = String.format('{0} {1} job',
         action.capitalize(), $.fn.zato.scheduler.titles[job_type]);
-        
+
     if(action == 'edit') {
 
         var form = $('#' + action +'-form-'+ job_type);
@@ -151,15 +196,17 @@ $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
     div.dialog('open');
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     var row = '';
-    
+
     if(include_tr) {
         row += String.format("<tr id='tr_{0}' class='updated'>", job.id);
     }
-    
+
     var cluster_id = $(document).getUrlParam('cluster');
-    
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', job.name);
@@ -183,7 +230,7 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     seconds = job.seconds ? 'seconds' in job : '';
     repeats = job.repeats ? 'repeats' in job : '';
     cron_definition = job.cron_definition ? 'cron_definition' in job : '';
-    
+
     row += String.format("<td class='ignore'>{0}</td>", weeks);
     row += String.format("<td class='ignore'>{0}</td>", days);
     row += String.format("<td class='ignore'>{0}</td>", hours);
@@ -191,13 +238,15 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", seconds);
     row += String.format("<td class='ignore'>{0}</td>", repeats);
     row += String.format("<td class='ignore'>{0}</td>", cron_definition);
-    
+
     if(include_tr) {
         row += '</tr>';
     }
-    
+
     return row;
 }
+
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.data_table.add_row = function(data, action, job_type, include_tr) {
 
@@ -205,35 +254,39 @@ $.fn.zato.scheduler.data_table.add_row = function(data, action, job_type, includ
     var form = $(String.format('#{0}-form-{1}', action, job_type));
     var prefix = String.format('{0}-{1}-', action, job_type);
     var name = null;
-    
+
     $.each(form.serializeArray(), function(idx, elem) {
         if(elem.name.indexOf(prefix) === 0) {
             name = elem.name.replace(prefix, '');
             job[name] = elem.value;
         }
     })
-    
+
     job.id = data.id;
     job.is_active = $.fn.zato.to_bool(job.is_active);
     job.job_type = job_type;
-    
+
     $.fn.zato.data_table.data[job.id] = job;
     return $.fn.zato.scheduler.data_table.new_row(job, data, include_tr);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.scheduler.create = function(job_type) {
     $.fn.zato.scheduler._create_edit('create', job_type, null);
 }
+
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.execute = function(id) {
 
     var callback = function(data, status) {
         var success = status == 'success';
         if(success) {
-            msg = 'Request submitted, check the server logs for details'; 
+            msg = 'OK, request submitted';
         }
         else {
-            msg = data.responseText; 
+            msg = data.responseText;
         }
         $.fn.zato.user_message(success, msg);
     }
@@ -243,13 +296,19 @@ $.fn.zato.scheduler.execute = function(id) {
 
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.scheduler.edit = function(job_type, id) {
     $.fn.zato.scheduler._create_edit('edit', job_type, id);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.scheduler.delete_ = function(id) {
 
-    $.fn.zato.data_table.delete_(id, 'td.job_id_', 
+    $.fn.zato.data_table.delete_(id, 'td.job_id_',
         'Job [{0}] deleted', 'Are you sure you want to delete the job [{0}]?',
         true);
 }
+
+// /////////////////////////////////////////////////////////////////////////////
