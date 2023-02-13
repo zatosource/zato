@@ -7,12 +7,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from base64 import b64decode, b64encode
 from contextlib import closing
 from enum import Enum
 from json import dumps as stdlib_dumps
 from operator import attrgetter
-from tempfile import NamedTemporaryFile
+from tempfile import gettempdir
 from traceback import format_exc
 from uuid import uuid4
 
@@ -609,9 +610,18 @@ class UploadPackage(AdminService):
         input_required = ('cluster_id', 'payload', 'payload_name')
 
     def handle(self):
-        with NamedTemporaryFile(prefix='zato-hd-', suffix=self.request.input.payload_name) as tf:
+
+        prefix='zato-hd-'
+        suffix=self.request.input.payload_name
+        body = uuid4().hex
+
+        file_name = f'{prefix}-{body}-{suffix}'
+        tmp_dir = gettempdir()
+        file_name_full = os.path.join(tmp_dir, file_name)
+
+        with open(file_name_full, 'wb') as tf:
             input_payload = b64decode(self.request.input.payload)
-            tf.write(input_payload)
+            _ = tf.write(input_payload)
             tf.flush()
 
             package_id = hot_deploy(self.server, self.request.input.payload_name, tf.name, False)
