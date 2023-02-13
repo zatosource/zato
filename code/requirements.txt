@@ -79,6 +79,7 @@ parse-type==0.3.4
 parse==1.6.6
 passlib==1.7.1
 Paste==3.5.2
+pbr==5.11.1
 pg8000==1.13.1
 prettytable==3.5.0
 psutil==5.9.4
