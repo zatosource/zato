@@ -9,15 +9,15 @@
 {% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
-    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     {% comment %} Common JS {% endcomment %}
-    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
 
     {% comment %} HTTP Basic Auth {% endcomment %}
-    <script type="text/javascript" src="/static/js/outgoing/jms-wmq.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/jms-wmq.js"></script>
 
 
     <script>

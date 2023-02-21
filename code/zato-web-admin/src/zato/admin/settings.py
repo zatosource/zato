@@ -77,12 +77,13 @@ ADMIN_MEDIA_PREFIX = '/media/'
 
 CSP_DEFAULT_SRC = ["'none'"]
 CSP_IMG_SRC     = ["'self'"]
-CSP_STYLE_SRC   = ["'self'", "'unsafe-inline'"]
+CSP_STYLE_SRC   = ["'self'"]
 CSP_SCRIPT_SRC  = ["'self'", "'unsafe-inline'", "'unsafe-eval'"]
 CSP_CONNECT_SRC = ["'self'"]
 CSP_FORM_ACTION = ["'self'"]
 CSP_STYLE_SRC_ATTR = ["'self'", "'unsafe-inline'"]
 CSP_STYLE_SRC_ELEM = ["'self'", "'unsafe-inline'"]
+CSP_INCLUDE_NONCE_IN = ["'script-src'"]
 
 # default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self';base-uri 'self';form-action 'self'
 
@@ -111,6 +112,7 @@ TEMPLATES = [{
             'django.template.context_processors.static',
             'django.template.context_processors.tz',
             'django.contrib.messages.context_processors.messages',
+            'csp.context_processors.nonce',
         ],
         'loaders': ['django.template.loaders.filesystem.Loader']
     },
