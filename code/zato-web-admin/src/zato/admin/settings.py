@@ -57,7 +57,7 @@ INTERNAL_IPS = ('127.0.0.1',)
 # to load the internationalization machinery.
 USE_I18N = True
 
-DEBUG = True
+DEBUG = False
 APPEND_SLASH = True
 SECURE_CONTENT_TYPE_NOSNIFF = False
 
