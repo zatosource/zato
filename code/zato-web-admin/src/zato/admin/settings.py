@@ -75,6 +75,17 @@ MEDIA_URL = '/static/'
 # Examples: 'http://foo.com/media/', '/media/'.
 ADMIN_MEDIA_PREFIX = '/media/'
 
+CSP_DEFAULT_SRC = ["'none'"]
+CSP_IMG_SRC     = ["'self'"]
+CSP_STYLE_SRC   = ["'self'", "'unsafe-inline'"]
+CSP_SCRIPT_SRC  = ["'self'", "'unsafe-inline'", "'unsafe-eval'"]
+CSP_CONNECT_SRC = ["'self'"]
+CSP_FORM_ACTION = ["'self'"]
+CSP_STYLE_SRC_ATTR = ["'self'", "'unsafe-inline'"]
+CSP_STYLE_SRC_ELEM = ["'self'", "'unsafe-inline'"]
+
+# default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self';base-uri 'self';form-action 'self'
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -82,6 +93,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'csp.middleware.CSPMiddleware',
     'zato.admin.middleware.ZatoMiddleware',
 ]
 
