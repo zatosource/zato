@@ -16,7 +16,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/fileuploader.js"></script>
 
-    <script>
+    <script nonce="{{ CSP_NONCE }}">
 
         var on_upload_complete = function(id, file_name, response){
             if(response.success) {
