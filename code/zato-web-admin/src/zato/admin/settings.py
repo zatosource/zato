@@ -85,8 +85,6 @@ CSP_STYLE_SRC_ATTR = ["'self'", "'unsafe-inline'"]
 CSP_STYLE_SRC_ELEM = ["'self'", "'unsafe-inline'"]
 CSP_INCLUDE_NONCE_IN = ["'script-src'"]
 
-# default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self';base-uri 'self';form-action 'self'
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
