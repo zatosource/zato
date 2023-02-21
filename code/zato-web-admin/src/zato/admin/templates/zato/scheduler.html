@@ -19,7 +19,7 @@
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
 
-    <script>
+    <script nonce="{{ CSP_NONCE }}">
     var friendly_names = new Object();
 
     {% for name, friendly_name in friendly_names%}

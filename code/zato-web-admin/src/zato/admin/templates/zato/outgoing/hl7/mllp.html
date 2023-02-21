@@ -24,7 +24,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/mllp.js"></script>
 
-    <script>
+    <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
