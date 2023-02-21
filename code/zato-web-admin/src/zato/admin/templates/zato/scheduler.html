@@ -10,14 +10,14 @@
 {% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
-    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.ui.slideraccess.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.slideraccess.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
 
     {% comment %} Common JS {% endcomment %}
-    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
 
     <script>
     var friendly_names = new Object();
@@ -55,7 +55,7 @@
     </script>
 
     {% comment %} Scheduler JS {% endcomment %}
-    <script type="text/javascript" src="/static/js/scheduler.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler.js"></script>
 
 {% endblock %}
 
