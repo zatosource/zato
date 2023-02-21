@@ -29,7 +29,7 @@
 
     {% block head %}{% endblock %}
 </head>
-<body onload="brython()">
+<body {% if user.is_authenticated %}onload="brython(){% endif %}">
     {% block body %}{% endblock %}
 </body>
 </html>
