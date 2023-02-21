@@ -19,7 +19,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/kvdb/data_dict/translation-common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/kvdb/data_dict/translation.js"></script>
 
-    <script>
+    <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',

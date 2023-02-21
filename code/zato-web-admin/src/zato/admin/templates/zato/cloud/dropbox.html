@@ -19,7 +19,7 @@
     {% comment %} Dropbox {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/cloud/dropbox.js"></script>
 
-    <script>
+    <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
