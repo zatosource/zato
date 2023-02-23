@@ -54,7 +54,7 @@ from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_conf
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
     register_diag_handlers
 from zato.common.util.file_transfer import path_string_list_to_list
-from zato.common.util.json_ import JSONParser
+from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
@@ -219,7 +219,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.marshal_api = MarshalAPI()
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
         self.enforce_service_invokes = False
-        self.json_parser = JSONParser()
+        self.json_parser = BasicParser()
 
         # A server-wide publication counter, indicating which one the current publication is,
         # increased after each successful publication.
