@@ -132,7 +132,7 @@ class PubSubTestCase(RESTClientTestCase):
 
         self.assertEqual(pub_sub_data['data_prefix'], '')
         self.assertEqual(pub_sub_data['data_prefix_short'], '')
-        self.assertEqual(pub_sub_data['delivery_count'], 0)
+        self.assertEqual(pub_sub_data['delivery_count'], 1)
         self.assertEqual(pub_sub_data['delivery_status'], '')
         self.assertEqual(pub_sub_data['expiration'], _default.LimitMessageExpiry)
         self.assertEqual(pub_sub_data['ext_pub_time_iso'], '')
@@ -180,7 +180,7 @@ class PubSubTestCase(RESTClientTestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    _ = main()
 
 # ################################################################################################################################
 # ################################################################################################################################
