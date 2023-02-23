@@ -319,6 +319,15 @@ class DeliveryTask:
 
 # ################################################################################################################################
 
+    def _update_delivery_counters(self, to_deliver:'msglist') -> 'None': # type: ignore[valid-type]
+
+        # Update the delivery counter for each message
+        with self.delivery_lock:
+            for msg in to_deliver: # type: ignore[attr-defined]
+                msg.delivery_count += 1
+
+# ################################################################################################################################
+
     def run_delivery(self,
         deliver_pubsub_msg=None, # type: callnone
         status_code=run_deliv_sc # type: any_
@@ -380,6 +389,9 @@ class DeliveryTask:
             if to_skip:
                 logger.info('Skipping messages `%s`', to_skip)
 
+            # Update the delivery counter before trying to deliver the messages
+            self._update_delivery_counters(to_deliver)
+
             # This is the call that actually delivers messages
             deliver_pubsub_msg(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0]) # type: ignore[index]
 
@@ -409,7 +421,6 @@ class DeliveryTask:
                 with self.delivery_lock:
                     for msg in to_deliver: # type: ignore[attr-defined]
                         try:
-                            msg.delivery_count += 1
                             self.delivery_list.remove_pubsub_msg(msg)
                         except Exception as remove_err:
                             result.status_code = status_code.Error
