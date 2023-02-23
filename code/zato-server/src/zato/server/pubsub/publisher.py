@@ -342,7 +342,7 @@ class Publisher:
             response = topic.before_publish_hook_service_invoker(topic, ps_msg)
 
             # Hook service decided that we should not process this message
-            if response['hook_action'] == _GetMessage._skip:
+            if response.get('hook_action') == _GetMessage._skip:
                 logger_audit.info('Skipping message pub_msg_id:`%s`, pub_correl_id:`%s`, ext_client_id:`%s`',
                     ps_msg.pub_msg_id, ps_msg.pub_correl_id, ps_msg.ext_client_id)
                 return None
