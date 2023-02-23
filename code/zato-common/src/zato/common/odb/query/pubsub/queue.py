@@ -91,9 +91,8 @@ def _set_delivery_status(
             'delivery_status': status,
             'delivery_time': now,
         }).\
-        where(PubSubSubscription.sub_key==sub_key).\
         where(PubSubEnqMsg.cluster_id).\
-        where(PubSubEnqMsg.sub_key==PubSubSubscription.sub_key).\
+        where(PubSubEnqMsg.sub_key==sub_key).\
         where(PubSubEnqMsg.pub_msg_id.in_(msg_id_list))
     )
 
