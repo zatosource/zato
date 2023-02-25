@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -35,7 +35,7 @@ from zato.sso.common import LoginCtx
 if 0:
     from bunch import Bunch
     from zato.common.odb.model import SSOUser
-    from zato.common.typing_ import any_, boolnone, callable_, callnone, intnone
+    from zato.common.typing_ import any_, anylist, boolnone, callable_, callnone, intnone
 
     SSOUser = SSOUser
 
@@ -138,7 +138,7 @@ def make_data_secret(data:'str', encrypt_func:'callable_'=None, hash_func:'calla
 
 def make_password_secret(
     password,          # type: str
-    encrypt_password,  # type: calllable_
+    encrypt_password,  # type: callable_
     encrypt_func=None, # type: callnone
     hash_func=None     # type: callnone
 ) -> 'bytes':

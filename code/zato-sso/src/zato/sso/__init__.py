@@ -1,19 +1,23 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from datetime import datetime
-
+# ################################################################################################################################
 # ################################################################################################################################
 
-_utcnow = datetime.utcnow
+if 0:
+    from zato.common.typing_ import boolnone, dtnone, stranydict, strlistnone, strnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 not_given = object()
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Default:
@@ -24,6 +28,7 @@ class Default:
     # User notifications are sent in this language by default
     prt_locale = 'en_GB'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class status_code:
@@ -96,6 +101,7 @@ class status_code:
         could_not_access = 'E010001'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class const:
     """ Constants used in SSO.
@@ -132,6 +138,7 @@ class const:
         token_type = 'prt'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ValidationError(Exception):
     """ Raised if any input SSO data is invalid, subcode contains details of what was rejected.
@@ -143,11 +150,13 @@ class ValidationError(Exception):
         self.status = status
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class InvalidTOTPError(ValidationError):
     """ Raised if any input TOTP code is invalid for user.
     """
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SearchCtx:
@@ -156,7 +165,22 @@ class SearchCtx:
     __slots__ = ('user_id', 'username', 'email', 'display_name', 'first_name', 'middle_name', 'last_name', 'sign_up_status',
         'approval_status', 'paginate', 'cur_page', 'page_size', 'name_op', 'is_name_exact')
 
-    def __init__(self):
+    user_id:  'str | object'
+    username: 'str | object'
+    email:    'str | object'
+    display_name:  'str | object'
+    first_name:    'str | object'
+    middle_name:   'str | object'
+    last_name:     'str | object'
+    sign_up_status:  'str | object'
+    approval_status: 'str | object'
+    paginate:  'str | object'
+    cur_page:  'str | object'
+    page_size: 'str | object'
+    name_op:   'str | object'
+    is_name_exact: 'str | object'
+
+    def __init__(self) -> 'None':
 
         # Query criteria
         self.user_id = not_given
@@ -177,21 +201,29 @@ class SearchCtx:
         self.is_name_exact = True
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class SignupCtx:
     """ A container for SSO user signup parameters.
     """
-    __slots__ = ('username', 'email', 'password', 'current_app', 'app_list', 'sign_up_status')
+    __slots__ = ('username', 'email', 'password', 'current_app', 'sign_up_status', 'app_list')
+
+    username:    'str'
+    email:       'str'
+    password:    'str'
+    current_app: 'str'
+    sign_up_status: 'str'
+    app_list: 'strlistnone'
 
     def __init__(self):
         self.username = ''
         self.email = ''
         self.password = ''
         self.current_app = None
-        self.app_list = None
         self.sign_up_status = const.signup_status.before_confirmation
+        self.app_list = None
 
-    def to_dict(self):
+    def to_dict(self) -> 'stranydict':
         return {
             'username': self.username,
             'email': self.email,
@@ -201,6 +233,7 @@ class SignupCtx:
             'sign_up_status': self.sign_up_status
         }
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class User:
@@ -255,6 +288,7 @@ class User:
         return {name: getattr(self, name) for name in self.__slots__ if name != 'attr'}
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Session:
     """ Represents a session opened by a particular SSO user.
@@ -271,4 +305,5 @@ class Session:
     def to_dict(self):
         return {name: getattr(self, name) for name in self.__slots__ if name != 'attr'}
 
+# ################################################################################################################################
 # ################################################################################################################################

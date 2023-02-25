@@ -103,6 +103,7 @@ intset        = set_[int]
 intsetdict    = dict_[int, anyset]
 intstrdict    = dict_[int, str]
 iterator_     = iterator_
+listnone      = anylistnone
 noreturn      = noreturn
 set_          = set_
 stranydict    = dict_[str, any_]
