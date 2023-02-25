@@ -342,7 +342,7 @@ class Password(BaseRESTService):
 
     def _log_invalid_password_expiry(self, value):
         self.logger.warning('CID: `%s`, invalid password_expiry `%r`, forcing default of `%s`',
-            self.cid, value, self.sso.password.expiry)
+            self.cid, value, self.sso.password_expiry)
 
 # ################################################################################################################################
 
@@ -362,7 +362,7 @@ class Password(BaseRESTService):
         if password_expiry != '':
             if password_expiry < 0:
                 self._log_invalid_password_expiry(password_expiry)
-                password_expiry = self.sso.password.expiry
+                password_expiry = self.sso.password_expiry
             data['password_expiry'] = password_expiry
 
         if 'must_change' in self.request.payload:
