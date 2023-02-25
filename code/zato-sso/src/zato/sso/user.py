@@ -196,46 +196,6 @@ class User:
     """
     __slots__ = _all_attrs.keys()
 
-    #
-    # regular_attrs
-    #
-
-    'username': None,
-    'email': b'',
-    'display_name': '',
-    'first_name': '',
-    'middle_name': '',
-    'last_name': '',
-    'is_totp_enabled': False,
-    'totp_label': '',
-
-    #
-    # super_user_attrs
-    #
-
-    'user_id': None,
-    'is_active': False,
-    'is_approval_needed': None,
-    'is_internal': False,
-    'is_super_user': False,
-    'is_locked': True,
-    'locked_time': None,
-    'creation_ctx': '',
-    'locked_by': None,
-    'approval_status': None,
-    'approval_status_mod_by': None,
-    'approval_status_mod_time': None,
-    'password_expiry': 0,
-    'password_is_set': False,
-    'password_must_change': True,
-    'password_last_set': None,
-    'sign_up_status': None,
-    'sign_up_time': None,
-    'is_rate_limit_active': None,
-    'rate_limit_def': None,
-    'rate_limit_type': None,
-    'rate_limit_check_parent_def': None,
-
     def __init__(self, **kwargs):
         for kwarg_name, kwarg_value in kwargs.items():
             setattr(self, kwarg_name, kwarg_value)
