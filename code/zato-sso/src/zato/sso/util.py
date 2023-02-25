@@ -206,7 +206,12 @@ def set_password(
 
 # ################################################################################################################################
 
-def check_credentials(decrypt_func, verify_hash_func, stored_password, input_password) -> 'bool':
+def check_credentials(
+    decrypt_func,     # type: callable_
+    verify_hash_func, # type: callable_
+    stored_password,  # type: str
+    input_password    # type: str
+) -> 'bool':
     """ Checks that an incoming password is equal to the one that is stored in the database.
     """
     password_decrypted = decrypt_func(stored_password) # At this point it is decrypted but still hashed
@@ -214,7 +219,7 @@ def check_credentials(decrypt_func, verify_hash_func, stored_password, input_pas
 
 # ################################################################################################################################
 
-def normalize_sso_config(sso_conf) -> 'None':
+def normalize_sso_config(sso_conf:'Bunch') -> 'None':
 
     # Lower-case elements that must not be substrings in usernames ..
     reject_username = sso_conf.user_validation.get('reject_username', [])
@@ -269,7 +274,7 @@ def normalize_sso_config(sso_conf) -> 'None':
 
 # ################################################################################################################################
 
-def check_remote_app_exists(current_app, apps_all, logger) -> 'bool':
+def check_remote_app_exists(current_app:'str', apps_all:'anylist', logger) -> 'bool':
     if current_app not in apps_all:
         logger.warning('Invalid current_app `%s`, not among `%s', current_app, apps_all)
         raise ValidationError(status_code.app_list.invalid)
