@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,7 +12,7 @@ from zato.sso.password_reset import PasswordResetAPI
 from zato.sso.user import Forbidden, User, UserAPI
 from zato.sso.totp_ import TOTPAPI
 
-# For pyflakes
+# For flake8
 const = const
 Forbidden = Forbidden
 status_code = status_code
@@ -20,12 +20,48 @@ User = User
 ValidationError = ValidationError
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from bunch import Bunch
+    from zato.common.typing_ import callable_, callnone
+    from zato.server.base.parallel import ParallelServer
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class SSOAPI:
     """ An object through which user management and SSO-related functionality is accessed.
     """
-    def __init__(self, server, sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, verify_hash_func,
-            new_user_id_func=None):
+    server:   'ParallelServer'
+    sso_conf: 'Bunch'
+    odb_session_func: 'callable_'
+    encrypt_func:     'callable_'
+    decrypt_func:     'callable_'
+    hash_func:        'callable_'
+    verify_hash_func: 'callable_'
+    new_user_id_func: 'callnone' = None
+
+    encrypt_email:    'bool'
+    encrypt_password: 'bool'
+    password_expiry:  'int'
+
+    totp: 'TOTPAPI'
+    user: 'UserAPI'
+    password_reset: 'PasswordResetAPI'
+
+    def __init__(
+        self,
+        server,   # type: ParallelServer
+        sso_conf, # type: Bunch
+        odb_session_func, # type: callable_
+        encrypt_func,     # type: callable_
+        decrypt_func,     # type: callable_
+        hash_func,        # type: callable_
+        verify_hash_func, # type: callable_
+        new_user_id_func=None # type: callnone
+    ) -> 'None':
+
         self.server = server
         self.sso_conf = sso_conf
         self.odb_session_func = odb_session_func
@@ -48,9 +84,12 @@ class SSOAPI:
         # Management of Password reset tokens (PRT)
         self.password_reset = PasswordResetAPI(server, sso_conf, odb_session_func, decrypt_func, verify_hash_func)
 
-    def post_configure(self, func, is_sqlite):
+# ################################################################################################################################
+
+    def post_configure(self, func:'callable_', is_sqlite:'bool') -> 'None':
         self.odb_session_func = func
         self.user.post_configure(func, is_sqlite)
         self.password_reset.post_configure(func, is_sqlite)
 
+# ################################################################################################################################
 # ################################################################################################################################
