@@ -23,7 +23,7 @@ from zato.sso import const
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, strnone
+    from zato.common.typing_ import any_, anydict, anylist, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,13 +37,13 @@ SessionModelInsert = SessionModelTable.insert
 @dataclass
 class BaseRequestCtx:
     cid:             'str'
-    remote_addr:     'anylist'
+    remote_addr:     'str | strlist'
     user_agent:      'str'
     input:           'anydict'
     has_remote_addr: 'bool' = field(init=False, default=False)
     has_user_agent:  'bool' = field(init=False, default=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> 'None':
         self.has_remote_addr = bool(self.input.get('remote_addr'))
         self.has_user_agent = bool(self.input.get('user_agent'))
 
@@ -70,7 +70,7 @@ class LoginCtx(BaseRequestCtx):
     """
     ext_session_id: 'str' = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> 'None':
         super().__post_init__()
         self.ext_session_id = ''
 

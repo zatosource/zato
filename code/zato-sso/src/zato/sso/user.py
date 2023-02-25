@@ -21,9 +21,6 @@ from gevent.lock import RLock
 from sqlalchemy import and_ as sql_and, update as sql_update
 from sqlalchemy.exc import IntegrityError
 
-# Python 2/3 compatibility
-from zato.common.py23_.past.builtins import basestring, unicode
-
 # Zato
 from zato.common.api import RATE_LIMIT, SEC_DEF_TYPE, TOTP
 from zato.common.audit import audit_pii
@@ -45,7 +42,7 @@ from zato.sso.util import check_credentials, check_remote_app_exists, make_data_
 
 if 0:
     from zato.common.odb.model import SSOSession
-    from zato.common.typing_ import anydict, callable_
+    from zato.common.typing_ import anydict, boolnone, callable_, dtnone, strnone
     from zato.server.base.parallel import ParallelServer
     from zato.sso.totp_ import TOTPAPI
 
@@ -199,6 +196,46 @@ class User:
     """
     __slots__ = _all_attrs.keys()
 
+    #
+    # regular_attrs
+    #
+
+    'username': None,
+    'email': b'',
+    'display_name': '',
+    'first_name': '',
+    'middle_name': '',
+    'last_name': '',
+    'is_totp_enabled': False,
+    'totp_label': '',
+
+    #
+    # super_user_attrs
+    #
+
+    'user_id': None,
+    'is_active': False,
+    'is_approval_needed': None,
+    'is_internal': False,
+    'is_super_user': False,
+    'is_locked': True,
+    'locked_time': None,
+    'creation_ctx': '',
+    'locked_by': None,
+    'approval_status': None,
+    'approval_status_mod_by': None,
+    'approval_status_mod_time': None,
+    'password_expiry': 0,
+    'password_is_set': False,
+    'password_must_change': True,
+    'password_last_set': None,
+    'sign_up_status': None,
+    'sign_up_time': None,
+    'is_rate_limit_active': None,
+    'rate_limit_def': None,
+    'rate_limit_type': None,
+    'rate_limit_check_parent_def': None,
+
     def __init__(self, **kwargs):
         for kwarg_name, kwarg_value in kwargs.items():
             setattr(self, kwarg_name, kwarg_value)
@@ -306,7 +343,7 @@ class UserAPI:
 
     def _get_encrypted_email(self, email):
         email = email or b''
-        email = email.encode('utf8') if isinstance(email, unicode) else email
+        email = email.encode('utf8') if isinstance(email, str) else email
         return make_data_secret(email, self.encrypt_func)
 
 # ################################################################################################################################
@@ -1070,7 +1107,7 @@ class UserAPI:
                     if attr_name is None:
                         data[attr_name_upper] = None
                     else:
-                        if attr_name and isinstance(data[attr_name], basestring):
+                        if attr_name and isinstance(data[attr_name], str):
                             data[attr_name_upper] = data[attr_name].upper()
 
             # Email may be optionally encrypted

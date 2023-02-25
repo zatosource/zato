@@ -24,9 +24,6 @@ from sqlalchemy import update
 # zxcvbn
 from zxcvbn import zxcvbn
 
-# Python 2/3 compatibility
-from zato.common.py23_.past.builtins import unicode
-
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
@@ -36,12 +33,13 @@ from zato.sso.common import LoginCtx
 # ################################################################################################################################
 
 if 0:
-    from typing import Callable
+    from bunch import Bunch
     from zato.common.odb.model import SSOUser
+    from zato.common.typing_ import any_, boolnone, callable_, callnone, intnone
 
-    Callable = Callable
     SSOUser = SSOUser
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger('zato')
@@ -57,31 +55,27 @@ UserModelTable = UserModel.__table__
 
 # ################################################################################################################################
 
-def _new_id(prefix, _uuid4=uuid4, _crockford_encode=crockford_encode):
-    # type: (object) -> str
+def _new_id(prefix:'str', _uuid4:'callable_'=uuid4, _crockford_encode:'callable_'=crockford_encode) -> 'str':
     return '%s%s' % (prefix, _crockford_encode(_uuid4().int).lower())
 
 # ################################################################################################################################
 
-def new_confirm_token(_gen_secret=_gen_secret):
-    # type: (object) -> str
+def new_confirm_token(_gen_secret:'callable_'=_gen_secret) -> 'str':
     return _gen_secret(192)
 
 # ################################################################################################################################
 
-def new_user_id(_new_id=_new_id):
+def new_user_id(_new_id:'callable_'=_new_id) -> 'str':
     return _new_id('zusr')
 
 # ################################################################################################################################
 
-def new_user_session_token(_new_id=_new_id):
-    # type: (object) -> str
+def new_user_session_token(_new_id:'callable_'=_new_id) -> 'str':
     return _new_id('zust')
 
 # ################################################################################################################################
 
-def new_prt(_new_id=_new_id):
-    # type: (object) -> str
+def new_prt(_new_id:'callable_'=_new_id) -> 'str':
 
     # Note that these tokens are to be publicly visible and this is why we prefer
     # not to be conspicuous about the prefix.
@@ -89,13 +83,13 @@ def new_prt(_new_id=_new_id):
 
 # ################################################################################################################################
 
-def new_prt_reset_key(_new_id=_new_id):
+def new_prt_reset_key(_new_id:'callable_'=_new_id) -> 'str':
     # type: (object) -> str
     return _new_id('zprtrkey')
 
 # ################################################################################################################################
 
-def validate_password(sso_conf, password):
+def validate_password(sso_conf:'Bunch', password:'str') -> 'None':
     """ Raises ValidationError if password is invalid, e.g. it is too simple.
     """
 
@@ -115,7 +109,7 @@ def validate_password(sso_conf, password):
     if len(password) > sso_conf.password.max_length:
         raise ValidationError(status_code.password.too_long, sso_conf.password.inform_if_invalid)
 
-    # Password's default complexity is checked case-insensitively
+    # Password's default complexity (i.e. the reject list) is checked case-insensitively
     password = password.lower()
 
     # Password may not contain most commonly used ones
@@ -126,14 +120,14 @@ def validate_password(sso_conf, password):
 
 # ################################################################################################################################
 
-def make_data_secret(data, encrypt_func=None, hash_func=None):
+def make_data_secret(data:'str', encrypt_func:'callable_'=None, hash_func:'callable_'=None) -> 'bytes':
     """ Turns data into a secret by hashing it (stretching) and then encrypting the result.
     """
     # E.g. PBKDF2-SHA512
     if hash_func:
         data = hash_func(data)
 
-    data = data.encode('utf8') if isinstance(data, unicode) else data
+    data = data.encode('utf8') if isinstance(data, str) else data
 
     # E.g. Fernet (AES-128)
     if encrypt_func:
@@ -143,14 +137,19 @@ def make_data_secret(data, encrypt_func=None, hash_func=None):
 
 # ################################################################################################################################
 
-def make_password_secret(password, encrypt_password, encrypt_func=None, hash_func=None):
+def make_password_secret(
+    password,          # type: str
+    encrypt_password,  # type: calllable_
+    encrypt_func=None, # type: callnone
+    hash_func=None     # type: callnone
+) -> 'bytes':
     """ Encrypts and hashes a user password.
     """
     return make_data_secret(password, encrypt_func if encrypt_password else None, hash_func)
 
 # ################################################################################################################################
 
-def normalize_password_reject_list(sso_conf):
+def normalize_password_reject_list(sso_conf:'Bunch') -> 'None':
     """ Turns a multi-line string with passwords to be rejected into a set.
     """
     reject = set()
@@ -161,8 +160,17 @@ def normalize_password_reject_list(sso_conf):
 
 # ################################################################################################################################
 
-def set_password(odb_session_func, encrypt_func, hash_func, sso_conf, user_id, password, must_change=None, password_expiry=None,
-        _utcnow=_utcnow):
+def set_password(
+    odb_session_func, # type: callable_
+    encrypt_func,     # type: callable_
+    hash_func,        # type: callable_
+    sso_conf,         # type: Bunch
+    user_id,          # type: str
+    password,         # type: str
+    must_change=None, # type: boolnone
+    password_expiry=None, # type: intnone
+    _utcnow=_utcnow   # type: callable_
+) -> 'None':
     """ Sets a new password for user.
     """
     # Just to be doubly sure, validate the password before saving it to DB.
@@ -198,7 +206,7 @@ def set_password(odb_session_func, encrypt_func, hash_func, sso_conf, user_id, p
 
 # ################################################################################################################################
 
-def check_credentials(decrypt_func, verify_hash_func, stored_password, input_password):
+def check_credentials(decrypt_func, verify_hash_func, stored_password, input_password) -> 'bool':
     """ Checks that an incoming password is equal to the one that is stored in the database.
     """
     password_decrypted = decrypt_func(stored_password) # At this point it is decrypted but still hashed
@@ -206,7 +214,7 @@ def check_credentials(decrypt_func, verify_hash_func, stored_password, input_pas
 
 # ################################################################################################################################
 
-def normalize_sso_config(sso_conf):
+def normalize_sso_config(sso_conf) -> 'None':
 
     # Lower-case elements that must not be substrings in usernames ..
     reject_username = sso_conf.user_validation.get('reject_username', [])
@@ -261,7 +269,7 @@ def normalize_sso_config(sso_conf):
 
 # ################################################################################################################################
 
-def check_remote_app_exists(current_app, apps_all, logger):
+def check_remote_app_exists(current_app, apps_all, logger) -> 'bool':
     if current_app not in apps_all:
         logger.warning('Invalid current_app `%s`, not among `%s', current_app, apps_all)
         raise ValidationError(status_code.app_list.invalid)
@@ -274,7 +282,7 @@ def check_remote_app_exists(current_app, apps_all, logger):
 class UserChecker:
     """ Checks whether runtime information about the user making a request is valid.
     """
-    def __init__(self, decrypt_func, verify_hash_func, sso_conf):
+    def __init__(self, decrypt_func, verify_hash_func, sso_conf) -> 'None':
         # type: (Callable, Callable, dict)
         self.decrypt_func = decrypt_func
         self.verify_hash_func = verify_hash_func
@@ -282,19 +290,19 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_credentials(self, ctx, user_password):
+    def check_credentials(self, ctx, user_password) -> 'bool':
         # type: (LoginCtx) -> bool
         return check_credentials(self.decrypt_func, self.verify_hash_func, user_password, ctx.input['password'])
 
 # ################################################################################################################################
 
-    def check_remote_app_exists(self, ctx):
+    def check_remote_app_exists(self, ctx) -> 'bool':
         # type: (LoginCtx) -> bool
         return check_remote_app_exists(ctx.input['current_app'], self.sso_conf.apps.all, logger)
 
 # ################################################################################################################################
 
-    def check_login_to_app_allowed(self, ctx):
+    def check_login_to_app_allowed(self, ctx) -> 'bool':
         # type: (LoginCtx) -> bool
         if ctx.input['current_app'] not in self.sso_conf.apps.login_allowed:
             if self.sso_conf.apps.inform_if_app_invalid:
@@ -306,7 +314,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_remote_ip_allowed(self, ctx, user, _invalid=object()):
+    def check_remote_ip_allowed(self, ctx, user, _invalid=object()) -> 'bool':
         # type: (LoginCtx, SSOUser) -> bool
 
         ip_allowed = self.sso_conf.user_address_list.get(user.username, _invalid)
@@ -349,7 +357,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_user_not_locked(self, user):
+    def check_user_not_locked(self, user) -> 'bool':
         # type: (SSOUser) -> bool
 
         if user.is_locked:
@@ -360,7 +368,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_signup_status(self, user):
+    def check_signup_status(self, user) -> 'bool':
         # type: (SSOUser) -> bool
 
         if user.sign_up_status != const.signup_status.final:
@@ -371,7 +379,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_is_approved(self, user):
+    def check_is_approved(self, user) -> 'bool':
         # type: (SSOUser) -> bool
 
         if not user.approval_status == const.approval_status.approved:
@@ -382,7 +390,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_password_expired(self, user, _now=datetime.utcnow):
+    def check_password_expired(self, user, _now=datetime.utcnow) -> 'bool':
         # type: (SSOUser, datetime) -> bool
 
         if _now() > user.password_expiry:
@@ -393,7 +401,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_password_about_to_expire(self, user, _now=datetime.utcnow, _timedelta=timedelta):
+    def check_password_about_to_expire(self, user, _now=datetime.utcnow, _timedelta=timedelta) -> 'bool':
         # type: (SSOUser, datetime, timedelta) -> object
 
         # Find time after which the password is considered to be about to expire
@@ -416,7 +424,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_must_send_new_password(self, ctx, user):
+    def check_must_send_new_password(self, ctx, user) -> 'bool':
         # type: (LoginCtx, SSOUser) -> bool
 
         if user.password_must_change and not ctx.input.get('new_password'):
@@ -427,7 +435,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_login_metadata_allowed(self, ctx):
+    def check_login_metadata_allowed(self, ctx) -> 'bool':
         # type: (LoginCtx) -> bool
 
         if ctx.has_remote_addr or ctx.has_user_agent:
@@ -438,7 +446,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check(self, ctx, user, check_if_password_expired=True):
+    def check(self, ctx, user, check_if_password_expired=True) -> 'None':
         """ Runs a series of checks for incoming request and user.
         """
         # type: (LoginCtx, SSOUser, bool)
