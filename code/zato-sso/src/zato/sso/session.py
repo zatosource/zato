@@ -14,9 +14,6 @@ from logging import getLogger
 from traceback import format_exc
 from uuid import uuid4
 
-# Python 2/3 compatibility
-from zato.common.py23_.past.builtins import unicode
-
 # Zato
 from zato.common.api import GENERIC, SEC_DEF_TYPE
 from zato.common.audit import audit_pii
@@ -37,7 +34,7 @@ if 0:
     from typing import Callable
     from bunch import Bunch
     from zato.common.odb.model import SSOUser
-    from zato.common.typing_ import anydict, callable_
+    from zato.common.typing_ import anydict, anylist, anytuple, boolnone, callable_, cast_, dtnone, list_, stranydict, strnone
     from zato.sso.totp_ import TOTPAPI
     from zato.sso.user import User
 
@@ -45,6 +42,9 @@ if 0:
     Callable = Callable
     SSOUser = SSOUser
     User = User
+
+    boolnone = boolnone
+    strnone = strnone
 
 # ################################################################################################################################
 
@@ -66,24 +66,31 @@ _ext_sec_type_supported = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
 class SessionInfo:
     """ Details about an individual session.
     """
-    __slots__ = ('username', 'user_id', 'ust', 'creation_time', 'expiration_time', 'has_w_about_to_exp')
+    ust:      'strnone' = None
+    user_id:  'strnone' = None
+    username: 'strnone' = None
+    creation_time:   'dtnone' = None
+    expiration_time: 'dtnone' = None
+    has_w_about_to_exp: 'boolnone' = None
 
-    def __init__(self):
-        self.username = None # type: unicode
-        self.user_id = None # type: unicode
-        self.ust = None # type: unicode
-        self.creation_time = None # type: unicode
-        self.expiration_time = None # type: unicode
-        self.has_w_about_to_exp = None # type: bool
+    def to_dict(self, serialize_dt:'bool'=True) -> 'stranydict':
 
-    def to_dict(self, serialize_dt=True):
-        # type: (bool) -> dict
+        if self.creation_time:
+            creation_time = self.creation_time.isoformat() if serialize_dt else self.creation_time
+        else:
+            creation_time = self.creation_time
+
+        if self.expiration_time:
+            expiration_time = self.expiration_time.isoformat() if serialize_dt else self.expiration_time
+        else:
+            expiration_time = self.expiration_time
+
         return {
             'username': self.username,
             'user_id': self.user_id,
             'ust': self.ust,
-            'creation_time': self.creation_time.isoformat() if serialize_dt else self.creation_time,
-            'expiration_time': self.expiration_time.isoformat() if serialize_dt else self.expiration_time,
+            'creation_time': creation_time,
+            'expiration_time': expiration_time,
             'has_w_about_to_exp': self.has_w_about_to_exp
         }
 
@@ -101,7 +108,7 @@ class SessionAPI:
         decrypt_func,     # type: 'callable_'
         hash_func,        # type: 'callable_'
         verify_hash_func, # type: 'callable_'
-        ) -> 'None':
+    ) -> 'None':
         self.sso_conf = sso_conf
         self.totp = totp
         self.encrypt_func = encrypt_func
@@ -115,15 +122,20 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def post_configure(self, func, is_sqlite):
-        # type: (Callable, bool)
+    def post_configure(self, func:'callable_', is_sqlite:'bool') -> 'None':
         self.odb_session_func = func
         self.is_sqlite = is_sqlite
 
 # ################################################################################################################################
 
-    def _format_ext_session_id(self, sec_type, sec_def_id, ext_session_id, _ext_sec_type_supported=_ext_sec_type_supported,
-        _bearer=b'Bearer '):
+    def _format_ext_session_id(
+        self,
+        sec_type,       # type: str
+        sec_def_id,     # type: int
+        ext_session_id, # type: str | bytes
+        _ext_sec_type_supported=_ext_sec_type_supported, # type: anytuple
+        _bearer=b'Bearer ' # type: bytes
+    ) -> 'str':
         """ Turns information about a security definition and potential external session ID
         into a format that can be used in SQL.
         """
@@ -136,11 +148,10 @@ class SessionAPI:
             # JWT tokens need to be included if this is the security type used
             if sec_type == SEC_DEF_TYPE.JWT:
 
-                if isinstance(ext_session_id, unicode):
-                    ext_session_id = ext_session_id.encode('utf8')
+                if isinstance(ext_session_id, str):
+                    ext_session_id = cast_('bytes', ext_session_id.encode('utf8')) # type: ignore
 
                 ext_session_id = ext_session_id.replace(_bearer, b'')
-
                 _ext_session_id += '.{}'.format(sha256(ext_session_id).hexdigest())
 
             # Return the reformatted external session ID
@@ -151,15 +162,24 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def on_external_auth_succeeded(self, cid, sec_type, sec_def_id, sec_def_username, user_id, ext_session_id, totp_code,
-        current_app, remote_addr, user_agent=None, _utcnow=datetime.utcnow,
-        ):
+    def on_external_auth_succeeded(
+        self,
+        cid, # type: str
+        sec_type,   # type: str
+        sec_def_id, # type: int
+        sec_def_username, # type: str
+        user_id,          # type: str
+        ext_session_id,   # type: str
+        totp_code,        # type: str
+        current_app,      # type: str
+        remote_addr,      # type: str | bytes
+        user_agent=None,  # type: str | None
+        _utcnow=datetime.utcnow, # type: callable_
+    ) -> 'SessionInfo':
         """ Invoked when a user succeeded in authentication via means external to default SSO credentials,
         e.g. through Basic Auth or JWT. Creates an SSO session related to that event or renews an existing one.
         """
-        # type: (unicode, Bunch, unicode, unicode, unicode, unicode) -> SessionInfo
-
-        remote_addr = remote_addr if isinstance(remote_addr, unicode) else remote_addr.decode('utf8')
+        remote_addr = remote_addr if isinstance(remote_addr, str) else remote_addr.decode('utf8')
 
         # PII audit comes first
         audit_pii.info(cid, 'session.on_external_auth_succeeded', extra={
@@ -170,7 +190,7 @@ class SessionAPI:
             'sec.username': sec_def_username,
         })
 
-        existing_ust = None # type: unicode
+        existing_ust = '' # type: str
         ext_session_id = self._format_ext_session_id(sec_type, sec_def_id, ext_session_id)
 
         # Check if there is already a session associated with this external one
@@ -186,22 +206,33 @@ class SessionAPI:
             session_info.expiration_time = expiration_time
             return session_info
 
-        # .. otherwise, create a new one. Note that we get here only if
+        # .. otherwise, create a new one.
         else:
-            ctx = LoginCtx(cid, remote_addr, user_agent, {
+            ctx = LoginCtx()
+            ctx.cid = cid
+            ctx.remote_addr = remote_addr
+            ctx.user_agent = user_agent
+            ctx.ext_session_id = ext_session_id
+            ctx.input = {
                 'user_id': user_id,
                 'current_app': current_app,
                 'totp_code': totp_code,
                 'sec_type': sec_type,
-            }, ext_session_id)
+            }
+
             return self.login(ctx, is_logged_in_ext=True)
 
 # ################################################################################################################################
 
-    def _needs_totp_login_check(self, user, is_logged_in_ext, sec_type, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
+    def _needs_totp_login_check(
+        self,
+        user,             # type: User
+        is_logged_in_ext, # type: bool
+        sec_type,         # type: str
+        _basic_auth=SEC_DEF_TYPE.BASIC_AUTH # type: str
+    ) -> 'bool':
         """ Returns True TOTP should be checked for user during logging in or False otherwise.
         """
-        # type: (User, bool, str, str) -> bool
         # If TOTP is enabled for user then return True unless the user is already
         # logged in externally via Basic Auth in which case it is never required
         # because Basic Auth itself does not have any means to relay current TOTP code
@@ -352,33 +383,33 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def _get_session_by_ust(self, session, ust, now):
+    def _get_session_by_ust(self, session, ust, now) -> 'SessionModel':
         """ Low-level implementation of self.get_session_by_ust.
         """
-        # type: (object, unicode, datetime) -> object
+        # type: (object, str, datetime) -> object
 
         return get_session_by_ust(session, ust, now)
 
 # ################################################################################################################################
 
-    def get_session_by_ust(self, ust, now):
+    def get_session_by_ust(self, ust, now) -> 'SessionModel':
         """ Returns details of an SSO session by its UST.
         """
-        # type: (unicode, datetime) -> object
+        # type: (str, datetime) -> object
 
         with closing(self.odb_session_func()) as session:
             return self._get_session_by_ust(session, ust, now)
 
 # ################################################################################################################################
 
-    def _get_session_by_ext_id(self, sec_type, sec_def_id, ext_session_id=None, _utcnow=datetime.utcnow):
+    def _get_session_by_ext_id(self, sec_type, sec_def_id, ext_session_id=None, _utcnow=datetime.utcnow) -> 'SessionModel':
 
         with closing(self.odb_session_func()) as session:
             return get_session_by_ext_id(session, ext_session_id, _utcnow())
 
 # ################################################################################################################################
 
-    def get_session_by_ext_id(self, sec_type, sec_def_id, ext_session_id=None):
+    def get_session_by_ext_id(self, sec_type, sec_def_id, ext_session_id=None) -> 'SessionModel':
         ext_session_id = self._format_ext_session_id(sec_type, sec_def_id, ext_session_id)
         result = self._get_session_by_ext_id(sec_type, sec_def_id, ext_session_id)
 
@@ -395,13 +426,13 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def _extract_session_state_change_list(self, session_data, _opaque=GENERIC.ATTR_NAME):
+    def _extract_session_state_change_list(self, session_data, _opaque=GENERIC.ATTR_NAME) -> 'anylist':
         opaque = getattr(session_data, _opaque) or {}
         return opaque.get('session_state_change_list', [])
 
 # ################################################################################################################################
 
-    def update_session_state_change_list(self, current_state, remote_addr, user_agent, ctx_source, now):
+    def update_session_state_change_list(self, current_state, remote_addr, user_agent, ctx_source, now) -> 'anylist':
         """ Adds information about a user interaction with SSO, keeping the history
         of such interactions to up to max_len entries.
         """
@@ -418,12 +449,12 @@ class SessionAPI:
 # ################################################################################################################################
 
     def _get(self, session, ust, current_app, remote_addr, ctx_source, needs_decrypt=True, renew=False, needs_attrs=False,
-        user_agent=None, check_if_password_expired=True, _now=datetime.utcnow, _opaque=GENERIC.ATTR_NAME, skip_sec=False):
+        user_agent=None, check_if_password_expired=True, _now=datetime.utcnow, _opaque=GENERIC.ATTR_NAME, skip_sec=False) -> 'SessionModel':
         """ Verifies if input user session token is valid and if the user is allowed to access current_app.
         On success, if renew is True, renews the session. Returns all session attributes or True,
         depending on needs_attrs's value.
         """
-        # type: (object, unicode, unicode, bool, bool, bool, bool, datetime, unicode) -> object
+        # type: (object, str, str, bool, bool, bool, bool, datetime, str) -> object
 
         now = _now()
         ctx = VerifyCtx(self.decrypt_func(ust) if needs_decrypt else ust, remote_addr, current_app)
@@ -469,13 +500,13 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def verify(self, cid, target_ust, current_ust, current_app, remote_addr, user_agent=None):
+    def verify(self, cid, target_ust, current_ust, current_app, remote_addr, user_agent=None) -> 'bool':
         """ Verifies a user session without renewing it.
         """
         # PII audit comes first
         audit_pii.info(cid, 'session.verify', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        self.require_super_user(cid, current_ust, current_app, remote_addr)
+        _ = self.require_super_user(cid, current_ust, current_app, remote_addr)
 
         try:
             with closing(self.odb_session_func()) as session:
@@ -486,7 +517,7 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def renew(self, cid, ust, current_app, remote_addr, user_agent=None, needs_decrypt=True):
+    def renew(self, cid, ust, current_app, remote_addr, user_agent=None, needs_decrypt=True) -> 'datetime':
         """ Renew timelife of a user session, if it is valid, and returns its new expiration time in UTC.
         """
         # PII audit comes first
@@ -501,7 +532,7 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def get(self, cid, target_ust, current_ust, current_app, remote_addr, user_agent=None, check_if_password_expired=True):
+    def get(self, cid, target_ust, current_ust, current_app, remote_addr, user_agent=None, check_if_password_expired=True) -> 'SessionEntity':
         """ Gets details of a session given by its UST on input, without renewing it.
         Must be called by a super-user.
         """
@@ -529,7 +560,7 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def _get_session(self, ust, current_app, remote_addr, ctx_source, check_if_password_expired=True, user_agent=None):
+    def _get_session(self, ust, current_app, remote_addr, ctx_source, check_if_password_expired=True, user_agent=None) -> 'SessionEntity':
         """ An internal wrapper around self.get which optionally does not require super-user rights.
         """
         with closing(self.odb_session_func()) as session:
@@ -538,7 +569,7 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def get_current_session(self, cid, current_ust, current_app, remote_addr, needs_super_user):
+    def get_current_session(self, cid, current_ust, current_app, remote_addr, needs_super_user) -> 'SessionEntity':
         """ Returns current session info or raises an exception if it could not be found.
         Optionally, requires that a super-user be owner of current_ust.
         """
@@ -556,7 +587,7 @@ class SessionAPI:
         if needs_super_user:
             if not current_session.is_super_user:
                 logger.warning(
-                    'Current UST does not belong to a super-user, cannot continue (session.get_current_session), ' \
+                    'Current UST does not belong to a super-user, cannot continue (session.get_current_session), ' + \
                     'current user is `%s` `%s`', current_session.user_id, current_session.username)
                 raise ValidationError(status_code.auth.not_allowed, True)
 
@@ -564,24 +595,26 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def _get_session_list_by_user_id(self, user_id, now=None):
+    def _get_session_list_by_user_id(self, user_id, now=None) -> 'list_[SessionModel]':
+
         with closing(self.odb_session_func()) as session:
             result = get_session_list_by_user_id(session, user_id, now or datetime.utcnow())
 
         for item in result:
             item.pop(GENERIC.ATTR_NAME, None)
+
         return result
 
 # ################################################################################################################################
 
-    def _get_session_list_by_ust(self, ust):
+    def _get_session_list_by_ust(self, ust) -> 'list_[SessionModel]':
         now = datetime.utcnow()
         session = self.get_session_by_ust(ust, now)
         return self._get_session_list_by_user_id(session.user_id, now)
 
 # ################################################################################################################################
 
-    def get_list(self, cid, ust, target_ust, current_ust, current_app, remote_addr, _unused_user_agent=None):
+    def get_list(self, cid, ust, target_ust, current_ust, current_app, remote_addr, _unused_user_agent=None) -> 'list_[SessionModel]':
         """ Returns a list of sessions. Regular users may receive basic information about their own sessions only
         whereas super-users may look up any other user's session list.
         """
@@ -602,7 +635,7 @@ class SessionAPI:
             # If we are to return a list of sessions for another UST, we need to be a super-user
             if not current_session.is_super_user:
                 logger.warning(
-                    'Current UST does not belong to a super-user, cannot continue (session.get_list), current user is ' \
+                    'Current UST does not belong to a super-user, cannot continue (session.get_list), current user is ' + \
                     '`%s` `%s`', current_session.user_id, current_session.username)
                 raise ValidationError(status_code.auth.not_allowed, True)
 
@@ -615,7 +648,7 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def require_super_user(self, cid, current_ust, current_app, remote_addr):
+    def require_super_user(self, cid, current_ust, current_app, remote_addr) -> 'SessionModel':
         """ Makes sure that current_ust belongs to a super-user or raises an exception if it does not.
         """
         # PII audit comes first
@@ -625,7 +658,7 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def logout(self, ust, current_app, remote_addr, skip_sec=False):
+    def logout(self, ust, current_app, remote_addr, skip_sec=False) -> 'None':
         """ Logs a user out of an SSO session.
         """
         ust = self.decrypt_func(ust)
