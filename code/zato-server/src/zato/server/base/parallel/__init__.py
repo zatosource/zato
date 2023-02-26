@@ -1245,6 +1245,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def get_default_cache(self) -> 'CacheAPI':
+        """ Returns the server's default cache.
+        """
+        return self.worker_store.cache_api.default
+
+# ################################################################################################################################
+
     def get_cache(self, cache_type:'str', cache_name:'str') -> 'Cache':
         """ Returns a cache object of given type and name.
         """
