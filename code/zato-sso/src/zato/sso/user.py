@@ -42,7 +42,7 @@ from zato.sso.util import check_credentials, check_remote_app_exists, make_data_
 
 if 0:
     from zato.common.odb.model import SSOSession
-    from zato.common.typing_ import anydict, boolnone, callable_, dtnone, strnone
+    from zato.common.typing_ import anydict, callable_
     from zato.server.base.parallel import ParallelServer
     from zato.sso.totp_ import TOTPAPI
 
