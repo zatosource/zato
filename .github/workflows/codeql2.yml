@@ -1,5 +1,5 @@
 
-name: "CodeQL"
+name: "Run CodeQL"
 
 on:
   schedule:
