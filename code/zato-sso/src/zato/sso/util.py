@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -35,7 +35,7 @@ from zato.sso.common import LoginCtx
 if 0:
     from bunch import Bunch
     from zato.common.odb.model import SSOUser
-    from zato.common.typing_ import any_, boolnone, callable_, callnone, intnone
+    from zato.common.typing_ import any_, anylist, boolnone, callable_, callnone, intnone
 
     SSOUser = SSOUser
 
@@ -84,7 +84,6 @@ def new_prt(_new_id:'callable_'=_new_id) -> 'str':
 # ################################################################################################################################
 
 def new_prt_reset_key(_new_id:'callable_'=_new_id) -> 'str':
-    # type: (object) -> str
     return _new_id('zprtrkey')
 
 # ################################################################################################################################
@@ -139,7 +138,7 @@ def make_data_secret(data:'str', encrypt_func:'callable_'=None, hash_func:'calla
 
 def make_password_secret(
     password,          # type: str
-    encrypt_password,  # type: calllable_
+    encrypt_password,  # type: callable_
     encrypt_func=None, # type: callnone
     hash_func=None     # type: callnone
 ) -> 'bytes':
@@ -287,28 +286,29 @@ def check_remote_app_exists(current_app:'str', apps_all:'anylist', logger) -> 'b
 class UserChecker:
     """ Checks whether runtime information about the user making a request is valid.
     """
-    def __init__(self, decrypt_func, verify_hash_func, sso_conf) -> 'None':
-        # type: (Callable, Callable, dict)
+    def __init__(
+        self,
+        decrypt_func,     # type: callable_
+        verify_hash_func, # type: callable_
+        sso_conf          # type: Bunch
+    ) -> 'None':
         self.decrypt_func = decrypt_func
         self.verify_hash_func = verify_hash_func
         self.sso_conf = sso_conf
 
 # ################################################################################################################################
 
-    def check_credentials(self, ctx, user_password) -> 'bool':
-        # type: (LoginCtx) -> bool
+    def check_credentials(self, ctx:'LoginCtx', user_password:'str') -> 'bool':
         return check_credentials(self.decrypt_func, self.verify_hash_func, user_password, ctx.input['password'])
 
 # ################################################################################################################################
 
-    def check_remote_app_exists(self, ctx) -> 'bool':
-        # type: (LoginCtx) -> bool
+    def check_remote_app_exists(self, ctx:'LoginCtx') -> 'bool':
         return check_remote_app_exists(ctx.input['current_app'], self.sso_conf.apps.all, logger)
 
 # ################################################################################################################################
 
-    def check_login_to_app_allowed(self, ctx) -> 'bool':
-        # type: (LoginCtx) -> bool
+    def check_login_to_app_allowed(self, ctx:'LoginCtx') -> 'bool':
         if ctx.input['current_app'] not in self.sso_conf.apps.login_allowed:
             if self.sso_conf.apps.inform_if_app_invalid:
                 raise ValidationError(status_code.app_list.invalid, True)
@@ -319,8 +319,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_remote_ip_allowed(self, ctx, user, _invalid=object()) -> 'bool':
-        # type: (LoginCtx, SSOUser) -> bool
+    def check_remote_ip_allowed(self, ctx:'LoginCtx', user:'SSOUser', _invalid:'any_'=object()) -> 'bool':
 
         ip_allowed = self.sso_conf.user_address_list.get(user.username, _invalid)
 
@@ -362,8 +361,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_user_not_locked(self, user) -> 'bool':
-        # type: (SSOUser) -> bool
+    def check_user_not_locked(self, user:'SSOUser') -> 'bool':
 
         if user.is_locked:
             if self.sso_conf.login.inform_if_locked:
@@ -373,8 +371,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_signup_status(self, user) -> 'bool':
-        # type: (SSOUser) -> bool
+    def check_signup_status(self, user:'SSOUser') -> 'bool':
 
         if user.sign_up_status != const.signup_status.final:
             if self.sso_conf.login.inform_if_not_confirmed:
@@ -384,8 +381,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_is_approved(self, user) -> 'bool':
-        # type: (SSOUser) -> bool
+    def check_is_approved(self, user:'SSOUser') -> 'bool':
 
         if not user.approval_status == const.approval_status.approved:
             if self.sso_conf.login.inform_if_not_approved:
@@ -395,8 +391,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_password_expired(self, user, _now=datetime.utcnow) -> 'bool':
-        # type: (SSOUser, datetime) -> bool
+    def check_password_expired(self, user:'SSOUser', _now:'callable_'=datetime.utcnow) -> 'bool':
 
         if _now() > user.password_expiry:
             if self.sso_conf.password.inform_if_expired:
@@ -406,8 +401,12 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_password_about_to_expire(self, user, _now=datetime.utcnow, _timedelta=timedelta) -> 'bool':
-        # type: (SSOUser, datetime, timedelta) -> object
+    def check_password_about_to_expire(
+        self,
+        user, # type: SSOUser
+        _now=datetime.utcnow, # type: callable_
+        _timedelta=timedelta  # type: timedelta
+    ) -> 'bool':
 
         # Find time after which the password is considered to be about to expire
         threshold_time = user.password_expiry - _timedelta(days=self.sso_conf.password.about_to_expire_threshold)
@@ -429,8 +428,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_must_send_new_password(self, ctx, user) -> 'bool':
-        # type: (LoginCtx, SSOUser) -> bool
+    def check_must_send_new_password(self, ctx:'LoginCtx', user:'SSOUser') -> 'bool':
 
         if user.password_must_change and not ctx.input.get('new_password'):
             if self.sso_conf.password.inform_if_must_be_changed:
@@ -440,8 +438,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check_login_metadata_allowed(self, ctx) -> 'bool':
-        # type: (LoginCtx) -> bool
+    def check_login_metadata_allowed(self, ctx:'LoginCtx') -> 'bool':
 
         if ctx.has_remote_addr or ctx.has_user_agent:
             if ctx.input['current_app'] not in self.sso_conf.apps.login_metadata_allowed:
@@ -451,10 +448,9 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def check(self, ctx, user, check_if_password_expired=True) -> 'None':
+    def check(self, ctx, user:'LoginCtx', check_if_password_expired:'bool'=True) -> 'None':
         """ Runs a series of checks for incoming request and user.
         """
-        # type: (LoginCtx, SSOUser, bool)
 
         # Move checks to UserChecker in tools
 
