@@ -86,7 +86,7 @@ if 0:
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, strbytes, strlist, strnone
-    from zato.server.connection.cache import Cache
+    from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.ext.zunicorn.arbiter import Arbiter
     from zato.server.ext.zunicorn.workers.ggevent import GeventWorker
@@ -94,6 +94,7 @@ if 0:
     from zato.simpleio import SIOServerConfig
     from zato.server.startup_callable import StartupCallableTool
     from zato.sso.api import SSOAPI
+
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
@@ -1242,6 +1243,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 if ide_username and ide_password:
                     self.logger.info('Setting password for IDE user `%s`', ide_username)
                     self._set_ide_password(ide_username, ide_password)
+
+# ################################################################################################################################
+
+    def get_default_cache(self) -> 'CacheAPI':
+        """ Returns the server's default cache.
+        """
+        return self.worker_store.cache_api.default
 
 # ################################################################################################################################
 
