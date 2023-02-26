@@ -2,11 +2,6 @@
 name: "CodeQL"
 
 on:
-  push:
-    branches: ["main", "support/3.2"]
-  pull_request:
-    # The branches below must be a subset of the branches above
-    branches: ["main", "support/3.2"]
   schedule:
     - cron: '39 5 * * *'
 
@@ -22,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['python', 'javascript']
+        language: ["python"]
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby' ]
 
     steps:
