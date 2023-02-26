@@ -131,7 +131,7 @@ suds==1.0.0
 stevedore==3.5.0
 texttable==1.6.1
 twilio==7.15.3
-typing-extensions==4.0.1
+typing-extensions==4.3.0
 typing-utils==0.1.0
 tzlocal==4.0
 ujson==5.6.0
