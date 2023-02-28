@@ -6,6 +6,9 @@ Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import os
+
 # Zato
 from zato.cli import ManageCommand
 
@@ -147,7 +150,48 @@ Examples:
 
 # ################################################################################################################################
 
+    def _handle_deploy_zip(self, path:'str') -> 'None':
+
+        print()
+        print(111, path)
+        print()
+
+# ################################################################################################################################
+
     def _on_server(self, show_output:'bool'=True, *ignored:'any_') -> 'int':
+
+        # Local aliases
+        env_from1 = os.environ.get('Zato_Deploy_From')
+        env_from2 = os.environ.get('ZATO_DEPLOY_FROM')
+
+        # Zato_Deploy_Auto_Path_To_Delete
+        # Zato_Deploy_Auto_Enmasse
+
+        # First goes the command line, then both of the environment variables
+        deploy = self.args.deploy or env_from1 or env_from2 or ''
+
+        # We have a resource to deploy ..
+        if deploy:
+
+            is_ssh   = deploy.startswith('ssh://')
+            is_http  = deploy.startswith('http://')
+            is_https = deploy.startswith('httpss//')
+            is_local = not (is_ssh or is_http or is_https)
+
+            # .. handle a local path ..
+            if is_local:
+
+                # .. this can be done upfront if it is a local path ..
+                deploy = os.path.expanduser(deploy)
+
+                # .. deploy local .zip archives ..
+                if deploy.endswith('.zip'):
+
+                    # .. do handle the input now ..
+                    self._handle_deploy_zip(deploy)
+
+        z
+
         self.run_check_config()
         return self.start_component('zato.server.main', 'server', self.component_dir, self.delete_pidfile)
 
