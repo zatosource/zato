@@ -1,21 +1,23 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
 from zato.cli import ManageCommand
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-# During development, it is convenient to configure it here to catch information that should be logged
-# even prior to setting up main loggers in each of components.
 if 0:
+
+    from zato.common.typing_ import any_, callnone
+
+    # During development, it is convenient to configure it here to catch information that should be logged
+    # even prior to setting up main loggers in each of components.
 
     # stdlib
     import logging
@@ -25,10 +27,12 @@ if 0:
     logging.basicConfig(level=log_level, format=log_format)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 stderr_sleep_fg = 0.9
 stderr_sleep_bg = 1.2
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Start(ManageCommand):
@@ -40,6 +44,7 @@ Examples:
 
     opts = [
         {'name':'--fg', 'help':'If given, the component will run in foreground', 'action':'store_true'},
+        {'name':'--deploy', 'help':'Resources to deploy', 'action':'store'},
         {'name':'--sync-internal', 'help':"Whether to synchronize component's internal state with ODB", 'action':'store_true'},
         {'name':'--secret-key', 'help':"Component's secret key", 'action':'store'},
         {'name':'--env-file', 'help':'Path to a file with environment variables to use', 'action':'store'},
@@ -49,7 +54,7 @@ Examples:
 
 # ################################################################################################################################
 
-    def run_check_config(self):
+    def run_check_config(self) -> 'None':
 
         # Bunch
         from bunch import Bunch
@@ -70,13 +75,16 @@ Examples:
 
 # ################################################################################################################################
 
-    def delete_pidfile(self):
+    def delete_pidfile(self) -> 'None':
 
         # stdlib
         import os
 
         # Zato
         from zato.common.api import MISC
+
+        # Local aliases
+        path = None
 
         try:
             path = os.path.join(self.component_dir, MISC.PIDFILE)
@@ -86,7 +94,7 @@ Examples:
 
 # ################################################################################################################################
 
-    def check_pidfile(self, pidfile=None):
+    def check_pidfile(self, pidfile:'str'='') -> 'int':
 
         # stdlib
         import os
@@ -108,7 +116,7 @@ Examples:
 
 # ################################################################################################################################
 
-    def start_component(self, py_path, name, program_dir, on_keyboard_interrupt=None):
+    def start_component(self, py_path:'str', name:'str', program_dir:'str', on_keyboard_interrupt:'callnone'=None) -> 'int':
         """ Starts a component in background or foreground, depending on the 'fg' flag.
         """
 
@@ -139,13 +147,13 @@ Examples:
 
 # ################################################################################################################################
 
-    def _on_server(self, show_output=True, *ignored):
+    def _on_server(self, show_output:'bool'=True, *ignored:'any_') -> 'int':
         self.run_check_config()
         return self.start_component('zato.server.main', 'server', self.component_dir, self.delete_pidfile)
 
 # ################################################################################################################################
 
-    def _on_lb(self, *ignored):
+    def _on_lb(self, *ignored:'any_') -> 'None':
 
         # stdlib
         import os
@@ -164,7 +172,7 @@ Examples:
         if not found_pidfile:
             found_agent_pidfile = self.check_pidfile(get_haproxy_agent_pidfile(self.component_dir))
             if not found_agent_pidfile:
-                self.start_component(
+                _ = self.start_component(
                     'zato.agent.load_balancer.main', 'load-balancer', os.path.join(self.config_dir, 'repo'), stop_haproxy)
                 return
 
@@ -173,15 +181,16 @@ Examples:
 
 # ################################################################################################################################
 
-    def _on_web_admin(self, *ignored):
+    def _on_web_admin(self, *ignored:'any_') -> 'None':
         self.run_check_config()
-        self.start_component('zato.admin.main', 'web-admin', '', self.delete_pidfile)
+        _ = self.start_component('zato.admin.main', 'web-admin', '', self.delete_pidfile)
 
 # ################################################################################################################################
 
-    def _on_scheduler(self, *ignored):
+    def _on_scheduler(self, *ignored:'any_') -> 'None':
         self.run_check_config()
-        self.check_pidfile()
-        self.start_component('zato.scheduler.main', 'scheduler', '', self.delete_pidfile)
+        _ = self.check_pidfile()
+        _ = self.start_component('zato.scheduler.main', 'scheduler', '', self.delete_pidfile)
 
+# ################################################################################################################################
 # ################################################################################################################################
