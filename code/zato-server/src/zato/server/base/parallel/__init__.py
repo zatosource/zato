@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -141,6 +141,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     oauth_store: 'OAuthStore'
 
     stop_after: 'intnone'
+    deploy_auto_from: 'str' = ''
 
     def __init__(self) -> 'None':
         self.logger = logger
@@ -456,13 +457,30 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def add_pickup_conf_from_env_hot_deploy(self) -> 'None':
+    def add_pickup_conf_from_env(self) -> 'None':
+
+        # Look up Python hot-deployment directories ..
+        path = os.environ.get('ZATO_HOT_DEPLOY_DIR', '')
+
+        # .. and make it possible to deploy from them.
+        self._add_pickup_conf_from_local_path(path)
+
+# ################################################################################################################################
+
+    def add_pickup_conf_from_auto_deploy(self) -> 'None':
+
+        # Look up Python hot-deployment directories ..
+        path = os.path.join(self.deploy_auto_from, 'code')
+
+        # .. and make it possible to deploy from them.
+        self._add_pickup_conf_from_local_path(path)
+
+# ################################################################################################################################
+
+    def _add_pickup_conf_from_local_path(self, items:'str') -> 'None':
 
         # Bunch
         from bunch import bunchify
-
-        # Look up Python hot-deployment directories
-        items = os.environ.get('ZATO_HOT_DEPLOY_DIR', '')
 
         # We have hot-deployment configuration to process ..
         if items:
@@ -491,7 +509,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def add_pickup_conf_from_env_user_conf(self) -> 'None':
+    def add_user_conf_from_env(self) -> 'None':
 
         # Bunch
         from bunch import bunchify
@@ -547,10 +565,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def add_pickup_conf_from_env_variables(self) -> 'None':
 
         # Code hot-deployment
-        self.add_pickup_conf_from_env_hot_deploy()
+        self.add_pickup_conf_from_env()
 
         # User configuration
-        self.add_pickup_conf_from_env_user_conf()
+        self.add_user_conf_from_env()
 
 # ################################################################################################################################
 
@@ -620,6 +638,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Look up pickup configuration among environment variables
         # and add anything found to self.pickup_config.
         self.add_pickup_conf_from_env_variables()
+
+        # Look up pickup configuration based on what should be auto-deployed on startup.
+        self.add_pickup_conf_from_auto_deploy()
 
         # Append additional services that can be invoked through WebSocket gateways.
         self.add_wsx_gateway_service_allowed()
@@ -715,6 +736,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def _run_stats_client(self, events_tcp_port:'int') -> 'None':
         self.stats_client.init('127.0.0.1', events_tcp_port)
         self.stats_client.run()
+
+# ################################################################################################################################
+
+    def handle_deploy_auto_from(self) -> 'None':
+
+        print()
+        print(111, self.deploy_auto_from)
+        print()
 
 # ################################################################################################################################
 
@@ -1007,6 +1036,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
             'server': self,
         })
+
+        # The server is started so we can deploy what we were told to handle on startup,
+        # assuming that we are the first process in this server.
+        if self.is_starting_first:
+            if self.deploy_auto_from:
+                self.handle_deploy_auto_from()
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
 
