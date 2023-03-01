@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,7 +23,7 @@ from zato.sso import const
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist, strnone
+    from zato.common.typing_ import any_, anydict, anylist, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,13 +37,13 @@ SessionModelInsert = SessionModelTable.insert
 @dataclass
 class BaseRequestCtx:
     cid:             'str'
-    remote_addr:     'anylist'
+    remote_addr:     'str | strlist'
     user_agent:      'str'
     input:           'anydict'
     has_remote_addr: 'bool' = field(init=False, default=False)
     has_user_agent:  'bool' = field(init=False, default=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> 'None':
         self.has_remote_addr = bool(self.input.get('remote_addr'))
         self.has_user_agent = bool(self.input.get('user_agent'))
 
@@ -70,7 +70,7 @@ class LoginCtx(BaseRequestCtx):
     """
     ext_session_id: 'str' = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> 'None':
         super().__post_init__()
         self.ext_session_id = ''
 
@@ -119,8 +119,7 @@ class VerifyCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def insert_sso_session(sql_session, insert_ctx, needs_commit=True):
-    # type: (object, SessionInsertCtx, bool) -> None
+def insert_sso_session(sql_session:'any_', insert_ctx:'SessionInsertCtx', needs_commit:'bool'=True) -> 'None':
 
     # Create current interaction details for this SSO session ..
     session_state_change_list = update_session_state_change_list(
@@ -159,11 +158,17 @@ def insert_sso_session(sql_session, insert_ctx, needs_commit=True):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def update_session_state_change_list(current_state, interaction_max_len, remote_addr, user_agent, ctx_source, now):
+def update_session_state_change_list(
+    current_state,       # type: anylist
+    interaction_max_len, # type: int
+    remote_addr,         # type: str | anylist
+    user_agent,          # type: str
+    ctx_source,          # type: any_
+    now                  # type: datetime
+) -> 'None':
     """ Adds information about a user interaction with SSO, keeping the history
     of such interactions to up to max_len entries.
     """
-    # type: (list, int, str, str, str, datetime)
     if current_state:
         idx = current_state[-1]['idx']
     else:

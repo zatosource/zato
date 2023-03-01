@@ -8,10 +8,10 @@
 {% block "extra_js" %}
 
     {% comment %} Common JS {% endcomment %}
-    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
 
-    <script type="text/javascript" src="/static/js/kvdb/data_dict/translation-common.js"></script>
-    <script type="text/javascript" src="/static/js/kvdb/data_dict/translation-translate.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/kvdb/data_dict/translation-common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/kvdb/data_dict/translation-translate.js"></script>
 
 {% endblock %}
 
@@ -37,7 +37,7 @@
 </div>
 
 <div id="markup">
-<form action=".?cluster={{ cluster_id }}" method="post" id="translate-form">
+<form novalidate action=".?cluster={{ cluster_id }}" method="post" id="translate-form">
 {% csrf_token %}
     <table id="data-table">
 
@@ -57,7 +57,7 @@
             <td>Key2</td>
             <td>{{ translate_form.key2 }}</td>
         </tr>
-        
+
         <tr>
             <td colspan="4" style="text-align:right;padding-right:1%">
                 <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
@@ -67,11 +67,11 @@
                 <input type="hidden" id="postback_value1" name="postback_value1" value="{{ postback.value1 }}" />
                 <input type="hidden" id="postback_system2" name="postback_system2" value="{{ postback.system2 }}" />
                 <input type="hidden" id="postback_key2" name="postback_key2" value="{{ postback.key2 }}" />
-                
+
                 <input type="submit" value="Translate" />
             </td>
         </tr>
-   
+
 {% if show_translation %}
         <tr>
             <td colspan="4" class='inline_header'>Value2</td>

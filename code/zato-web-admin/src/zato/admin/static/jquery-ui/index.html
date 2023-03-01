@@ -83,7 +83,7 @@
 <!-- Button -->
 <h2 class="demoHeaders">Button</h2>
 <button id="button">A button element</button>
-<form style="margin-top: 1em;">
+<form novalidate style="margin-top: 1em;">
 	<div id="radioset">
 		<input type="radio" id="radio1" name="radio"><label for="radio1">Choice 1</label>
 		<input type="radio" id="radio2" name="radio" checked="checked"><label for="radio2">Choice 2</label>
@@ -391,9 +391,9 @@ the element with your mouse, the title attribute is displayed in a little box ne
 	</div>
 </div>
 
-<script src="external/jquery/jquery.js"></script>
-<script src="jquery-ui.js"></script>
-<script>
+<script nonce="{{ CSP_NONCE }}" src="external/jquery/jquery.js"></script>
+<script nonce="{{ CSP_NONCE }}" src="jquery-ui.js"></script>
+<script nonce="{{ CSP_NONCE }}">
 
 $( "#accordion" ).accordion();
 

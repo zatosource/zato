@@ -6,11 +6,11 @@
 {% endblock %}
 
 {% block "extra_js" %}
-    <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
-    <script type="text/javascript" src="/static/js/qrcode.js"></script>
-    <script type="text/javascript" src="/static/js/account/settings.js"></script>
-    <script type="text/javascript" src="/static/js/colorpicker/js/colorpicker.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/qrcode.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/account/settings.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/colorpicker/js/colorpicker.js"></script>
 {% endblock %}
 
 {% block "content" %}
@@ -27,7 +27,7 @@
 
 
 <div id="markup">
-    <form action="./save/" method="post" id="settings_form">
+    <form novalidate action="./save/" method="post" id="settings_form">
     {% csrf_token %}
     <table id="data-table">
 

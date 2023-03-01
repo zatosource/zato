@@ -13,7 +13,7 @@
 
 {% block "extra_js" %}
 
-    <script type='text/javascript'>
+    <script nonce="{{ CSP_NONCE }}" type='text/javascript'>
         $(document).ready(function() {
             $('#id_username').focus();
         });
@@ -29,7 +29,7 @@
 <img src="/static/gfx/ajax-loader.gif" style="display:none" alt="Please wait" />
 
 <div style="width:45%;margin: 0px auto -1px auto;padding-top:20px">
-    <form method="post" action="{% url "login" %}" style="width:100%">
+    <form novalidate method="post" action="{% url "login" %}" style="width:100%">
         {% csrf_token %}
         <table class="form-data" border="">
             <tr>

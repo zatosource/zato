@@ -5,16 +5,16 @@
 
 
 {% block head %}
-    <script type="text/javascript" src="/static/jquery/jquery.min.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.ui.custom.min.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.bvalidator-yc.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.getUrlParam.js"></script>
-    <script type="text/javascript" src="/static/js/underscore-min.js"></script>
-    <script type="text/javascript" src="/static/js/stringformat.js"></script>
-    <script type="text/javascript" src="/static/mootools/mootools.js"></script>
-    <script type="text/javascript" src="/static/superfish/js/superfish.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.custom.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.bvalidator-yc.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.getUrlParam.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/underscore-min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/stringformat.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/mootools/mootools.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/superfish/js/superfish.js"></script>
 
-    <script>
+    <script nonce="{{ CSP_NONCE }}">
 
     $(document).ready(function(){
         $("ul.sf-menu").superfish();
@@ -61,7 +61,7 @@
 {% block body %}
     <div>
         <div id="hd">
-            <div id="console-header">&nbsp;<a href="https://zato.io/?v={{ zato_version|cut:"Zato " }}" id="logo-link"><img src="/static/gfx/logo.png" alt="Zato logo" style="vertical-align:middle;padding-top:2px;padding-bottom:2px"/></a>
+            <div id="console-header">&nbsp;<a href="https://zato.io/{% if user.is_authenticated %}?v={{ zato_version|cut:"Zato " }} {% endif %}" id="logo-link"><img src="/static/gfx/logo.png" alt="Zato logo" style="vertical-align:middle;padding-top:2px;padding-bottom:2px"/></a>
             {% if user.is_authenticated %}
                 <span id="logout" style="padding-top:10px">
                     <a class="top" href="{% url "account-settings-basic" %}">My settings</a>

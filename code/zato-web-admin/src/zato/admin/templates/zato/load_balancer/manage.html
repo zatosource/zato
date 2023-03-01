@@ -8,10 +8,10 @@
 {% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
-    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
 
-    <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/load_balancer.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/load_balancer.js"></script>
 
 {% endblock %}
 
@@ -34,7 +34,7 @@
 
 
 <div id="markup">
-    <form action="{% url "lb-manage-validate-save" cluster.id %}" method="post" id="lb-validate-save">
+    <form novalidate action="{% url "lb-manage-validate-save" cluster.id %}" method="post" id="lb-validate-save">
         <table id="data-table">
             <tr>
                 <td colspan="6" class='inline_header'>

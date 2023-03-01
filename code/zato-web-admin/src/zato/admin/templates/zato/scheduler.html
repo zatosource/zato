@@ -10,16 +10,16 @@
 {% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
-    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.ui.slideraccess.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.slideraccess.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
 
     {% comment %} Common JS {% endcomment %}
-    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
 
-    <script>
+    <script nonce="{{ CSP_NONCE }}">
     var friendly_names = new Object();
 
     {% for name, friendly_name in friendly_names%}
@@ -55,7 +55,7 @@
     </script>
 
     {% comment %} Scheduler JS {% endcomment %}
-    <script type="text/javascript" src="/static/js/scheduler.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler.js"></script>
 
 {% endblock %}
 
@@ -153,7 +153,7 @@
 
         <div id="create-one_time" class='data-popup ignore'>
             <div>
-                <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-one_time">
+                <form novalidate action=".?cluster={{ cluster_id }}" method="post" id="create-form-one_time">
                     <table class="form-data">
 
                         <tr>
@@ -224,7 +224,7 @@
 
         <div id="edit-one_time" class='data-popup ignore'>
             <div>
-                <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-one_time">
+                <form novalidate action=".?cluster={{ cluster_id }}" method="post" id="edit-form-one_time">
                     <table class="form-data">
 
                         <tr>
@@ -293,7 +293,7 @@
 
         <div id="create-interval_based" class='data-popup ignore'>
             <div>
-                <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-interval_based">
+                <form novalidate action=".?cluster={{ cluster_id }}" method="post" id="create-form-interval_based">
                     <table class="form-data">
 
                         <tr>
@@ -415,7 +415,7 @@
 
         <div id="edit-interval_based" class='data-popup ignore'>
             <div>
-                <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-interval_based">
+                <form novalidate action=".?cluster={{ cluster_id }}" method="post" id="edit-form-interval_based">
                     <table class="form-data">
 
                         <tr>
@@ -538,7 +538,7 @@
 
         <div id="create-cron_style" class='data-popup ignore'>
             <div>
-                <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-cron_style">
+                <form novalidate action=".?cluster={{ cluster_id }}" method="post" id="create-form-cron_style">
                     <table class="form-data">
 
                         <tr>
@@ -619,7 +619,7 @@
 
         <div id="edit-cron_style" class='data-popup ignore'>
             <div>
-                <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-cron_style">
+                <form novalidate action=".?cluster={{ cluster_id }}" method="post" id="edit-form-cron_style">
                     <table class="form-data">
 
                         <tr>

@@ -9,13 +9,13 @@
 {% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
-    <script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.form.js"></script>
 
     {% comment %} Common JS {% endcomment %}
-    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
 
     {% comment %} SFTP {% endcomment %}
-    <script type="text/javascript" src="/static/js/outgoing/sftp-command-shell.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/sftp-command-shell.js"></script>
 
 {% endblock %}
 
@@ -31,7 +31,7 @@
         </tr>
         <tr>
             <td>
-                <form id="command_shell_form" action="{% url "out-sftp-command-shell-action" conn_id cluster_id name_slug %}" method="post">
+                <form novalidate id="command_shell_form" action="{% url "out-sftp-command-shell-action" conn_id cluster_id name_slug %}" method="post">
                 {% csrf_token %}
                     {{ form.data }}
                     <br/><br/>

@@ -9,18 +9,18 @@
 {% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
-    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     {% comment %} Common JS {% endcomment %}
-    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
 
     {% comment %} HTTP Basic Auth {% endcomment %}
-    <script type="text/javascript" src="/static/js/kvdb/data_dict/dictionary.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/kvdb/data_dict/dictionary.js"></script>
 
 
-    <script>
+    <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
@@ -97,19 +97,19 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "kvdb-data-dict-dictionary-create" %}" method="post" id="create-form">
+                <form novalidate action="{% url "kvdb-data-dict-dictionary-create" %}" method="post" id="create-form">
                     <table class="form-data">
 
                         <tr>
                             <td style="vertical-align:middle;width:20%">System</td>
                             <td>{{ create_form.system }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle;width:20%">Key</td>
                             <td>{{ create_form.key }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle;width:20%">Value</td>
                             <td>{{ create_form.value }}</td>
@@ -129,19 +129,19 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "kvdb-data-dict-dictionary-edit" %}" method="post" id="edit-form">
+                <form novalidate action="{% url "kvdb-data-dict-dictionary-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
 
                         <tr>
                             <td style="vertical-align:middle;width:20%">System</td>
                             <td>{{ edit_form.system }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle;width:20%">Key</td>
                             <td>{{ edit_form.key }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle;width:20%">Value</td>
                             <td>{{ edit_form.value }}</td>
