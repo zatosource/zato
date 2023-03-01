@@ -22,7 +22,7 @@
         </tr>
         <tr>
             <td>
-                <form id="send_message_form" action="{% url "outgoing-wmq-send-message-action" cluster_id conn_id name_slug %}" method="post">
+                <form novalidate id="send_message_form" action="{% url "outgoing-wmq-send-message-action" cluster_id conn_id name_slug %}" method="post">
                 {% csrf_token %}
                     <textarea style="width:100%; height:350px" id="data" name="data">Hello from Zato!</textarea>
                     <br/><br/>

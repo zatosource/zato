@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,7 +11,9 @@ import os
 import re
 import string
 from datetime import datetime, timedelta
+from tempfile import gettempdir
 from time import sleep
+from uuid import uuid4
 
 # ################################################################################################################################
 
@@ -49,3 +51,20 @@ def wait_for_file(path:'str', max_wait:'int'=5) -> 'None':
         else:
             sleep(0.05)
             now = datetime.utcnow()
+
+# ################################################################################################################################
+
+def get_tmp_path(prefix:'str'='', body:'str'='', suffix:'str'='') -> 'str':
+
+    tmp_dir = gettempdir()
+
+    prefix = prefix or 'zato'
+    body   = body   or uuid4().hex
+    suffix = suffix or uuid4().hex
+
+    file_name = f'{prefix}-{body}-{suffix}'
+    tmp_path = os.path.join(tmp_dir, file_name)
+
+    return tmp_path
+
+# ################################################################################################################################

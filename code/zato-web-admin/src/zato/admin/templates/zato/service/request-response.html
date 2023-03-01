@@ -44,7 +44,7 @@
             <td>
                 One in how many request/response pairs should be stored?
 
-                <form action="{% url "service-request-response-configure" service.name cluster_id %}"
+                <form novalidate action="{% url "service-request-response-configure" service.name cluster_id %}"
                      id="request_response_configure_form" method="post" style="padding-top:6px">
                      {% csrf_token %}
                     <input type="text" id="sample_req_resp_freq" name="sample_req_resp_freq" style="width:120px"
