@@ -31,7 +31,7 @@
         </tr>
         <tr>
             <td>
-                <form id="command_shell_form" action="{% url "out-sftp-command-shell-action" conn_id cluster_id name_slug %}" method="post">
+                <form novalidate id="command_shell_form" action="{% url "out-sftp-command-shell-action" conn_id cluster_id name_slug %}" method="post">
                 {% csrf_token %}
                     {{ form.data }}
                     <br/><br/>
