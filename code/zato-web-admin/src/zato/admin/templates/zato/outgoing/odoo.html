@@ -122,7 +122,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "out-odoo-create" %}" method="post" id="create-form">
+                <form novalidate action="{% url "out-odoo-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
@@ -182,7 +182,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "out-odoo-edit" %}" method="post" id="edit-form">
+                <form novalidate action="{% url "out-odoo-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
@@ -243,7 +243,7 @@
 
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "out-odoo-change-password" %}" method="post" id="change_password-form">
+                <form novalidate action="{% url "out-odoo-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>

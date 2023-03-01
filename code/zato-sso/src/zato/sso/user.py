@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -20,9 +20,6 @@ from gevent.lock import RLock
 # SQLAlchemy
 from sqlalchemy import and_ as sql_and, update as sql_update
 from sqlalchemy.exc import IntegrityError
-
-# Python 2/3 compatibility
-from zato.common.py23_.past.builtins import basestring, unicode
 
 # Zato
 from zato.common.api import RATE_LIMIT, SEC_DEF_TYPE, TOTP
@@ -306,7 +303,7 @@ class UserAPI:
 
     def _get_encrypted_email(self, email):
         email = email or b''
-        email = email.encode('utf8') if isinstance(email, unicode) else email
+        email = email.encode('utf8') if isinstance(email, str) else email
         return make_data_secret(email, self.encrypt_func)
 
 # ################################################################################################################################
@@ -1070,7 +1067,7 @@ class UserAPI:
                     if attr_name is None:
                         data[attr_name_upper] = None
                     else:
-                        if attr_name and isinstance(data[attr_name], basestring):
+                        if attr_name and isinstance(data[attr_name], str):
                             data[attr_name_upper] = data[attr_name].upper()
 
             # Email may be optionally encrypted

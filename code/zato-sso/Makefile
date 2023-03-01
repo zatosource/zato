@@ -31,6 +31,18 @@ pylint:
 		--rcfile $(CURDIR)/../pylint.ini \
 				 $(CURDIR)/../zato-sso/src/zato/sso
 
+mypy:
+	$(Zato_Python_Dir)/mypy --config-file=$(CURDIR)/../mypy.ini \
+			$(CURDIR)/src/zato/sso/*.py
+
+pyright:
+	$(Zato_Python_Dir)/pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/sso/*.py
+
+type-check:
+	echo "Running type checks ($(Zato_Package_Name))"
+	# $(MAKE) mypy
+	# $(MAKE) pyright
+
 flake8:
 	echo "Running flake8 checks in $(Zato_Package_Name)"
 	$(Zato_Python_Dir)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
@@ -38,3 +50,4 @@ flake8:
 static-check:
 	echo "Running static checks in $(Zato_Package_Name)"
 	$(MAKE) flake8
+	$(MAKE) type-check
