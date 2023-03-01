@@ -157,11 +157,11 @@
 
 {% include "zato/paginate/action-panel.html" %}
 
-        <form id="topic_search_form"></form>
+        <form novalidate id="topic_search_form"></form>
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "pubsub-subscription-create" %}" method="post" id="create-form">
+                <form novalidate action="{% url "pubsub-subscription-create" %}" method="post" id="create-form">
                     <table class="form-data">
 
                         <tr>

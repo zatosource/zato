@@ -170,7 +170,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "out-redis-create" %}" method="post" id="create-form">
+                <form novalidate action="{% url "out-redis-create" %}" method="post" id="create-form">
 
                     <table class="form-data">
 
@@ -262,7 +262,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "out-redis-edit" %}" method="post" id="edit-form">
+                <form novalidate action="{% url "out-redis-edit" %}" method="post" id="edit-form">
 
                     <table class="form-data">
 
@@ -357,7 +357,7 @@
 
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "out-redis-change-password" %}" method="post" id="change_password-form">
+                <form novalidate action="{% url "out-redis-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:10%">Name</td>
