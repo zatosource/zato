@@ -365,8 +365,9 @@ class OutconnWSXWrapper(Wrapper):
                 sec_def_id = int(sec_def_id)
                 sec_def_config = server.api_worker_store_basic_auth_get_by_id(sec_def_id)
 
-                config['username'] = sec_def_config['username']
-                config['secret'] = sec_def_config['password']
+                if sec_def_config:
+                    config['username'] = sec_def_config['username']
+                    config['secret'] = sec_def_config['password']
 
 # ################################################################################################################################
 
