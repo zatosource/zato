@@ -8,12 +8,12 @@
 
 {% block "extra_js" %}
 
-    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.form.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
-    <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/cache/builtin/entry.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/cache/builtin/entry.js"></script>
 
 
 {% endblock %}
@@ -30,7 +30,7 @@
         </tr>
         <tr>
             <td>
-                <form id="cache_entry_form" action="{% url form_action cache_id cluster_id %}" method="post">
+                <form novalidate id="cache_entry_form" action="{% url form_action cache_id cluster_id %}" method="post">
                 {% csrf_token %}
                     Key
                     <br/>

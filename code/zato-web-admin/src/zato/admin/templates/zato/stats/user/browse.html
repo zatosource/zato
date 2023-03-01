@@ -8,7 +8,7 @@
 
 {% block "extra_js" %}
 
-<script>
+<script nonce="{{ CSP_NONCE }}">
 
 // Maps chart / dataset IDs to Frappe charts that we display
 zato_frappe_charts = {};
@@ -27,10 +27,10 @@ zato_frappe_charts = {};
 
 </script>
 
-<script type="text/javascript" src="/static/js/common.js"></script>
-<script type="text/javascript" src="/static/frappe-charts/frappe-charts.min.iife.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/frappe-charts/frappe-charts.min.iife.js"></script>
 
-<script>
+<script nonce="{{ CSP_NONCE }}">
 
     $(document).ready(function() {
 
@@ -215,7 +215,7 @@ zato_frappe_charts = {};
     <div style="text-align: center !important;">
     <br/>
 
-    <form id="charts-form" action=".">
+    <form novalidate id="charts-form" action=".">
     <table id="data-table" style="width:80%; margin: auto">
 
         {% if action != "BrowseStats" %}
@@ -265,7 +265,7 @@ zato_frappe_charts = {};
                         </table>
                     </td>
 
-                    <script>
+                    <script nonce="{{ CSP_NONCE }}">
 
                         // ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -347,7 +347,7 @@ zato_frappe_charts = {};
                     <tr>
                         <td style="width:100%; border-bottom: 1px solid #ccc; style="vertical-align:middle; ">
                             <div id="chart0" class="charts-div"></div>
-                            <script>
+                            <script nonce="{{ CSP_NONCE }}">
                             const data = {
 
                                 labels: {{ chart_item.labels }},

@@ -888,10 +888,14 @@ def invoke_action_handler(req, service_name:'str', send_attrs:'any_'=None, extra
         logger.info('Response received `%s`', response.data)
 
         if response.ok:
+
             if 'response_data' in response.data:
                 response_data = response.data['response_data']
             else:
                 response_data = response.data
+
+            logger.info('Invocation response -> `%s` (`%s`)', response_data, service_name)
+
             if isinstance(response_data, dict):
                 response_data = dumps(response_data)
                 logger.info('Returning `%s` from `%s`', response_data, service_name)

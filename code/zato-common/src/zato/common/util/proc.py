@@ -46,6 +46,7 @@ async_keyword = 'async_' if PY2 else 'async_'
 stderr_ignore = [
     'pykafka.rdkafka',
     'Auto-created primary key used when not defining a primary key type',
+    'Linux distribution found',
 ]
 
 # ################################################################################################################################
@@ -57,11 +58,12 @@ is_windows = 'windows' in system.lower()
 # ################################################################################################################################
 
 def get_executable():
-    """ Returns the wrapper which buildout uses for executing Zato commands,
+    """ Returns the wrapper which pip uses for executing Zato commands,
     the one with all the dependencies added to PYTHONPATH.
     """
     if is_windows:
         return os.path.join(os.path.dirname(sys.executable), 'python.exe')
+
     return os.path.join(os.path.dirname(sys.executable), 'py')
 
 # ################################################################################################################################

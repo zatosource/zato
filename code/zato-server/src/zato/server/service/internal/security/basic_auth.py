@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -23,6 +21,9 @@ from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetList(AdminService):
     """ Returns a list of HTTP Basic Auth definitions available.
     """
@@ -36,11 +37,15 @@ class GetList(AdminService):
         output_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
 
     def get_data(self, session):
-        return elems_with_opaque(self._search(basic_auth_list, session, self.request.input.cluster_id, None, False))
+        data = elems_with_opaque(self._search(basic_auth_list, session, self.request.input.cluster_id, None, False))
+        return data
 
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Create(AdminService):
     """ Creates a new HTTP Basic Auth definition.
@@ -96,6 +101,9 @@ class Create(AdminService):
 
             self.response.payload.id = auth.id
             self.response.payload.name = auth.name
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Edit(AdminService):
     """ Updates an HTTP Basic Auth definition.
@@ -165,6 +173,9 @@ class Edit(AdminService):
                 self.response.payload.id = definition.id
                 self.response.payload.name = definition.name
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an HTTP Basic Auth definition.
     """
@@ -179,6 +190,9 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
 
         return self._handle(HTTPBasicAuth, _auth, SECURITY.BASIC_AUTH_CHANGE_PASSWORD.value)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Delete(AdminService):
     """ Deletes an HTTP Basic Auth definition.
@@ -206,3 +220,6 @@ class Delete(AdminService):
                 self.request.input.action = SECURITY.BASIC_AUTH_DELETE.value
                 self.request.input.name = auth.name
                 self.broker_client.publish(self.request.input)
+
+# ################################################################################################################################
+# ################################################################################################################################

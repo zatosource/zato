@@ -14,7 +14,7 @@ $(document).ready(function() {
             $('#response_data').text(JSON.stringify(data) || '(No response)');
         }
         else {
-            $.fn.zato.user_message(false, 'Invocation error');
+            $.fn.zato.user_message(false, 'Invocation error -> `' + status + '`');
             $('#response_data').text(data.responseText);
         }
     }

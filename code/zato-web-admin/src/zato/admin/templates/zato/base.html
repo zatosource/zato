@@ -2,7 +2,9 @@
 <html>
 <head>
     <title>{% block html_title %}{% endblock %} - Zato</title>
+    {% if user.is_authenticated %}
     <meta name="generator" content="{{ zato_version }}" />
+    {% endif %}
 
     <link rel="apple-touch-icon" sizes="57x57" href="/static/favicon/apple-icon-57x57.png">
     <link rel="apple-touch-icon" sizes="60x60" href="/static/favicon/apple-icon-60x60.png">
@@ -20,12 +22,14 @@
     <link rel="manifest" href="/static/favicon/manifest.json">
     <meta name="msapplication-TileImage" content="/static/favicon/ms-icon-144x144.png">
 
-    <script src="/static/brython/dist/brython.js"></script>
-    <script src="/static/brython/dist/brython_stdlib.js"></script>
+    {% if user.is_authenticated %}
+        <script nonce="{{ CSP_NONCE }}" src="/static/brython/dist/brython.js"></script>
+        <script nonce="{{ CSP_NONCE }}" src="/static/brython/dist/brython_stdlib.js"></script>
+    {% endif %}
 
     {% block head %}{% endblock %}
 </head>
-<body onload="brython()">
+<body {% if user.is_authenticated %}onload="brython(){% endif %}">
     {% block body %}{% endblock %}
 </body>
 </html>

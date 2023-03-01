@@ -308,7 +308,8 @@ class GetList(AdminService):
 
     def get_data(self, session):
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
-        return self._search(connection_list, session, cluster_id, self.request.input.type_, False)
+        data = self._search(connection_list, session, cluster_id, self.request.input.type_, False)
+        return data
 
 # ################################################################################################################################
 

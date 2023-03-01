@@ -122,6 +122,7 @@ class ZatoMiddleware:
     def __call__(self, req):
         self.process_request(req)
         response = self.get_response(req)
+        response.headers['Server'] = 'Apache'
         return response
 
     def process_request(self, req):

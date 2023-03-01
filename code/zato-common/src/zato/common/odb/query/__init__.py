@@ -1202,14 +1202,21 @@ def pubsub_queue_message(session, cluster_id, msg_id):
 
 # ################################################################################################################################
 
-@query_wrapper
-def pubsub_messages_for_queue(session, cluster_id, sub_key, skip_delivered=False, needs_columns=False):
+def pubsub_messages_for_queue_raw(session, cluster_id, sub_key, *, skip_delivered=False):
+
     q = _pubsub_queue_message(session, cluster_id).\
         filter(PubSubEndpointEnqueuedMessage.sub_key==sub_key)
 
     if skip_delivered:
         q = q.filter(PubSubEndpointEnqueuedMessage.delivery_status != PUBSUB.DELIVERY_STATUS.DELIVERED)
 
+    return q
+
+# ################################################################################################################################
+
+@query_wrapper
+def pubsub_messages_for_queue(session, cluster_id, sub_key, skip_delivered=False, needs_columns=False):
+    q = pubsub_messages_for_queue_raw(session, cluster_id, sub_key, skip_delivered=skip_delivered)
     return q.order_by(PubSubEndpointEnqueuedMessage.creation_time.desc())
 
 # ################################################################################################################################

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,7 +18,7 @@ from zato.common.broker_message import PUBSUB
 from zato.common.exception import BadRequest, Conflict
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic
 from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_list, pubsub_endpoint_queue, \
-     pubsub_messages_for_queue, server_by_id
+     pubsub_messages_for_queue, pubsub_messages_for_queue_raw, server_by_id
 from zato.common.odb.query.pubsub.endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id
 from zato.common.pubsub import ensure_subs_exist, msg_pub_attrs
@@ -262,11 +262,10 @@ class GetEndpointQueueNonGDDepth(AdminService):
 class _GetEndpointQueue(AdminService):
     def _add_queue_depths(self, session:'SASession', item:'stranydict') -> 'None':
 
-        current_depth_gd_q = session.query(PubSubEndpointEnqueuedMessage.id).\
-            filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-            filter(PubSubEndpointEnqueuedMessage.sub_key==item['sub_key']).\
-            filter(PubSubEndpointEnqueuedMessage.is_in_staging != True).\
-            filter(PubSubEndpointEnqueuedMessage.delivery_status != COMMON_PUBSUB.DELIVERY_STATUS.DELIVERED) # noqa: E712
+        cluster_id = self.request.input.cluster_id
+        sub_key = item['sub_key']
+
+        current_depth_gd_q = pubsub_messages_for_queue_raw(session, cluster_id, sub_key, skip_delivered=True)
 
         # This could be read from the SQL database ..
         item['current_depth_gd'] = count(session, current_depth_gd_q)
@@ -469,7 +468,7 @@ class ClearEndpointQueue(AdminService):
 
             if is_in_staging is not None:
                 q = q.filter(cast_('Column', PubSubEndpointEnqueuedMessage.is_in_staging).is_(is_in_staging))
-            q.delete()
+            _ = q.delete()
 
             session.commit()
 

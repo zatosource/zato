@@ -9,18 +9,18 @@
 {% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
-    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     {% comment %} Common JS {% endcomment %}
-    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
 
     {% comment %} HTTP Basic Auth {% endcomment %}
-    <script type="text/javascript" src="/static/js/security/wss.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/security/wss.js"></script>
 
 
-    <script>
+    <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
@@ -63,7 +63,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "security-wss-create" %}" method="post" id="create-form">
+                <form novalidate action="{% url "security-wss-create" %}" method="post" id="create-form">
                     <table class="form-data" border="0">
                         <tr>
                             <td style="vertical-align:middle;width:30%">Name</td>
@@ -107,7 +107,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "security-wss-edit" %}" method="post" id="edit-form">
+                <form novalidate action="{% url "security-wss-edit" %}" method="post" id="edit-form">
                     <table class="form-data" border="0">
                         <tr>
                             <td style="vertical-align:middle;width:30%">Name</td>
@@ -152,7 +152,7 @@
 
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "security-wss-change-password" %}" method="post" id="change_password-form">
+                <form novalidate action="{% url "security-wss-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data" border="0">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
