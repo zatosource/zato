@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from shutil import copy as shutil_copy,  move as shutil_move
+from shutil import copy as shutil_copy
 from zipfile import ZipFile
 
 # Zato
