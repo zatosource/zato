@@ -20,7 +20,7 @@ from zato.common.util.file_system import get_tmp_path
 
 if 0:
 
-    from zato.common.typing_ import any_, callnone
+    from zato.common.typing_ import any_, anydict, callnone, dictnone
 
     # During development, it is convenient to configure it here to catch information that should be logged
     # even prior to setting up main loggers in each of components.
@@ -37,6 +37,12 @@ if 0:
 
 stderr_sleep_fg = 0.9
 stderr_sleep_bg = 1.2
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ModuleCtx:
+    Deploy_Dirs = {'code', 'config-server', 'config-user', 'enmasse', 'env', 'lib', 'pip'}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -122,21 +128,34 @@ Examples:
 
 # ################################################################################################################################
 
-    def start_component(self, py_path:'str', name:'str', program_dir:'str', on_keyboard_interrupt:'callnone'=None) -> 'int':
+    def start_component(
+        self,
+        py_path:'str',
+        name:'str',
+        program_dir:'str',
+        on_keyboard_interrupt:'callnone'=None,
+        *,
+        extra_options: 'dictnone' = None,
+    ) -> 'int':
         """ Starts a component in background or foreground, depending on the 'fg' flag.
         """
 
         # Zato
         from zato.common.util.proc import start_python_process
 
+        options = {
+            'sync_internal': self.args.sync_internal,
+            'secret_key': self.args.secret_key or '',
+            'stderr_path': self.args.stderr_path,
+            'env_file': self.args.env_file,
+            'stop_after': self.args.stop_after,
+        }
+
+        if extra_options:
+            options.update(extra_options)
+
         exit_code = start_python_process(
-            name, self.args.fg, py_path, program_dir, on_keyboard_interrupt, self.SYS_ERROR.FAILED_TO_START, {
-                'sync_internal': self.args.sync_internal,
-                'secret_key': self.args.secret_key or '',
-                'stderr_path': self.args.stderr_path,
-                'env_file': self.args.env_file,
-                'stop_after': self.args.stop_after,
-            },
+            name, self.args.fg, py_path, program_dir, on_keyboard_interrupt, self.SYS_ERROR.FAILED_TO_START, options,
             stderr_path=self.args.stderr_path,
             stdin_data=self.stdin_data)
 
@@ -153,7 +172,45 @@ Examples:
 
 # ################################################################################################################################
 
-    def _handle_deploy_local_zip(self, src_path:'str', *, delete_src_path:'bool'=False) -> 'None':
+    def _handle_deploy_local_dir_impl(self, src_path:'str') -> 'anydict':
+        return {'deploy_auto_from':src_path}
+
+# ################################################################################################################################
+
+    def _handle_deploy_local_dir(self, src_path:'str', *, delete_src_path:'bool'=False) -> 'dictnone':
+
+        # Local aliases
+        has_one_name    = False
+        top_name_is_dir = False
+        top_name_path   = 'zato-does-not-exist_handle_deploy_local_dir'
+        should_recurse  = False
+        top_name_is_not_internal = False
+
+        # If there is only one directory inside the source path, we drill into it
+        # because this is where we expect to find our assets to deploy.
+        names = os.listdir(src_path)
+
+        has_one_name   = len(names) == 1
+
+        if has_one_name:
+            top_name = names[0]
+            top_name_path = os.path.join(src_path, top_name)
+            top_name_is_dir = os.path.isdir(top_name_path)
+            top_name_is_not_internal = not (top_name in ModuleCtx.Deploy_Dirs)
+
+        should_recurse = top_name_is_dir and top_name_is_not_internal
+
+        # .. if we have a single top-level directory, we can recurse into that ..
+        if should_recurse:
+            return self._handle_deploy_local_dir(top_name_path)
+
+        else:
+            # If we are here, we have a leaf location to actually deploy from ..
+            return self._handle_deploy_local_dir_impl(src_path)
+
+# ################################################################################################################################
+
+    def _handle_deploy_local_zip(self, src_path:'str', *, delete_src_path:'bool'=False) -> 'dictnone':
 
         # Extract the file name for later use
         zip_name = os.path.basename(src_path)
@@ -184,17 +241,16 @@ Examples:
         # .. always delete the temporary zip file ..
         os.remove(zip_file_path)
 
-        # .. optionally, delete
+        # .. optionally, delete the original, source file ..
+        if delete_src_path:
+            os.remove(src_path)
 
-        print()
-        print(111, tmp_path)
-        print()
-
-        zz
+        # .. we can now treat it as deployment from a local directory ..
+        return self._handle_deploy_local_dir(tmp_path)
 
 # ################################################################################################################################
 
-    def _maybe_set_up_deploy(self) -> 'None':
+    def _maybe_set_up_deploy(self) -> 'dictnone':
 
         # Local aliases
         env_from1 = os.environ.get('Zato_Deploy_From')
@@ -224,20 +280,26 @@ Examples:
                 if deploy.endswith('.zip'):
 
                     # .. do handle the input now ..
-                    self._handle_deploy_local_zip(deploy)
+                    return self._handle_deploy_local_zip(deploy)
 
 # ################################################################################################################################
 
     def _on_server(self, show_output:'bool'=True, *ignored:'any_') -> 'int':
 
         # Potentially sets up the deployment of any assets given on input
-        self._maybe_set_up_deploy()
+        extra_options = self._maybe_set_up_deploy()
 
         # Check basic configuration
         self.run_check_config()
 
         # Start the server now
-        return self.start_component('zato.server.main', 'server', self.component_dir, self.delete_pidfile)
+        return self.start_component(
+            'zato.server.main',
+            'server',
+            self.component_dir,
+            self.delete_pidfile,
+            extra_options=extra_options
+        )
 
 # ################################################################################################################################
 
