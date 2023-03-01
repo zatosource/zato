@@ -96,7 +96,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "security-aws-create" %}" method="post" id="create-form">
+                <form novalidate action="{% url "security-aws-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:10%">Name</td>
@@ -121,7 +121,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "security-aws-edit" %}" method="post" id="edit-form">
+                <form novalidate action="{% url "security-aws-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:10%">Name</td>
@@ -147,7 +147,7 @@
 
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "security-aws-change-password" %}" method="post" id="change_password-form">
+                <form novalidate action="{% url "security-aws-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:15%">Name</td>

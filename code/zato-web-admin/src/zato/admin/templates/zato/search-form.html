@@ -1,6 +1,6 @@
 
     <div class="prompt" style="float:left; width:60%">
-    <form action="." method="get" id="main_page_form">
+    <form novalidate action="." method="get" id="main_page_form">
         {{ search_form.cluster }}
 
         {% if meta or show_search_form %} {% comment %} Statistics and other pages will not need the search box {% endcomment %}
