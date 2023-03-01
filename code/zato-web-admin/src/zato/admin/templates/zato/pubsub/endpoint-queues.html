@@ -318,7 +318,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "pubsub-endpoint-queue-edit" %}" method="post" id="edit-form">
+                <form novalidate action="{% url "pubsub-endpoint-queue-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
 
                         {% if endpoint.endpoint_type == endpoint_type.WEB_SOCKETS.id %}

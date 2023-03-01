@@ -30,7 +30,7 @@
         </tr>
         <tr>
             <td>
-                <form id="cache_entry_form" action="{% url form_action cache_id cluster_id %}" method="post">
+                <form novalidate id="cache_entry_form" action="{% url form_action cache_id cluster_id %}" method="post">
                 {% csrf_token %}
                     Key
                     <br/>
