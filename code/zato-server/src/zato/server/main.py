@@ -377,6 +377,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
     server.has_fg = options.get('fg') or False
+    server.deploy_auto_from = options.get('deploy_auto_from') or ''
     server.crypto_manager = crypto_manager
     server.odb_data = server_config.odb
     server.host = zato_gunicorn_app.zato_host
@@ -516,6 +517,7 @@ if __name__ == '__main__':
             'stderr_path': None,
             'env_file': '',
             'stop_after': None,
+            'deploy_auto_from': ''
         }
     else:
         server_base_dir = sys.argv[1]
