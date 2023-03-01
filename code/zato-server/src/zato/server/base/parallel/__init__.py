@@ -11,6 +11,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 from logging import DEBUG, INFO, WARN
+from pathlib import Path
 from platform import system as platform_system
 from random import seed as random_seed
 from tempfile import mkstemp
@@ -86,6 +87,7 @@ if 0:
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, strbytes, strlist, strnone
+    from zato.server.commands import CommandResult
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.ext.zunicorn.arbiter import Arbiter
@@ -486,8 +488,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if items:
 
             # .. support multiple entries ..
-            items = items.split(':')
-            items = [elem.strip() for elem in items]
+            items = items.split(':') # type: ignore
+            items = [elem.strip() for elem in items] # type: ignore
 
             # .. add  the actual configuration ..
             for name in items:
@@ -739,11 +741,33 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def handle_deploy_auto_from(self) -> 'None':
+    def _on_enmasse_completed(self, result:'CommandResult') -> 'None':
 
-        print()
-        print(111, self.deploy_auto_from)
-        print()
+        self.logger.info('Enmasse stdout -> `%s`', result.stdout.strip())
+        self.logger.info('Enmasse stderr -> `%s`', result.stderr.strip())
+
+# ################################################################################################################################
+
+    def handle_enmasse_auto_from(self) -> 'None':
+
+        # Zato
+        from zato.server.commands import CommandsFacade
+
+        # Local aliases
+        commands = CommandsFacade()
+        commands.init(self)
+
+        # Full path to a directory with enmasse files ..
+        path = os.path.join(self.deploy_auto_from, 'enmasse')
+        path = Path(path)
+
+        # enmasse --import --replace-odb-objects --input ./zato-export.yml /path/to/server/
+
+        # .. find all the enmasse files in this directory ..
+        for file_path in sorted(path.iterdir()):
+
+            command = f'enmasse --import --replace-odb-objects --input {file_path} {self.base_dir} --verbose'
+            _ = commands.run_zato_cli_async(command, callback=self._on_enmasse_completed)
 
 # ################################################################################################################################
 
@@ -1041,7 +1065,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # assuming that we are the first process in this server.
         if self.is_starting_first:
             if self.deploy_auto_from:
-                self.handle_deploy_auto_from()
+                self.handle_enmasse_auto_from()
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
 
@@ -1284,7 +1308,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def get_default_cache(self) -> 'CacheAPI':
         """ Returns the server's default cache.
         """
-        return self.worker_store.cache_api.default
+        return cast_('CacheAPI', self.worker_store.cache_api.default)
 
 # ################################################################################################################################
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -20,9 +20,10 @@ from gevent.subprocess import run as subprocess_run, TimeoutExpired
 from humanize import naturalsize
 
 # Zato
+from zato.common.marshal_.api import Model
+from zato.common.util.platform_ import is_windows
 from zato.common.typing_ import cast_
 from zato.common.util import new_cid
-from zato.common.marshal_.api import Model
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -114,7 +115,7 @@ class CommandsFacade:
         result:      'CompletedProcess',
         encoding:    'str',
         replace_char:'str',
-        ) -> 'None':
+    ) -> 'None':
 
         # .. otherwise, we process the result received from the command ..
 
@@ -165,7 +166,7 @@ class CommandsFacade:
         encoding: 'str',
         replace_char: 'str',
         use_pubsub: 'bool'
-        ) -> 'CommandResult':
+    ) -> 'CommandResult':
 
         # Our response to produce
         out = CommandResult()
@@ -313,7 +314,7 @@ class CommandsFacade:
         encoding:    'str'   = Config.Encoding,
         use_pubsub:  'bool'  = Config.UsePubSub,
         replace_char:'str'   = Config.ReplaceChar,
-        ) -> 'CommandResult':
+    ) -> 'CommandResult':
 
         # Accept input or create a new Correlation ID
         cid = cid or 'zcma' + new_cid()
@@ -351,7 +352,7 @@ class CommandsFacade:
         encoding:    'str'   = Config.Encoding,
         use_pubsub:  'bool'  = Config.UsePubSub,
         replace_char:'str'   = Config.ReplaceChar,
-        ) -> 'CommandResult':
+    ) -> 'CommandResult':
 
         # Accept input or create a new Correlation ID
         cid = cid or 'zcmd' + new_cid()
@@ -359,6 +360,22 @@ class CommandsFacade:
         return self._run(
             cid=cid, command=command, callback=callback, stdin=stdin, timeout=timeout, encoding=encoding,
             use_pubsub=use_pubsub, replace_char=replace_char)
+
+# ################################################################################################################################
+
+    def run_zato_cli_async(
+        self,
+        command:  'str',
+        callback: 'any_'  = None,
+    ) -> 'CommandResult':
+
+        # This will differ depending on our current OS
+        zato_bin = 'zato.bat' if is_windows else 'zato'
+
+        # Build the full command to execute
+        command = f'{zato_bin} {command}'
+
+        return self.invoke_async(command, callback=callback)
 
 # ################################################################################################################################
 # ################################################################################################################################
