@@ -8,9 +8,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from shutil import copy as shutil_copy,  move as shutil_move
+from zipfile import ZipFile
 
 # Zato
 from zato.cli import ManageCommand
+from zato.common.util.file_system import get_tmp_path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -150,15 +153,48 @@ Examples:
 
 # ################################################################################################################################
 
-    def _handle_deploy_zip(self, path:'str') -> 'None':
+    def _handle_deploy_local_zip(self, src_path:'str', *, delete_src_path:'bool'=False) -> 'None':
+
+        # Extract the file name for later use
+        zip_name = os.path.basename(src_path)
+
+        # This will be a new directory ..
+        tmp_path = get_tmp_path(body='deploy')
+
+        # .. do create it now ..
+        os.mkdir(tmp_path)
+
+        # .. move the archive to the new location ..
+        shutil_copy(src_path, tmp_path)
+
+        # .. get the zip file new location's full path ..
+        zip_file_path = os.path.join(tmp_path, zip_name)
+
+        # .. do extract it now ..
+        with ZipFile(zip_file_path) as zip_file:
+
+            # .. first, run a CRC test ..
+            result = zip_file.testzip()
+            if result:
+                raise ValueError(f'Zip contents CRC file error -> {result}')
+
+            # .. we can proceed with the extraction ..
+            zip_file.extractall(tmp_path)
+
+        # .. always delete the temporary zip file ..
+        os.remove(zip_file_path)
+
+        # .. optionally, delete
 
         print()
-        print(111, path)
+        print(111, tmp_path)
         print()
+
+        zz
 
 # ################################################################################################################################
 
-    def _on_server(self, show_output:'bool'=True, *ignored:'any_') -> 'int':
+    def _maybe_set_up_deploy(self) -> 'None':
 
         # Local aliases
         env_from1 = os.environ.get('Zato_Deploy_From')
@@ -188,11 +224,19 @@ Examples:
                 if deploy.endswith('.zip'):
 
                     # .. do handle the input now ..
-                    self._handle_deploy_zip(deploy)
+                    self._handle_deploy_local_zip(deploy)
 
-        z
+# ################################################################################################################################
 
+    def _on_server(self, show_output:'bool'=True, *ignored:'any_') -> 'int':
+
+        # Potentially sets up the deployment of any assets given on input
+        self._maybe_set_up_deploy()
+
+        # Check basic configuration
         self.run_check_config()
+
+        # Start the server now
         return self.start_component('zato.server.main', 'server', self.component_dir, self.delete_pidfile)
 
 # ################################################################################################################################
