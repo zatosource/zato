@@ -407,7 +407,7 @@ snippet form.\n\
 		${4}\n\
 	</form>\n\
 snippet form#\n\
-	<form id=\"${1}\" action=\"${2}\" method=\"${3:get}\" accept-charset=\"utf-8\">\n\
+	<form novalidate id=\"${1}\" action=\"${2}\" method=\"${3:get}\" accept-charset=\"utf-8\">\n\
 		${4}\n\
 	</form>\n\
 snippet h1\n\
@@ -892,4 +892,3 @@ exports.scope = "liquid";
                         }
                     });
                 })();
-            
