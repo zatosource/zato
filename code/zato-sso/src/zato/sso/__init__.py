@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, strlistnone
+    from zato.common.typing_ import stranydict, strlistnone, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -166,22 +166,22 @@ class SearchCtx:
         'approval_status', 'paginate', 'cur_page', 'page_size', 'name_op', 'is_name_exact')
 
     # Query criteria
-    user_id         = not_given # type:  str | object
-    username        = not_given # type:  str | object
-    email           = not_given # type:  str | object
-    display_name    = not_given # type:  str | object
-    first_name      = not_given # type:  str | object
-    middle_name     = not_given # type:  str | object
-    last_name       = not_given # type:  str | object
-    sign_up_status  = not_given # type:  str | object
-    approval_status = not_given # type:  str | object
+    user_id:         'str | object' = not_given
+    username:        'str | object' = not_given
+    email:           'str | object' = not_given
+    display_name:    'str | object' = not_given
+    first_name:      'str | object' = not_given
+    middle_name:     'str | object' = not_given
+    last_name:       'str | object' = not_given
+    sign_up_status:  'str | object' = not_given
+    approval_status: 'str | object' = not_given
 
     # Query config
-    paginate      = True  # type: bool
-    cur_page      = 1     # type: int
-    page_size     = None  # type: strnone
-    is_name_exact = True  # type: bool
-    name_op       = const.search.and_ # type: str
+    paginate:      'bool'    = True
+    cur_page:      'int'     = 1
+    page_size:     'strnone' = None
+    name_op:       'str'     = const.search.and_
+    is_name_exact: 'bool'    = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -189,22 +189,14 @@ class SearchCtx:
 class SignupCtx:
     """ A container for SSO user signup parameters.
     """
-    __slots__ = ('username', 'email', 'password', 'current_app', 'sign_up_status', 'app_list')
+    __slots__ = ('username', 'email', 'password', 'current_app', 'app_list', 'sign_up_status')
 
-    username:    'str'
-    email:       'str'
-    password:    'str'
-    current_app: 'str'
-    sign_up_status: 'str'
-    app_list: 'strlistnone'
-
-    def __init__(self):
-        self.username = ''
-        self.email = ''
-        self.password = ''
-        self.current_app = None
-        self.sign_up_status = const.signup_status.before_confirmation
-        self.app_list = None
+    username:       'str' = ''
+    email:          'str' = ''
+    password:       'str' = ''
+    current_app:    'str' = None
+    app_list:       'strlistnone' = None
+    sign_up_status: 'str' = const.signup_status.before_confirmation
 
     def to_dict(self) -> 'stranydict':
         return {
