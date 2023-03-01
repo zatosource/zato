@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from contextlib import closing
+from json import dumps
 from logging import getLogger
 from traceback import format_exc
 
@@ -266,7 +265,9 @@ class _BaseAPICommand(_BaseCommand):
 # ################################################################################################################################
 
 class _BaseServerCommand(_BaseCommand):
+
     func_name = '<overridden-by-subclasses>'
+    serialize_payload_to_json = False
 
     def _get_server_response(self, func, pub_client_id):
         raise NotImplementedError('Must be implemented in subclasses')
@@ -286,6 +287,7 @@ class _BaseServerCommand(_BaseCommand):
         except Exception:
             self.response.payload.response_data = format_exc()
         else:
+            response_data = dumps(response_data) if self.serialize_payload_to_json else response_data
             self.response.payload.response_data = response_data
 
 # ################################################################################################################################
@@ -335,6 +337,7 @@ class ServerInvokeWSX(_BaseServerCommand):
     """ Low-level implementation of WSX connection inovcations - must be invoked on the server where the connection exists.
     """
     func_name = 'invoke'
+    serialize_payload_to_json = True
 
     def _get_server_response(self, func, pub_client_id):
         return func(self.cid, pub_client_id, self.request.input.request_data, self.request.input.timeout)
