@@ -26,7 +26,7 @@
         </tr>
         <tr>
             <td>
-                <form id="send_message_form" action="{% url "channel-web-socket-invoke-action" pub_client_id %}?cluster={{ cluster_id }}" method="post">
+                <form novalidate id="send_message_form" action="{% url "channel-web-socket-invoke-action" pub_client_id %}?cluster={{ cluster_id }}" method="post">
                 {% csrf_token %}
                     Request:
                     <textarea style="width:100%; height:250px" id="request_data" name="request_data">Hello from Zato!</textarea>

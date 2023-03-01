@@ -121,7 +121,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "email-smtp-create" %}" method="post" id="create-form">
+                <form novalidate action="{% url "email-smtp-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:18%">
@@ -197,7 +197,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "email-smtp-edit" %}" method="post" id="edit-form">
+                <form novalidate action="{% url "email-smtp-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:18%">
@@ -274,7 +274,7 @@
 
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "email-smtp-change-password" %}" method="post" id="change_password-form">
+                <form novalidate action="{% url "email-smtp-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:18%">Name</td>
