@@ -165,40 +165,23 @@ class SearchCtx:
     __slots__ = ('user_id', 'username', 'email', 'display_name', 'first_name', 'middle_name', 'last_name', 'sign_up_status',
         'approval_status', 'paginate', 'cur_page', 'page_size', 'name_op', 'is_name_exact')
 
-    user_id:  'str | object'
-    username: 'str | object'
-    email:    'str | object'
-    display_name:  'str | object'
-    first_name:    'str | object'
-    middle_name:   'str | object'
-    last_name:     'str | object'
-    sign_up_status:  'str | object'
-    approval_status: 'str | object'
-    paginate:  'str | object'
-    cur_page:  'str | object'
-    page_size: 'str | object'
-    name_op:   'str | object'
-    is_name_exact: 'str | object'
+    # Query criteria
+    user_id         = not_given # type:  str | object
+    username        = not_given # type:  str | object
+    email           = not_given # type:  str | object
+    display_name    = not_given # type:  str | object
+    first_name      = not_given # type:  str | object
+    middle_name     = not_given # type:  str | object
+    last_name       = not_given # type:  str | object
+    sign_up_status  = not_given # type:  str | object
+    approval_status = not_given # type:  str | object
 
-    def __init__(self) -> 'None':
-
-        # Query criteria
-        self.user_id = not_given
-        self.username = not_given
-        self.email = not_given
-        self.display_name = not_given
-        self.first_name = not_given
-        self.middle_name = not_given
-        self.last_name = not_given
-        self.sign_up_status = not_given
-        self.approval_status = not_given
-
-        # Query config
-        self.paginate = True
-        self.cur_page = 1
-        self.page_size = None
-        self.name_op = const.search.and_
-        self.is_name_exact = True
+    # Query config
+    paginate      = True  # type: bool
+    cur_page      = 1     # type: int
+    page_size     = None  # type: strnone
+    is_name_exact = True  # type: bool
+    name_op       = const.search.and_ # type: str
 
 # ################################################################################################################################
 # ################################################################################################################################
