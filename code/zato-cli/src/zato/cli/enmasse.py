@@ -1117,7 +1117,7 @@ class ObjectManager:
 
             dep = self.find(info['dependent_type'], {'id': dep_id})
 
-            if dep_id != 'ZATO_SEC_USE_RBAC':
+            if (dep_id != 'ZATO_SEC_USE_RBAC') and (field_name != 'sec_def' and dep is None):
                 if not dep:
                     msg = 'Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, item:`{}`'
                     raise Exception(msg.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))

@@ -13,7 +13,6 @@ from contextlib import closing
 from enum import Enum
 from json import dumps as stdlib_dumps
 from operator import attrgetter
-from tempfile import NamedTemporaryFile
 from traceback import format_exc
 from uuid import uuid4
 
@@ -41,6 +40,7 @@ from zato.common.rate_limiting import DefinitionParser
 from zato.common.scheduler import get_startup_job_services
 from zato.common.typing_ import any_
 from zato.common.util.api import hot_deploy, payload_from_request
+from zato.common.util.file_system import get_tmp_path
 from zato.common.util.stats import combine_table_data, collect_current_usage
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Float, Integer, Service as ZatoService
@@ -642,9 +642,15 @@ class UploadPackage(AdminService):
         input_required = ('cluster_id', 'payload', 'payload_name')
 
     def handle(self):
-        with NamedTemporaryFile(prefix='zato-hd-', suffix=self.request.input.payload_name) as tf:
+
+        prefix='zato-hd-'
+        suffix=self.request.input.payload_name
+        body = uuid4().hex
+        file_name_full = get_tmp_path(prefix, suffix, body)
+
+        with open(file_name_full, 'wb') as tf:
             input_payload = b64decode(self.request.input.payload)
-            tf.write(input_payload)
+            _ = tf.write(input_payload)
             tf.flush()
 
             package_id = hot_deploy(self.server, self.request.input.payload_name, tf.name, False)

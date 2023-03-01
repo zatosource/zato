@@ -266,7 +266,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         debugger_host = server_config.main.debugger_host
         debugger_port = server_config.main.debugger_port
         logger.info('Debugger waiting for connections on %s:%s', debugger_host, debugger_port)
-        debugpy.listen((debugger_host, debugger_port))
+        _ = debugpy.listen((debugger_host, debugger_port))
         debugpy.wait_for_client()
 
     sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
@@ -336,7 +336,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     user_locale = server_config.misc.get('locale', None)
     if user_locale:
-        locale.setlocale(locale.LC_ALL, user_locale)
+        _ = locale.setlocale(locale.LC_ALL, user_locale)
         value = 12345
         logger.info('Locale is `%s`, amount of %s -> `%s`', user_locale, value, locale.currency(
             value, grouping=True))
@@ -377,6 +377,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
     server.has_fg = options.get('fg') or False
+    server.deploy_auto_from = options.get('deploy_auto_from') or ''
     server.crypto_manager = crypto_manager
     server.odb_data = server_config.odb
     server.host = zato_gunicorn_app.zato_host
@@ -516,6 +517,7 @@ if __name__ == '__main__':
             'stderr_path': None,
             'env_file': '',
             'stop_after': None,
+            'deploy_auto_from': ''
         }
     else:
         server_base_dir = sys.argv[1]
@@ -525,7 +527,7 @@ if __name__ == '__main__':
     if not os.path.isabs(server_base_dir):
         server_base_dir = os.path.abspath(os.path.join(os.getcwd(), server_base_dir))
 
-    run(server_base_dir, options=cmd_line_options)
+    _ = run(server_base_dir, options=cmd_line_options)
 
 # ################################################################################################################################
 # ################################################################################################################################

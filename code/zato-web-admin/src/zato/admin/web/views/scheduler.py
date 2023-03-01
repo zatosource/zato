@@ -514,7 +514,7 @@ def execute(req, job_id, cluster_id):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def get_definition(req, start_date, repeats, weeks, days, hours, minutes, seconds):
+def get_definition(req, start_date, repeats, weeks, days, hours, minutes, seconds) -> 'HttpResponse':
     start_date = _get_start_date(start_date)
 
     definition = _interval_based_job_def(req.user_profile, start_date, repeats, weeks, days, hours, minutes, seconds)
