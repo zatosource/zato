@@ -7,7 +7,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from base64 import b64decode, b64encode
 from contextlib import closing
 from enum import Enum
