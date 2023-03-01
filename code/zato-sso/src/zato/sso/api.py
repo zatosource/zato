@@ -54,7 +54,7 @@ class SSOAPI:
         self,
         server,   # type: ParallelServer
         sso_conf, # type: Bunch
-        odb_session_func, # type: callable_
+        odb_session_func, # type: callnone
         encrypt_func,     # type: callable_
         decrypt_func,     # type: callable_
         hash_func,        # type: callable_
