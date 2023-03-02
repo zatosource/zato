@@ -162,8 +162,6 @@ class InvalidTOTPError(ValidationError):
 class SearchCtx:
     """ A container for SSO user search parameters.
     """
-    __slots__ = ('user_id', 'username', 'email', 'display_name', 'first_name', 'middle_name', 'last_name', 'sign_up_status',
-        'approval_status', 'paginate', 'cur_page', 'page_size', 'name_op', 'is_name_exact')
 
     # Query criteria
     user_id:         'str | object' = not_given
@@ -189,7 +187,6 @@ class SearchCtx:
 class SignupCtx:
     """ A container for SSO user signup parameters.
     """
-    __slots__ = ('username', 'email', 'password', 'current_app', 'app_list', 'sign_up_status')
 
     username:       'str' = ''
     email:          'str' = ''
