@@ -274,7 +274,7 @@ class WebSocket(_WebSocket):
             from orjson import dumps as dumps_func
 
         elif json_library == 'rapidjson':
-            from rapidjson import dumps as dumps_func
+            from rapidjson import dumps as dumps_func # type: ignore
 
         elif json_library == 'bson':
             from bson.json_util import dumps as dumps_func
@@ -399,7 +399,7 @@ class WebSocket(_WebSocket):
 
         # Drop WSGI keys pointing to complex Python objects such as sockets
         for name in _wsgi_drop_keys:
-            self.initial_http_wsgi_environ.pop(name, None)
+            _ = self.initial_http_wsgi_environ.pop(name, None)
 
         # Responses to previously sent requests - keyed by request IDs
         self.responses_received = {}
@@ -1061,7 +1061,7 @@ class WebSocket(_WebSocket):
     def _handle_invoke_service(self, cid:'str', msg:'Bunch') -> 'None':
 
         try:
-            service_response = self.invoke_service(self.config.service_name, msg.data, cid=cid)
+            service_response = self.invoke_service(cast_('str', self.config.service_name), msg.data, cid=cid)
         except Exception as e:
 
             # This goes to WSX logs, with a full traceback
@@ -1466,7 +1466,7 @@ class WebSocket(_WebSocket):
             self._local_address, self.config.name, self.python_id, self.forwarded_for, self.forwarded_for_fqdn,
             self.pub_client_id)
 
-        spawn(self._ensure_session_created)
+        _ = spawn(self._ensure_session_created)
 
 # ################################################################################################################################
 
@@ -1613,7 +1613,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
             # Yes, we do, although we are not sure yet if input is valid,
             # e.g. HTTP_UPGRADE may be missing.
             else:
-                super(WebSocketContainer, self).__call__(wsgi_environ, start_response)
+                _ = super(WebSocketContainer, self).__call__(wsgi_environ, start_response)
 
         except HandshakeError:
             logger.warning('Handshake error; e:`%s`', format_exc())
@@ -1729,11 +1729,11 @@ class WebSocketServer(_Gevent_WSGIServer):
 
         address_info = urlparse(config.address)
 
-        host, port = address_info.netloc.split(':')
-        config.host = host
+        host, port = address_info.netloc.split(':') # type: ignore
+        config.host = host # type: ignore
         config.port = int(port)
 
-        config.path = address_info.path
+        config.path = address_info.path # type: ignore
         config.needs_tls = address_info.scheme == 'wss'
         config.auth_func = auth_func
         config.on_message_callback = on_message_callback
@@ -1832,7 +1832,7 @@ class ChannelWebSocket(Connector):
             self.is_connected = False
 
     def get_log_details(self) -> 'str':
-        return self.config.address
+        return cast_('str', self.config.address)
 
     def invoke(self, cid:'str', pub_client_id:'str', request:'any_', timeout:'int'=5) -> 'any_':
         return self._wsx_server.invoke_client(cid, pub_client_id, request, timeout)
