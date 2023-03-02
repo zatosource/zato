@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # First thing in the process
 from gevent import monkey
-monkey.patch_all()
+_ = monkey.patch_all()
 
 # stdlib
 import random
@@ -669,7 +669,7 @@ class Client:
             raise Exception('Client is not authenticated')
 
         request_id = MsgPrefix.InvokeService.format(new_cid())
-        spawn(self.send, request_id, ServiceInvocationRequest(request_id, data, self.config, self.auth_token))
+        _ = spawn(self.send, request_id, ServiceInvocationRequest(request_id, data, self.config, self.auth_token))
 
         response = self._wait_for_response(request_id, wait_time=timeout)
 
@@ -721,7 +721,7 @@ if __name__ == '__main__':
 
     # First thing in the process
     from gevent import monkey
-    monkey.patch_all()
+    _ = monkey.patch_all()
 
     # stdlib
     import logging
@@ -766,7 +766,7 @@ if __name__ == '__main__':
     client.run()
 
     # .. wait until it is authenticated ..
-    client.wait_until_authenticated()
+    _ = client.wait_until_authenticated()
 
     # .. and run sample code now ..
 
