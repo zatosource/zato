@@ -8,30 +8,22 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts, common_totp_opts
+from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool
 
 # ################################################################################################################################
 
 if 0:
 
-    # stdlib
     from argparse import Namespace
-
-    # Bunch
     from bunch import Bunch
-
-    # Python 2/3 compatibility
-    from zato.common.py23_.past.builtins import unicode
-
-    # Zato
     from zato.common.odb.model import SSOUser
+    from zato.common.typing_ import any_, intnone
     from zato.sso.api import UserAPI
 
-    # For pyflakes
     Bunch = Bunch
     Namespace = Namespace
     SSOUser = SSOUser
-    unicode = unicode
     UserAPI = UserAPI
 
 # ################################################################################################################################
@@ -44,17 +36,17 @@ class SSOCommand(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _get_cid(self):
+    def _get_cid(self) -> 'str':
         return 'cli'
 
 # ################################################################################################################################
 
-    def _get_current_app(self):
+    def _get_current_app(self) -> 'str':
         return 'zato-cli'
 
 # ################################################################################################################################
 
-    def _get_current_host(self):
+    def _get_current_host(self) -> 'str':
 
         # Zato
         from zato.common.util.api import current_host
@@ -63,7 +55,7 @@ class SSOCommand(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _get_user(self):
+    def _get_user(self) -> 'str':
 
         # Zato
         from zato.common.util.api import current_host, current_user
@@ -72,8 +64,7 @@ class SSOCommand(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _get_sso_config(self, args, repo_location, secrets_conf):
-        # type: (Namespace, unicode, Bunch) -> UserAPI
+    def _get_sso_config(self, args:'Namespace', repo_location:'str', secrets_conf:'Bunch') -> 'UserAPI':
 
         # Zato
         from zato.common.crypto.api import CryptoManager
@@ -90,21 +81,21 @@ class SSOCommand(ZatoCommand):
         server_conf = get_config(
             repo_location, 'server.conf', needs_user_config=False, crypto_manager=crypto_manager, secrets_conf=secrets_conf)
 
-        def _get_session():
+        def _get_session() -> 'any_':
             return self.get_odb_session_from_server_config(server_conf, None)
 
-        def _hash_secret(_secret):
+        def _hash_secret(_secret:'any_') -> 'any_':
             return crypto_manager.hash_secret(_secret, 'sso.super-user')
 
         user_api = UserAPI(
-            server=None,
+            server=cast_('any_', None),
             sso_conf=sso_conf,
-            totp=None,
-            odb_session_func=None,
+            totp=cast_('any_', None),
+            odb_session_func=cast_('any_', None),
             encrypt_func=crypto_manager.encrypt,
             decrypt_func=crypto_manager.decrypt,
             hash_func=_hash_secret,
-            verify_hash_func=None,
+            verify_hash_func=cast_('any_', None),
             new_user_id_func=new_user_id
             )
         user_api.post_configure(_get_session, True, False)
@@ -113,8 +104,7 @@ class SSOCommand(ZatoCommand):
 
 # ################################################################################################################################
 
-    def execute(self, args):
-        # type: (Namespace) -> object
+    def execute(self, args:'Namespace') -> 'any_':
 
         # stdlib
         import os
@@ -138,36 +128,36 @@ class SSOCommand(ZatoCommand):
         else:
             user = None
 
-        return self._on_sso_command(args, user, user_api)
+        return self._on_sso_command(args, cast_('any_', user), cast_('any_', user_api))
 
 # ################################################################################################################################
 
-    def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, Bunch) -> object
+    def _on_sso_command(self, args:'Namespace', user:'SSOUser', user_api:'Bunch') -> 'any_':
         raise NotImplementedError('Must be implement by subclasses')
 
 # ################################################################################################################################
 
 class _CreateUser(SSOCommand):
-    user_required = False
-    create_func = None
-    user_type = None
 
-    allow_empty_secrets = False
+    user_type:'str'   = ''
+    create_func:'str' = ''
+    user_required:'bool' = False
+
+    allow_empty_secrets:'bool' = False
+
     opts = [
-        {'name': 'username', 'help': 'Username to use'},
-        {'name': '--email', 'help': "Person's email"},
+        {'name': 'username',       'help': 'Username to use'},
+        {'name': '--email',        'help': "Person's email"},
         {'name': '--display-name', 'help': "Person's display name"},
-        {'name': '--first-name', 'help': "Person's first name"},
-        {'name': '--middle-name', 'help': "Person's middle name"},
-        {'name': '--last-name', 'help': "Person's middle name"},
-        {'name': '--password', 'help': 'Password'},
+        {'name': '--first-name',   'help': "Person's first name"},
+        {'name': '--middle-name',  'help': "Person's middle name"},
+        {'name': '--last-name',    'help': "Person's middle name"},
+        {'name': '--password',     'help': 'Password'},
     ]
 
 # ################################################################################################################################
 
-    def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI)
+    def _on_sso_command(self, args:'Namespace', user:'SSOUser', user_api:'UserAPI') -> 'intnone':
 
         # Bunch
         from bunch import Bunch
@@ -210,16 +200,16 @@ class _CreateUser(SSOCommand):
 class CreateUser(_CreateUser):
     """ Creates a new regular SSO user
     """
-    create_func = 'create_user'
     user_type = 'user'
+    create_func = 'create_user'
 
 # ################################################################################################################################
 
 class CreateSuperUser(_CreateUser):
     """ Creates a new SSO super-user
     """
-    create_func = 'create_super_user'
     user_type = 'super-user'
+    create_func = 'create_super_user'
 
 # ################################################################################################################################
 
@@ -231,8 +221,7 @@ class DeleteUser(SSOCommand):
         {'name': '--yes', 'help': 'Do not prompt for confirmation, assume yes', 'action': 'store_true'},
     ]
 
-    def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI)
+    def _on_sso_command(self, args:'Namespace', user:'SSOUser', user_api:'UserAPI') -> 'None':
 
         if not args.yes:
             template = 'Delete user? `{}`'.format(user.username)
@@ -253,8 +242,7 @@ class LockUser(SSOCommand):
         {'name': 'username', 'help': 'User account to lock'},
     ]
 
-    def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI)
+    def _on_sso_command(self, args:'Namespace', user:'SSOUser', user_api:'UserAPI') -> 'None':
 
         user_api.lock_user(
             self._get_cid(), user.user_id, None, self._get_current_app(), self._get_current_host(), False, self._get_user())
@@ -269,8 +257,7 @@ class UnlockUser(SSOCommand):
         {'name': 'username', 'help': 'User account to unlock'},
     ]
 
-    def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI)
+    def _on_sso_command(self, args:'Namespace', user:'SSOUser', user_api:'UserAPI') -> 'None':
 
         user_api.unlock_user(
             self._get_cid(), user.user_id, None, self._get_current_app(), self._get_current_host(), False, self._get_user())
@@ -285,8 +272,7 @@ class Login(SSOCommand):
         {'name': 'username', 'help': 'User to log in as (no password is required)'},
     ]
 
-    def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI)
+    def _on_sso_command(self, args:'Namespace', user:'SSOUser', user_api:'UserAPI') -> 'None':
 
         # Zato
         from zato.common.util.api import current_host
@@ -307,8 +293,7 @@ class Logout(SSOCommand):
         {'name': 'ust', 'help': 'User session token to log out by'},
     ]
 
-    def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI)
+    def _on_sso_command(self, args:'Namespace', user:'SSOUser', user_api:'UserAPI') -> 'None':
         user_api.logout(self._get_cid(), args.ust, None, '127.0.0.1', skip_sec=True)
         self.logger.info('User logged out by UST')
 
@@ -324,8 +309,7 @@ class ChangeUserPassword(SSOCommand):
         {'name': '--must-change', 'help': 'A flag indicating whether the password must be changed on next login', 'type':as_bool},
     ]
 
-    def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI)
+    def _on_sso_command(self, args:'Namespace', user:'SSOUser', user_api:'UserAPI') -> 'intnone':
 
         # Zato
         from zato.sso import ValidationError
@@ -351,14 +335,15 @@ class ResetUserPassword(SSOCommand):
         {'name': '--must-change', 'help': 'A flag indicating whether the password must be changed on next login', 'type':as_bool},
     ]
 
-    def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI)
+    def _on_sso_command(self, args:'Namespace', user:'SSOUser', user_api:'UserAPI') -> 'None':
 
         # Zato
         from zato.common.crypto.api import CryptoManager
 
         new_password = CryptoManager.generate_password()
-        new_password = new_password.decode('utf8')
+
+        if isinstance(new_password, bytes):
+            new_password = new_password.decode('utf8')
 
         user_api.set_password(
             self._get_cid(), user.user_id, new_password, args.must_change, args.expiry, self._get_current_app(),
@@ -373,8 +358,7 @@ class ResetTOTPKey(SSOCommand):
     """
     opts = common_totp_opts
 
-    def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI)
+    def _on_sso_command(self, args:'Namespace', user:'SSOUser', user_api:'UserAPI') -> 'None':
 
         # Zato
         from zato.cli.util import get_totp_info_from_args
@@ -394,8 +378,7 @@ class CreateODB(ZatoCommand):
     """
     opts = common_odb_opts
 
-    def execute(self, args, show_output=True):
-        # type: (Namespace)
+    def execute(self, args:'Namespace', show_output:'bool'=True):
 
         # Zato
         from zato.common.odb.model.sso import \
