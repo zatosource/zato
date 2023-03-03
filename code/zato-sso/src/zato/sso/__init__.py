@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, strlistnone
+    from zato.common.typing_ import stranydict, strlistnone, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -162,43 +162,24 @@ class InvalidTOTPError(ValidationError):
 class SearchCtx:
     """ A container for SSO user search parameters.
     """
-    __slots__ = ('user_id', 'username', 'email', 'display_name', 'first_name', 'middle_name', 'last_name', 'sign_up_status',
-        'approval_status', 'paginate', 'cur_page', 'page_size', 'name_op', 'is_name_exact')
 
-    user_id:  'str | object'
-    username: 'str | object'
-    email:    'str | object'
-    display_name:  'str | object'
-    first_name:    'str | object'
-    middle_name:   'str | object'
-    last_name:     'str | object'
-    sign_up_status:  'str | object'
-    approval_status: 'str | object'
-    paginate:  'str | object'
-    cur_page:  'str | object'
-    page_size: 'str | object'
-    name_op:   'str | object'
-    is_name_exact: 'str | object'
+    # Query criteria
+    user_id:         'str | object' = not_given
+    username:        'str | object' = not_given
+    email:           'str | object' = not_given
+    display_name:    'str | object' = not_given
+    first_name:      'str | object' = not_given
+    middle_name:     'str | object' = not_given
+    last_name:       'str | object' = not_given
+    sign_up_status:  'str | object' = not_given
+    approval_status: 'str | object' = not_given
 
-    def __init__(self) -> 'None':
-
-        # Query criteria
-        self.user_id = not_given
-        self.username = not_given
-        self.email = not_given
-        self.display_name = not_given
-        self.first_name = not_given
-        self.middle_name = not_given
-        self.last_name = not_given
-        self.sign_up_status = not_given
-        self.approval_status = not_given
-
-        # Query config
-        self.paginate = True
-        self.cur_page = 1
-        self.page_size = None
-        self.name_op = const.search.and_
-        self.is_name_exact = True
+    # Query config
+    paginate:      'bool'    = True
+    cur_page:      'int'     = 1
+    page_size:     'strnone' = None
+    name_op:       'str'     = const.search.and_
+    is_name_exact: 'bool'    = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -206,22 +187,13 @@ class SearchCtx:
 class SignupCtx:
     """ A container for SSO user signup parameters.
     """
-    __slots__ = ('username', 'email', 'password', 'current_app', 'sign_up_status', 'app_list')
 
-    username:    'str'
-    email:       'str'
-    password:    'str'
-    current_app: 'str'
-    sign_up_status: 'str'
-    app_list: 'strlistnone'
-
-    def __init__(self):
-        self.username = ''
-        self.email = ''
-        self.password = ''
-        self.current_app = None
-        self.sign_up_status = const.signup_status.before_confirmation
-        self.app_list = None
+    username:       'str' = ''
+    email:          'str' = ''
+    password:       'str' = ''
+    current_app:    'str' = None
+    app_list:       'strlistnone' = None
+    sign_up_status: 'str' = const.signup_status.before_confirmation
 
     def to_dict(self) -> 'stranydict':
         return {

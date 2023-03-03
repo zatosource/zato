@@ -642,7 +642,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.add_pickup_conf_from_env_variables()
 
         # Look up pickup configuration based on what should be auto-deployed on startup.
-        self.add_pickup_conf_from_auto_deploy()
+        if self.deploy_auto_from:
+            self.add_pickup_conf_from_auto_deploy()
 
         # Append additional services that can be invoked through WebSocket gateways.
         self.add_wsx_gateway_service_allowed()

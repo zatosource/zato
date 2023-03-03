@@ -8,9 +8,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # First thing in the process
 from gevent import monkey
-monkey.patch_all()
+_ = monkey.patch_all()
 
 # stdlib
+import os
 import random
 import socket
 from dataclasses import dataclass
@@ -101,8 +102,9 @@ class Config:
 
 @dataclass(init=False)
 class ClientMeta(Model):
-    action: 'str'
     id: 'str'
+    action: 'str'
+    attrs: 'strnone' = None
     timestamp: 'str'
     client_id: 'str'
     client_name: 'str'
@@ -174,6 +176,11 @@ class AuthRequest(ClientToServerMessage):
     def enrich(self, msg:'ClientToServerModel') -> 'ClientToServerModel':
         msg.meta.username = self.config.username
         msg.meta.secret = self.config.secret
+
+        # Client attributes can be optionally provided via environment variables
+        if client_attrs := os.environ.get('Zato_WSX_Client_Attrs'):
+            msg.meta.attrs = client_attrs
+
         return msg
 
 # ################################################################################################################################
@@ -484,7 +491,7 @@ class Client:
 
 # ################################################################################################################################
 
-    def on_message(self, msg:'TextMessage') -> 'None':
+    def _on_message(self, msg:'TextMessage') -> 'None':
         """ Invoked for each message received from Zato, both for responses to previous requests and for incoming requests.
         """
         _msg_parsed = JSONParser().parse(msg.data) # type: any_
@@ -502,6 +509,14 @@ class Client:
             data = self.on_request_callback(RequestFromServer.from_json(_msg))
             response_id = MsgPrefix.SendResponse.format(new_cid())
             self.send(response_id, ResponseToServer(_msg['meta']['id'], data, response_id, self.config, self.auth_token))
+
+# ################################################################################################################################
+
+    def on_message(self, msg:'TextMessage') -> 'None':
+        try:
+            return self._on_message(msg)
+        except Exception:
+            self.logger.info('Exception in on_message -> %s', format_exc())
 
 # ################################################################################################################################
 
@@ -669,7 +684,7 @@ class Client:
             raise Exception('Client is not authenticated')
 
         request_id = MsgPrefix.InvokeService.format(new_cid())
-        spawn(self.send, request_id, ServiceInvocationRequest(request_id, data, self.config, self.auth_token))
+        _ = spawn(self.send, request_id, ServiceInvocationRequest(request_id, data, self.config, self.auth_token))
 
         response = self._wait_for_response(request_id, wait_time=timeout)
 
@@ -721,7 +736,7 @@ if __name__ == '__main__':
 
     # First thing in the process
     from gevent import monkey
-    monkey.patch_all()
+    _ = monkey.patch_all()
 
     # stdlib
     import logging
@@ -766,7 +781,7 @@ if __name__ == '__main__':
     client.run()
 
     # .. wait until it is authenticated ..
-    client.wait_until_authenticated()
+    _ = client.wait_until_authenticated()
 
     # .. and run sample code now ..
 
