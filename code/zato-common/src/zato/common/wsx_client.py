@@ -494,8 +494,7 @@ class Client:
     def _on_message(self, msg:'TextMessage') -> 'None':
         """ Invoked for each message received from Zato, both for responses to previous requests and for incoming requests.
         """
-        _msg_parsed = JSONParser().parse(msg.data) # type: any_
-        _msg = _msg_parsed.as_dict() # type: anydict
+        _msg = JSONParser().parse(msg.data) # type: anydict
         self.logger.info('Received message `%s`', _msg)
 
         in_reply_to = _msg['meta'].get('in_reply_to')
