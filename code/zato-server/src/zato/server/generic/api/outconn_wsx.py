@@ -12,7 +12,7 @@ from threading import current_thread
 from traceback import format_exc
 
 # gevent
-from gevent import sleep
+from gevent import sleep, spawn
 
 # ws4py
 from ws4py.client.threadedclient import WebSocketClient
@@ -280,9 +280,9 @@ class WSXClient:
     def __init__(self, config:'stranydict') -> 'None':
         self.config = config
         self.is_zato = self.config['is_zato']
-        self._init()
+        self.impl = None
 
-    def _init(self) -> 'None':
+    def init(self) -> 'None':
 
         if self.is_zato:
             _impl_class = ZatoWSXClient
@@ -290,7 +290,6 @@ class WSXClient:
             _impl_class = _NonZatoWSXClient
 
         self.impl = _impl_class(self.config, self.on_connected_cb, self.on_message_cb, self.on_close_cb, self.config['address'])
-
         self.send = self.impl.send
 
         if _impl_class is ZatoWSXClient:
@@ -457,8 +456,11 @@ class OutconnWSXWrapper(Wrapper):
 # ################################################################################################################################
 
     def add_client(self) -> 'None':
+
         try:
             conn = WSXClient(self.config)
+            self.conn_in_progress_list.append(conn)
+            conn.init()
 
             if not conn.is_impl_connected():
                 self.client.decr_in_progress_count()
