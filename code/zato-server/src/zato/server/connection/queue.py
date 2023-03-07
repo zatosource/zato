@@ -328,7 +328,11 @@ class Wrapper:
         self.python_id = get_python_id(self)
         self.should_reconnect = True
 
-        conn_type = self.config.get('type_')
+        # An optional list of all the connections that are currently trying to connect
+        # but which are not connected yet, e.g. this will apply to WebSockets.
+        self.conn_in_progress_list = []
+
+        conn_type = self.config.get('type_') or ''
         address = self.config['auth_url']
 
         self.client = ConnectionQueue(
@@ -372,8 +376,22 @@ class Wrapper:
 
 # ################################################################################################################################
 
+    def delete_in_progress_connections(self, reason:'strnone'=None) -> 'None':
+
+        # These connections are trying to connect (e.g. WSXClient objects)
+        if self.conn_in_progress_list:
+            for item in self.conn_in_progress_list:
+                item.delete(reason)
+
+        self.conn_in_progress_list.clear()
+
+# ################################################################################################################################
+
     def delete_queue_connections(self, reason:'strnone'=None) -> 'None':
+
+        # These are connections that are already connected
         items = self.client.queue.queue
+
         for item in items:
             try:
                 logger.info('Deleting connection from queue for `%s`', self.config['name'])
@@ -404,7 +422,10 @@ class Wrapper:
             self.delete_requested = True
             self.client.keep_connecting = False
 
-            # Actuall delete all connections
+            # Delete connections that are still connecting
+            self.delete_in_progress_connections(reason)
+
+            # Delete connections that are already established
             self.delete_queue_connections(reason)
 
             # In case the client was in the process of building a queue of connections,
