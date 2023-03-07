@@ -12,7 +12,7 @@ from threading import current_thread
 from traceback import format_exc
 
 # gevent
-from gevent import sleep, spawn
+from gevent import sleep
 
 # ws4py
 from ws4py.client.threadedclient import WebSocketClient
