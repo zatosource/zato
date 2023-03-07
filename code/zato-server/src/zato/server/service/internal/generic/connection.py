@@ -37,6 +37,7 @@ if 0:
     from zato.common.typing_ import any_, anydict, anylist
     from zato.server.service import Service
 
+    anylist = anylist
     Bunch = Bunch
     Service = Service
 
