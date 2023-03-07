@@ -695,6 +695,14 @@ class Client:
                     self.config.address,
                     self.conn.sock,
                 )
+
+                # .. this is needed to ensure that the next attempt will not reuse the current TCP socket ..
+                # .. which, under Windows, would make it impossible to establish the connection ..
+                # .. even if the remote endpoint existed. I.e. this would result in the error below:
+                # .. [Errno 10061] [WinError 10061] No connection could be made because the target machine actively refused it.
+                self.conn.close_connection()
+
+                # .. now, we can sleep a bit ..
                 sleep(_sleep_time)
                 now = utcnow()
             else:
