@@ -28,14 +28,13 @@ from zato.server.service.internal.generic import _BaseService
 from zato.server.service.meta import DeleteMeta
 
 # Python 2/3 compatibility
-from zato.common.py23_.past.builtins import basestring
 from six import add_metaclass
 
 # ################################################################################################################################
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict, anylist, cast
     from zato.server.service import Service
 
     Bunch = Bunch
@@ -115,7 +114,7 @@ class _CreateEdit(_BaseService):
 
 # ################################################################################################################################
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         data = deepcopy(self.request.input)
 
@@ -132,7 +131,7 @@ class _CreateEdit(_BaseService):
                 input_secret = input_secret.decode('utf8')
 
         raw_request = self.request.raw_request
-        if isinstance(raw_request, basestring):
+        if isinstance(raw_request, (str, bytes)):
             raw_request = loads(raw_request)
 
         for key, value in raw_request.items():
@@ -306,7 +305,7 @@ class GetList(AdminService):
 
 # ################################################################################################################################
 
-    def get_data(self, session):
+    def get_data(self, session:'any_') -> 'any_':
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
         data = self._search(connection_list, session, cluster_id, self.request.input.type_, False)
         return data
@@ -362,22 +361,23 @@ class GetList(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def handle(self):
+    def handle(self) -> 'None':
         out = {'_meta':{}, 'response':[]}
+        _meta = cast_('anydict', out['_meta'])
 
         with closing(self.odb.session()) as session:
 
             search_result = self.get_data(session)
-            out['_meta'].update(search_result.to_dict())
+            _meta.update(search_result.to_dict())
 
             for item in search_result:
                 conn = GenericConnection.from_model(item)
                 conn_dict = conn.to_dict()
                 self._enrich_conn_dict(conn_dict)
-                out['response'].append(conn_dict)
+                cast_('anylist', out['response']).append(conn_dict)
 
         # Results are already included in the list of out['response'] elements
-        out['_meta'].pop('result', None)
+        _ = _meta.pop('result', None)
 
         self.response.payload = dumps(out)
 
@@ -394,7 +394,7 @@ class ChangePassword(ChangePasswordBase):
 
 # ################################################################################################################################
 
-    def _run_pre_handle_tasks_CLOUD_MICROSOFT_365(self, session, instance):
+    def _run_pre_handle_tasks_CLOUD_MICROSOFT_365(self, session:'any_', instance:'any_') -> 'None':
 
         # stdlib
         from json import dumps, loads
@@ -421,7 +421,7 @@ class ChangePassword(ChangePasswordBase):
         credentials = (client_id, secret_value)
 
         account = Account(credentials)
-        account.con.request_token(authorization_url=auth_url, state=state)
+        _ = account.con.request_token(authorization_url=auth_url, state=state)
 
         opaque1['token'] = account.con.token_backend.token
         opaque1 = dumps(opaque1)
@@ -432,7 +432,7 @@ class ChangePassword(ChangePasswordBase):
 
 # ################################################################################################################################
 
-    def _run_pre_handle_tasks(self, session, instance):
+    def _run_pre_handle_tasks(self, session:'any_', instance:'any_') -> 'None':
         conn_type = self.request.input.get('type_')
 
         if conn_type == COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365:
@@ -440,9 +440,9 @@ class ChangePassword(ChangePasswordBase):
 
 # ################################################################################################################################
 
-    def handle(self):
+    def handle(self) -> 'None':
 
-        def _auth(instance, secret):
+        def _auth(instance:'any_', secret:'str | bytes') -> 'None':
             if secret:
 
                 # Always encrypt the secret given on input
@@ -480,7 +480,7 @@ class Ping(_BaseService):
         output_required = 'info',
         response_elem = None
 
-    def handle(self):
+    def handle(self) -> 'None':
         with closing(self.odb.session()) as session:
 
             # To ensure that the input ID is correct
@@ -497,7 +497,7 @@ class Ping(_BaseService):
             start_time = datetime.utcnow()
 
             try:
-                ping_func(self.request.input.id)
+                _ = ping_func(self.request.input.id)
             except Exception:
                 exc = format_exc()
                 self.logger.warning(exc)
@@ -520,7 +520,10 @@ class Invoke(AdminService):
         output_optional = 'response_data'
         response_elem = None
 
-    def handle(self):
+    def handle(self) -> 'None':
+
+        # Local aliases
+        response = None
 
         # Maps all known connection types to their implementation ..
         conn_type_to_container = {

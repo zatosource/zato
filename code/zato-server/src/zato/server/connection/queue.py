@@ -328,7 +328,7 @@ class Wrapper:
         self.python_id = get_python_id(self)
         self.should_reconnect = True
 
-        conn_type = self.config.get('type_')
+        conn_type = self.config.get('type_') or ''
         address = self.config['auth_url']
 
         self.client = ConnectionQueue(
