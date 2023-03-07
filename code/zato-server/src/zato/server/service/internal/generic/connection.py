@@ -34,7 +34,7 @@ from six import add_metaclass
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, anydict, anylist, cast
+    from zato.common.typing_ import any_, anydict, anylist
     from zato.server.service import Service
 
     Bunch = Bunch
