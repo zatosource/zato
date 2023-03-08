@@ -42,7 +42,7 @@ from zato.sso.util import check_credentials, check_remote_app_exists, make_data_
 
 if 0:
     from zato.common.odb.model import SSOSession
-    from zato.common.typing_ import anydict, callable_
+    from zato.common.typing_ import anydict, callable_, callnone
     from zato.server.base.parallel import ParallelServer
     from zato.sso.totp_ import TOTPAPI
 
@@ -239,7 +239,7 @@ class UserAPI:
         decrypt_func,     # type: callable_
         hash_func,        # type: callable_
         verify_hash_func, # type: callable_
-        new_user_id_func, # type: callable_
+        new_user_id_func, # type: callnone
         ) -> 'None':
 
         self.server = server
@@ -268,7 +268,7 @@ class UserAPI:
         }
 
         # For convenience, sessions are accessible through user API.
-        self.session = SessionAPI(self.sso_conf, self.totp, self.encrypt_func, self.decrypt_func, self.hash_func,
+        self.session = SessionAPI(self.server, self.sso_conf, self.totp, self.encrypt_func, self.decrypt_func, self.hash_func,
             self.verify_hash_func)
 
 # ################################################################################################################################
