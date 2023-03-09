@@ -444,10 +444,8 @@ class ClearEndpointQueue(AdminService):
 
     def handle(self) -> 'None':
 
-        # Make sure the (optional) queue type is one of allowed values
-        queue_type = self.request.input.queue_type
-
-        if queue_type:
+        # Make sure the (optional) queue type is one of the allowed values
+        if queue_type := self.request.input.queue_type:
             if queue_type not in _queue_type:
                 raise BadRequest(self.cid, 'Invalid queue_type:`{}`'.format(queue_type))
             else:
@@ -471,6 +469,12 @@ class ClearEndpointQueue(AdminService):
             _ = q.delete()
 
             session.commit()
+
+        # Notify delivery tasks that
+        self.broker_client.publish({
+            'sub_key': self.request.input.sub_key,
+            'action': PUBSUB.QUEUE_CLEAR.value,
+        })
 
 # ################################################################################################################################
 # ################################################################################################################################
