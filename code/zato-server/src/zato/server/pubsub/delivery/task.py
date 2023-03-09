@@ -149,7 +149,7 @@ class DeliveryTask:
 
 # ################################################################################################################################
 
-    def _delete_messages(self, to_delete:'msgiter', to_deliver:'msglist') -> 'None':
+    def _delete_messages(self, to_delete:'msgiter') -> 'None':
         """ Actually deletes messages - must be called with self.interrupt_lock held.
         """
         logger.info('Deleting message(s) `%s` from `%s` (%s)', to_delete, self.sub_key, self.topic_name)
@@ -162,13 +162,6 @@ class DeliveryTask:
 
             # .. delete it from our in-RAM delivery list ..
             self.delivery_list.remove_pubsub_msg(msg)
-
-            # .. and from the current list of messages to be delivered as well.
-            try:
-                to_deliver.remove(msg)
-            except ValueError:
-                # It is fine if the message in not in this list.
-                pass
 
 # ################################################################################################################################
 
@@ -409,6 +402,20 @@ class DeliveryTask:
             # Look up all the potential messages that we need to delete.
             to_delete = self._get_messages_to_delete(current_batch)
 
+            # Delete these messages first, before starting any delivery.
+            if to_delete:
+                self._delete_messages(to_delete)
+
+            # Clear out this list because we will be reusing it later in the delivery hook
+            to_delete = []
+
+            # It is possible that we do not have any messages to deliver here, e.g. because all of them were already deleted
+            # via self._delete_messages, in which case, we can simply return.
+            if not self.delivery_list:
+                result.is_ok = True
+                result.status_code = status_code.OK
+                return result
+
             # Unlike to_delete, which has to be computed dynamically,
             # these two can be initialized to their respective empty lists directly.
             to_deliver:'msglist' = [] # type: ignore[valid-type]
@@ -422,26 +429,12 @@ class DeliveryTask:
             else:
                 to_deliver[:] = current_batch[:] # type: ignore[index]
 
-            #
-            # Delete these messages first, before starting any delivery, either because self._get_messages_to_delete
-            # returned a non-empty list in this iteration or because the hook did.
-            #
-            # Note that any such messages will be deleted from the "to_deliver" list,
-            # potentially turning this list into an empty one.
-            #
+            # Our hook may have indicated what to delete, in which case, do delete that now.
             if to_delete:
-                self._delete_messages(to_delete, to_deliver)
+                self._delete_messages(to_delete)
 
             if to_skip:
                 logger.info('Skipping messages `%s`', to_skip)
-
-            # It is possible that we do not have any messages to deliver here,
-            # e.g. because all of them were already deleted in self._delete_messages,
-            # in which case, we can simply return.
-            if not to_deliver:
-                result.is_ok = True
-                result.status_code = status_code.OK
-                return result
 
             # Update the delivery counter before trying to deliver the messages
             self._update_delivery_counters(to_deliver)
