@@ -933,7 +933,7 @@ class Service:
 
                 else:
                     if e:
-                        raise e
+                        raise e from None
 
         # We don't accept it but some response needs to be returned anyway.
         else:
