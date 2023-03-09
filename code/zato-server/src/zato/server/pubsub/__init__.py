@@ -575,6 +575,13 @@ class PubSub:
 
 # ################################################################################################################################
 
+    def clear_task(self, sub_key:'str') -> 'None':
+        with self.lock:
+            ps_tool = self.pubsub_tool_by_sub_key[sub_key]
+            ps_tool.clear_task(sub_key)
+
+# ################################################################################################################################
+
     def _delete_subscription_by_sub_key(
         self,
         sub_key,          # type: str

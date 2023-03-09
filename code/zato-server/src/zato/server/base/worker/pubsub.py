@@ -111,6 +111,14 @@ class PubSub(WorkerImpl):
 
 # ################################################################################################################################
 
+    def on_broker_msg_PUBSUB_QUEUE_CLEAR(
+        self:'WorkerStore', # type: ignore
+        msg, # type: Bunch
+    ) -> 'None':
+        self.pubsub.clear_task(msg.sub_key)
+
+# ################################################################################################################################
+
     def on_broker_msg_PUBSUB_WSX_CLIENT_SUB_KEY_SERVER_REMOVE(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
