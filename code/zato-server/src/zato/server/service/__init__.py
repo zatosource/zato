@@ -46,6 +46,7 @@ from zato.common.json_schema import ValidationException as JSONSchemaValidationE
 from zato.common.typing_ import cast_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
 from zato.server.commands import CommandsFacade
+from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
@@ -552,6 +553,8 @@ class Service:
     component_enabled_target_matcher: 'bool'
     component_enabled_invoke_matcher: 'bool'
 
+    cache: 'CacheAPI'
+
     def __init__(
         self,
         *ignored_args:'any_',
@@ -572,7 +575,6 @@ class Service:
         self.user_config = Bunch()
         self.has_validate_input = False
         self.has_validate_output = False
-        self.cache = None
 
         self.usage = 0 # How many times the service has been invoked
         self.slow_threshold = maxint # After how many ms to consider the response came too late
