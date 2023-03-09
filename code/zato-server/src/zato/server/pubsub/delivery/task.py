@@ -149,7 +149,7 @@ class DeliveryTask:
 
 # ################################################################################################################################
 
-    def _delete_messages(self, to_delete:'msgiter') -> 'None':
+    def _delete_messages(self, to_delete:'msgiter', to_deliver:'msglist') -> 'None':
         """ Actually deletes messages - must be called with self.interrupt_lock held.
         """
         logger.info('Deleting message(s) `%s` from `%s` (%s)', to_delete, self.sub_key, self.topic_name)
@@ -157,9 +157,18 @@ class DeliveryTask:
         # Mark as deleted in SQL
         self.pubsub_set_to_delete(self.sub_key, [msg.pub_msg_id for msg in to_delete])
 
-        # Delete from our in-RAM delivery list
+        # Go through each of the messages that is to be deleted ..
         for msg in to_delete:
+
+            # .. delete it from our in-RAM delivery list ..
             self.delivery_list.remove_pubsub_msg(msg)
+
+            # .. and from the current list of messages to be delivered as well.
+            try:
+                to_deliver.remove(msg)
+            except ValueError:
+                # It is fine if the message in not in this list.
+                pass
 
 # ################################################################################################################################
 
@@ -286,17 +295,20 @@ class DeliveryTask:
             if self.clear_requested:
 
                 # .. take all of them into account ..
-                to_delete = cast_('anylist', current_batch)[:]
+                # to_delete = cast_('anylist', current_batch)[:]
+
+                self.delete_requested[:] = current_batch
 
                 # .. and reset the flag,
                 self.clear_requested = False
-            else:
 
-                # .. we are to delete only these selected messages (if any) ..
-                to_delete = self.delete_requested[:]
+            # else:
 
-                # .. and reset the list of what was to be deleted.
-                self.delete_requested.clear()
+            # .. we are to delete only these selected messages (if any) ..
+            to_delete = self.delete_requested[:]
+
+            # .. and reset the list of what was to be deleted.
+            self.delete_requested.clear()
 
         #
         # Unless we were already told to clear everything, go through each message
@@ -410,13 +422,26 @@ class DeliveryTask:
             else:
                 to_deliver[:] = current_batch[:] # type: ignore[index]
 
+            #
             # Delete these messages first, before starting any delivery, either because self._get_messages_to_delete
             # returned a non-empty list in this iteration or because the hook did.
+            #
+            # Note that any such messages will be deleted from the "to_deliver" list,
+            # potentially turning this list into an empty one.
+            #
             if to_delete:
-                self._delete_messages(to_delete)
+                self._delete_messages(to_delete, to_deliver)
 
             if to_skip:
                 logger.info('Skipping messages `%s`', to_skip)
+
+            # It is possible that we do not have any messages to deliver here,
+            # e.g. because all of them were already deleted in self._delete_messages,
+            # in which case, we can simply return.
+            if not to_deliver:
+                result.is_ok = True
+                result.status_code = status_code.OK
+                return result
 
             # Update the delivery counter before trying to deliver the messages
             self._update_delivery_counters(to_deliver)
@@ -707,7 +732,7 @@ class DeliveryTask:
         self.delivery_list.clear()
 
         # .. and log a higher-level message now.
-        msg = 'Cleared in-RAM delivery list for sub_key `%s` -> `%s`'
+        msg = 'Clearing task messages for sub_key `%s` -> `%s`'
         logger.info(msg, self.sub_key, self.py_object)
         logger_zato.info(msg, self.sub_key, self.py_object)
 
