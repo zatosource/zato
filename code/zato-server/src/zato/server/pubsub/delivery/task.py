@@ -152,7 +152,9 @@ class DeliveryTask:
     def is_running(self) -> 'bool':
         return self.keep_running
 
-    def _set_sub_config_attrs(self):
+# ################################################################################################################################
+
+    def _set_sub_config_attrs(self) -> 'None':
         self.wait_sock_err = float(self.sub_config['wait_sock_err'])
         self.wait_non_sock_err = float(self.sub_config['wait_non_sock_err'])
         self.delivery_max_retry = int(self.sub_config.get('delivery_max_retry', 0) or PUBSUB.DEFAULT.DELIVERY_MAX_RETRY)
