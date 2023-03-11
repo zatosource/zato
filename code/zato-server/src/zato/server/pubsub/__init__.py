@@ -539,10 +539,25 @@ class PubSub:
 # ################################################################################################################################
 
     def edit_subscription(self, config:'stranydict') -> 'None':
+
+        # Make sure we are the only ones updating the configuration now ..
         with self.lock:
+
+            # Reusable ..
+            sub_key = config['sub_key']
+
+            # .. such a subscription should exist ..
             sub = self._get_subscription_by_sub_key(config['sub_key'])
+
+            # .. update the whole config of the subscription object in place ..
             for key, value in config.items():
                 sub.config[key] = value
+
+            # .. now, obtain the PubSub tool responsible for this subscription ..
+            ps_tool = self.pubsub_tool_by_sub_key[sub_key] # type: PubSubTool
+
+            # .. and trigger an update of the underlying delivery task's configuration as well.
+            ps_tool.trigger_update_task_sub_config(sub_key)
 
 # ################################################################################################################################
 
