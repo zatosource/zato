@@ -57,7 +57,7 @@ INTERNAL_IPS = ('127.0.0.1',)
 # to load the internationalization machinery.
 USE_I18N = True
 
-DEBUG = False
+DEBUG = os.environ.get('Zato_Dashboard_Debug_Enabled') or False
 APPEND_SLASH = True
 SECURE_CONTENT_TYPE_NOSNIFF = False
 
