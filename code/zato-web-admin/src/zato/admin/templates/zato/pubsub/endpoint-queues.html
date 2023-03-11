@@ -247,7 +247,7 @@
                             {{ item.ext_client_id|no_value_indicator }}
                         </td>
 
-                        <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.clear('{{ item.sub_id }}', '{{ cluster_id }}')">Clear</a></td>
+                        <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.clear('{{ item.sub_id }}', '{{ cluster_id }}', '{{ item.topic_name }}')">Clear</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.edit('{{ item.sub_id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.delete_('{{ item.sub_id }}')">Delete</a></td>
 

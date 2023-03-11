@@ -44,7 +44,8 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     var last_interaction_link = '';
 
     var clear_link = String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint_queue.clear('{0}')\">Clear</a>", data.id));
+        String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint_queue.clear('{0}', '{1}', '{2}')\">Clear</a>",
+        data.id, data.cluster_id, data.topic_name));
     var edit_link = String.format('<td>{0}</td>',
         String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint_queue.edit('{0}')\">Edit</a>", data.id));
     var delete_link = String.format('<td>{0}</td>',
@@ -152,7 +153,7 @@ $.fn.zato.pubsub.endpoint_queue.get_current_depth_link = function(data, cluster_
     return current_depth = current_depth_gd + ' / ' + data.current_depth_non_gd;
 }
 
-$.fn.zato.pubsub.endpoint_queue.clear = function(id, cluster_id) {
+$.fn.zato.pubsub.endpoint_queue.clear = function(id, cluster_id, topic_name) {
 
     var instance = $.fn.zato.data_table.data[id];
 
@@ -172,7 +173,7 @@ $.fn.zato.pubsub.endpoint_queue.clear = function(id, cluster_id) {
     var jq_callback = function(ok) {
         if(ok) {
             var url = String.format('/zato/pubsub/endpoint/queue/clear/cluster/{0}/queue/{1}/', cluster_id, instance.sub_key);
-            $.fn.zato.post(url, http_callback, {'queue_name': instance.topic_name}, 'text');
+            $.fn.zato.post(url, http_callback, {'queue_name': topic_name}, 'text');
         }
     }
 
