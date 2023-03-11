@@ -246,6 +246,12 @@ class PubSubTool:
 
 # ################################################################################################################################
 
+    def trigger_update_task_sub_config(self, sub_key:'str') -> 'None':
+        task = self.delivery_tasks[sub_key]
+        task.update_sub_config()
+
+# ################################################################################################################################
+
     def _add_non_gd_messages_by_sub_key(self, sub_key:'str', messages:'dictlist') -> 'None':
         """ Low-level implementation of add_non_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """

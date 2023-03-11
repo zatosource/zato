@@ -71,6 +71,11 @@ sqlmsgiter = iterable_['SQLRow']
 class DeliveryTask:
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """
+
+    wait_sock_err: 'float'
+    wait_non_sock_err: 'float'
+    delivery_max_retry: 'int'
+
     def __init__(
         self,
         *,
@@ -98,14 +103,14 @@ class DeliveryTask:
         self.confirm_pubsub_msg_delivered_cb = confirm_pubsub_msg_delivered_cb
         self.sub_config = sub_config
         self.topic_name = sub_config['topic_name']
-        self.wait_sock_err = float(self.sub_config['wait_sock_err'])
-        self.wait_non_sock_err = float(self.sub_config['wait_non_sock_err'])
         self.last_iter_run = utcnow_as_ms()
         self.delivery_interval = self.sub_config['task_delivery_interval'] / 1000.0
-        self.delivery_max_retry = int(self.sub_config.get('delivery_max_retry', 0) or PUBSUB.DEFAULT.DELIVERY_MAX_RETRY)
         self.previous_delivery_method = self.sub_config['delivery_method']
         self.python_id = str(hex(id(self)))
         self.py_object = '<empty>'
+
+        # Set attributes that may be potentially changed in runtime by users
+        self._set_sub_config_attrs()
 
         # This is a total of delivery iterations
         self.delivery_iter = 0
@@ -146,6 +151,11 @@ class DeliveryTask:
 
     def is_running(self) -> 'bool':
         return self.keep_running
+
+    def _set_sub_config_attrs(self):
+        self.wait_sock_err = float(self.sub_config['wait_sock_err'])
+        self.wait_non_sock_err = float(self.sub_config['wait_non_sock_err'])
+        self.delivery_max_retry = int(self.sub_config.get('delivery_max_retry', 0) or PUBSUB.DEFAULT.DELIVERY_MAX_RETRY)
 
 # ################################################################################################################################
 
@@ -728,6 +738,11 @@ class DeliveryTask:
         msg = 'Clearing task messages for sub_key `%s` -> `%s`'
         logger.info(msg, self.sub_key, self.py_object)
         logger_zato.info(msg, self.sub_key, self.py_object)
+
+# ################################################################################################################################
+
+    def update_sub_config(self) -> 'None':
+        self._set_sub_config_attrs()
 
 # ################################################################################################################################
 
