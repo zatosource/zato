@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from operator import itemgetter
 
 # Zato
-from zato.common.api import DATA_FORMAT, PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.query import pubsub_endpoint_queue_list_by_sub_keys
 from zato.common.typing_ import cast_
