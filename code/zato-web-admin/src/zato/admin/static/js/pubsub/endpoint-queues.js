@@ -40,8 +40,7 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
 
     var total_link = $.fn.zato.pubsub.endpoint_queue.get_current_depth_link(data, data.cluster_id);
 
-    var sub_key_link = String.format(
-        '<a id="sub_key_{0}" href="javascript:$.fn.zato.pubsub.endpoint_queue.toggle_sub_key(\'{0}\')">Show</a>', data.id);
+    var sub_key_link = item.sub_key;
     var last_interaction_link = '';
 
     var clear_link = String.format('<td>{0}</td>',
