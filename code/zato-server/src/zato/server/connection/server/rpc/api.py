@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
 from zato.common.ext.dataclasses import dataclass
-from zato.common.typing_ import anylist, list_field
+from zato.common.typing_ import anylist, cast_, list_field
 from zato.server.connection.server.rpc.invoker import LocalServerInvoker, RemoteServerInvoker
 
 # ################################################################################################################################
@@ -122,7 +122,8 @@ class ServerRPC:
         out = InvokeAllResult()
 
         # Now, invoke all the servers ..
-        for invoker in self._invokers.values(): # type: ServerInvoker
+        for invoker in self._invokers.values():
+            invoker = cast_('ServerInvoker', invoker)
 
             # .. this includes responses for all the PIDs ..
             response = invoker.invoke_all_pids(service, request, *args, **kwargs)

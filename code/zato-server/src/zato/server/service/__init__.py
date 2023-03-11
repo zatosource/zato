@@ -968,6 +968,10 @@ class Service:
                 if response_elem == 'response' or (isinstance(response_elem, str) and response_elem.startswith('zato')):
                     return response[response_elem]
 
+                # This may be a dict response from a service, in which case we return it as is
+                elif isinstance(response, dict):
+                    return response
+
             # .. otherwise, this could be a dictionary of elements other than the above
             # so we just return the dict as it is.
             else:
