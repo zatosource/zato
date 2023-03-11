@@ -373,8 +373,14 @@ class UpdateEndpointQueue(AdminService):
         if out_rest_http_soap_id and out_soap_http_soap_id:
             raise BadRequest(self.cid, 'Cannot provide both out_rest_http_soap_id and out_soap_http_soap_id on input')
 
-        # WebSockets clients dynamic attach to delivery servers hence the servers cannot be updated by users
-        can_update_delivery_server = self.request.input.endpoint_type != COMMON_PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+        should_update_delivery_server = self.request.input.endpoint_type not in {
+
+            # WebSockets clients dynamically attach to delivery servers hence the servers cannot be updated by users
+            COMMON_PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
+
+            # Services are always invoked in the same server
+            COMMON_PUBSUB.ENDPOINT_TYPE.SERVICE.id,
+        }
 
         # We know we don't have both out_rest_http_soap_id and out_soap_http_soap_id on input
         # but we still need to find out if we have any at all.
@@ -391,10 +397,13 @@ class UpdateEndpointQueue(AdminService):
                 filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
                 one()
 
-            if can_update_delivery_server:
+            if should_update_delivery_server:
                 old_delivery_server_id = item.server_id
                 new_delivery_server_id = self.request.input.server_id
-                new_delivery_server_name = server_by_id(session, self.server.cluster_id, new_delivery_server_id).name
+                if new_delivery_server_id:
+                    new_delivery_server_name = server_by_id(session, self.server.cluster_id, new_delivery_server_id).name
+                else:
+                    new_delivery_server_name = None
             else:
                 # These are added purely for static type hints
                 old_delivery_server_id = -1
@@ -422,7 +431,7 @@ class UpdateEndpointQueue(AdminService):
 
             # We change the delivery server in background - note how we send name, not ID, on input.
             # This is because our invocation target will want to use self.server.rpc[server_name].invoke(...)
-            if can_update_delivery_server:
+            if should_update_delivery_server:
                 if old_delivery_server_id != new_delivery_server_id:
                     self.broker_client.publish({
                         'sub_key': self.request.input.sub_key,
