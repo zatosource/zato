@@ -1,4 +1,5 @@
 {% extends "zato/index.html" %}
+{% load extras %}
 
 {% block html_title %}Endpoint subscriptions{% endblock %}
 
@@ -35,6 +36,7 @@
 
             '_creation_time',
             '_sub_key',
+            '_ext_client_id',
 
             '_clear',
             '_edit',
@@ -138,6 +140,7 @@
 
                         <th><a href="#">Creation / State update</a></th>
                         <th style="min-width:260px"><a href="#">Sub key</a></th>
+                        <th style="min-width:260px"><a href="#">EXTCLI</a></th>
 
                         <th style="width:5%">&nbsp;</th>
                         <th style="width:5%">&nbsp;</th>
@@ -238,6 +241,10 @@
 
                         <td>
                             {{ item.sub_key }}
+                        </td>
+
+                        <td>
+                            {{ item.ext_client_id|no_value_indicator }}
                         </td>
 
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.clear('{{ item.sub_id }}', '{{ cluster_id }}')">Clear</a></td>
