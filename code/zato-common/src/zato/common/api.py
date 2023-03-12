@@ -890,16 +890,13 @@ class PUBSUB:
             return iter((
                 self.INTERNAL.id,
                 self.REST.id,
-                self.SERVICE.id,
                 self.WEB_SOCKETS.id,
                 self.SERVICE.id
             ))
 
         def get_pub_types(self):
             return iter((
-                self.INTERNAL,
                 self.REST,
-                self.SERVICE,
                 self.WEB_SOCKETS,
                 self.SERVICE
             ))
@@ -937,7 +934,6 @@ PUBSUB.SUBSCRIBE_CLASS = _PUBSUB_SUBSCRIBE_CLASS
 
 skip_endpoint_types = (
     PUBSUB.ENDPOINT_TYPE.INTERNAL.id,
-    PUBSUB.ENDPOINT_TYPE.SERVICE.id,
 )
 
 # ################################################################################################################################
