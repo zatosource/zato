@@ -44,7 +44,8 @@ class CreateForm(forms.Form):
         add_select(self, 'service_id', data_list.service_list)
         add_select(self, 'ws_channel_id', data_list.ws_channel_list)
         add_select(self, 'role', PUBSUB.ROLE())
-        add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE(), needs_initial_select=False, skip=skip_endpoint_types)
+        add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE().get_pub_types(),
+            needs_initial_select=False, skip=skip_endpoint_types)
 
         # Let's assume the default type of pub/sub endpoint will be REST clients
         self.initial['endpoint_type'] = PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
