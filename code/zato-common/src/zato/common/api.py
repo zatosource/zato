@@ -895,6 +895,15 @@ class PUBSUB:
                 self.SERVICE.id
             ))
 
+        def get_pub_types(self):
+            return iter((
+                self.INTERNAL,
+                self.REST,
+                self.SERVICE,
+                self.WEB_SOCKETS,
+                self.SERVICE
+            ))
+
     class REDIS:
         META_TOPIC_LAST_KEY = 'zato.ps.meta.topic.last.%s.%s'
         META_ENDPOINT_PUB_KEY = 'zato.ps.meta.endpoint.pub.%s.%s'
