@@ -48,7 +48,7 @@ class CreateForm(forms.Form):
             needs_initial_select=False, skip=skip_endpoint_types)
 
         # Let's assume the default type of pub/sub endpoint will be REST clients
-        self.initial['endpoint_type'] = PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+        self.initial['endpoint_type'] = PUBSUB.ENDPOINT_TYPE.REST.id
 
 # ################################################################################################################################
 
