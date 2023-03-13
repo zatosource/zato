@@ -56,6 +56,7 @@
             'is_active',
             'topic_patterns',
             'security_id',
+            'service_id',
             'ws_channel_id',
         ]
     }
@@ -94,6 +95,7 @@
                         <th>Sub</th>
                         <th style="width:5%">&nbsp;</th>
                         <th style="width:5%">&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -156,6 +158,7 @@
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.topic_patterns|default:'' }}</td>
                         <td class='ignore'>{{ item.security_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.service_id|default:'' }}</td>
                         <td class='ignore'>{{ item.ws_channel_id|default:'' }}</td>
                     </tr>
                 {% endfor %}

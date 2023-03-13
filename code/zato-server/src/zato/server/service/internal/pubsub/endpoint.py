@@ -62,7 +62,7 @@ broker_message = PUBSUB
 broker_message_prefix = 'ENDPOINT_'
 list_func = pubsub_endpoint_list
 skip_input_params = ['sub_key', 'is_sub_allowed']
-output_optional_extra = ['ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key']
+output_optional_extra = ['service_name', 'ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key']
 delete_require_instance = False
 
 SubTable = PubSubSubscription.__table__
@@ -161,6 +161,14 @@ class Create(AdminService):
         input = self.request.input
         cluster_id = input.get('cluster_id') or self.server.cluster_id
 
+        # Services have a fixed role and patterns ..
+        if input.endpoint_type == COMMON_PUBSUB.ENDPOINT_TYPE.SERVICE.id:
+            role = COMMON_PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
+            topic_patterns = COMMON_PUBSUB.DEFAULT.Topic_Patterns_All
+        else:
+            role = input.role
+            topic_patterns = input.topic_patterns
+
         with closing(self.odb.session()) as session:
 
             existing_one = session.query(PubSubEndpoint.id).\
@@ -177,9 +185,9 @@ class Create(AdminService):
             endpoint.is_active = input.is_active
             endpoint.is_internal = input.is_internal
             endpoint.endpoint_type = input.endpoint_type
-            endpoint.role = input.role
-            endpoint.topic_patterns = input.topic_patterns
-            endpoint.security_id = input.security_id
+            endpoint.role = role
+            endpoint.topic_patterns = topic_patterns
+            endpoint.security_id = input.get('security_id')
             endpoint.service_id = input.get('service_id')
             endpoint.ws_channel_id = input.get('ws_channel_id')
 
