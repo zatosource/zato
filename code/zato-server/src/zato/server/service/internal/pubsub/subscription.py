@@ -291,6 +291,9 @@ class SubscribeServiceImpl(_Subscribe):
             # Is it a WebSockets client?
             is_wsx = bool(ctx.ws_channel_id)
 
+            # Is it a service?
+            is_service = bool(ctx.service_id)
+
             # These casts are needed for pylance
             web_socket = cast_('WebSocket', None)
             sql_ws_client_id = cast_('int', None)
@@ -504,7 +507,8 @@ class Create(_Subscribe):
             # Invoke subscription for each topic given on input. At this point we know we can subscribe to all of them.
             for topic_name in topic_list:
                 sub_request['topic_name'] = topic_name
-                self.response.payload = self.invoke(sub_service, sub_request)
+                response = self.invoke(sub_service, sub_request)
+                self.response.payload = response
 
 # ################################################################################################################################
 
