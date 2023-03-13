@@ -903,6 +903,16 @@ class PUBSUB:
                 self.SERVICE
             ))
 
+        @staticmethod
+        def get_name_by_type(endpoint_type:'str') -> 'str':
+            data = {
+                'srv':        'Service',
+                'rest':       'REST',
+                'internal':   'Internal',
+                'wsx': 'WebSockets',
+            }
+            return data[endpoint_type]
+
     class REDIS:
         META_TOPIC_LAST_KEY = 'zato.ps.meta.topic.last.%s.%s'
         META_ENDPOINT_PUB_KEY = 'zato.ps.meta.endpoint.pub.%s.%s'

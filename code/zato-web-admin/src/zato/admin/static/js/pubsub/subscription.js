@@ -100,7 +100,7 @@ $.fn.zato.pubsub.populate_endpoint_topics = function(topic_sub_list) {
         }
 
         var topic = $('<a/>', {
-            'href': String.format('/zato/pubsub/topic/?cluster={0}&highlight={1}', topic.cluster_id, topic.topic_id),
+            'href': String.format('/zato/pubsub/topic/?cluster={0}&query={1}', topic.cluster_id, topic.topic_name),
             'target': '_blank',
             'text': topic.topic_name,
         });
