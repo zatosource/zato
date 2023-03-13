@@ -808,6 +808,8 @@ class PUBSUB:
         INTERNAL_SECDEF_NAME   = 'zato.pubsub.internal.secdef'
         INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
 
+        Topic_Patterns_All = 'pub=/*\nsub=/*'
+
     class SERVICE_SUBSCRIBER:
         NAME = 'zato.pubsub.service.endpoint'
         TOPICS_ALLOWED = 'sub=/zato/s/to/*'
