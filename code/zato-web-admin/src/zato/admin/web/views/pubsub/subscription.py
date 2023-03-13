@@ -162,8 +162,8 @@ class _CreateEdit(CreateEdit):
 
         return_data.update(response)
 
-    def success_message(self, item):
-        return 'Pub/sub subscription(s) {} successfully'.format(self.verb)
+    def success_message(self, _ignored_item):
+        return 'Pub/sub configuration updated successfully'
 
 # ################################################################################################################################
 

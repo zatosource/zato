@@ -296,10 +296,10 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.subscription.configure = function() {
+$.fn.zato.pubsub.subscription.create = function() {
     window.zato_run_dyn_form_handler();
     $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
-    $.fn.zato.data_table._create_edit('create', 'Configure pub/sub subscriptions', null);
+    $.fn.zato.data_table._create_edit('create', 'Create pub/sub subscriptions', null);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -308,8 +308,10 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     var row = '';
 
     var is_active = data.is_active ? "Yes" : "No";
-    var last_seen = data.last_seen ? data.last_seen : $.fn.zato.empty_value;
-    var last_deliv_time = data.last_deliv_time ? data.last_deliv_time : $.fn.zato.empty_value;
+
+    // var last_pub_time = data.last_pub_time ? data.last_pub_time : $.fn.zato.empty_value;
+    // var last_seen = data.last_seen ? data.last_seen : $.fn.zato.empty_value;
+    // var last_deliv_time = data.last_deliv_time ? data.last_deliv_time : $.fn.zato.empty_value;
 
     var pubsub_endpoint_queues_link = String.format(
         '<a id="pubsub_endpoint_queues_link_{0}" href="{1}">{2}</a>', data.id, data.pubsub_endpoint_queues_link,
@@ -325,8 +327,9 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', data.role);
     row += String.format('<td>{0}</td>', pubsub_endpoint_queues_link);
 
-    row += String.format('<td>{0}</td>', last_seen);
-    row += String.format('<td>{0}</td>', last_deliv_time);
+    // row += String.format('<td>{0}</td>', last_pub_time);
+    // row += String.format('<td>{0}</td>', last_seen);
+    // row += String.format('<td>{0}</td>', last_deliv_time);
 
     if(data.is_internal) {
         row += '<td><span class="form_hint">Delete all subscriptions</span></td>';
