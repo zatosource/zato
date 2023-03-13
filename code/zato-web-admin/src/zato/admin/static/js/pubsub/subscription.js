@@ -16,6 +16,19 @@ $.fn.zato.data_table.PubSubEndpoint = new Class({
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+var elems_required = [
+    'endpoint_id',
+    'server_id',
+    'active_status',
+    'delivery_method',
+    'delivery_batch_size',
+    'delivery_max_retry',
+    'wait_sock_err',
+    'wait_non_sock_err'
+];
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = false;
@@ -26,16 +39,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.before_populate_hook = $.fn.zato.pubsub.subscription.cleanup_hook;
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.subscription.before_submit_hook;
-    $.fn.zato.data_table.setup_forms([
-        'endpoint_id',
-        'server_id',
-        'active_status',
-        'delivery_method',
-        'delivery_batch_size',
-        'delivery_max_retry',
-        'wait_sock_err',
-        'wait_non_sock_err'
-    ]);
+    $.fn.zato.data_table.setup_forms(elems_required);
 
     $('#id_endpoint_id').change(function() {
         $.fn.zato.pubsub.on_endpoint_changed();
@@ -54,9 +58,9 @@ $(document).ready(function() {
     });
 
     $('#id_endpoint_type').change(function() {
+        $.fn.zato.pubsub.on_endpoint_type_changed();
         $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
     });
-
 
 })
 
@@ -151,6 +155,33 @@ $.fn.zato.pubsub.on_endpoint_changed = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.pubsub.on_endpoint_type_changed = function() {
+
+    $.fn.zato.data_table.setup_forms(elems_required);
+
+    var validator     = $('#create-form').data('bValidator');
+    validator.reset();
+
+    var endpoint_type = $('#id_endpoint_type').val();
+
+    if(endpoint_type == 'srv') {
+
+        var server_id       = $('#id_server_id');
+        var delivery_method = $('#id_delivery_method');
+
+        server_id.attr('data-bvalidator', '');
+        delivery_method.attr('data-bvalidator', '');
+
+        // server_id.css('background-color', '#fff');
+        // delivery_method.css('background-color', '#fff');
+
+        validator.removeMsg(server_id);
+        validator.removeMsg(delivery_method);
+    }
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.pubsub.on_delivery_method_changed = function() {
     var delivery_method = $('#id_delivery_method').val();
     if(delivery_method != 'notify') {
@@ -182,14 +213,31 @@ $.fn.zato.pubsub.subscription.add_row_hook = function(instance, elem_name, html_
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.subscription.cleanup_hook = function(form) {
+$.fn.zato.pubsub.subscription.cleanup_hook = function(form, _unused_prefix) {
 
+    var validator = form.data('bValidator');
     var blank = '<input class="multi-select-input" id="multi-select-input" disabled="disabled"></input>';
+
     $('#multi-select-div').html(blank);
 
     var disabled_input = $('#multi-select-input');
-    form.data('bValidator').removeMsg(disabled_input);
+    validator.removeMsg(disabled_input);
     disabled_input.css('background-color', '#e6e6e6');
+
+    /*
+    var server_id       = $('#id_server_id');
+    var delivery_method = $('#id_delivery_method');
+    var out_http_method = $('#id_out_http_method');
+
+    server_id.css('background-color', '#fff');
+    delivery_method.css('background-color', '#fff');
+    out_http_method.css('background-color', '#fff');
+
+    validator.removeMsg(server_id);
+    validator.removeMsg(delivery_method);
+    validator.removeMsg(out_http_method);
+    */
+
     return true;
 }
 
@@ -203,8 +251,21 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
     var endpoint_type = $('#id_' + prefix + 'endpoint_type').val();
 
     if(endpoint_type == 'rest' || endpoint_type == 'soap') {
-        var delivery_method = $('#id_' + prefix + 'delivery_method').val();
+
+        var server_id       = $('#id_' + prefix + 'server_id');
+        var delivery_method = $('#id_' + prefix + 'delivery_method');
         var out_http_method = $('#id_' + prefix + 'out_http_method');
+
+        if(!server_id.val()) {
+            server_id.css('background-color', '#ffffae');
+            form.data('bValidator').showMsg(server_id, 'This is a required field');
+            return false;
+        }
+
+        if(!delivery_method.val()) {
+            form.data('bValidator').showMsg(server_id, 'This is a required field');
+            return false;
+        }
 
         if(!out_http_method.val()) {
             form.data('bValidator').showMsg(out_http_method, 'This is a required field');
@@ -252,17 +313,10 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.subscription.create = function() {
+$.fn.zato.pubsub.subscription.configure = function() {
     window.zato_run_dyn_form_handler();
     $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
-    $.fn.zato.data_table._create_edit('create', 'Create new pub/sub subscriptions', null);
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.pubsub.subscription.edit = function(id) {
-    window.zato_run_dyn_form_handler();
-    $.fn.zato.data_table._create_edit('edit', 'Update pub/sub subscriptions', id);
+    $.fn.zato.data_table._create_edit('create', 'Configure pub/sub subscriptions', null);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
