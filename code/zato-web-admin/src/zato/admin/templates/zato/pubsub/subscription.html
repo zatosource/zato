@@ -30,15 +30,14 @@
     window.zato_dyn_form_skip_clear_field = ['id_out_http_method'];
     window.zato_dyn_form_rows = {
         'rest': ['out_rest_http_soap_id', 'out_http_method'],
-        'service': ['service_id'],
+        'srv': [],
     }
 
     window.zato_select_data_target = 'endpoint_id';
     window.zato_select_data_target_items = {
         'endpoint_id': {
             'rest': {{ select_data_target.rest|safe }},
-            'service': [],
-            'websockets': [],
+            'srv': {{ select_data_target.srv|safe }},
         }
     }
 
@@ -57,9 +56,11 @@
 
             'role',
             'subscription_count',
-            '_last_seen',
 
-            '_last_deliv_time',
+            '_last_pub_time',
+            // '_last_seen',
+            // '_last_deliv_time',
+
             '_delete',
             'id',
 
@@ -85,7 +86,7 @@
 
         {% if not topic_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.pubsub.subscription.create()">Create new pub/sub subscriptions</a>
+            <a href="javascript:$.fn.zato.pubsub.subscription.configure()">Configure pub/sub subscriptions</a>
         </div>
         {% endif %}
 
@@ -103,9 +104,13 @@
 
                         <th><a href="#">Role</a></th>
                         <th><a href="#"># of subscriptions</a></th>
-                        <th><a href="#">Last seen</a></th>
 
+                        <th><a href="#">Last pub. time</a></th>
+                        <!--
+                        <th><a href="#">Last seen</a></th>
                         <th><a href="#">Last deliv. time</a></th>
+                        -->
+
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -130,9 +135,13 @@
                             <a id="pubsub_endpoint_queues_link_{{ item.id }}"
                                href="{% url "pubsub-endpoint-queues" cluster_id item.id item.endpoint_name|slugify %}?cluster={{ cluster_id }}">{{ item.subscription_count}} </a>
                         </td>
-                        <td>{{ item.last_seen|default:"<span class='form_hint'>---</span>" }}</td>
 
+                        <td>{{ item.last_pub_time|default:"<span class='form_hint'>---</span>" }}</td>
+                        <!--
+                        <td>{{ item.last_seen|default:"<span class='form_hint'>---</span>" }}</td>
                         <td>{{ item.last_deliv_time|default:"<span class='form_hint'>---</span>" }}</td>
+                        -->
+
                         <td>
                             {% if not topic_id %}
                                 {% if item.is_internal %}

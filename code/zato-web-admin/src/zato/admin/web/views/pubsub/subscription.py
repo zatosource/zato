@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -20,9 +18,6 @@ from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, slugify
 from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpoint
-
-# Python 2/3 compatibility
-from six import PY2
 
 # ################################################################################################################################
 
@@ -74,16 +69,15 @@ class Index(_Index):
             for item in self.items:
                 targets = select_data_target[item.endpoint_type]
 
-                if PY2:
-                    id_key = b'id'
-                    name_key = b'name'
-                    endpoint_name = item.endpoint_name.encode('utf8')
-                else:
-                    id_key = 'id'
-                    name_key = 'name'
-                    endpoint_name = item.endpoint_name
+                id_key = 'id'
+                name_key = 'name'
+                endpoint_name = item.endpoint_name
 
                 targets.append({id_key:item.id, name_key:endpoint_name})
+
+                print()
+                print(111, targets)
+                print()
 
             # Security definitions
             data_list.security_list = self.get_sec_def_list('basic_auth').def_items
