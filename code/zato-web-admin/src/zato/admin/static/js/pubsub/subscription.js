@@ -157,9 +157,7 @@ $.fn.zato.pubsub.on_endpoint_changed = function() {
 
 $.fn.zato.pubsub.on_endpoint_type_changed = function() {
 
-    $.fn.zato.data_table.setup_forms(elems_required);
-
-    var validator     = $('#create-form').data('bValidator');
+    var validator = $('#create-form').data('bValidator');
     validator.reset();
 
     var endpoint_type = $('#id_endpoint_type').val();

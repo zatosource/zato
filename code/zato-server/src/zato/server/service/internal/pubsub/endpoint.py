@@ -169,6 +169,11 @@ class Create(AdminService):
             role = input.role
             topic_patterns = input.topic_patterns
 
+        # Populate it back so that we can reuse the same input object
+        # when we publish a broker message.
+        input.role = role
+        input.topic_patterns = topic_patterns
+
         with closing(self.odb.session()) as session:
 
             existing_one = session.query(PubSubEndpoint.id).\
@@ -185,8 +190,8 @@ class Create(AdminService):
             endpoint.is_active = input.is_active
             endpoint.is_internal = input.is_internal
             endpoint.endpoint_type = input.endpoint_type
-            endpoint.role = role
-            endpoint.topic_patterns = topic_patterns
+            endpoint.role = input.role
+            endpoint.topic_patterns = input.topic_patterns
             endpoint.security_id = input.get('security_id')
             endpoint.service_id = input.get('service_id')
             endpoint.ws_channel_id = input.get('ws_channel_id')
