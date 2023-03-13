@@ -43,7 +43,7 @@ class Index(_Index):
         input_optional = ('topic_id',)
         output_required = ('id', 'endpoint_name', 'endpoint_type', 'subscription_count', 'is_active', 'is_internal')
         output_optional = ('security_id', 'sec_type', 'sec_name', 'ws_channel_id', 'ws_channel_name',
-            'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role')
+            'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role', 'endpoint_type_name')
         output_repeated = True
 
     def on_before_append_item(self, item):
