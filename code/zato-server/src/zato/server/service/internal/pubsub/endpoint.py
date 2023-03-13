@@ -62,7 +62,7 @@ broker_message = PUBSUB
 broker_message_prefix = 'ENDPOINT_'
 list_func = pubsub_endpoint_list
 skip_input_params = ['sub_key', 'is_sub_allowed']
-output_optional_extra = ['service_name', 'ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key']
+output_optional_extra = ['service_name', 'ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key', 'endpoint_type_name']
 delete_require_instance = False
 
 SubTable = PubSubSubscription.__table__
@@ -652,7 +652,7 @@ class _GetEndpointSummaryBase(AdminService):
         input_optional = ('topic_id',)
         output_required = ('id', 'endpoint_name', 'endpoint_type', 'subscription_count', 'is_active', 'is_internal')
         output_optional = ('security_id', 'sec_type', 'sec_name', 'ws_channel_id', 'ws_channel_name',
-            'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role')
+            'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role', 'endpoint_type_name')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -669,11 +669,15 @@ class GetEndpointSummary(_GetEndpointSummaryBase):
         with closing(self.odb.session()) as session:
             item = pubsub_endpoint_summary(session, self.server.cluster_id, self.request.input.endpoint_id)
 
-            if item.last_seen:
-                item.last_seen = datetime_from_ms(item.last_seen)
+            item = item._asdict()
 
-            if item.last_deliv_time:
-                item.last_deliv_time = datetime_from_ms(item.last_deliv_time)
+            if item['last_seen']:
+                item['last_seen'] = datetime_from_ms(item['last_seen'])
+
+            if item['last_deliv_time']:
+                item['last_deliv_time'] = datetime_from_ms(item['last_deliv_time'])
+
+            item['endpoint_type_name'] = COMMON_PUBSUB.ENDPOINT_TYPE.get_name_by_type(item['endpoint_type'])
 
             self.response.payload = item
 
@@ -691,18 +695,28 @@ class GetEndpointSummaryList(_GetEndpointSummaryBase):
 
     def get_data(self, session:'SASession') -> 'anylist':
 
+        # This will be a list of dictionaries that we return
+        out = []
+
+        # These are SQL rows
         result = self._search(pubsub_endpoint_summary_list, session, self.request.input.cluster_id,
             self.request.input.get('topic_id') or None, False)
 
         for item in result:
 
-            if item.last_seen:
-                item.last_seen = datetime_from_ms(item.last_seen)
+            item = item._asdict()
 
-            if item.last_deliv_time:
-                item.last_deliv_time = datetime_from_ms(item.last_deliv_time)
+            if item['last_seen']:
+                item['last_seen'] = datetime_from_ms(item['last_seen'])
 
-        return result
+            if item['last_deliv_time']:
+                item['last_deliv_time'] = datetime_from_ms(item['last_deliv_time'])
+
+            item['endpoint_type_name'] = COMMON_PUBSUB.ENDPOINT_TYPE.get_name_by_type(item['endpoint_type'])
+
+            out.append(item)
+
+        return out
 
     def handle(self):
         with closing(self.odb.session()) as session:

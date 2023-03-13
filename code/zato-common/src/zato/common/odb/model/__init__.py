@@ -2214,10 +2214,11 @@ class PubSubEndpoint(Base):
     cluster_id = cast_('int', Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
     cluster = relationship(Cluster, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
-    sec_type = None         # Not used by DB
-    sec_name = None         # Not used by DB
-    ws_channel_name = None  # Not used by DB
-    service_name = None     # Not used by DB
+    sec_type = None           # Not used by DB
+    sec_name = None           # Not used by DB
+    ws_channel_name = None    # Not used by DB
+    service_name = None       # Not used by DB
+    endpoint_type_human =None # Not used by DB
 
 # ################################################################################################################################
 
