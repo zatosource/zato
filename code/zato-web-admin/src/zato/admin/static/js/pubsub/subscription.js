@@ -172,9 +172,6 @@ $.fn.zato.pubsub.on_endpoint_type_changed = function() {
         server_id.attr('data-bvalidator', '');
         delivery_method.attr('data-bvalidator', '');
 
-        // server_id.css('background-color', '#fff');
-        // delivery_method.css('background-color', '#fff');
-
         validator.removeMsg(server_id);
         validator.removeMsg(delivery_method);
     }
@@ -223,20 +220,6 @@ $.fn.zato.pubsub.subscription.cleanup_hook = function(form, _unused_prefix) {
     var disabled_input = $('#multi-select-input');
     validator.removeMsg(disabled_input);
     disabled_input.css('background-color', '#e6e6e6');
-
-    /*
-    var server_id       = $('#id_server_id');
-    var delivery_method = $('#id_delivery_method');
-    var out_http_method = $('#id_out_http_method');
-
-    server_id.css('background-color', '#fff');
-    delivery_method.css('background-color', '#fff');
-    out_http_method.css('background-color', '#fff');
-
-    validator.removeMsg(server_id);
-    validator.removeMsg(delivery_method);
-    validator.removeMsg(out_http_method);
-    */
 
     return true;
 }
