@@ -451,7 +451,23 @@ class PubSub:
 
     def delete_endpoint(self, endpoint_id:'int') -> 'None':
         with self.lock:
+
+            # First, delete the endpoint object ..
             self.endpoint_api.delete(endpoint_id)
+
+            # .. a list of of sub_keys for this endpoint ..
+            sk_list = []
+
+            # .. find all the sub_keys this endpoint held ..
+            for sub in self.subscriptions_by_sub_key.values():
+                if sub.endpoint_id == endpoint_id:
+                    sk_list.append(sub.sub_key)
+
+            # .. delete all references to the sub_keys found ..
+            for sub_key in sk_list:
+
+                # .. first, stop the delivery tasks ..
+                _ = self._delete_subscription_by_sub_key(sub_key, ignore_missing=True)
 
 # ################################################################################################################################
 
@@ -590,6 +606,20 @@ class PubSub:
 
 # ################################################################################################################################
 
+    def _delete_subscription_from_subscriptions_by_topic(self, sub:'Subscription') -> 'None':
+
+        # This is a list of all the subscriptions related to a given topic ..
+        sk_list = self.subscriptions_by_topic[sub.topic_name]
+
+        # .. try to remove the subscription object from each list ..
+        try:
+            sk_list.remove(sub)
+        except ValueError:
+            # .. it is fine, this list did not contain the sub object.
+            pass
+
+# ################################################################################################################################
+
     def clear_task(self, sub_key:'str') -> 'None':
         with self.lock:
             ps_tool = self.pubsub_tool_by_sub_key[sub_key]
@@ -627,11 +657,28 @@ class PubSub:
         else:
 
             # Now, delete the subscription
-            _ = self.subscriptions_by_sub_key.pop(sub_key, _invalid)
+            sub = self.subscriptions_by_sub_key.pop(sub_key, _invalid)
 
             # Delete the subscription's sk_server first because it depends on the subscription
             # for sk_server table formatting.
             self.delete_sub_key_server(sub_key, sub_pattern_matched=sub.sub_pattern_matched)
+
+            # Stop and remove the task for this sub_key ..
+            try:
+                ps_tool = self._get_pubsub_tool_by_sub_key(sub_key)
+            except KeyError:
+                # This may happen if the sub_key was held by a WebSocket
+                # but the WebSocket is not connected currently,
+                # meaning that its ps_tool does not exist.
+                pass
+            else:
+                ps_tool.delete_by_sub_key(sub_key)
+
+            # Remove the mapping from the now-removed sub_key to its ps_tool
+            self._delete_subscription_from_subscriptions_by_topic(sub)
+
+            # Remove the subscription from the mapping of topics-to-sub-objects
+            self._delete_pubsub_tool_by_sub_key(sub_key)
 
             # Log what we have done ..
             logger.info('Deleted subscription object `%s` (%s)', sub.sub_key, sub.topic_name)
@@ -651,9 +698,15 @@ class PubSub:
             if not self.has_sub_key(config['sub_key']):
                 self._add_subscription(config)
 
-            # We don't start dedicated tasks for WebSockets - they are all dynamic without a fixed server.
-            # But for other endpoint types, we create and start a delivery task here.
-            if config['endpoint_type'] != PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id:
+            # Is this a WebSockets-based subscription?
+            is_wsx = config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+
+            # .. we do not start dedicated tasks for WebSockets - they are all dynamic without a fixed server ..
+            if is_wsx:
+                pass
+
+            # .. for other endpoint types, we create and start a delivery task here ..
+            else:
 
                 # We have a matching server..
                 if config['cluster_id'] == self.cluster_id and config['server_id'] == self.server.id:
@@ -832,9 +885,19 @@ class PubSub:
 
 # ################################################################################################################################
 
+    def _delete_pubsub_tool_by_sub_key(self, sub_key:'str') -> 'None':
+        _ = self.pubsub_tool_by_sub_key.pop(sub_key, None)
+
+# ################################################################################################################################
+
+    def _get_pubsub_tool_by_sub_key(self, sub_key:'str') -> 'PubSubTool':
+        return self.pubsub_tool_by_sub_key[sub_key]
+
+# ################################################################################################################################
+
     def get_pubsub_tool_by_sub_key(self, sub_key:'str') -> 'PubSubTool':
         with self.lock:
-            return self.pubsub_tool_by_sub_key[sub_key]
+            return self._get_pubsub_tool_by_sub_key(sub_key)
 
 # ################################################################################################################################
 
@@ -985,26 +1048,31 @@ class PubSub:
 
 # ################################################################################################################################
 
+    def _delete_sub_key_server(self, sub_key:'str', sub_pattern_matched:'str'='') -> 'None':
+        sub_key_server = self.sub_key_servers.get(sub_key)
+        if sub_key_server:
+            msg = 'Deleting sk_server for sub_key `%s`, was `%s:%s`'
+
+            logger.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
+            logger_zato.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
+
+            _ = self.sub_key_servers.pop(sub_key, None)
+
+            sks_table = self.format_sk_servers(sub_pattern_matched=sub_pattern_matched)
+            msg_sks = 'Current sk_servers after deletion of `%s`:\n%s'
+
+            logger.info(msg_sks, sub_key, sks_table)
+            logger_zato.info(msg_sks, sub_key, sks_table)
+
+        else:
+            logger.info('Could not find sub_key `%s` while deleting sub_key server, current `%s` `%s`',
+                sub_key, self.server.name, self.server.pid)
+
+# ################################################################################################################################
+
     def delete_sub_key_server(self, sub_key:'str', sub_pattern_matched:'str'='') -> 'None':
         with self.lock:
-            sub_key_server = self.sub_key_servers.get(sub_key)
-            if sub_key_server:
-                msg = 'Deleting sk_server for sub_key `%s`, was `%s:%s`'
-
-                logger.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
-                logger_zato.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
-
-                _ = self.sub_key_servers.pop(sub_key, None)
-
-                sks_table = self.format_sk_servers(sub_pattern_matched=sub_pattern_matched)
-                msg_sks = 'Current sk_servers after deletion of `%s`:\n%s'
-
-                logger.info(msg_sks, sub_key, sks_table)
-                logger_zato.info(msg_sks, sub_key, sks_table)
-
-            else:
-                logger.info('Could not find sub_key `%s` while deleting sub_key server, current `%s` `%s`',
-                    sub_key, self.server.name, self.server.pid)
+            self._delete_sub_key_server(sub_key, sub_pattern_matched)
 
 # ################################################################################################################################
 
