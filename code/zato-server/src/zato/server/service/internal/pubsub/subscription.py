@@ -291,9 +291,6 @@ class SubscribeServiceImpl(_Subscribe):
             # Is it a WebSockets client?
             is_wsx = bool(ctx.ws_channel_id)
 
-            # Is it a service?
-            is_service = bool(ctx.service_id)
-
             # These casts are needed for pylance
             web_socket = cast_('WebSocket', None)
             sql_ws_client_id = cast_('int', None)
