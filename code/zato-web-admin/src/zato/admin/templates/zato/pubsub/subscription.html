@@ -144,7 +144,7 @@
 
                         <td>
                             {% if not topic_id %}
-                                {% if item.is_internal %}
+                                {% if item.is_internal and item.endpoint_type == "internal" %}
                                     <span class="form_hint">Delete all subscriptions</span>
                                 {% else %}
                                     <a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete all subscriptions</a>
