@@ -691,9 +691,15 @@ class PubSub:
             if not self.has_sub_key(config['sub_key']):
                 self._add_subscription(config)
 
-            # We don't start dedicated tasks for WebSockets - they are all dynamic without a fixed server.
-            # But for other endpoint types, we create and start a delivery task here.
-            if config['endpoint_type'] != PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id:
+            # Is this a WebSockets-based subscription?
+            is_wsx = config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+
+            # .. we do not start dedicated tasks for WebSockets - they are all dynamic without a fixed server ..
+            if is_wsx:
+                pass
+
+            # .. for other endpoint types, we create and start a delivery task here ..
+            else:
 
                 # We have a matching server..
                 if config['cluster_id'] == self.cluster_id and config['server_id'] == self.server.id:

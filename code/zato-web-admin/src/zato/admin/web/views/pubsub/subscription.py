@@ -75,10 +75,6 @@ class Index(_Index):
 
                 targets.append({id_key:item.id, name_key:endpoint_name})
 
-                print()
-                print(111, targets)
-                print()
-
             # Security definitions
             data_list.security_list = self.get_sec_def_list('basic_auth').def_items
 
