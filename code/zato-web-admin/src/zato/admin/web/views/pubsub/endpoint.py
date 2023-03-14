@@ -92,7 +92,7 @@ class Index(_Index):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'endpoint_type', 'is_active', 'is_internal', 'role')
         output_optional = ('topic_patterns', 'security_id', 'ws_channel_id', 'ws_channel_name',
-            'sec_type', 'sec_name', 'sub_key', 'service_id')
+            'sec_type', 'sec_name', 'sub_key', 'service_id', 'service_name')
         output_repeated = True
 
     def on_before_append_item(self, item):

@@ -157,7 +157,7 @@ class PubAPI:
                 raise Forbidden(correl_id, 'You are not allowed to access this resource')
 
             # At this point we know this is a service so we may build the topic's full name,
-            # taking into account the fact that a service's name is arbitrary string
+            # taking into account the fact that a service's name is an arbitrary string
             # so we need to make it filesystem-safe.
             topic_name = PUBSUB.TOPIC_PATTERN.TO_SERVICE.format(fs_safe_name(name))
 

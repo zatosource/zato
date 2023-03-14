@@ -808,6 +808,8 @@ class PUBSUB:
         INTERNAL_SECDEF_NAME   = 'zato.pubsub.internal.secdef'
         INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
 
+        Topic_Patterns_All = 'pub=/*\nsub=/*'
+
     class SERVICE_SUBSCRIBER:
         NAME = 'zato.pubsub.service.endpoint'
         TOPICS_ALLOWED = 'sub=/zato/s/to/*'
@@ -890,10 +892,26 @@ class PUBSUB:
             return iter((
                 self.INTERNAL.id,
                 self.REST.id,
-                self.SERVICE.id,
                 self.WEB_SOCKETS.id,
                 self.SERVICE.id
             ))
+
+        def get_pub_types(self):
+            return iter((
+                self.REST,
+                self.WEB_SOCKETS,
+                self.SERVICE
+            ))
+
+        @staticmethod
+        def get_name_by_type(endpoint_type:'str') -> 'str':
+            data = {
+                'srv':        'Service',
+                'rest':       'REST',
+                'internal':   'Internal',
+                'wsx': 'WebSockets',
+            }
+            return data[endpoint_type]
 
     class REDIS:
         META_TOPIC_LAST_KEY = 'zato.ps.meta.topic.last.%s.%s'
@@ -928,7 +946,6 @@ PUBSUB.SUBSCRIBE_CLASS = _PUBSUB_SUBSCRIBE_CLASS
 
 skip_endpoint_types = (
     PUBSUB.ENDPOINT_TYPE.INTERNAL.id,
-    PUBSUB.ENDPOINT_TYPE.SERVICE.id,
 )
 
 # ################################################################################################################################
