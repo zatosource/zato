@@ -225,6 +225,8 @@ class PubSubTool:
             except Exception:
                 logger.warning('Exception during sub_key removal `%s`, e:`%s`', sub_key, format_exc())
 
+    delete_by_sub_key = remove_sub_key
+
 # ################################################################################################################################
 
     def has_sub_key(self, sub_key:'str') -> 'bool':
