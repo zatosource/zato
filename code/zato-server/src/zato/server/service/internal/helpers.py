@@ -482,13 +482,13 @@ class HelperPubSubTarget(Service):
     def handle(self):
 
         # Our request
-        msg = self.request.raw_request # type: PubSubMessage
+        msg = self.request.raw_request # type: list_[PubSubMessage]
 
         # Whatever happens next, log what we received
-        self.logger.info('I was invoked with %r', msg.to_dict())
+        self.logger.info('I was invoked with %r', msg)
 
         # .. load the inner dict ..
-        data = msg.data # type: anydict
+        data = msg[0].data # type: anydict
 
         # .. confirm what it was ..
         self.logger.info('Data is %r', data)
@@ -500,14 +500,14 @@ class HelperPubSubTarget(Service):
             file_name = data['file_name']
 
             # .. we will save the message as a JSON one ..
-            json_msg = msg.to_json(needs_utf8_decode=True)
+            json_msg = msg[0].to_json(needs_utf8_decode=True)
 
             # .. confirm what we will be saving and where ..
             self.logger.info('Saving data to file `%s` -> `%s`', file_name, json_msg)
 
             # .. and actually save it now.
             f = open_rw(file_name)
-            f.write(json_msg)
+            _ = f.write(json_msg)
             f.close()
 
 # ################################################################################################################################

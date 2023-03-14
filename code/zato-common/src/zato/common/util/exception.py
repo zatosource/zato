@@ -37,7 +37,7 @@ def pretty_format_exception(e:'Exception', cid:'str', utcnow_func:'callnone'=Non
     # Extract the traceback from the exception
     tb = TracebackException.from_exception(e)
 
-    exc_arg  = e.args[0]
+    exc_arg  = e.args[0] if e.args else e.args
     exc_type = e.__class__.__name__
 
     # For the error summary, we need to last frame in the stack,
