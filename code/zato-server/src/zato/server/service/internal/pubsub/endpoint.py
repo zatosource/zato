@@ -62,7 +62,7 @@ broker_message = PUBSUB
 broker_message_prefix = 'ENDPOINT_'
 list_func = pubsub_endpoint_list
 skip_input_params = ['sub_key', 'is_sub_allowed']
-output_optional_extra = ['ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key']
+output_optional_extra = ['service_name', 'ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key', 'endpoint_type_name']
 delete_require_instance = False
 
 SubTable = PubSubSubscription.__table__
@@ -161,6 +161,19 @@ class Create(AdminService):
         input = self.request.input
         cluster_id = input.get('cluster_id') or self.server.cluster_id
 
+        # Services have a fixed role and patterns ..
+        if input.endpoint_type == COMMON_PUBSUB.ENDPOINT_TYPE.SERVICE.id:
+            role = COMMON_PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
+            topic_patterns = COMMON_PUBSUB.DEFAULT.Topic_Patterns_All
+        else:
+            role = input.role
+            topic_patterns = input.topic_patterns
+
+        # Populate it back so that we can reuse the same input object
+        # when we publish a broker message.
+        input.role = role
+        input.topic_patterns = topic_patterns
+
         with closing(self.odb.session()) as session:
 
             existing_one = session.query(PubSubEndpoint.id).\
@@ -179,7 +192,7 @@ class Create(AdminService):
             endpoint.endpoint_type = input.endpoint_type
             endpoint.role = input.role
             endpoint.topic_patterns = input.topic_patterns
-            endpoint.security_id = input.security_id
+            endpoint.security_id = input.get('security_id')
             endpoint.service_id = input.get('service_id')
             endpoint.ws_channel_id = input.get('ws_channel_id')
 
@@ -373,8 +386,14 @@ class UpdateEndpointQueue(AdminService):
         if out_rest_http_soap_id and out_soap_http_soap_id:
             raise BadRequest(self.cid, 'Cannot provide both out_rest_http_soap_id and out_soap_http_soap_id on input')
 
-        # WebSockets clients dynamic attach to delivery servers hence the servers cannot be updated by users
-        can_update_delivery_server = self.request.input.endpoint_type != COMMON_PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+        should_update_delivery_server = self.request.input.endpoint_type not in {
+
+            # WebSockets clients dynamically attach to delivery servers hence the servers cannot be updated by users
+            COMMON_PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
+
+            # Services are always invoked in the same server
+            COMMON_PUBSUB.ENDPOINT_TYPE.SERVICE.id,
+        }
 
         # We know we don't have both out_rest_http_soap_id and out_soap_http_soap_id on input
         # but we still need to find out if we have any at all.
@@ -391,10 +410,13 @@ class UpdateEndpointQueue(AdminService):
                 filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
                 one()
 
-            if can_update_delivery_server:
+            if should_update_delivery_server:
                 old_delivery_server_id = item.server_id
                 new_delivery_server_id = self.request.input.server_id
-                new_delivery_server_name = server_by_id(session, self.server.cluster_id, new_delivery_server_id).name
+                if new_delivery_server_id:
+                    new_delivery_server_name = server_by_id(session, self.server.cluster_id, new_delivery_server_id).name
+                else:
+                    new_delivery_server_name = None
             else:
                 # These are added purely for static type hints
                 old_delivery_server_id = -1
@@ -422,7 +444,7 @@ class UpdateEndpointQueue(AdminService):
 
             # We change the delivery server in background - note how we send name, not ID, on input.
             # This is because our invocation target will want to use self.server.rpc[server_name].invoke(...)
-            if can_update_delivery_server:
+            if should_update_delivery_server:
                 if old_delivery_server_id != new_delivery_server_id:
                     self.broker_client.publish({
                         'sub_key': self.request.input.sub_key,
@@ -635,7 +657,7 @@ class _GetEndpointSummaryBase(AdminService):
         input_optional = ('topic_id',)
         output_required = ('id', 'endpoint_name', 'endpoint_type', 'subscription_count', 'is_active', 'is_internal')
         output_optional = ('security_id', 'sec_type', 'sec_name', 'ws_channel_id', 'ws_channel_name',
-            'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role')
+            'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role', 'endpoint_type_name')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -652,11 +674,15 @@ class GetEndpointSummary(_GetEndpointSummaryBase):
         with closing(self.odb.session()) as session:
             item = pubsub_endpoint_summary(session, self.server.cluster_id, self.request.input.endpoint_id)
 
-            if item.last_seen:
-                item.last_seen = datetime_from_ms(item.last_seen)
+            item = item._asdict()
 
-            if item.last_deliv_time:
-                item.last_deliv_time = datetime_from_ms(item.last_deliv_time)
+            if item['last_seen']:
+                item['last_seen'] = datetime_from_ms(item['last_seen'])
+
+            if item['last_deliv_time']:
+                item['last_deliv_time'] = datetime_from_ms(item['last_deliv_time'])
+
+            item['endpoint_type_name'] = COMMON_PUBSUB.ENDPOINT_TYPE.get_name_by_type(item['endpoint_type'])
 
             self.response.payload = item
 
@@ -674,18 +700,28 @@ class GetEndpointSummaryList(_GetEndpointSummaryBase):
 
     def get_data(self, session:'SASession') -> 'anylist':
 
+        # This will be a list of dictionaries that we return
+        out = []
+
+        # These are SQL rows
         result = self._search(pubsub_endpoint_summary_list, session, self.request.input.cluster_id,
             self.request.input.get('topic_id') or None, False)
 
         for item in result:
 
-            if item.last_seen:
-                item.last_seen = datetime_from_ms(item.last_seen)
+            item = item._asdict()
 
-            if item.last_deliv_time:
-                item.last_deliv_time = datetime_from_ms(item.last_deliv_time)
+            if item['last_seen']:
+                item['last_seen'] = datetime_from_ms(item['last_seen'])
 
-        return result
+            if item['last_deliv_time']:
+                item['last_deliv_time'] = datetime_from_ms(item['last_deliv_time'])
+
+            item['endpoint_type_name'] = COMMON_PUBSUB.ENDPOINT_TYPE.get_name_by_type(item['endpoint_type'])
+
+            out.append(item)
+
+        return out
 
     def handle(self):
         with closing(self.odb.session()) as session:
