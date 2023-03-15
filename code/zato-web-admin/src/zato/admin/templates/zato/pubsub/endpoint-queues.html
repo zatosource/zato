@@ -349,7 +349,7 @@
 
                         {% endif %}
 
-                        {% if endpoint.endpoint_type != endpoint_type.WEB_SOCKETS.id %}
+                        {% if endpoint.endpoint_type != endpoint_type.WEB_SOCKETS.id and endpoint.endpoint_type != endpoint_type.SERVICE.id %}
 
                         <tr>
                             <td style="vertical-align:middle; width:12%">Delivery method</td>
@@ -361,9 +361,11 @@
                         {% endif %}
 
                         <tr>
-                            <td style="vertical-align:middle; width:12%">Deliv. batch size<br/>(list required?)</td>
+                            <td style="vertical-align:middle; width:12%">Deliv. batch size</td>
                             <td>
                                 {{ edit_form.delivery_batch_size }}
+                                |
+                                As list
                                 {{ edit_form.wrap_one_msg_in_list }}
                                 |
                                 Deliv. max retries
@@ -442,13 +444,14 @@
                         </tr>
                         {% endif %}
 
-                        {% comment %} --------- Service --------- {% endcomment %}
+                        {% comment %} --------- Service ---------
                         {% if endpoint.endpoint_type == endpoint_type.SERVICE.id %}
                         <tr id="dyn_form_row_id_service_id">
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.service_id }} </td>
                         </tr>
                         {% endif %}
+                        {% endcomment %}
 
                         {% comment %} --------- SMS - Twilio --------- {% endcomment %}
                         {% if endpoint.endpoint_type == endpoint_type.SMS_TWILIO.id %}
