@@ -120,7 +120,11 @@
                             {% if item.client_html %}
                                 {{ item.client_html|safe }}
                             {% else %}
-                                {{ item.endpoint_type|upper }}
+                                {% if item.is_internal and item.endpoint_type == "srv" %}
+                                    Internal
+                                {% else %}
+                                    {{ item.endpoint_type|upper }}
+                                {% endif %}
                             {% endif %}
                         </td>
                         <td>
