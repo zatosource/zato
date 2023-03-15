@@ -303,24 +303,47 @@ $.fn.zato.pubsub.subscription.create = function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_tr) {
+
     var row = '';
 
     var is_active = data.is_active ? "Yes" : "No";
+    var cluster_id = $('#cluster_id').val();
+    var endpoint_type_human = '';
+
+    if(data.endpoint_type == 'srv') {
+        endpoint_type_human = 'Service';
+    }
+    else if(data.endpoint_type == 'rest') {
+        endpoint_type_human = 'REST';
+    }
+    else {
+        endpoint_type_human = data.endpoint_type;
+    }
 
     // var last_pub_time = data.last_pub_time ? data.last_pub_time : $.fn.zato.empty_value;
     // var last_seen = data.last_seen ? data.last_seen : $.fn.zato.empty_value;
     // var last_deliv_time = data.last_deliv_time ? data.last_deliv_time : $.fn.zato.empty_value;
 
     var pubsub_endpoint_queues_link = String.format(
-        '<a id="pubsub_endpoint_queues_link_{0}" href="{1}">{2}</a>', data.id, data.pubsub_endpoint_queues_link,
-        data.subscription_count);
+        '<a id="pubsub_endpoint_queues_link_{0}" href="{1}?cluster={2}">{3}</a>',
+        data.id,
+        data.pubsub_endpoint_queues_link,
+        cluster_id,
+        data.subscription_count,
+    );
+
+    var endpoint_name_link = String.format(
+        '<a href="/zato/pubsub/endpoint/?cluster={0}&query={1}">{1}</a>',
+        cluster_id,
+        data.endpoint_name,
+    );
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
     row += String.format('<td>{0}</td>', is_active);
-    row += String.format('<td>{0}</td>', data.endpoint_name);
-    row += String.format('<td>{0}</td>', data.endpoint_type);
+    row += String.format('<td>{0}</td>', endpoint_name_link);
+    row += String.format('<td>{0}</td>', endpoint_type_human);
 
     row += String.format('<td>{0}</td>', data.role);
     row += String.format('<td>{0}</td>', pubsub_endpoint_queues_link);
