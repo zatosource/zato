@@ -569,11 +569,12 @@ class PubSub:
             for key, value in config.items():
                 sub.config[key] = value
 
-            # .. now, obtain the PubSub tool responsible for this subscription ..
-            ps_tool = self.pubsub_tool_by_sub_key[sub_key] # type: PubSubTool
-
-            # .. and trigger an update of the underlying delivery task's configuration as well.
-            ps_tool.trigger_update_task_sub_config(sub_key)
+            # .. now, try obtain the PubSub tool responsible for this subscription ..
+            # .. and trigger an update of the underlying delivery task's configuration as well, ..
+            # .. note, however, that there may be no such ps_tool when we edit a WebSockets-based subscription ..
+            # .. and the WebSocket client is not currently connected.
+            if ps_tool := self._get_pubsub_tool_by_sub_key(sub_key):
+                ps_tool.trigger_update_task_sub_config(sub_key)
 
 # ################################################################################################################################
 
@@ -622,8 +623,11 @@ class PubSub:
 
     def clear_task(self, sub_key:'str') -> 'None':
         with self.lock:
-            ps_tool = self.pubsub_tool_by_sub_key[sub_key]
-            ps_tool.clear_task(sub_key)
+            # Clear the task but only if a given ps_tool exists at all.
+            # It may be missing if the sub_key points to a WebSocket
+            # that is not connected at the moment.
+            if ps_tool := self._get_pubsub_tool_by_sub_key(sub_key):
+                ps_tool.clear_task(sub_key)
 
 # ################################################################################################################################
 
@@ -890,8 +894,8 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def _get_pubsub_tool_by_sub_key(self, sub_key:'str') -> 'PubSubTool':
-        return self.pubsub_tool_by_sub_key[sub_key]
+    def _get_pubsub_tool_by_sub_key(self, sub_key:'str') -> 'PubSubTool | None':
+        return self.pubsub_tool_by_sub_key.get(sub_key)
 
 # ################################################################################################################################
 
