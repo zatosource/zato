@@ -668,14 +668,7 @@ class PubSub:
             self.delete_sub_key_server(sub_key, sub_pattern_matched=sub.sub_pattern_matched)
 
             # Stop and remove the task for this sub_key ..
-            try:
-                ps_tool = self._get_pubsub_tool_by_sub_key(sub_key)
-            except KeyError:
-                # This may happen if the sub_key was held by a WebSocket
-                # but the WebSocket is not connected currently,
-                # meaning that its ps_tool does not exist.
-                pass
-            else:
+            if ps_tool := self._get_pubsub_tool_by_sub_key(sub_key):
                 ps_tool.delete_by_sub_key(sub_key)
 
             # Remove the mapping from the now-removed sub_key to its ps_tool
