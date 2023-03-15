@@ -113,7 +113,7 @@
     Subscription queues for endpoint :
     <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ endpoint.name }}">{{ endpoint.name }}</a>
     : Type :
-    {{ endpoint.endpoint_type }}
+    {{ client_html|safe }}
 </h2>
 
 {% if not zato_clusters %}
