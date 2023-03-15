@@ -38,10 +38,6 @@ def get_client_html(item, security_id, cluster_id, style='', separator=''):
     client = ''
     path_name = ''
 
-    print()
-    print(111, item)
-    print()
-
     if item.is_internal:
         return 'Internal'
 
