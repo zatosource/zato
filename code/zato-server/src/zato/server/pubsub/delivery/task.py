@@ -126,7 +126,7 @@ class DeliveryTask:
 
         # This will be set to True if the task should clear all of the messages
         # that are currently held by its delivery list. The flag is checked before each delivery.
-        self.clear_requested = False
+        self.should_clear = False
 
         # This is a lock used for micro-operations such as changing or consulting the contents of self.delete_requested.
         self.interrupt_lock = RLock()
@@ -288,47 +288,18 @@ class DeliveryTask:
         current_batch:'msglist' # type: ignore[valid-type]
     ) -> 'msglist': # type: ignore[valid-type]
 
-        # While we are running, we may receive a request to clear all the messages (i.e. to delete them all)
-        # or to delete only some of messages and we obtain the list of such messages here.
+        # There may be requests to delete some of messages while we are running and we obtain the list of
+        # such messages here.
         with self.interrupt_lock:
-
-            # We need to keep a reference to this flag because we are going to reset it in a moment
-            # while it is going to be needed later on.
-            orig_clear_requested = self.clear_requested
-
-            # We are told to clear all the messages that are in progress
-            if self.clear_requested:
-
-                # .. take all of them into account ..
-                # to_delete = cast_('anylist', current_batch)[:]
-
-                self.delete_requested[:] = current_batch
-
-                # .. and reset the flag,
-                self.clear_requested = False
-
-            # else:
-
-            # .. we are to delete only these selected messages (if any) ..
             to_delete = self.delete_requested[:]
-
-            # .. and reset the list of what was to be deleted.
             self.delete_requested.clear()
 
-        #
-        # Unless we were already told to clear everything, go through each message
-        # and check if any has reached our delivery_max_retry.
-        #
+        # Go through each message and check if any has reached our delivery_max_retry.
         # Any such message should be deleted so we add it to to_delete. Note that we do it here
         # because we want for a sub hook to have access to them.
-        #
-        # Note that we skip the loop if orig_clear_requested was True because, in such a case, we are going to delete
-        # all the messages anyway.
-        #
-        if not orig_clear_requested:
-            for msg in current_batch: # type: ignore[attr-defined]
-                if msg.delivery_count >= self.delivery_max_retry:
-                    to_delete.append(msg)
+        for msg in current_batch: # type: ignore[attr-defined]
+            if msg.delivery_count >= self.delivery_max_retry:
+                to_delete.append(msg)
 
         return to_delete
 
@@ -649,6 +620,18 @@ class DeliveryTask:
 
                     with self.delivery_lock:
 
+                        # Check if we should not clear all the messages before we run the delivery ..
+                        if self.should_clear:
+
+                            # .. delete the messages first ..
+                            self._delete_messages(self.delivery_list[:])
+
+                            # .. reset the flag ..
+                            self.should_clear = False
+
+                            # .. and continue the loop ..
+                            continue
+
                         # Update last run time to be able to wake up in time for the next delivery
                         self.last_iter_run = utcnow_as_ms()
 
@@ -724,7 +707,7 @@ class DeliveryTask:
     def clear(self) -> 'None':
 
         # Indicate to other parts of the task that a clear operation was requested
-        self.clear_requested = True
+        self.should_clear = True
 
         # For logging purposes ..
         gd, non_gd = self.get_queue_depth()
@@ -732,6 +715,9 @@ class DeliveryTask:
         # .. log details of what we are about to do ..
         logger.info('Removing messages from delivery list for sub_key:`%s, gd:%d, ngd:%d `%s`',
             self.sub_key, gd, non_gd, [elem.pub_msg_id for elem in self.delivery_list])
+
+        # .. indicate what should be deleted in the next iteration of the self.run_delivery loop ..
+        self.delete_requested[:] = self.delivery_list[:]
 
         # .. clear the delivery list now ..
         self.delivery_list.clear()
