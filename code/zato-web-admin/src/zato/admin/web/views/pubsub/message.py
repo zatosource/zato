@@ -161,6 +161,7 @@ def publish(req, cluster_id, topic_id):
     return_data = {
         'cluster_id': cluster_id,
         'action': 'publish',
+        'default_message': PUBSUB.DEFAULT.Dashboard_Message_Body,
         'form': MsgPublishForm(
             req,
             dumps(select_changer_data),
