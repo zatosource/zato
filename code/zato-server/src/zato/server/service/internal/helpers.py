@@ -531,19 +531,27 @@ class HelperPubSubHook(PubSubHook):
         # Log what we have received ..
         self.logger.info('Helpers before_publish; pub_msg_id:`%s`, data:`%s`', pub_msg_id, data)
 
-        # .. load data from JSON ..
-        dict_data = loads(data)
+        # .. unless this is a test message, load data from JSON ..
+        if data != PUBSUB.DEFAULT.Dashboard_Message_Body:
 
-        # .. find information where we should save our input to ..
-        file_name = dict_data['file_name']
+            # .. the data may be still user-provided, in which case it may not be JSON at all ..
+            try:
+                dict_data = loads(data)
+            except Exception:
+                # This is fine, it was not JSON
+                pass
+            else:
 
-        # .. add a suffix so as not to clash with the main recipient of the message ..
-        file_name = file_name + '.hook-before-publish.json'
+                # .. find information where we should save our input to ..
+                file_name = dict_data['file_name']
 
-        # .. store our input in a file for the external caller to check it ..
-        f = open_rw(file_name)
-        f.write(data)
-        f.close()
+                # .. add a suffix so as not to clash with the main recipient of the message ..
+                file_name = file_name + '.hook-before-publish.json'
+
+                # .. store our input in a file for the external caller to check it ..
+                f = open_rw(file_name)
+                _ = f.write(data)
+                f.close()
 
         # .. and proceed with the publication
         self.response.payload.hook_action = PUBSUB.HOOK_ACTION.DELIVER
