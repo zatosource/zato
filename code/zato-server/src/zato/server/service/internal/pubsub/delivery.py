@@ -197,7 +197,8 @@ class DeliverMessage(AdminService):
         #
         if not target_service_name:
             endpoint = self.pubsub.get_endpoint_by_id(sub.endpoint_id)
-            target_service_name = endpoint.config['service_name']
+            service_id = endpoint.config['service_id']
+            target_service_name = self.server.service_store.get_service_name_by_id(service_id)
 
         # Invoke the target service, giving it on input everything that we have,
         # regardless of whether it is a list or not. a list
