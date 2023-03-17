@@ -35,7 +35,11 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Topics last published to by endpoint : <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ endpoint.name }}">{{ endpoint.name }}</a></h2>
+<h2 class="zato">
+    Topics last published to by endpoint : <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ endpoint.name }}">{{ endpoint.name }}</a>
+    : Type :
+    {{ client_html|safe }}
+</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
