@@ -164,13 +164,8 @@ $.fn.zato.pubsub.on_endpoint_type_changed = function() {
 
     if(endpoint_type == 'srv') {
 
-        var server_id       = $('#id_server_id');
         var delivery_method = $('#id_delivery_method');
-
-        server_id.attr('data-bvalidator', '');
         delivery_method.attr('data-bvalidator', '');
-
-        validator.removeMsg(server_id);
         validator.removeMsg(delivery_method);
     }
 }
@@ -231,11 +226,15 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
     var prefix = is_edit ? 'edit-' : '';
     var endpoint_type = $('#id_' + prefix + 'endpoint_type').val();
 
-    if(endpoint_type == 'rest' || endpoint_type == 'soap') {
+    var server_id       = $('#id_' + prefix + 'server_id');
+    var delivery_method = $('#id_' + prefix + 'delivery_method');
+    var out_http_method = $('#id_' + prefix + 'out_http_method');
 
-        var server_id       = $('#id_' + prefix + 'server_id');
-        var delivery_method = $('#id_' + prefix + 'delivery_method');
-        var out_http_method = $('#id_' + prefix + 'out_http_method');
+    var out_rest_http_soap_id = $('#id_' + prefix + 'out_rest_http_soap_id');
+    var out_soap_http_soap_id = $('#id_' + prefix + 'out_soap_http_soap_id');
+    var rest_delivery_endpoint = $('#id_' + prefix + 'rest_delivery_endpoint');
+
+    if(endpoint_type == 'rest' || endpoint_type == 'soap') {
 
         if(!server_id.val()) {
             server_id.css('background-color', '#ffffae');
@@ -257,9 +256,6 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 
     if(endpoint_type == 'rest') {
         if(delivery_method == 'notify') {
-            var out_rest_http_soap_id = $('#id_' + prefix + 'out_rest_http_soap_id');
-            var rest_delivery_endpoint = $('#id_' + prefix + 'rest_delivery_endpoint');
-
             if(!out_rest_http_soap_id.val() && !rest_delivery_endpoint.val()) {
                 form.data('bValidator').showMsg(out_rest_http_soap_id,
                     'This is a required field');
@@ -270,9 +266,6 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 
     if(endpoint_type == 'soap') {
         if(delivery_method == 'notify') {
-            var out_soap_http_soap_id = $('#id_' + prefix + 'out_soap_http_soap_id');
-            var rest_delivery_endpoint = $('#id_' + prefix + 'soap_delivery_endpoint');
-
             if(!out_soap_http_soap_id.val() && !soap_delivery_endpoint.val()) {
                 form.data('bValidator').showMsg(out_soap_http_soap_id,
                     'This is a required field');
