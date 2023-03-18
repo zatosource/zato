@@ -125,7 +125,7 @@ class InputLogger(Service):
         pass
 
     def finalize_handle(self) -> 'None': # type: ignore
-        self.log_input()
+        _ = self.log_input()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -175,13 +175,13 @@ Data: `{data}`
         na = 'n/a'
 
         try:
-            msg_id = mq.msg_id.decode('ascii')
+            msg_id = mq.msg_id.decode('ascii') # type: ignore
         except UnicodeDecodeError:
             msg_id = repr(mq.msg_id)
 
         if mq.correlation_id:
             try:
-                correlation_id = mq.correlation_id.decode('ascii')
+                correlation_id = mq.correlation_id.decode('ascii') # type: ignore
             except UnicodeDecodeError:
                 correlation_id = repr(mq.correlation_id)
         else:
@@ -482,13 +482,13 @@ class HelperPubSubTarget(Service):
     def handle(self):
 
         # Our request
-        msg = self.request.raw_request # type: PubSubMessage
+        msg = self.request.raw_request # type: list_[PubSubMessage]
 
         # Whatever happens next, log what we received
-        self.logger.info('I was invoked with %r', msg.to_dict())
+        self.logger.info('I was invoked with %r', msg)
 
         # .. load the inner dict ..
-        data = msg.data # type: anydict
+        data = msg[0].data # type: anydict
 
         # .. confirm what it was ..
         self.logger.info('Data is %r', data)
@@ -500,14 +500,14 @@ class HelperPubSubTarget(Service):
             file_name = data['file_name']
 
             # .. we will save the message as a JSON one ..
-            json_msg = msg.to_json(needs_utf8_decode=True)
+            json_msg = msg[0].to_json(needs_utf8_decode=True)
 
             # .. confirm what we will be saving and where ..
             self.logger.info('Saving data to file `%s` -> `%s`', file_name, json_msg)
 
             # .. and actually save it now.
             f = open_rw(file_name)
-            f.write(json_msg)
+            _ = f.write(json_msg)
             f.close()
 
 # ################################################################################################################################
@@ -531,19 +531,27 @@ class HelperPubSubHook(PubSubHook):
         # Log what we have received ..
         self.logger.info('Helpers before_publish; pub_msg_id:`%s`, data:`%s`', pub_msg_id, data)
 
-        # .. load data from JSON ..
-        dict_data = loads(data)
+        # .. unless this is a test message, load data from JSON ..
+        if data != PUBSUB.DEFAULT.Dashboard_Message_Body:
 
-        # .. find information where we should save our input to ..
-        file_name = dict_data['file_name']
+            # .. the data may be still user-provided, in which case it may not be JSON at all ..
+            try:
+                dict_data = loads(data)
+            except Exception:
+                # This is fine, it was not JSON
+                pass
+            else:
 
-        # .. add a suffix so as not to clash with the main recipient of the message ..
-        file_name = file_name + '.hook-before-publish.json'
+                # .. find information where we should save our input to ..
+                file_name = dict_data['file_name']
 
-        # .. store our input in a file for the external caller to check it ..
-        f = open_rw(file_name)
-        f.write(data)
-        f.close()
+                # .. add a suffix so as not to clash with the main recipient of the message ..
+                file_name = file_name + '.hook-before-publish.json'
+
+                # .. store our input in a file for the external caller to check it ..
+                f = open_rw(file_name)
+                _ = f.write(data)
+                f.close()
 
         # .. and proceed with the publication
         self.response.payload.hook_action = PUBSUB.HOOK_ACTION.DELIVER
@@ -572,7 +580,7 @@ class HelperPubSubSource(Service):
         self.pubsub.publish(HelperPubSubTarget, data=data)
 
         # .. the topic for that service has to be potentially created so we wait here until it appears ..
-        self.pubsub.wait_for_topic(topic_name)
+        _ = self.pubsub.wait_for_topic(topic_name)
         sleep(0.1)
 
         # .. now, once the message has been published, we know that the topic
@@ -603,7 +611,7 @@ class HelperPubSubSource(Service):
         response = self.invoke('zato.pubsub.topic.edit', request)
 
         # .. once again, wait until the topic has been recreated ..
-        self.pubsub.wait_for_topic(topic_name)
+        _ = self.pubsub.wait_for_topic(topic_name)
         sleep(0.1)
 
         # The second time around, the target service should not create a file
@@ -836,7 +844,7 @@ class CommandsService(Service):
 
             # Populate the file with test data
             with open_w(full_path) as f:
-                f.write(data)
+                _ = f.write(data)
 
             # Read the file back
             command = f'cat {full_path}'

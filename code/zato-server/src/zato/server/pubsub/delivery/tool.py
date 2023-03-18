@@ -188,6 +188,7 @@ class PubSubTool:
 
         else:
             self.delivery_tasks[sub_key] = DeliveryTask(
+                pubsub = self.pubsub,
                 sub_config = sub.config,
                 sub_key = sub_key,
                 delivery_lock = delivery_lock,
@@ -225,6 +226,8 @@ class PubSubTool:
             except Exception:
                 logger.warning('Exception during sub_key removal `%s`, e:`%s`', sub_key, format_exc())
 
+    delete_by_sub_key = remove_sub_key
+
 # ################################################################################################################################
 
     def has_sub_key(self, sub_key:'str') -> 'bool':
@@ -237,6 +240,18 @@ class PubSubTool:
         sub_keys = deepcopy(self.sub_keys)
         for sub_key in sub_keys:
             self.remove_sub_key(sub_key)
+
+# ################################################################################################################################
+
+    def clear_task(self, sub_key:'str') -> 'None':
+        task = self.delivery_tasks[sub_key]
+        task.clear()
+
+# ################################################################################################################################
+
+    def trigger_update_task_sub_config(self, sub_key:'str') -> 'None':
+        task = self.delivery_tasks[sub_key]
+        task.update_sub_config()
 
 # ################################################################################################################################
 

@@ -649,7 +649,6 @@ class WebSocket(_WebSocket):
         """
         # Parse JSON into a dictionary
         parsed = self._json_parser.parse(data) # type: any_
-        parsed = parsed.as_dict()
 
         # Create a request message
         msg = ClientMessage()

@@ -220,7 +220,7 @@ class Endpoint(ToDictBase):
         for key, config in iteritems(data):
             is_topic = key == 'topic' # type: bool
 
-            for line in config.splitlines():
+            for line in (config or '').splitlines():
                 line = line.strip()
                 if line.startswith('pub=') or line.startswith('sub='):
                     is_pub = line.startswith('pub=') # type: bool

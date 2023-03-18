@@ -405,6 +405,7 @@ email_from=hello@example.com
 
 [session]
 expiry=60 # In minutes
+expiry_hook= # Name of a service that will return expiry value each time it is needed
 
 [password]
 expiry=730 # In days, 365 days * 2 years = 730 days

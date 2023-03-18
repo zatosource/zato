@@ -109,52 +109,52 @@ class DeliverMessage(AdminService):
 
     def _deliver_rest_soap(self,
         msg:'list[PubSubMessage]',
-        subscription:'Subscription',
+        sub:'Subscription',
         impl_getter:'callable_',
         _suds:'str'=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id,
         _rest:'str'=URL_TYPE.PLAIN_HTTP
         ) -> 'None':
 
-        if not subscription.config['out_http_soap_id']:
-            raise ValueError('Missing out_http_soap_id for subscription `{}`'.format(subscription))
+        if not sub.config['out_http_soap_id']:
+            raise ValueError('Missing out_http_soap_id for subscription `{}`'.format(sub))
         else:
             data = self._get_data_from_message(msg)
-            http_soap = impl_getter(subscription.config['out_http_soap_id']) # type: any_
+            http_soap = impl_getter(sub.config['out_http_soap_id']) # type: any_
 
             _is_rest = http_soap['config']['transport'] == _rest # type: bool
             _has_suds = http_soap['config']['serialization_type'] == _suds # type: bool
 
             # If it is REST or a suds-based connection, we can just invoke it directly
             if _is_rest or (not _has_suds):
-                http_soap.conn.http_request(subscription.config['out_http_method'], self.cid, data=data)
+                http_soap.conn.http_request(sub.config['out_http_method'], self.cid, data=data)
 
             # .. while suds-based outgoing connections need to invoke the hook service which will
             # in turn issue a SOAP request to the remote server.
             else:
-                self.pubsub.invoke_on_outgoing_soap_invoke_hook(msg, subscription, http_soap)
+                self.pubsub.invoke_on_outgoing_soap_invoke_hook(msg, sub, http_soap)
 
 # ################################################################################################################################
 
     def _deliver_amqp(
         self,
         msg:'PubSubMessage',
-        subscription:'Subscription',
+        sub:'Subscription',
         _ignored_impl_getter # type: ignore
     ) -> 'None':
 
         # Ultimately we should use impl_getter to get the outconn
         for value in self.server.worker_store.worker_config.out_amqp.values():
-            if value['config']['id'] == subscription.config['out_amqp_id']:
+            if value['config']['id'] == sub.config['out_amqp_id']:
 
                 data = self._get_data_from_message(msg)
                 name = value['config']['name']
                 kwargs = {}
 
-                if subscription.config['amqp_exchange']:
-                    kwargs['exchange'] = subscription.config['amqp_exchange']
+                if sub.config['amqp_exchange']:
+                    kwargs['exchange'] = sub.config['amqp_exchange']
 
-                if subscription.config['amqp_routing_key']:
-                    kwargs['routing_key'] = subscription.config['amqp_routing_key']
+                if sub.config['amqp_routing_key']:
+                    kwargs['routing_key'] = sub.config['amqp_routing_key']
 
                 self.outgoing.amqp.send(dumps(data), name, **kwargs)
 
@@ -163,29 +163,46 @@ class DeliverMessage(AdminService):
 
 # ################################################################################################################################
 
-    def _deliver_wsx(self, msg, subscription, _ignored_impl_getter) -> 'None': # type: ignore
+    def _deliver_wsx(self, msg, sub, _ignored_impl_getter) -> 'None': # type: ignore
         raise NotImplementedError('WSX deliveries should be handled by each socket\'s deliver_pubsub_msg')
 
 # ################################################################################################################################
 
-    def _deliver_srv(self, msg:'any_', subscription:'Subscription', _ignored_impl_getter:'any_') -> 'None':
+    def _deliver_srv(self, msg:'any_', sub:'Subscription', _ignored_impl_getter:'any_') -> 'None':
 
         # Reusable
         is_list = isinstance(msg, list)
 
+        #
+        # We can have two cases.
+        #
+        # 1) The messages were published via self.pubsub.publish('service.name)
+        # 2) The messages were published to a topic and of its subscribers is a service
+        #
+        # Depending on which case it is, we will extract the actual service's name differently.
+        #
+
+        # We do not know upfront which case it will be so this needs to be extracted upfront.
         # Each message will be destinated for the same service so we can extract the target service's name
         # from the first message in list, assuming it is in a list at all.
         zato_ctx = msg[0].zato_ctx if is_list else msg.zato_ctx
-        target_service_name = zato_ctx['target_service_name']
 
-        # Invoke the target service, giving it on input everything that we had,
-        # do it either for each message from the list ..
-        if is_list:
-            for item in msg: # type: PubSubMessage
-                self.invoke(target_service_name, item)
-        else:
-            # .. or directly, if input is not a list
-            self.invoke(target_service_name, msg)
+        #
+        # Case 1) is where we can find the service name immediately.
+        #
+        target_service_name = zato_ctx != '{}' and zato_ctx.get('target_service_name')
+
+        #
+        # Case 2) is where we need to look up the service's name based on a given endpoint that points to the service.
+        #
+        if not target_service_name:
+            endpoint = self.pubsub.get_endpoint_by_id(sub.endpoint_id)
+            service_id = endpoint.config['service_id']
+            target_service_name = self.server.service_store.get_service_name_by_id(service_id)
+
+        # Invoke the target service, giving it on input everything that we have,
+        # regardless of whether it is a list or not. a list
+        self.invoke(target_service_name, msg)
 
 # ################################################################################################################################
 

@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from contextlib import closing
+from random import randint
 from traceback import format_exc
 
 # ciso8601
@@ -54,6 +53,7 @@ class Create(AdminService):
                 filter(ChannelWebSocket.name==req.channel_name).\
                 one()
 
+            client.id = randint(100_000, 2_000_000_000)
             client.is_internal = req.is_internal
             client.pub_client_id = req.pub_client_id
             client.ext_client_id = req.ext_client_id
