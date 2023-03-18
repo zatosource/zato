@@ -964,18 +964,17 @@ def _pubsub_endpoint(session, cluster_id):
         PubSubEndpoint.pub_tag_patterns,
         PubSubEndpoint.message_tag_patterns,
         PubSubEndpoint.security_id,
+        PubSubEndpoint.service_id,
         PubSubEndpoint.ws_channel_id,
         SecurityBase.sec_type,
         SecurityBase.name.label('sec_name'),
-        Service.id.label('service_id'),
         Service.name.label('service_name'),
         ChannelWebSocket.name.label('ws_channel_name'),
         ).\
         outerjoin(SecurityBase, SecurityBase.id==PubSubEndpoint.security_id).\
-        outerjoin(Service, PubSubEndpoint.id==PubSubEndpoint.service_id).\
+        outerjoin(Service, Service.id==PubSubEndpoint.service_id).\
         outerjoin(ChannelWebSocket, ChannelWebSocket.id==PubSubEndpoint.ws_channel_id).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==PubSubEndpoint.cluster_id).\
+        filter(PubSubEndpoint.cluster_id==cluster_id).\
         order_by(PubSubEndpoint.id)
 
 def pubsub_endpoint(session, cluster_id, id):
@@ -989,7 +988,8 @@ def pubsub_endpoint(session, cluster_id, id):
 def pubsub_endpoint_list(session, cluster_id, needs_columns=False):
     """ A list of pub/sub endpoints.
     """
-    return _pubsub_endpoint(session, cluster_id)
+    result = _pubsub_endpoint(session, cluster_id)
+    return result
 
 # ################################################################################################################################
 

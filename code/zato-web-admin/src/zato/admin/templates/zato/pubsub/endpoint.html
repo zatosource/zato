@@ -18,7 +18,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/python" src="/static/brython/zato/common.py"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript">
-    window.zato_dyn_form_default = 'wsx';
+    window.zato_dyn_form_default = 'rest';
     window.zato_dyn_form_elem_name = 'endpoint_type';
     window.zato_dyn_form_rows = {
         'amqp': [],
@@ -26,10 +26,10 @@
         'ftp': [],
         'imap': [],
         'rest': ['security_id'],
-        'service': ['service_id'],
         'sms_twilio': [],
         'smtp': [],
         'soap': [],
+        'srv': ['service_id'],
         'sql': [],
         'wsx': ['ws_channel_id'],
     }
@@ -56,6 +56,7 @@
             'is_active',
             'topic_patterns',
             'security_id',
+            'service_id',
             'ws_channel_id',
         ]
     }
@@ -103,6 +104,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -118,7 +120,11 @@
                             {% if item.client_html %}
                                 {{ item.client_html|safe }}
                             {% else %}
-                                {{ item.endpoint_type|upper }}
+                                {% if item.is_internal and item.endpoint_type == "srv" %}
+                                    Internal
+                                {% else %}
+                                    {{ item.endpoint_type|upper }}
+                                {% endif %}
                             {% endif %}
                         </td>
                         <td>
@@ -156,6 +162,7 @@
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.topic_patterns|default:'' }}</td>
                         <td class='ignore'>{{ item.security_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.service_id|default:'' }}</td>
                         <td class='ignore'>{{ item.ws_channel_id|default:'' }}</td>
                     </tr>
                 {% endfor %}
@@ -203,7 +210,7 @@
 
                         {% comment %} --------- WebSockets --------- {% endcomment %}
                         <tr id="dyn_form_row_id_ws_channel_id" style="display:none">
-                            <td style="vertical-align:middle">WebSockets channel</td>
+                            <td style="vertical-align:middle">WSX channel</td>
                             <td>{{ create_form.ws_channel_id }} </td>
                         </tr>
                         <tr>

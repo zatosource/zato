@@ -87,6 +87,9 @@ class Index(_Index):
         item.key_escaped = b64encode(item.key_escaped)
         item.key_escaped = item.key_escaped.decode('utf8')
 
+        chars_omitted = getattr(item, 'chars_omitted', 0)
+        item.chars_omitted = int(chars_omitted)
+
         for name in _to_user_dt:
             value = getattr(item, name)
             if value:

@@ -19,6 +19,8 @@ from zato.common.api import GENERIC, SEC_DEF_TYPE
 from zato.common.audit import audit_pii
 from zato.common.json_internal import dumps
 from zato.common.odb.model import SSOSession as SessionModel
+from zato.common.model.sso import ExpiryHookInput
+from zato.common.typing_ import cast_
 from zato.sso import status_code, Session as SessionEntity, ValidationError
 from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_session_by_ext_id, get_session_by_ust, get_session_list_by_user_id, get_user_by_id, \
@@ -34,7 +36,8 @@ if 0:
     from typing import Callable
     from bunch import Bunch
     from zato.common.odb.model import SSOUser
-    from zato.common.typing_ import anydict, anylist, anytuple, boolnone, callable_, cast_, dtnone, list_, stranydict, strnone
+    from zato.common.typing_ import anylist, anytuple, boolnone, callable_, dtnone, list_, stranydict, strnone
+    from zato.server.base.parallel import ParallelServer
     from zato.sso.totp_ import TOTPAPI
     from zato.sso.user import User
 
@@ -102,13 +105,15 @@ class SessionAPI:
     """
     def __init__(
         self,
-        sso_conf,         # type: anydict
+        server,           # type: ParallelServer
+        sso_conf,         # type: Bunch
         totp,             # type: TOTPAPI
         encrypt_func,     # type: 'callable_'
         decrypt_func,     # type: 'callable_'
         hash_func,        # type: 'callable_'
         verify_hash_func, # type: 'callable_'
     ) -> 'None':
+        self.server = server
         self.sso_conf = sso_conf
         self.totp = totp
         self.encrypt_func = encrypt_func
@@ -315,7 +320,7 @@ class SessionAPI:
             if not skip_sec:
 
                 # It must be possible to log into the application requested (CRM above)
-                self.user_checker.check_login_to_app_allowed(ctx)
+                _ = self.user_checker.check_login_to_app_allowed(ctx)
 
                 # Common auth checks
                 self.user_checker.check(ctx, user)
@@ -330,7 +335,7 @@ class SessionAPI:
                         raise ValidationError(status_code.password.e_about_to_exp, False, _about_status)
 
                 # If password is marked as requiring a change upon next login but a new one was not sent, reject the request.
-                self.user_checker.check_must_send_new_password(ctx, user)
+                _ = self.user_checker.check_must_send_new_password(ctx, user)
 
             # If new password is required, we need to validate and save it before session can be created.
             # Note that at this point we already know that the old password was correct so it is safe to set the new one
@@ -349,7 +354,8 @@ class SessionAPI:
 
             # All validated, we can create a session object now
             creation_time = _now()
-            expiration_time = creation_time + timedelta(minutes=self.sso_conf.session.expiry)
+            session_expiry = self._get_session_expiry_delta(cast_('str', ctx.input['current_app']), user.username)
+            expiration_time = creation_time + timedelta(minutes=session_expiry)
             ust = new_user_session_token()
 
             # All the data needed to insert a new session into the database ..
@@ -383,7 +389,7 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def _get_session_by_ust(self, session, ust, now) -> 'SessionModel':
+    def _get_session_by_ust(self, session, ust, now) -> 'SessionModel | Bunch':
         """ Low-level implementation of self.get_session_by_ust.
         """
         # type: (object, str, datetime) -> object
@@ -432,7 +438,7 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def update_session_state_change_list(self, current_state, remote_addr, user_agent, ctx_source, now) -> 'anylist':
+    def update_session_state_change_list(self, current_state, remote_addr, user_agent, ctx_source, now) -> 'anylist | None':
         """ Adds information about a user interaction with SSO, keeping the history
         of such interactions to up to max_len entries.
         """
@@ -448,8 +454,42 @@ class SessionAPI:
 
 # ################################################################################################################################
 
+    def _get_session_expiry_delta(self, current_app:'str', username:'str') -> 'int':
+        """ Returns an integer indicating for how many minutes to extend a user session.
+        """
+        # This will be used if, for any reason, we cannot invoke the hook service
+        out = cast_('int', self.sso_conf.session.expiry)
+
+        # Try to see if there is an expiry hook service defined ..
+        expiry_hook = self.sso_conf.session.get('expiry_hook')
+
+        # .. if not, we can return the default expiry immediately ..
+        if not expiry_hook:
+            return out
+
+        # .. otherwise, try to invoke the hook service ..
+        try:
+
+            request = ExpiryHookInput()
+            request.username = username
+            request.current_app = current_app
+
+            out = self.server.invoke(expiry_hook, request=request.to_dict(), serialize=False)
+            out = out.getvalue()
+            out = out['response']
+            out = out['expiry']
+            out = int(out)
+
+        except Exception:
+            logger.info('Caught an exception when invoking expiry hook service `%s` -> `%s`', expiry_hook, format_exc())
+        finally:
+            return out
+
+# ################################################################################################################################
+
     def _get(self, session, ust, current_app, remote_addr, ctx_source, needs_decrypt=True, renew=False, needs_attrs=False,
-        user_agent=None, check_if_password_expired=True, _now=datetime.utcnow, _opaque=GENERIC.ATTR_NAME, skip_sec=False) -> 'SessionModel':
+        user_agent=None, check_if_password_expired=True, _now=datetime.utcnow,
+        _opaque=GENERIC.ATTR_NAME, skip_sec=False) -> 'SessionModel | bool':
         """ Verifies if input user session token is valid and if the user is allowed to access current_app.
         On success, if renew is True, renews the session. Returns all session attributes or True,
         depending on needs_attrs's value.
@@ -480,11 +520,12 @@ class SessionAPI:
                 # Update current interaction details for this session
                 opaque = getattr(sso_info, _opaque) or {}
                 session_state_change_list = self._extract_session_state_change_list(sso_info)
-                self.update_session_state_change_list(session_state_change_list, remote_addr, user_agent, ctx_source, now)
+                _ = self.update_session_state_change_list(session_state_change_list, remote_addr, user_agent, ctx_source, now)
                 opaque['session_state_change_list'] = session_state_change_list
 
                 # Set a new expiration time
-                expiration_time = now + timedelta(minutes=self.sso_conf.session.expiry)
+                session_expiry = self._get_session_expiry_delta(ctx.current_app, sso_info.username)
+                expiration_time = now + timedelta(minutes=session_expiry)
 
                 session.execute(
                     SessionModelUpdate().values({

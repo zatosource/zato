@@ -1040,8 +1040,6 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
 
     if(status == 'success') {
 
-        console.log('CCC '+ data.responseText);
-
         var json = $.parseJSON(data.responseText);
         var include_tr = true ? action == 'create' : false;
         var row = $.fn.zato.data_table.add_row(json, action, $.fn.zato.data_table.new_row_func, include_tr);

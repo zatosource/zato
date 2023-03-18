@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -16,6 +16,7 @@ from hashlib import sha256
 from json import dumps as json_dumps, JSONEncoder
 from logging import getLogger
 from sys import getsizeof
+from time import time
 
 # Arrow
 from arrow import Arrow
@@ -636,20 +637,12 @@ cdef class Cache:
 # ################################################################################################################################
 
     cdef inline double _get_timestamp(self):
-        """ Uses gettimeofday(2) to return current timestamp as double with microseconds precision.
-        """
-        '''
-        cdef timeval tv
-        cdef timezone tz
-
-        gettimeofday(&tv, &tz)
-        '''
-        return 1.12#tv.tv_sec + tv.tv_usec / 1.0e6
+        return time()
 
 # ################################################################################################################################
 
     cpdef double get_timestamp(self):
-        return 1.11#self._get_timestamp()
+        return self._get_timestamp()
 
 # ################################################################################################################################
 
@@ -672,7 +665,7 @@ cdef class Cache:
         if orig_now:
             _now = orig_now
         else:
-            _orig_now = _now = 1.8#self._get_timestamp()
+            _orig_now = _now = self._get_timestamp()
 
         if not isinstance(key, _key_types):
             raise ValueError('Key must be an instance of one of {}'.format(key_types))
@@ -766,7 +759,7 @@ cdef class Cache:
         cdef dict out = {}
         cdef Entry entry
         cdef bint _needs_any_found_report = True if meta_ref else False
-        cdef double _now = orig_now if orig_now else 1.1#self._get_timestamp()
+        cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -807,7 +800,7 @@ cdef class Cache:
         cdef dict out = {}
         cdef Entry entry
         cdef bint _needs_any_found_report = True if meta_ref else False
-        cdef double _now = orig_now if orig_now else 1.2 #self._get_timestamp()
+        cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -851,7 +844,7 @@ cdef class Cache:
         cdef Entry entry
         cdef object regex = self._regex_cache.setdefault(data, re_compile(data))
         cdef bint _needs_any_found_report = True if meta_ref else False
-        cdef double _now = orig_now if orig_now else 1.3#self._get_timestamp()
+        cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -894,7 +887,7 @@ cdef class Cache:
         cdef dict out = {}
         cdef Entry entry
         cdef bint _needs_any_found_report = True if meta_ref else False
-        cdef double _now = orig_now if orig_now else 1.4 #self._get_timestamp()
+        cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
 
@@ -938,7 +931,7 @@ cdef class Cache:
         cdef dict out = {}
         cdef Entry entry
         cdef bint _needs_any_found_report = True if meta_ref else False
-        cdef double _now = orig_now if orig_now else 1.5 #self._get_timestamp()
+        cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -979,7 +972,7 @@ cdef class Cache:
         cdef Entry entry
         cdef bint use_key
         cdef bint _needs_any_found_report = True if meta_ref else False
-        cdef double _now = orig_now if orig_now else 1.6#self._get_timestamp()
+        cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -1029,7 +1022,7 @@ cdef class Cache:
         cdef Entry entry
         cdef bint use_key
         cdef bint _needs_any_found_report = True if meta_ref else False
-        cdef double _now = orig_now if orig_now else 1.7#self._get_timestamp()
+        cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -1078,7 +1071,7 @@ cdef class Cache:
         cdef Py_ssize_t index_idx
         cdef Py_ssize_t cache_size
         cdef object index_key
-        cdef double _now = 1.9#self._get_timestamp()
+        cdef double _now = self._get_timestamp()
 
         try:
             entry = <Entry>self._data[key]
@@ -1321,7 +1314,7 @@ cdef class Cache:
     cpdef expire(self, object key, double expiry, dict meta_ref):
         """ Makes a given cache entry expire after 'expiry' seconds.
         """
-        cpdef bint found_key = False
+        cdef bint found_key = False
 
         with self._lock:
             if key in self._data:
@@ -1332,11 +1325,11 @@ cdef class Cache:
 
 # ################################################################################################################################
 
-    cpdef bint expire_by_prefix(self, object data, double expiry, int limit):
+    cdef bint expire_by_prefix(self, object data, double expiry, int limit):
         """ Sets expiration for all keys matching a given prefix. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
-        cpdef bint found_any = False
+        cdef bint found_any = False
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -1352,11 +1345,11 @@ cdef class Cache:
 
 # ################################################################################################################################
 
-    cpdef bint expire_by_suffix(self, object data, double expiry, int limit):
+    cdef bint expire_by_suffix(self, object data, double expiry, int limit):
         """ Sets expiration for all keys matching a given suffix. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
-        cpdef bint found_any = False
+        cdef bint found_any = False
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -1372,11 +1365,11 @@ cdef class Cache:
 
 # ################################################################################################################################
 
-    cpdef bint expire_by_regex(self, object data, double expiry, int limit):
+    cdef bint expire_by_regex(self, object data, double expiry, int limit):
         """ Sets expiration for all keys matching a given regex pattern. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
-        cpdef bint found_any = False
+        cdef bint found_any = False
         cdef object regex = self._regex_cache.setdefault(data, re_compile(data))
 
         with self._lock:
@@ -1393,11 +1386,11 @@ cdef class Cache:
 
 # ################################################################################################################################
 
-    cpdef bint expire_contains(self, object data, double expiry, int limit):
+    cdef bint expire_contains(self, object data, double expiry, int limit):
         """ Sets expiration for all keys containing a given pattern. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
-        cpdef bint found_any = False
+        cdef bint found_any = False
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -1413,11 +1406,11 @@ cdef class Cache:
 
 # ################################################################################################################################
 
-    cpdef bint expire_not_contains(self, object data, double expiry, int limit):
+    cdef bint expire_not_contains(self, object data, double expiry, int limit):
         """ Sets expiration for all keys containing a given pattern. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
-        cpdef bint found_any = False
+        cdef bint found_any = False
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -1433,11 +1426,11 @@ cdef class Cache:
 
 # ################################################################################################################################
 
-    cpdef bint expire_contains_all(self, object data, double expiry, int limit):
+    cdef bint expire_contains_all(self, object data, double expiry, int limit):
         """ Sets expiration for keys containing all of input elements. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
-        cpdef bint found_any = False
+        cdef bint found_any = False
         cdef bint use_key
 
         with self._lock:
@@ -1462,11 +1455,11 @@ cdef class Cache:
 
 # ################################################################################################################################
 
-    cpdef bint expire_contains_any(self, object data, double expiry, int limit):
+    cdef bint expire_contains_any(self, object data, double expiry, int limit):
         """ Sets expiration for keys containing at least one of input elements. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
-        cpdef bint found_any = False
+        cdef bint found_any = False
         cdef bint use_key
 
         with self._lock:
@@ -1521,7 +1514,7 @@ cdef class Cache:
         """ Deletes all entries expired as of now. Also, deletes all entries possibly found to have expired by .get or .set calls.
         """
         cdef list deleted
-        cdef double _now = 1.10#self._get_timestamp()
+        cdef double _now = self._get_timestamp()
         cdef double expires_at
 
         # Collects all keys to be deleted and in another pass, delete them all.
