@@ -266,7 +266,7 @@ class Connector:
 
     def start(self, needs_log=True):
         if self.is_inactive:
-            logger.warning('Skipped creation of an inactive connector `%s` (%s)', self.name, self.type)
+            logger.info('Skipped creation of an inactive connector `%s` (%s)', self.name, self.type)
             return
 
         with self._start_stop_logger('Starting', 'Started', self._wait_until_connected):

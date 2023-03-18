@@ -428,6 +428,8 @@ class PUBSUB(Constants):
 
     DELIVERY_SERVER_CHANGE = ValueConstant('')
 
+    QUEUE_CLEAR = ValueConstant('')
+
 class SMS(Constants):
     code_start = 106000
 

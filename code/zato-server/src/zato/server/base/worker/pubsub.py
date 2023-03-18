@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.common.pubsub import MSG_PREFIX as PUBSUB_MSG_PREFIX
 from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
@@ -83,6 +84,8 @@ class PubSub(WorkerImpl):
         msg, # type: Bunch
     ) -> 'None':
         self.pubsub.create_subscription_object(msg)
+        if msg.sub_key.startswith(PUBSUB_MSG_PREFIX.SERVICE_SK):
+            self.pubsub.set_config_for_service_subscription(msg.sub_key)
 
 # ################################################################################################################################
 
@@ -108,6 +111,14 @@ class PubSub(WorkerImpl):
         msg, # type: Bunch
     ) -> 'None':
         self.pubsub.set_sub_key_server(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_QUEUE_CLEAR(
+        self:'WorkerStore', # type: ignore
+        msg, # type: Bunch
+    ) -> 'None':
+        self.pubsub.clear_task(msg.sub_key)
 
 # ################################################################################################################################
 

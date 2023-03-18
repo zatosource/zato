@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,13 +11,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from contextlib import closing
-from datetime import datetime, timedelta
 from io import StringIO
 from operator import attrgetter
 from traceback import format_exc
 
 # gevent
-from gevent import sleep
 from gevent.lock import RLock
 
 # Texttable
@@ -29,7 +27,7 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.typing_ import cast_, dict_, optional
-from zato.common.util.api import spawn_greenlet
+from zato.common.util.api import spawn_greenlet, wait_for_dict_key_by_get_func
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.core.endpoint import EndpointAPI
 from zato.server.pubsub.core.trigger import NotifyPubSubTasksTrigger
@@ -451,7 +449,23 @@ class PubSub:
 
     def delete_endpoint(self, endpoint_id:'int') -> 'None':
         with self.lock:
+
+            # First, delete the endpoint object ..
             self.endpoint_api.delete(endpoint_id)
+
+            # .. a list of of sub_keys for this endpoint ..
+            sk_list = []
+
+            # .. find all the sub_keys this endpoint held ..
+            for sub in self.subscriptions_by_sub_key.values():
+                if sub.endpoint_id == endpoint_id:
+                    sk_list.append(sub.sub_key)
+
+            # .. delete all references to the sub_keys found ..
+            for sub_key in sk_list:
+
+                # .. first, stop the delivery tasks ..
+                _ = self._delete_subscription_by_sub_key(sub_key, ignore_missing=True)
 
 # ################################################################################################################################
 
@@ -539,10 +553,26 @@ class PubSub:
 # ################################################################################################################################
 
     def edit_subscription(self, config:'stranydict') -> 'None':
+
+        # Make sure we are the only ones updating the configuration now ..
         with self.lock:
+
+            # Reusable ..
+            sub_key = config['sub_key']
+
+            # .. such a subscription should exist ..
             sub = self._get_subscription_by_sub_key(config['sub_key'])
+
+            # .. update the whole config of the subscription object in place ..
             for key, value in config.items():
                 sub.config[key] = value
+
+            # .. now, try obtain the PubSub tool responsible for this subscription ..
+            # .. and trigger an update of the underlying delivery task's configuration as well, ..
+            # .. note, however, that there may be no such ps_tool when we edit a WebSockets-based subscription ..
+            # .. and the WebSocket client is not currently connected.
+            if ps_tool := self._get_pubsub_tool_by_sub_key(sub_key):
+                ps_tool.trigger_update_task_sub_config(sub_key)
 
 # ################################################################################################################################
 
@@ -572,6 +602,30 @@ class PubSub:
             hook = self.get_on_subscribed_hook(config['sub_key'])
             if hook:
                 _ = self.invoke_on_subscribed_hook(hook, config['topic_id'], config['sub_key'])
+
+# ################################################################################################################################
+
+    def _delete_subscription_from_subscriptions_by_topic(self, sub:'Subscription') -> 'None':
+
+        # This is a list of all the subscriptions related to a given topic ..
+        sk_list = self.subscriptions_by_topic[sub.topic_name]
+
+        # .. try to remove the subscription object from each list ..
+        try:
+            sk_list.remove(sub)
+        except ValueError:
+            # .. it is fine, this list did not contain the sub object.
+            pass
+
+# ################################################################################################################################
+
+    def clear_task(self, sub_key:'str') -> 'None':
+        with self.lock:
+            # Clear the task but only if a given ps_tool exists at all.
+            # It may be missing if the sub_key points to a WebSocket
+            # that is not connected at the moment.
+            if ps_tool := self._get_pubsub_tool_by_sub_key(sub_key):
+                ps_tool.clear_task(sub_key)
 
 # ################################################################################################################################
 
@@ -605,11 +659,21 @@ class PubSub:
         else:
 
             # Now, delete the subscription
-            _ = self.subscriptions_by_sub_key.pop(sub_key, _invalid)
+            sub = self.subscriptions_by_sub_key.pop(sub_key, _invalid)
 
             # Delete the subscription's sk_server first because it depends on the subscription
             # for sk_server table formatting.
             self.delete_sub_key_server(sub_key, sub_pattern_matched=sub.sub_pattern_matched)
+
+            # Stop and remove the task for this sub_key ..
+            if ps_tool := self._get_pubsub_tool_by_sub_key(sub_key):
+                ps_tool.delete_by_sub_key(sub_key)
+
+            # Remove the mapping from the now-removed sub_key to its ps_tool
+            self._delete_subscription_from_subscriptions_by_topic(sub)
+
+            # Remove the subscription from the mapping of topics-to-sub-objects
+            self._delete_pubsub_tool_by_sub_key(sub_key)
 
             # Log what we have done ..
             logger.info('Deleted subscription object `%s` (%s)', sub.sub_key, sub.topic_name)
@@ -629,9 +693,15 @@ class PubSub:
             if not self.has_sub_key(config['sub_key']):
                 self._add_subscription(config)
 
-            # We don't start dedicated tasks for WebSockets - they are all dynamic without a fixed server.
-            # But for other endpoint types, we create and start a delivery task here.
-            if config['endpoint_type'] != PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id:
+            # Is this a WebSockets-based subscription?
+            is_wsx = config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+
+            # .. we do not start dedicated tasks for WebSockets - they are all dynamic without a fixed server ..
+            if is_wsx:
+                pass
+
+            # .. for other endpoint types, we create and start a delivery task here ..
+            else:
 
                 # We have a matching server..
                 if config['cluster_id'] == self.cluster_id and config['server_id'] == self.server.id:
@@ -673,28 +743,8 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def wait_for_topic(self, topic_name:'str', timeout:'int'=10, _utcnow:'callable_'=datetime.utcnow) -> 'bool':
-        now = _utcnow()
-        until = now + timedelta(seconds=timeout)
-
-        # Wait until topic has been created in self.topic or raise an exception on timeout
-        while now < until:
-
-            # We have it, good
-            with self.lock:
-                try:
-                    _ = self.topic_api.get_topic_by_name(topic_name)
-                except KeyError:
-                    pass # No such topic
-                else:
-                    return True
-
-            # No such topic, let us sleep for a moment
-            sleep(1)
-            now = _utcnow()
-
-        # We get here on timeout
-        raise ValueError('No such topic `{}` after {}s'.format(topic_name, timeout))
+    def wait_for_topic(self, topic_name:'str', timeout:'int'=600) -> 'bool':
+        return wait_for_dict_key_by_get_func(self.topic_api.get_topic_by_name, topic_name, timeout, interval=0.5)
 
 # ################################################################################################################################
 
@@ -810,9 +860,19 @@ class PubSub:
 
 # ################################################################################################################################
 
+    def _delete_pubsub_tool_by_sub_key(self, sub_key:'str') -> 'None':
+        _ = self.pubsub_tool_by_sub_key.pop(sub_key, None)
+
+# ################################################################################################################################
+
+    def _get_pubsub_tool_by_sub_key(self, sub_key:'str') -> 'PubSubTool | None':
+        return self.pubsub_tool_by_sub_key.get(sub_key)
+
+# ################################################################################################################################
+
     def get_pubsub_tool_by_sub_key(self, sub_key:'str') -> 'PubSubTool':
         with self.lock:
-            return self.pubsub_tool_by_sub_key[sub_key]
+            return self._get_pubsub_tool_by_sub_key(sub_key)
 
 # ################################################################################################################################
 
@@ -963,26 +1023,31 @@ class PubSub:
 
 # ################################################################################################################################
 
+    def _delete_sub_key_server(self, sub_key:'str', sub_pattern_matched:'str'='') -> 'None':
+        sub_key_server = self.sub_key_servers.get(sub_key)
+        if sub_key_server:
+            msg = 'Deleting sk_server for sub_key `%s`, was `%s:%s`'
+
+            logger.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
+            logger_zato.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
+
+            _ = self.sub_key_servers.pop(sub_key, None)
+
+            sks_table = self.format_sk_servers(sub_pattern_matched=sub_pattern_matched)
+            msg_sks = 'Current sk_servers after deletion of `%s`:\n%s'
+
+            logger.info(msg_sks, sub_key, sks_table)
+            logger_zato.info(msg_sks, sub_key, sks_table)
+
+        else:
+            logger.info('Could not find sub_key `%s` while deleting sub_key server, current `%s` `%s`',
+                sub_key, self.server.name, self.server.pid)
+
+# ################################################################################################################################
+
     def delete_sub_key_server(self, sub_key:'str', sub_pattern_matched:'str'='') -> 'None':
         with self.lock:
-            sub_key_server = self.sub_key_servers.get(sub_key)
-            if sub_key_server:
-                msg = 'Deleting sk_server for sub_key `%s`, was `%s:%s`'
-
-                logger.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
-                logger_zato.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
-
-                _ = self.sub_key_servers.pop(sub_key, None)
-
-                sks_table = self.format_sk_servers(sub_pattern_matched=sub_pattern_matched)
-                msg_sks = 'Current sk_servers after deletion of `%s`:\n%s'
-
-                logger.info(msg_sks, sub_key, sks_table)
-                logger_zato.info(msg_sks, sub_key, sks_table)
-
-            else:
-                logger.info('Could not find sub_key `%s` while deleting sub_key server, current `%s` `%s`',
-                    sub_key, self.server.name, self.server.pid)
+            self._delete_sub_key_server(sub_key, sub_pattern_matched)
 
 # ################################################################################################################################
 

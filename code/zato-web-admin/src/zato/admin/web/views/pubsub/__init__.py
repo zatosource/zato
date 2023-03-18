@@ -29,13 +29,19 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-def get_client_html(item, security_id, cluster_id):
+def get_client_html(item, security_id, cluster_id, style='', separator=''):
     """ Client is a string representation of a WebSockets channel, HTTP credentials or a service.
     """
+    style = style or 'font-size:smaller'
+    separator = separator or '<br/>'
+
     client = ''
     path_name = ''
 
-    if item.ws_channel_id:
+    if item.is_internal:
+        return 'Internal'
+
+    elif item.ws_channel_id:
         path_name = 'channel-web-socket'
         name = item.ws_channel_name
         protocol = 'WebSockets'
@@ -43,7 +49,7 @@ def get_client_html(item, security_id, cluster_id):
     elif security_id:
         path_name = 'security-basic-auth'
         name = item.sec_name
-        protocol = 'HTTP'
+        protocol = 'REST'
 
     elif getattr(item, 'service_id', None):
         path_name = 'service'
@@ -52,10 +58,21 @@ def get_client_html(item, security_id, cluster_id):
 
     if path_name:
         path = django_url_reverse(path_name)
-        client = '<span style="font-size:smaller">{}</span><br/><a href="{}?cluster={}&amp;query={}">{}</a>'.format(
-            protocol, path, cluster_id, name, name)
+        client = '<span style="{}">{}</span>{}<a href="{}?cluster={}&amp;query={}">{}</a>'.format(
+            style, protocol, separator, path, cluster_id, name, name)
 
     return client
+
+# ################################################################################################################################
+
+def get_inline_client_html(item, security_id, cluster_id):
+    return get_client_html(
+        item,
+        security_id,
+        cluster_id,
+        style='font-size:default',
+        separator=' : '
+    )
 
 # ################################################################################################################################
 

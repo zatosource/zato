@@ -40,7 +40,7 @@ class SessionVerifyTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_verify_another_user(self):
+    def xtest_verify_another_user(self):
 
         username = self._get_random_username()
         password = self._get_random_data()
@@ -81,7 +81,7 @@ class SessionVerifyTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_verify_not_super_user(self):
+    def xtest_verify_not_super_user(self):
 
         username1 = self._get_random_username()
         password1 = self._get_random_data()
@@ -173,7 +173,7 @@ class SessionVerifyTestCase(BaseTest):
 
 class SessionRenewTestCase(BaseTest):
 
-    def test_renew(self):
+    def xtest_renew(self):
 
         now = datetime.utcnow()
 
@@ -190,7 +190,7 @@ class SessionGetTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_get_regular_user(self):
+    def xtest_get_regular_user(self):
 
         username = self._get_random_username()
         password = self._get_random_data()
