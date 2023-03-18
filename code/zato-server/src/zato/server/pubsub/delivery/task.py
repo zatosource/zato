@@ -34,6 +34,7 @@ from zato.server.pubsub.model import DeliveryResultCtx
 if 0:
     from zato.common.typing_ import any_, anydict, anylist, boolnone, callable_, callnone, dict_, dictlist, \
          strlist, tuple_
+    from zato.server.pubsub import PubSub
     from zato.server.pubsub.delivery.message import GDMessage, Message
     from zato.server.pubsub.delivery._sorted_list import SortedList
     GDMessage = GDMessage
@@ -71,9 +72,15 @@ sqlmsgiter = iterable_['SQLRow']
 class DeliveryTask:
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """
+
+    wait_sock_err: 'float'
+    wait_non_sock_err: 'float'
+    delivery_max_retry: 'int'
+
     def __init__(
         self,
         *,
+        pubsub,        # type: PubSub
         sub_config,    # type: anydict
         sub_key,       # type: str
         delivery_lock, # type: RLock
@@ -87,6 +94,7 @@ class DeliveryTask:
     ) -> 'None':
 
         self.keep_running = True
+        self.pubsub = pubsub
         self.enqueue_initial_messages_func = enqueue_initial_messages_func
         self.pubsub_set_to_delete = pubsub_set_to_delete
         self.pubsub_get_before_delivery_hook = pubsub_get_before_delivery_hook
@@ -98,14 +106,14 @@ class DeliveryTask:
         self.confirm_pubsub_msg_delivered_cb = confirm_pubsub_msg_delivered_cb
         self.sub_config = sub_config
         self.topic_name = sub_config['topic_name']
-        self.wait_sock_err = float(self.sub_config['wait_sock_err'])
-        self.wait_non_sock_err = float(self.sub_config['wait_non_sock_err'])
         self.last_iter_run = utcnow_as_ms()
         self.delivery_interval = self.sub_config['task_delivery_interval'] / 1000.0
-        self.delivery_max_retry = int(self.sub_config.get('delivery_max_retry', 0) or PUBSUB.DEFAULT.DELIVERY_MAX_RETRY)
         self.previous_delivery_method = self.sub_config['delivery_method']
         self.python_id = str(hex(id(self)))
         self.py_object = '<empty>'
+
+        # Set attributes that may be potentially changed in runtime by users
+        self._set_sub_config_attrs()
 
         # This is a total of delivery iterations
         self.delivery_iter = 0
@@ -116,9 +124,12 @@ class DeliveryTask:
         # A total of messages processed so far
         self.len_delivered = 0
 
-        # A list of messages that were requested to be deleted while a delivery was in progress,
-        # checked before each delivery.
+        # A list of messages that were requested to be deleted while a delivery was in progress, checked before each delivery.
         self.delete_requested:list_['Message'] = []
+
+        # This will be set to True if the task should clear all of the messages
+        # that are currently held by its delivery list. The flag is checked before each delivery.
+        self.should_clear = False
 
         # This is a lock used for micro-operations such as changing or consulting the contents of self.delete_requested.
         self.interrupt_lock = RLock()
@@ -146,6 +157,13 @@ class DeliveryTask:
 
 # ################################################################################################################################
 
+    def _set_sub_config_attrs(self) -> 'None':
+        self.wait_sock_err = float(self.sub_config['wait_sock_err'])
+        self.wait_non_sock_err = float(self.sub_config['wait_non_sock_err'])
+        self.delivery_max_retry = int(self.sub_config.get('delivery_max_retry', 0) or PUBSUB.DEFAULT.DELIVERY_MAX_RETRY)
+
+# ################################################################################################################################
+
     def _delete_messages(self, to_delete:'msgiter') -> 'None':
         """ Actually deletes messages - must be called with self.interrupt_lock held.
         """
@@ -154,8 +172,10 @@ class DeliveryTask:
         # Mark as deleted in SQL
         self.pubsub_set_to_delete(self.sub_key, [msg.pub_msg_id for msg in to_delete])
 
-        # Delete from our in-RAM delivery list
+        # Go through each of the messages that is to be deleted ..
         for msg in to_delete:
+
+            # .. delete it from our in-RAM delivery list ..
             self.delivery_list.remove_pubsub_msg(msg)
 
 # ################################################################################################################################
@@ -368,6 +388,20 @@ class DeliveryTask:
             # Look up all the potential messages that we need to delete.
             to_delete = self._get_messages_to_delete(current_batch)
 
+            # Delete these messages first, before starting any delivery.
+            if to_delete:
+                self._delete_messages(to_delete)
+
+            # Clear out this list because we will be reusing it later in the delivery hook
+            to_delete = []
+
+            # It is possible that we do not have any messages to deliver here, e.g. because all of them were already deleted
+            # via self._delete_messages, in which case, we can simply return.
+            if not self.delivery_list:
+                result.is_ok = True
+                result.status_code = status_code.OK
+                return result
+
             # Unlike to_delete, which has to be computed dynamically,
             # these two can be initialized to their respective empty lists directly.
             to_deliver:'msglist' = [] # type: ignore[valid-type]
@@ -381,8 +415,7 @@ class DeliveryTask:
             else:
                 to_deliver[:] = current_batch[:] # type: ignore[index]
 
-            # Delete these messages first, before starting any delivery, either because self._get_messages_to_delete
-            # returned a non-empty list in this iteration or because the hook did.
+            # Our hook may have indicated what to delete, in which case, do delete that now.
             if to_delete:
                 self._delete_messages(to_delete)
 
@@ -546,6 +579,12 @@ class DeliveryTask:
         logger.info('Starting delivery task for sub_key:`%s` (%s, %s, %s)',
             self.sub_key, self.topic_name, self.sub_config['delivery_method'], self.py_object)
 
+        # First, make sure that the topic object already exists,
+        # e.g. it is possible that our task is already started
+        # even if other in-RAM structures are not populated yet,
+        # which is why we need to wait for this topic.
+        _ = self.pubsub.wait_for_topic(self.topic_name)
+
         #
         # Before starting anything, check if there are any messages already queued up in the database for this task.
         # This may happen, for instance, if:
@@ -589,6 +628,18 @@ class DeliveryTask:
                 if self._should_wake():
 
                     with self.delivery_lock:
+
+                        # Check if we should not clear all the messages before we run the delivery ..
+                        if self.should_clear:
+
+                            # .. delete the messages first ..
+                            self._delete_messages(self.delivery_list[:])
+
+                            # .. reset the flag ..
+                            self.should_clear = False
+
+                            # .. and continue the loop ..
+                            continue
 
                         # Update last run time to be able to wake up in time for the next delivery
                         self.last_iter_run = utcnow_as_ms()
@@ -647,11 +698,11 @@ class DeliveryTask:
                     # .. thus, we can wait until one arrives.
                     sleep(default_sleep_time) # pyright: ignore[reportGeneralTypeIssues]
 
-        except Exception:
+        except Exception as e:
             error_msg = 'Exception in delivery task for sub_key:`%s`, e:`%s`'
             e_formatted = format_exc()
             logger.warning(error_msg, self.sub_key, e_formatted)
-            logger_zato.warning(error_msg, self.sub_key, e_formatted)
+            logger_zato.warning(error_msg, self.sub_key, e)
 
 # ################################################################################################################################
 
@@ -664,15 +715,31 @@ class DeliveryTask:
 
     def clear(self) -> 'None':
 
+        # Indicate to other parts of the task that a clear operation was requested
+        self.should_clear = True
+
         # For logging purposes ..
         gd, non_gd = self.get_queue_depth()
 
-        # .. log  what we are about to do ..
+        # .. log details of what we are about to do ..
         logger.info('Removing messages from delivery list for sub_key:`%s, gd:%d, ngd:%d `%s`',
             self.sub_key, gd, non_gd, [elem.pub_msg_id for elem in self.delivery_list])
 
-        # .. and clear the delivery list now.
+        # .. indicate what should be deleted in the next iteration of the self.run_delivery loop ..
+        self.delete_requested[:] = self.delivery_list[:]
+
+        # .. clear the delivery list now ..
         self.delivery_list.clear()
+
+        # .. and log a higher-level message now.
+        msg = 'Clearing task messages for sub_key `%s` -> `%s`'
+        logger.info(msg, self.sub_key, self.py_object)
+        logger_zato.info(msg, self.sub_key, self.py_object)
+
+# ################################################################################################################################
+
+    def update_sub_config(self) -> 'None':
+        self._set_sub_config_attrs()
 
 # ################################################################################################################################
 

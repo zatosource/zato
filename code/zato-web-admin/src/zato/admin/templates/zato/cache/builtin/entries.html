@@ -86,7 +86,7 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td style="vertical-align:middle"><a href="{% url "cache-builtin-edit-entry" item.cache_id cluster_id %}?key={{ item.key_escaped }}">{{ item.key }}</a></td>
-                        <td>{{ item.value|default:'<span class="form_hint">---</span>' }}{% if item.chars_omitted %}<span class="form_hint"><br/>({{ item.chars_omitted }} more omitted)</span>{% endif %}</td>
+                        <td>{{ item.value|default:'<span class="form_hint">---</span>' }}{% if item.value and item.chars_omitted %}<span class="form_hint"><br/>({{ item.chars_omitted }} more omitted)</span>{% endif %}</td>
                         <td>{{ item.position }}</td>
                         <td>{{ item.expiry_op|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.expires_at|default:'<span class="form_hint">---</span>' }}</td>
