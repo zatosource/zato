@@ -34,6 +34,7 @@ from zato.server.pubsub.model import DeliveryResultCtx
 if 0:
     from zato.common.typing_ import any_, anydict, anylist, boolnone, callable_, callnone, dict_, dictlist, \
          strlist, tuple_
+    from zato.server.pubsub import PubSub
     from zato.server.pubsub.delivery.message import GDMessage, Message
     from zato.server.pubsub.delivery._sorted_list import SortedList
     GDMessage = GDMessage
@@ -79,6 +80,7 @@ class DeliveryTask:
     def __init__(
         self,
         *,
+        pubsub,        # type: PubSub
         sub_config,    # type: anydict
         sub_key,       # type: str
         delivery_lock, # type: RLock
@@ -92,6 +94,7 @@ class DeliveryTask:
     ) -> 'None':
 
         self.keep_running = True
+        self.pubsub = pubsub
         self.enqueue_initial_messages_func = enqueue_initial_messages_func
         self.pubsub_set_to_delete = pubsub_set_to_delete
         self.pubsub_get_before_delivery_hook = pubsub_get_before_delivery_hook
@@ -575,6 +578,12 @@ class DeliveryTask:
 
         logger.info('Starting delivery task for sub_key:`%s` (%s, %s, %s)',
             self.sub_key, self.topic_name, self.sub_config['delivery_method'], self.py_object)
+
+        # First, make sure that the topic object already exists,
+        # e.g. it is possible that our task is already started
+        # even if other in-RAM structures are not populated yet,
+        # which is why we need to wait for this topic.
+        _ = self.pubsub.wait_for_topic(self.topic_name)
 
         #
         # Before starting anything, check if there are any messages already queued up in the database for this task.
