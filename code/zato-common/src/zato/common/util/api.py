@@ -1901,12 +1901,11 @@ def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, 
     is_fulfilled = bool(predicate_func(*args, **kwargs))
 
     # Use an explicit loop index for reporting
-    loop_idx = 0
+    loop_idx = 1
 
     logger.info('Entering wait-for-predicate -> %s -> %s', log_msg_details, is_fulfilled)
 
     if not is_fulfilled:
-        loop_idx += 1
         start = datetime.utcnow()
         wait_until = start + timedelta(seconds=timeout)
 
@@ -1920,8 +1919,29 @@ def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, 
             is_fulfilled = predicate_func(*args, **kwargs)
             if datetime.utcnow() > wait_until:
                 break
+            loop_idx += 1
 
     return is_fulfilled
+
+# ################################################################################################################################
+
+def wait_for_dict_key_by_get_func(
+    get_key_func, # type: callable_
+    key,          # type: any_
+    timeout=30,   # type: int
+    interval=0.01 # type: float
+) -> 'any_':
+
+    # In this function, we wait for a key through a user-provided get-key function,
+    # which may be different than dict.get, e.g. topic_api.get_topic_by_name.
+
+    def _predicate_dict_key(*_ignored_args, **_ignored_kwargs) -> 'any_':
+        try:
+            return get_key_func(key)
+        except KeyError:
+            return False
+
+    return wait_for_predicate(_predicate_dict_key, timeout, interval, log_msg_details=f'dict key -> `{key}`')
 
 # ################################################################################################################################
 
@@ -1932,16 +1952,19 @@ def wait_for_dict_key(
     interval=0.01 # type: float
 ) -> 'any_':
 
-    def _predicate_dict_key(*_ignored_args, **_ignored_kwargs):
+    # In this function, we wait for a key by accessing the dict object directly,
+    # using the dict's own .get method.
+
+    def _predicate_dict_key(*_ignored_args, **_ignored_kwargs) -> 'any_':
         return _dict.get(key)
 
-    return wait_for_predicate(_predicate_dict_key, timeout, interval, log_msg_details=f'dict key -> `{key}`')
+    return wait_for_dict_key_by_get_func(_predicate_dict_key, timeout, interval, log_msg_details=f'dict key -> `{key}`')
 
 # ################################################################################################################################
 
 def wait_for_file(full_path:'str', timeout:'int'=30, interval:'float'=0.01) -> 'any_':
 
-    def _predicate_wait_for_file(*_ignored_args, **_ignored_kwargs):
+    def _predicate_wait_for_file(*_ignored_args, **_ignored_kwargs) -> 'any_':
 
         file_exists = os.path.exists(full_path)
 

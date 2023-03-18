@@ -16,6 +16,19 @@ $.fn.zato.data_table.PubSubEndpoint = new Class({
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+var elems_required = [
+    'endpoint_id',
+    'server_id',
+    'active_status',
+    'delivery_method',
+    'delivery_batch_size',
+    'delivery_max_retry',
+    'wait_sock_err',
+    'wait_non_sock_err'
+];
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = false;
@@ -26,16 +39,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.before_populate_hook = $.fn.zato.pubsub.subscription.cleanup_hook;
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.subscription.before_submit_hook;
-    $.fn.zato.data_table.setup_forms([
-        'endpoint_id',
-        'server_id',
-        'active_status',
-        'delivery_method',
-        'delivery_batch_size',
-        'delivery_max_retry',
-        'wait_sock_err',
-        'wait_non_sock_err'
-    ]);
+    $.fn.zato.data_table.setup_forms(elems_required);
 
     $('#id_endpoint_id').change(function() {
         $.fn.zato.pubsub.on_endpoint_changed();
@@ -54,9 +58,9 @@ $(document).ready(function() {
     });
 
     $('#id_endpoint_type').change(function() {
+        $.fn.zato.pubsub.on_endpoint_type_changed();
         $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
     });
-
 
 })
 
@@ -100,7 +104,7 @@ $.fn.zato.pubsub.populate_endpoint_topics = function(topic_sub_list) {
         }
 
         var topic = $('<a/>', {
-            'href': String.format('/zato/pubsub/topic/?cluster={0}&highlight={1}', topic.cluster_id, topic.topic_id),
+            'href': String.format('/zato/pubsub/topic/?cluster={0}&query={1}', topic.cluster_id, topic.topic_name),
             'target': '_blank',
             'text': topic.topic_name,
         });
@@ -151,6 +155,23 @@ $.fn.zato.pubsub.on_endpoint_changed = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.pubsub.on_endpoint_type_changed = function() {
+
+    var validator = $('#create-form').data('bValidator');
+    validator.reset();
+
+    var endpoint_type = $('#id_endpoint_type').val();
+
+    if(endpoint_type == 'srv') {
+
+        var delivery_method = $('#id_delivery_method');
+        delivery_method.attr('data-bvalidator', '');
+        validator.removeMsg(delivery_method);
+    }
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.pubsub.on_delivery_method_changed = function() {
     var delivery_method = $('#id_delivery_method').val();
     if(delivery_method != 'notify') {
@@ -182,14 +203,17 @@ $.fn.zato.pubsub.subscription.add_row_hook = function(instance, elem_name, html_
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.subscription.cleanup_hook = function(form) {
+$.fn.zato.pubsub.subscription.cleanup_hook = function(form, _unused_prefix) {
 
+    var validator = form.data('bValidator');
     var blank = '<input class="multi-select-input" id="multi-select-input" disabled="disabled"></input>';
+
     $('#multi-select-div').html(blank);
 
     var disabled_input = $('#multi-select-input');
-    form.data('bValidator').removeMsg(disabled_input);
+    validator.removeMsg(disabled_input);
     disabled_input.css('background-color', '#e6e6e6');
+
     return true;
 }
 
@@ -202,9 +226,26 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
     var prefix = is_edit ? 'edit-' : '';
     var endpoint_type = $('#id_' + prefix + 'endpoint_type').val();
 
+    var server_id       = $('#id_' + prefix + 'server_id');
+    var delivery_method = $('#id_' + prefix + 'delivery_method');
+    var out_http_method = $('#id_' + prefix + 'out_http_method');
+
+    var out_rest_http_soap_id = $('#id_' + prefix + 'out_rest_http_soap_id');
+    var out_soap_http_soap_id = $('#id_' + prefix + 'out_soap_http_soap_id');
+    var rest_delivery_endpoint = $('#id_' + prefix + 'rest_delivery_endpoint');
+
     if(endpoint_type == 'rest' || endpoint_type == 'soap') {
-        var delivery_method = $('#id_' + prefix + 'delivery_method').val();
-        var out_http_method = $('#id_' + prefix + 'out_http_method');
+
+        if(!server_id.val()) {
+            server_id.css('background-color', '#ffffae');
+            form.data('bValidator').showMsg(server_id, 'This is a required field');
+            return false;
+        }
+
+        if(!delivery_method.val()) {
+            form.data('bValidator').showMsg(server_id, 'This is a required field');
+            return false;
+        }
 
         if(!out_http_method.val()) {
             form.data('bValidator').showMsg(out_http_method, 'This is a required field');
@@ -215,9 +256,6 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 
     if(endpoint_type == 'rest') {
         if(delivery_method == 'notify') {
-            var out_rest_http_soap_id = $('#id_' + prefix + 'out_rest_http_soap_id');
-            var rest_delivery_endpoint = $('#id_' + prefix + 'rest_delivery_endpoint');
-
             if(!out_rest_http_soap_id.val() && !rest_delivery_endpoint.val()) {
                 form.data('bValidator').showMsg(out_rest_http_soap_id,
                     'This is a required field');
@@ -228,9 +266,6 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 
     if(endpoint_type == 'soap') {
         if(delivery_method == 'notify') {
-            var out_soap_http_soap_id = $('#id_' + prefix + 'out_soap_http_soap_id');
-            var rest_delivery_endpoint = $('#id_' + prefix + 'soap_delivery_endpoint');
-
             if(!out_soap_http_soap_id.val() && !soap_delivery_endpoint.val()) {
                 form.data('bValidator').showMsg(out_soap_http_soap_id,
                     'This is a required field');
@@ -255,41 +290,60 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 $.fn.zato.pubsub.subscription.create = function() {
     window.zato_run_dyn_form_handler();
     $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
-    $.fn.zato.data_table._create_edit('create', 'Create new pub/sub subscriptions', null);
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.pubsub.subscription.edit = function(id) {
-    window.zato_run_dyn_form_handler();
-    $.fn.zato.data_table._create_edit('edit', 'Update pub/sub subscriptions', id);
+    $.fn.zato.data_table._create_edit('create', 'Create pub/sub subscriptions', null);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_tr) {
+
     var row = '';
 
     var is_active = data.is_active ? "Yes" : "No";
-    var last_seen = data.last_seen ? data.last_seen : $.fn.zato.empty_value;
-    var last_deliv_time = data.last_deliv_time ? data.last_deliv_time : $.fn.zato.empty_value;
+    var cluster_id = $('#cluster_id').val();
+    var endpoint_type_human = '';
+
+    if(data.endpoint_type == 'srv') {
+        endpoint_type_human = 'Service';
+    }
+    else if(data.endpoint_type == 'rest') {
+        endpoint_type_human = 'REST';
+    }
+    else {
+        endpoint_type_human = data.endpoint_type;
+    }
+
+    // var last_pub_time = data.last_pub_time ? data.last_pub_time : $.fn.zato.empty_value;
+    // var last_seen = data.last_seen ? data.last_seen : $.fn.zato.empty_value;
+    // var last_deliv_time = data.last_deliv_time ? data.last_deliv_time : $.fn.zato.empty_value;
 
     var pubsub_endpoint_queues_link = String.format(
-        '<a id="pubsub_endpoint_queues_link_{0}" href="{1}">{2}</a>', data.id, data.pubsub_endpoint_queues_link,
-        data.subscription_count);
+        '<a id="pubsub_endpoint_queues_link_{0}" href="{1}?cluster={2}">{3}</a>',
+        data.id,
+        data.pubsub_endpoint_queues_link,
+        cluster_id,
+        data.subscription_count,
+    );
+
+    var endpoint_name_link = String.format(
+        '<a href="/zato/pubsub/endpoint/?cluster={0}&query={1}">{1}</a>',
+        cluster_id,
+        data.endpoint_name,
+    );
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
     row += String.format('<td>{0}</td>', is_active);
-    row += String.format('<td>{0}</td>', data.endpoint_name);
-    row += String.format('<td>{0}</td>', data.endpoint_type);
+    row += String.format('<td>{0}</td>', endpoint_name_link);
+    row += String.format('<td>{0}</td>', endpoint_type_human);
 
     row += String.format('<td>{0}</td>', data.role);
     row += String.format('<td>{0}</td>', pubsub_endpoint_queues_link);
 
-    row += String.format('<td>{0}</td>', last_seen);
-    row += String.format('<td>{0}</td>', last_deliv_time);
+    // row += String.format('<td>{0}</td>', last_pub_time);
+    // row += String.format('<td>{0}</td>', last_seen);
+    // row += String.format('<td>{0}</td>', last_deliv_time);
 
     if(data.is_internal) {
         row += '<td><span class="form_hint">Delete all subscriptions</span></td>';

@@ -97,7 +97,7 @@ class SessionInsertCtx:
 class VerifyCtx:
     """ Wraps information about a verification request.
     """
-    __slots__ = ('ust', 'remote_addr', 'input', 'has_remote_addr', 'has_user_agent')
+    __slots__ = ('ust', 'remote_addr', 'input', 'has_remote_addr', 'has_user_agent', 'current_app')
 
     def __init__(
         self,
@@ -112,6 +112,7 @@ class VerifyCtx:
         self.remote_addr = remote_addr
         self.has_remote_addr = has_remote_addr
         self.has_user_agent = has_user_agent
+        self.current_app = current_app
         self.input = {
             'current_app': current_app
         }
