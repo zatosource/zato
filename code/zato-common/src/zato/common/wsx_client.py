@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # First thing in the process
 from gevent import monkey
-monkey.patch_all()
+_ = monkey.patch_all()
 
 # stdlib
+import os
 import random
 import socket
 from dataclasses import dataclass
@@ -18,6 +19,7 @@ from datetime import datetime, timedelta
 from http.client import OK
 from json import dumps as json_dumps
 from logging import getLogger
+from threading import Thread
 from traceback import format_exc
 from types import GeneratorType
 
@@ -26,11 +28,19 @@ from gevent import sleep, spawn
 
 # ws4py
 from ws4py.client.geventclient import WebSocketClient
-from ws4py.messaging import Message as ws4py_Message
+from ws4py.messaging import Message as ws4py_Message, PingControlMessage
 
 # Zato
+from zato.common.api import WEB_SOCKET
 from zato.common.marshal_.api import MarshalAPI, Model
 from zato.common.util.json_ import JSONParser
+
+try:
+    from OpenSSL.SSL import Error as PyOpenSSLError
+    _ = PyOpenSSLError
+except ImportError:
+    class PyOpenSSLError(Exception):
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,6 +78,12 @@ _invalid = '_invalid.' + new_cid()
 
 utcnow = datetime.utcnow
 
+_ping_interval = WEB_SOCKET.DEFAULT.PING_INTERVAL
+_ping_missed_threshold = WEB_SOCKET.DEFAULT.PING_INTERVAL
+
+# This is how long we wait for responses - longer than the ping interval is
+wsx_socket_timeout = _ping_interval + (_ping_interval * 0.1)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -101,8 +117,9 @@ class Config:
 
 @dataclass(init=False)
 class ClientMeta(Model):
-    action: 'str'
     id: 'str'
+    action: 'str'
+    attrs: 'strnone' = None
     timestamp: 'str'
     client_id: 'str'
     client_name: 'str'
@@ -174,6 +191,11 @@ class AuthRequest(ClientToServerMessage):
     def enrich(self, msg:'ClientToServerModel') -> 'ClientToServerModel':
         msg.meta.username = self.config.username
         msg.meta.secret = self.config.secret
+
+        # Client attributes can be optionally provided via environment variables
+        if client_attrs := os.environ.get('Zato_WSX_Client_Attrs'):
+            msg.meta.attrs = client_attrs
+
         return msg
 
 # ################################################################################################################################
@@ -268,6 +290,41 @@ class RequestFromServer(MessageFromServer):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class WSXHeartbeat(Thread):
+    def __init__(self, websocket:'any_', frequency:'float'=2.0) -> 'None':
+        Thread.__init__(self)
+        self.websocket = websocket
+        self.frequency = frequency
+
+    def __enter__(self) -> 'WSXHeartbeat':
+        if self.frequency:
+            self.start()
+        return self
+
+    def __exit__(self, exc_type:'any_', exc_value:'any_', exc_tb:'any_') -> 'None':
+        self.stop()
+
+    def stop(self) -> 'None':
+        self.running = False
+
+    def run(self) -> 'None':
+        self.running = True
+        while self.running:
+            sleep(self.frequency)
+            if self.websocket.terminated:
+                break
+
+            try:
+                self.websocket.send(PingControlMessage(data='beep'))
+            except socket.error:
+                logger.info('Heartbeat failed')
+                self.websocket.server_terminated = True
+                self.websocket.close_connection()
+                break
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _WebSocketClientImpl(WebSocketClient):
     """ A low-level subclass of ws4py's WebSocket client functionality.
     """
@@ -279,12 +336,21 @@ class _WebSocketClientImpl(WebSocketClient):
         on_error_callback:'callable_',
         on_closed_callback:'callable_'
     ) -> 'None':
+
+        # Assign our own pieces of configuration ..
         self.config = config
         self.on_connected_callback = on_connected_callback
         self.on_message_callback = on_message_callback
         self.on_error_callback = on_error_callback
         self.on_closed_callback = on_closed_callback
+
+        # .. call the parent ..
         super(_WebSocketClientImpl, self).__init__(url=self.config.address)
+
+        # .. adjust parent's configuration ..
+        self.heartbeat_freq = 5.0
+
+# ################################################################################################################################
 
     def close_connection(self):
         """ Overridden from ws4py.websocket.WebSocket.
@@ -304,15 +370,23 @@ class _WebSocketClientImpl(WebSocketClient):
     def opened(self) -> 'None':
         _ = spawn(self.on_connected_callback)
 
+# ################################################################################################################################
+
     def received_message(self, msg:'anydict') -> 'None':
         self.on_message_callback(msg)
+
+# ################################################################################################################################
 
     def unhandled_error(self, error:'any_') -> 'None':
         _ = spawn(self.on_error_callback, error)
 
+# ################################################################################################################################
+
     def closed(self, code:'int', reason:'strnone'=None) -> 'None':
         super(_WebSocketClientImpl, self).closed(code, reason)
         self.on_closed_callback(code, reason)
+
+# ################################################################################################################################
 
     def send(self, payload:'any_', binary:'bool'=False) -> 'None':
         """ Overloaded from the parent class.
@@ -349,6 +423,8 @@ class _WebSocketClientImpl(WebSocketClient):
         else:
             raise ValueError('Unsupported type `%s` passed to send()' % type(payload))
 
+# ################################################################################################################################
+
     def _write(self, data:'bytes') -> 'None':
         """ Overloaded from the parent class.
         """
@@ -356,7 +432,21 @@ class _WebSocketClientImpl(WebSocketClient):
             logger.info('Could not send message on a terminated socket; `%s` -> %s (%s)',
                 self.config.client_name, self.config.address, self.config.client_id)
         else:
+            self.sock.settimeout(60)
             self.sock.sendall(data)
+
+# ################################################################################################################################
+
+    def run(self):
+        self.sock.setblocking(True) # type: ignore
+        with WSXHeartbeat(self, frequency=self.heartbeat_freq):
+            try:
+                self.opened()
+                while not self.terminated:
+                    if not self.once():
+                        break
+            finally:
+                self.terminate()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -484,11 +574,10 @@ class Client:
 
 # ################################################################################################################################
 
-    def on_message(self, msg:'TextMessage') -> 'None':
+    def _on_message(self, msg:'TextMessage') -> 'None':
         """ Invoked for each message received from Zato, both for responses to previous requests and for incoming requests.
         """
-        _msg_parsed = JSONParser().parse(msg.data) # type: any_
-        _msg = _msg_parsed.as_dict() # type: anydict
+        _msg = JSONParser().parse(msg.data) # type: anydict
         self.logger.info('Received message `%s`', _msg)
 
         in_reply_to = _msg['meta'].get('in_reply_to')
@@ -505,6 +594,14 @@ class Client:
 
 # ################################################################################################################################
 
+    def on_message(self, msg:'TextMessage') -> 'None':
+        try:
+            return self._on_message(msg)
+        except Exception:
+            self.logger.info('Exception in on_message -> %s', format_exc())
+
+# ################################################################################################################################
+
     def on_closed(self, code:'int', reason:'strnone'=None) -> 'None':
         self.logger.info('Closed WSX client connection to `%s` (remote code:%s reason:%s)', self.config.address, code, reason)
         if self.on_closed_callback:
@@ -515,7 +612,7 @@ class Client:
     def on_error(self, error:'any_') -> 'None':
         """ Invoked for each unhandled error in the lower-level ws4py library.
         """
-        self.logger.warning('Caught error %s', error)
+        self.logger.warning('Caught error `%s`', error)
 
 # ################################################################################################################################
 
@@ -598,6 +695,14 @@ class Client:
                     self.config.address,
                     self.conn.sock,
                 )
+
+                # .. this is needed to ensure that the next attempt will not reuse the current TCP socket ..
+                # .. which, under Windows, would make it impossible to establish the connection ..
+                # .. even if the remote endpoint existed. I.e. this would result in the error below:
+                # .. [Errno 10061] [WinError 10061] No connection could be made because the target machine actively refused it.
+                self.conn.close_connection()
+
+                # .. now, we can sleep a bit ..
                 sleep(_sleep_time)
                 now = utcnow()
             else:
@@ -638,7 +743,7 @@ class Client:
             return
 
         # .. otherwise, if we are here, it means that we are connected,
-        # .. although we may be still not authenticated as this step
+        # .. although we may be still not authenticated as the authentication step
         # .. is carried out by the on_connected_callback method.
         pass
 
@@ -669,7 +774,7 @@ class Client:
             raise Exception('Client is not authenticated')
 
         request_id = MsgPrefix.InvokeService.format(new_cid())
-        spawn(self.send, request_id, ServiceInvocationRequest(request_id, data, self.config, self.auth_token))
+        _ = spawn(self.send, request_id, ServiceInvocationRequest(request_id, data, self.config, self.auth_token))
 
         response = self._wait_for_response(request_id, wait_time=timeout)
 
@@ -721,7 +826,7 @@ if __name__ == '__main__':
 
     # First thing in the process
     from gevent import monkey
-    monkey.patch_all()
+    _ = monkey.patch_all()
 
     # stdlib
     import logging
@@ -766,7 +871,7 @@ if __name__ == '__main__':
     client.run()
 
     # .. wait until it is authenticated ..
-    client.wait_until_authenticated()
+    _ = client.wait_until_authenticated()
 
     # .. and run sample code now ..
 

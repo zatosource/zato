@@ -21,7 +21,7 @@ from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
 from zato.admin.web.forms.pubsub.subscription import EditForm as EditSubscriptionForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
-from zato.admin.web.views.pubsub import get_client_html
+from zato.admin.web.views.pubsub import get_client_html, get_inline_client_html
 from zato.common.api import PUBSUB, ZATO_NONE
 from zato.common.json_internal import dumps
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubSubscription, PubSubTopic
@@ -92,7 +92,7 @@ class Index(_Index):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'endpoint_type', 'is_active', 'is_internal', 'role')
         output_optional = ('topic_patterns', 'security_id', 'ws_channel_id', 'ws_channel_name',
-            'sec_type', 'sec_name', 'sub_key', 'service_id')
+            'sec_type', 'sec_name', 'sub_key', 'service_id', 'service_name')
         output_repeated = True
 
     def on_before_append_item(self, item):
@@ -215,9 +215,12 @@ class _EndpointObjects(_Index):
             'id':self.input.endpoint_id,
         }).data.response
 
+        client_html = get_inline_client_html(endpoint, endpoint.security_id, self.req.zato.cluster_id)
+
         return {
             'endpoint':endpoint,
             'endpoint_type': PUBSUB.ENDPOINT_TYPE,
+            'client_html': client_html,
         }
 
 # ################################################################################################################################

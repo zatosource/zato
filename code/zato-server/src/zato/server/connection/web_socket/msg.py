@@ -97,6 +97,7 @@ class ClientMessage:
         self.ext_client_id = None
         self.reply_to_sk = None
         self.deliver_to_sk = None
+        self.client_attrs = {}
 
         self.is_auth = False
         self.secret = ''

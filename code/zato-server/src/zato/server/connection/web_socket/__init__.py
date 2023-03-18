@@ -54,7 +54,7 @@ from zato.common.audit_log import DataReceived, DataSent
 from zato.common.exception import ParsingException, Reportable, RuntimeInvocationError
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.typing_ import cast_
-from zato.common.util.api import new_cid
+from zato.common.util.api import new_cid, parse_extra_into_dict
 from zato.common.util.hook import HookTool
 from zato.common.util.json_ import JSONParser
 from zato.common.util.python_ import get_python_id
@@ -113,6 +113,10 @@ code_pings_missed = 4002
 
 # ################################################################################################################################
 
+_missing = object()
+
+# ################################################################################################################################
+
 # Maps WSGI keys to our own
 new_conn_map_config = {
     'REMOTE_ADDR': 'remote_addr',
@@ -165,7 +169,6 @@ _interact_update_interval = WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL
 # ################################################################################################################################
 
 ExtraProperties = WEB_SOCKET.ExtraProperties
-
 WebSocketAction = WEB_SOCKET.ACTION
 
 # ################################################################################################################################
@@ -202,6 +205,7 @@ class WebSocket(_WebSocket):
     """
     store_ctx: 'bool'
     ctx_file: 'ContextHandler'
+    client_attrs: 'stranydict'
 
     def __init__(
         self,
@@ -225,6 +229,9 @@ class WebSocket(_WebSocket):
 
         # Referred to soon enough so created here
         self.pub_client_id = 'ws.{}'.format(new_cid())
+
+        # A dictionary of attributes that each client can send across
+        self.client_attrs = {}
 
         # Zato parallel server this WebSocket runs on
         self.parallel_server = cast_('ParallelServer', self.config.parallel_server)
@@ -274,7 +281,7 @@ class WebSocket(_WebSocket):
             from orjson import dumps as dumps_func
 
         elif json_library == 'rapidjson':
-            from rapidjson import dumps as dumps_func
+            from rapidjson import dumps as dumps_func # type: ignore
 
         elif json_library == 'bson':
             from bson.json_util import dumps as dumps_func
@@ -399,7 +406,7 @@ class WebSocket(_WebSocket):
 
         # Drop WSGI keys pointing to complex Python objects such as sockets
         for name in _wsgi_drop_keys:
-            self.initial_http_wsgi_environ.pop(name, None)
+            _ = self.initial_http_wsgi_environ.pop(name, None)
 
         # Responses to previously sent requests - keyed by request IDs
         self.responses_received = {}
@@ -642,7 +649,6 @@ class WebSocket(_WebSocket):
         """
         # Parse JSON into a dictionary
         parsed = self._json_parser.parse(data) # type: any_
-        parsed = parsed.as_dict()
 
         # Create a request message
         msg = ClientMessage()
@@ -655,6 +661,9 @@ class WebSocket(_WebSocket):
             msg.id = meta['id']
             msg.timestamp = meta['timestamp']
             msg.token = meta.get('token') # Optional because it won't exist during first authentication
+
+            if client_attrs := (meta.get('attrs') or {}):
+                msg.client_attrs = parse_extra_into_dict(client_attrs)
 
             # self.ext_client_id and self.ext_client_name will exist after create-session action
             # so we use them if they are available but fall back to meta.client_id and meta.client_name during
@@ -705,7 +714,7 @@ class WebSocket(_WebSocket):
     def create_session(
         self,
         cid:'str',
-        request:'Bunch',
+        request:'ClientMessage',
         _sec_def_type_vault:'str'=SEC_DEF_TYPE.VAULT,
         _VAULT_TOKEN_HEADER:'str'=VAULT_TOKEN_HEADER
     ) -> 'optional[AuthenticateResponse]':
@@ -977,12 +986,20 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def handle_create_session(self, cid:'str', request:'Bunch') -> 'None':
+    def handle_create_session(self, cid:'str', request:'ClientMessage') -> 'None':
         if request.is_auth:
             response = self.create_session(cid, request)
             if response:
+
+                # Assign any potential attributes sent across by the client WebSocket
+                self.client_attrs = request.client_attrs
+
+                # Register the client for future use
                 self.register_auth_client()
+
+                # Send an auth response to the client
                 self.send(response, cid)
+
                 logger.info(
                     'Client %s logged in successfully to %s (%s) (%s %s)', self.pub_client_id, self._local_address,
                     self.config.name, self.ext_client_id, self.ext_client_name)
@@ -1061,7 +1078,7 @@ class WebSocket(_WebSocket):
     def _handle_invoke_service(self, cid:'str', msg:'Bunch') -> 'None':
 
         try:
-            service_response = self.invoke_service(self.config.service_name, msg.data, cid=cid)
+            service_response = self.invoke_service(cast_('str', self.config.service_name), msg.data, cid=cid)
         except Exception as e:
 
             # This goes to WSX logs, with a full traceback
@@ -1466,7 +1483,7 @@ class WebSocket(_WebSocket):
             self._local_address, self.config.name, self.python_id, self.forwarded_for, self.forwarded_for_fqdn,
             self.pub_client_id)
 
-        spawn(self._ensure_session_created)
+        _ = spawn(self._ensure_session_created)
 
 # ################################################################################################################################
 
@@ -1613,7 +1630,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
             # Yes, we do, although we are not sure yet if input is valid,
             # e.g. HTTP_UPGRADE may be missing.
             else:
-                super(WebSocketContainer, self).__call__(wsgi_environ, start_response)
+                _ = super(WebSocketContainer, self).__call__(wsgi_environ, start_response)
 
         except HandshakeError:
             logger.warning('Handshake error; e:`%s`', format_exc())
@@ -1631,6 +1648,41 @@ class WebSocketContainer(WebSocketWSGIApplication):
 
     def invoke_client(self, cid:'str', pub_client_id:'str', request:'any_', timeout:'int') -> 'any_':
         return self.clients[pub_client_id].invoke_client(cid, request, timeout)
+
+# ################################################################################################################################
+
+    def invoke_client_by_attrs(self, cid:'str', attrs:'stranydict', request:'any_', timeout:'int') -> 'any_':
+
+        # Iterate over all the currently connected WebSockets ..
+        for client in self.clients.values():
+
+            # .. by default, assume that we do not need to invoke this client ..
+            should_invoke = False
+
+            # .. add static typing ..
+            client = cast_('WebSocket', client)
+
+            # .. go through each of the attrs that the client is expected to have ..
+            for expected_key, expected_value in attrs.items():
+
+                # .. check if the client has such a key at all ..
+                client_value = client.client_attrs.get(expected_key, _missing)
+
+                # .. if not, we do not need to continue ..
+                if client_value is _missing:
+                    continue
+
+                # .. otherwise, confirm that the value is the same ..
+                # .. and iterate further if it is not ..
+                if client_value != expected_value:
+                    continue
+
+                # .. if we are here, it means that this client can be invoked ..
+                should_invoke = True
+
+            # .. do invoke it now in background ..
+            if should_invoke:
+                _ = spawn(client.invoke_client, cid, request, wait_for_response=False)
 
 # ################################################################################################################################
 
@@ -1729,11 +1781,11 @@ class WebSocketServer(_Gevent_WSGIServer):
 
         address_info = urlparse(config.address)
 
-        host, port = address_info.netloc.split(':')
-        config.host = host
+        host, port = address_info.netloc.split(':') # type: ignore
+        config.host = host # type: ignore
         config.port = int(port)
 
-        config.path = address_info.path
+        config.path = address_info.path # type: ignore
         config.needs_tls = address_info.scheme == 'wss'
         config.auth_func = auth_func
         config.on_message_callback = on_message_callback
@@ -1796,6 +1848,9 @@ class WebSocketServer(_Gevent_WSGIServer):
     def invoke_client(self, cid:'str', pub_client_id:'str', request:'any_', timeout:'int') -> 'any_':
         return self.application.invoke_client(cid, pub_client_id, request, timeout)
 
+    def invoke_client_by_attrs(self, cid:'str', attrs:'stranydict', request:'any_', timeout:'int') -> 'any_':
+        return self.application.invoke_client_by_attrs(cid, attrs, request, timeout)
+
     def broadcast(self, cid:'str', request:'any_') -> 'any_':
         return self.application.broadcast(cid, request)
 
@@ -1832,10 +1887,13 @@ class ChannelWebSocket(Connector):
             self.is_connected = False
 
     def get_log_details(self) -> 'str':
-        return self.config.address
+        return cast_('str', self.config.address)
 
     def invoke(self, cid:'str', pub_client_id:'str', request:'any_', timeout:'int'=5) -> 'any_':
         return self._wsx_server.invoke_client(cid, pub_client_id, request, timeout)
+
+    def invoke_by_attrs(self, cid:'str', attrs:'stranydict', request:'any_', timeout:'int'=5) -> 'any_':
+        return self._wsx_server.invoke_client_by_attrs(cid, attrs, request, timeout)
 
     def broadcast(self, cid:'str', request:'any_') -> 'any_':
         return self._wsx_server.broadcast(cid, request)
@@ -1854,6 +1912,10 @@ class ChannelWebSocket(Connector):
 
     def get_conn_report(self) -> 'stranydict':
         return self._wsx_server.environ
+
+    # Convenience aliases
+    invoke_client = invoke
+    invoke_client_by_attrs = invoke_by_attrs
 
 # ################################################################################################################################
 # ################################################################################################################################
