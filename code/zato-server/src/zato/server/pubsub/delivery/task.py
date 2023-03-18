@@ -698,11 +698,11 @@ class DeliveryTask:
                     # .. thus, we can wait until one arrives.
                     sleep(default_sleep_time) # pyright: ignore[reportGeneralTypeIssues]
 
-        except Exception:
+        except Exception as e:
             error_msg = 'Exception in delivery task for sub_key:`%s`, e:`%s`'
             e_formatted = format_exc()
             logger.warning(error_msg, self.sub_key, e_formatted)
-            logger_zato.warning(error_msg, self.sub_key, e_formatted)
+            logger_zato.warning(error_msg, self.sub_key, e)
 
 # ################################################################################################################################
 
