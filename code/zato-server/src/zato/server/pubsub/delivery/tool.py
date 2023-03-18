@@ -188,6 +188,7 @@ class PubSubTool:
 
         else:
             self.delivery_tasks[sub_key] = DeliveryTask(
+                pubsub = self.pubsub,
                 sub_config = sub.config,
                 sub_key = sub_key,
                 delivery_lock = delivery_lock,

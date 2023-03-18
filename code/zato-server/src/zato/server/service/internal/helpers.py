@@ -125,7 +125,7 @@ class InputLogger(Service):
         pass
 
     def finalize_handle(self) -> 'None': # type: ignore
-        self.log_input()
+        _ = self.log_input()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -175,13 +175,13 @@ Data: `{data}`
         na = 'n/a'
 
         try:
-            msg_id = mq.msg_id.decode('ascii')
+            msg_id = mq.msg_id.decode('ascii') # type: ignore
         except UnicodeDecodeError:
             msg_id = repr(mq.msg_id)
 
         if mq.correlation_id:
             try:
-                correlation_id = mq.correlation_id.decode('ascii')
+                correlation_id = mq.correlation_id.decode('ascii') # type: ignore
             except UnicodeDecodeError:
                 correlation_id = repr(mq.correlation_id)
         else:
@@ -580,7 +580,7 @@ class HelperPubSubSource(Service):
         self.pubsub.publish(HelperPubSubTarget, data=data)
 
         # .. the topic for that service has to be potentially created so we wait here until it appears ..
-        self.pubsub.wait_for_topic(topic_name)
+        _ = self.pubsub.wait_for_topic(topic_name)
         sleep(0.1)
 
         # .. now, once the message has been published, we know that the topic
@@ -611,7 +611,7 @@ class HelperPubSubSource(Service):
         response = self.invoke('zato.pubsub.topic.edit', request)
 
         # .. once again, wait until the topic has been recreated ..
-        self.pubsub.wait_for_topic(topic_name)
+        _ = self.pubsub.wait_for_topic(topic_name)
         sleep(0.1)
 
         # The second time around, the target service should not create a file
@@ -844,7 +844,7 @@ class CommandsService(Service):
 
             # Populate the file with test data
             with open_w(full_path) as f:
-                f.write(data)
+                _ = f.write(data)
 
             # Read the file back
             command = f'cat {full_path}'
