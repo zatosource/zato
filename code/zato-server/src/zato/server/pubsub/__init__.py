@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,13 +11,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from contextlib import closing
-from datetime import datetime, timedelta
 from io import StringIO
 from operator import attrgetter
 from traceback import format_exc
 
 # gevent
-from gevent import sleep
 from gevent.lock import RLock
 
 # Texttable
@@ -29,7 +27,7 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.typing_ import cast_, dict_, optional
-from zato.common.util.api import spawn_greenlet
+from zato.common.util.api import spawn_greenlet, wait_for_dict_key_by_get_func
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.core.endpoint import EndpointAPI
 from zato.server.pubsub.core.trigger import NotifyPubSubTasksTrigger
@@ -745,28 +743,8 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def wait_for_topic(self, topic_name:'str', timeout:'int'=10, _utcnow:'callable_'=datetime.utcnow) -> 'bool':
-        now = _utcnow()
-        until = now + timedelta(seconds=timeout)
-
-        # Wait until topic has been created in self.topic or raise an exception on timeout
-        while now < until:
-
-            # We have it, good
-            with self.lock:
-                try:
-                    _ = self.topic_api.get_topic_by_name(topic_name)
-                except KeyError:
-                    pass # No such topic
-                else:
-                    return True
-
-            # No such topic, let us sleep for a moment
-            sleep(1)
-            now = _utcnow()
-
-        # We get here on timeout
-        raise ValueError('No such topic `{}` after {}s'.format(topic_name, timeout))
+    def wait_for_topic(self, topic_name:'str', timeout:'int'=600) -> 'bool':
+        return wait_for_dict_key_by_get_func(self.topic_api.get_topic_by_name, topic_name, timeout, interval=0.5)
 
 # ################################################################################################################################
 
