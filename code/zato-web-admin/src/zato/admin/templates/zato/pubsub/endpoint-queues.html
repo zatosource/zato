@@ -1,4 +1,5 @@
 {% extends "zato/index.html" %}
+{% load extras %}
 
 {% block html_title %}Endpoint subscriptions{% endblock %}
 
@@ -35,6 +36,7 @@
 
             '_creation_time',
             '_sub_key',
+            '_ext_client_id',
 
             '_clear',
             '_edit',
@@ -111,7 +113,7 @@
     Subscription queues for endpoint :
     <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ endpoint.name }}">{{ endpoint.name }}</a>
     : Type :
-    {{ endpoint.endpoint_type }}
+    {{ client_html|safe }}
 </h2>
 
 {% if not zato_clusters %}
@@ -138,6 +140,7 @@
 
                         <th><a href="#">Creation / State update</a></th>
                         <th style="min-width:260px"><a href="#">Sub key</a></th>
+                        <th style="min-width:260px"><a href="#">EXTCLI</a></th>
 
                         <th style="width:5%">&nbsp;</th>
                         <th style="width:5%">&nbsp;</th>
@@ -240,7 +243,11 @@
                             {{ item.sub_key }}
                         </td>
 
-                        <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.clear('{{ item.sub_id }}', '{{ cluster_id }}')">Clear</a></td>
+                        <td>
+                            {{ item.ext_client_id|no_value_indicator }}
+                        </td>
+
+                        <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.clear('{{ item.sub_id }}', '{{ cluster_id }}', '{{ item.topic_name }}')">Clear</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.edit('{{ item.sub_id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.delete_('{{ item.sub_id }}')">Delete</a></td>
 
@@ -342,7 +349,7 @@
 
                         {% endif %}
 
-                        {% if endpoint.endpoint_type != endpoint_type.WEB_SOCKETS.id %}
+                        {% if endpoint.endpoint_type != endpoint_type.WEB_SOCKETS.id and endpoint.endpoint_type != endpoint_type.SERVICE.id %}
 
                         <tr>
                             <td style="vertical-align:middle; width:12%">Delivery method</td>
@@ -354,9 +361,11 @@
                         {% endif %}
 
                         <tr>
-                            <td style="vertical-align:middle; width:12%">Deliv. batch size<br/>(list required?)</td>
+                            <td style="vertical-align:middle; width:12%">Deliv. batch size</td>
                             <td>
                                 {{ edit_form.delivery_batch_size }}
+                                |
+                                As list
                                 {{ edit_form.wrap_one_msg_in_list }}
                                 |
                                 Deliv. max retries
@@ -435,13 +444,14 @@
                         </tr>
                         {% endif %}
 
-                        {% comment %} --------- Service --------- {% endcomment %}
+                        {% comment %} --------- Service ---------
                         {% if endpoint.endpoint_type == endpoint_type.SERVICE.id %}
                         <tr id="dyn_form_row_id_service_id">
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.service_id }} </td>
                         </tr>
                         {% endif %}
+                        {% endcomment %}
 
                         {% comment %} --------- SMS - Twilio --------- {% endcomment %}
                         {% if endpoint.endpoint_type == endpoint_type.SMS_TWILIO.id %}
