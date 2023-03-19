@@ -1958,7 +1958,7 @@ def wait_for_dict_key(
     def _predicate_dict_key(*_ignored_args, **_ignored_kwargs) -> 'any_':
         return _dict.get(key)
 
-    return wait_for_dict_key_by_get_func(_predicate_dict_key, timeout, interval, log_msg_details=f'dict key -> `{key}`')
+    return wait_for_dict_key_by_get_func(_predicate_dict_key, timeout, interval)
 
 # ################################################################################################################################
 
