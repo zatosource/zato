@@ -224,7 +224,7 @@ class PubSubTool:
                 del self.delivery_tasks[sub_key]
 
             except Exception:
-                logger.warning('Exception during sub_key removal `%s`, e:`%s`', sub_key, format_exc())
+                logger.info('Exception during sub_key removal `%s`, e:`%s`', sub_key, format_exc())
 
     delete_by_sub_key = remove_sub_key
 
