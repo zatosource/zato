@@ -449,7 +449,7 @@ class Scheduler:
 
         # .. otherwise, this is a job that runs in a server.
         else:
-            logger.info('Executing `%s`, `%s`', ctx['name'], ctx)
+            logger.debug('Executing `%s`, `%s`', ctx['name'], ctx)
             self.on_job_executed_cb(ctx)
             self.job_log('Job executed `%s`, `%s`', ctx['name'], ctx)
 
