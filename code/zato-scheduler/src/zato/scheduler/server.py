@@ -60,7 +60,7 @@ class Config:
         self.startup_jobs = []
         self.on_job_executed_cb = None
         self.stats_enabled = None
-        self.job_log_level = 'info'
+        self.job_log_level = 'debug'
         self.component_dir = 'not-set-component_dir'
         self._add_startup_jobs = True
         self._add_scheduler_jobs = True
