@@ -2539,6 +2539,7 @@ class PubSubSubscription(Base):
     total_depth = None # Not used by DB
     current_depth_gd = None # Not used by DB
     current_depth_non_gd = None # Not used by DB
+    sub_count = None # Not used by DB
 
 # ################################################################################################################################
 
