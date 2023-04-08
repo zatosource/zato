@@ -301,17 +301,20 @@ class Create(ZatoCommand):
 
         engine = self._get_engine(args)
         session = self._get_session(engine)
-        sub = session.query(PubSubSubscription).\
+
+        sub_list = session.query(PubSubSubscription).\
             filter(PubSubTopic.id==PubSubSubscription.topic_id).\
             filter(PubSubTopic.name==topic_name).\
             filter(PubSubTopic.cluster_id==Cluster.id).\
             filter(Cluster.name==cluster_name).\
-            one()
+            all()
 
-        # Set publishing server for that subscription
-        sub.server_id = server_id
+        for sub in sub_list:
 
-        session.add(sub)
+            # Set publishing server for that subscription
+            sub.server_id = server_id
+
+            session.add(sub)
         session.commit()
 
 # ################################################################################################################################
