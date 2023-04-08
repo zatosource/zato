@@ -449,6 +449,9 @@ class Index(_BaseView):
 
             return func(service_name, request)
 
+    def should_include(self, item) -> 'bool':
+        return True
+
     def _handle_single_item_list(self, container, item_list):
         """ Creates a new instance of the model class for each of the element received
         and fills it in with received attributes.
@@ -495,6 +498,9 @@ class Index(_BaseView):
                     value = getattr(value, 'text', '') or value
                 if value or value == 0:
                     setattr(item, name, value)
+
+            if not self.should_include(item):
+                continue
 
             item = self.on_before_append_item(item)
 
