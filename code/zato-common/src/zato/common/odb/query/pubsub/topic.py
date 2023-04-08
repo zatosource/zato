@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -29,6 +29,7 @@ if 0:
 # ################################################################################################################################
 
 MsgTable = PubSubMessage.__table__
+SubTable = PubSubSubscription.__table__
 TopicTable = PubSubTopic.__table__
 
 # ################################################################################################################################
@@ -83,6 +84,24 @@ def get_gd_depth_topic_list(session:'SASession', cluster_id:'int', topic_id_list
             MsgTable.c.cluster_id == cluster_id,
             MsgTable.c.is_in_sub_queue == sa_false(),
             MsgTable.c.topic_id.in_(topic_id_list),
+        )).\
+        group_by('topic_id')
+
+    return session.execute(q).fetchall()
+
+# ################################################################################################################################
+
+def get_topic_sub_count_list(session:'SASession', cluster_id:'int', topic_id_list:'intlist') -> 'anylist':
+    """ Returns the number of subscriptions for each topic from the input list.
+    """
+
+    q = select([
+        SubTable.c.topic_id,
+        func.count(SubTable.c.topic_id).label('sub_count')
+        ]).\
+        where(and_(
+            SubTable.c.cluster_id == cluster_id,
+            SubTable.c.topic_id.in_(topic_id_list),
         )).\
         group_by('topic_id')
 
