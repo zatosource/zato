@@ -58,7 +58,7 @@ ZATO_NOT_GIVEN = b'ZATO_NOT_GIVEN'
 ZatoNotGiven = b'ZatoNotGiven'
 
 # Separates command line arguments in shell commands.
-CLI_ARG_SEP = 'ZATO_ZATO_ZATO'
+CLI_ARG_SEP = 'Zato_Zato_Zato'
 
 # Also used in a couple of places.
 ZATO_OK = 'ZATO_OK'
@@ -796,8 +796,8 @@ class PUBSUB:
         LimitTopicRetention = 86_400 # In seconds = 1 day # 0.1
         LimitSubInactivity  = 86_400 # In seconds = 1 day # 0.1
 
-        DEMO_USERNAME    = 'zato.pubsub.demo'
-        DEMO_SECDEF_NAME = 'zato.pubsub.demo.secdef'
+        DEFAULT_USERNAME    = 'zato.pubsub'
+        DEFAULT_SECDEF_NAME = 'zato.pubsub.default.secdef'
 
         TEST_USERNAME    = 'zato.pubsub.test'
         TEST_SECDEF_NAME = 'zato.pubsub.test.secdef'
@@ -807,12 +807,12 @@ class PUBSUB:
 
         INTERNAL_USERNAME      = 'zato.pubsub.internal'
         INTERNAL_SECDEF_NAME   = 'zato.pubsub.internal.secdef'
-        INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
+        INTERNAL_ENDPOINT_NAME = 'zato.pubsub.internal.default'
 
         Topic_Patterns_All = 'pub=/*\nsub=/*'
 
     class SERVICE_SUBSCRIBER:
-        NAME = 'zato.pubsub.service.endpoint'
+        NAME = 'zato.pubsub.service.subscriber'
         TOPICS_ALLOWED = 'sub=/zato/s/to/*'
 
     class TOPIC_PATTERN:

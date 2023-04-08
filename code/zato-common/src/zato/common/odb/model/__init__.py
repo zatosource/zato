@@ -2197,6 +2197,7 @@ class PubSubEndpoint(Base):
 
     # Endpoint is a service
     service_id = cast_('intnone', Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True))
+    service = relationship('Service', backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
     # Identifies the endpoint through its security definition, e.g. a username/password combination.
     security_id = cast_('intnone', Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True))
