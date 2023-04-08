@@ -95,6 +95,9 @@ class Index(_Index):
             'sec_type', 'sec_name', 'sub_key', 'service_id', 'service_name')
         output_repeated = True
 
+    def should_include(self, item) -> 'bool':
+        return item.is_internal is False
+
     def on_before_append_item(self, item):
         return enrich_item(self.req.zato.cluster_id, item)
 
