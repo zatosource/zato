@@ -54,7 +54,7 @@ class SortedList(_SortedList):
         pos = bisect_left(self._maxes, msg)
 
         if pos == len(self._maxes):
-            raise ValueError('{0!r} not in list'.format(msg))
+            raise ValueError('{0!r} not in list (1)'.format(msg))
 
         for _list_idx, _list_msg in enumerate(self._lists[pos]):
             if msg.pub_msg_id == _list_msg.pub_msg_id:
@@ -62,7 +62,7 @@ class SortedList(_SortedList):
                 self._delete(pos, idx)
                 break
         else:
-            raise ValueError('{0!r} not in list'.format(msg))
+            raise ValueError('{0!r} not in list (2)'.format(msg))
 
 # ################################################################################################################################
 # ################################################################################################################################
