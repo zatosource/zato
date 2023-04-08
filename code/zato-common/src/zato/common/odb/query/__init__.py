@@ -943,7 +943,7 @@ def _pubsub_endpoint(session, cluster_id):
         outerjoin(Service, Service.id==PubSubEndpoint.service_id).\
         outerjoin(ChannelWebSocket, ChannelWebSocket.id==PubSubEndpoint.ws_channel_id).\
         filter(PubSubEndpoint.cluster_id==cluster_id).\
-        order_by(PubSubEndpoint.id)
+        order_by(PubSubEndpoint.name)
 
 def pubsub_endpoint(session, cluster_id, id):
     """ An individual pub/sub endpoint.
