@@ -111,7 +111,7 @@ pyyaml==6.0
 pyzmq==25.0.0
 raven==5.1.1
 recommonmark==0.6.0
-redis==2.10.6
+redis==4.5.4
 regex==2022.3.2
 repoze.lru==0.6
 repoze.profile==2.3
