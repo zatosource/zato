@@ -491,6 +491,30 @@ class DeliveryTask:
 
 # ################################################################################################################################
 
+    def _should_wake(self, _now:'callable_'=utcnow_as_ms) -> 'bool':
+        """ Returns True if the task should be woken up e.g. because its time has come already to process messages,
+        assumming there are any waiting for it.
+        """
+        # Return quickly if we already know that there are some messages to deliver or clear ..
+        if self.delivery_list:
+            return True
+
+        # .. otherwise, we will wait until self.delivery_interval lapsed.
+
+        now = _now()
+        diff = round(now - self.last_iter_run, 2)
+
+        if diff >= self.delivery_interval:
+            if self.delivery_list:
+                logger.info('Waking task:%s now:%s last:%s diff:%s interval:%s len-list:%d',
+                    self.sub_key, now, self.last_iter_run, diff, self.delivery_interval, len(self.delivery_list))
+                return True
+
+        # The above conditions are not met so we explicitly return False
+        return False
+
+# ################################################################################################################################
+
     def run(self,
         default_sleep_time=0.1,  # type: float
         status_code=run_deliv_sc # type: any_
@@ -633,29 +657,6 @@ class DeliveryTask:
             logger.warning(error_msg, self.sub_key, e_formatted)
             logger_zato.warning(error_msg, self.sub_key, e)
 
-# ################################################################################################################################
-
-    def _should_wake(self, _now:'callable_'=utcnow_as_ms) -> 'bool':
-        """ Returns True if the task should be woken up e.g. because its time has come already to process messages,
-        assumming there are any waiting for it.
-        """
-        # Return quickly if we already know that there are some messages to deliver ..
-        if self.delivery_list:
-            return True
-
-        # .. otherwise, we will wait until self.delivery_interval lapsed.
-
-        now = _now()
-        diff = round(now - self.last_iter_run, 2)
-
-        if diff >= self.delivery_interval:
-            if self.delivery_list:
-                logger.info('Waking task:%s now:%s last:%s diff:%s interval:%s len-list:%d',
-                    self.sub_key, now, self.last_iter_run, diff, self.delivery_interval, len(self.delivery_list))
-                return True
-
-        # The above conditions are not met so we explicitly return False
-        return False
 
 # ################################################################################################################################
 
