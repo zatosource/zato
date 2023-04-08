@@ -797,7 +797,7 @@ class PUBSUB:
         LimitSubInactivity  = 86_400 # In seconds = 1 day # 0.1
 
         DEFAULT_USERNAME    = 'zato.pubsub'
-        DEFAULT_SECDEF_NAME = 'zato.pubsub.default.secdef'
+        DEFAULT_SECDEF_NAME = 'pub.zato.pubsub.default'
 
         TEST_USERNAME    = 'zato.pubsub.test'
         TEST_SECDEF_NAME = 'zato.pubsub.test.secdef'
