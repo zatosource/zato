@@ -42,7 +42,7 @@ class Index(_Index):
             'pub_buffer_size_gd', 'task_sync_interval', 'task_delivery_interval', 'limit_retention', 'limit_message_expiry',
             'limit_sub_inactivity')
         output_optional = ('last_pub_time', 'last_pub_msg_id', 'last_endpoint_id', 'last_endpoint_name', 'last_pub_has_gd',
-            'last_pub_server_pid', 'last_pub_server_name', 'on_no_subs_pub')
+            'last_pub_server_pid', 'last_pub_server_name', 'on_no_subs_pub', 'sub_count')
         output_repeated = True
 
     def populate_initial_input_dict(self, initial_input_dict):

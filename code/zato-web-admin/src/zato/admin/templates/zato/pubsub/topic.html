@@ -159,7 +159,7 @@
                         </td>
 
                         <td id="sub_{{ item.id }}">
-                            <a href="{% url "pubsub-subscription" %}?cluster={{ cluster_id }}&amp;topic_id={{ item.id }}">Subscriptions</a>
+                            <a href="{% url "pubsub-subscription" %}?cluster={{ cluster_id }}&amp;topic_id={{ item.id }}">Subscriptions</a> <span class='form_hint'>({{ item.sub_count }})</span>
                         </td>
 
                         <td><a href="{% url "pubsub-message-publish" cluster_id item.id %}">Publish</a></td>
