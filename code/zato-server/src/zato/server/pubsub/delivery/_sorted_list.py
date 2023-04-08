@@ -49,6 +49,7 @@ class SortedList(_SortedList):
         """ Removes a pubsub message from a SortedList instance - we cannot use the regular .remove method
         because it may triggger __cmp__ per https://github.com/grantjenks/sorted_containers/issues/81.
         """
+        idx = None
 
         logger.info('In remove_pubsub_msg msg:`%s`', msg.pub_msg_id)
         pos = bisect_left(self._maxes, msg)
@@ -64,7 +65,8 @@ class SortedList(_SortedList):
             if raise_if_not_found:
                 raise ValueError('{0!r} not in list'.format(msg))
 
-        self._delete(pos, idx)
+        if idx:
+            self._delete(pos, idx)
 
 # ################################################################################################################################
 # ################################################################################################################################

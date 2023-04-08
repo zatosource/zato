@@ -176,7 +176,7 @@ class DeliveryTask:
         for msg in to_delete:
 
             # .. delete it from our in-RAM delivery list ..
-            self.delivery_list.remove_pubsub_msg(msg)
+            self.delivery_list.remove_pubsub_msg(msg, raise_if_not_found=False)
 
 # ################################################################################################################################
 
