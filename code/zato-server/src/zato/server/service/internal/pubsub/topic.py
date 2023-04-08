@@ -22,7 +22,7 @@ from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubTopic
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_gd_depth_topic_list, get_topic_list_by_id_list, \
-    get_topic_list_by_name_list, get_topic_list_by_name_pattern, get_topics_by_sub_keys
+    get_topic_list_by_name_list, get_topic_list_by_name_pattern, get_topic_sub_count_list, get_topics_by_sub_keys
 from zato.common.typing_ import anylist, cast_, intlistnone, intnone, strlistnone, strnone
 from zato.common.util.api import ensure_pubsub_hook_is_valid
 from zato.common.util.pubsub import get_last_pub_metadata
@@ -61,7 +61,7 @@ input_optional_extra = ['needs_details', 'on_no_subs_pub', 'hook_service_name'] 
 output_optional_extra = ['is_internal', Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time',
     'hook_service_name', 'last_pub_time', AsIs('last_pub_msg_id'), 'last_endpoint_id', 'last_endpoint_name',
     Bool('last_pub_has_gd'), Opaque('last_pub_server_pid'), 'last_pub_server_name', 'on_no_subs_pub',
-    ] + topic_limit_fields
+    Int('sub_count'),] + topic_limit_fields
 
 # ################################################################################################################################
 
@@ -127,12 +127,14 @@ def response_hook(self:'Service', input:'stranydict', instance:'PubSubTopic', at
             for item in self.response.payload:
                 topic_id_list.append(item.id)
 
-            # .. query the database to find depth of all the topics from the list ..
+            # .. query the database to find all the additional data for topics from the list ..
             with closing(self.odb.session()) as session:
                 depth_by_topic = get_gd_depth_topic_list(session, input['cluster_id'], topic_id_list)
+                sub_count_by_topic = get_topic_sub_count_list(session, input['cluster_id'], topic_id_list)
 
-            # .. convert it to a dict to make it easier to use it ..
+            # .. convert it all to a dict to make it easier to use it ..
             depth_by_topic = dict(depth_by_topic)
+            sub_count_by_topic = dict(sub_count_by_topic)
 
             # .. look up last pub metadata among all the servers ..
             last_pub_by_topic = get_last_pub_metadata(self.server, topic_id_list) # type: dict
@@ -141,8 +143,9 @@ def response_hook(self:'Service', input:'stranydict', instance:'PubSubTopic', at
             # .. and assign the metadata found.
             for item in self.response.payload:
 
-                # .. assign depth ..
+                # .. assign additional data ..
                 item.current_depth_gd = depth_by_topic.get(item.id) or 0
+                item.sub_count = sub_count_by_topic.get(item.id) or 0
 
                 # .. assign last usage metadata ..
                 last_data = last_pub_by_topic.get(item.id)
