@@ -496,6 +496,10 @@ class DeliveryTask:
         if self.delivery_list:
             return True
 
+        # .. or if there are any messages to be cleared ..
+        elif self.should_clear:
+            return True
+
         # .. otherwise, we will wait until self.delivery_interval lapsed.
 
         now = _now()
