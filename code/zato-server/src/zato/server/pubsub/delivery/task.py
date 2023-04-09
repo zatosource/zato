@@ -127,10 +127,6 @@ class DeliveryTask:
         # A list of messages that were requested to be deleted while a delivery was in progress, checked before each delivery.
         self.delete_requested:list_['Message'] = []
 
-        # This will be set to True if the task should clear all of the messages
-        # that are currently held by its delivery list. The flag is checked before each delivery.
-        self.should_clear = False
-
         # This is a lock used for micro-operations such as changing or consulting the contents of self.delete_requested.
         self.interrupt_lock = RLock()
 
@@ -294,11 +290,8 @@ class DeliveryTask:
         # There may be requests to delete some of messages while we are running and we obtain the list of
         # such messages here.
         with self.interrupt_lock:
-            if self.should_clear:
-                to_delete = self.delete_requested[:]
-                self.delete_requested.clear()
-            else:
-                to_delete = []
+            to_delete = self.delete_requested[:]
+            self.delete_requested.clear()
 
         # Go through each message and check if any has reached our delivery_max_retry.
         # Any such message should be deleted so we add it to to_delete. Note that we do it here
@@ -582,18 +575,6 @@ class DeliveryTask:
 
                     with self.delivery_lock:
 
-                        # Check if we should not clear all the messages before we run the delivery ..
-                        if self.should_clear:
-
-                            # .. delete the messages first ..
-                            self._delete_messages(self.delivery_list[:])
-
-                            # .. reset the flag ..
-                            self.should_clear = False
-
-                            # .. and continue the loop ..
-                            continue
-
                         # Update last run time to be able to wake up in time for the next delivery
                         self.last_iter_run = utcnow_as_ms()
 
@@ -719,9 +700,6 @@ class DeliveryTask:
 
     def clear(self) -> 'None':
 
-        # Indicate to other parts of the task that a clear operation was requested
-        self.should_clear = True
-
         # For logging purposes ..
         gd, non_gd = self.get_queue_depth()
 
@@ -730,13 +708,13 @@ class DeliveryTask:
             self.sub_key, gd, non_gd, [elem.pub_msg_id for elem in self.delivery_list])
 
         # .. indicate what should be deleted in the next iteration of the self.run_delivery loop ..
-        self.delete_requested[:] = self.delivery_list[:]
+        # self.delete_requested[:] = self.delivery_list[:]
 
         # .. clear the delivery list now ..
         self.delivery_list.clear()
 
         # .. and log a higher-level message now.
-        msg = 'Clearing task messages for sub_key `%s` -> `%s`'
+        msg = 'Cleared task messages for sub_key `%s` -> `%s`'
         logger.info(msg, self.sub_key, self.py_object)
         logger_zato.info(msg, self.sub_key, self.py_object)
 
