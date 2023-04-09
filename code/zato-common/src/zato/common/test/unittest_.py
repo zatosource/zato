@@ -26,8 +26,8 @@ if 0:
 
 _default = PUBSUB.DEFAULT
 
-sec_name = _default.DEMO_SECDEF_NAME
-username = _default.DEMO_USERNAME
+sec_name = _default.DEFAULT_SECDEF_NAME
+username = _default.DEFAULT_USERNAME
 
 # ################################################################################################################################
 # ################################################################################################################################

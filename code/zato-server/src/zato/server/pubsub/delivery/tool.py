@@ -335,21 +335,19 @@ class PubSubTool:
                 # Go over all sub_keys given on input and carry out all operations while holding a lock for each sub_key
                 for sub_key in ctx.sub_key_list:
 
-                    with self.sub_key_locks[sub_key]:
+                    # Accept all input non-GD messages
+                    if ctx.non_gd_msg_list:
+                        self._add_non_gd_messages_by_sub_key(sub_key, ctx.non_gd_msg_list)
 
-                        # Accept all input non-GD messages
-                        if ctx.non_gd_msg_list:
-                            self._add_non_gd_messages_by_sub_key(sub_key, ctx.non_gd_msg_list)
+                    # Push all GD messages, if there are any at all for this sub_key
+                    if ctx.has_gd and sub_key in gd_msg_list:
 
-                        # Push all GD messages, if there are any at all for this sub_key
-                        if ctx.has_gd and sub_key in gd_msg_list:
+                        topic_name = self.pubsub.get_topic_name_by_sub_key(sub_key)
+                        self._push_gd_messages_by_sub_key(sub_key, topic_name, gd_msg_list[sub_key])
 
-                            topic_name = self.pubsub.get_topic_name_by_sub_key(sub_key)
-                            self._push_gd_messages_by_sub_key(sub_key, topic_name, gd_msg_list[sub_key])
+                        self.last_gd_run[sub_key] = new_now
 
-                            self.last_gd_run[sub_key] = new_now
-
-                            logger.info('Storing last_gd_run of `%r` for sub_key:%s (d:%s)', new_now, sub_key, delta)
+                        logger.info('Storing last_gd_run of `%r` for sub_key:%s (d:%s)', new_now, sub_key, delta)
 
         except Exception:
             e = format_exc()
