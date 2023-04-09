@@ -48,11 +48,11 @@ from zato.common.match import Matcher
 from zato.common.model.amqp_ import AMQPConnectorConfig
 from zato.common.model.wsx import WSXConnectorConfig
 from zato.common.odb.api import PoolStore, SessionWrapper
-from zato.common.pubsub import MSG_PREFIX as PUBSUB_MSG_PREFIX
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      import_module_from_path, new_cid, parse_extra_into_dict, parse_tls_channel_security_definition, \
      start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source, wait_for_dict_key
+from zato.common.util.pubsub import is_service_subscription
 from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.server.base.parallel.subprocess_.api import StartConfig as SubprocessStartConfig
 from zato.server.base.worker.common import WorkerImpl
@@ -951,7 +951,7 @@ class WorkerStore(_WorkerStoreBase):
             self.pubsub.create_subscription_object(config)
 
             # Special-case delivery of messages to services
-            if config.sub_key.startswith(PUBSUB_MSG_PREFIX.SERVICE_SK):
+            if is_service_subscription(config):
                 self.pubsub.set_config_for_service_subscription(config['sub_key'])
 
         for value in self.worker_config.pubsub_topic.values():

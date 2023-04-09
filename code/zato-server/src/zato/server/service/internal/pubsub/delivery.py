@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,9 +10,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.api import HTTP_SOAP_SERIALIZATION_TYPE, PUBSUB, URL_TYPE
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
-from zato.common.pubsub import HandleNewMessageCtx
-from zato.server.pubsub.delivery.tool import PubSubTool
 from zato.common.json_internal import dumps
+from zato.common.pubsub import HandleNewMessageCtx
+from zato.common.util.pubsub import is_service_subscription
+from zato.server.pubsub.delivery.tool import PubSubTool
 from zato.server.service import Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -54,8 +55,10 @@ class CreateDeliveryTask(AdminService):
         # Creates a pubsub_tool that will handle this subscription and registers it with pubsub
         pubsub_tool = PubSubTool(self.pubsub, self.server, config['endpoint_type'])
 
-        # Makes this sub_key known to pubsub
-        pubsub_tool.add_sub_key(config['sub_key'])
+        # Makes this sub_key known to pubsub but only if this is not a service subscription
+        # because subscriptions of this sort are handed by the worker store directly in init_pubsub.
+        if not is_service_subscription(config):
+            pubsub_tool.add_sub_key(config['sub_key'])
 
         # Common message for both local server and broker
         msg = {
