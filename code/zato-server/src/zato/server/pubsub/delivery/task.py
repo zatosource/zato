@@ -638,7 +638,6 @@ class DeliveryTask:
             logger.warning(error_msg, self.sub_key, e_formatted)
             logger_zato.warning(error_msg, self.sub_key, e)
 
-
 # ################################################################################################################################
 
     def _log_delivery_method_changed(self, current_delivery_method:'str') -> 'None':

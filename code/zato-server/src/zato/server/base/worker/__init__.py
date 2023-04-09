@@ -48,7 +48,6 @@ from zato.common.match import Matcher
 from zato.common.model.amqp_ import AMQPConnectorConfig
 from zato.common.model.wsx import WSXConnectorConfig
 from zato.common.odb.api import PoolStore, SessionWrapper
-from zato.common.pubsub import MSG_PREFIX as PUBSUB_MSG_PREFIX
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      import_module_from_path, new_cid, parse_extra_into_dict, parse_tls_channel_security_definition, \
