@@ -59,7 +59,7 @@ class PubSubAPIRestImpl:
 
     def _subscribe(self, topic_name:'str', needs_unsubscribe:'bool'=False) -> 'str':
         if needs_unsubscribe:
-            self._unsubscribe(topic_name)
+            _ = self._unsubscribe(topic_name)
         response = self.rest_client.post(PubSubConfig.PathSubscribe + topic_name)
         sleep(6)
         return response['sub_key']
