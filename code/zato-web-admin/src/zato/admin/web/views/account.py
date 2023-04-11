@@ -59,7 +59,7 @@ def set_initial_opaque_attrs(username, initial, opaque_attrs):
     totp_key = initial.get('totp_key')
     if not totp_key:
         totp_key = pyotp.random_base32()
-        initial['totp_key_label'] = 'Zato web-admin'
+        initial['totp_key_label'] = 'Zato Dashboard'
     else:
         cm = CryptoManager(secret_key=zato_settings.zato_secret_key)
 
