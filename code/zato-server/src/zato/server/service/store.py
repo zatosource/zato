@@ -443,18 +443,18 @@ class ServiceStore:
             if _direct_sio_input or _direct_sio_output:
 
                 # If I/O is declared directly, it means that we do not need response wrappers
-                class_._zato_needs_response_wrapper = False
+                class_._zato_needs_response_wrapper = False # type: ignore
 
                 class _Class_SimpleIO:
                     pass
 
                 if _direct_sio_input:
-                    _Class_SimpleIO.input = _direct_sio_input
+                    _Class_SimpleIO.input = _direct_sio_input # type: ignore
 
                 if _direct_sio_output:
-                    _Class_SimpleIO.output = _direct_sio_output
+                    _Class_SimpleIO.output = _direct_sio_output # type: ignore
 
-                class_.SimpleIO = _Class_SimpleIO
+                class_.SimpleIO = _Class_SimpleIO # type: ignore
 
         try:
             class_.SimpleIO # type: ignore
@@ -484,7 +484,7 @@ class ServiceStore:
             else:
                 SIOClass = CySimpleIO
 
-            SIOClass.attach_sio(service_store.server, service_store.server.sio_config, class_)
+            _ = SIOClass.attach_sio(service_store.server, service_store.server.sio_config, class_)
 
         # May be None during unit-tests - not every test provides it.
         if service_store:
@@ -824,7 +824,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _store_in_ram(self, session:'SASession', to_process:'inramlist') -> 'None':
+    def _store_in_ram(self, session:'SASession | None', to_process:'inramlist') -> 'None':
 
         if self.is_testing:
             services = {}
@@ -1036,7 +1036,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _store_in_odb(self, session:'SASession', to_process:'inramlist') -> 'None':
+    def _store_in_odb(self, session:'SASession | None', to_process:'inramlist') -> 'None':
 
         # Indicates boundaries of deployment batches
         batch_indexes = get_batch_indexes(to_process, self.max_batch_size)
@@ -1048,7 +1048,8 @@ class ServiceStore:
         # in which case we need to commit the sesssion here to make it possible
         # for the next method to have access to these newly added Service objects.
         if needs_commit:
-            session.commit()
+            if session:
+                session.commit()
 
         # Now DeployedService can be added - they assume that all Service objects all are in ODB already
         self._store_deployed_services_in_odb(session, batch_indexes, to_process)
@@ -1169,7 +1170,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def after_import(self, session:'SASession', info:'DeploymentInfo') -> 'None':
+    def after_import(self, session:'SASession | None', info:'DeploymentInfo') -> 'None':
 
         # Names of all services that have been just deployed ..
         deployed_service_name_list = [item.name for item in info.to_process]
