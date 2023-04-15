@@ -155,7 +155,7 @@ echo [4/$STEPS] Load-balancer started
 zato_qs_start_tail = """
 # .. web admin comes as the last one because it may ask Django-related questions.
 $ZATO_BIN start $BASE_DIR/web-admin --verbose
-echo [$STEPS/$STEPS] Web admin started
+echo [$STEPS/$STEPS] Dashboard started
 
 cd $BASE_DIR
 echo Zato cluster $CLUSTER started
@@ -655,7 +655,7 @@ class Create(ZatoCommand):
         self.logger.info('Quickstart cluster {} created'.format(cluster_name))
 
         if admin_created:
-            self.logger.info('Web admin user:[admin], password:[%s]', web_admin_password.decode('utf8'))
+            self.logger.info('Dashboard user:[admin], password:[%s]', web_admin_password.decode('utf8'))
         else:
             self.logger.info('User [admin] already exists in the ODB')
 
