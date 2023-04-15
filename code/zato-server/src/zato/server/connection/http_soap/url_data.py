@@ -620,6 +620,7 @@ class URLData(CyURLData, OAuthDataStore):
     def apikey_get(self, name):
         """ Returns the configuration of the API key of the given name.
         """
+        wait_for_dict_key(self.apikey_config, name)
         with self.url_sec_lock:
             return self.apikey_config.get(name)
 
@@ -662,6 +663,7 @@ class URLData(CyURLData, OAuthDataStore):
     def aws_get(self, name):
         """ Returns the configuration of the AWS security definition of the given name.
         """
+        wait_for_dict_key(self.aws_config, name)
         with self.url_sec_lock:
             return self.aws_config.get(name)
 
@@ -709,6 +711,7 @@ class URLData(CyURLData, OAuthDataStore):
     def basic_auth_get(self, name):
         """ Returns the configuration of the HTTP Basic Auth security definition of the given name.
         """
+        wait_for_dict_key(self.basic_auth_config, name)
         with self.url_sec_lock:
             return self.basic_auth_config.get(name)
 
@@ -764,6 +767,7 @@ class URLData(CyURLData, OAuthDataStore):
     def vault_conn_sec_get(self, name):
         """ Returns configuration of a Vault connection of the given name.
         """
+        wait_for_dict_key(self.vault_conn_sec_config, name)
         with self.url_sec_lock:
             return self.vault_conn_sec_config.get(name)
 
@@ -798,6 +802,7 @@ class URLData(CyURLData, OAuthDataStore):
     def jwt_get(self, name):
         """ Returns configuration of a JWT security definition of the given name.
         """
+        wait_for_dict_key(self.jwt_config, name)
         with self.url_sec_lock:
             return self.jwt_config.get(name)
 
@@ -851,6 +856,7 @@ class URLData(CyURLData, OAuthDataStore):
     def ntlm_get(self, name):
         """ Returns the configuration of the NTLM security definition of the given name.
         """
+        wait_for_dict_key(self.ntlm_config, name)
         with self.url_sec_lock:
             return self.ntlm_config.get(name)
 
@@ -893,6 +899,7 @@ class URLData(CyURLData, OAuthDataStore):
     def oauth_get(self, name):
         """ Returns the configuration of the OAuth account of the given name.
         """
+        wait_for_dict_key(self.oauth_config, name)
         with self.url_sec_lock:
             return self.oauth_config.get(name)
 
@@ -940,6 +947,7 @@ class URLData(CyURLData, OAuthDataStore):
         self.tls_channel_sec_config[name].config.value = dict(parse_tls_channel_security_definition(config.value))
 
     def tls_channel_security_get(self, name):
+        wait_for_dict_key(self.tls_channel_sec_config, name)
         with self.url_sec_lock:
             return self.tls_channel_sec_config.get(name)
 
@@ -973,6 +981,7 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def tls_key_cert_get(self, name):
+        wait_for_dict_key(self.tls_key_cert_config, name)
         with self.url_sec_lock:
             return self.tls_key_cert_config.get(name)
 
