@@ -47,7 +47,7 @@ class _WebAdminAuthCommand(ManageCommand):
 # ################################################################################################################################
 
 class CreateUser(_WebAdminAuthCommand):
-    """ Creates a new web admin user
+    """ Creates a new Dashboard user
     """
     opts = [
         {'name': '--username', 'help': 'Username to use'},
@@ -145,7 +145,7 @@ class CreateUser(_WebAdminAuthCommand):
 # ################################################################################################################################
 
 class UpdatePassword(_WebAdminAuthCommand):
-    """ Updates a web admin user's password
+    """ Updates a Dashboard user's password
     """
     opts = [
         {'name': 'username', 'help': 'Username to change the password of'},
