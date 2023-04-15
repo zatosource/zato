@@ -812,7 +812,7 @@ class ServiceStore:
 
             len_si = len(dill_items['service_info'])
 
-            for _idx, item in enumerate(dill_items['service_info'], 1):
+            for _, item in enumerate(dill_items['service_info'], 1):
                 class_ = self._visit_class_for_service(item['mod'], item['service_class'], item['fs_location'], True)
                 to_process.append(class_)
 
@@ -939,7 +939,6 @@ class ServiceStore:
         """ Returns True if a given service has been already deployed but its current source code,
         one that is about to be deployed, is changed in comparison to what is stored in ODB.
         """
-        # type: (InRAMService, dict)
 
         # Already deployed ..
         if service.name in already_deployed:
