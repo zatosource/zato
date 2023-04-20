@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://zato.io?gh1"><img alt="" src="https://zato.io/static/img/banner.webp" /></a>
+  <a href="https://zato.io?gh1"><img alt="" src="https://zato.io/static/img/intro/banner.webp" /></a>
 </p>
 
 # Zato /zɑːtəʊ/
