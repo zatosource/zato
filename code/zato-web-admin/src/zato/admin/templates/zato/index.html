@@ -250,6 +250,64 @@
                     </ul>
                 </li>
 
+                <li><span class="like-a">Vendors &darr;</span>
+                    <ul>
+                        <li>
+                            <span class="like-a">Amazon &rarr;</span>
+                            <ul>
+                                <li class='wide'><a href="{% url "cloud-aws-s3" %}?cluster={{ cluster_id|default:'' }}">S3</a></li>
+                            </ul>
+                        </li>
+                        <li>
+                            <span class="like-a">Atlassian &rarr;</span>
+                            <ul>
+                                <li><a href="{% url "cloud-confluence" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-confluence">Confluence</a></li>
+                                <li><a href="{% url "cloud-jira" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-jira">Jira</a></li>
+                            </ul>
+                        </li>
+                        <li><a href="{% url "cloud-dropbox" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-dropbox">Dropbox</a></li>
+                        <li>
+                            <span class="like-a">IBM &rarr;</span>
+                            <ul>
+                                <li>
+                                    <span class="like-a">MQ &rarr;</span>
+                                    <ul>
+                                        <li><a href="{% url "definition-wmq" %}?cluster={{ cluster_id|default:'' }}">Definitions</a></li>
+                                        <li><a href="{% url "channel-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">Channels</a></li>
+                                        <li><a href="{% url "out-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">Outgoing</a></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                        <!--
+                        <li>
+                            <span class="like-a">Keysight &rarr;</span>
+                            <ul>
+                                <li><a href="{% url "cloud-jira" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-jira">Hawkeye</a></li>
+                                <li><a href="{% url "cloud-confluence" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-confluence">Vision Series</a></li>
+                            </ul>
+                        </li>
+                        -->
+                        <li>
+                            <span class="like-a">Microsoft &rarr;</span>
+                            <ul>
+                                <li>
+                                    <span class="like-a">365 &rarr;</span>
+                                    <ul>
+                                        <li><a href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-microsoft-365">Cloud</a></li>
+                                        <li><a href="{% url "email-imap" %}?cluster={{ cluster_id|default:'' }}">IMAP</a></li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <li><a href="{% url "out-ldap" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-ldap">LDAP (AD)</a></li>
+                                </li>
+                            </ul>
+                        </li>
+                        <li><a href="{% url "cloud-salesforce" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-salesforce">Salesforce</a></li>
+                        <li><a href="{% url "out-sap" %}?cluster={{ cluster_id|default:'' }}">SAP</a></li>
+                    </ul>
+                </li>
+
                 <li><span class="like-a">Pub/sub &darr;</span>
                     <ul>
                         <li><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id|default:'' }}">Topics</a></li>
