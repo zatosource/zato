@@ -1,16 +1,18 @@
 <p align="center">
-  <a href="https://zato.io?gh1"><img alt="" src="https://zato.io/static/img/platform2.webp" /></a>
+  <a href="https://zato.io?gh1"><img alt="" src="https://zato.io/static/img/intro/banner.webp" /></a>
 </p>
 
 # Zato /zɑːtəʊ/
 
 ESB, SOA, API and Cloud Integrations in Python.
 
-Zato is a Python-based, open-source platform that lets you automate, orchestrate and integrate business systems, applications, APIs
-as well as hardware assets in industries such as
+Zato is a Python-based, open-source platform that lets you automate, integrate and orchestrate business systems,
+IT/OT applications, APIs as well as hardware assets in industries such as
 [telecommunications](https://zato.io/en/industry/telecom/index.html),
+[defense](https://zato.io/en/industry/defense/index.html),
 [health care](https://zato.io/en/industry/healthcare/index.html),
-financial services
+financial services,
+government
 and more.
 
 <p align="center">
