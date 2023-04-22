@@ -46,6 +46,8 @@ if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, dictnone, stranydict, strstrdict
     from zato.server.base.parallel import ParallelServer
+    from zato.server.config import ConfigDict
+    ConfigDict = ConfigDict
     ParallelServer = ParallelServer
 
 # ################################################################################################################################
@@ -546,6 +548,14 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
             # .. now, we can invoke the remote endpoint with our file on input.
             return self.post(cid, data=encoder, headers=headers)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RESTFacade:
+    """ A facade through which self.rest calls can be made.
+    """
+    _out_plain_http: 'ConfigDict'
 
 # ################################################################################################################################
 # ################################################################################################################################
