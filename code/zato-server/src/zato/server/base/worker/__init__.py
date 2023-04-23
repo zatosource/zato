@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -50,7 +50,7 @@ from zato.common.model.wsx import WSXConnectorConfig
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
-     import_module_from_path, new_cid, parse_extra_into_dict, parse_tls_channel_security_definition, \
+     fs_safe_name, import_module_from_path, new_cid, parse_extra_into_dict, parse_tls_channel_security_definition, \
      start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source, wait_for_dict_key
 from zato.common.util.pubsub import is_service_subscription
 from zato.cy.reqresp.payload import SimpleIOPayload
@@ -478,6 +478,11 @@ class WorkerStore(_WorkerStoreBase):
     def _http_soap_wrapper_from_config(self, config:'Bunch', has_sec_config:'bool'=True) -> 'BaseHTTPSOAPWrapper':
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration dictionary.
         """
+
+        # Populate it upfront
+        conn_name = config['name']
+        config['name_fs_safe'] = fs_safe_name(conn_name)
+
         security_name = config.get('security_name')
         sec_config = {
             'security_name': security_name,
@@ -581,7 +586,8 @@ class WorkerStore(_WorkerStoreBase):
         for transport in('soap', 'plain_http'):
             config_dict = getattr(self.worker_config, 'out_' + transport)
             for name in list(config_dict): # Must use list explicitly so config_dict can be changed during iteration
-                yield config_dict, config_dict[name]
+                config_data = config_dict[name]
+                yield config_dict, config_data
 
 # ################################################################################################################################
 

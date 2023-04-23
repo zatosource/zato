@@ -41,7 +41,7 @@ from zato.common.util.api import make_repr, new_cid, payload_from_request, servi
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import SchedulerFacade
+from zato.server.connection.facade import RESTFacade, SchedulerFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.connection.sms import SMSAPI
@@ -372,7 +372,8 @@ class Service:
     """ A base class for all services deployed on Zato servers, no matter the transport and protocol, be it REST, IBM MQ
     or any other, regardless whether they arere built-in or user-defined ones.
     """
-    schedule: SchedulerFacade
+    rest: 'RESTFacade'
+    schedule: 'SchedulerFacade'
 
     call_hooks:'bool' = True
     _filter_by = None
@@ -512,6 +513,9 @@ class Service:
             self.kvdb
         ) # type: Outgoing
 
+        # REST facade for outgoing connections
+        self.rest = RESTFacade()
+
         if self.component_enabled_hl7:
             hl7_api = HL7API(self._worker_store.outconn_hl7_fhir, self._worker_store.outconn_hl7_mllp)
             self.out.hl7 = hl7_api
@@ -609,6 +613,9 @@ class Service:
 
         # Cache is always enabled
         self.cache = self._worker_store.cache_api
+
+        # REST facade
+        self.rest.init(self.cid, self._out_plain_http)
 
 # ################################################################################################################################
 
