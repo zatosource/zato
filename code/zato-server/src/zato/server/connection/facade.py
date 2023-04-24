@@ -127,8 +127,11 @@ class RESTFacade:
     """ A facade through which self.rest calls can be made.
     """
     cid: 'str'
-    name_prefix: 'str' = ''
     _out_plain_http: 'ConfigDict'
+
+    name_prefix: 'str' = ''
+    needs_facade: 'bool' = False
+    has_path_in_args: 'bool' = False
 
     before_call_func: 'callnone' = None
     after_call_func:  'callnone' = None
@@ -139,7 +142,7 @@ class RESTFacade:
 
 # ################################################################################################################################
 
-    def __getitem__(self, orig_name:'str') -> 'HTTPSOAPWrapper':
+    def _get(self, orig_name:'str', needs_facade:'bool'=True) -> 'HTTPSOAPWrapper | RESTInvoker':
 
         # Check if name may point to an environment variable ..
         if orig_name.startswith('$'):
@@ -156,15 +159,25 @@ class RESTFacade:
         # This will raise a KeyError if we have no such name ..
         item = self._out_plain_http[name]
 
-        # .. now, we can return the item's underlying connection object
-        return item.conn
+        # .. now, we can return our own facade or the item's underlying connection object
+        if needs_facade:
+            invoker = RESTInvoker(item.conn, self)
+            return invoker
+        else:
+            return item.conn
 
 # ################################################################################################################################
 
-    def __getattr__(self, attr_name:'str') -> 'HTTPSOAPWrapper':
+    def __getitem__(self, orig_name:'str') -> 'RESTInvoker':
+        result = self._get(orig_name, needs_facade=self.needs_facade)
+        return cast_('RESTInvoker', result)
+
+# ################################################################################################################################
+
+    def __getattr__(self, attr_name:'str') -> 'RESTInvoker':
 
         # Use a potential prefix
-        attr_name = self.name_prefix + attr_name
+        # attr_name = self.name_prefix + attr_name
 
         try:
             # First, try and see if we do not have a connection of that exact name ..
@@ -188,71 +201,115 @@ class RESTFacade:
         return self[name]
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-    def _call_rest_func(self, func_name:'str', conn_name:'str', *args:'any_', **kwargs:'str') -> 'any_':
+class RESTInvoker:
+    conn: 'HTTPSOAPWrapper'
+    container: 'RESTFacade'
 
-        # Note that we use getattr to get the connection, thus ensuring that we will find it
-        # no matter what naming convention is used, i.e. both "My Connection" and "My_Connection" ..
-        conn = getattr(self, conn_name)
+    def __init__(self, conn:'HTTPSOAPWrapper', container:'RESTFacade') -> 'None':
+        self.conn = conn
+        self.container = container
+
+# ################################################################################################################################
+
+    def call_rest_func(self, func_name:'str', conn_name:'str', *args:'any_', **kwargs:'str') -> 'any_':
 
         # .. the actual method to invoke ..
-        func = getattr(conn, func_name)
+        func = getattr(self.conn, func_name)
 
         # .. if we have a function to call before the actual method should be invoked, do it now ..
-        if self.before_call_func:
-            self.before_call_func(func_name, conn_name, conn, *args, **kwargs)
+        if self.container.before_call_func:
+            self.container.before_call_func(func_name, conn_name, self.conn, *args, **kwargs)
 
         # .. do invoke the actual function ..
-        result = func(self.cid, *args, **kwargs)
+        result = func(self.container.cid, *args, **kwargs)
 
         # .. if we have a function to call after the actual method was invoked, do it now ..
-        if self.after_call_func:
-            self.after_call_func(func_name, conn_name, conn, result, *args, **kwargs)
+        if self.container.after_call_func:
+            self.container.after_call_func(func_name, conn_name, self.conn, result, *args, **kwargs)
 
         # .. and return the result to our caller.
         return result
 
 # ################################################################################################################################
 
-    def http_request(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self._call_rest_func('http_request', *args, **kwargs)
+    def http_request(self, *args:'any_', **kwargs:'any_') -> 'any_':
+
+        # This will be always the same
+        conn_name = self.conn.config['name']
+
+        # Depending on what kind of an invoker this is, build the path that we actually want to access.
+        if self.container.has_path_in_args:
+            if args:
+                _zato_path = args[1]
+                args = args[2:]
+            else:
+                _zato_path = '/zato-no-path-given'
+
+            # We know we will be always able to populate this key with some value
+            kwargs_params = kwargs.setdefault('params', {})
+            kwargs_params['_zato_path'] = _zato_path
+
+        return self.call_rest_func('http_request', conn_name, *args, **kwargs)
+
+# ################################################################################################################################
 
     def get(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self._call_rest_func('get', *args, **kwargs)
+        return self.http_request('get', *args, **kwargs)
 
     def delete(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self._call_rest_func('delete', *args, **kwargs)
+        return self.http_request('delete', *args, **kwargs)
 
     def options(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self._call_rest_func('options', *args, **kwargs)
+        return self.http_request('options', *args, **kwargs)
 
     def post(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self._call_rest_func('post', *args, **kwargs)
+        return self.http_request('post', *args, **kwargs)
 
     send = post
 
     def put(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self._call_rest_func('put', *args, **kwargs)
+        return self.http_request('put', *args, **kwargs)
 
     def patch(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self._call_rest_func('patch', *args, **kwargs)
+        return self.http_request('patch', *args, **kwargs)
 
     def ping(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self._call_rest_func('ping', *args, **kwargs)
+        return self.http_request('ping', *args, **kwargs)
 
     def upload(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self._call_rest_func('upload', *args, **kwargs)
+        return self.http_request('upload', *args, **kwargs)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class KeysightVisionFacade(RESTFacade):
     name_prefix = 'KeysightVision.'
+    needs_facade = True
+    has_path_in_args = True
+
+    '''
+    def __getitem__(self, orig_name:'str') -> 'KeysightVisionFacade':
+        result = super().__getitem__(orig_name)
+        return cast_('KeysightVisionFacade', result)
+    '''
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class KeysightHawkeyeFacade(RESTFacade):
+    name_prefix = 'KeysightHawkeye.'
+    needs_facade = True
+    has_path_in_args = True
+
+    '''
+    def __getitem__(self, orig_name:'str') -> 'KeysightHawkeyeFacade':
+        result = super().__getitem__(orig_name)
+        return cast_('KeysightHawkeyeFacade', result)
+    '''
+
+# ################################################################################################################################
 
     def before_call_func(
         self,
