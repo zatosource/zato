@@ -20,6 +20,7 @@ from dateutil.tz.tz import tzutc
 # Zato
 from zato.common.api import SCHEDULER
 from zato.common.json_internal import dumps
+from zato.common.typing_ import cast_
 
 ################################################################################################################################
 ################################################################################################################################
@@ -130,7 +131,7 @@ class RESTFacade:
     _out_plain_http: 'ConfigDict'
 
     name_prefix: 'str' = ''
-    needs_facade: 'bool' = False
+    needs_facade: 'bool' = True
     has_path_in_args: 'bool' = False
 
     before_call_func: 'callnone' = None
@@ -142,7 +143,7 @@ class RESTFacade:
 
 # ################################################################################################################################
 
-    def _get(self, orig_name:'str', needs_facade:'bool'=True) -> 'HTTPSOAPWrapper | RESTInvoker':
+    def _get(self, orig_name:'str', needs_facade:'bool'=True) -> 'RESTInvoker':
 
         # Check if name may point to an environment variable ..
         if orig_name.startswith('$'):
@@ -159,18 +160,15 @@ class RESTFacade:
         # This will raise a KeyError if we have no such name ..
         item = self._out_plain_http[name]
 
-        # .. now, we can return our own facade or the item's underlying connection object
-        if needs_facade:
-            invoker = RESTInvoker(item.conn, self)
-            return invoker
-        else:
-            return item.conn
+        # .. now, we can return our own facade.
+        invoker = RESTInvoker(item.conn, self)
+        return invoker
 
 # ################################################################################################################################
 
     def __getitem__(self, orig_name:'str') -> 'RESTInvoker':
         result = self._get(orig_name, needs_facade=self.needs_facade)
-        return cast_('RESTInvoker', result)
+        return result
 
 # ################################################################################################################################
 
@@ -234,10 +232,12 @@ class RESTInvoker:
 
 # ################################################################################################################################
 
-    def http_request(self, *args:'any_', **kwargs:'any_') -> 'any_':
+    def call_wrapper(self, *args:'any_', **kwargs:'any_') -> 'any_':
 
         # This will be always the same
         conn_name = self.conn.config['name']
+        func_name = args[0]
+        args = args[1:]
 
         # Depending on what kind of an invoker this is, build the path that we actually want to access.
         if self.container.has_path_in_args:
@@ -251,42 +251,41 @@ class RESTInvoker:
             kwargs_params = kwargs.setdefault('params', {})
             kwargs_params['_zato_path'] = _zato_path
 
-        return self.call_rest_func('http_request', conn_name, *args, **kwargs)
+        return self.call_rest_func(func_name, conn_name, *args, **kwargs)
 
 # ################################################################################################################################
 
     def get(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self.http_request('get', *args, **kwargs)
+        return self.call_wrapper('get', *args, **kwargs)
 
     def delete(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self.http_request('delete', *args, **kwargs)
+        return self.call_wrapper('delete', *args, **kwargs)
 
     def options(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self.http_request('options', *args, **kwargs)
+        return self.call_wrapper('options', *args, **kwargs)
 
     def post(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self.http_request('post', *args, **kwargs)
+        return self.call_wrapper('post', *args, **kwargs)
 
     send = post
 
     def put(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self.http_request('put', *args, **kwargs)
+        return self.call_wrapper('put', *args, **kwargs)
 
     def patch(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self.http_request('patch', *args, **kwargs)
+        return self.call_wrapper('patch', *args, **kwargs)
 
     def ping(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self.http_request('ping', *args, **kwargs)
+        return self.call_wrapper('ping', *args, **kwargs)
 
     def upload(self, *args:'any_', **kwargs:'str') -> 'any_':
-        return self.http_request('upload', *args, **kwargs)
+        return self.call_wrapper('upload', *args, **kwargs)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class KeysightVisionFacade(RESTFacade):
     name_prefix = 'KeysightVision.'
-    needs_facade = True
     has_path_in_args = True
 
     '''
@@ -300,7 +299,6 @@ class KeysightVisionFacade(RESTFacade):
 
 class KeysightHawkeyeFacade(RESTFacade):
     name_prefix = 'KeysightHawkeye.'
-    needs_facade = True
     has_path_in_args = True
 
     '''
