@@ -20,7 +20,6 @@ from dateutil.tz.tz import tzutc
 # Zato
 from zato.common.api import SCHEDULER
 from zato.common.json_internal import dumps
-from zato.common.typing_ import cast_
 
 ################################################################################################################################
 ################################################################################################################################
