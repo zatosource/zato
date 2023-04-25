@@ -46,6 +46,8 @@ if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, dictnone, stranydict, strstrdict
     from zato.server.base.parallel import ParallelServer
+    from zato.server.config import ConfigDict
+    ConfigDict = ConfigDict
     ParallelServer = ParallelServer
 
 # ################################################################################################################################

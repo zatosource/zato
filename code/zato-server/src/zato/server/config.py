@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -170,13 +170,13 @@ class ConfigDict:
     def get_config_list(self, predicate=lambda value: value):
         """ Returns a list of deepcopied config Bunch objects.
         """
+        out = []
         with self.lock:
-            out = []
             for value in self.values():
-                config = value['config']
-                if predicate(config):
-                    out.append(deepcopy(config))
-
+                if isinstance(value, dict):
+                    config = value['config']
+                    if predicate(config):
+                        out.append(deepcopy(config))
         return out
 
 # ################################################################################################################################

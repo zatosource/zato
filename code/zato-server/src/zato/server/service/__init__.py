@@ -8,21 +8,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from inspect import isclass
 from traceback import format_exc
 from typing import Optional as optional
 
-# Arrow
-from arrow import Arrow
-
 # Bunch
 from bunch import bunchify
-
-# datetutil
-from dateutil.parser import parse as dt_parse
-from dateutil.tz.tz import tzutc
 
 # lxml
 from lxml.etree import _Element as EtreeElement
@@ -37,7 +30,7 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, SCHEDULER, \
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, \
      WEB_SOCKET, zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.exception import Inactive, Reportable, ZatoException
@@ -48,6 +41,7 @@ from zato.common.util.api import make_repr, new_cid, payload_from_request, servi
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
+from zato.server.connection.facade import KeysightContainer, RESTFacade, SchedulerFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.connection.sms import SMSAPI
@@ -170,7 +164,6 @@ _wsgi_channels = {CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
 # ################################################################################################################################
 
 _response_raw_types=(bytes, str, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
-_utz_utc = timezone.utc
 _utcnow = datetime.utcnow
 
 # ################################################################################################################################
@@ -373,93 +366,14 @@ class PatternsFacade:
         self.fanout = FanOut(invoking_service, cache, lock)
         self.parallel = ParallelExec(invoking_service, cache, lock)
 
-################################################################################################################################
-
-class SchedulerFacade:
-    """ The API through which jobs can be scheduled.
-    """
-    def __init__(self, server:'ParallelServer') -> 'None':
-        self.server = server
-
-    def onetime(
-        self,
-        invoking_service, # type: Service
-        target_service,   # type: any_
-        name='',          # type: str
-        *,
-        prefix='',        # type: str
-        start_date='',    # type: any_
-        after_seconds=0,  # type: int
-        after_minutes=0,  # type: int
-        data=''           # type: any_
-        ) -> 'int':
-        """ Schedules a service to run at a specific date and time or aftern N minutes or seconds.
-        """
-
-        # This is reusable
-        now = self.server.time_util.utcnow(needs_format=False)
-
-        # We are given a start date on input ..
-        if start_date:
-            if not isinstance(start_date, datetime):
-
-                # This gives us a datetime object but we need to ensure
-                # that it is in UTC because this what the scheduler expects.
-                start_date = dt_parse(start_date)
-
-                if not isinstance(start_date.tzinfo, tzutc):
-                    _as_arrow = Arrow.fromdatetime(start_date)
-                    start_date = _as_arrow.to(_utz_utc)
-
-        # .. or we need to compute one ourselves.
-        else:
-            start_date = now + timedelta(seconds=after_seconds, minutes=after_minutes)
-
-        # This is the service that is scheduling a job ..
-        invoking_name = invoking_service.get_name()
-
-        # .. and this is the service that is being scheduled.
-        target_name   = target_service if isinstance(target_service, str) else target_service.get_name()
-
-        # Construct a name for the job
-        name = name or '{}{} -> {} {} {}'.format(
-            '{} '.format(prefix) if prefix else '',
-            invoking_name,
-            target_name,
-            now.isoformat(),
-            invoking_service.cid,
-        )
-
-        # This is what the service being invoked will receive on input
-        if data:
-            data = dumps({
-                SCHEDULER.EmbeddedIndicator: True,
-                'data': data
-            })
-
-        # Now, we are ready to create a new job ..
-        response = self.server.invoke(
-            'zato.scheduler.job.create', {
-                'cluster_id': self.server.cluster_id,
-                'name': name,
-                'is_active': True,
-                'job_type': SCHEDULER.JOB_TYPE.ONE_TIME,
-                'service': target_name,
-                'start_date': start_date,
-                'extra': data
-            }
-        )
-
-        # .. and return its ID to the caller.
-        return response['id'] # type: ignore
-
 # ################################################################################################################################
 
 class Service:
     """ A base class for all services deployed on Zato servers, no matter the transport and protocol, be it REST, IBM MQ
     or any other, regardless whether they arere built-in or user-defined ones.
     """
-    schedule: SchedulerFacade
+    rest: 'RESTFacade'
+    schedule: 'SchedulerFacade'
 
     call_hooks:'bool' = True
     _filter_by = None
@@ -514,6 +428,9 @@ class Service:
 
     # Audit log
     audit_pii:'AuditPII'
+
+    # Vendors - Keysight
+    keysight: 'KeysightContainer'
 
     # By default, services do not use JSON Schema
     schema = '' # type: str
@@ -598,6 +515,9 @@ class Service:
             self._worker_store.def_kafka,
             self.kvdb
         ) # type: Outgoing
+
+        # REST facade for outgoing connections
+        self.rest = RESTFacade()
 
         if self.component_enabled_hl7:
             hl7_api = HL7API(self._worker_store.outconn_hl7_fhir, self._worker_store.outconn_hl7_mllp)
@@ -696,6 +616,13 @@ class Service:
 
         # Cache is always enabled
         self.cache = self._worker_store.cache_api
+
+        # REST facade
+        self.rest.init(self.cid, self._out_plain_http)
+
+        # Vendors - Keysight
+        self.keysight = KeysightContainer()
+        self.keysight.init(self.cid, self._out_plain_http)
 
 # ################################################################################################################################
 
