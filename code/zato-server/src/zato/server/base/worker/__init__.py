@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -38,8 +38,8 @@ from orjson import dumps
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
-     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, \
-     WEB_SOCKET, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, name_prefix_list, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, \
+     URL_TYPE, WEB_SOCKET, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -50,7 +50,7 @@ from zato.common.model.wsx import WSXConnectorConfig
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
-     import_module_from_path, new_cid, parse_extra_into_dict, parse_tls_channel_security_definition, \
+     fs_safe_name, import_module_from_path, new_cid, parse_extra_into_dict, parse_tls_channel_security_definition, \
      start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source, wait_for_dict_key
 from zato.common.util.pubsub import is_service_subscription
 from zato.cy.reqresp.payload import SimpleIOPayload
@@ -478,6 +478,22 @@ class WorkerStore(_WorkerStoreBase):
     def _http_soap_wrapper_from_config(self, config:'Bunch', has_sec_config:'bool'=True) -> 'BaseHTTPSOAPWrapper':
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration dictionary.
         """
+
+        # Populate it upfront
+        conn_name = config['name']
+
+        # This can also be populated upfront but we need to ensure
+        # we do not include any potential name prefix in the FS-safe name.
+        for prefix in name_prefix_list:
+            if conn_name.startswith(prefix):
+                name_without_prefix = conn_name.replace(prefix, '', 1)
+                break
+        else:
+            prefix = ''
+            name_without_prefix = conn_name
+
+        config['name_fs_safe'] = prefix + fs_safe_name(name_without_prefix)
+
         security_name = config.get('security_name')
         sec_config = {
             'security_name': security_name,
@@ -581,7 +597,8 @@ class WorkerStore(_WorkerStoreBase):
         for transport in('soap', 'plain_http'):
             config_dict = getattr(self.worker_config, 'out_' + transport)
             for name in list(config_dict): # Must use list explicitly so config_dict can be changed during iteration
-                yield config_dict, config_dict[name]
+                config_data = config_dict[name]
+                yield config_dict, config_data
 
 # ################################################################################################################################
 
