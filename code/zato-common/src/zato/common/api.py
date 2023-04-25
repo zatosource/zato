@@ -1929,6 +1929,18 @@ WebSphereMQCallData = IBMMQCallData
 # ################################################################################################################################
 # ################################################################################################################################
 
+class Name_Prefix:
+    Keysight_Hawkeye = 'KeysightHawkeye.'
+    Keysight_Vision  = 'KeysightVision.'
+
+name_prefix_list = [
+    Name_Prefix.Keysight_Hawkeye,
+    Name_Prefix.Keysight_Vision,
+]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 default_internal_modules = {
     'zato.server.service.internal': True,
     'zato.server.service.internal.apispec': True,
