@@ -41,7 +41,7 @@ from zato.common.util.api import make_repr, new_cid, payload_from_request, servi
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import RESTFacade, SchedulerFacade
+from zato.server.connection.facade import KeysightContainer, RESTFacade, SchedulerFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.connection.sms import SMSAPI
@@ -429,6 +429,9 @@ class Service:
     # Audit log
     audit_pii:'AuditPII'
 
+    # Vendors - Keysight
+    keysight: 'KeysightContainer'
+
     # By default, services do not use JSON Schema
     schema = '' # type: str
 
@@ -616,6 +619,10 @@ class Service:
 
         # REST facade
         self.rest.init(self.cid, self._out_plain_http)
+
+        # Vendors - Keysight
+        self.keysight = KeysightContainer()
+        self.keysight.init(self.cid, self._out_plain_http)
 
 # ################################################################################################################################
 

@@ -143,7 +143,7 @@ class RESTFacade:
 
 # ################################################################################################################################
 
-    def _get(self, orig_name:'str', needs_facade:'bool'=True) -> 'RESTInvoker':
+    def _get(self, orig_name:'str', needs_prefix:'bool'=True) -> 'RESTInvoker':
 
         # Check if name may point to an environment variable ..
         if orig_name.startswith('$'):
@@ -155,7 +155,8 @@ class RESTFacade:
             name = orig_name
 
         # Use a potential prefix
-        name = self.name_prefix + name
+        if needs_prefix:
+            name = self.name_prefix + name
 
         # This will raise a KeyError if we have no such name ..
         item = self._out_plain_http[name]
@@ -166,8 +167,8 @@ class RESTFacade:
 
 # ################################################################################################################################
 
-    def __getitem__(self, orig_name:'str') -> 'RESTInvoker':
-        result = self._get(orig_name, needs_facade=self.needs_facade)
+    def __getitem__(self, name:'str') -> 'RESTInvoker':
+        result = self._get(name)
         return result
 
 # ################################################################################################################################
@@ -175,11 +176,11 @@ class RESTFacade:
     def __getattr__(self, attr_name:'str') -> 'RESTInvoker':
 
         # Use a potential prefix
-        # attr_name = self.name_prefix + attr_name
+        attr_name = self.name_prefix + attr_name
 
         try:
             # First, try and see if we do not have a connection of that exact name ..
-            conn = self[attr_name]
+            conn = self._get(attr_name, needs_prefix=False)
         except KeyError:
             # .. this is fine, there was no such connection
             pass
@@ -196,7 +197,7 @@ class RESTFacade:
             raise KeyError(f'No such connection `{attr_name}`')
 
         # If we are here, it means that we must have found the correct name
-        return self[name]
+        return self._get(name, needs_prefix=False)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -247,8 +248,8 @@ class RESTInvoker:
         # Depending on what kind of an invoker this is, build the path that we actually want to access.
         if self.container.has_path_in_args:
             if args:
-                _zato_path = args[1]
-                args = args[2:]
+                _zato_path = args[0]
+                args = args[1:]
             else:
                 _zato_path = '/zato-no-path-given'
 
@@ -293,24 +294,12 @@ class KeysightVisionFacade(RESTFacade):
     name_prefix = 'KeysightVision.'
     has_path_in_args = True
 
-    '''
-    def __getitem__(self, orig_name:'str') -> 'KeysightVisionFacade':
-        result = super().__getitem__(orig_name)
-        return cast_('KeysightVisionFacade', result)
-    '''
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 class KeysightHawkeyeFacade(RESTFacade):
     name_prefix = 'KeysightHawkeye.'
     has_path_in_args = True
-
-    '''
-    def __getitem__(self, orig_name:'str') -> 'KeysightHawkeyeFacade':
-        result = super().__getitem__(orig_name)
-        return cast_('KeysightHawkeyeFacade', result)
-    '''
 
 # ################################################################################################################################
 

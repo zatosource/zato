@@ -38,8 +38,8 @@ from orjson import dumps
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
-     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, \
-     WEB_SOCKET, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, name_prefix_list, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, \
+     URL_TYPE, WEB_SOCKET, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -481,7 +481,18 @@ class WorkerStore(_WorkerStoreBase):
 
         # Populate it upfront
         conn_name = config['name']
-        config['name_fs_safe'] = fs_safe_name(conn_name)
+
+        # This can also be populated upfront but we need to ensure
+        # we do not include any potential name prefix in the FS-safe name.
+        for prefix in name_prefix_list:
+            if conn_name.startswith(prefix):
+                name_without_prefix = conn_name.replace(prefix, '', 1)
+                break
+        else:
+            prefix = ''
+            name_without_prefix = conn_name
+
+        config['name_fs_safe'] = prefix + fs_safe_name(name_without_prefix)
 
         security_name = config.get('security_name')
         sec_config = {
