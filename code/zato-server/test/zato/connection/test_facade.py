@@ -38,9 +38,19 @@ class ModuleCtx:
 
 class RESTFacadeTestCase(TestCase):
 
-    def test_api_before_facade(self):
+    def test_rest_calls(self):
+
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
+
+        # Zato
+        from zato.common.util.cli import CommandLineServiceInvoker
+
+        service = 'helpers.rest.internal.tester'
+        expected_stdout = b'(None)\n'
+
+        invoker = CommandLineServiceInvoker(expected_stdout)
+        invoker.invoke_and_test(service)
 
 # ################################################################################################################################
 # ################################################################################################################################
