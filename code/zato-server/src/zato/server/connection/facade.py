@@ -239,6 +239,11 @@ class RESTInvoker:
         func_name = args[0]
         args = args[1:]
 
+        # If this is a pre-facade REST call, we do not need the CID in here
+        if args:
+            if args[0] == self.container.cid:
+                args = args[1:]
+
         # Depending on what kind of an invoker this is, build the path that we actually want to access.
         if self.container.has_path_in_args:
             if args:

@@ -672,8 +672,6 @@ class Ping(AdminService):
                 result = config_dict.get(item.name).ping(self.cid)
                 is_success = True
             except Exception as e:
-                from traceback import format_exc
-                self.logger.warn('QQQ-1 -> %s', format_exc())
                 result = e.args[0]
                 is_success = False
             finally:
