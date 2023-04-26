@@ -1663,6 +1663,8 @@ urlpatterns += [
         login_required(keysight_vision.Edit()), name=keysight_vision.Edit.url_name),
     url(r'^zato/vendors/keysight/vision/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(keysight_vision.Delete()), name=keysight_vision.Delete.url_name),
+    url(r'^zato/vendors/keysight/vision/change-password/$',
+        login_required(keysight_vision.change_password), name='vendors-keysight-vision-change-password'),
     ]
 
 # ################################################################################################################################

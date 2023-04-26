@@ -33,7 +33,7 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
-            'address',
+            'host',
 
             {% comment %} 2 {% endcomment %}
             'username',
@@ -80,7 +80,7 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Address</a></th>
+                        <th><a href="#">host</a></th>
 
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Username</a></th>
@@ -107,7 +107,7 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.address }}</td>
+                        <td>{{ item.host }}</td>
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.username }}</td>
@@ -138,7 +138,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate action="{% url "cloud-confluence-create" %}" method="post" id="create-form">
+                <form novalidate action="{% url "vendors-keysight-vision-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:17%">
@@ -166,12 +166,12 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_address">
-                                Address
+                                <label for="id_host">
+                                host
                                 </label>
                             </td>
                             <td>
-                                {{ create_form.address }}
+                                {{ create_form.host }}
                             </td>
                         </tr>
                         <tr>
@@ -208,7 +208,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate action="{% url "cloud-confluence-edit" %}" method="post" id="edit-form">
+                <form novalidate action="{% url "vendors-keysight-vision-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:17%">
@@ -236,12 +236,12 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_address">
-                                Address
+                                <label for="id_host">
+                                host
                                 </label>
                             </td>
                             <td>
-                                {{ edit_form.address }}
+                                {{ edit_form.host }}
                             </td>
                         </tr>
                         <tr>
@@ -279,7 +279,7 @@
 
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate action="{% url "cloud-confluence-change-password" %}" method="post" id="change_password-form">
+                <form novalidate action="{% url "vendors-keysight-vision-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:19%">Name</td>

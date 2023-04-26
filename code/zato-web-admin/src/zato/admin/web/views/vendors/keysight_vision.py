@@ -28,7 +28,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'address', 'username', 'sec_tls_ca_cert_id'
+        output_required = 'id', 'name', 'is_active', 'host', 'username', 'sec_tls_ca_cert_id'
         output_repeated = True
 
 # ################################################################################################################################
@@ -47,27 +47,18 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'name', 'is_active', 'address', 'username', 'sec_tls_ca_cert_id'
+        input_required = 'id', 'name', 'is_active', 'host', 'username', 'sec_tls_ca_cert_id'
         output_required = 'id', 'name'
 
 # ################################################################################################################################
 
-    '''
     def populate_initial_input_dict(self, initial_input_dict):
-        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE
-        initial_input_dict['is_internal'] = False
-        initial_input_dict['is_channel'] = False
-        initial_input_dict['is_outgoing'] = True
-        initial_input_dict['is_outconn'] = False
-        initial_input_dict['sec_use_rbac'] = False
-        initial_input_dict['recv_timeout'] = 250
-        initial_input_dict['pool_size'] = 20
-    '''
+        initial_input_dict['wrapper_type'] = Wrapper_Type.Keysight_Vision
 
 # ################################################################################################################################
 
     def success_message(self, item):
-        return 'Successfully {} Keysight Vision Series connection `{}`'.format(self.verb, item.name)
+        return 'Successfully {} Keysight Vision Series connection `{}`'.format(self.verb, item.response.name)
 
 # ################################################################################################################################
 # ################################################################################################################################

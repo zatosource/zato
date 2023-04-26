@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -251,7 +251,8 @@ class Create(_CreateEdit):
             'is_audit_log_sent_active', 'is_audit_log_received_active', \
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
-            'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify'
+            'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify', \
+            'wrapper_type', 'password'
         output_required = 'id', 'name'
         output_optional = 'url_path'
 
@@ -409,7 +410,8 @@ class Edit(_CreateEdit):
             'is_audit_log_sent_active', 'is_audit_log_received_active', \
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
-            'cluster_id', 'is_active', 'transport', 'tls_verify'
+            'cluster_id', 'is_active', 'transport', 'tls_verify', \
+            'wrapper_type', 'password'
         output_optional = 'id', 'name'
 
     def handle(self):
