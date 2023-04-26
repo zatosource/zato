@@ -19,20 +19,16 @@ class CreateForm(WithAuditLog):
 
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+
     sec_tls_ca_cert_id = forms.ChoiceField(widget=forms.Select())
+    address  = forms.CharField(initial='https://', widget=forms.TextInput(attrs={'style':'width:100%'}))
 
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     password = forms.CharField(strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
-    def __init__(self, *args, **kwargs):
-        # super().__init__(req, *args, **kwargs)
-
-        print()
-        print(111, args)
-        print(222, kwargs)
-        print()
-
-        # add_sec_tls_ca_cert_id_select(req, self)
+    def __init__(self, req=None, prefix=None):
+        super(CreateForm, self).__init__(prefix=prefix)
+        add_sec_tls_ca_cert_id_select(req, self)
 
 # ################################################################################################################################
 # ################################################################################################################################
