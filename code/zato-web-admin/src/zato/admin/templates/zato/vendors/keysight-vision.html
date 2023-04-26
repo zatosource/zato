@@ -37,20 +37,16 @@
 
             {% comment %} 2 {% endcomment %}
             'username',
-            'api_version',
-            '_is_cloud',
+            'sec_tls_ca_cert_id',
 
             {% comment %} 3 {% endcomment %}
-            '_change_api_token',
+            '_change_password',
             '_edit',
             '_delete',
-            '_ping',
 
             {% comment %} 4 {% endcomment %}
             'id',
             'is_active',
-            'is_cloud',
-
         ]
     }
     </script>
@@ -70,7 +66,7 @@
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.cloud.confluence.create()">Create a new connection</a>
+            <a href="javascript:$.fn.zato.vendors.keysight.vision.create()">Create a new connection</a>
         </div>
 
 
@@ -88,17 +84,14 @@
 
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Username</a></th>
-                        <th>API version</th>
-                        <th>Cloud edition</th>
+                        <th>&nbsp;</th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th>&nbsp;</th>
 
                         {% comment %} 4 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -118,19 +111,16 @@
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.username }}</td>
-                        <td>{{ item.api_version }}</td>
-                        <td>{{ item.is_cloud|yesno:'Yes,No' }}</td>
+                        <td>{{ item.sec_tls_ca_cert_id }}</td>
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change API token')">Change API token</a></td>
-                        <td><a href="javascript:$.fn.zato.cloud.confluence.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.cloud.confluence.delete_('{{ item.id }}')">Delete</a></td>
-                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+                        <td><a href="javascript:$.fn.zato.vendors.keysight.vision.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.vendors.keysight.vision.delete_('{{ item.id }}')">Delete</a></td>
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.is_cloud }}</td>
 
                     </tr>
                 {% endfor %}
@@ -169,15 +159,8 @@
                                 |
 
                                 <label>
-                                Cloud edition
-                                {{ create_form.is_cloud }}
-                                </label>
-
-                                |
-
-                                <label>
-                                API version
-                                {{ create_form.api_version }}
+                                SSL/TLS
+                                {{ create_form.sec_tls_ca_cert_id }}
                                 </label>
                             </td>
                         </tr>
@@ -199,6 +182,16 @@
                             </td>
                             <td>
                                 {{ create_form.username }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_password">
+                                Password
+                                </label>
+                            </td>
+                            <td>
+                                {{ create_form.password }}
                             </td>
                         </tr>
                         <tr>
@@ -236,15 +229,8 @@
                                 |
 
                                 <label>
-                                Cloud edition
-                                {{ edit_form.is_cloud }}
-                                </label>
-
-                                |
-
-                                <label>
-                                API version
-                                {{ edit_form.api_version }}
+                                SSL/TLS
+                                {{ edit_form.sec_tls_ca_cert_id }}
                                 </label>
                             </td>
                         </tr>
@@ -266,6 +252,16 @@
                             </td>
                             <td>
                                 {{ edit_form.username }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_password">
+                                Password
+                                </label>
+                            </td>
+                            <td>
+                                {{ edit_form.password }}
                             </td>
                         </tr>
                         <tr>
