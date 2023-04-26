@@ -47,7 +47,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'name', 'is_active', 'host', 'username', 'sec_tls_ca_cert_id'
+        input_required = 'id', 'name', 'is_active', 'host', 'username', 'sec_tls_ca_cert_id', 'password'
         output_required = 'id', 'name'
 
 # ################################################################################################################################
