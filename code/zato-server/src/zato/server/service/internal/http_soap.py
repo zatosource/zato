@@ -86,7 +86,8 @@ class _BaseGet(AdminService):
                 'hl7_version', 'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', \
                 'data_encoding', 'is_audit_log_sent_active', 'is_audit_log_received_active', \
                 Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
-                Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received')
+                Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
+                'username', 'wrapper_type'
 
 # ################################################################################################################################
 
@@ -252,7 +253,7 @@ class Create(_CreateEdit):
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify', \
-            'wrapper_type', 'password'
+            'wrapper_type', 'username', 'password'
         output_required = 'id', 'name'
         output_optional = 'url_path'
 
@@ -341,6 +342,9 @@ class Create(_CreateEdit):
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
+                item.wrapper_type = input.wrapper_type
+                item.username = input.username
+                item.password = input.password
 
                 # Configure CA certs
                 self._set_sec_tls_ca_cert_id(item, input)
@@ -348,7 +352,7 @@ class Create(_CreateEdit):
                 if input.security_id:
                     item.security = get_security_by_id(session, input.security_id)
                 else:
-                    input.security_id = None # To ensure that SQLite doesn't reject ''
+                    input.security_id = None # To ensure that SQLite does not reject ''
 
                 # Opaque attributes
                 set_instance_opaque_attrs(item, input)
@@ -411,7 +415,7 @@ class Edit(_CreateEdit):
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'cluster_id', 'is_active', 'transport', 'tls_verify', \
-            'wrapper_type', 'password'
+            'wrapper_type', 'username', 'password'
         output_optional = 'id', 'name'
 
     def handle(self):
@@ -514,6 +518,9 @@ class Edit(_CreateEdit):
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
+                item.wrapper_type = input.wrapper_type
+                item.username = input.username
+                item.password = input.password
 
                 # Configure CA certs
                 self._set_sec_tls_ca_cert_id(item, input)
