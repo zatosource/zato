@@ -19,7 +19,9 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms([
         'name',
-        'address',
+        'host',
+        'username',
+        'password',
         'sec_tls_ca_cert_id',
     ]);
 })
@@ -29,7 +31,7 @@ $(document).ready(function() {
 $.fn.zato.data_table.on_before_element_validation = function(elem) {
     if(elem.attr('id').endsWith('sec_tls_ca_cert_id')) {
         var form = elem.closest('form');
-        var value = $(form.find("input[id$='address']")[0]);
+        var value = $(form.find("input[id$='host']")[0]);
         var is_https = value.val().startsWith('https');
         if(!is_https) {
             return false;
@@ -67,7 +69,7 @@ $.fn.zato.vendors.keysight.vision.data_table.new_row = function(item, data, incl
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.address);
+    row += String.format('<td>{0}</td>', item.host);
 
     // 2
     row += String.format("<td>{0}</td>", item.username);
