@@ -8,7 +8,7 @@
     {% if items %}
     <style type="text/css">
         .ui-dialog-titlebar {
-            margin-bottom:-4px !important;
+            padding-bottom:8px !important;
         }
     </style>
     {% endif %}
@@ -80,11 +80,11 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">host</a></th>
+                        <th><a href="#">Host</a></th>
 
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Username</a></th>
-                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -111,7 +111,7 @@
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.username }}</td>
-                        <td>{{ item.sec_tls_ca_cert_id }}</td>
+                        <td class='ignore'>{{ item.sec_tls_ca_cert_id }}</td>
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change API token')">Change API token</a></td>

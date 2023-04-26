@@ -18,7 +18,7 @@ from zato.server.service import Service
 
 class GetList(Service):
 
-    name = 'zato.generic.rest-wrapper.get-list'
+    name = 'dev.generic.rest-wrapper.get-list'
 
     def handle(self) -> 'None':
 
@@ -49,7 +49,7 @@ class GetList(Service):
 
 class Create(Service):
 
-    name = 'zato.generic.rest-wrapper.create'
+    name = 'dev.generic.rest-wrapper.create'
     output = 'name'
 
     def handle(self) -> 'None':
