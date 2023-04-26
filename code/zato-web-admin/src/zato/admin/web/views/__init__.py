@@ -380,6 +380,7 @@ class Index(_BaseView):
     """
     url_name = 'url_name-must-be-defined-in-a-subclass'
     template = 'template-must-be-defined-in-a-subclass-or-get-template-name'
+    wrapper_type = None
 
     output_class = None
     clear_self_items = True
@@ -444,6 +445,10 @@ class Index(_BaseView):
                 request.update(self.input)
             else:
                 logger.info('Not updating request with self.input')
+
+            # Auto-populate the field if it exists
+            if self.wrapper_type:
+                request['wrapper_type'] = self.wrapper_type
 
             logger.info('Invoking `%s` with `%s`', service_name, request)
 
