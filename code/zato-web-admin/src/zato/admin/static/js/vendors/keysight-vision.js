@@ -61,7 +61,6 @@ $.fn.zato.vendors.keysight.vision.data_table.new_row = function(item, data, incl
     }
 
     let is_active = item.is_active == true;
-    let is_cloud = item.is_cloud == true;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
@@ -73,20 +72,17 @@ $.fn.zato.vendors.keysight.vision.data_table.new_row = function(item, data, incl
 
     // 2
     row += String.format("<td>{0}</td>", item.username);
-    row += String.format("<td>{0}</td>", item.api_version);
-    row += String.format('<td>{0}</td>', is_cloud ? 'Yes' : 'No');
+    row += String.format("<td class='ignore'>{0}</td>", item.sec_tls_ca_cert_id);
 
     // 3
     row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change API token')\">Change API token</a>", item.id));
+        String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change password')\">Change password</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.vendors.keysight.vision.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.vendors.keysight.vision.delete_({0});'>Delete</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.ping({0});'>Ping</a>", item.id));
 
     // 4
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
-    row += String.format("<td class='ignore'>{0}</td>", item.username);
 
     if(include_tr) {
         row += '</tr>';
