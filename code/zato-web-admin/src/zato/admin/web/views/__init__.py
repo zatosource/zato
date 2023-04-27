@@ -808,10 +808,20 @@ def id_only_service(req, service, id, error_template='{}', initial=None):
 # ################################################################################################################################
 
 def ping_connection(req, service, connection_id, connection_type='{}'):
-    ret = id_only_service(req, service, connection_id, 'Could not ping {}, e:`{{}}`'.format(connection_type))
-    if isinstance(ret, HttpResponseServerError):
-        return ret
-    return HttpResponse(ret.data.info)
+    response = id_only_service(req, service, connection_id, 'Could not ping {}, e:`{{}}`'.format(connection_type))
+    if isinstance(response, HttpResponseServerError):
+        return response
+    else:
+
+        if 'info' in response.data:
+            is_success = response.data.is_success
+            response_class = HttpResponse if is_success else HttpResponseServerError
+            info = response.data.info
+        else:
+            response_class = HttpResponse
+            info = 'Ping OK'
+
+        return response_class(info)
 
 # ################################################################################################################################
 

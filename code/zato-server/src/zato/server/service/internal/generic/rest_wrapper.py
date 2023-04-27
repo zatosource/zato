@@ -77,7 +77,7 @@ class _WrapperBase(Service):
     _uses_name = False
 
     # SimpleIO
-    output = '-id', '-name'
+    output = '-id', '-name', '-info', '-is_success'
 
     def handle(self) -> 'None':
 
@@ -110,8 +110,10 @@ class _WrapperBase(Service):
         if self._uses_name:
             self.response.payload.name = _orig_name # type: ignore
 
-        # This is optional as well
-        self.response.payload.id = response.get('id')
+        # These are optional as well
+        self.response.payload.id   = response.get('id')
+        self.response.payload.info = response.get('info')
+        self.response.payload.is_success = response.get('is_success')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,6 +148,17 @@ class Delete(_WrapperBase):
     name = 'dev.generic.rest-wrapper.delete'
 
     _wrapper_impl_suffix = 'delete'
+    _uses_name = False
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Ping(_WrapperBase):
+
+    # Our name
+    name = 'dev.generic.rest-wrapper.ping'
+
+    _wrapper_impl_suffix = 'ping'
     _uses_name = False
 
 # ################################################################################################################################
