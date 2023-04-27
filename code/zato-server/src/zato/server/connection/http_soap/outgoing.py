@@ -185,15 +185,18 @@ class BaseHTTPSOAPWrapper:
         def zato_pre_request_hook(hook_data:'stranydict', *args:'any_', **kwargs:'any_') -> 'None':
             entry = '{} (UTC) {} {}\n'.format(datetime.utcnow().isoformat(),
                 hook_data['request'].method, hook_data['request'].url)
-            verbose.write(entry)
+            _ = verbose.write(entry)
+
+        # .. potential wrapper paths must be replaced ..
+        address = self.address.replace(r'{_zato_path}', '/')
 
         # .. invoke the other end ..
-        response = self.invoke_http(cid, self.config['ping_method'], self.address, '', self._create_headers(cid, {}),
+        response = self.invoke_http(cid, self.config['ping_method'], address, '', self._create_headers(cid, {}),
             {'zato_pre_request':zato_pre_request_hook})
 
         # .. store additional info, get and close the stream.
-        verbose.write('Code: {}'.format(response.status_code))
-        verbose.write('\nResponse time: {}'.format(datetime.utcnow() - start))
+        _ = verbose.write('Code: {}'.format(response.status_code))
+        _ = verbose.write('\nResponse time: {}'.format(datetime.utcnow() - start))
         value = verbose.getvalue()
         verbose.close()
 
