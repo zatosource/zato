@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.vendors.keysight_vision import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
-    method_allowed
+    method_allowed, ping_connection
 from zato.common.api import Wrapper_Type
 from zato.common.model.keysight_ import KeysightVisionConfigObject
 
@@ -89,5 +89,11 @@ class Delete(_Delete):
 @method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'dev.generic.rest-wrapper.change-password', success_msg='Password updated')
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def ping(req, id, cluster_id):
+    return ping_connection(req, 'dev.generic.rest-wrapper.ping', id, 'Keysight Vision Series connection')
 
 # ################################################################################################################################
