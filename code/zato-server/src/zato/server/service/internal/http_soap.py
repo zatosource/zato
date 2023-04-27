@@ -669,6 +669,7 @@ class Ping(AdminService):
         request_elem = 'zato_http_soap_ping_request'
         response_elem = 'zato_http_soap_ping_response'
         input_required = 'id'
+        input_optional = 'ping_path'
         output_required = 'id', 'is_success'
         output_optional = 'info'
 
@@ -679,7 +680,7 @@ class Ping(AdminService):
             self.response.payload.id = self.request.input.id
 
             try:
-                result = config_dict.get(item.name).ping(self.cid)
+                result = config_dict.get(item.name).ping(self.cid, ping_path=self.request.input.ping_path)
                 is_success = True
             except Exception as e:
                 result = e.args[0]

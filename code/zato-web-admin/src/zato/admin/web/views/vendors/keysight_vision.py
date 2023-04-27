@@ -94,6 +94,6 @@ def change_password(req):
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    return ping_connection(req, 'dev.generic.rest-wrapper.ping', id, 'Keysight Vision Series connection')
+    return ping_connection(req, 'dev.generic.rest-wrapper.ping', id, 'Keysight Vision Series connection', ping_path='/users')
 
 # ################################################################################################################################

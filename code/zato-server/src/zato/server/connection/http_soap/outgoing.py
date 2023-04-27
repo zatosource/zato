@@ -172,7 +172,7 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
-    def ping(self, cid:'str', return_response:'bool'=False, log_verbose:'bool'=False) -> 'any_':
+    def ping(self, cid:'str', return_response:'bool'=False, log_verbose:'bool'=False, *, ping_path:'str'='/') -> 'any_':
         """ Pings a given HTTP/SOAP resource
         """
         logger.info('Pinging:`%s`', self.config_no_sensitive)
@@ -188,7 +188,8 @@ class BaseHTTPSOAPWrapper:
             _ = verbose.write(entry)
 
         # .. potential wrapper paths must be replaced ..
-        address = self.address.replace(r'{_zato_path}', '/')
+        ping_path = ping_path or '/'
+        address = self.address.replace(r'{_zato_path}', ping_path)
 
         # .. invoke the other end ..
         response = self.invoke_http(cid, self.config['ping_method'], address, '', self._create_headers(cid, {}),
