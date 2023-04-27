@@ -807,8 +807,13 @@ def id_only_service(req, service, id, error_template='{}', initial=None):
 
 # ################################################################################################################################
 
-def ping_connection(req, service, connection_id, connection_type='{}'):
-    response = id_only_service(req, service, connection_id, 'Could not ping {}, e:`{{}}`'.format(connection_type))
+def ping_connection(req, service, connection_id, connection_type='{}', ping_path=None):
+    error_template = 'Could not ping {}, e:`{{}}`'.format(connection_type)
+    if ping_path:
+        initial = {'ping_path': ping_path}
+    else:
+        initial = None
+    response = id_only_service(req, service, connection_id, error_template, initial)
     if isinstance(response, HttpResponseServerError):
         return response
     else:
