@@ -58,7 +58,7 @@ class _CreateEdit(CreateEdit):
 # ################################################################################################################################
 
     def success_message(self, item):
-        return 'Successfully {} Keysight Vision Series connection `{}`'.format(self.verb, item.response.name)
+        return 'Successfully {} Keysight Vision Series connection `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
 # ################################################################################################################################

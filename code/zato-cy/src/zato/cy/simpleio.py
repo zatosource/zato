@@ -1528,6 +1528,10 @@ class CySimpleIO:
         response_elem = getattr(self.user_declaration, 'response_elem', InternalNotGiven)
 
         if response_elem is InternalNotGiven:
+            if getattr(class_, '_zato_needs_response_wrapper', None) is False:
+                response_elem = None
+
+        if response_elem is InternalNotGiven:
             response_elem = getattr(self.server_config, 'response_elem', InternalNotGiven)
 
         if (not response_elem) or (response_elem is InternalNotGiven):
@@ -2122,7 +2126,6 @@ class CySimpleIO:
         out:object = out_elems if is_list else out_elems[0]
 
         # Wrap the response in a top-level element if needed
-
         if data_format in (DATA_FORMAT_JSON, DATA_FORMAT_DICT):
             if self.definition._has_response_elem:
                 out = {

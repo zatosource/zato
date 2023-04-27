@@ -425,8 +425,9 @@ class Edit(_CreateEdit):
 
         input = self.request.input
         input.sec_use_rbac = input.get('sec_use_rbac') or (input.security_id == ZATO_SEC_USE_RBAC)
-        input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
-        input.soap_action = input.soap_action if input.soap_action else ''
+        input.security_id  = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
+        input.soap_action  = input.soap_action if input.soap_action else ''
+        input.timeout      = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
 
         input.is_active   = input.get('is_active',   True)
         input.is_internal = input.get('is_internal', False)
@@ -511,7 +512,7 @@ class Edit(_CreateEdit):
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
-                item.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+                item.timeout = input.get('timeout')
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac
