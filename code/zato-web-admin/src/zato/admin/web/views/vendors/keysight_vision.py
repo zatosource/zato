@@ -21,7 +21,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'vendors-keysight-vision'
     template = 'zato/vendors/keysight-vision.html'
-    service_name = 'dev.generic.rest-wrapper.get-list'
+    service_name = 'zato.generic.rest-wrapper.get-list'
     output_class = KeysightVisionConfigObject
     paginate = True
     wrapper_type = Wrapper_Type.Keysight_Vision
@@ -65,7 +65,7 @@ class _CreateEdit(CreateEdit):
 
 class Create(_CreateEdit):
     url_name = 'vendors-keysight-vision-create'
-    service_name = 'dev.generic.rest-wrapper.create'
+    service_name = 'zato.generic.rest-wrapper.create'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,7 +73,7 @@ class Create(_CreateEdit):
 class Edit(_CreateEdit):
     url_name = 'vendors-keysight-vision-edit'
     form_prefix = 'edit-'
-    service_name = 'dev.generic.rest-wrapper.edit'
+    service_name = 'zato.generic.rest-wrapper.edit'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,19 +81,19 @@ class Edit(_CreateEdit):
 class Delete(_Delete):
     url_name = 'vendors-keysight-vision-delete'
     error_message = 'Could not delete Keysight Vision Series connection'
-    service_name = 'dev.generic.rest-wrapper.delete'
+    service_name = 'zato.generic.rest-wrapper.delete'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def change_password(req):
-    return _change_password(req, 'dev.generic.rest-wrapper.change-password', success_msg='Password updated')
+    return _change_password(req, 'zato.generic.rest-wrapper.change-password', success_msg='Password updated')
 
 # ################################################################################################################################
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    return ping_connection(req, 'dev.generic.rest-wrapper.ping', id, 'Keysight Vision Series connection', ping_path='/users')
+    return ping_connection(req, 'zato.generic.rest-wrapper.ping', id, 'Keysight Vision Series connection', ping_path='/users')
 
 # ################################################################################################################################
