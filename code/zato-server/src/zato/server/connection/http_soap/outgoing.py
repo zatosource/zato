@@ -183,7 +183,7 @@ class BaseHTTPSOAPWrapper:
         start = datetime.utcnow()
 
         def zato_pre_request_hook(hook_data:'stranydict', *args:'any_', **kwargs:'any_') -> 'None':
-            entry = '{} (UTC) {} {}\n'.format(datetime.utcnow().isoformat(),
+            entry = '{} (UTC)\n{} {}\n'.format(datetime.utcnow().isoformat(),
                 hook_data['request'].method, hook_data['request'].url)
             _ = verbose.write(entry)
 
