@@ -33,7 +33,7 @@ def _replace_suffix_from_dict_name(data:'stranydict', wrapper_type:'str') -> 'st
 
 class GetList(Service):
 
-    name = 'dev.generic.rest-wrapper.get-list'
+    name = 'zato.generic.rest-wrapper.get-list'
 
     def handle(self) -> 'None':
 
@@ -119,11 +119,8 @@ class _WrapperBase(Service):
 # ################################################################################################################################
 
 class Create(_WrapperBase):
-
-    # Our name
-    name = 'dev.generic.rest-wrapper.create'
+    name = 'zato.generic.rest-wrapper.create'
     response_elem = None
-
     _wrapper_impl_suffix = 'create'
     _uses_name = True
 
@@ -131,11 +128,8 @@ class Create(_WrapperBase):
 # ################################################################################################################################
 
 class Edit(_WrapperBase):
-
-    # Our name
-    name = 'dev.generic.rest-wrapper.edit'
+    name = 'zato.generic.rest-wrapper.edit'
     response_elem = None
-
     _wrapper_impl_suffix = 'edit'
     _uses_name = True
 
@@ -143,21 +137,23 @@ class Edit(_WrapperBase):
 # ################################################################################################################################
 
 class Delete(_WrapperBase):
-
-    # Our name
-    name = 'dev.generic.rest-wrapper.delete'
-
+    name = 'zato.generic.rest-wrapper.delete'
     _wrapper_impl_suffix = 'delete'
     _uses_name = False
 
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ChangePassword(_WrapperBase):
+    name = 'zato.generic.rest-wrapper.change-password'
+    _wrapper_impl_suffix = 'change-password'
+    _uses_name = False
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Ping(_WrapperBase):
-
-    # Our name
-    name = 'dev.generic.rest-wrapper.ping'
-
+    name = 'zato.generic.rest-wrapper.ping'
     _wrapper_impl_suffix = 'ping'
     _uses_name = False
 
