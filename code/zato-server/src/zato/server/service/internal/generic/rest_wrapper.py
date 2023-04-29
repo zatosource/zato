@@ -7,10 +7,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from contextlib import closing
 from json import dumps
 
 # Zato
 from zato.common.api import CONNECTION, URL_TYPE
+from zato.common.broker_message import OUTGOING
+from zato.common.odb.model import HTTPSOAP
+from zato.common.util.sql import parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -33,7 +37,7 @@ def _replace_suffix_from_dict_name(data:'stranydict', wrapper_type:'str') -> 'st
 
 class GetList(Service):
 
-    name = 'zato.generic.rest-wrapper.get-list'
+    name = 'dev2.generic.rest-wrapper.get-list'
 
     def handle(self) -> 'None':
 
@@ -126,7 +130,7 @@ class _WrapperBase(Service):
 # ################################################################################################################################
 
 class Create(_WrapperBase):
-    name = 'zato.generic.rest-wrapper.create'
+    name = 'dev2.generic.rest-wrapper.create'
     response_elem = None
     _wrapper_impl_suffix = 'create'
     _uses_name = True
@@ -135,7 +139,7 @@ class Create(_WrapperBase):
 # ################################################################################################################################
 
 class Edit(_WrapperBase):
-    name = 'zato.generic.rest-wrapper.edit'
+    name = 'dev2.generic.rest-wrapper.edit'
     response_elem = None
     _wrapper_impl_suffix = 'edit'
     _uses_name = True
@@ -144,7 +148,7 @@ class Edit(_WrapperBase):
 # ################################################################################################################################
 
 class Delete(_WrapperBase):
-    name = 'zato.generic.rest-wrapper.delete'
+    name = 'dev2.generic.rest-wrapper.delete'
     _wrapper_impl_suffix = 'delete'
     _uses_name = False
 
@@ -152,24 +156,46 @@ class Delete(_WrapperBase):
 # ################################################################################################################################
 
 class ChangePassword(_WrapperBase):
-    name = 'zato.generic.rest-wrapper.change-password'
+    name = 'dev2.generic.rest-wrapper.change-password'
     _wrapper_impl_suffix = 'edit'
     _uses_name = False
 
     def handle(self):
-        response = self.invoke('zato.http-soap.get', self.request.raw_request, skip_response_elem=True)
-        edit_request = {
-            'id': response['id'],
-            'name': response['name'],
-            'password': self.request.raw_request['password1']
-        }
-        self._handle(edit_request)
+
+        # Reusable
+        request = self.request.raw_request
+
+        # This must always exist
+        id = request['id']
+
+        # This is optional ..
+        password = request.get('password') or request.get('password1') or ''
+        password = self.server.encrypt(password)
+
+        with closing(self.odb.session()) as session:
+
+            item = session.query(HTTPSOAP).filter_by(id=id).one()
+
+            opaque = parse_instance_opaque_attr(item)
+            opaque['password'] = password
+
+            set_instance_opaque_attrs(item, opaque)
+
+            session.add(item)
+            session.commit()
+
+        # Notify all the members of the cluster of the change
+        self.broker_client.publish({
+            'action': OUTGOING.REST_WRAPPER_CHANGE_PASSWORD.value,
+            'id': id,
+            'password': password,
+        })
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Ping(_WrapperBase):
-    name = 'zato.generic.rest-wrapper.ping'
+    name = 'dev2.generic.rest-wrapper.ping'
     _wrapper_impl_suffix = 'ping'
     _uses_name = False
 
