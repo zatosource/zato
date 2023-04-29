@@ -1969,6 +1969,12 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
+    def on_broker_msg_OUTGOING_REST_WRAPPER_CHANGE_PASSWORD(self, msg:'Bunch', *args:'any_') -> 'None':
+        out_plain_http = self.worker_config.out_plain_http
+        out_plain_http
+
+# ################################################################################################################################
+
     def on_broker_msg_SERVICE_DELETE(self, msg:'Bunch', *args:'any_') -> 'None':
         """ Deletes the service from the service store and removes it from the filesystem
         if it's not an internal one.
@@ -2062,7 +2068,7 @@ class WorkerStore(_WorkerStoreBase):
             serialize=False, needs_response=True)
 
         # If there were any services deployed, let pub/sub know that this service has been just deployed -
-        # pub/sub will go through sall of its topics and reconfigure any of its hooks that this service implements.
+        # pub/sub will go through all of its topics and reconfigure any of its hooks that this service implements.
         if response.services_deployed:
             self.pubsub.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(response.services_deployed)
 
