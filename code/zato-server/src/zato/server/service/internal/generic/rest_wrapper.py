@@ -79,7 +79,9 @@ class _WrapperBase(Service):
     # SimpleIO
     output = '-id', '-name', '-info', '-is_success'
 
-    def handle(self) -> 'None':
+# ################################################################################################################################
+
+    def _handle(self, initial:'stranydict') -> 'None':
 
         # Our service to invoke
         service_name = 'zato.http-soap.' + self._wrapper_impl_suffix # type: ignore
@@ -93,7 +95,7 @@ class _WrapperBase(Service):
         }
 
         # .. extend it with our own extra input ..
-        request.update(self.request.raw_request)
+        request.update(initial)
 
         # .. prepend a prefix to the name given that this is a wrapper ..
         # .. but note that the Delete action does not use a name so this block is optional ..
@@ -114,6 +116,11 @@ class _WrapperBase(Service):
         self.response.payload.id   = response.get('id')
         self.response.payload.info = response.get('info')
         self.response.payload.is_success = response.get('is_success')
+
+# ################################################################################################################################
+
+    def handle(self):
+        self._handle(self.request.raw_request)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,8 +153,17 @@ class Delete(_WrapperBase):
 
 class ChangePassword(_WrapperBase):
     name = 'zato.generic.rest-wrapper.change-password'
-    _wrapper_impl_suffix = 'change-password'
+    _wrapper_impl_suffix = 'edit'
     _uses_name = False
+
+    def handle(self):
+        response = self.invoke('zato.http-soap.get', self.request.raw_request, skip_response_elem=True)
+        edit_request = {
+            'id': response['id'],
+            'name': response['name'],
+            'password': self.request.raw_request['password1']
+        }
+        self._handle(edit_request)
 
 # ################################################################################################################################
 # ################################################################################################################################

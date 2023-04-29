@@ -181,10 +181,12 @@ class BaseHTTPSOAPWrapper:
         verbose = StringIO()
 
         start = datetime.utcnow()
+        ping_method = self.config['ping_method']
 
         def zato_pre_request_hook(hook_data:'stranydict', *args:'any_', **kwargs:'any_') -> 'None':
+
             entry = '{} (UTC)\n{} {}\n'.format(datetime.utcnow().isoformat(),
-                hook_data['request'].method, hook_data['request'].url)
+                ping_method, hook_data['request'].url)
             _ = verbose.write(entry)
 
         # .. potential wrapper paths must be replaced ..
@@ -192,7 +194,7 @@ class BaseHTTPSOAPWrapper:
         address = self.address.replace(r'{_zato_path}', ping_path)
 
         # .. invoke the other end ..
-        response = self.invoke_http(cid, self.config['ping_method'], address, '', self._create_headers(cid, {}),
+        response = self.invoke_http(cid, ping_method, address, '', self._create_headers(cid, {}),
             {'zato_pre_request':zato_pre_request_hook})
 
         # .. store additional info, get and close the stream.

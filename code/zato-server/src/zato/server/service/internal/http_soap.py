@@ -114,13 +114,13 @@ class Get(_BaseGet):
     class SimpleIO(_BaseGet.SimpleIO):
         request_elem = 'zato_http_soap_get_request'
         response_elem = 'zato_http_soap_get_response'
-        input_required = 'cluster_id',
-        input_optional = 'id', 'name'
+        input_optional = 'cluster_id', 'id', 'name'
 
     def handle(self):
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
         with closing(self.odb.session()) as session:
             self.request.input.require_any('id', 'name')
-            item = http_soap(session, self.request.input.cluster_id, self.request.input.id, self.request.input.name)
+            item = http_soap(session, cluster_id, self.request.input.id, self.request.input.name)
             out = get_dict_with_opaque(item)
             out['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(out)
             self.response.payload = out
@@ -135,13 +135,13 @@ class GetList(_BaseGet):
     class SimpleIO(GetListAdminSIO, _BaseGet.SimpleIO):
         request_elem = 'zato_http_soap_get_list_request'
         response_elem = 'zato_http_soap_get_list_response'
-        input_required = 'cluster_id'
-        input_optional = GetListAdminSIO.input_optional + ('connection', 'transport', 'data_format')
+        input_optional = GetListAdminSIO.input_optional + ('cluster_id', 'connection', 'transport', 'data_format')
         output_optional = _BaseGet.SimpleIO.output_optional + ('connection', 'transport')
         output_repeated = True
 
     def get_data(self, session):
-        result = self._search(http_soap_list, session, self.request.input.cluster_id,
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
+        result = self._search(http_soap_list, session, cluster_id,
             self.request.input.connection, self.request.input.transport,
             asbool(self.server.fs_server_config.misc.return_internal_objects),
             self.request.input.get('data_format'),
