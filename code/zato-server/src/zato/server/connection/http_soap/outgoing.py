@@ -137,7 +137,7 @@ class BaseHTTPSOAPWrapper:
         json = kwargs.pop('json', None)
         cert = self.config['tls_key_cert_full_path'] if self.sec_type == _TLS_Key_Cert else None
 
-        if 'ZATO_SKIP_TLS_VERIFY' in os.environ:
+        if ('ZATO_SKIP_TLS_VERIFY' in os.environ) or ('Zato_Skip_TLS_Verify' in os.environ):
             tls_verify = False
         else:
             tls_verify = self.config.get('tls_verify', True)
@@ -172,7 +172,7 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
-    def ping(self, cid:'str', return_response:'bool'=False, log_verbose:'bool'=False) -> 'any_':
+    def ping(self, cid:'str', return_response:'bool'=False, log_verbose:'bool'=False, *, ping_path:'str'='/') -> 'any_':
         """ Pings a given HTTP/SOAP resource
         """
         logger.info('Pinging:`%s`', self.config_no_sensitive)
@@ -181,19 +181,25 @@ class BaseHTTPSOAPWrapper:
         verbose = StringIO()
 
         start = datetime.utcnow()
+        ping_method = self.config['ping_method']
 
         def zato_pre_request_hook(hook_data:'stranydict', *args:'any_', **kwargs:'any_') -> 'None':
-            entry = '{} (UTC) {} {}\n'.format(datetime.utcnow().isoformat(),
-                hook_data['request'].method, hook_data['request'].url)
-            verbose.write(entry)
+
+            entry = '{} (UTC)\n{} {}\n'.format(datetime.utcnow().isoformat(),
+                ping_method, hook_data['request'].url)
+            _ = verbose.write(entry)
+
+        # .. potential wrapper paths must be replaced ..
+        ping_path = ping_path or '/'
+        address = self.address.replace(r'{_zato_path}', ping_path)
 
         # .. invoke the other end ..
-        response = self.invoke_http(cid, self.config['ping_method'], self.address, '', self._create_headers(cid, {}),
+        response = self.invoke_http(cid, ping_method, address, '', self._create_headers(cid, {}),
             {'zato_pre_request':zato_pre_request_hook})
 
         # .. store additional info, get and close the stream.
-        verbose.write('Code: {}'.format(response.status_code))
-        verbose.write('\nResponse time: {}'.format(datetime.utcnow() - start))
+        _ = verbose.write('Code: {}'.format(response.status_code))
+        _ = verbose.write('\nResponse time: {}'.format(datetime.utcnow() - start))
         value = verbose.getvalue()
         verbose.close()
 
@@ -384,8 +390,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 # ################################################################################################################################
 
     def _get_auth(self) -> 'None | tuple[str, str]':
-        """ Returns a username and password pair or None, if no security definition
-        has been attached.
+        """ Returns a username and password pair or None, if no security definition has been attached.
         """
         if self.sec_type in {_Basic_Auth}:
             auth = (self.config['username'], self.config['password'])
