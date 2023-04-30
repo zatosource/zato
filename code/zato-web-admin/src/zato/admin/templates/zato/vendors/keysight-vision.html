@@ -1,0 +1,308 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}Keysight Vision Series connections{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    {% if items %}
+    <style type="text/css">
+        .ui-dialog-titlebar {
+            padding-bottom:8px !important;
+        }
+    </style>
+    {% endif %}
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/vendors/keysight-vision.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            {% comment %} 1 {% endcomment %}
+            'name',
+            '_is_active',
+            'host',
+
+            {% comment %} 2 {% endcomment %}
+            'username',
+            'sec_tls_ca_cert_id',
+
+            {% comment %} 3 {% endcomment %}
+            '_change_password',
+            '_edit',
+            '_delete',
+
+            {% comment %} 4 {% endcomment %}
+            '_ping',
+            'id',
+            'is_active',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Keysight Vision Series connections</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show connections"%}
+
+    {% if cluster_id %}
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.vendors.keysight.vision.create()">Create a new connection</a>
+        </div>
+
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Host</a></th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th><a href="#">Username</a></th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.host }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td>{{ item.username }}</td>
+                        <td class='ignore'>{{ item.sec_tls_ca_cert_id }}</td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change password')">Change password</a></td>
+                        <td><a href="javascript:$.fn.zato.vendors.keysight.vision.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.vendors.keysight.vision.delete_('{{ item.id }}')">Delete</a></td>
+
+                        {% comment %} 4 {% endcomment %}
+                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='15'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "vendors-keysight-vision-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:17%">
+                                <label for="id_name">
+                                Name
+                                </label>
+                            </td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>
+                                <label>
+                                Active
+                                {{ create_form.is_active }}
+                                </label>
+
+                                |
+
+                                <label>
+                                SSL/TLS
+                                {{ create_form.sec_tls_ca_cert_id }}
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_host">
+                                Host
+                                </label>
+                            </td>
+                            <td>
+                                {{ create_form.host }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_username">
+                                Username
+                                </label>
+                            </td>
+                            <td>
+                                {{ create_form.username }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_password">
+                                Password
+                                </label>
+                            </td>
+                            <td>
+                                {{ create_form.password }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "vendors-keysight-vision-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:17%">
+                                <label for="id_name">
+                                Name
+                                </label>
+                            </td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>
+                                <label>
+                                Active
+                                {{ edit_form.is_active }}
+                                </label>
+
+                                |
+
+                                <label>
+                                SSL/TLS
+                                {{ edit_form.sec_tls_ca_cert_id }}
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_host">
+                                Host
+                                </label>
+                            </td>
+                            <td>
+                                {{ edit_form.host }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_username">
+                                Username
+                                </label>
+                            </td>
+                            <td>
+                                {{ edit_form.username }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "vendors-keysight-vision-change-password" %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:19%">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Password</td>
+                            <td>{{ change_password_form.password1 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Confirm password</td>
+                            <td>{{ change_password_form.password2 }}
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+        {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
