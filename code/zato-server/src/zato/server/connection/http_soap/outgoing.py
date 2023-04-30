@@ -137,7 +137,7 @@ class BaseHTTPSOAPWrapper:
         json = kwargs.pop('json', None)
         cert = self.config['tls_key_cert_full_path'] if self.sec_type == _TLS_Key_Cert else None
 
-        if 'ZATO_SKIP_TLS_VERIFY' in os.environ:
+        if ('ZATO_SKIP_TLS_VERIFY' in os.environ) or ('Zato_Skip_TLS_Verify' in os.environ):
             tls_verify = False
         else:
             tls_verify = self.config.get('tls_verify', True)
@@ -390,8 +390,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 # ################################################################################################################################
 
     def _get_auth(self) -> 'None | tuple[str, str]':
-        """ Returns a username and password pair or None, if no security definition
-        has been attached.
+        """ Returns a username and password pair or None, if no security definition has been attached.
         """
         if self.sec_type in {_Basic_Auth}:
             auth = (self.config['username'], self.config['password'])
