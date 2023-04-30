@@ -1055,12 +1055,17 @@ class WorkerStore(_WorkerStoreBase):
         if wrapper.config['security_name'] == msg['name']:
             del config_dict[wrapper.config['name']]
 
-    def _visit_wrapper_change_password(self, wrapper:'HTTPSOAPWrapper', msg:'Bunch') -> 'None':
+    def _visit_wrapper_change_password(self, wrapper:'HTTPSOAPWrapper', msg:'Bunch', *, check_name:'bool'=True) -> 'None':
         """ Changes a wrapper's password.
         """
-        if wrapper.config['security_name'] == msg['name']:
-            wrapper.config['password'] = msg['password']
-            wrapper.set_auth()
+        # This check is performed by non-wrapper connection types
+        if check_name:
+            if not (wrapper.config['security_name'] == msg['name']):
+                return
+
+        # If we are here, it means that either the name matches or that the connection is a wrapper object
+        wrapper.config['password'] = msg['password']
+        wrapper.set_auth()
 
 # ################################################################################################################################
 
@@ -1997,7 +2002,7 @@ class WorkerStore(_WorkerStoreBase):
         item['config']['password'] = password
 
         # .. and its wrapper's configuration too.
-        # item['conn'].set_password_from_wrapper(password_decrypted)
+        self._visit_wrapper_change_password(item['conn'], {'password': password_decrypted}, check_name=False)
 
 # ################################################################################################################################
 
