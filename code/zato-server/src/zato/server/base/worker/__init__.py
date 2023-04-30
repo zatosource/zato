@@ -38,8 +38,8 @@ from orjson import dumps
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
-     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, name_prefix_list, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, \
-     URL_TYPE, WEB_SOCKET, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, \
+     URL_TYPE, WEB_SOCKET, Wrapper_Name_Prefix_List, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -484,11 +484,13 @@ class WorkerStore(_WorkerStoreBase):
 
         # This can also be populated upfront but we need to ensure
         # we do not include any potential name prefix in the FS-safe name.
-        for prefix in name_prefix_list:
+        for prefix in Wrapper_Name_Prefix_List:
             if conn_name.startswith(prefix):
                 name_without_prefix = conn_name.replace(prefix, '', 1)
+                is_wrapper = True
                 break
         else:
+            is_wrapper = False
             prefix = ''
             name_without_prefix = conn_name
 
@@ -518,6 +520,7 @@ class WorkerStore(_WorkerStoreBase):
                 func = getattr(self.request_dispatcher.url_data, sec_type + '_get')
                 _sec_config = func(security_name).config
 
+        # Update the security configuration if it is a separate one ..
         if _sec_config:
             _sec_config_id = _sec_config.get('id') or _sec_config.get('security_id')
             sec_config['security_id'] = _sec_config_id
@@ -533,6 +536,15 @@ class WorkerStore(_WorkerStoreBase):
                 auth_data = self.server.decrypt(tls.config.auth_data)
                 sec_config['tls_key_cert_full_path'] = get_tls_key_cert_full_path(
                     self.server.tls_dir, get_tls_from_payload(auth_data, True))
+
+        # .. otherwise, try to find it elsewhere ..
+        else:
+
+            # .. if it is a REST wrapper, it will have its own security configuration that we can use ..
+            if is_wrapper:
+                sec_config['sec_type'] = SEC_DEF_TYPE.BASIC_AUTH
+                sec_config['username'] = config['username']
+                sec_config['password'] = self.server.decrypt(config['password'])
 
         wrapper_config = {
             'id':config.id,
@@ -1043,12 +1055,17 @@ class WorkerStore(_WorkerStoreBase):
         if wrapper.config['security_name'] == msg['name']:
             del config_dict[wrapper.config['name']]
 
-    def _visit_wrapper_change_password(self, wrapper:'HTTPSOAPWrapper', msg:'Bunch') -> 'None':
+    def _visit_wrapper_change_password(self, wrapper:'HTTPSOAPWrapper', msg:'Bunch', *, check_name:'bool'=True) -> 'None':
         """ Changes a wrapper's password.
         """
-        if wrapper.config['security_name'] == msg['name']:
-            wrapper.config['password'] = msg['password']
-            wrapper.set_auth()
+        # This check is performed by non-wrapper connection types
+        if check_name:
+            if not (wrapper.config['security_name'] == msg['name']):
+                return
+
+        # If we are here, it means that either the name matches or that the connection is a wrapper object
+        wrapper.config['password'] = msg['password']
+        wrapper.set_auth()
 
 # ################################################################################################################################
 
@@ -1969,6 +1986,26 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
+    def on_broker_msg_OUTGOING_REST_WRAPPER_CHANGE_PASSWORD(self, msg:'Bunch', *args:'any_') -> 'None':
+
+        # Reusable
+        password = msg.password
+        password_decrypted = self.server.decrypt(password)
+
+        # All outgoing REST connections
+        out_plain_http = self.worker_config.out_plain_http
+
+        # .. get the one that we need ..
+        item = out_plain_http.get_by_id(msg.id)
+
+        # .. update its dict configuration ..
+        item['config']['password'] = password
+
+        # .. and its wrapper's configuration too.
+        self._visit_wrapper_change_password(item['conn'], {'password': password_decrypted}, check_name=False)
+
+# ################################################################################################################################
+
     def on_broker_msg_SERVICE_DELETE(self, msg:'Bunch', *args:'any_') -> 'None':
         """ Deletes the service from the service store and removes it from the filesystem
         if it's not an internal one.
@@ -2062,7 +2099,7 @@ class WorkerStore(_WorkerStoreBase):
             serialize=False, needs_response=True)
 
         # If there were any services deployed, let pub/sub know that this service has been just deployed -
-        # pub/sub will go through sall of its topics and reconfigure any of its hooks that this service implements.
+        # pub/sub will go through all of its topics and reconfigure any of its hooks that this service implements.
         if response.services_deployed:
             self.pubsub.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(response.services_deployed)
 
