@@ -169,6 +169,9 @@ $.namespace('zato.sms.twilio');
 $.namespace('zato.stats');
 $.namespace('zato.stats.custom');
 $.namespace('zato.stats.top_n');
+$.namespace('zato.vendors');
+$.namespace('zato.vendors.keysight');
+$.namespace('zato.vendors.keysight.vision');
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
