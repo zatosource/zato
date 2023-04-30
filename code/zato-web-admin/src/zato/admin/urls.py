@@ -77,6 +77,7 @@ from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as
 from zato.admin.web.views.security.vault import connection as vault_conn
 from zato.admin.web.views.stats import service_usage as stats_service_usage
 from zato.admin.web.views.stats import user as stats_user
+from zato.admin.web.views.vendors import keysight_vision
 
 urlpatterns = [
 
@@ -1641,6 +1642,31 @@ urlpatterns += [
     # Statistics - user-defined - latest updates
     url(r'^zato/stats/user/get-updates/$',
         login_required(stats_user.get_updates), name='stats-user-get-updates'),
+    ]
+
+# ################################################################################################################################
+# ################################################################################################################################
+# #
+# #   Vendors
+# #
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Vendors - Keysight Vision Series
+    url(r'^zato/vendors/keysight/vision/$',
+        login_required(keysight_vision.Index()), name=keysight_vision.Index.url_name),
+    url(r'^zato/vendors/keysight/vision/create/$',
+        login_required(keysight_vision.Create()), name=keysight_vision.Create.url_name),
+    url(r'^zato/vendors/keysight/vision/edit/$',
+        login_required(keysight_vision.Edit()), name=keysight_vision.Edit.url_name),
+    url(r'^zato/vendors/keysight/vision/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(keysight_vision.Delete()), name=keysight_vision.Delete.url_name),
+    url(r'^zato/vendors/keysight/vision/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(keysight_vision.ping), name='vendors-keysight-vision-ping'),
+    url(r'^zato/vendors/keysight/vision/change-password/$',
+        login_required(keysight_vision.change_password), name='vendors-keysight-vision-change-password'),
     ]
 
 # ################################################################################################################################

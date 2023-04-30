@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -86,7 +86,8 @@ class _BaseGet(AdminService):
                 'hl7_version', 'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', \
                 'data_encoding', 'is_audit_log_sent_active', 'is_audit_log_received_active', \
                 Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
-                Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received')
+                Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
+                'username', 'wrapper_type'
 
 # ################################################################################################################################
 
@@ -113,13 +114,13 @@ class Get(_BaseGet):
     class SimpleIO(_BaseGet.SimpleIO):
         request_elem = 'zato_http_soap_get_request'
         response_elem = 'zato_http_soap_get_response'
-        input_required = 'cluster_id',
-        input_optional = 'id', 'name'
+        input_optional = 'cluster_id', 'id', 'name'
 
     def handle(self):
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
         with closing(self.odb.session()) as session:
             self.request.input.require_any('id', 'name')
-            item = http_soap(session, self.request.input.cluster_id, self.request.input.id, self.request.input.name)
+            item = http_soap(session, cluster_id, self.request.input.id, self.request.input.name)
             out = get_dict_with_opaque(item)
             out['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(out)
             self.response.payload = out
@@ -134,13 +135,13 @@ class GetList(_BaseGet):
     class SimpleIO(GetListAdminSIO, _BaseGet.SimpleIO):
         request_elem = 'zato_http_soap_get_list_request'
         response_elem = 'zato_http_soap_get_list_response'
-        input_required = 'cluster_id'
-        input_optional = GetListAdminSIO.input_optional + ('connection', 'transport', 'data_format')
+        input_optional = GetListAdminSIO.input_optional + ('cluster_id', 'connection', 'transport', 'data_format')
         output_optional = _BaseGet.SimpleIO.output_optional + ('connection', 'transport')
         output_repeated = True
 
     def get_data(self, session):
-        result = self._search(http_soap_list, session, self.request.input.cluster_id,
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
+        result = self._search(http_soap_list, session, cluster_id,
             self.request.input.connection, self.request.input.transport,
             asbool(self.server.fs_server_config.misc.return_internal_objects),
             self.request.input.get('data_format'),
@@ -251,7 +252,8 @@ class Create(_CreateEdit):
             'is_audit_log_sent_active', 'is_audit_log_received_active', \
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
-            'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify'
+            'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify', \
+            'wrapper_type', 'username', 'password'
         output_required = 'id', 'name'
         output_optional = 'url_path'
 
@@ -340,6 +342,9 @@ class Create(_CreateEdit):
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
+                item.wrapper_type = input.wrapper_type
+                item.username = input.username
+                item.password = input.password
 
                 # Configure CA certs
                 self._set_sec_tls_ca_cert_id(item, input)
@@ -347,7 +352,7 @@ class Create(_CreateEdit):
                 if input.security_id:
                     item.security = get_security_by_id(session, input.security_id)
                 else:
-                    input.security_id = None # To ensure that SQLite doesn't reject ''
+                    input.security_id = None # To ensure that SQLite does not reject ''
 
                 # Opaque attributes
                 set_instance_opaque_attrs(item, input)
@@ -409,7 +414,8 @@ class Edit(_CreateEdit):
             'is_audit_log_sent_active', 'is_audit_log_received_active', \
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
-            'cluster_id', 'is_active', 'transport', 'tls_verify'
+            'cluster_id', 'is_active', 'transport', 'tls_verify', \
+            'wrapper_type', 'username', 'password'
         output_optional = 'id', 'name'
 
     def handle(self):
@@ -419,8 +425,9 @@ class Edit(_CreateEdit):
 
         input = self.request.input
         input.sec_use_rbac = input.get('sec_use_rbac') or (input.security_id == ZATO_SEC_USE_RBAC)
-        input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
-        input.soap_action = input.soap_action if input.soap_action else ''
+        input.security_id  = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
+        input.soap_action  = input.soap_action if input.soap_action else ''
+        input.timeout      = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
 
         input.is_active   = input.get('is_active',   True)
         input.is_internal = input.get('is_internal', False)
@@ -505,13 +512,16 @@ class Edit(_CreateEdit):
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
-                item.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+                item.timeout = input.get('timeout')
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
+                item.wrapper_type = input.wrapper_type
+                item.username = input.username
+                item.password = input.password
 
                 # Configure CA certs
                 self._set_sec_tls_ca_cert_id(item, input)
@@ -659,6 +669,7 @@ class Ping(AdminService):
         request_elem = 'zato_http_soap_ping_request'
         response_elem = 'zato_http_soap_ping_response'
         input_required = 'id'
+        input_optional = 'ping_path'
         output_required = 'id', 'is_success'
         output_optional = 'info'
 
@@ -669,7 +680,7 @@ class Ping(AdminService):
             self.response.payload.id = self.request.input.id
 
             try:
-                result = config_dict.get(item.name).ping(self.cid)
+                result = config_dict.get(item.name).ping(self.cid, ping_path=self.request.input.ping_path)
                 is_success = True
             except Exception as e:
                 result = e.args[0]

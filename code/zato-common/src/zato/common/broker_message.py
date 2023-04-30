@@ -206,6 +206,8 @@ class OUTGOING(Constants):
     SFTP_EXECUTE = ValueConstant('')
     SFTP_PING = ValueConstant('')
 
+    REST_WRAPPER_CHANGE_PASSWORD = ValueConstant('')
+
 class CHANNEL(Constants):
     code_start = 101000
 

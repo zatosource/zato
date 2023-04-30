@@ -316,13 +316,18 @@ class ServiceStore:
     def delete_service_data(self, name:'str') -> 'None':
 
         with self.update_lock:
-            impl_name = self.name_to_impl_name[name]     # type: str
-            service_id = self.impl_name_to_id[impl_name] # type: int
-
-            del self.id_to_impl_name[service_id]
-            del self.impl_name_to_id[impl_name]
-            del self.name_to_impl_name[name]
-            del self.services[impl_name]
+            try:
+                impl_name = self.name_to_impl_name[name]     # type: str
+                service_id = self.impl_name_to_id[impl_name] # type: int
+                del self.id_to_impl_name[service_id]
+                del self.impl_name_to_id[impl_name]
+                del self.name_to_impl_name[name]
+                del self.services[impl_name]
+            except KeyError:
+                # This is as expected and may happen if a service
+                # was already deleted, e.g. it was in the same module
+                # that another deleted service was in.
+                pass
 
 # ################################################################################################################################
 

@@ -380,6 +380,7 @@ class Index(_BaseView):
     """
     url_name = 'url_name-must-be-defined-in-a-subclass'
     template = 'template-must-be-defined-in-a-subclass-or-get-template-name'
+    wrapper_type = None
 
     output_class = None
     clear_self_items = True
@@ -444,6 +445,10 @@ class Index(_BaseView):
                 request.update(self.input)
             else:
                 logger.info('Not updating request with self.input')
+
+            # Auto-populate the field if it exists
+            if self.wrapper_type:
+                request['wrapper_type'] = self.wrapper_type
 
             logger.info('Invoking `%s` with `%s`', service_name, request)
 
@@ -659,9 +664,10 @@ class CreateEdit(_BaseView):
             response = self.req.zato.client.invoke(self.service_name, self.input_dict)
 
             if response.ok:
+                logger.info('Received `%s` from `%s`', response.data, self.service_name)
                 return_data = {
                     'message': self.success_message(response.data)
-                    }
+                }
 
                 return_data.update(initial_return_data)
 
@@ -801,11 +807,26 @@ def id_only_service(req, service, id, error_template='{}', initial=None):
 
 # ################################################################################################################################
 
-def ping_connection(req, service, connection_id, connection_type='{}'):
-    ret = id_only_service(req, service, connection_id, 'Could not ping {}, e:`{{}}`'.format(connection_type))
-    if isinstance(ret, HttpResponseServerError):
-        return ret
-    return HttpResponse(ret.data.info)
+def ping_connection(req, service, connection_id, connection_type='{}', ping_path=None):
+    error_template = 'Could not ping {}, e:`{{}}`'.format(connection_type)
+    if ping_path:
+        initial = {'ping_path': ping_path}
+    else:
+        initial = None
+    response = id_only_service(req, service, connection_id, error_template, initial)
+    if isinstance(response, HttpResponseServerError):
+        return response
+    else:
+
+        if 'info' in response.data:
+            is_success = response.data.is_success
+            response_class = HttpResponse if is_success else HttpResponseServerError
+            info = response.data.info
+        else:
+            response_class = HttpResponse
+            info = 'Ping OK'
+
+        return response_class(info)
 
 # ################################################################################################################################
 
