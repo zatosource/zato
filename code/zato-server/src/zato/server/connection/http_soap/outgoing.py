@@ -181,7 +181,7 @@ class BaseHTTPSOAPWrapper:
         verbose = StringIO()
 
         start = datetime.utcnow()
-        ping_method = self.config['ping_method']
+        ping_method = self.config['ping_method'] or 'HEAD'
 
         def zato_pre_request_hook(hook_data:'stranydict', *args:'any_', **kwargs:'any_') -> 'None':
 
