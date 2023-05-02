@@ -37,7 +37,7 @@ def _replace_suffix_from_dict_name(data:'stranydict', wrapper_type:'str') -> 'st
 
 class GetList(Service):
 
-    name = 'dev2.generic.rest-wrapper.get-list'
+    name = 'zato.generic.rest-wrapper.get-list'
 
     def handle(self) -> 'None':
 
@@ -130,7 +130,7 @@ class _WrapperBase(Service):
 # ################################################################################################################################
 
 class Create(_WrapperBase):
-    name = 'dev2.generic.rest-wrapper.create'
+    name = 'zato.generic.rest-wrapper.create'
     response_elem = None
     _wrapper_impl_suffix = 'create'
     _uses_name = True
@@ -139,7 +139,7 @@ class Create(_WrapperBase):
 # ################################################################################################################################
 
 class Edit(_WrapperBase):
-    name = 'dev2.generic.rest-wrapper.edit'
+    name = 'zato.generic.rest-wrapper.edit'
     response_elem = None
     _wrapper_impl_suffix = 'edit'
     _uses_name = True
@@ -148,7 +148,7 @@ class Edit(_WrapperBase):
 # ################################################################################################################################
 
 class Delete(_WrapperBase):
-    name = 'dev2.generic.rest-wrapper.delete'
+    name = 'zato.generic.rest-wrapper.delete'
     _wrapper_impl_suffix = 'delete'
     _uses_name = False
 
@@ -156,7 +156,7 @@ class Delete(_WrapperBase):
 # ################################################################################################################################
 
 class ChangePassword(_WrapperBase):
-    name = 'dev2.generic.rest-wrapper.change-password'
+    name = 'zato.generic.rest-wrapper.change-password'
     _wrapper_impl_suffix = 'edit'
     _uses_name = False
 
@@ -168,7 +168,7 @@ class ChangePassword(_WrapperBase):
         # This must always exist
         id = request['id']
 
-        # This is optional ..
+        # This is optional
         password = request.get('password') or request.get('password1') or ''
         password = self.server.encrypt(password)
 
@@ -195,7 +195,7 @@ class ChangePassword(_WrapperBase):
 # ################################################################################################################################
 
 class Ping(_WrapperBase):
-    name = 'dev2.generic.rest-wrapper.ping'
+    name = 'zato.generic.rest-wrapper.ping'
     _wrapper_impl_suffix = 'ping'
     _uses_name = False
 
