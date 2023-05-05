@@ -987,12 +987,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # These flags are needed if we are the first worker or not
         has_ibm_mq = bool(self.worker_store.worker_config.definition_wmq.keys()) \
             and self.fs_server_config.component_enabled.ibm_mq
-
         has_sftp = bool(self.worker_store.worker_config.out_sftp.keys())
+        has_stats = self.fs_server_config.component_enabled.stats
 
         subprocess_start_config = SubprocessStartConfig()
+
         subprocess_start_config.has_ibm_mq = has_ibm_mq
-        subprocess_start_config.has_sftp = has_sftp
+        subprocess_start_config.has_sftp   = has_sftp
+        subprocess_start_config.has_stats  = has_stats
 
         # Directories for SSH keys used by SFTP channels
         self.sftp_channel_dir = os.path.join(self.repo_location, 'sftp', 'channel')
@@ -1133,7 +1135,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         ipc_config_name_to_enabled = {
             IBMMQIPC.ipc_config_name: config.has_ibm_mq,
             SFTPIPC.ipc_config_name: config.has_sftp,
-            ZatoEventsIPC.ipc_config_name: True,
+            ZatoEventsIPC.ipc_config_name: config.has_stats,
         }
 
         for ipc_config_name, is_enabled in ipc_config_name_to_enabled.items():
