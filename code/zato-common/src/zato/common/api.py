@@ -1974,7 +1974,7 @@ default_internal_modules = {
     'zato.server.service.internal.email.imap': True,
     'zato.server.service.internal.email.smtp': True,
     'zato.server.service.internal.generic.connection': True,
-    'zato.server.service.internal.generic.rest-wrapper': True,
+    'zato.server.service.internal.generic.rest_wrapper': True,
     'zato.server.service.internal.helpers': True,
     'zato.server.service.internal.hot_deploy': True,
     'zato.server.service.internal.ide_deploy': True,
