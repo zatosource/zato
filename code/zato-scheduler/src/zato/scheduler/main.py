@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # First thing in the process
 from gevent import monkey
-monkey.patch_all()
+_ = monkey.patch_all()
 
 # stdlib
 import os
@@ -28,8 +28,9 @@ from zato.common.ext.future.utils import iteritems
 
 # Zato
 from zato.common.api import SCHEDULER
+from zato.common.aux_server.base import AuxServerConfig
 from zato.common.util.api import get_config, set_up_logging, store_pidfile
-from zato.scheduler.server import Config, SchedulerServer
+from zato.scheduler.server import AuxServerConfig, SchedulerServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,7 +53,11 @@ def main():
     set_up_logging(repo_location)
 
     # The main configuration object
-    config = Config.from_repo_location(repo_location)
+    config = AuxServerConfig.from_repo_location(
+        repo_location,
+        SchedulerServer.conf_file_name,
+        SchedulerServer.crypto_manager_class,
+    )
 
     logger = getLogger(__name__)
     logger.info('Scheduler starting (http{}://{}:{})'.format(
