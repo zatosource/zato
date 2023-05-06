@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from errno import ENOTSOCK
@@ -18,6 +16,7 @@ from zato.common.ipc import IPCEndpoint, Request
 # This is needed so that unpickling of requests works
 Request = Request
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Subscriber(IPCEndpoint):
@@ -39,7 +38,8 @@ class Subscriber(IPCEndpoint):
 
         while self.keep_running:
             try:
-                self.on_message_callback(self.socket.recv_pyobj())
+                request = self.socket.recv_pyobj()
+                self.on_message_callback(request)
             except zmq.ZMQError as e:
                 if e.errno == ENOTSOCK:
                     self.logger.debug('Stopping IPC socket `%s` (ENOTSOCK)', self.name)
@@ -47,4 +47,5 @@ class Subscriber(IPCEndpoint):
             except Exception:
                 self.logger.warning('Error in IPC subscriber, e:`%s`', format_exc())
 
+# ################################################################################################################################
 # ################################################################################################################################
