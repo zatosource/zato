@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import os
 from datetime import datetime
+from logging import getLogger
 from tempfile import gettempdir
 
 # Zato
 from zato.common.api import DATA_FORMAT, NO_DEFAULT_VALUE
-from zato.common.util.api import get_logger_for_class, make_repr, new_cid, spawn_greenlet
+from zato.common.util.api import make_repr, new_cid, spawn_greenlet
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Request:
@@ -49,11 +49,12 @@ class Request:
         return make_repr(self)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class IPCBase:
     """ Base class for core IPC objects.
     """
-    def __init__(self, name, pid):
+    def __init__(self, name:'str', pid:'int') -> 'None':
 
         # ZeroMQ
         import zmq.green as zmq
@@ -64,51 +65,58 @@ class IPCBase:
         self.socket = None
         spawn_greenlet(self.set_up_sockets)
         self.keep_running = True
-        self.logger = get_logger_for_class(self.__class__)
+        self.logger = getLogger('zato')
         self.log_connected()
 
     def __repr__(self):
         return make_repr(self)
 
-    def set_up_sockets(self):
+    def set_up_sockets(self) -> 'None':
         raise NotImplementedError('Needs to be implemented in subclasses')
 
-    def log_connected(self):
+    def log_connected(self) -> 'None':
         raise NotImplementedError('Needs to be implemented in subclasses')
 
-    def close(self):
+    def close(self) -> 'None':
         raise NotImplementedError('Needs to be implemented in subclasses')
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class IPCEndpoint(IPCBase):
     """ A participant in IPC conversations, i.e. either publisher or subscriber.
     """
-    socket_method = None
-    socket_type = None
+    socket_method = '<invalid-socket_method>'
+    socket_type = '<invalid-socket_type>'
 
-    def __init__(self, name, pid):
+    def __init__(self, name:'str', pid:'int') -> 'None':
         self.address = self.get_address(name)
         super(IPCEndpoint, self).__init__(name, pid)
 
-    def get_address(self, address):
+    def get_address(self, address:'str') -> 'str':
         return 'ipc://{}'.format(os.path.join(gettempdir(), 'zato-ipc-{}'.format(address)))
 
-    def set_up_sockets(self):
+    def set_up_sockets(self) -> 'None':
 
         # ZeroMQ
         import zmq.green as zmq
 
-        self.socket = self.ctx.socket(getattr(zmq, self.socket_type.upper()))
-        self.socket.setsockopt(zmq.LINGER, 0)
-        getattr(self.socket, self.socket_method)(self.address)
+        _socket_type_name = self.socket_type.upper()
+        _socket_type = getattr(zmq, _socket_type_name)
 
-    def log_connected(self):
+        self.socket = self.ctx.socket(_socket_type)
+        self.socket.setsockopt(zmq.LINGER, 0)
+
+        _socket_start_func = getattr(self.socket, self.socket_method)
+        _socket_start_func(self.address)
+
+    def log_connected(self) -> 'None':
         self.logger.info('Established %s/%s to %s (self.pid: %s)', self.socket_type, self.socket_method, self.address, self.pid)
 
-    def close(self):
+    def close(self) -> 'None':
         self.keep_running = False
         self.socket.close()
         self.ctx.term()
 
+# ################################################################################################################################
 # ################################################################################################################################
