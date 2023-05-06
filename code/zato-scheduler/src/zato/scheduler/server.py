@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -30,14 +30,17 @@ from zato.scheduler.api import SchedulerAPI
 from zato.scheduler.util import set_up_zato_client
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, callable_
+    from zato.common.typing_ import any_, anydict, byteslist, callable_
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class StatusCode:
@@ -48,6 +51,7 @@ class StatusCode:
 headers = [('Content-Type', 'application/json')]
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Config:
     """ Encapsulates configuration of various scheduler-related layers.
@@ -55,7 +59,7 @@ class Config:
     odb: 'ODBManager'
     crypto_manager: 'SchedulerCryptoManager'
 
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.main = Bunch()
         self.startup_jobs = []
         self.on_job_executed_cb = None
@@ -123,6 +127,7 @@ class Config:
         return config
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class SchedulerServer:
     """ Main class spawning scheduler-related tasks and listening for HTTP API requests.
@@ -151,14 +156,13 @@ class SchedulerServer:
 
 # ################################################################################################################################
 
-    def serve_forever(self):
+    def serve_forever(self) -> 'None':
         self.scheduler_api.serve_forever()
         self.api_server.serve_forever()
 
 # ################################################################################################################################
 
-    def handle_api_request(self, request):
-        # type: (bytes) -> None
+    def handle_api_request(self, request:'bytes') -> 'any_':
 
         # Log what we are about to do
         logger.info('Handling API request -> `%s`', request)
@@ -188,7 +192,7 @@ class SchedulerServer:
 
 # ################################################################################################################################
 
-    def __call__(self, env:'anydict', start_response:'callable_') -> 'any_':
+    def __call__(self, env:'anydict', start_response:'callable_') -> 'byteslist':
 
         cid      = '<cid-unassigned>'
         response = {}
@@ -236,4 +240,5 @@ class SchedulerServer:
             start_response(status_code, headers)
             return [return_data]
 
+# ################################################################################################################################
 # ################################################################################################################################
