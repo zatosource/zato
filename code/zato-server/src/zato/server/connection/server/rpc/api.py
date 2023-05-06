@@ -115,6 +115,8 @@ class ServerRPC:
         **kwargs        # type: any_
     ) -> 'InvokeAllResult':
 
+        self
+
         # First, make sure that we are aware of all the servers currently available
         self.populate_invokers()
 

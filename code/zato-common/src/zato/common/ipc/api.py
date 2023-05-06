@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -63,10 +63,10 @@ class IPCAPI:
     name: 'str'
     on_message_callback: 'callable_'
     pid: 'int'
+    subscriber: 'Subscriber | None' = None
 
     def __init__(self):
         self.pid_publishers = {} # Target PID -> Publisher object connected to that target PID's subscriber socket
-        self.subscriber = None
 
 # ################################################################################################################################
 
@@ -90,12 +90,7 @@ class IPCAPI:
 
 # ################################################################################################################################
 
-    def publish(self, payload):
-        self.publisher.publish(payload)
-
-# ################################################################################################################################
-
-    def _get_pid_publisher(self, cluster_name, server_name, target_pid):
+    def _get_pid_publisher(self, cluster_name:'str', server_name:'str', target_pid:'int') -> 'Publisher':
 
         # We do no have a publisher connected to that PID, so we need to create it ..
         if target_pid not in self.pid_publishers:
@@ -155,6 +150,9 @@ class IPCAPI:
         # Create a FIFO pipe to receive replies to come through
         fifo_path = os.path.join(tempfile.tempdir, 'zato-ipc-fifo-{}'.format(uuid4().hex))
         os.mkfifo(fifo_path, fifo_create_mode)
+
+        logger.info('Invoking %s on %s (%s:%s) (%s) with %s',
+            service, cluster_name, server_name, target_pid, fifo_path, payload)
 
         try:
             publisher = self._get_pid_publisher(cluster_name, server_name, target_pid)
