@@ -51,27 +51,25 @@ headers = [('Content-Type', 'application/json')]
 # ################################################################################################################################
 
 class AuxServerConfig:
-    """ Encapsulates configuration of various scheduler-related layers.
+    """ Encapsulates configuration of various server-related layers.
     """
     odb: 'ODBManager'
+    server_type: 'str'
     conf_file_name: 'str'
     crypto_manager: 'CryptoManager'
     crypto_manager_class: 'type_[CryptoManager]'
 
     def __init__(self) -> 'None':
         self.main = Bunch()
-        self.startup_jobs = []
-        self.on_job_executed_cb = None
         self.stats_enabled = None
-        self.job_log_level = 'debug'
         self.component_dir = 'not-set-component_dir'
-        self._add_startup_jobs = True
-        self._add_scheduler_jobs = True
 
 # ################################################################################################################################
 
-    @staticmethod
+    @classmethod
     def from_repo_location(
+        class_,         # type: type_[AuxServerConfig]
+        server_type,    # type: str
         repo_location,  # type: str
         conf_file_name, # type: str
         crypto_manager_class, # type: type_[CryptoManager]
@@ -81,9 +79,10 @@ class AuxServerConfig:
         from zato.common.util.cli import read_stdin_data
 
         # Response to produce
-        config = AuxServerConfig()
+        config = class_()
+        config.server_type = server_type
 
-        # Path to the scheduler can be built from its repository location
+        # Path to the component can be built from its repository location
         component_dir = os.path.join(repo_location, '..', '..')
         component_dir = os.path.abspath(component_dir)
         config.component_dir = component_dir
@@ -136,6 +135,7 @@ class AuxServer:
     """ Main class spawning an auxilliary server and listening for API requests.
     """
     api_server: 'WSGIServer'
+    cid_prefix: 'str'
 
     def __init__(self, config:'AuxServerConfig') -> 'None':
         self.config = config
@@ -204,7 +204,7 @@ class AuxServer:
         try:
 
             # Assign a new cid
-            cid = 'zsch{}'.format(new_cid())
+            cid = '{}'.format(self.cid_prefix, new_cid())
 
             # Get the contents of our request ..
             request = env['wsgi.input'].read()
