@@ -40,7 +40,9 @@ class IPCServerConfig(AuxServerConfig):
 # ################################################################################################################################
 
 class IPCServer(AuxServer):
-    pass
+    needs_logging_setup = False
+    cid_prefix = 'zipc'
+    server_type = 'IPCServer'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,31 +51,7 @@ def main():
 
     ipc_port = 27050
 
-    # Capture warnings to log files
-    captureWarnings(True)
-
-    # Where we keep our configuration
-    repo_location = os.path.join('.', 'config', 'repo')
-
-    # Logging configuration
-    set_up_logging(repo_location)
-
-    # The main configuration object
-    config = IPCServerConfig.from_repo_location(
-        f'IPCServer:{ipc_port}',
-        repo_location,
-        IPCServerConfig.conf_file_name,
-        IPCServerConfig.crypto_manager_class,
-    )
-    config = cast_('IPCServerConfig', config)
-
-    logger = getLogger(__name__)
-    logger.info('{} starting (http{}://{}:{})'.format(
-        config.server_type,
-        's' if config.main.crypto.use_tls else '',
-        config.main.bind.host,
-        config.main.bind.port)
-    )
+    IPCServer.start()
 
 # ################################################################################################################################
 # ################################################################################################################################
