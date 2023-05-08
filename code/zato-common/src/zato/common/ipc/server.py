@@ -7,23 +7,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
-from logging import captureWarnings, getLogger
+from logging import getLogger
 
 # Zato
-from zato.broker.client import BrokerClient
 from zato.common.aux_server.base import AuxServer, AuxServerConfig
-from zato.common.crypto.api import SchedulerCryptoManager
-from zato.common.typing_ import cast_
-from zato.common.util.api import get_config, set_up_logging
-from zato.scheduler.api import SchedulerAPI
-from zato.scheduler.util import set_up_zato_client
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import callable_
+from zato.common.crypto.api import ServerCryptoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,6 +31,9 @@ class IPCServer(AuxServer):
     needs_logging_setup = False
     cid_prefix = 'zipc'
     server_type = 'IPCServer'
+    conf_file_name = 'server.conf'
+    config_class = AuxServerConfig
+    crypto_manager_class = ServerCryptoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
