@@ -28,9 +28,9 @@ from zato.common.ext.future.utils import iteritems
 
 # Zato
 from zato.common.api import SCHEDULER
-from zato.common.aux_server.base import AuxServerConfig
+from zato.common.typing_ import cast_
 from zato.common.util.api import get_config, set_up_logging, store_pidfile
-from zato.scheduler.server import AuxServerConfig, SchedulerServer
+from zato.scheduler.server import SchedulerServer, SchedulerServerConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,15 +53,21 @@ def main():
     set_up_logging(repo_location)
 
     # The main configuration object
-    config = AuxServerConfig.from_repo_location(
+    config = SchedulerServerConfig.from_repo_location(
+        'Scheduler',
         repo_location,
         SchedulerServer.conf_file_name,
         SchedulerServer.crypto_manager_class,
     )
+    config = cast_('SchedulerServerConfig', config)
 
     logger = getLogger(__name__)
-    logger.info('Scheduler starting (http{}://{}:{})'.format(
-        's' if config.main.crypto.use_tls else '', config.main.bind.host, config.main.bind.port))
+    logger.info('{} starting (http{}://{}:{})'.format(
+        config.server_type,
+        's' if config.main.crypto.use_tls else '',
+        config.main.bind.host,
+        config.main.bind.port)
+    )
 
     # Reusable
     startup_jobs_config_file = 'startup_jobs.conf'

@@ -30,13 +30,28 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+class SchedulerServerConfig(AuxServerConfig):
+
+    def __init__(self) -> 'None':
+        super().__init__()
+
+        self.startup_jobs = []
+        self.on_job_executed_cb = None
+        self.job_log_level = 'debug'
+        self._add_startup_jobs = True
+        self._add_scheduler_jobs = True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SchedulerServer(AuxServer):
     """ Main class spawning scheduler-related tasks and listening for HTTP API requests.
     """
+    cid_prefix = 'zsch'
     conf_file_name = 'scheduler.conf'
     crypto_manager_class = SchedulerCryptoManager
 
-    def __init__(self, config:'AuxServerConfig') -> 'None':
+    def __init__(self, config:'SchedulerServerConfig') -> 'None':
 
         super().__init__(config)
 
