@@ -7,9 +7,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import logging
 import os
 from json import dumps
+from logging import getLogger
 from traceback import format_exc
 
 # Bunch
@@ -23,7 +23,7 @@ from zato.common.api import ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
-from zato.common.util.api import as_bool, absjoin, get_config, new_cid
+from zato.common.util.api import as_bool, absjoin, get_config, new_cid, set_up_logging
 from zato.common.util.json_ import json_loads
 
 # ################################################################################################################################
@@ -35,7 +35,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -134,8 +134,13 @@ class AuxServerConfig:
 class AuxServer:
     """ Main class spawning an auxilliary server and listening for API requests.
     """
+    needs_logging_setup: 'bool'
     api_server: 'WSGIServer'
     cid_prefix: 'str'
+    server_type: 'str'
+    conf_file_name: 'str'
+    config_class: 'type_[AuxServerConfig]'
+    crypto_manager_class: 'type_[CryptoManager]'
 
     def __init__(self, config:'AuxServerConfig') -> 'None':
         self.config = config
@@ -154,13 +159,58 @@ class AuxServer:
 
 # ################################################################################################################################
 
-    def before_config_hook(self) -> 'None':
+    @classmethod
+    def before_config_hook(class_:'type_[AuxServer]') -> 'None':
         pass
 
 # ################################################################################################################################
 
-    def after_config_hook(self) -> 'None':
-        pass
+    @classmethod
+    def after_config_hook(
+        class_, # type: type_[AuxServer]
+        config, # type: AuxServerConfig
+        repo_location, # type: str
+    ) -> 'None':
+
+        logger = getLogger(__name__)
+        logger.info('{} starting (http{}://{}:{})'.format(
+            config.server_type,
+            's' if config.main.crypto.use_tls else '',
+            config.main.bind.host,
+            config.main.bind.port)
+        )
+
+# ################################################################################################################################
+
+    @classmethod
+    def start(class_:'type_[AuxServer]') -> 'None':
+
+        # Functionality that needs to run before configuration is created
+        class_.before_config_hook()
+
+        # Where we keep our configuration
+        repo_location = os.path.join('.', 'config', 'repo')
+
+        # Optionally, configure logging
+        if class_.needs_logging_setup:
+            set_up_logging(repo_location)
+
+        # The main configuration object
+        config = class_.config_class.from_repo_location(
+            class_.server_type,
+            repo_location,
+            class_.conf_file_name,
+            class_.crypto_manager_class,
+        )
+
+        # Functionality that needs to run before configuration is created
+        class_.after_config_hook(config, repo_location)
+
+        # Run the scheduler server now
+        try:
+            class_(config).serve_forever()
+        except Exception:
+            logger.warning(format_exc())
 
 # ################################################################################################################################
 

@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from logging import captureWarnings, getLogger
-from traceback import format_exc
 
 # Zato
 from zato.broker.client import BrokerClient
@@ -17,7 +16,7 @@ from zato.common.api import SCHEDULER
 from zato.common.aux_server.base import AuxServer, AuxServerConfig
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.typing_ import cast_
-from zato.common.util.api import get_config, set_up_logging, store_pidfile
+from zato.common.util.api import get_config, store_pidfile
 from zato.scheduler.api import SchedulerAPI
 from zato.scheduler.util import set_up_zato_client
 
@@ -52,11 +51,14 @@ class SchedulerServerConfig(AuxServerConfig):
 class SchedulerServer(AuxServer):
     """ Main class spawning scheduler-related tasks and listening for HTTP API requests.
     """
+    needs_logging_setup = True
     cid_prefix = 'zsch'
+    server_type = 'Scheduler'
     conf_file_name = 'scheduler.conf'
+    config_class = SchedulerServerConfig
     crypto_manager_class = SchedulerCryptoManager
 
-    def __init__(self, config:'SchedulerServerConfig') -> 'None':
+    def __init__(self, config:'AuxServerConfig') -> 'None':
 
         super().__init__(config)
 
@@ -70,7 +72,7 @@ class SchedulerServer(AuxServer):
 # ################################################################################################################################
 
     @classmethod
-    def start(class_:'type_[AuxServer]'):
+    def before_config_hook(class_:'type_[AuxServer]') -> 'None':
 
         if 'ZATO_SCHEDULER_BASE_DIR' in os.environ:
             os.chdir(os.environ['ZATO_SCHEDULER_BASE_DIR'])
@@ -81,28 +83,16 @@ class SchedulerServer(AuxServer):
         # Capture warnings to log files
         captureWarnings(True)
 
-        # Where we keep our configuration
-        repo_location = os.path.join('.', 'config', 'repo')
+# ################################################################################################################################
 
-        # Logging configuration
-        set_up_logging(repo_location)
+    @classmethod
+    def after_config_hook(
+        class_, # type: type_[AuxServer]
+        config, # type: AuxServerConfig
+        repo_location, # type: str
+    ) -> 'None':
 
-        # The main configuration object
-        config = SchedulerServerConfig.from_repo_location(
-            'Scheduler',
-            repo_location,
-            SchedulerServer.conf_file_name,
-            SchedulerServer.crypto_manager_class,
-        )
-        config = cast_('SchedulerServerConfig', config)
-
-        logger = getLogger(__name__)
-        logger.info('{} starting (http{}://{}:{})'.format(
-            config.server_type,
-            's' if config.main.crypto.use_tls else '',
-            config.main.bind.host,
-            config.main.bind.port)
-        )
+        super().after_config_hook(config, repo_location)
 
         # Reusable
         startup_jobs_config_file = 'startup_jobs.conf'
@@ -117,13 +107,7 @@ class SchedulerServer(AuxServer):
                 continue
 
             job_config['name'] = name
-            config.startup_jobs.append(job_config)
-
-        # Run the scheduler server now
-        try:
-            SchedulerServer(config).serve_forever()
-        except Exception:
-            logger.warning(format_exc())
+            cast_('SchedulerServerConfig', config).startup_jobs.append(job_config)
 
 # ################################################################################################################################
 
