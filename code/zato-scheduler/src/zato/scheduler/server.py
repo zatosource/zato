@@ -7,12 +7,17 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import logging
+import os
+from logging import captureWarnings, getLogger
+from traceback import format_exc
 
 # Zato
 from zato.broker.client import BrokerClient
+from zato.common.api import SCHEDULER
 from zato.common.aux_server.base import AuxServer, AuxServerConfig
 from zato.common.crypto.api import SchedulerCryptoManager
+from zato.common.typing_ import cast_
+from zato.common.util.api import get_config, set_up_logging, store_pidfile
 from zato.scheduler.api import SchedulerAPI
 from zato.scheduler.util import set_up_zato_client
 
@@ -20,12 +25,12 @@ from zato.scheduler.util import set_up_zato_client
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import callable_
+    from zato.common.typing_ import callable_, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,6 +66,64 @@ class SchedulerServer(AuxServer):
         # SchedulerAPI
         self.scheduler_api = SchedulerAPI(self.config)
         self.scheduler_api.broker_client = BrokerClient(zato_client=self.zato_client, server_rpc=None, scheduler_config=None)
+
+# ################################################################################################################################
+
+    @classmethod
+    def start(class_:'type_[AuxServer]'):
+
+        if 'ZATO_SCHEDULER_BASE_DIR' in os.environ:
+            os.chdir(os.environ['ZATO_SCHEDULER_BASE_DIR'])
+
+        # Always attempt to store the PID file first
+        store_pidfile(os.path.abspath('.'))
+
+        # Capture warnings to log files
+        captureWarnings(True)
+
+        # Where we keep our configuration
+        repo_location = os.path.join('.', 'config', 'repo')
+
+        # Logging configuration
+        set_up_logging(repo_location)
+
+        # The main configuration object
+        config = SchedulerServerConfig.from_repo_location(
+            'Scheduler',
+            repo_location,
+            SchedulerServer.conf_file_name,
+            SchedulerServer.crypto_manager_class,
+        )
+        config = cast_('SchedulerServerConfig', config)
+
+        logger = getLogger(__name__)
+        logger.info('{} starting (http{}://{}:{})'.format(
+            config.server_type,
+            's' if config.main.crypto.use_tls else '',
+            config.main.bind.host,
+            config.main.bind.port)
+        )
+
+        # Reusable
+        startup_jobs_config_file = 'startup_jobs.conf'
+
+        # Fix up configuration so it uses the format that internal utilities expect
+        startup_jobs_config = get_config(repo_location, startup_jobs_config_file, needs_user_config=False)
+        for name, job_config in startup_jobs_config.items():
+
+            # Ignore jobs that have been removed
+            if name in SCHEDULER.JobsToIgnore:
+                logger.info('Ignoring job `%s (%s)`', name, startup_jobs_config_file)
+                continue
+
+            job_config['name'] = name
+            config.startup_jobs.append(job_config)
+
+        # Run the scheduler server now
+        try:
+            SchedulerServer(config).serve_forever()
+        except Exception:
+            logger.warning(format_exc())
 
 # ################################################################################################################################
 
