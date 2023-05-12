@@ -191,7 +191,7 @@ class AuxServer:
     def start(
         class_,            # type 'type_[AuxServer]
         *,
-        root_dir=None,         # type: strnone
+        base_dir=None,         # type: strnone
         bind_host='localhost', # type: str
         bind_port=None,        # type: intnone
         callback_func=None     # type: callnone
@@ -201,8 +201,8 @@ class AuxServer:
         class_.before_config_hook()
 
         # Where we keep our configuration
-        root_dir = root_dir or '.'
-        repo_location = os.path.join(root_dir, 'config', 'repo')
+        base_dir = base_dir or '.'
+        repo_location = os.path.join(base_dir, 'config', 'repo')
 
         # Optionally, configure logging
         if class_.needs_logging_setup:

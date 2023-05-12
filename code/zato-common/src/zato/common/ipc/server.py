@@ -65,9 +65,9 @@ def main():
         return 'Hello'
 
     bind_port = 27050
-    root_dir = os.environ['Zato_Test_Server_Root_Dir']
+    base_dir = os.environ['Zato_Test_Server_Root_Dir']
 
-    IPCServer.start(root_dir=root_dir, bind_port=bind_port, callback_func=my_callback)
+    IPCServer.start(base_dir=base_dir, bind_port=bind_port, callback_func=my_callback)
 
 # ################################################################################################################################
 # ################################################################################################################################
