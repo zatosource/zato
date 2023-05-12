@@ -40,9 +40,12 @@ class IPCServer(AuxServer):
 
 def main():
 
-    ipc_port = 27050
+    # stdlib
+    import os
 
-    IPCServer.start()
+    bind_port = 27050
+    root_dir = os.environ['Zato_Test_Server_Root_Dir']
+    IPCServer.start(root_dir=root_dir, bind_port=bind_port)
 
 # ################################################################################################################################
 # ################################################################################################################################
