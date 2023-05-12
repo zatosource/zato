@@ -30,7 +30,7 @@ from zato.common.util.json_ import json_loads
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, byteslist, callable_, intnone, strnone, type_
+    from zato.common.typing_ import any_, anydict, byteslist, callable_, callnone, intnone, strnone, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,6 +55,7 @@ class AuxServerConfig:
     """
     odb: 'ODBManager'
     server_type: 'str'
+    callback_func: 'callable_'
     conf_file_name: 'str'
     crypto_manager: 'CryptoManager'
     crypto_manager_class: 'type_[CryptoManager]'
@@ -113,10 +114,6 @@ class AuxServerConfig:
             config.main.odb.username = config.main.odb.username
             config.main.odb.password = config.crypto_manager.decrypt(config.main.odb.password)
             config.main.odb.pool_size = config.main.odb.pool_size
-
-        print()
-        print(111, config.main)
-        print()
 
         # Decrypt the password used to invoke servers
         if config.main.get('server'):
@@ -197,6 +194,7 @@ class AuxServer:
         root_dir=None,         # type: strnone
         bind_host='localhost', # type: str
         bind_port=None,        # type: intnone
+        callback_func=None     # type: callnone
     ) -> 'None':
 
         # Functionality that needs to run before configuration is created
@@ -217,6 +215,8 @@ class AuxServer:
             class_.conf_file_name,
             class_.crypto_manager_class,
         )
+
+        config.callback_func = callback_func
 
         # This is optional
         if bind_port:
