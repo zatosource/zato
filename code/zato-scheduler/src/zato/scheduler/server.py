@@ -111,11 +111,9 @@ class SchedulerServer(AuxServer):
 
 # ################################################################################################################################
 
-    def action_func_impl(self, action_name:'str') -> 'callable_':
-
+    def get_action_func_impl(self, action_name:'str') -> 'callable_':
         func_name = 'on_broker_msg_{}'.format(action_name)
         func = getattr(self.scheduler_api, func_name)
-
         return func
 
 # ################################################################################################################################
