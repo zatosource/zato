@@ -30,6 +30,7 @@ from gevent import sleep
 # Zato
 from zato.common.api import IPC
 from zato.common.ipc.publisher import Publisher
+from zato.common.ipc.server import IPCServer
 from zato.common.ipc.subscriber import Subscriber
 from zato.common.util.api import spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
@@ -60,33 +61,24 @@ _F_SETPIPE_SZ = 1031
 class IPCAPI:
     """ API through which IPC is performed.
     """
-    name: 'str'
-    on_message_callback: 'callable_'
     pid: 'int'
-    subscriber: 'Subscriber | None' = None
-
-    def __init__(self):
-        self.pid_publishers = {} # Target PID -> Publisher object connected to that target PID's subscriber socket
+    server: 'IPCServer'
+    on_message_callback: 'callable_'
 
 # ################################################################################################################################
 
-    @staticmethod
-    def get_endpoint_name(cluster_name, server_name, target_pid):
-        return fs_safe_name('{}-{}-{}'.format(cluster_name, server_name, target_pid))
+    def start_server(self, base_dir:'str') -> 'None':
 
-# ################################################################################################################################
+        # stdlib
+        import os
 
-    def run(self):
-        self.subscriber = Subscriber(self.on_message_callback, self.name, self.pid)
-        spawn_greenlet(self.subscriber.serve_forever)
+        def my_callback(msg:'Bunch') -> 'str':
+            return 'Hello'
 
-# ################################################################################################################################
+        bind_port = 27050
+        base_dir = os.environ['Zato_Test_Server_Root_Dir']
 
-    def close(self):
-        if self.subscriber:
-            self.subscriber.close()
-        for publisher in self.pid_publishers.values():
-            publisher.close()
+        IPCServer.start(base_dir=base_dir, bind_port=bind_port, callback_func=my_callback)
 
 # ################################################################################################################################
 
@@ -147,6 +139,8 @@ class IPCAPI:
         """ Invokes a service through IPC, synchronously or in background. If target_pid is an exact PID then this one worker
         process will be invoked if it exists at all.
         """
+        zzz 'dpfk [d[ df df[ vire -gir-g34'; gf34? G>
+
         # Create a FIFO pipe to receive replies to come through
         fifo_path = os.path.join(tempfile.tempdir, 'zato-ipc-fifo-{}'.format(uuid4().hex))
         os.mkfifo(fifo_path, fifo_create_mode)
