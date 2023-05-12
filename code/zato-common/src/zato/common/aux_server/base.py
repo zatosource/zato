@@ -30,7 +30,7 @@ from zato.common.util.json_ import json_loads
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, byteslist, callable_, type_
+    from zato.common.typing_ import any_, anydict, byteslist, callable_, intnone, strnone, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,6 +73,8 @@ class AuxServerConfig:
         repo_location,  # type: str
         conf_file_name, # type: str
         crypto_manager_class, # type: type_[CryptoManager]
+        *,
+        needs_odb=True, # type: bool
     ) -> 'AuxServerConfig':
 
         # Zato
@@ -112,11 +114,17 @@ class AuxServerConfig:
             config.main.odb.password = config.crypto_manager.decrypt(config.main.odb.password)
             config.main.odb.pool_size = config.main.odb.pool_size
 
+        print()
+        print(111, config.main)
+        print()
+
         # Decrypt the password used to invoke servers
-        server_password = config.main.server.server_password or ''
-        if server_password and server_password.startswith('gA'):
-            server_password = config.crypto_manager.decrypt(server_password)
-            config.main.server.server_password = server_password
+        if config.main.get('server'):
+            server_password = config.main.server.server_password or ''
+            if server_password and server_password.startswith('gA'):
+                server_password = config.crypto_manager.decrypt(server_password)
+                config.main.server.server_password = server_password
+
 
         sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
 
@@ -183,13 +191,20 @@ class AuxServer:
 # ################################################################################################################################
 
     @classmethod
-    def start(class_:'type_[AuxServer]') -> 'None':
+    def start(
+        class_,            # type 'type_[AuxServer]
+        *,
+        root_dir=None,         # type: strnone
+        bind_host='localhost', # type: str
+        bind_port=None,        # type: intnone
+    ) -> 'None':
 
         # Functionality that needs to run before configuration is created
         class_.before_config_hook()
 
         # Where we keep our configuration
-        repo_location = os.path.join('.', 'config', 'repo')
+        root_dir = root_dir or '.'
+        repo_location = os.path.join(root_dir, 'config', 'repo')
 
         # Optionally, configure logging
         if class_.needs_logging_setup:
@@ -203,10 +218,16 @@ class AuxServer:
             class_.crypto_manager_class,
         )
 
+        # This is optional
+        if bind_port:
+            config.main.bind = Bunch()
+            config.main.bind.host = bind_host
+            config.main.bind.port = bind_port
+
         # Functionality that needs to run before configuration is created
         class_.after_config_hook(config, repo_location)
 
-        # Run the scheduler server now
+        # Run the server now
         try:
             class_(config).serve_forever()
         except Exception:
