@@ -1039,17 +1039,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if self.has_posix_ipc:
                 self._populate_connector_config(subprocess_start_config)
 
-        # IPC
-        self.ipc_api.name = self.ipc_api.get_endpoint_name(self.cluster_name, self.name, self.pid)
-        self.ipc_api.pid = self.pid
-        self.ipc_api.on_message_callback = self.worker_store.on_ipc_message
-
         # Stops the environment after N seconds
         if self.stop_after:
             _ = spawn_greenlet(self._stop_after_timeout)
 
+        # Initialize per-process IPC tasks
+        if not self.is_first_worker:
+            self.ipc_api.start_server(self.base_dir)
+
         if is_posix:
-            _ = spawn_greenlet(self.ipc_api.run)
             connector_config_ipc = cast_('ConnectorConfigIPC', self.connector_config_ipc)
 
             if self.component_enabled['stats']:
@@ -1666,9 +1664,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if self.has_posix_ipc:
                 self.server_startup_ipc.close()
                 self.connector_config_ipc.close()
-
-            # Close ZeroMQ-based IPC
-            self.ipc_api.close()
 
             # WSX connections for this server cleanup
             self.cleanup_wsx(True)
