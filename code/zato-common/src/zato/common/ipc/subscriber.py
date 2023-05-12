@@ -26,6 +26,8 @@ class Subscriber(IPCEndpoint):
     socket_type = 'sub'
 
     def __init__(self, on_message_callback, *args, **kwargs):
+        on_message_callback
+        on_message_callback
         self.on_message_callback = on_message_callback
         super(Subscriber, self).__init__(*args, **kwargs)
 

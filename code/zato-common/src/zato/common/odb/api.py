@@ -408,9 +408,6 @@ class PoolStore:
         with self._lock:
             if enforce_is_active:
                 wrapper = self.wrappers[name]
-                print()
-                print(222, wrapper.config)
-                print()
                 if wrapper.config.get('is_active', True):
                     return wrapper
                 raise Inactive(name)

@@ -16,6 +16,13 @@ from zato.common.crypto.api import ServerCryptoManager
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from bunch import Bunch
+    from zato.common.typing_ import callable_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -28,12 +35,23 @@ class IPCServerConfig(AuxServerConfig):
 # ################################################################################################################################
 
 class IPCServer(AuxServer):
+    callback_func: 'callable_'
     needs_logging_setup = False
     cid_prefix = 'zipc'
     server_type = 'IPCServer'
     conf_file_name = 'server.conf'
     config_class = AuxServerConfig
     crypto_manager_class = ServerCryptoManager
+
+    def on_ipc_msg_SERVER_IPC_INVOKE(self, msg:'Bunch') -> 'str':
+        return self.config.callback_func(msg)
+
+# ################################################################################################################################
+
+    def get_action_func_impl(self, action_name:'str') -> 'callable_':
+        func_name = 'on_ipc_msg_{}'.format(action_name)
+        func = getattr(self, func_name)
+        return func
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,9 +61,13 @@ def main():
     # stdlib
     import os
 
-    bind_port = 31215
+    def my_callback(msg:'Bunch') -> 'str':
+        return 'Hello'
+
+    bind_port = 27050
     root_dir = os.environ['Zato_Test_Server_Root_Dir']
-    IPCServer.start(root_dir=root_dir, bind_port=bind_port)
+
+    IPCServer.start(root_dir=root_dir, bind_port=bind_port, callback_func=my_callback)
 
 # ################################################################################################################################
 # ################################################################################################################################
