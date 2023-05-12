@@ -88,7 +88,7 @@ wsx_socket_timeout = _ping_interval + (_ping_interval * 0.1)
 # ################################################################################################################################
 
 class Default:
-    ResponseWaitTime = 5 # How many seconds to wait for responses
+    ResponseWaitTime = os.environ.get('Zato_WSX_Response_Wait_Time') or 5 # How many seconds to wait for responses
     MaxConnectAttempts = 1234567890
     MaxWaitTime = 999_999_999
 
