@@ -285,7 +285,7 @@ class AuxServer:
         try:
 
             # Assign a new cid
-            cid = '{}'.format(self.cid_prefix, new_cid())
+            cid = '{}{}'.format(self.cid_prefix, new_cid())
 
             # Get the contents of our request ..
             request = env['wsgi.input'].read()

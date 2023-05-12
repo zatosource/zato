@@ -43,7 +43,7 @@ def main():
     # stdlib
     import os
 
-    bind_port = 27050
+    bind_port = 31215
     root_dir = os.environ['Zato_Test_Server_Root_Dir']
     IPCServer.start(root_dir=root_dir, bind_port=bind_port)
 
