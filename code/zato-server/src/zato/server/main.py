@@ -371,7 +371,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     # Assigned here because it is a circular dependency
     odb_manager.parallel_server = server
 
-    stop_after = options.get('stop_after') or os.environ.get('ZATO_STOP_AFTER')
+    stop_after = options.get('stop_after') or os.environ.get('Zato_Stop_After')  or os.environ.get('ZATO_STOP_AFTER')
     if stop_after:
         stop_after = int(stop_after)
 
