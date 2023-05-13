@@ -80,6 +80,7 @@ class IPCAPI:
 
     def start_server(
         self,
+        pid,
         base_dir,    # type: str
         *,
         username='', # type: str
@@ -93,14 +94,15 @@ class IPCAPI:
             return 'Hello'
 
         bind_port = 27050
-        base_dir = os.environ['Zato_Test_Server_Root_Dir']
+        server_type_suffix = f':{pid}'
 
         IPCServer.start(
             base_dir=base_dir,
             bind_port=bind_port,
             username=username,
             password=password,
-            callback_func=my_callback
+            callback_func=my_callback,
+            server_type_suffix=server_type_suffix
         )
 
 # ################################################################################################################################

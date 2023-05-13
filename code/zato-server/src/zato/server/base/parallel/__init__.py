@@ -1053,7 +1053,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             _ipc_password_key = IPC.Credentials.Password_Key
             ipc_password = os.environ[_ipc_password_key]
             ipc_password = self.decrypt(ipc_password)
-            self.ipc_api.start_server(self.base_dir, username=IPC.Credentials.Username, password=ipc_password)
+            self.ipc_api.start_server(
+                self.pid,
+                self.base_dir,
+                username=IPC.Credentials.Username,
+                password=ipc_password
+            )
 
         if is_posix:
             connector_config_ipc = cast_('ConnectorConfigIPC', self.connector_config_ipc)

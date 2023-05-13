@@ -198,6 +198,7 @@ class AuxServer:
         username='',           # type: str
         password='',           # type: str
         callback_func=None,    # type: callnone
+        server_type_suffix=''  # type: str
     ) -> 'None':
 
         # Functionality that needs to run before configuration is created
@@ -226,6 +227,7 @@ class AuxServer:
         config.password = password
 
         config.callback_func = callback_func
+        config.server_type = config.server_type + server_type_suffix
 
         # This is optional
         if bind_port:
