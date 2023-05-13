@@ -24,6 +24,7 @@ from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.util.api import as_bool, absjoin, get_config, new_cid, set_up_logging
+from zato.common.crypto.api import CryptoManager
 from zato.common.util.json_ import json_loads
 
 # ################################################################################################################################
@@ -54,6 +55,8 @@ class AuxServerConfig:
     """ Encapsulates configuration of various server-related layers.
     """
     odb: 'ODBManager'
+    username: 'str'
+    password: 'str'
     server_type: 'str'
     callback_func: 'callable_'
     conf_file_name: 'str'
@@ -74,8 +77,6 @@ class AuxServerConfig:
         repo_location,  # type: str
         conf_file_name, # type: str
         crypto_manager_class, # type: type_[CryptoManager]
-        *,
-        needs_odb=True, # type: bool
     ) -> 'AuxServerConfig':
 
         # Zato
@@ -217,6 +218,12 @@ class AuxServer:
             class_.conf_file_name,
             class_.crypto_manager_class,
         )
+
+        username = username or 'ipc.username.not.set.' + CryptoManager.generate_secret().decode('utf8')
+        password = password or 'ipc.password.not.set.' + CryptoManager.generate_secret().decode('utf8')
+
+        config.username = username
+        config.password = password
 
         config.callback_func = callback_func
 
