@@ -1126,6 +1126,10 @@ class ContentType:
 
 class IPC:
 
+    class Credentials:
+        Username = 'zato.server.ipc'
+        Password_Key = 'Zato_Server_IPC_Password'
+
     class ACTION:
         INVOKE_SERVICE = 'invoke-service'
         INVOKE_WORKER_STORE = 'invoke-worker-store'

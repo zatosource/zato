@@ -63,11 +63,28 @@ class IPCAPI:
     """
     pid: 'int'
     server: 'IPCServer'
+    username: 'str'
+    password: 'str'
     on_message_callback: 'callable_'
+
+    def __init__(self) -> 'None':
+        self.username = 'ipc'
+        self.password = ''
 
 # ################################################################################################################################
 
-    def start_server(self, base_dir:'str') -> 'None':
+    def set_password(self, password:'str') -> 'None':
+        self.password = password
+
+# ################################################################################################################################
+
+    def start_server(
+        self,
+        base_dir,    # type: str
+        *,
+        username='', # type: str
+        password='', # type: str
+    ) -> 'None':
 
         # stdlib
         import os
@@ -78,7 +95,13 @@ class IPCAPI:
         bind_port = 27050
         base_dir = os.environ['Zato_Test_Server_Root_Dir']
 
-        IPCServer.start(base_dir=base_dir, bind_port=bind_port, callback_func=my_callback)
+        IPCServer.start(
+            base_dir=base_dir,
+            bind_port=bind_port,
+            username=username,
+            password=password,
+            callback_func=my_callback
+        )
 
 # ################################################################################################################################
 
@@ -139,8 +162,8 @@ class IPCAPI:
         """ Invokes a service through IPC, synchronously or in background. If target_pid is an exact PID then this one worker
         process will be invoked if it exists at all.
         """
-        zzz 'dpfk [d[ df df[ vire -gir-g34'; gf34? G>
-
+        service
+        '''
         # Create a FIFO pipe to receive replies to come through
         fifo_path = os.path.join(tempfile.tempdir, 'zato-ipc-fifo-{}'.format(uuid4().hex))
         os.mkfifo(fifo_path, fifo_create_mode)
@@ -188,6 +211,7 @@ class IPCAPI:
             logger.warning(format_exc())
         finally:
             os.remove(fifo_path)
+        '''
 
 # ################################################################################################################################
 # ################################################################################################################################

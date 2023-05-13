@@ -194,7 +194,9 @@ class AuxServer:
         base_dir=None,         # type: strnone
         bind_host='localhost', # type: str
         bind_port=None,        # type: intnone
-        callback_func=None     # type: callnone
+        username='',           # type: str
+        password='',           # type: str
+        callback_func=None,    # type: callnone
     ) -> 'None':
 
         # Functionality that needs to run before configuration is created

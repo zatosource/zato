@@ -51,7 +51,7 @@ Logger._log = logging_Logger_log # type: ignore
 import yaml
 
 # Zato
-from zato.common.api import OS_Env, SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
+from zato.common.api import IPC, OS_Env, SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ipaddress_ import get_preferred_ip
@@ -59,6 +59,7 @@ from zato.common.kvdb.api import KVDB
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
 from zato.common.simpleio_ import get_sio_server_config
+from zato.common.typing_ import cast_
 from zato.common.util.api import absjoin, asbool, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.env import populate_environment_from_file
@@ -77,7 +78,7 @@ from zato.sso.util import new_user_id, normalize_sso_config
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, dictnone
+    from zato.common.typing_ import any_, callable_, dictnone
     from zato.server.ext.zunicorn.config import Config as ZunicornConfig
 
 # ################################################################################################################################
@@ -405,7 +406,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.stop_after = stop_after # type: ignore
     server.is_sso_enabled = server.fs_server_config.component_enabled.sso
     if server.is_sso_enabled:
-        server.sso_api = SSOAPI(server, sso_config, None, crypto_manager.encrypt, server.decrypt,
+        server.sso_api = SSOAPI(server, sso_config, cast_('callable_', None), crypto_manager.encrypt, server.decrypt,
             crypto_manager.hash_secret, crypto_manager.verify_hash, new_user_id)
 
     server.return_tracebacks = asbool(server_config.misc.get('return_tracebacks', True))
@@ -413,6 +414,19 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
+
+    # For IPC communication
+    ipc_password = crypto_manager.generate_secret()
+    ipc_password = ipc_password.decode('utf8')
+
+    # .. this is for our own process ..
+    server.set_ipc_password(ipc_password)
+
+    # .. this is for other processes.
+    ipc_password_encrypted = crypto_manager.encrypt(ipc_password)
+    ipc_password_encrypted = ipc_password_encrypted.decode('utf8')
+    _ipc_password_key = IPC.Credentials.Password_Key
+    os.environ[_ipc_password_key] = ipc_password_encrypted
 
     profiler_enabled = server_config.get('profiler', {}).get('enabled', False)
     sentry_config = server_config.get('sentry') or {}
