@@ -33,8 +33,8 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import DATA_FORMAT, default_internal_modules, HotDeploy, KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, \
-    SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
+from zato.common.api import DATA_FORMAT, default_internal_modules, HotDeploy, IPC, KVDB as CommonKVDB, RATE_LIMIT, \
+    SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
@@ -286,6 +286,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # The main config store
         self.config = ConfigStore()
+
+# ################################################################################################################################
+
+    def set_ipc_password(self, password:'str') -> 'None':
+        password = self.decrypt(password)
 
 # ################################################################################################################################
 
@@ -1045,7 +1050,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Initialize per-process IPC tasks
         if not self.is_first_worker:
-            self.ipc_api.start_server(self.base_dir)
+            _ipc_password_key = IPC.Credentials.Password_Key
+            ipc_password = os.environ[_ipc_password_key]
+            ipc_password = self.decrypt(ipc_password)
+            self.ipc_api.start_server(self.base_dir, username=IPC.Credentials.Username, password=ipc_password)
 
         if is_posix:
             connector_config_ipc = cast_('ConnectorConfigIPC', self.connector_config_ipc)
