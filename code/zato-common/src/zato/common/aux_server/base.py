@@ -193,8 +193,8 @@ class AuxServer:
         class_,            # type 'type_[AuxServer]
         *,
         base_dir=None,         # type: strnone
-        bind_host='localhost', # type: str
-        bind_port=None,        # type: intnone
+        bind_host='127.0.0.1', # type: str
+        bind_port=-1,          # type: int
         username='',           # type: str
         password='',           # type: str
         callback_func=None,    # type: callnone
