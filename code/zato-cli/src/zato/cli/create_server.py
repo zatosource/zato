@@ -49,6 +49,8 @@ gunicorn_graceful_timeout=1
 debugger_enabled=False
 debugger_host=0.0.0.0
 debugger_port=5678
+ipc_host=127.0.0.1
+ipc_port_start=17050
 
 work_dir=../../work
 
