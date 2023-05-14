@@ -226,7 +226,8 @@ class AuxServer:
         config.username = username
         config.password = password
 
-        config.callback_func = callback_func
+        if callback_func:
+            config.callback_func = callback_func
         config.server_type = config.server_type + server_type_suffix
 
         # This is optional
