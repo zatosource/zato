@@ -81,10 +81,12 @@ class IPCAPI:
     def start_server(
         self,
         pid,
-        base_dir,    # type: str
+        base_dir,     # type: str
         *,
-        username='', # type: str
-        password='', # type: str
+        bind_host='', # type: str
+        bind_port='', # type: str
+        username='',  # type: str
+        password='',  # type: str
     ) -> 'None':
 
         # stdlib
@@ -93,11 +95,11 @@ class IPCAPI:
         def my_callback(msg:'Bunch') -> 'str':
             return 'Hello'
 
-        bind_port = 27050
         server_type_suffix = f':{pid}'
 
         IPCServer.start(
             base_dir=base_dir,
+            bind_host=bind_host,
             bind_port=bind_port,
             username=username,
             password=password,
