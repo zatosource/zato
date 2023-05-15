@@ -1086,13 +1086,21 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # .. which we can extract ..
         ipc_password = os.environ[_ipc_password_key]
 
-        # .. now, decrypt ..
+        # .. and decrypt it ..
         ipc_password = self.decrypt(ipc_password)
 
+        # .. this is the same for all processes ..
+        bind_host = self.fs_server_config.main.ipc_host
+
+        # .. this is set to a different value for each process ..
+        bind_port = self.fs_server_config.main.ipc_port_start + self.process_idx
+
         # .. finally, the IPC server can be started now.
-        self.ipc_api.start_server(
+        spawn_greenlet(self.ipc_api.start_server,
             self.pid,
             self.base_dir,
+            bind_host=bind_host,
+            bind_port=bind_port,
             username=IPC.Credentials.Username,
             password=ipc_password
         )
