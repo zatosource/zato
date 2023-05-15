@@ -201,6 +201,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.ipc_api = IPCAPI()
         self.fifo_response_buffer_size = -1
         self.is_first_worker = False
+        self.process_idx = -1
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
         self.connector_config_ipc = ConnectorConfigIPC()
@@ -787,7 +788,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.pid = os.getpid()
 
         # This also cannot be done in __init__ which doesn't have this variable yet
-        self.is_first_worker = int(os.environ['ZATO_SERVER_WORKER_IDX']) == 0
+        self.process_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
+        self.is_first_worker = self.process_idx == 0
 
         # Used later on
         use_tls = asbool(self.fs_server_config.crypto.use_tls)
@@ -1048,17 +1050,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if self.stop_after:
             _ = spawn_greenlet(self._stop_after_timeout)
 
-        # Initialize per-process IPC tasks
-        if not self.is_first_worker:
-            _ipc_password_key = IPC.Credentials.Password_Key
-            ipc_password = os.environ[_ipc_password_key]
-            ipc_password = self.decrypt(ipc_password)
-            self.ipc_api.start_server(
-                self.pid,
-                self.base_dir,
-                username=IPC.Credentials.Username,
-                password=ipc_password
-            )
+        # Per-process IPC tasks
+        self.init_ipc()
 
         if is_posix:
             connector_config_ipc = cast_('ConnectorConfigIPC', self.connector_config_ipc)
@@ -1082,6 +1075,27 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 self.handle_enmasse_auto_from()
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def init_ipc(self):
+
+        # Name of the environment key that points to our password ..
+        _ipc_password_key = IPC.Credentials.Password_Key
+
+        # .. which we can extract ..
+        ipc_password = os.environ[_ipc_password_key]
+
+        # .. now, decrypt ..
+        ipc_password = self.decrypt(ipc_password)
+
+        # .. finally, the IPC server can be started now.
+        self.ipc_api.start_server(
+            self.pid,
+            self.base_dir,
+            username=IPC.Credentials.Username,
+            password=ipc_password
+        )
 
 # ################################################################################################################################
 
