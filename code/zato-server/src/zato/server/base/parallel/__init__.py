@@ -52,8 +52,8 @@ from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
-    fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
-    register_diag_handlers
+    fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, register_diag_handlers, \
+    save_ipc_pid_port, spawn_greenlet, StaticConfig
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
@@ -1095,7 +1095,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # .. this is set to a different value for each process ..
         bind_port = self.fs_server_config.main.ipc_port_start + self.process_idx
 
-        # .. finally, the IPC server can be started now.
+        # .. now, the IPC server can be started ..
         spawn_greenlet(self.ipc_api.start_server,
             self.pid,
             self.base_dir,
@@ -1104,6 +1104,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             username=IPC.Credentials.Username,
             password=ipc_password
         )
+
+        # .. we can now store the information about what IPC port to use with this PID.
+        save_ipc_pid_port(self.cluster_name, self.name, self.pid, bind_port)
 
 # ################################################################################################################################
 
@@ -1410,11 +1413,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def invoke_by_pid(self, service:'str', request:'any_', target_pid:'int', *args:'any_', **kwargs:'any_') -> 'any_':
+    def invoke_by_pid(self, service:'str', request:'any_', target_pid:'int', timeout:'int', **kwargs:'any_') -> 'any_':
         """ Invokes a service in a worker process by the latter's PID.
         """
-        return self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid,
-            self.fifo_response_buffer_size, *args, **kwargs)
+        return self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid, timeout)
 
 # ################################################################################################################################
 

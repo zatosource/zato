@@ -32,7 +32,7 @@ from zato.common.api import IPC
 from zato.common.ipc.publisher import Publisher
 from zato.common.ipc.server import IPCServer
 from zato.common.ipc.subscriber import Subscriber
-from zato.common.util.api import spawn_greenlet
+from zato.common.util.api import load_ipc_pid_port
 from zato.common.util.file_system import fs_safe_name
 
 # ################################################################################################################################
@@ -161,12 +161,20 @@ class IPCAPI:
 
 # ################################################################################################################################
 
-    def invoke_by_pid(self, service, payload, cluster_name, server_name, target_pid,
-        fifo_response_buffer_size, timeout=90, is_async=False, skip_response_elem=False):
-        """ Invokes a service through IPC, synchronously or in background. If target_pid is an exact PID then this one worker
-        process will be invoked if it exists at all.
+    def invoke_by_pid(
+        self,
+        service,      # type: str
+        request,      # type: str
+        cluster_name, # type: str
+        server_name,  # type: str
+        target_pid,   # type: int
+        timeout=90    # type: int
+    ) -> 'any_':
+        """ Invokes a service in a specific process synchronously through IPC.
         """
-        service
+        ipc_port = load_ipc_pid_port(cluster_name, server_name, target_pid)
+        ipc_port
+        ipc_port
         '''
         # Create a FIFO pipe to receive replies to come through
         fifo_path = os.path.join(tempfile.tempdir, 'zato-ipc-fifo-{}'.format(uuid4().hex))
