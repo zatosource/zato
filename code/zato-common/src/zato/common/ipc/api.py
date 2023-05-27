@@ -10,15 +10,17 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.common.api import IPC
+from zato.common.ipc.client import IPCClient
 from zato.common.ipc.server import IPCServer
-from zato.common.util.api import load_ipc_pid_port
+from zato.common.util.api import fs_safe_name, load_ipc_pid_port
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, callable_
+    from zato.common.typing_ import anydict, callable_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,7 +40,7 @@ class IPCAPI:
     on_message_callback: 'callable_'
 
     def __init__(self) -> 'None':
-        self.username = 'ipc'
+        self.username = IPC.Credentials.Username
         self.password = ''
 
 # ################################################################################################################################
@@ -62,6 +64,9 @@ class IPCAPI:
         def my_callback(msg:'Bunch') -> 'str':
             return 'Hello'
 
+        username = username or self.username
+        password = password or self.password
+
         server_type_suffix = f':{pid}'
 
         IPCServer.start(
@@ -84,9 +89,12 @@ class IPCAPI:
         server_name,  # type: str
         target_pid,   # type: int
         timeout=90    # type: int
-    ) -> 'any_':
+    ) -> 'anydict':
         """ Invokes a service in a specific process synchronously through IPC.
         """
+
+        # This is constant
+        ipc_host = '127.0.0.1'
 
         # Get the port that we can find the PID listening on
         ipc_port = load_ipc_pid_port(cluster_name, server_name, target_pid)
@@ -95,17 +103,14 @@ class IPCAPI:
         log_msg = f'Invoking {service} on {cluster_name}:{server_name}:{target_pid}-tcp:{ipc_port}'
         logger.info(log_msg)
 
-        ipc_port
-        ipc_port
-        '''
-        # Create a FIFO pipe to receive replies to come through
-        fifo_path = os.path.join(tempfile.tempdir, 'zato-ipc-fifo-{}'.format(uuid4().hex))
-        os.mkfifo(fifo_path, fifo_create_mode)
+        # Use this URL path to be able to easily find requests in logs
+        url_path = f'{cluster_name}:{server_name}:{target_pid}-tcp:{ipc_port}-service:{service}'
+        url_path = fs_safe_name(url_path)
 
-        logger.info('Invoking %s on %s (%s:%s) (%s) with %s',
-            service, cluster_name, server_name, target_pid, fifo_path, payload)
-            '''
-
+        client = IPCClient(ipc_host, ipc_port, IPC.Credentials.Username, self.password)
+        response = client.invoke(service, request, url_path, timeout=timeout)
+        response
+        return response
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -262,6 +262,14 @@ class AuxServer:
         username = request.get('username') or ''
         password = request.get('password') or ''
 
+        print()
+        print(111, self.config.username)
+        print(222, self.config.password)
+        print()
+        print(333, username)
+        print(444, password)
+        print()
+
         if not is_string_equal(self.config.username, username):
             logger.info('Invalid IPC username')
             raise Exception('Invalid IPC username or password')
