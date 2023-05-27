@@ -17,6 +17,7 @@ from zato.common.util.api import load_ipc_pid_port
 # ################################################################################################################################
 
 if 0:
+    from bunch import Bunch
     from zato.common.typing_ import any_, callable_
 
 # ################################################################################################################################
@@ -49,17 +50,14 @@ class IPCAPI:
 
     def start_server(
         self,
-        pid,
+        pid,          # type: str
         base_dir,     # type: str
         *,
         bind_host='', # type: str
-        bind_port='', # type: str
+        bind_port=-1, # type: int
         username='',  # type: str
         password='',  # type: str
     ) -> 'None':
-
-        # stdlib
-        import os
 
         def my_callback(msg:'Bunch') -> 'str':
             return 'Hello'
@@ -94,7 +92,7 @@ class IPCAPI:
         ipc_port = load_ipc_pid_port(cluster_name, server_name, target_pid)
 
         # Log what we are about to do
-        log_msg = f'Invoking {service} on {cluster_name} ({server_name}:{target_pid}:{ipc_port})'
+        log_msg = f'Invoking {service} on {cluster_name}:{server_name}:{target_pid}-tcp:{ipc_port}'
         logger.info(log_msg)
 
         ipc_port
