@@ -248,6 +248,11 @@ class MessageFromServer:
         raise NotImplementedError('Must be implemented in subclasses')
 
 # ################################################################################################################################
+
+    def to_dict(self):
+        return {'id':self.id, 'timestamp':self.timestamp, 'data':self.data}
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ResponseFromServer(MessageFromServer):
@@ -830,16 +835,18 @@ if __name__ == '__main__':
 
     # stdlib
     import logging
+    import sys
 
     log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
-    logging.basicConfig(level=logging.DEBUG, format=log_format)
+    logging.basicConfig(level=logging.INFO, format=log_format)
 
     _cli_logger = logging.getLogger('zato')
 
     def on_request_from_zato(msg:'RequestFromServer') -> 'any_':
         try:
-            _cli_logger.info('Message from Zato received -> %s', msg)
-            return 'Hello'
+            _cli_logger.info('*' * 80)
+            _cli_logger.debug('Message from Zato received -> %s', msg.to_dict())
+            return [elem['data'] for elem in msg.data]
         except Exception:
             return format_exc()
 
@@ -852,8 +859,7 @@ if __name__ == '__main__':
     on_request_callback = on_request_from_zato
 
     # Test topic to use
-    topic_name1 = '/test1'
-    topic_name2 = '/test2'
+    topic_name1 = '/zato/demo/sample'
 
     config = Config()
     config.address = address
@@ -875,7 +881,7 @@ if __name__ == '__main__':
 
     # .. and run sample code now ..
 
-    is_subscriber = 1
+    is_subscriber = 'sub' in sys.argv
 
     if is_subscriber:
         client.subscribe(topic_name1)
@@ -895,6 +901,7 @@ if __name__ == '__main__':
             sleep(0.2)
     except KeyboardInterrupt:
         client.stop()
+
 
 # ################################################################################################################################
 # ################################################################################################################################

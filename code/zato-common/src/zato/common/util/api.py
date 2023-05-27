@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -40,7 +40,7 @@ from pathlib import Path
 from pprint import pprint as _pprint, PrettyPrinter
 from string import Template
 from subprocess import Popen, PIPE
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, gettempdir
 from threading import current_thread
 from time import sleep
 from traceback import format_exc
@@ -121,7 +121,7 @@ from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_pin
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
 from zato.common.util.logging_ import ColorFormatter
-from zato.common.util.open_ import open_r
+from zato.common.util.open_ import open_r, open_w
 from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_request
 
 # ################################################################################################################################
@@ -173,6 +173,11 @@ get_free_port = get_free_port
 is_port_taken = is_port_taken
 wait_until_port_free = wait_until_port_free
 wait_until_port_taken = wait_until_port_taken
+
+# ################################################################################################################################
+
+class ModuleCtx:
+    PID_To_Port_Pattern = 'zato-ipc-port-{cluster_name}-{server_name}-{pid}.txt'
 
 # ################################################################################################################################
 
@@ -2021,5 +2026,56 @@ def tabulate_dictlist(data:'dictlist', skip_keys:'listnone'=None) -> 'str':
     col_align = ('left',) * len_keys
 
     return tabulate(data, headers='keys', tablefmt='pretty', colalign=col_align)
+
+# ################################################################################################################################
+
+def get_ipc_pid_port_path(cluster_name:'str', server_name:'str', pid:'int') -> 'str':
+
+    # This is where the file name itself ..
+    file_name = ModuleCtx.PID_To_Port_Pattern.format(
+        cluster_name=cluster_name,
+        server_name=server_name,
+        pid=pid,
+    )
+
+    # .. make sure the name is safe to use in the file-system ..
+    file_name = fs_safe_name(file_name)
+
+    # .. now, we can combine it with a temporary directory ..
+    tmp_dir = gettempdir()
+    full_path = os.path.join(tmp_dir, file_name)
+
+    # .. and return the result to our caller.
+    return full_path
+
+# ################################################################################################################################
+
+def save_ipc_pid_port(cluster_name:'str', server_name:'str', pid:'int', port:'int') -> 'None':
+
+    # Make sure we store a string ..
+    port = str(port)
+
+    # .. get a path where we can save it ..
+    path = get_ipc_pid_port_path(cluster_name, server_name, pid)
+
+    # .. and do save it now.
+    with open_w(path) as f:
+        _ = f.write(port)
+        f.flush()
+
+# ################################################################################################################################
+
+def load_ipc_pid_port(cluster_name:'str', server_name:'str', pid:'int') -> 'int':
+
+    # Get a path to load the port from ..
+    path = get_ipc_pid_port_path(cluster_name, server_name, pid)
+
+    # .. load it now ..
+    with open_r(path) as f:
+        data = f.read()
+        data = data.strip()
+        out = int(data)
+
+    return out
 
 # ################################################################################################################################

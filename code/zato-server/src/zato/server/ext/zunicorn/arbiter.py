@@ -522,7 +522,7 @@ class Arbiter:
             self.pidfile.create(self.pid)
 
         # set new proc_name
-        util._setproctitle("master [%s]" % self.proc_name)
+        util._setproctitle("main [%s]" % self.proc_name)
 
         # spawn new workers
         for idx, _ in enumerate(range(self.cfg.workers)):
