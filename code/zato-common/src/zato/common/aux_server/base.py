@@ -21,7 +21,7 @@ from gevent.pywsgi import WSGIServer
 # Zato
 from zato.common.api import ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
-from zato.common.crypto.api import CryptoManager
+from zato.common.crypto.api import CryptoManager, is_string_equal
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.util.api import as_bool, absjoin, get_config, new_cid, set_up_logging
 from zato.common.crypto.api import CryptoManager
@@ -257,16 +257,31 @@ class AuxServer:
 
 # ################################################################################################################################
 
-    def handle_api_request(self, request:'bytes') -> 'any_':
+    def _check_credentials(self, request:'Bunch') -> 'None':
 
-        # Log what we are about to do
-        logger.info('Handling API request -> `%s`', request)
+        username = request.get('username') or ''
+        password = request.get('password') or ''
+
+        if not is_string_equal(self.config.username, username):
+            logger.info('Invalid IPC username')
+            raise Exception('Invalid IPC username or password')
+
+        if not is_string_equal(self.config.password, password):
+            logger.info('Invalid IPC password')
+            raise Exception('Invalid IPC username or password')
+
+# ################################################################################################################################
+
+    def handle_api_request(self, request:'bytes') -> 'any_':
 
         # Convert to a Python dict ..
         request = json_loads(request)
 
         # .. callback functions expect Bunch instances on input ..
         request = Bunch(request) # type: ignore
+
+        # .. first, check credentials ..
+        self._check_credentials(request)
 
         # .. look up the action we need to invoke ..
         action = request.get('action') # type: ignore
