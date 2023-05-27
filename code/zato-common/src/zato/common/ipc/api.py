@@ -19,7 +19,6 @@ from zato.common.util.api import fs_safe_name, load_ipc_pid_port
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
     from zato.common.typing_ import anydict, callable_
 
 # ################################################################################################################################
@@ -52,17 +51,15 @@ class IPCAPI:
 
     def start_server(
         self,
-        pid,          # type: str
-        base_dir,     # type: str
+        pid,           # type: str
+        base_dir,      # type: str
         *,
-        bind_host='', # type: str
-        bind_port=-1, # type: int
-        username='',  # type: str
-        password='',  # type: str
+        bind_host='',  # type: str
+        bind_port=-1,  # type: int
+        username='',   # type: str
+        password='',   # type: str
+        callback_func, # type: callable_
     ) -> 'None':
-
-        def my_callback(msg:'Bunch') -> 'str':
-            return 'Hello'
 
         username = username or self.username
         password = password or self.password
@@ -75,7 +72,7 @@ class IPCAPI:
             bind_port=bind_port,
             username=username,
             password=password,
-            callback_func=my_callback,
+            callback_func=callback_func,
             server_type_suffix=server_type_suffix
         )
 

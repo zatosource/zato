@@ -24,14 +24,13 @@ from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import CryptoManager, is_string_equal
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.util.api import as_bool, absjoin, get_config, new_cid, set_up_logging
-from zato.common.crypto.api import CryptoManager
 from zato.common.util.json_ import json_loads
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, byteslist, callable_, callnone, intnone, strnone, type_
+    from zato.common.typing_ import any_, anydict, byteslist, callable_, callnone, strnone, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -122,7 +121,6 @@ class AuxServerConfig:
             if server_password and server_password.startswith('gA'):
                 server_password = config.crypto_manager.decrypt(server_password)
                 config.main.server.server_password = server_password
-
 
         sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
 
@@ -261,14 +259,6 @@ class AuxServer:
 
         username = request.get('username') or ''
         password = request.get('password') or ''
-
-        print()
-        print(111, self.config.username)
-        print(222, self.config.password)
-        print()
-        print(333, username)
-        print(444, password)
-        print()
 
         if not is_string_equal(self.config.username, username):
             logger.info('Invalid IPC username')
