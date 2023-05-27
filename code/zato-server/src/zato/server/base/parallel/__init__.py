@@ -292,6 +292,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def set_ipc_password(self, password:'str') -> 'None':
         password = self.decrypt(password)
+        self.ipc_api.password = password
 
 # ################################################################################################################################
 
