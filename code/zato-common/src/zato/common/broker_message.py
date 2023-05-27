@@ -498,8 +498,11 @@ class SSO(Constants):
 
 class EVENT(Constants):
     code_start = 107400
-
     PUSH = ValueConstant('')
+
+class SERVER_IPC(Constants):
+    code_start = 107600
+    INVOKE = ValueConstant('')
 
 code_to_name = {}
 
