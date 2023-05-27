@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,6 +18,7 @@ from bunch import bunchify
 
 # cryptography
 from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives.constant_time import bytes_eq
 
 # Python 2/3 compatibility
 from builtins import bytes
@@ -29,8 +30,28 @@ from zato.common.ext.configobj_ import ConfigObj
 from zato.common.json_internal import loads
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import strbytes
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def is_string_equal(data1:'strbytes', data2:'strbytes') -> 'bool':
+
+    if isinstance(data1, str):
+        data1 = data1.encode('utf8')
+
+    if isinstance(data2, str):
+        data2 = data2.encode('utf8')
+
+    return bytes_eq(data1, data2)
 
 # ################################################################################################################################
 

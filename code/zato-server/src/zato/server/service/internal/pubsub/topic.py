@@ -677,6 +677,8 @@ class GetTopicMetadata(AdminService):
         # .. look up keys in RAM ..
         result = self.server.pub_sub_metadata.get_many(topic_key_list)
 
+        self.logger.info('Returning topic metadata -> %s', result)
+
         if result:
             self.response.payload = result
 

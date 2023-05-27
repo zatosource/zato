@@ -25,6 +25,7 @@ reportUnsupportedDunderAll  = "error"
 reportUntypedFunctionDecorator    = "error"
 reportWildcardImportFromLibrary   = "error"
 reportImplicitStringConcatenation = "error"
+reportSelfClsParameterName = "none"
 
 reportUnknownLambdaType    = "none"
 reportUnknownMemberType    = "none"
