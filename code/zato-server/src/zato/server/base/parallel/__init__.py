@@ -1103,7 +1103,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             bind_host=bind_host,
             bind_port=bind_port,
             username=IPC.Credentials.Username,
-            password=ipc_password
+            password=ipc_password,
+            callback_func=self.on_ipc_invoke_callback,
         )
 
         # .. we can now store the information about what IPC port to use with this PID.
@@ -1396,12 +1397,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     'pid_data': None,
                     'error_info': None
                 }
-
                 try:
-                    is_ok, pid_data = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
-                    response['is_ok'] = is_ok
-                    response['pid_data' if is_ok else 'error_info'] = pid_data
-
+                    pid_data = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
+                    response['pid_data'] = pid_data
                 except Exception:
                     e = format_exc()
                     response['error_info'] = e
@@ -1438,6 +1436,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 data_format=kwargs.pop('data_format', DATA_FORMAT.DICT),
                 serialize=kwargs.pop('serialize', True),
                 *args, **kwargs)
+
+# ################################################################################################################################
+
+    def on_ipc_invoke_callback(self, msg:'Bunch') -> 'anydict':
+
+        service = msg['service']
+        data    = msg['data']
+
+        return self.invoke(service, data)
 
 # ################################################################################################################################
 
