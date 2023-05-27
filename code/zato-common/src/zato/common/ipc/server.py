@@ -59,15 +59,31 @@ class IPCServer(AuxServer):
 def main():
 
     # stdlib
+    import logging
     import os
+
+    log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+    logging.basicConfig(level=logging.DEBUG, format=log_format)
 
     def my_callback(msg:'Bunch') -> 'str':
         return 'Hello'
 
-    bind_port = 27050
+    bind_host = '127.0.0.1'
+    bind_port = 17050
     base_dir = os.environ['Zato_Test_Server_Root_Dir']
+    username = 'test.username'
+    password = 'test.password'
+    server_type_suffix = ':test'
 
-    IPCServer.start(base_dir=base_dir, bind_port=bind_port, callback_func=my_callback)
+    IPCServer.start(
+        base_dir=base_dir,
+        bind_host=bind_host,
+        bind_port=bind_port,
+        username=username,
+        password=password,
+        callback_func=my_callback,
+        server_type_suffix=server_type_suffix
+    )
 
 # ################################################################################################################################
 # ################################################################################################################################
