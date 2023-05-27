@@ -33,8 +33,8 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import DATA_FORMAT, default_internal_modules, HotDeploy, KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, \
-    SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
+from zato.common.api import DATA_FORMAT, default_internal_modules, HotDeploy, IPC, KVDB as CommonKVDB, RATE_LIMIT, \
+    SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
@@ -52,8 +52,8 @@ from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
-    fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
-    register_diag_handlers
+    fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, register_diag_handlers, \
+    save_ipc_pid_port, spawn_greenlet, StaticConfig
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
@@ -201,6 +201,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.ipc_api = IPCAPI()
         self.fifo_response_buffer_size = -1
         self.is_first_worker = False
+        self.process_idx = -1
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
         self.connector_config_ipc = ConnectorConfigIPC()
@@ -286,6 +287,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # The main config store
         self.config = ConfigStore()
+
+# ################################################################################################################################
+
+    def set_ipc_password(self, password:'str') -> 'None':
+        password = self.decrypt(password)
+        self.ipc_api.password = password
 
 # ################################################################################################################################
 
@@ -782,7 +789,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.pid = os.getpid()
 
         # This also cannot be done in __init__ which doesn't have this variable yet
-        self.is_first_worker = int(os.environ['ZATO_SERVER_WORKER_IDX']) == 0
+        self.process_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
+        self.is_first_worker = self.process_idx == 0
 
         # Used later on
         use_tls = asbool(self.fs_server_config.crypto.use_tls)
@@ -1039,17 +1047,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if self.has_posix_ipc:
                 self._populate_connector_config(subprocess_start_config)
 
-        # IPC
-        self.ipc_api.name = self.ipc_api.get_endpoint_name(self.cluster_name, self.name, self.pid)
-        self.ipc_api.pid = self.pid
-        self.ipc_api.on_message_callback = self.worker_store.on_ipc_message
-
         # Stops the environment after N seconds
         if self.stop_after:
             _ = spawn_greenlet(self._stop_after_timeout)
 
+        # Per-process IPC tasks
+        self.init_ipc()
+
         if is_posix:
-            _ = spawn_greenlet(self.ipc_api.run)
             connector_config_ipc = cast_('ConnectorConfigIPC', self.connector_config_ipc)
 
             if self.component_enabled['stats']:
@@ -1071,6 +1076,39 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 self.handle_enmasse_auto_from()
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def init_ipc(self):
+
+        # Name of the environment key that points to our password ..
+        _ipc_password_key = IPC.Credentials.Password_Key
+
+        # .. which we can extract ..
+        ipc_password = os.environ[_ipc_password_key]
+
+        # .. and decrypt it ..
+        ipc_password = self.decrypt(ipc_password)
+
+        # .. this is the same for all processes ..
+        bind_host = self.fs_server_config.main.ipc_host
+
+        # .. this is set to a different value for each process ..
+        bind_port = self.fs_server_config.main.ipc_port_start + self.process_idx
+
+        # .. now, the IPC server can be started ..
+        spawn_greenlet(self.ipc_api.start_server,
+            self.pid,
+            self.base_dir,
+            bind_host=bind_host,
+            bind_port=bind_port,
+            username=IPC.Credentials.Username,
+            password=ipc_password,
+            callback_func=self.on_ipc_invoke_callback,
+        )
+
+        # .. we can now store the information about what IPC port to use with this PID.
+        save_ipc_pid_port(self.cluster_name, self.name, self.pid, bind_port)
 
 # ################################################################################################################################
 
@@ -1359,12 +1397,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     'pid_data': None,
                     'error_info': None
                 }
-
                 try:
-                    is_ok, pid_data = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
-                    response['is_ok'] = is_ok
-                    response['pid_data' if is_ok else 'error_info'] = pid_data
-
+                    pid_data = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
+                    response['pid_data'] = pid_data
                 except Exception:
                     e = format_exc()
                     response['error_info'] = e
@@ -1377,11 +1412,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def invoke_by_pid(self, service:'str', request:'any_', target_pid:'int', *args:'any_', **kwargs:'any_') -> 'any_':
+    def invoke_by_pid(self, service:'str', request:'any_', target_pid:'int', timeout:'int', **kwargs:'any_') -> 'any_':
         """ Invokes a service in a worker process by the latter's PID.
         """
-        return self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid,
-            self.fifo_response_buffer_size, *args, **kwargs)
+        return self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid, timeout)
 
 # ################################################################################################################################
 
@@ -1402,6 +1436,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 data_format=kwargs.pop('data_format', DATA_FORMAT.DICT),
                 serialize=kwargs.pop('serialize', True),
                 *args, **kwargs)
+
+# ################################################################################################################################
+
+    def on_ipc_invoke_callback(self, msg:'Bunch') -> 'anydict':
+
+        service = msg['service']
+        data    = msg['data']
+
+        return self.invoke(service, data)
 
 # ################################################################################################################################
 
@@ -1666,9 +1709,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if self.has_posix_ipc:
                 self.server_startup_ipc.close()
                 self.connector_config_ipc.close()
-
-            # Close ZeroMQ-based IPC
-            self.ipc_api.close()
 
             # WSX connections for this server cleanup
             self.cleanup_wsx(True)
