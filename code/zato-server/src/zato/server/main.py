@@ -80,6 +80,7 @@ if 0:
     from bunch import Bunch
     from zato.common.typing_ import any_, callable_, dictnone
     from zato.server.ext.zunicorn.config import Config as ZunicornConfig
+    callable_ = callable_
 
 # ################################################################################################################################
 # ################################################################################################################################
