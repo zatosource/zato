@@ -30,7 +30,7 @@ from zato.common.util.json_ import json_loads
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, byteslist, callable_, callnone, strnone, type_
+    from zato.common.typing_ import any_, anydict, byteslist, callable_, callnone, intnone, strnone, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -145,6 +145,7 @@ class AuxServer:
     conf_file_name: 'str'
     config_class: 'type_[AuxServerConfig]'
     crypto_manager_class: 'type_[CryptoManager]'
+    has_credentials: 'bool' = True
 
     def __init__(self, config:'AuxServerConfig') -> 'None':
         self.config = config
@@ -192,7 +193,7 @@ class AuxServer:
         *,
         base_dir=None,         # type: strnone
         bind_host='127.0.0.1', # type: str
-        bind_port=-1,          # type: int
+        bind_port=None,        # type: intnone
         username='',           # type: str
         password='',           # type: str
         callback_func=None,    # type: callnone
@@ -270,16 +271,17 @@ class AuxServer:
 
 # ################################################################################################################################
 
-    def handle_api_request(self, request:'bytes') -> 'any_':
+    def handle_api_request(self, data:'bytes') -> 'any_':
 
         # Convert to a Python dict ..
-        request = json_loads(request)
+        request = json_loads(data)
 
         # .. callback functions expect Bunch instances on input ..
         request = Bunch(request) # type: ignore
 
         # .. first, check credentials ..
-        self._check_credentials(request)
+        if self.has_credentials:
+            self._check_credentials(request)
 
         # .. look up the action we need to invoke ..
         action = request.get('action') # type: ignore
