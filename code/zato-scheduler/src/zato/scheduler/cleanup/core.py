@@ -174,7 +174,8 @@ class CleanupManager:
     def init(self):
 
         # Zato
-        from zato.scheduler.server import Config
+        from zato.common.crypto.api import SchedulerCryptoManager
+        from zato.scheduler.server import SchedulerServer, SchedulerServerConfig
 
         # Make sure we are in the same directory that the scheduler is in
         base_dir = os.path.join(self.repo_location, '..', '..')
@@ -182,7 +183,12 @@ class CleanupManager:
         os.chdir(base_dir)
 
         # Build our main configuration object
-        self.config = Config.from_repo_location(self.repo_location)
+        self.config = SchedulerServerConfig.from_repo_location(
+            SchedulerServer.server_type,
+            self.repo_location,
+            SchedulerServer.conf_file_name,
+            SchedulerCryptoManager
+        )
 
         # Configures a client to Zato servers
         self.zato_client = set_up_zato_client(self.config.main)
