@@ -343,7 +343,12 @@ class AuxServer:
             }
 
             # .. make sure that we return bytes representing a JSON object ..
-            return_data = dumps(return_data)
+            try:
+                return_data = dumps(return_data)
+            except TypeError as e:
+                e
+                e
+                return_data = '{}'
             return_data = return_data.encode('utf8')
 
             start_response(status_code, headers)
