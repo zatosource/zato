@@ -119,6 +119,11 @@ megabyte = 10 ** 6
 # ################################################################################################################################
 # ################################################################################################################################
 
+_ipc_timeout = IPC.Default.Timeout
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
@@ -1412,7 +1417,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def invoke_by_pid(self, service:'str', request:'any_', target_pid:'int', timeout:'int', **kwargs:'any_') -> 'any_':
+    def invoke_by_pid(
+        self,
+        service,    # type: str
+        request,    # type: any_
+        target_pid, # type: int
+        timeout=_ipc_timeout, # type: int
+        **kwargs    # type:any_
+    ) -> 'any_':
         """ Invokes a service in a worker process by the latter's PID.
         """
         return self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid, timeout)
