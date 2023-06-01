@@ -81,6 +81,9 @@ class AuxServerConfig:
         # Zato
         from zato.common.util.cli import read_stdin_data
 
+        # Reusable
+        crypto_manager = crypto_manager_class(repo_location, stdin_data=read_stdin_data())
+
         # Response to produce
         config = class_()
         config.server_type = server_type
@@ -90,8 +93,21 @@ class AuxServerConfig:
         component_dir = os.path.abspath(component_dir)
         config.component_dir = component_dir
 
+        # This is optional
+        secrets_conf_location = os.path.join(repo_location, 'secrets.conf')
+        if os.path.exists(secrets_conf_location):
+            secrets_conf = get_config(repo_location, 'secrets.conf', needs_user_config=False)
+        else:
+            secrets_conf = None
+
         # Read config in and extend it with ODB-specific information
-        config.main = get_config(repo_location, conf_file_name, require_exists=True)
+        config.main = get_config(
+            repo_location,
+            conf_file_name,
+            crypto_manager=crypto_manager,
+            secrets_conf=secrets_conf,
+            require_exists=True
+        )
         config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
         config.main.crypto.use_tls = as_bool(config.main.crypto.use_tls)
 
@@ -102,7 +118,7 @@ class AuxServerConfig:
             config.main.crypto.cert_location = absjoin(repo_location, config.main.crypto.cert_location)
 
         # Set up the crypto manager need to access credentials
-        config.crypto_manager = crypto_manager_class(repo_location, stdin_data=read_stdin_data())
+        config.crypto_manager = crypto_manager
 
         # ODB connection
         odb = ODBManager()
@@ -112,7 +128,6 @@ class AuxServerConfig:
 
             config.main.odb.host = config.main.odb.host
             config.main.odb.username = config.main.odb.username
-            config.main.odb.password = config.crypto_manager.decrypt(config.main.odb.password)
             config.main.odb.pool_size = config.main.odb.pool_size
 
         # Decrypt the password used to invoke servers
