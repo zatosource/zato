@@ -1126,6 +1126,9 @@ class ContentType:
 
 class IPC:
 
+    class Default:
+        Timeout = 90
+
     class Credentials:
         Username = 'zato.server.ipc'
         Password_Key = 'Zato_Server_IPC_Password'
