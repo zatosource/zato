@@ -16,7 +16,7 @@ government
 and more.
 
 <p align="center">
-  <a href="https://zato.io?gh2"><img alt="" src="https://zato.io/static/img/intro/bus.svg?gh" /></a>
+  <a href="https://zato.io?gh2"><img alt="" src="https://zato.io/static/img/intro/bus.png?gh" /></a>
 </p>
 
 ## Learn more
