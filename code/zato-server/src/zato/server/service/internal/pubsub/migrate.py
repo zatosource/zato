@@ -72,7 +72,7 @@ class MigrateDeliveryServer(AdminService):
 
         # .. create a new task if the subscription exists ..
         if sub:
-            self.server.rpc[new_delivery_server_name].invoke(service_name, {
+            self.server.rpc.get_invoker_by_server_name(new_delivery_server_name).invoke(service_name, {
                 'sub_key': sub_key,
                 'endpoint_type': endpoint_type,
                 'task_delivery_interval': sub.task_delivery_interval
