@@ -1072,7 +1072,7 @@ class PubSub:
         Returns that PID or None if the information could not be obtained.
         """
         try:
-            response = self.server.rpc[server_name].invoke('zato.pubsub.delivery.get-server-pid-for-sub-key', {
+            response = self.server.rpc.get_invoker_by_server_name(server_name).invoke('zato.pubsub.delivery.get-server-pid-for-sub-key', {
                 'sub_key': sub_key,
             }) # type: anydict
         except Exception:
