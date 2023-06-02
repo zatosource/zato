@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from json import dumps
 
 # SQLAlchemy
 from sqlalchemy import delete
@@ -779,7 +780,9 @@ class GetServerDeliveryMessages(AdminService):
 
     def handle(self) -> 'None':
         ps_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        self.response.payload.msg_list = ps_tool.pull_messages(self.request.input.sub_key)
+        msg_list = ps_tool.pull_messages(self.request.input.sub_key)
+        msg_list = dumps(msg_list)
+        self.response.payload.msg_list = msg_list
 
 # ################################################################################################################################
 # ################################################################################################################################
