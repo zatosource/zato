@@ -1440,7 +1440,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             # This cannot be used by self.invoke_by_pid
             data_format = kwargs.pop('data_format', None)
 
-            _, data = self.invoke_by_pid(service, request, target_pid, *args, **kwargs)
+            data = self.invoke_by_pid(service, request, target_pid, *args, **kwargs)
             return dumps(data) if data_format == DATA_FORMAT.JSON else data
         else:
             return self.worker_store.invoke(
