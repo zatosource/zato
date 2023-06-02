@@ -55,13 +55,11 @@ class ConfigCtx:
         self.local_server_invoker_class = local_server_invoker_class
         self.remote_server_invoker_class = remote_server_invoker_class
 
-    def get_remote_server_invoker(self, server_name):
-        # type: (str) -> RemoteServerInvoker
+    def get_remote_server_invoker(self, server_name:'str') -> 'RemoteServerInvoker':
         ctx = self.config_source.get_server_ctx(self.parallel_server, self.config_source.current_cluster_name, server_name)
         return self.remote_server_invoker_class(ctx)
 
-    def get_remote_server_invoker_list(self):
-        # type: (str) -> list[RemoteServerInvoker]
+    def get_remote_server_invoker_list(self) -> 'list[RemoteServerInvoker]':
         ctx_list = self.config_source.get_server_ctx_list(self.config_source.current_cluster_name)
         for ctx in ctx_list: # type: RemoteServerInvocationCtx
             yield self.remote_server_invoker_class(ctx)

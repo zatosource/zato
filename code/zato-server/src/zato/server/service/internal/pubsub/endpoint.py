@@ -8,7 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
-from json import dumps
 
 # SQLAlchemy
 from sqlalchemy import delete
@@ -44,11 +43,14 @@ if 0:
     from bunch import Bunch
     from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import anylist, stranydict
+    from zato.common.typing_ import anydict, anylist, stranydict
+    from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvocationResult
     from zato.server.pubsub.model import subnone
     from zato.server.service import Service
     Bunch   = Bunch
     Column = Column
+    PerPIDResponse = PerPIDResponse
+    ServerInvocationResult = ServerInvocationResult
     Service = Service
     subnone = subnone
 
@@ -263,8 +265,8 @@ class GetEndpointQueueNonGDDepth(AdminService):
     """ Returns current depth of non-GD messages for input sub_key which must have a delivery task on current server.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('sub_key',)
-        output_optional = (Int('current_depth_non_gd'),)
+        input_required = 'sub_key'
+        output_optional = Int('current_depth_non_gd')
 
     def handle(self):
         pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
@@ -275,6 +277,7 @@ class GetEndpointQueueNonGDDepth(AdminService):
 # ################################################################################################################################
 
 class _GetEndpointQueue(AdminService):
+
     def _add_queue_depths(self, session:'SASession', item:'stranydict') -> 'None':
 
         cluster_id = self.request.input.cluster_id
@@ -295,17 +298,48 @@ class _GetEndpointQueue(AdminService):
                 pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(item['sub_key'])
                 _, current_depth_non_gd = pubsub_tool.get_queue_depth(item['sub_key'])
             else:
-                response = self.server.rpc[sk_server.server_name].invoke(GetEndpointQueueNonGDDepth.get_name(), {
+
+                # An invoker pointing to that server
+                server_rpc   = self.server.rpc[sk_server.server_name]
+
+                # The service we are invoking
+                service_name = GetEndpointQueueNonGDDepth.get_name()
+
+                # Inquire the server about our sub_key
+                request = {
                     'sub_key': item['sub_key'],
-                }, pid=sk_server.server_pid)
-                inner_response = response['response']
-                current_depth_non_gd = inner_response['current_depth_non_gd'] if inner_response else 0
+                }
+
+                # Keyword arguments point to a specific PID in that server
+                kwargs = {
+                    'pid': sk_server.server_pid
+                }
+
+                # Do invoke the server now
+                response = server_rpc.invoke(service_name, request, **kwargs)
+
+                self.logger.info('*' * 50)
+                self.logger.warn('Server RPC -> %s', server_rpc)
+                self.logger.warn('RESPONSE   -> %s', response)
+                self.logger.info('*' * 50)
+
+                '''
+
+                pid_data = response['response']
+
+                if pid_data:
+                    pid_data = cast_('anydict', pid_data)
+                    current_depth_non_gd = pid_data['current_depth_non_gd']
+                else:
+                    current_depth_non_gd = 0
 
         # No delivery server = there cannot be any non-GD messages waiting for that subscriber
         else:
             current_depth_non_gd = 0
+            '''
 
-        item['current_depth_non_gd'] = current_depth_non_gd
+        # item['current_depth_non_gd'] = current_depth_non_gd
+        item['current_depth_non_gd'] = 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -780,9 +814,7 @@ class GetServerDeliveryMessages(AdminService):
 
     def handle(self) -> 'None':
         ps_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        msg_list = ps_tool.pull_messages(self.request.input.sub_key)
-        msg_list = dumps(msg_list)
-        self.response.payload.msg_list = msg_list
+        self.response.payload.msg_list = ps_tool.pull_messages(self.request.input.sub_key)
 
 # ################################################################################################################################
 # ################################################################################################################################
