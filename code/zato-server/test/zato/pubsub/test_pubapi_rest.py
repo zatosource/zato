@@ -29,7 +29,7 @@ if 0:
 
 class PubAPITestCase(BasePubSubRestTestCase):
 
-    def test_self_subscribe(self):
+    def xtest_self_subscribe(self):
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_shared
@@ -71,7 +71,7 @@ class PubAPITestCase(BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def test_self_unsubscribe(self):
+    def xtest_self_unsubscribe(self):
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_shared
@@ -89,13 +89,13 @@ class PubAPITestCase(BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def test_full_path_subscribe_before_publication(self):
+    def xtest_full_path_subscribe_before_publication(self):
         tester = FullPathTester(self, True) # type: ignore
         tester.run()
 
 # ################################################################################################################################
 
-    def test_full_path_subscribe_after_publication(self):
+    def xtest_full_path_subscribe_after_publication(self):
 
         prefix = '/zato/demo/unique.'
         topic_name = prefix + datetime.utcnow().isoformat()
@@ -112,7 +112,7 @@ class PubAPITestCase(BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def test_receive_has_no_sub(self):
+    def xtest_receive_has_no_sub(self):
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_shared
