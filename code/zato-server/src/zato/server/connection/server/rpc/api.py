@@ -89,7 +89,7 @@ class ServerRPC:
 
 # ################################################################################################################################
 
-    def __getitem__(self, server_name:'str') -> 'ServerInvoker':
+    def get_invoker_by_server_name(self, server_name:'str') -> 'ServerInvoker':
         if server_name not in self._invokers:
             server = self._get_invoker_by_server_name(server_name)
             self._invokers[server_name] = server

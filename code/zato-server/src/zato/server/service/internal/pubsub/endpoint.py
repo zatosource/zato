@@ -300,7 +300,7 @@ class _GetEndpointQueue(AdminService):
             else:
 
                 # An invoker pointing to that server
-                server_rpc   = self.server.rpc[sk_server.server_name]
+                server_rpc   = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
 
                 # The service we are invoking
                 service_name = GetEndpointQueueNonGDDepth.get_name()
@@ -479,7 +479,8 @@ class UpdateEndpointQueue(AdminService):
             self.broker_client.publish(updated_params_msg)
 
             # We change the delivery server in background - note how we send name, not ID, on input.
-            # This is because our invocation target will want to use self.server.rpc[server_name].invoke(...)
+            # This is because our invocation target will want to use
+            # self.server.rpc.get_invoker_by_server_name(server_name).invoke(...)
             if should_update_delivery_server:
                 if old_delivery_server_id != new_delivery_server_id:
                     self.broker_client.publish({
@@ -674,7 +675,7 @@ class GetEndpointQueueMessagesNonGD(NonGDSearchService, _GetMessagesBase):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
 
         if sk_server:
-            response = self.server.rpc[sk_server.server_name].invoke(GetServerEndpointQueueMessagesNonGD.get_name(), {
+            response = self.server.rpc.get_invoker_by_server_name(sk_server.server_name).invoke(GetServerEndpointQueueMessagesNonGD.get_name(), {
                 'cluster_id': self.request.input.cluster_id,
                 'sub_key': sub.sub_key,
             }, pid=sk_server.server_pid)
@@ -841,7 +842,7 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
 
         if sk_server:
-            response = self.server.rpc[sk_server.server_name].invoke(GetServerDeliveryMessages.get_name(), {
+            response = self.server.rpc.get_invoker_by_server_name(sk_server.server_name).invoke(GetServerDeliveryMessages.get_name(), {
                 'sub_key': sub.sub_key,
             }, pid=sk_server.server_pid)
 
