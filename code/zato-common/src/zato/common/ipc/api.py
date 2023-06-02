@@ -106,7 +106,6 @@ class IPCAPI:
 
         client = IPCClient(ipc_host, ipc_port, IPC.Credentials.Username, self.password)
         response = client.invoke(service, request, url_path, timeout=timeout)
-        response
         return response
 
 # ################################################################################################################################
