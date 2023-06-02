@@ -1390,7 +1390,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         try:
             # Get all current PIDs
-            data = self.invoke('zato.info.get-worker-pids', serialize=False).getvalue(False)
+            all_pids_response = self.invoke('zato.info.get-worker-pids', serialize=False)
+            data = all_pids_response
             pids = data['response']['pids']
 
             # Underlying IPC needs strings on input instead of None
@@ -1443,11 +1444,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             data = self.invoke_by_pid(service, request, target_pid, *args, **kwargs)
             return dumps(data) if data_format == DATA_FORMAT.JSON else data
         else:
-            return self.worker_store.invoke(
+            response = self.worker_store.invoke(
                 service, request,
                 data_format=kwargs.pop('data_format', DATA_FORMAT.DICT),
                 serialize=kwargs.pop('serialize', True),
                 *args, **kwargs)
+            return response
 
 # ################################################################################################################################
 
@@ -1456,7 +1458,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         service = msg['service']
         data    = msg['data']
 
-        return self.invoke(service, data)
+        response = self.invoke(service, data)
+        if isinstance(response, dict):
+            if 'response' in response:
+                response = response['response']
+        return response
 
 # ################################################################################################################################
 
