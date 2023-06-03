@@ -25,7 +25,7 @@ if 0:
     from requests import Response
     from typing import Callable
     from zato.client import ServiceInvokeResponse
-    from zato.common.typing_ import anydict, callable_
+    from zato.common.typing_ import anydict, anylist, callable_
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.server.rpc.config import RPCServerInvocationCtx
 
@@ -78,7 +78,7 @@ class ServerInvoker:
     def invoke_async(self, *args:'any_', **kwargs:'any_') -> 'any_':
         raise NotImplementedError(self.__class__)
 
-    def invoke_all_pids(self, *args:'any_', **kwargs:'any_') -> 'any_':
+    def invoke_all_pids(self, *args:'any_', **kwargs:'any_') -> 'anylist':
         raise NotImplementedError(self.__class__)
 
 # ################################################################################################################################
@@ -87,17 +87,17 @@ class ServerInvoker:
 class LocalServerInvoker(ServerInvoker):
     """ Invokes services directly on the current server, without any network-based RPC.
     """
-    def invoke(self, *args:'any_', **kwargs:'any_'):
+    def invoke(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.parallel_server.invoke(*args, **kwargs)
 
 # ################################################################################################################################
 
-    def invoke_async(self, *args:'any_', **kwargs:'any_'):
+    def invoke_async(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.parallel_server.invoke_async(*args, **kwargs)
 
 # ################################################################################################################################
 
-    def invoke_all_pids(self, *args:'any_', **kwargs:'any_'):
+    def invoke_all_pids(self, *args:'any_', **kwargs:'any_') -> 'anylist':
         return self.parallel_server.invoke_all_pids(*args, **kwargs)
 
 # ################################################################################################################################

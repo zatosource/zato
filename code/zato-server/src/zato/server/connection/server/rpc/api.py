@@ -101,34 +101,19 @@ class ServerRPC:
 
     def get_invoker_by_server_name(self, server_name:'str') -> 'ServerInvoker':
 
-        self.logger.info('*' * 80)
-
         has_invoker_by_server_name = server_name in self._invokers
 
-        self.logger.warn('Self.Invokers -> %s', self._invokers)
-        self.logger.warn('Server.Name   -> %s', server_name)
-        self.logger.warn('Has.Invoker   -> %s', has_invoker_by_server_name)
-
         if not has_invoker_by_server_name:
-            self.logger.warn('Building a new invoker')
             invoker = self._get_invoker_by_server_name(server_name)
             self._invokers[server_name] = invoker
 
         invoker = self._invokers[server_name]
-
-        self.logger.warn('Found.An.Invoker -> %s', invoker)
-
-        self.logger.info('*' * 80)
-
         return invoker
 
 # ################################################################################################################################
 
     def populate_invokers(self) -> 'None':
         for invoker in self.config_ctx.get_remote_server_invoker_list():
-            self.logger.info('*' * 80)
-            self.logger.warn('Populating.Invokers -> %s -> %s', invoker.server_name, invoker)
-            self.logger.info('*' * 80)
             self._invokers[invoker.server_name] = invoker
 
 # ################################################################################################################################
@@ -151,27 +136,10 @@ class ServerRPC:
         for invoker in self._invokers.values():
             invoker = cast_('ServerInvoker', invoker)
 
-            # .. this includes responses for all the PIDs ..
+            # .. each response object received is a list of sub-responses,
+            # .. with each sub-response representing a specific PID ..
             response = invoker.invoke_all_pids(service, request, *args, **kwargs)
-            response
-
-            '''
-            # .. continue if we know we can find something ..
-            if response:
-
-                # .. check all per-PID responses ..
-                for _ignored_pid, per_pid_response in response.items():
-                    per_pid_response = cast_('PerPIDResponse', per_pid_response)
-
-                    # .. append the response if everything went fine ..
-                    if per_pid_response.is_ok:
-                        if per_pid_response.pid_data is not None:
-                            out.data.append(per_pid_response.pid_data)
-
-                    # .. otherwise, just set the overall response's success flag to false ..
-                    else:
-                        out.is_ok = False
-            '''
+            out.data.extend(response)
 
         # .. now we can return the result.
         return out
