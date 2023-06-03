@@ -215,7 +215,8 @@ class AfterPublish(AdminService):
             }
 
             try:
-                self.server.rpc.get_invoker_by_server_name(server_name).invoke(service_name, full_request, pid=server_pid)
+                invoker = self.server.rpc.get_invoker_by_server_name(server_name)
+                invoker.invoke(service_name, full_request, pid=server_pid)
             except Exception:
 
                 for logger in (self.logger, logger_pubsub):

@@ -173,7 +173,8 @@ class GetList(AdminService):
 
             for pid in pids:
 
-                pid_response = bunchify(self.server.rpc.get_invoker_by_server_name(server_name).invoke(GetDetails.get_name(), pid=pid))
+                invoker = self.server.rpc.get_invoker_by_server_name(server_name)
+                pid_response = bunchify(invoker.invoke(GetDetails.get_name(), pid=pid))
 
                 # A summary of each PID's current pub/sub activities
                 pid_data = bunchify({

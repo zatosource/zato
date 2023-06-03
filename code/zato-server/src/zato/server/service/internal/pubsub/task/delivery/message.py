@@ -107,7 +107,8 @@ class GetDeliveryTaskMessageList(AdminService):
 
     def handle(self):
 
-        response = self.server.rpc.get_invoker_by_server_name(self.request.input.server_name).invoke(GetServerDeliveryTaskMessageList.get_name(), {
+        invoker = self.server.rpc.get_invoker_by_server_name(self.request.input.server_name)
+        response = invoker.invoke(GetServerDeliveryTaskMessageList.get_name(), {
             'cluster_id': self.request.input.cluster_id,
             'python_id': self.request.input.python_id,
         }, pid=self.request.input.server_pid)
