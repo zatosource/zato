@@ -61,7 +61,8 @@ class ConfigCtx:
 
     def get_remote_server_invoker_list(self) -> 'list[RemoteServerInvoker]':
         ctx_list = self.config_source.get_server_ctx_list(self.config_source.current_cluster_name)
-        for ctx in ctx_list: # type: RemoteServerInvocationCtx
+        for ctx in ctx_list:
+            ctx = cast_('RemoteServerInvocationCtx', ctx)
             yield self.remote_server_invoker_class(ctx)
 
 # ################################################################################################################################
@@ -113,8 +114,6 @@ class ServerRPC:
         **kwargs        # type: any_
     ) -> 'InvokeAllResult':
 
-        self
-
         # First, make sure that we are aware of all the servers currently available
         self.populate_invokers()
 
@@ -132,7 +131,8 @@ class ServerRPC:
             if response and response.has_data:
 
                 # .. check all per-PID responses ..
-                for _ignored_pid, per_pid_response in response.data.items(): # type: (int, PerPIDResponse)
+                for _ignored_pid, per_pid_response in response.data.items():
+                    per_pid_response = cast_('PerPIDResponse', per_pid_response)
 
                     # .. append the response if everything went fine ..
                     if per_pid_response.is_ok:
