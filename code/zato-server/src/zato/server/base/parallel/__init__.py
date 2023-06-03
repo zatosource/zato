@@ -82,11 +82,11 @@ from zato.server.sso import SSOTool
 
 if 0:
 
-    # Zato
     from zato.common.crypto.api import ServerCryptoManager
+    from zato.common.ipc.client import IPCResponse
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
-    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, strbytes, strlist, strnone
+    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, dictlist, strbytes, strlist, strnone
     from zato.server.commands import CommandResult
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
@@ -1379,38 +1379,24 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def invoke_all_pids(self, service:'str', request:'any_', timeout:'int'=5, *args:'any_', **kwargs:'any_') -> 'anydict':
+    def invoke_all_pids(self, service:'str', request:'any_', timeout:'int'=5, *args:'any_', **kwargs:'any_') -> 'dictlist':
         """ Invokes a given service in each of processes current server has.
         """
-        # PID -> response from that process
-        out = {}
 
-        # Per-PID response
-        response:'anydict'
+        # A list of dict responses, one for each PID
+        out = []
 
         try:
             # Get all current PIDs
             all_pids_response = self.invoke('zato.info.get-worker-pids', serialize=False)
-            data = all_pids_response
-            pids = data['response']['pids']
+            pids = all_pids_response['pids']
 
-            # Underlying IPC needs strings on input instead of None
-            request = request or ''
-
+            # Invoke each of them
             for pid in pids:
-                response = {
-                    'is_ok': False,
-                    'pid_data': None,
-                    'error_info': None
-                }
-                try:
-                    pid_data = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
-                    response['pid_data'] = pid_data
-                except Exception:
-                    e = format_exc()
-                    response['error_info'] = e
-                finally:
-                    out[pid] = response
+                pid_response = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
+                if pid_response.data != None:
+                    out.append(pid_response.data)
+
         except Exception:
             logger.warning('PID invocation error `%s`', format_exc())
         finally:
@@ -1425,10 +1411,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         target_pid, # type: int
         timeout=_ipc_timeout, # type: int
         **kwargs    # type:any_
-    ) -> 'any_':
+    ) -> 'IPCResponse':
         """ Invokes a service in a worker process by the latter's PID.
         """
-        return self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid, timeout)
+        response = self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid, timeout)
+        return response
 
 # ################################################################################################################################
 

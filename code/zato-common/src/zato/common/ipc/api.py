@@ -19,7 +19,8 @@ from zato.common.util.api import fs_safe_name, load_ipc_pid_port
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, callable_
+    from zato.common.ipc.client import IPCResponse
+    from zato.common.typing_ import callable_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,7 +87,7 @@ class IPCAPI:
         server_name,  # type: str
         target_pid,   # type: int
         timeout=90    # type: int
-    ) -> 'anydict':
+    ) -> 'IPCResponse':
         """ Invokes a service in a specific process synchronously through IPC.
         """
 
@@ -105,7 +106,15 @@ class IPCAPI:
         url_path = fs_safe_name(url_path)
 
         client = IPCClient(ipc_host, ipc_port, IPC.Credentials.Username, self.password)
-        response = client.invoke(service, request, url_path, timeout=timeout)
+        response = client.invoke(
+            service,
+            request,
+            url_path,
+            cluster_name=cluster_name,
+            server_name=server_name,
+            server_pid=target_pid,
+            timeout=timeout
+        )
         return response
 
 # ################################################################################################################################
