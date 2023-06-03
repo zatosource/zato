@@ -27,11 +27,11 @@ if 0:
     from zato.client import ServiceInvokeResponse
     from zato.common.typing_ import anydict, callable_
     from zato.server.base.parallel import ParallelServer
-    from zato.server.connection.server.rpc.config import RemoteServerInvocationCtx
+    from zato.server.connection.server.rpc.config import RPCServerInvocationCtx
 
     Callable = Callable
     ParallelServer = ParallelServer
-    RemoteServerInvocationCtx = RemoteServerInvocationCtx
+    RPCServerInvocationCtx = RPCServerInvocationCtx
     Response = Response
     ServiceInvokeResponse = ServiceInvokeResponse
 
@@ -63,14 +63,14 @@ class PerPIDResponse:
 class ServerInvoker:
     """ A base class for local and remote server invocations.
     """
-    def __init__(self, parallel_server:'ParallelServer', cluster_name:'str', server_name:'str') -> 'None':
+    def __init__(self, parallel_server:'ParallelServer', ctx:'RPCServerInvocationCtx') -> 'None':
 
         # This parameter is used for local invocations only
         # to have access to self.parallel_server.invoke/.invoke_async/.invoke_all_pids
         self.parallel_server = parallel_server
 
-        self.cluster_name = cluster_name
-        self.server_name = server_name
+        self.cluster_name = ctx.cluster_name
+        self.server_name = ctx.server_name
 
     def invoke(self, *args:'any_', **kwargs:'any_') -> 'any_':
         raise NotImplementedError(self.__class__)
@@ -106,7 +106,7 @@ class LocalServerInvoker(ServerInvoker):
 class RemoteServerInvoker(ServerInvoker):
     """ Invokes services on a remote server using RPC.
     """
-    def __init__(self, ctx:'RemoteServerInvocationCtx') -> 'None':
+    def __init__(self, ctx:'RPCServerInvocationCtx') -> 'None':
         super().__init__(cast_('ParallelServer', None), ctx.cluster_name, ctx.server_name)
         self.invocation_ctx = ctx
 

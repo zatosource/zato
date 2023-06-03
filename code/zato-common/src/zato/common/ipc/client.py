@@ -13,13 +13,39 @@ from json import dumps, loads
 from requests import post as requests_post
 
 # Zato
+from zato.common.api import IPC as Common_IPC
 from zato.common.broker_message import SERVER_IPC
+from zato.common.typing_ import dataclass
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.typing_ import any_, anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class IPCResponseMeta:
+
+    cid:   'str'
+    is_ok: 'bool'
+
+    service: 'str'
+    request: 'any_'
+
+    cluster_name: 'str'
+    server_name:  'str'
+    server_pid:   'int'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class IPCResponse:
+    data: 'anydict | None'
+    meta: 'IPCResponseMeta'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,7 +67,17 @@ class IPCClient:
 
 # ################################################################################################################################
 
-    def invoke(self, service:'str', data:'any_', url_path:'str', timeout:'int'=90) -> 'anydict':
+    def invoke(
+        self,
+        service,    # type: str
+        request,    # type: any_
+        url_path,   # type: str
+        *,
+        cluster_name, # type: str
+        server_name,  # type: str
+        server_pid,   # type: int
+        timeout=90,   # type: int
+    ) -> 'IPCResponse':
 
         # This is where we can find the IPC server to invoke ..
         url = f'http://{self.host}:{self.port}/{url_path}'
@@ -52,7 +88,7 @@ class IPCClient:
             'username': self.username,
             'password': self.password,
             'service':  service,
-            'data': data,
+            'data': request,
         })
 
         # .. invoke the server ..
@@ -61,8 +97,17 @@ class IPCClient:
         # .. de-serialize the response ..
         response = loads(response.text)
 
+        ipc_response = IPCResponse()
+        ipc_response.data = response['response'] or None
+        ipc_response.meta = IPCResponseMeta()
+        ipc_response.meta.cid = response['cid']
+        ipc_response.meta.is_ok = response['status'] == Common_IPC.Status_OK
+        ipc_response.meta.cluster_name = cluster_name
+        ipc_response.meta.server_name = server_name
+        ipc_response.meta.server_pid = server_pid
+
         # .. and return its response.
-        return response
+        return ipc_response
 
 # ################################################################################################################################
 
