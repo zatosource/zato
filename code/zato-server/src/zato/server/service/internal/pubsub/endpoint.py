@@ -300,7 +300,7 @@ class _GetEndpointQueue(AdminService):
             else:
 
                 # An invoker pointing to that server
-                server_rpc   = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+                invoker   = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
 
                 # The service we are invoking
                 service_name = GetEndpointQueueNonGDDepth.get_name()
@@ -316,11 +316,11 @@ class _GetEndpointQueue(AdminService):
                 }
 
                 # Do invoke the server now
-                response = server_rpc.invoke(service_name, request, **kwargs)
+                response = invoker.invoke(service_name, request, **kwargs)
 
                 self.logger.info('*' * 50)
-                self.logger.warn('Server RPC -> %s', server_rpc)
-                self.logger.warn('RESPONSE   -> %s', response)
+                self.logger.warn('Invoker  -> %s', invoker)
+                self.logger.warn('RESPONSE -> %s', response)
                 self.logger.info('*' * 50)
 
                 '''
@@ -675,7 +675,8 @@ class GetEndpointQueueMessagesNonGD(NonGDSearchService, _GetMessagesBase):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
 
         if sk_server:
-            response = self.server.rpc.get_invoker_by_server_name(sk_server.server_name).invoke(GetServerEndpointQueueMessagesNonGD.get_name(), {
+            invoker = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+            response = invoker.invoke(GetServerEndpointQueueMessagesNonGD.get_name(), {
                 'cluster_id': self.request.input.cluster_id,
                 'sub_key': sub.sub_key,
             }, pid=sk_server.server_pid)
