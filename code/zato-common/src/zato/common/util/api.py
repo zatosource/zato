@@ -1915,12 +1915,12 @@ def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, 
         wait_until = start + timedelta(seconds=timeout)
 
         if needs_log and log_msg_details:
-            logger.info('Waiting for %s (#%s)', log_msg_details, loop_idx)
+            logger.info('Waiting for %s (#%s -> %ss)', log_msg_details, loop_idx, interval)
 
         while not is_fulfilled:
             gevent_sleep(interval)
             if needs_log and log_msg_details:
-                logger.info('Waiting for %s (#%s)', log_msg_details, loop_idx)
+                logger.info('Waiting for %s (#%s -> %ss)', log_msg_details, loop_idx, interval)
             is_fulfilled = predicate_func(*args, **kwargs)
             if datetime.utcnow() > wait_until:
                 break
@@ -2069,6 +2069,9 @@ def load_ipc_pid_port(cluster_name:'str', server_name:'str', pid:'int') -> 'int'
 
     # Get a path to load the port from ..
     path = get_ipc_pid_port_path(cluster_name, server_name, pid)
+
+    # .. wait until the file exists (which may be required when the server starts up) ..
+    wait_for_file(path, interval=2.5)
 
     # .. load it now ..
     with open_r(path) as f:
