@@ -1479,7 +1479,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def publish_pickup(self, topic_name:'str', request:'any_', *args:'any_', **kwargs:'any_') -> 'None':
-        """ Publishes a pickedup file to a named topic.
+        """ Publishes a previously picked up file to a named topic.
         """
         _ = self.invoke('zato.pubsub.publish.publish', {
             'topic_name': topic_name,
