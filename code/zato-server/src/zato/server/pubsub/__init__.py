@@ -521,6 +521,13 @@ class PubSub:
 
 # ################################################################################################################################
 
+    def get_target_service_name_by_topic_id(self, topic_id:'int') -> 'strnone':
+        with self.lock:
+            topic = self.topic_api.get_topic_by_id(topic_id)
+            return topic.config.get('target_service_name')
+
+# ################################################################################################################################
+
     def get_sub_key_to_topic_name_dict(self, sub_key_list:'strlist') -> 'strstrdict':
         out = {} # type: strstrdict
         with self.lock:

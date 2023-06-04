@@ -495,7 +495,8 @@ class HelperPubSubTarget(Service):
         # .. confirm what it was ..
         self.logger.info('************************** 2) Data is %r', data)
 
-        # .. this may be a dict or an empty string - the latter is the case when a message is published from Dashboard  ..
+        # .. this may be a dict or an empty string, the latter is the case
+        # .. when a message is published via self.pubsub.publish with no input  ..
         if data:
 
             # .. rule out string objects ..
