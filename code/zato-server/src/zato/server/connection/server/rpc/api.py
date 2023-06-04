@@ -18,7 +18,7 @@ from zato.server.connection.server.rpc.invoker import LocalServerInvoker, Remote
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, list_
+    from zato.common.typing_ import any_, anylist, generator_
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.server.rpc.config import ConfigSource, RPCServerInvocationCtx
     from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvoker
@@ -62,11 +62,13 @@ class ConfigCtx:
         ctx = self.config_source.get_server_ctx(self.parallel_server, self.config_source.current_cluster_name, server_name)
         return self.remote_server_invoker_class(ctx)
 
-    def get_remote_server_invoker_list(self) -> 'list_[RemoteServerInvoker]':
+    def get_remote_server_invoker_list(self) -> 'generator_[ServerInvoker, None, None]':
         ctx_list = self.config_source.get_server_ctx_list(self.config_source.current_cluster_name)
         for ctx in ctx_list:
             if ctx.server_name == self.config_source.current_server_name:
-                invoker = self.local_server_invoker_class(self.parallel_server, ctx)
+                cluster_name = cast_('str', ctx.cluster_name)
+                server_name  = cast_('str', ctx.server_name)
+                invoker = self.local_server_invoker_class(self.parallel_server, cluster_name, server_name)
             else:
                 invoker = self.remote_server_invoker_class(ctx)
             yield invoker
