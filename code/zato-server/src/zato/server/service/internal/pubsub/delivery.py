@@ -196,13 +196,13 @@ class DeliverMessage(AdminService):
         target_service_name = zato_ctx != '{}' and zato_ctx.get('target_service_name')
 
         #
-        # Case 2) is where we need to look up the service's name based on a given endpoint that points to the service.
+        # Case 2) is where we need to look up the service's name based on a given topic that points to the service.
         #
         if not target_service_name:
             target_service_name = self.pubsub.get_target_service_name_by_topic_id(sub.topic_id)
 
         # Invoke the target service, giving it on input everything that we have,
-        # regardless of whether it is a list or not. a list
+        # regardless of whether it is a list or not.
         self.invoke(target_service_name, msg)
 
 # ################################################################################################################################

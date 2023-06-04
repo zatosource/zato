@@ -1394,7 +1394,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             # Invoke each of them
             for pid in pids:
                 pid_response = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
-                if pid_response.data != None:
+                if pid_response.data is not None:
                     out.append(pid_response.data)
 
         except Exception:
