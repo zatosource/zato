@@ -487,30 +487,36 @@ class HelperPubSubTarget(Service):
         msg = self.request.raw_request # type: list_[PubSubMessage]
 
         # Whatever happens next, log what we received
-        self.logger.info('I was invoked with %r', msg)
+        self.logger.info('************************** 1) I was invoked with %r', msg)
 
         # .. load the inner dict ..
-        data = msg[0].data # type: anydict
+        data = msg[0].data # type: anydict | str
 
         # .. confirm what it was ..
-        self.logger.info('Data is %r', data)
+        self.logger.info('************************** 2) Data is %r', data)
 
-        # .. optionally, save our input data for the external caller to check it ..
-        if data['target_needs_file']:
+        # .. this may be a dict or an empty string - the latter is the case when a message is published from Dashboard  ..
+        if data:
 
-            # .. this is where we will save our input data ..
-            file_name = data['file_name']
+            # .. rule out string objects ..
+            if isinstance(data, dict):
 
-            # .. we will save the message as a JSON one ..
-            json_msg = msg[0].to_json(needs_utf8_decode=True)
+                # .. optionally, save our input data for the external caller to check it ..
+                if data['target_needs_file']:
 
-            # .. confirm what we will be saving and where ..
-            self.logger.info('Saving data to file `%s` -> `%s`', file_name, json_msg)
+                    # .. this is where we will save our input data ..
+                    file_name = data['file_name']
 
-            # .. and actually save it now.
-            f = open_rw(file_name)
-            _ = f.write(json_msg)
-            f.close()
+                    # .. we will save the message as a JSON one ..
+                    json_msg = msg[0].to_json(needs_utf8_decode=True)
+
+                    # .. confirm what we will be saving and where ..
+                    self.logger.info('Saving data to file `%s` -> `%s`', file_name, json_msg)
+
+                    # .. and actually save it now.
+                    f = open_rw(file_name)
+                    _ = f.write(json_msg)
+                    f.close()
 
 # ################################################################################################################################
 # ################################################################################################################################
