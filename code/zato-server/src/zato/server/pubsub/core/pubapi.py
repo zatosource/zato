@@ -268,6 +268,7 @@ class PubAPI:
             'cluster_id': self.cluster_id,
             'sub_key': sub_key,
         }, serialize=False)
+        response = response['response']
 
         # Already includes all the details ..
         if needs_details:

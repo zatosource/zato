@@ -43,7 +43,7 @@ if 0:
     from bunch import Bunch
     from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import anydict, anylist, stranydict
+    from zato.common.typing_ import anylist, stranydict
     from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvocationResult
     from zato.server.pubsub.model import subnone
     from zato.server.service import Service
@@ -79,7 +79,7 @@ for name in msg_pub_attrs:
         continue
     elif name.endswith('_id'):
         msg_pub_attrs_sio.append(AsIs(name))
-    elif name in ('position_in_group', 'priority', 'size', 'delivery_count'):
+    elif name in ('position_in_group', 'priority', 'size', 'delivery_count', 'expiration'):
         msg_pub_attrs_sio.append(Int(name))
     elif name.startswith(('has_', 'is_')):
         msg_pub_attrs_sio.append(Bool(name))
@@ -323,6 +323,7 @@ class _GetEndpointQueue(AdminService):
                 self.logger.warn('RESPONSE -> %s', response)
                 self.logger.info('*' * 50)
 
+                """
                 '''
 
                 pid_data = response['response']
@@ -337,6 +338,7 @@ class _GetEndpointQueue(AdminService):
         else:
             current_depth_non_gd = 0
             '''
+            """
 
         # item['current_depth_non_gd'] = current_depth_non_gd
         item['current_depth_non_gd'] = 0
@@ -843,19 +845,18 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
 
         if sk_server:
-            response = self.server.rpc.get_invoker_by_server_name(sk_server.server_name).invoke(GetServerDeliveryMessages.get_name(), {
+            invoker = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+            response = invoker.invoke(GetServerDeliveryMessages.get_name(), {
                 'sub_key': sub.sub_key,
             }, pid=sk_server.server_pid)
 
             if response:
 
                 # Extract the actual list of messages ..
-                response = response.data
-                response = response[sk_server.server_pid]
-                response = response.pid_data
-                response = response['msg_list']
-                response = reversed(response)
-                response = list(response)
+                response = response['response']
+                msg_list = response['msg_list']
+                msg_list = reversed(msg_list)
+                msg_list = list(msg_list)
 
                 # .. at this point the topic may have been already deleted ..
                 try:
@@ -867,16 +868,16 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
 
                 # .. make sure that all of the sub_keys actually still exist ..
                 with closing(self.odb.session()) as session:
-                    response = ensure_subs_exist(
+                    msg_list = ensure_subs_exist(
                         session,
                         topic_name,
-                        response,
-                        response,
+                        msg_list,
+                        msg_list,
                         'returning to endpoint',
                         '<no-ctx-string>'
                     )
 
-                self.response.payload[:] = response
+                self.response.payload[:] = msg_list
         else:
             self.logger.info('Could not find delivery server for sub_key:`%s`', sub.sub_key)
 
