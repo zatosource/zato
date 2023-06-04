@@ -180,7 +180,7 @@ class DeliverMessage(AdminService):
         # We can have two cases.
         #
         # 1) The messages were published via self.pubsub.publish('service.name)
-        # 2) The messages were published to a topic and of its subscribers is a service
+        # 2) The messages were published to a topic and one of its subscribers is a service
         #
         # Depending on which case it is, we will extract the actual service's name differently.
         #
