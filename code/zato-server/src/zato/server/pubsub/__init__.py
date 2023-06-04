@@ -44,7 +44,7 @@ from zato.server.pubsub.sync import InRAMSync
 
 if 0:
     from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, dictlist, intdict, \
-        intlist, intnone, list_, stranydict, strstrdict, strlist, strlistdict, \
+        intlist, intnone, list_, stranydict, strnone, strstrdict, strlist, strlistdict, \
         strlistempty, strtuple, type_
     from zato.distlock import Lock
     from zato.server.base.parallel import ParallelServer
@@ -607,8 +607,10 @@ class PubSub:
 
     def _delete_subscription_from_subscriptions_by_topic(self, sub:'Subscription') -> 'None':
 
-        # This is a list of all the subscriptions related to a given topic ..
-        sk_list = self.subscriptions_by_topic[sub.topic_name]
+        # This is a list of all the subscriptions related to a given topic,
+        # it may be potentially empty if we are trying to delete subscriptions
+        # for a topic that has just been deleted ..
+        sk_list = self.get_subscriptions_by_topic(sub.topic_name)
 
         # .. try to remove the subscription object from each list ..
         try:
@@ -738,7 +740,7 @@ class PubSub:
 # ################################################################################################################################
 
     def create_topic_for_service(self, service_name:'str', topic_name:'str') -> 'None':
-        self.create_topic(topic_name, is_internal=True)
+        self.create_topic(topic_name, is_internal=True, target_service_name=service_name)
         logger.info('Created topic `%s` for service `%s`', topic_name, service_name)
 
 # ################################################################################################################################
@@ -1643,13 +1645,14 @@ class PubSub:
 # ################################################################################################################################
 
     def create_topic(self,
-        name,                    # type: str
-        has_gd=False,            # type: bool
-        accept_on_no_sub=True,   # type: bool
-        is_active=True,          # type: bool
-        is_internal=False,       # type: bool
-        is_api_sub_allowed=True, # type: bool
-        hook_service_id=None,    # type: intnone
+        name,                     # type: str
+        has_gd=False,             # type: bool
+        accept_on_no_sub=True,    # type: bool
+        is_active=True,           # type: bool
+        is_internal=False,        # type: bool
+        is_api_sub_allowed=True,  # type: bool
+        hook_service_id=None,     # type: intnone
+        target_service_name=None, # type: strnone
         task_sync_interval=_ps_default.TASK_SYNC_INTERVAL,         # type: int
         task_delivery_interval=_ps_default.TASK_DELIVERY_INTERVAL, # type: int
         depth_check_freq=_ps_default.DEPTH_CHECK_FREQ,             # type: int
@@ -1666,6 +1669,7 @@ class PubSub:
             is_internal = is_internal,
             is_api_sub_allowed = is_api_sub_allowed,
             hook_service_id = hook_service_id,
+            target_service_name = target_service_name,
             task_sync_interval = task_sync_interval,
             task_delivery_interval = task_delivery_interval,
             depth_check_freq = depth_check_freq,

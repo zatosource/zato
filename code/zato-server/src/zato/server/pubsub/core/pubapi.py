@@ -23,7 +23,8 @@ from zato.common.util.wsx import find_wsx_environ
 
 if 0:
     from zato.common.model.wsx import WSXConnectorConfig
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, commondict, intnone, stranydict, strtuple
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, commondict, intnone, stranydict, \
+        strnone, strtuple
     from zato.server.connection.web_socket import WebSocket
     from zato.server.pubsub import PubSub
     from zato.server.pubsub.core.endpoint import EndpointAPI
@@ -239,7 +240,14 @@ class PubAPI:
 
         response = self.pubsub.invoke_service('zato.pubsub.publish.publish', request, serialize=False)
 
-        if response.has_data():
+        if isinstance(response, dict):
+            if 'response' in response:
+                response = response['response']
+            has_data = bool(response)
+        else:
+            has_data = response.has_data()
+
+        if has_data:
             return response.get('msg_id') or response.get('msg_id_list')
 
 # ################################################################################################################################
@@ -433,14 +441,22 @@ class PubAPI:
             wsgi_environ = {} # # type: ignore[no-redef]
 
         # Actually subscribe the caller
-        response = self.pubsub.invoke_service(sub_service_name, request, wsgi_environ=wsgi_environ, serialize=False)
+        response = self.pubsub.invoke_service(
+            sub_service_name,
+            request,
+            wsgi_environ=wsgi_environ,
+            serialize=False
+        )
+
+        if isinstance(response, dict) and 'response' in response:
+            response = response['response']
 
         # If this was a WebSocket caller, we can now update its pub/sub metadata
         if use_current_wsx:
             if wsx:
                 wsx.set_last_interaction_data('pubsub.subscribe')
 
-        return response.sub_key
+        return response['sub_key']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -481,13 +497,14 @@ class PubAPI:
     def create_topic(
         self,
         *,
-        name,                    # type: str
-        has_gd=False,            # type: bool
-        accept_on_no_sub=True,   # type: bool
-        is_active=True,          # type: bool
-        is_internal=False,       # type: bool
-        is_api_sub_allowed=True, # type: bool
-        hook_service_id=None,    # type: intnone
+        name,                     # type: str
+        has_gd=False,             # type: bool
+        accept_on_no_sub=True,    # type: bool
+        is_active=True,           # type: bool
+        is_internal=False,        # type: bool
+        is_api_sub_allowed=True,  # type: bool
+        hook_service_id=None,     # type: intnone
+        target_service_name=None, # type: strnone
         task_sync_interval=_ps_default.TASK_SYNC_INTERVAL,         # type: int
         task_delivery_interval=_ps_default.TASK_DELIVERY_INTERVAL, # type: int
         depth_check_freq=_ps_default.DEPTH_CHECK_FREQ,             # type: int
@@ -504,6 +521,7 @@ class PubAPI:
             'is_api_sub_allowed': is_api_sub_allowed,
             'has_gd': has_gd,
             'hook_service_id': hook_service_id,
+            'target_service_name': target_service_name,
             'on_no_subs_pub': PUBSUB.ON_NO_SUBS_PUB.ACCEPT.id if accept_on_no_sub else PUBSUB.ON_NO_SUBS_PUB.DROP.id,
             'task_sync_interval': task_sync_interval,
             'task_delivery_interval': task_delivery_interval,
