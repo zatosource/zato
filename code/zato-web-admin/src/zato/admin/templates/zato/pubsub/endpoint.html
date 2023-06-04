@@ -113,12 +113,20 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td>{{ item.name }}</td>
-                        <td>{{ item.role }}</td>
-                        <td>{{ item.topic_patterns_html|safe|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{% if item.is_internal %}<span class="form_hint">{{ item.name }}</span>{% else %}{{ item.name }}{% endif %}</td>
+                        <td>{% if item.is_internal %}<span class="form_hint">{{ item.role }}</span>{% else %}{{ item.role }}{% endif %}</td>
+                        <td>
+                            {% if item.is_internal %}
+                                <span class="form_hint">{{ item.topic_patterns_html|safe|default:'---' }}</span>
+                            {% else %}
+                                {{ item.topic_patterns_html|safe|default:'<span class="form_hint">---</span>' }}
+                            {% endif %}
+                        </td>
                         <td>
                             {% if item.client_html %}
+                                {% if item.is_internal %}<span class="form_hint">{% endif %}
                                 {{ item.client_html|safe }}
+                                {% if item.is_internal %}</span>{% endif %}
                             {% else %}
                                 {% if item.is_internal and item.endpoint_type == "srv" %}
                                     Internal
@@ -129,14 +137,14 @@
                         </td>
                         <td>
                             {% if 'pub' in item.role %}
-                                <a href="{% url "pubsub-endpoint-topics" cluster_id item.id item.name|slugify %}?cluster={{ cluster_id }}">Topics</a>
+                                <a href="{% url "pubsub-endpoint-topics" cluster_id item.id item.name|slugify %}?cluster={{ cluster_id }}">{% if item.is_internal %}<span class="form_hint">Topics</span>{% else %}Topics{% endif %}</a>
                             {% else %}
                                 <span class="form_hint">---</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if 'sub' in item.role %}
-                                <a href="{% url "pubsub-endpoint-queues" cluster_id item.id item.name|slugify %}?cluster={{ cluster_id }}">Queues</a>
+                                <a href="{% url "pubsub-endpoint-queues" cluster_id item.id item.name|slugify %}?cluster={{ cluster_id }}">{% if item.is_internal %}<span class="form_hint">Queues</span>{% else %}Queues{% endif %}</a>
                             {% else %}
                                 <span class="form_hint">---</span>
                             {% endif %}
