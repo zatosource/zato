@@ -360,7 +360,9 @@ class ServerRPCTestCase(TestCase):
         self.assertEqual(ctx3.password, TestConfig.api_credentials_password)
         self.assertIs(ctx3.crypto_use_tls, TestConfig.crypto_use_tls)
 
-    def xtest_invoke_all_pids(self):
+    def test_invoke_all_pids_using_a_remote_invoker(self):
+
+        xC:VJ ;fjob pdfjb'pdfjbdfjbddpd0--' ------ =we=w
 
         @dataclass(init=False)
         class TestServiceInvokeResponse:
