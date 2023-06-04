@@ -199,9 +199,7 @@ class DeliverMessage(AdminService):
         # Case 2) is where we need to look up the service's name based on a given endpoint that points to the service.
         #
         if not target_service_name:
-            endpoint = self.pubsub.get_endpoint_by_id(sub.endpoint_id)
-            service_id = endpoint.config['service_id']
-            target_service_name = self.server.service_store.get_service_name_by_id(service_id)
+            target_service_name = self.pubsub.get_target_service_name_by_topic_id(sub.topic_id)
 
         # Invoke the target service, giving it on input everything that we have,
         # regardless of whether it is a list or not. a list
