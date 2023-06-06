@@ -128,7 +128,8 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 
 if 0:
     from typing import Iterable as iterable
-    from zato.common.typing_ import any_, anydict, callable_, dictlist, listnone, strlistnone
+    from zato.client import ZatoClient
+    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strlistnone
     iterable = iterable
 
 # ################################################################################################################################
@@ -1501,7 +1502,11 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted) -> 'any
 
 # ################################################################################################################################
 
-def get_client_from_server_conf(server_dir, require_server=True, stdin_data=None):
+def get_client_from_server_conf(
+    server_dir,          # type: str
+    require_server=True, # type: bool
+    stdin_data=None      # type: strnone
+) -> 'ZatoClient':
 
     # Imports go here to avoid circular dependencies
     from zato.client import get_client_from_server_conf as client_get_client_from_server_conf
@@ -1518,8 +1523,7 @@ def get_client_from_server_conf(server_dir, require_server=True, stdin_data=None
 
 # ################################################################################################################################
 
-def get_repo_dir_from_component_dir(component_dir):
-    # type: (str) -> str
+def get_repo_dir_from_component_dir(component_dir:'str') -> 'str':
     return os.path.join(os.path.abspath(os.path.join(component_dir)), 'config', 'repo')
 
 # ################################################################################################################################
@@ -1720,13 +1724,27 @@ def get_logger_for_class(class_):
 
 # ################################################################################################################################
 
-def get_worker_pids():
-    """ Returns all sibling worker PIDs of the server process we are being invoked on, including our own worker too.
+def get_worker_pids_by_parent(parent_pid:'int') -> 'intlist':
+    """ Returns all children PIDs of the process whose PID is given on input.
     """
     # psutil
     import psutil
 
-    return sorted(elem.pid for elem in psutil.Process(psutil.Process().ppid()).children())
+    return sorted(elem.pid for elem in psutil.Process(parent_pid).children())
+
+# ################################################################################################################################
+
+def get_worker_pids():
+    """ Returns all sibling worker PIDs of the server process we are being invoked on, including our own worker too.
+    """
+    # This is our own process ..
+    current_process = psutil.Process()
+
+    # .. and this is its parent PID ..
+    parent_pid = current_process.ppid()
+
+    # .. now, we can return PIDs of all the workers.
+    return get_worker_pids_by_parent(parent_pid)
 
 # ################################################################################################################################
 

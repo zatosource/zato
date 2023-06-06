@@ -43,6 +43,12 @@ DEFAULT_MAX_CID_REPR = 5
 mod_logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import strtuple
+
+# ################################################################################################################################
 # Version
 # ################################################################################################################################
 
@@ -323,6 +329,11 @@ class _Client:
                  max_response_repr=DEFAULT_MAX_RESPONSE_REPR, max_cid_repr=DEFAULT_MAX_CID_REPR, logger=None,
                  tls_verify=True):
         self.address = address
+
+        self.auth     = auth    # type: strtuple
+        self.username = auth[0] # type: str
+        self.password = auth[1] # type: str
+
         self.service_address = '{}{}'.format(address, path)
         self.session = session or requests.session()
 

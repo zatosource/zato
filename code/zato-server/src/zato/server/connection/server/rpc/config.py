@@ -56,7 +56,7 @@ class RPCServerInvocationCtx:
     password: 'strnone' = None
 
     needs_ping:     'bool' = True
-    crypto_use_tls: 'bool'
+    crypto_use_tls: 'bool' = False
 
 @dataclass(init=False)
 class InvocationCredentials:
