@@ -1458,9 +1458,19 @@ def get_odb_session_from_server_dir(server_dir):
 
 # ################################################################################################################################
 
-def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted) -> 'any_':
-    """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
+def get_server_client_auth(
+    config,
+    repo_dir,
+    cm,
+    odb_password_encrypted,
+    *,
+    url_path=None,
+) -> 'any_':
+    """ Returns credentials to authenticate with against Zato's own inocation channels.
     """
+    # This is optional on input
+    url_path = url_path or '/zato/admin/invoke'
+
     session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
 
     with closing(session) as session:
@@ -1485,7 +1495,7 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted) -> 'any
 
         channel = session.query(HTTPSOAP).\
             filter(HTTPSOAP.cluster_id == cluster.id).\
-            filter(HTTPSOAP.url_path == '/zato/admin/invoke').\
+            filter(HTTPSOAP.url_path == url_path).\
             filter(HTTPSOAP.connection== 'channel').\
             one()
 
@@ -1506,14 +1516,22 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted) -> 'any
 def get_client_from_server_conf(
     server_dir,          # type: str
     require_server=True, # type: bool
-    stdin_data=None      # type: strnone
+    stdin_data=None,     # type: strnone
+    *,
+    url_path=None,       # type: strnone
 ) -> 'ZatoClient':
 
     # Imports go here to avoid circular dependencies
     from zato.client import get_client_from_server_conf as client_get_client_from_server_conf
 
     # Get the client object ..
-    client = client_get_client_from_server_conf(server_dir, get_server_client_auth, get_config, stdin_data=stdin_data)
+    client = client_get_client_from_server_conf(
+        server_dir,
+        get_server_client_auth,
+        get_config,
+        stdin_data=stdin_data,
+        url_path=url_path
+    )
 
     # .. make sure the server is available ..
     if require_server:
