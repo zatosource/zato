@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from contextlib import closing
 from unittest import main, TestCase
+from uuid import uuid4
 
 # Zato
 from zato.common.api import INFO_FORMAT
@@ -19,7 +20,8 @@ from zato.common.odb.model import Base, HTTPBasicAuth, Cluster, Server as Server
 from zato.common.odb.api import ODBManager, SQLConnectionPool
 from zato.common.test import TestCluster, TestParallelServer
 from zato.common.typing_ import cast_
-from zato.common.util.api import get_client_from_server_conf
+from zato.common.util.api import get_client_from_server_conf, get_new_tmp_full_path
+from zato.common.util.open_ import open_r, open_w
 from zato.server.connection.server.rpc.api import ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import CredentialsConfig, ODBConfigSource, RPCServerInvocationCtx
 from zato.server.connection.server.rpc.invoker import LocalServerInvoker, RemoteServerInvoker, ServerInvoker
@@ -28,7 +30,7 @@ from zato.server.connection.server.rpc.invoker import LocalServerInvoker, Remote
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, anytuple
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, intstrdict
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
 
@@ -369,6 +371,12 @@ class ServerRPCTestCase(TestCase):
         if not(server_root_dir := os.environ.get('Zato_Test_Server_Root_Dir')):
             return
 
+        # We are going to write random data to a file for each worker PID
+        # and then all the PIDs will be invoked. It is expected that each
+        # PID will read its data from that file and create a new file
+        # with its response which we will read to confirm that the PID
+        # indeed has been invoked.
+
         # Note that this test requires that at least two workers be present
         # because it tests multi-CPU configuration.
         min_workers = 2
@@ -406,7 +414,32 @@ class ServerRPCTestCase(TestCase):
             msg = f'Server from {server_root_dir} should have at least {min_workers} workers instead of {master_proc_workers_no}'
             raise Exception(msg)
 
-        server_info
+        # The request will be populated with data for each PID in the loop below
+        request = {} # type: intstrdict
+
+        # Go through all the PIDs found ..
+        for pid in server_info['master_proc_workers_pids']:
+
+            # This is reusable
+            random_pid_data = uuid4().hex
+
+            # Random data for that pid
+            pid_data = f'pid:{pid}:' + random_pid_data + '\n'
+
+            # A random file for that PID
+            prefix = f'pid-request-{pid}'
+            tmp_file_path = get_new_tmp_full_path(prefix=prefix, random_suffix=random_pid_data)
+
+            # Write the data for this PID
+            with open_w(tmp_file_path) as f:
+                _ = f.write(pid_data)
+
+            # Populate the request
+            request[pid] = random_pid_data
+
+            print(111, tmp_file_path)
+
+        print(222, request)
 
 # ################################################################################################################################
 # ################################################################################################################################
