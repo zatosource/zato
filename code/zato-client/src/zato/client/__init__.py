@@ -466,7 +466,15 @@ def get_client_from_credentials(server_url:'str', client_auth:'tuple') -> 'ZatoC
 
 # ################################################################################################################################
 
-def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, server_url=None, stdin_data=None):
+def get_client_from_server_conf(
+    server_dir,
+    client_auth_func,
+    get_config_func,
+    server_url=None,
+    stdin_data=None,
+    *,
+    url_path=None,
+):
     """ Returns a Zato client built out of data found in a given server's config files.
     """
     # stdlib
@@ -484,16 +492,25 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
 
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
     secrets_conf = get_config_func(
-        repo_location, 'secrets.conf', needs_user_config=False,
-        crypto_manager=crypto_manager, secrets_conf=secrets_config)
+        repo_location,
+        'secrets.conf',
+        needs_user_config=False,
+        crypto_manager=crypto_manager,
+        secrets_conf=secrets_config
+    )
 
-    config = get_config_func(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_conf)
+    config = get_config_func(
+        repo_location,
+        'server.conf',
+        crypto_manager=crypto_manager,
+        secrets_conf=secrets_conf,
+    )
 
     # Note that we cannot use 0.0.0.0 under Windows but, since it implies localhost, we can just replace it as below.
     server_url = server_url if server_url else config.main.gunicorn_bind # type: str
     server_url = server_url.replace('0.0.0.0', '127.0.0.1')
 
-    client_auth = client_auth_func(config, repo_location, crypto_manager, False)
+    client_auth = client_auth_func(config, repo_location, crypto_manager, False, url_path=url_path)
 
     client = ZatoClient('http://{}'.format(server_url), '/zato/admin/invoke', client_auth, max_response_repr=15000)
     session = get_odb_session_from_server_config(config, None, False)

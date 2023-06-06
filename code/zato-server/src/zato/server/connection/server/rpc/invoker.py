@@ -106,6 +106,8 @@ class LocalServerInvoker(ServerInvoker):
 class RemoteServerInvoker(ServerInvoker):
     """ Invokes services on a remote server using RPC.
     """
+    url_path = '/zato/internal/invoke'
+
     def __init__(self, ctx:'RPCServerInvocationCtx') -> 'None':
         super().__init__(
             cast_('ParallelServer', None),
@@ -129,7 +131,7 @@ class RemoteServerInvoker(ServerInvoker):
         credentials = (self.invocation_ctx.username, self.invocation_ctx.password)
 
         # Now, we can build a client to the remote server
-        self.invoker = AnyServiceInvoker(self.address, '/zato/internal/invoke', credentials)
+        self.invoker = AnyServiceInvoker(self.address, self.url_path, credentials)
 
 # ################################################################################################################################
 
@@ -166,7 +168,9 @@ class RemoteServerInvoker(ServerInvoker):
 
         # .. actually invoke the server now ..
         response = invoke_func(service, request, *args, **kwargs) # type: ServiceInvokeResponse
+        response
 
+        '''
         # .. build the results object ..
         out = ServerInvocationResult()
         out.is_ok = response.ok
@@ -244,6 +248,7 @@ class RemoteServerInvoker(ServerInvoker):
                         else:
                             logger.info('Object pid_data is not a dict -> %s -> `%s`', type(pid_data), pid_data)
                             out.data[pid] = pid_data
+        '''
 
         # .. and return the result to our caller.
         return out
