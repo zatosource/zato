@@ -107,7 +107,11 @@ class RemoteServerInvoker(ServerInvoker):
     """ Invokes services on a remote server using RPC.
     """
     def __init__(self, ctx:'RPCServerInvocationCtx') -> 'None':
-        super().__init__(cast_('ParallelServer', None), ctx.cluster_name, ctx.server_name)
+        super().__init__(
+            cast_('ParallelServer', None),
+            cast_('str', ctx.cluster_name),
+            cast_('str', ctx.server_name),
+        )
         self.invocation_ctx = ctx
 
         # We need to cover both HTTP and HTTPS connections to other servers
@@ -138,9 +142,6 @@ class RemoteServerInvoker(ServerInvoker):
         **kwargs:'any_'        # type: any_
     ) -> 'ServerInvocationResult | None':
 
-
-    xC:VJ ;fjob pdfjb'pdfjbdfjbddpd0--' ------ =we=w
-
         # Local aliases
         kwargs_pid = kwargs.get('pid')
 
@@ -155,7 +156,7 @@ class RemoteServerInvoker(ServerInvoker):
         # Optionally, ping the remote server to quickly find out if it is still available ..
         if self.invocation_ctx.needs_ping:
             ping_timeout = kwargs.get('ping_timeout') or self.ping_timeout
-            requests_get(self.ping_address, timeout=ping_timeout)
+            _ = requests_get(self.ping_address, timeout=ping_timeout)
 
         # .. actually invoke the server now ..
         response = invoke_func(service, request, *args, **kwargs) # type: ServiceInvokeResponse
