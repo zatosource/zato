@@ -377,6 +377,9 @@ class ServerRPCTestCase(TestCase):
         # with its response which we will read to confirm that the PID
         # indeed has been invoked.
 
+        # Local aliases
+        service_name = 'zato.ping'
+
         # Note that this test requires that at least two workers be present
         # because it tests multi-CPU configuration.
         min_workers = 2
@@ -387,7 +390,7 @@ class ServerRPCTestCase(TestCase):
         server_port = int(server_port)
 
         # An invocation client that we can extract the underlying configuration from
-        client = get_client_from_server_conf(server_root_dir)
+        client = get_client_from_server_conf(server_root_dir, url_path=RemoteServerInvoker.url_path)
 
         # Build the overall configuration context object
         ctx = RPCServerInvocationCtx()
@@ -438,6 +441,9 @@ class ServerRPCTestCase(TestCase):
             request[pid] = random_pid_data
 
             print(111, tmp_file_path)
+
+        # .. now, we can invoke all the PIDs with our request on input ..
+        invoker.invoke_all_pids(service_name, request)
 
         print(222, request)
 
