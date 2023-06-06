@@ -443,9 +443,13 @@ class ServerRPCTestCase(TestCase):
             print(111, tmp_file_path)
 
         # .. now, we can invoke all the PIDs with our request on input ..
-        invoker.invoke_all_pids(service_name, request)
+        response = invoker.invoke_all_pids(service_name, request)
+
+        # .. close the underlying socket ..
+        invoker.close()
 
         print(222, request)
+        print(333, response)
 
 # ################################################################################################################################
 # ################################################################################################################################
