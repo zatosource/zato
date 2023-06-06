@@ -425,10 +425,10 @@ class AnyServiceInvoker(_Client):
         return super(AnyServiceInvoker, self).invoke(dumps(request, default=default_json_handler),
             ServiceInvokeResponse, is_async, headers, output_repeated)
 
-    def invoke(self, *args, **kwargs):
+    def invoke(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self._invoke(is_async=False, *args, **kwargs)
 
-    def invoke_async(self, *args, **kwargs):
+    def invoke_async(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self._invoke(is_async=True, *args, **kwargs)
 
 # ################################################################################################################################
