@@ -1379,6 +1379,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def _remove_response_elem(self, data:'stranydict') -> 'stranydict':
+
+
+# ################################################################################################################################
+
     def invoke_all_pids(self, service:'str', request:'any_', timeout:'int'=5, *args:'any_', **kwargs:'any_') -> 'dictlist':
         """ Invokes a given service in each of processes current server has.
         """

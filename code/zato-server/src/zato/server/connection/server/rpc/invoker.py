@@ -15,8 +15,7 @@ from requests import get as requests_get
 # Zato
 from zato.client import AnyServiceInvoker
 from zato.common.ext.dataclasses import dataclass
-from zato.common.typing_ import any_, cast_, dict_field, from_dict, strordictnone
-from zato.common.util.json_ import json_loads
+from zato.common.typing_ import any_, cast_, dict_field
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -141,6 +140,11 @@ class RemoteServerInvoker(ServerInvoker):
 
 # ################################################################################################################################
 
+    def close(self) -> 'None':
+        self.invoker.session.close()
+
+# ################################################################################################################################
+
     def _invoke(
         self,
         invoke_func,           # type: callable_
@@ -148,10 +152,7 @@ class RemoteServerInvoker(ServerInvoker):
         request:'any_' = None, # type: any_
         *args:'any_',          # type: any_
         **kwargs:'any_'        # type: any_
-    ) -> 'ServerInvocationResult | None':
-
-        # Local aliases
-        kwargs_pid = kwargs.get('pid')
+    ) -> 'stranydict | anylist | str | None':
 
         if not self.invocation_ctx.address:
             logger.info('RPC address not found for %s:%s -> `%r` (%s)',
@@ -168,7 +169,9 @@ class RemoteServerInvoker(ServerInvoker):
 
         # .. actually invoke the server now ..
         response = invoke_func(service, request, *args, **kwargs) # type: ServiceInvokeResponse
-        response
+        response = response.data
+
+        return response
 
         '''
         # .. build the results object ..
