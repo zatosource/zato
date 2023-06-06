@@ -18,7 +18,7 @@ from zato.server.connection.server.rpc.invoker import LocalServerInvoker, Remote
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, generator_
+    from zato.common.typing_ import any_, anylist, generator_, stranydict
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.server.rpc.config import ConfigSource, RPCServerInvocationCtx
     from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvoker
@@ -82,7 +82,7 @@ class ServerRPC:
     def __init__(self, config_ctx:'ConfigCtx') -> 'None':
         self.config_ctx = config_ctx
         self.current_cluster_name = self.config_ctx.config_source.current_cluster_name
-        self._invokers = {}
+        self._invokers = {} # type: stranydict
         self.logger = getLogger('zato')
 
 # ################################################################################################################################
