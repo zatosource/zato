@@ -133,6 +133,12 @@ class RemoteServerInvoker(ServerInvoker):
 
 # ################################################################################################################################
 
+    def ping(self, ping_timeout:'intnone'=None) -> 'None':
+        ping_timeout = ping_timeout or self.ping_timeout
+        _ = requests_get(self.ping_address, timeout=ping_timeout)
+
+# ################################################################################################################################
+
     def _invoke(
         self,
         invoke_func,           # type: callable_

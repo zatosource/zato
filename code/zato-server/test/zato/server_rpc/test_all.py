@@ -7,17 +7,21 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from contextlib import closing
 from unittest import main, TestCase
 
 # Zato
+from zato.common.api import INFO_FORMAT
+from zato.common.component_info import get_info
 from zato.common.ext.dataclasses import dataclass
 from zato.common.odb.model import Base, HTTPBasicAuth, Cluster, Server as ServerModel
 from zato.common.odb.api import ODBManager, SQLConnectionPool
 from zato.common.test import TestCluster, TestParallelServer
 from zato.common.typing_ import cast_
+from zato.common.util.api import get_client_from_server_conf
 from zato.server.connection.server.rpc.api import ConfigCtx, ServerRPC
-from zato.server.connection.server.rpc.config import CredentialsConfig, ODBConfigSource
+from zato.server.connection.server.rpc.config import CredentialsConfig, ODBConfigSource, RPCServerInvocationCtx
 from zato.server.connection.server.rpc.invoker import LocalServerInvoker, RemoteServerInvoker, ServerInvoker
 
 # ################################################################################################################################
@@ -361,7 +365,48 @@ class ServerRPCTestCase(TestCase):
         self.assertIs(ctx3.crypto_use_tls, TestConfig.crypto_use_tls)
 
     def test_invoke_all_pids_using_a_remote_invoker(self):
-        pass
+
+        if not(server_root_dir := os.environ.get('Zato_Test_Server_Root_Dir')):
+            return
+
+        # Note that this test requires that at least two workers be present
+        # because it tests multi-CPU configuration.
+        min_workers = 2
+
+        # Configuration read from the environment
+        server_host = os.environ.get('Zato_Test_Server_Host')
+        server_port = cast_('str', os.environ.get('Zato_Test_Server_Port'))
+        server_port = int(server_port)
+
+        # An invocation client that we can extract the underlying configuration from
+        client = get_client_from_server_conf(server_root_dir)
+
+        # Build the overall configuration context object
+        ctx = RPCServerInvocationCtx()
+        ctx.cluster_name = 'ServerRPCTestCase-Cluster-Name'
+        ctx.server_name  = 'ServerRPCTestCase-Server-Name'
+        ctx.address = server_host
+        ctx.port = server_port
+        ctx.username = client.username
+        ctx.password = client.password
+
+        # Create the invoker ..
+        invoker = RemoteServerInvoker(ctx)
+
+        # .. and ping it immediately to make sure the configuration is correct.
+        invoker.ping()
+
+        # Now, obtain all the PIDs of the workers in the current server.
+        server_info = get_info(server_root_dir, INFO_FORMAT.DICT)
+
+        # Make sure we have enough worker processes to continue
+        master_proc_workers_no = server_info['master_proc_workers_no']
+        master_proc_workers_no = cast_('int', master_proc_workers_no)
+        if master_proc_workers_no < min_workers:
+            msg = f'Server from {server_root_dir} should have at least {min_workers} workers instead of {master_proc_workers_no}'
+            raise Exception(msg)
+
+        server_info
 
 # ################################################################################################################################
 # ################################################################################################################################
