@@ -44,6 +44,7 @@ from tempfile import NamedTemporaryFile, gettempdir
 from threading import current_thread
 from time import sleep
 from traceback import format_exc
+from uuid import uuid4
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -2047,6 +2048,27 @@ def tabulate_dictlist(data:'dictlist', skip_keys:'listnone'=None) -> 'str':
 
 # ################################################################################################################################
 
+def get_new_tmp_full_path(file_name:'str'='', *, prefix:'str'='', suffix:'str'='', random_suffix:'str'='') -> 'str':
+
+    if prefix:
+        prefix = f'{prefix}-'
+
+    if not random_suffix:
+        random_suffix = uuid4().hex
+
+    # This may be provided by users on input
+    file_name = file_name or 'zato-tmp-' + prefix + random_suffix
+
+    if suffix:
+        file_name += f'-{suffix}'
+
+    tmp_dir = gettempdir()
+    full_path = os.path.join(tmp_dir, file_name)
+
+    return full_path
+
+# ################################################################################################################################
+
 def get_ipc_pid_port_path(cluster_name:'str', server_name:'str', pid:'int') -> 'str':
 
     # This is where the file name itself ..
@@ -2059,9 +2081,8 @@ def get_ipc_pid_port_path(cluster_name:'str', server_name:'str', pid:'int') -> '
     # .. make sure the name is safe to use in the file-system ..
     file_name = fs_safe_name(file_name)
 
-    # .. now, we can combine it with a temporary directory ..
-    tmp_dir = gettempdir()
-    full_path = os.path.join(tmp_dir, file_name)
+    # .. now, we can obtain a full path to a temporary directory ..
+    full_path = get_new_tmp_full_path(file_name)
 
     # .. and return the result to our caller.
     return full_path
