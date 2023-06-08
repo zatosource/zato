@@ -44,7 +44,7 @@ class IPCResponseMeta:
 
 @dataclass(init=False)
 class IPCResponse:
-    data: 'anydict | None'
+    data: 'anydict | anylist | None'
     meta: 'IPCResponseMeta'
 
 # ################################################################################################################################
