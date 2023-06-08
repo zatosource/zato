@@ -130,9 +130,14 @@ class AuxServerConfig:
             config.main.odb.username = config.main.odb.username
             config.main.odb.pool_size = config.main.odb.pool_size
 
+            odb_password = config.main.odb.password or '' # type: str
+
+            if odb_password and odb_password.startswith('gA'):
+                config.main.odb.password = config.crypto_manager.decrypt(odb_password)
+
         # Decrypt the password used to invoke servers
         if config.main.get('server'):
-            server_password = config.main.server.server_password or ''
+            server_password = config.main.server.server_password or '' # type: str
             if server_password and server_password.startswith('gA'):
                 server_password = config.crypto_manager.decrypt(server_password)
                 config.main.server.server_password = server_password
