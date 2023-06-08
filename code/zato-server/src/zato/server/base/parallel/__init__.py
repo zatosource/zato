@@ -86,7 +86,7 @@ if 0:
     from zato.common.ipc.client import IPCResponse
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
-    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, dictlist, strbytes, strlist, strnone
+    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, dictlist, stranydict, strbytes, strlist, strnone
     from zato.server.commands import CommandResult
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
@@ -100,7 +100,7 @@ if 0:
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
-    SIOServerConfig = SIOServerConfig
+    SIOServerConfig = SIOServerConfig # type: ignore
     SSOAPI = SSOAPI # type: ignore
     StartupCallableTool = StartupCallableTool
     SubprocessIPC = SubprocessIPC
@@ -1379,8 +1379,26 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _remove_response_elem(self, data:'stranydict') -> 'stranydict':
+    def _remove_response_root_elem(self, data:'stranydict') -> 'stranydict':
+        keys = list(data.keys())
+        if len(keys) == 1:
+            root = keys[0]
+            data = data[root]
 
+        return data
+
+# ################################################################################################################################
+
+    def _remove_response_elem(self, data:'stranydict | anylist') -> 'stranydict | anylist':
+
+        if isinstance(data, dict):
+            data = self._remove_response_root_elem(data)
+        else:
+            for idx, item in enumerate(data):
+                item = self._remove_response_root_elem(item)
+                data[idx] = item
+
+        return data
 
 # ################################################################################################################################
 
@@ -1400,6 +1418,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             for pid in pids:
                 pid_response = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
                 if pid_response.data is not None:
+                    pid_response.data = self._remove_response_elem(pid_response.data)
                     out.append(pid_response.data)
 
         except Exception:
