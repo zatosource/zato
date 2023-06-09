@@ -1383,7 +1383,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         keys = list(data.keys())
         if len(keys) == 1:
             root = keys[0]
-            data = data[root]
+            if root.startswith('zato_') or root == 'response':
+                data = data[root]
 
         return data
 
@@ -1407,7 +1408,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """
 
         # A list of dict responses, one for each PID
-        out = []
+        out = [] # type: dictlist
 
         try:
             # Get all current PIDs
@@ -1418,7 +1419,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             for pid in pids:
                 pid_response = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
                 if pid_response.data is not None:
-                    pid_response.data = self._remove_response_elem(pid_response.data)
+
+                    # If this is an internal service, we want to remove its root-level response element.
+                    if service.startswith('zato'):
+                        pid_response.data = self._remove_response_elem(pid_response.data)
                     out.append(pid_response.data)
 
         except Exception:
