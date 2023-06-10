@@ -479,8 +479,6 @@ class SessionAPI:
             request.default_expiry = default_expiry
 
             out = self.server.invoke(expiry_hook, request=request.to_dict(), serialize=False)
-            out = out.getvalue()
-            out = out['response']
             out = out['expiry']
             out = int(out)
 
