@@ -41,6 +41,9 @@ class GetList(Service):
 
     def handle(self) -> 'None':
 
+        # Reusable
+        wrapper_type = ''
+
         # Our response to produce
         out = []
 
@@ -48,7 +51,8 @@ class GetList(Service):
         service_name = 'zato.http-soap.get-list'
 
         # Filter by this wrapper type from input
-        wrapper_type = self.request.raw_request['wrapper_type']
+        if isinstance(self.request.raw_request, dict):
+            wrapper_type = self.request.raw_request.get('wrapper_type', '') # type: str
 
         # This response has all the REST connections possible ..
         response = self.invoke(service_name, {
@@ -61,14 +65,15 @@ class GetList(Service):
         # .. iterate through each of them ..
         for item in response:
 
-            # .. filter out everything but our own wrapper ..
-            if item.get('wrapper_type') == wrapper_type:
+            if wrapper_type:
+                if item.get('wrapper_type') != wrapper_type:
+                    continue
 
-                # .. replace the name prefix ..
-                item['name'] = _replace_suffix_from_dict_name(item, wrapper_type)
+            # .. replace the name prefix ..
+            item['name'] = _replace_suffix_from_dict_name(item, wrapper_type)
 
-                # .. and append the item to the result ..
-                out.append(item)
+            # .. and append the item to the result ..
+            out.append(item)
 
         self.response.payload = dumps(out)
 
