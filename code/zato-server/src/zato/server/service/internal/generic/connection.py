@@ -477,8 +477,9 @@ class Ping(_BaseService):
     """ Pings a generic connection.
     """
     class SimpleIO(AdminSIO):
-        input_required = 'id',
-        output_required = 'info',
+        input_required = 'id'
+        output_required = 'info'
+        output_optional = 'is_success'
         response_elem = None
 
     def handle(self) -> 'None':
@@ -503,11 +504,13 @@ class Ping(_BaseService):
                 exc = format_exc()
                 self.logger.warning(exc)
                 self.response.payload.info = exc
+                self.response.payload.is_success = False
             else:
                 response_time = datetime.utcnow() - start_time
                 info = 'Connection pinged; response time: {}'.format(response_time)
                 self.logger.info(info)
                 self.response.payload.info = info
+                self.response.payload.is_success = True
 
 # ################################################################################################################################
 # ################################################################################################################################
