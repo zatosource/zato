@@ -249,8 +249,15 @@ def overview(req, service_name):
             now = datetime.utcnow()
             start = now+relativedelta(minutes=-60)
 
-            response = req.zato.client.invoke('zato.stats.get-by-service', {'service_id':service.id, 'start':start, 'stop':now})
-            if response.has_data:
+            try:
+                response = req.zato.client.invoke(
+                    'zato.stats.get-by-service', {
+                        'service_id':service.id, 'start':start, 'stop':now
+                })
+            except Exception:
+                response = None
+
+            if response and response.has_data:
                 for name in('mean_trend', 'usage_trend', 'min_resp_time', 'max_resp_time', 'mean', 'usage', 'rate'):
                     value = getattr(response.data, name, ZATO_NONE)
                     if not value or value == ZATO_NONE:
