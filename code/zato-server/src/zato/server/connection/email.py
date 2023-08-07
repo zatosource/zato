@@ -173,7 +173,7 @@ class SMTPConnection(_Connection):
 
 # ################################################################################################################################
 
-    def send(self, msg, from_=None):
+    def send(self, msg, from_=None) -> 'bool':
 
         headers = msg.headers or {}
         atts = []
@@ -200,12 +200,22 @@ class SMTPConnection(_Connection):
             with self.conn_class(*self.conn_args) as conn:
                 conn.send(email, atts, from_ or msg.from_)
         except Exception:
+
+            # Log what happened ..
             logger.warning('Could not send an SMTP message to `%s`, e:`%s`', self.config_no_sensitive, format_exc())
+
+            # .. and tell the caller that the message was not sent.
+            return False
         else:
+
+            # Optionally, log what happened ..
             if logger.isEnabledFor(INFO):
                 atts_info = ', '.join(att.name for att in atts) if atts else None
                 logger.info('SMTP message `%r` sent from `%r` to `%r`, attachments:`%r`',
                     msg.subject, msg.from_, msg.to, atts_info)
+
+            # .. and tell the caller that the message was sent successfully.
+            return True
 
 # ################################################################################################################################
 # ################################################################################################################################
