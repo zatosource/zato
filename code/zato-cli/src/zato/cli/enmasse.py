@@ -12,7 +12,7 @@ from collections import namedtuple
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common.api import GENERIC as COMMON_GENERIC
+from zato.common.api import GENERIC as COMMON_GENERIC, Zato_None
 
 # ################################################################################################################################
 
@@ -93,7 +93,7 @@ def populate_services_from_apispec(client, logger):
     })
 
     if not response.ok:
-        logger.error('could not fetch service list')
+        logger.error('Could not fetch service list -> %s', response.inner.text)
         return
 
     by_prefix = {}  # { "zato.apispec": {"get-api-spec": { .. } } }
@@ -558,7 +558,25 @@ class DependencyScanner:
 
                 dep = self.find(dep_info['dependent_type'], {dep_info['dependent_field']: value})
                 if dep is None:
-                    key = (dep_info['dependent_type'], item[dep_key])
+
+                    if dep_key == 'sec_def':
+                        value = item.get('sec_def', Zato_None)
+
+                        if value == Zato_None:
+                            value = item['security_name']
+
+                    else:
+                        value = item[dep_key]
+
+                    print()
+                    print(111, dep)
+                    print(222, dep_info)
+                    print(333, dep_key)
+                    print(444, item)
+                    print(555, value)
+                    print()
+
+                    key = (dep_info['dependent_type'], value)
                     names = self.missing.setdefault(key, [])
                     names.append(item.name)
 
