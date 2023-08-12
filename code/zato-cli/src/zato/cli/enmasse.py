@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,7 +12,7 @@ from collections import namedtuple
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common.api import GENERIC as COMMON_GENERIC, Zato_None
+from zato.common.api import GENERIC as COMMON_GENERIC
 
 # ################################################################################################################################
 
@@ -549,32 +549,20 @@ class DependencyScanner:
             if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
                 continue
 
+            if dep_key == 'sec_def':
+                if 'sec_def' not in item:
+                    dep_key = 'security_name'
+
             if dep_key not in item:
                 results.add_error(
                     (dep_key, dep_info), ERROR_MISSING_DEP, '{} lacks required {} field: {}', item_type, dep_key, item)
 
             value = item.get(dep_key)
+
             if value != dep_info.get('empty_value'):
 
                 dep = self.find(dep_info['dependent_type'], {dep_info['dependent_field']: value})
                 if dep is None:
-
-                    if dep_key == 'sec_def':
-                        value = item.get('sec_def', Zato_None)
-
-                        if value == Zato_None:
-                            value = item['security_name']
-
-                    else:
-                        value = item[dep_key]
-
-                    print()
-                    print(111, dep)
-                    print(222, dep_info)
-                    print(333, dep_key)
-                    print(444, item)
-                    print(555, value)
-                    print()
 
                     key = (dep_info['dependent_type'], value)
                     names = self.missing.setdefault(key, [])
@@ -991,6 +979,10 @@ class ObjectImporter:
 
             if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
                 continue
+
+            if field_name == 'sec_def':
+                if 'sec_def' not in item:
+                    field_name = 'security_name'
 
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
                 dep_obj = self.object_mgr.find(info['dependent_type'], {
