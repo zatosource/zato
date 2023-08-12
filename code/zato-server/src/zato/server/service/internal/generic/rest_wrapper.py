@@ -111,8 +111,12 @@ class _WrapperBase(Service):
         if self._uses_name:
             _orig_name    = request['name']
             _name         = _orig_name
-            _wrapper_type = request['wrapper_type']
-            request['name'] = f'{_wrapper_type }.{_name}'
+            _wrapper_type = request.get('wrapper_type')
+            if _wrapper_type:
+                name = f'{_wrapper_type }.{_name}'
+            else:
+                name = _name
+            request['name'] = name
 
         # .. and send it to the service.
         response = self.invoke(service_name, request, skip_response_elem=True)
