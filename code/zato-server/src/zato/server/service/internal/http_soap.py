@@ -259,6 +259,9 @@ class Create(_CreateEdit):
 
     def handle(self):
 
+        # For later use
+        skip_opaque = []
+
         # If we have a rate limiting definition, let's check it upfront
         DefinitionParser.check_definition_from_input(self.request.input)
 
@@ -343,8 +346,16 @@ class Create(_CreateEdit):
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
                 item.wrapper_type = input.wrapper_type
-                item.username = input.username
-                item.password = input.password
+
+                if input.username:
+                    item.username = input.username
+                else:
+                    skip_opaque.append('username')
+
+                if input.password:
+                    item.password = input.password
+                else:
+                    skip_opaque.append('password')
 
                 # Configure CA certs
                 self._set_sec_tls_ca_cert_id(item, input)
@@ -355,7 +366,7 @@ class Create(_CreateEdit):
                     input.security_id = None # To ensure that SQLite does not reject ''
 
                 # Opaque attributes
-                set_instance_opaque_attrs(item, input)
+                set_instance_opaque_attrs(item, input, skip=skip_opaque)
 
                 session.add(item)
                 session.commit()
@@ -419,6 +430,9 @@ class Edit(_CreateEdit):
         output_optional = 'id', 'name'
 
     def handle(self):
+
+        # For later use
+        skip_opaque = []
 
         # If we have a rate limiting definition, let's check it upfront
         DefinitionParser.check_definition_from_input(self.request.input)
@@ -520,14 +534,22 @@ class Edit(_CreateEdit):
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
                 item.wrapper_type = input.wrapper_type
-                item.username = input.username
-                item.password = input.password
+
+                if input.username:
+                    item.username = input.username
+                else:
+                    skip_opaque.append('username')
+
+                if input.password:
+                    item.password = input.password
+                else:
+                    skip_opaque.append('password')
 
                 # Configure CA certs
                 self._set_sec_tls_ca_cert_id(item, input)
 
                 # Opaque attributes
-                set_instance_opaque_attrs(item, input)
+                set_instance_opaque_attrs(item, input, skip=skip_opaque)
 
                 session.add(item)
                 session.commit()

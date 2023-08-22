@@ -316,13 +316,14 @@ class AWS:
 class Cloud:
     """ A container for cloud-related connections a service can establish.
     """
-    __slots__ = 'aws', 'confluence', 'dropbox', 'jira', 'salesforce'
+    __slots__ = 'aws', 'confluence', 'dropbox', 'jira', 'salesforce', 'ms365'
 
     aws: 'AWS'
     confluence: 'stranydict'
     dropbox: 'stranydict'
     jira: 'stranydict'
     salesforce: 'stranydict'
+    ms365: 'stranydict'
 
     def __init__(self) -> 'None':
         self.aws = AWS()
