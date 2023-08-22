@@ -419,7 +419,7 @@ about_to_expire_threshold=30 # In days
 log_in_if_about_to_expire=True
 min_length=8
 max_length=256
-min_complexity=4
+min_complexity=0
 min_complexity_algorithm=zxcvbn
 reject_list = """
   111111
