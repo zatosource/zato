@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -268,6 +268,8 @@ class AutoPing(AdminService):
         response = response['zato_outgoing_sql_get_list_response']
 
         for item in response:
+            if not item.get('is_active'):
+                continue
             try:
                 self.invoke(Ping.get_name(), {
                     'id': item['id'],
