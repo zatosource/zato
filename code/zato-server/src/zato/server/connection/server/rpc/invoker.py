@@ -87,17 +87,20 @@ class LocalServerInvoker(ServerInvoker):
     """ Invokes services directly on the current server, without any network-based RPC.
     """
     def invoke(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self.parallel_server.invoke(*args, **kwargs)
+        response = self.parallel_server.invoke(*args, **kwargs)
+        return response
 
 # ################################################################################################################################
 
     def invoke_async(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self.parallel_server.invoke_async(*args, **kwargs)
+        response = self.parallel_server.invoke_async(*args, **kwargs)
+        return response
 
 # ################################################################################################################################
 
     def invoke_all_pids(self, *args:'any_', **kwargs:'any_') -> 'anylist':
-        return self.parallel_server.invoke_all_pids(*args, **kwargs)
+        response = self.parallel_server.invoke_all_pids(*args, **kwargs)
+        return response
 
 # ################################################################################################################################
 # ################################################################################################################################
