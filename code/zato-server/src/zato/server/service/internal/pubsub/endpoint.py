@@ -43,6 +43,7 @@ if 0:
     from bunch import Bunch
     from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SASession
+    from zato.common.ipc.client import IPCResponse
     from zato.common.typing_ import anylist, stranydict
     from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvocationResult
     from zato.server.pubsub.model import subnone
@@ -852,9 +853,18 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
 
             if response:
 
+                # It may be a dict on a successful invocation ..
+                if isinstance(response, dict):
+                    data = response         # type: ignore
+                    data = data['response'] # type: ignore
+
+                # .. otherwise, it may be an IPCResponse object.
+                else:
+                    data = response.data # type: ignore
+
                 # Extract the actual list of messages ..
-                response = response['response']
-                msg_list = response['msg_list']
+                data = cast_('stranydict', data)
+                msg_list = data['msg_list']
                 msg_list = reversed(msg_list)
                 msg_list = list(msg_list)
 
