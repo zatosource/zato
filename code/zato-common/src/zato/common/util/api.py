@@ -1756,6 +1756,9 @@ def get_worker_pids_by_parent(parent_pid:'int') -> 'intlist':
 def get_worker_pids():
     """ Returns all sibling worker PIDs of the server process we are being invoked on, including our own worker too.
     """
+    # psutil
+    import psutil
+
     # This is our own process ..
     current_process = psutil.Process()
 
