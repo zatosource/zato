@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -43,8 +43,8 @@ class PubAPITestCase(BasePubSubRestTestCase):
         # Wait a moment to make sure the subscription data is created
         sleep(0.2)
 
-        sub_key = response_initial['sub_key']
-        queue_depth = response_initial['queue_depth']
+        sub_key = cast_('str', response_initial['sub_key'])
+        queue_depth = cast_('int', response_initial['queue_depth'])
 
         #
         # Validate sub_key
