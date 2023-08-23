@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import datetime
 from logging import getLogger
 from tempfile import NamedTemporaryFile
+from time import sleep
 from random import choice, randint
 from unittest import TestCase
 from uuid import uuid4
@@ -735,6 +736,8 @@ class BaseZatoTestCase(TestCase):
         # These parameters for the Command to invoke will always exist ..
         cli_params = ['pubsub', 'create-topic', '--name', topic_name]
 
+        self.logger.info(f'Creating topic {topic_name} ({self.__class__.__name__})')
+
         # .. whereas these ones are optional ..
         if limit_retention:
             cli_params.append('--limit-retention')
@@ -796,6 +799,9 @@ class BaseZatoTestCase(TestCase):
 
         # .. invoke the service and obtain its response ..
         out = invoker.invoke_cli(cli_params, command_name) # type: str
+
+        # .. let the changes propagate across servers ..
+        sleep(1)
 
         # .. and let the parent class handle the result
         return self._handle_cli_out(out, assert_ok, load_json)
