@@ -202,8 +202,8 @@ class GetEventList(_GetEventList):
     """ Returns a list of events for a particular topic. Must be invoked on the same server the data is to be returned from.
     """
     def handle(self):
-        server = self.server.rpc[self.request.input.server_name]
-        response = server.invoke(GetServerEventList.get_name(), self.request.input, pid=self.request.input.server_pid)
+        invoker = self.server.rpc.get_invoker_by_server_name(self.request.input.server_name)
+        response = invoker.invoke(GetServerEventList.get_name(), self.request.input, pid=self.request.input.server_pid)
         self.response.payload[:] = response
 
 # ################################################################################################################################

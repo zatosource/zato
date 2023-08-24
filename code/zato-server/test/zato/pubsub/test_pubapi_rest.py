@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -29,7 +29,7 @@ if 0:
 
 class PubAPITestCase(BasePubSubRestTestCase):
 
-    def xtest_self_subscribe(self):
+    def test_self_subscribe(self):
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_shared
@@ -41,10 +41,10 @@ class PubAPITestCase(BasePubSubRestTestCase):
         response_initial = self.rest_client.post(PubSubConfig.PathSubscribe + topic_name)
 
         # Wait a moment to make sure the subscription data is created
-        sleep(0.2)
+        sleep(4)
 
-        sub_key = response_initial['sub_key']
-        queue_depth = response_initial['queue_depth']
+        sub_key = cast_('str', response_initial['sub_key'])
+        queue_depth = cast_('int', response_initial['queue_depth'])
 
         #
         # Validate sub_key
@@ -71,7 +71,7 @@ class PubAPITestCase(BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def xtest_self_unsubscribe(self):
+    def test_self_unsubscribe(self):
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_shared
@@ -89,13 +89,13 @@ class PubAPITestCase(BasePubSubRestTestCase):
 
 # ################################################################################################################################
 
-    def xtest_full_path_subscribe_before_publication(self):
+    def test_full_path_subscribe_before_publication(self):
         tester = FullPathTester(self, True) # type: ignore
         tester.run()
 
 # ################################################################################################################################
 
-    def xtest_full_path_subscribe_after_publication(self):
+    def test_full_path_subscribe_after_publication(self):
 
         prefix = '/zato/demo/unique.'
         topic_name = prefix + datetime.utcnow().isoformat()
@@ -103,16 +103,20 @@ class PubAPITestCase(BasePubSubRestTestCase):
         # Command to invoke ..
         cli_params = ['pubsub', 'create-topic', '--name', topic_name]
 
+        self.logger.info(f'Creating topic {topic_name} ({self.__class__.__name__})')
+
         # .. get its response as a dict ..
         out = self.run_zato_cli_json_command(cli_params) # type: anydict
         topic_name = out['name']
+
+        sleep(4)
 
         tester = FullPathTester(self, False, topic_name) # type: ignore
         tester.run()
 
 # ################################################################################################################################
 
-    def xtest_receive_has_no_sub(self):
+    def test_receive_has_no_sub(self):
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_shared
