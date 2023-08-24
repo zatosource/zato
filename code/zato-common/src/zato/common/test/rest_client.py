@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from http.client import OK
 from json import dumps, loads
+from time import sleep
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -132,6 +133,8 @@ class RESTClient:
         # .. reset the password now ..
         command('service', 'invoke', TestConfig.server_location,
             'zato.security.basic-auth.change-password', '--payload', payload)
+
+        sleep(4)
 
         # .. and store the credentials for later use.
         self._auth = (self._api_invoke_username, self._api_invoke_password)

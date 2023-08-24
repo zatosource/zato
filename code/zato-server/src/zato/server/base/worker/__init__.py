@@ -1790,7 +1790,13 @@ class WorkerStore(_WorkerStoreBase):
 
         if kwargs.get('needs_response'):
 
-            return response if skip_response_elem else service.response.payload
+            if skip_response_elem:
+                return response
+            else:
+                response = service.response.payload
+                if hasattr(response, 'getvalue'):
+                    response = response.getvalue(serialize=kwargs.get('serialize'))
+                return response
 
 # ################################################################################################################################
 

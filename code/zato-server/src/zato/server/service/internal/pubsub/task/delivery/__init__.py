@@ -93,7 +93,8 @@ class GetDeliveryTaskList(AdminService):
 
     def handle(self):
 
-        self.response.payload[:] = self.server.rpc[self.request.input.server_name].invoke(GetServerDeliveryTaskList.get_name(), {
+        invoker = self.server.rpc.get_invoker_by_server_name(self.request.input.server_name)
+        self.response.payload[:] = invoker.invoke(GetServerDeliveryTaskList.get_name(), {
             'cluster_id': self.request.input.cluster_id,
         }, pid=self.request.input.server_pid)
 
@@ -114,7 +115,8 @@ class GetDeliveryTask(AdminService):
             'server_pid': self.request.input.server_pid,
         }
 
-        response = self.server.rpc[self.request.input.server_name].invoke(GetDeliveryTaskList.get_name(), request)
+        invoker = self.server.rpc.get_invoker_by_server_name(self.request.input.server_name)
+        response = invoker.invoke(GetDeliveryTaskList.get_name(), request)
 
         for item in response:
             if item['python_id'] == self.request.input.python_id:

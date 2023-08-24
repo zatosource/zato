@@ -180,7 +180,7 @@ class DeliverMessage(AdminService):
         # We can have two cases.
         #
         # 1) The messages were published via self.pubsub.publish('service.name)
-        # 2) The messages were published to a topic and of its subscribers is a service
+        # 2) The messages were published to a topic and one of its subscribers is a service
         #
         # Depending on which case it is, we will extract the actual service's name differently.
         #
@@ -196,15 +196,13 @@ class DeliverMessage(AdminService):
         target_service_name = zato_ctx != '{}' and zato_ctx.get('target_service_name')
 
         #
-        # Case 2) is where we need to look up the service's name based on a given endpoint that points to the service.
+        # Case 2) is where we need to look up the service's name based on a given topic that points to the service.
         #
         if not target_service_name:
-            endpoint = self.pubsub.get_endpoint_by_id(sub.endpoint_id)
-            service_id = endpoint.config['service_id']
-            target_service_name = self.server.service_store.get_service_name_by_id(service_id)
+            target_service_name = self.pubsub.get_target_service_name_by_topic_id(sub.topic_id)
 
         # Invoke the target service, giving it on input everything that we have,
-        # regardless of whether it is a list or not. a list
+        # regardless of whether it is a list or not.
         self.invoke(target_service_name, msg)
 
 # ################################################################################################################################

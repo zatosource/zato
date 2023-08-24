@@ -235,8 +235,13 @@ class _BaseAPICommand(_BaseCommand):
             'WSX API request: `%s` `%s` `%s` `%s` (%s %s:%s)', self.server_service, self.request.input,
             client.pub_client_id, client.ext_client_id, self.cid, server_name, server_proc_pid)
 
-        server_response = self.server.rpc[server_name].invoke(
-            self.server_service, self.request.input, pid=server_proc_pid, data_format=DATA_FORMAT.JSON)
+        invoker = self.server.rpc.get_invoker_by_server_name(server_name)
+        server_response = invoker.invoke(
+            self.server_service,
+            self.request.input,
+            pid=server_proc_pid,
+            data_format=DATA_FORMAT.JSON
+        )
 
         self.logger.info('WSX API response: `%s` (%s)', server_response, self.cid)
 
