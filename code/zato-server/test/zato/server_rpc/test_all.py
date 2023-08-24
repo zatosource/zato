@@ -21,7 +21,7 @@ from zato.common.odb.api import ODBManager, SQLConnectionPool
 from zato.common.test import TestCluster, TestParallelServer
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_client_from_server_conf, get_new_tmp_full_path
-from zato.common.util.open_ import open_r, open_w
+from zato.common.util.open_ import open_w
 from zato.server.connection.server.rpc.api import ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import CredentialsConfig, ODBConfigSource, RPCServerInvocationCtx
 from zato.server.connection.server.rpc.invoker import LocalServerInvoker, RemoteServerInvoker, ServerInvoker

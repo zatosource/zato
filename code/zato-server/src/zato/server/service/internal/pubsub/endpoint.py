@@ -43,7 +43,6 @@ if 0:
     from bunch import Bunch
     from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.ipc.client import IPCResponse
     from zato.common.typing_ import anylist, stranydict
     from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvocationResult
     from zato.server.pubsub.model import subnone
