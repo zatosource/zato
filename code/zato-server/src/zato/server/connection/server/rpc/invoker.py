@@ -24,7 +24,7 @@ if 0:
     from requests import Response
     from typing import Callable
     from zato.client import ServiceInvokeResponse
-    from zato.common.typing_ import anydict, anylist, callable_
+    from zato.common.typing_ import anydict, anylist, callable_, intnone, stranydict, strordictnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.server.rpc.config import RPCServerInvocationCtx
 
@@ -175,89 +175,6 @@ class RemoteServerInvoker(ServerInvoker):
         response = response.data
 
         return response
-
-        '''
-        # .. build the results object ..
-        out = ServerInvocationResult()
-        out.is_ok = response.ok
-        out.has_data = response.has_data
-        out.data = {}
-        out.error_info = response.details
-
-        if response.ok:
-            if response.has_data:
-                response.data = cast_('anydict', response.data)
-                for pid, pid_data in response.data.items():
-
-                    pid_data = cast_('strordictnone', pid_data)
-                    per_pid_data_is_dict = False
-
-                    # We may potentially receive it if all_pids is not used
-                    if pid == 'response':
-                        pid = kwargs_pid
-
-                    # PID is always an integer, no matter how we get its value.
-                    pid = cast_('int', pid)
-
-                    # It may be a string if there is a low-level exception ..
-                    if isinstance(pid_data, str):
-                        per_pid_data = pid_data
-
-                    # .. otherwise, it may be a dict or.
-                    else:
-
-                        # If it is a dict, not that per_pid_data will not exist if we were invoking a specific PID
-                        if isinstance(pid_data, dict):
-                            per_pid_data_is_dict = True
-                            per_pid_data = pid_data.get('pid_data', '')
-
-                        # .. otherwise, it may be None, which we assign as is.
-                        else:
-                            per_pid_data = pid_data
-
-                    # We go here if there is no response for a PID ..
-                    if per_pid_data == '':
-
-                        # .. however, if we did invoke another PID then we need to extract
-                        # .. the response ourselves because it will not be in a top-level per-PID dict ..
-                        if kwargs_pid:
-
-                            per_pid_response = PerPIDResponse()
-                            per_pid_response.is_ok = True
-                            per_pid_response.pid = kwargs_pid
-                            per_pid_response.pid_data = pid_data
-                            per_pid_response.error_info = ''
-
-                            out.data[pid] = per_pid_response
-
-                        # .. otherwise, there really was no response for that PID.
-                        else:
-
-                            # We need a cast because type checkers may not recognize that it is known to be a dict.
-                            if per_pid_data_is_dict:
-                                pid_data = cast_('anydict', pid_data)
-                                pid_data['pid_data'] = None
-
-                    else:
-                        if per_pid_data:
-                            if isinstance(per_pid_data, str) and per_pid_data[0] == '{':
-
-                                # Here, we also need a cast for the same reason as above.
-                                if per_pid_data_is_dict:
-                                    pid_data = cast_('anydict', pid_data)
-                                    pid_data['pid_data'] = json_loads(per_pid_data)
-
-                        if isinstance(pid_data, dict):
-                            per_pid_response = from_dict(PerPIDResponse, pid_data) # type: PerPIDResponse
-                            per_pid_response.pid = pid
-                            out.data[pid] = per_pid_response
-                        else:
-                            logger.info('Object pid_data is not a dict -> %s -> `%s`', type(pid_data), pid_data)
-                            out.data[pid] = pid_data
-        '''
-
-        # .. and return the result to our caller.
-        return out
 
 # ################################################################################################################################
 
