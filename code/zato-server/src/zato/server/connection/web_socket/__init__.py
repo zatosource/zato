@@ -944,7 +944,7 @@ class WebSocket(_WebSocket):
         """ Registers peer in ODB and sets up background pings to keep its connection alive.
         Called only if authentication succeeded.
         """
-        self.sql_ws_client_id = self.invoke_service('zato.channel.web-socket.client.create', {
+        response = self.invoke_service('zato.channel.web-socket.client.create', {
             'pub_client_id': self.pub_client_id,
             'ext_client_id': self.ext_client_id,
             'ext_client_name': self.ext_client_name,
@@ -957,7 +957,9 @@ class WebSocket(_WebSocket):
             'channel_name': self.config.name,
             'peer_forwarded_for': self.forwarded_for,
             'peer_forwarded_for_fqdn': self.forwarded_for_fqdn,
-        }, needs_response=True).ws_client_id
+        }, needs_response=True)
+
+        self.sql_ws_client_id = response['ws_client_id']
 
         logger.info(
             _assigned_msg, self.sql_ws_client_id, self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name)

@@ -122,8 +122,8 @@ class GetFromTopicNonGD(AdminService):
         input_required = _GetSIO.input_required + ('server_name', 'server_pid')
 
     def handle(self) -> 'None':
-        server = self.server.rpc[self.request.input.server_name]
-        response = server.invoke(GetFromServerTopicNonGD.get_name(), {
+        invoker = self.server.rpc.get_invoker_by_server_name(self.request.input.server_name)
+        response = invoker.invoke(GetFromServerTopicNonGD.get_name(), {
             'msg_id': self.request.input.msg_id,
         }, pid=self.request.input.server_pid)
 
@@ -191,8 +191,8 @@ class TopicDeleteNonGD(AdminService):
         input_required = ('cluster_id', 'server_name', 'server_pid', AsIs('msg_id'))
 
     def handle(self) -> 'None':
-        server = self.server.rpc[self.request.input.server_name]
-        server.invoke(DeleteTopicNonGDMessage.get_name(), {
+        invoker = self.server.rpc.get_invoker_by_server_name(self.request.input.server_name)
+        invoker.invoke(DeleteTopicNonGDMessage.get_name(), {
             'msg_id': self.request.input.msg_id,
         }, pid=self.request.input.server_pid)
 
@@ -223,7 +223,8 @@ class QueueDeleteNonGD(AdminService):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
 
         if sk_server:
-            response = self.server.rpc[sk_server.server_name].invoke(
+            invoker = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+            response = invoker.invoke(
                 QueueDeleteServerNonGD.get_name(), {
                     'sub_key': sk_server.sub_key,
                     'msg_id': self.request.input.msg_id
@@ -256,16 +257,16 @@ class QueueDeleteGD(AdminService):
             session.commit()
 
             # Find the server that has the delivery task for this sub_key
-            sub_key_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
+            sk_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
 
             # It's possible that there is no such server in case of WSX clients that connected,
             # had their subscription created but then they disconnected and there is no delivery server for them.
-            if sub_key_server:
-                server = self.server.rpc[sub_key_server.server_name]
-                server.invoke(DeleteDeliveryTaskMessage.get_name(), {
+            if sk_server:
+                invoker = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+                invoker.invoke(DeleteDeliveryTaskMessage.get_name(), {
                     'msg_id': self.request.input.msg_id,
                     'sub_key': self.request.input.sub_key,
-                }, pid=sub_key_server.server_pid)
+                }, pid=sk_server.server_pid)
 
         self.logger.info('Deleting GD queue message `%s` (%s)', self.request.input.msg_id, self.request.input.sub_key)
 
@@ -381,8 +382,8 @@ class UpdateNonGD(_Update):
         return Bunch()
 
     def _save_item(self, item:'any_', input:'any_', _ignored:'any_') -> 'bool':
-        server = self.server.rpc[self.request.input.server_name]
-        response = server.invoke(UpdateServerNonGD.get_name(), item, pid=self.request.input.server_pid)
+        invoker = self.server.rpc.get_invoker_by_server_name(self.request.input.server_name)
+        response = invoker.invoke(UpdateServerNonGD.get_name(), item, pid=self.request.input.server_pid)
         self.response.payload = response['response']
         return True
 
@@ -465,7 +466,8 @@ class GetFromQueueNonGD(AdminService):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
 
         if sk_server:
-            response = self.server.rpc[sk_server.server_name].invoke(
+            invoker = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+            response = invoker.invoke(
                 GetFromQueueServerNonGD.get_name(), {
                     'sub_key': sk_server.sub_key,
                     'msg_id': self.request.input.msg_id

@@ -82,11 +82,11 @@ from zato.server.sso import SSOTool
 
 if 0:
 
-    # Zato
     from zato.common.crypto.api import ServerCryptoManager
+    from zato.common.ipc.client import IPCResponse
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
-    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, strbytes, strlist, strnone
+    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, dictlist, stranydict, strbytes, strlist, strnone
     from zato.server.commands import CommandResult
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
@@ -100,7 +100,7 @@ if 0:
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
-    SIOServerConfig = SIOServerConfig
+    SIOServerConfig = SIOServerConfig # type: ignore
     SSOAPI = SSOAPI # type: ignore
     StartupCallableTool = StartupCallableTool
     SubprocessIPC = SubprocessIPC
@@ -1379,37 +1379,52 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def invoke_all_pids(self, service:'str', request:'any_', timeout:'int'=5, *args:'any_', **kwargs:'any_') -> 'anydict':
+    def _remove_response_root_elem(self, data:'stranydict') -> 'stranydict':
+        keys = list(data.keys())
+        if len(keys) == 1:
+            root = keys[0]
+            if root.startswith('zato_') or root == 'response':
+                data = data[root]
+
+        return data
+
+# ################################################################################################################################
+
+    def _remove_response_elem(self, data:'stranydict | anylist') -> 'stranydict | anylist':
+
+        if isinstance(data, dict):
+            data = self._remove_response_root_elem(data)
+        else:
+            for idx, item in enumerate(data):
+                item = self._remove_response_root_elem(item)
+                data[idx] = item
+
+        return data
+
+# ################################################################################################################################
+
+    def invoke_all_pids(self, service:'str', request:'any_', timeout:'int'=5, *args:'any_', **kwargs:'any_') -> 'dictlist':
         """ Invokes a given service in each of processes current server has.
         """
-        # PID -> response from that process
-        out = {}
 
-        # Per-PID response
-        response:'anydict'
+        # A list of dict responses, one for each PID
+        out = [] # type: dictlist
 
         try:
             # Get all current PIDs
-            data = self.invoke('zato.info.get-worker-pids', serialize=False).getvalue(False)
-            pids = data['response']['pids']
+            all_pids_response = self.invoke('zato.info.get-worker-pids', serialize=False)
+            pids = all_pids_response['pids']
 
-            # Underlying IPC needs strings on input instead of None
-            request = request or ''
-
+            # Invoke each of them
             for pid in pids:
-                response = {
-                    'is_ok': False,
-                    'pid_data': None,
-                    'error_info': None
-                }
-                try:
-                    pid_data = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
-                    response['pid_data'] = pid_data
-                except Exception:
-                    e = format_exc()
-                    response['error_info'] = e
-                finally:
-                    out[pid] = response
+                pid_response = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
+                if pid_response.data is not None:
+
+                    # If this is an internal service, we want to remove its root-level response element.
+                    if service.startswith('zato'):
+                        pid_response.data = self._remove_response_elem(pid_response.data)
+                    out.append(pid_response.data)
+
         except Exception:
             logger.warning('PID invocation error `%s`', format_exc())
         finally:
@@ -1424,10 +1439,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         target_pid, # type: int
         timeout=_ipc_timeout, # type: int
         **kwargs    # type:any_
-    ) -> 'any_':
+    ) -> 'IPCResponse':
         """ Invokes a service in a worker process by the latter's PID.
         """
-        return self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid, timeout)
+        response = self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid, timeout)
+        return response
 
 # ################################################################################################################################
 
@@ -1440,14 +1456,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             # This cannot be used by self.invoke_by_pid
             data_format = kwargs.pop('data_format', None)
 
-            _, data = self.invoke_by_pid(service, request, target_pid, *args, **kwargs)
+            data = self.invoke_by_pid(service, request, target_pid, *args, **kwargs)
             return dumps(data) if data_format == DATA_FORMAT.JSON else data
         else:
-            return self.worker_store.invoke(
+            response = self.worker_store.invoke(
                 service, request,
                 data_format=kwargs.pop('data_format', DATA_FORMAT.DICT),
                 serialize=kwargs.pop('serialize', True),
                 *args, **kwargs)
+            return response
 
 # ################################################################################################################################
 
@@ -1456,7 +1473,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         service = msg['service']
         data    = msg['data']
 
-        return self.invoke(service, data)
+        response = self.invoke(service, data)
+        if isinstance(response, dict):
+            if 'response' in response:
+                response = response['response']
+        return response
 
 # ################################################################################################################################
 
@@ -1473,7 +1494,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def publish_pickup(self, topic_name:'str', request:'any_', *args:'any_', **kwargs:'any_') -> 'None':
-        """ Publishes a pickedup file to a named topic.
+        """ Publishes a previously picked up file to a named topic.
         """
         _ = self.invoke('zato.pubsub.publish.publish', {
             'topic_name': topic_name,

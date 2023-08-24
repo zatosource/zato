@@ -47,8 +47,13 @@ class HookTool:
             """
             ctx = self.hook_ctx_class(hook_type, *args, **kwargs)
             response = self.invoke_func(service_name, {'ctx':ctx}, serialize=False)
-            response = response.getvalue(serialize=False)
-            response = response['response']
+
+            if not isinstance(response, dict):
+                response = response.getvalue(serialize=False)
+
+            if 'response' in response:
+                response = response['response']
+
             return response
 
         return _invoke_hook_service
