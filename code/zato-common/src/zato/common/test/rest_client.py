@@ -134,7 +134,7 @@ class RESTClient:
         command('service', 'invoke', TestConfig.server_location,
             'zato.security.basic-auth.change-password', '--payload', payload)
 
-        sleep(0.5)
+        sleep(4)
 
         # .. and store the credentials for later use.
         self._auth = (self._api_invoke_username, self._api_invoke_password)

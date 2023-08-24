@@ -41,7 +41,7 @@ class PubAPITestCase(BasePubSubRestTestCase):
         response_initial = self.rest_client.post(PubSubConfig.PathSubscribe + topic_name)
 
         # Wait a moment to make sure the subscription data is created
-        sleep(1)
+        sleep(4)
 
         sub_key = cast_('str', response_initial['sub_key'])
         queue_depth = cast_('int', response_initial['queue_depth'])
@@ -108,6 +108,8 @@ class PubAPITestCase(BasePubSubRestTestCase):
         # .. get its response as a dict ..
         out = self.run_zato_cli_json_command(cli_params) # type: anydict
         topic_name = out['name']
+
+        sleep(4)
 
         tester = FullPathTester(self, False, topic_name) # type: ignore
         tester.run()
