@@ -74,10 +74,9 @@ class GetServerInfo(Service):
 # ################################################################################################################################
 
 class GetWorkerPids(Service):
-    """ Returns PIDs of all workers of current server.
+    """ Returns PIDs of all processes of current server.
     """
-    class SimpleIO:
-        output_required = (List('pids'),)
+    output = List('pids')
 
     def handle(self):
         self.response.payload.pids = get_worker_pids(self.server.base_dir)

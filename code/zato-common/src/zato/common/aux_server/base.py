@@ -19,7 +19,7 @@ from bunch import Bunch
 from gevent.pywsgi import WSGIServer
 
 # Zato
-from zato.common.api import ZATO_ODB_POOL_NAME
+from zato.common.api import IPC as Common_IPC, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import CryptoManager, is_string_equal
 from zato.common.odb.api import ODBManager, PoolStore
@@ -342,7 +342,7 @@ class AuxServer:
                 response = self.handle_api_request(request)
 
             # If we are here, it means that there was no exception
-            status_text = 'ok'
+            status_text = Common_IPC.Status_OK
             status_code = StatusCode.OK
 
         except Exception:
@@ -363,12 +363,7 @@ class AuxServer:
             }
 
             # .. make sure that we return bytes representing a JSON object ..
-            try:
-                return_data = dumps(return_data)
-            except TypeError as e:
-                e
-                e
-                return_data = '{}'
+            return_data = dumps(return_data)
             return_data = return_data.encode('utf8')
 
             start_response(status_code, headers)

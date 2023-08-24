@@ -1126,6 +1126,8 @@ class ContentType:
 
 class IPC:
 
+    Status_OK = 'ok'
+
     class Default:
         Timeout = 90
 

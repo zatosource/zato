@@ -44,6 +44,7 @@ from tempfile import NamedTemporaryFile, gettempdir
 from threading import current_thread
 from time import sleep
 from traceback import format_exc
+from uuid import uuid4
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -128,7 +129,8 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 
 if 0:
     from typing import Iterable as iterable
-    from zato.common.typing_ import any_, anydict, callable_, dictlist, listnone, strlistnone
+    from zato.client import ZatoClient
+    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strlistnone, strnone
     iterable = iterable
 
 # ################################################################################################################################
@@ -1456,9 +1458,19 @@ def get_odb_session_from_server_dir(server_dir):
 
 # ################################################################################################################################
 
-def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted) -> 'any_':
-    """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
+def get_server_client_auth(
+    config,
+    repo_dir,
+    cm,
+    odb_password_encrypted,
+    *,
+    url_path=None,
+) -> 'any_':
+    """ Returns credentials to authenticate with against Zato's own inocation channels.
     """
+    # This is optional on input
+    url_path = url_path or '/zato/admin/invoke'
+
     session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
 
     with closing(session) as session:
@@ -1483,7 +1495,7 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted) -> 'any
 
         channel = session.query(HTTPSOAP).\
             filter(HTTPSOAP.cluster_id == cluster.id).\
-            filter(HTTPSOAP.url_path == '/zato/admin/invoke').\
+            filter(HTTPSOAP.url_path == url_path).\
             filter(HTTPSOAP.connection== 'channel').\
             one()
 
@@ -1501,13 +1513,25 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted) -> 'any
 
 # ################################################################################################################################
 
-def get_client_from_server_conf(server_dir, require_server=True, stdin_data=None):
+def get_client_from_server_conf(
+    server_dir,          # type: str
+    require_server=True, # type: bool
+    stdin_data=None,     # type: strnone
+    *,
+    url_path=None,       # type: strnone
+) -> 'ZatoClient':
 
     # Imports go here to avoid circular dependencies
     from zato.client import get_client_from_server_conf as client_get_client_from_server_conf
 
     # Get the client object ..
-    client = client_get_client_from_server_conf(server_dir, get_server_client_auth, get_config, stdin_data=stdin_data)
+    client = client_get_client_from_server_conf(
+        server_dir,
+        get_server_client_auth,
+        get_config,
+        stdin_data=stdin_data,
+        url_path=url_path
+    )
 
     # .. make sure the server is available ..
     if require_server:
@@ -1518,8 +1542,7 @@ def get_client_from_server_conf(server_dir, require_server=True, stdin_data=None
 
 # ################################################################################################################################
 
-def get_repo_dir_from_component_dir(component_dir):
-    # type: (str) -> str
+def get_repo_dir_from_component_dir(component_dir:'str') -> 'str':
     return os.path.join(os.path.abspath(os.path.join(component_dir)), 'config', 'repo')
 
 # ################################################################################################################################
@@ -1720,13 +1743,30 @@ def get_logger_for_class(class_):
 
 # ################################################################################################################################
 
+def get_worker_pids_by_parent(parent_pid:'int') -> 'intlist':
+    """ Returns all children PIDs of the process whose PID is given on input.
+    """
+    # psutil
+    import psutil
+
+    return sorted(elem.pid for elem in psutil.Process(parent_pid).children())
+
+# ################################################################################################################################
+
 def get_worker_pids():
     """ Returns all sibling worker PIDs of the server process we are being invoked on, including our own worker too.
     """
     # psutil
     import psutil
 
-    return sorted(elem.pid for elem in psutil.Process(psutil.Process().ppid()).children())
+    # This is our own process ..
+    current_process = psutil.Process()
+
+    # .. and this is its parent PID ..
+    parent_pid = current_process.ppid()
+
+    # .. now, we can return PIDs of all the workers.
+    return get_worker_pids_by_parent(parent_pid)
 
 # ################################################################################################################################
 
@@ -1915,12 +1955,12 @@ def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, 
         wait_until = start + timedelta(seconds=timeout)
 
         if needs_log and log_msg_details:
-            logger.info('Waiting for %s (#%s)', log_msg_details, loop_idx)
+            logger.info('Waiting for %s (#%s -> %ss)', log_msg_details, loop_idx, interval)
 
         while not is_fulfilled:
             gevent_sleep(interval)
             if needs_log and log_msg_details:
-                logger.info('Waiting for %s (#%s)', log_msg_details, loop_idx)
+                logger.info('Waiting for %s (#%s -> %ss)', log_msg_details, loop_idx, interval)
             is_fulfilled = predicate_func(*args, **kwargs)
             if datetime.utcnow() > wait_until:
                 break
@@ -2029,6 +2069,27 @@ def tabulate_dictlist(data:'dictlist', skip_keys:'listnone'=None) -> 'str':
 
 # ################################################################################################################################
 
+def get_new_tmp_full_path(file_name:'str'='', *, prefix:'str'='', suffix:'str'='', random_suffix:'str'='') -> 'str':
+
+    if prefix:
+        prefix = f'{prefix}-'
+
+    if not random_suffix:
+        random_suffix = uuid4().hex
+
+    # This may be provided by users on input
+    file_name = file_name or 'zato-tmp-' + prefix + random_suffix
+
+    if suffix:
+        file_name += f'-{suffix}'
+
+    tmp_dir = gettempdir()
+    full_path = os.path.join(tmp_dir, file_name)
+
+    return full_path
+
+# ################################################################################################################################
+
 def get_ipc_pid_port_path(cluster_name:'str', server_name:'str', pid:'int') -> 'str':
 
     # This is where the file name itself ..
@@ -2041,9 +2102,8 @@ def get_ipc_pid_port_path(cluster_name:'str', server_name:'str', pid:'int') -> '
     # .. make sure the name is safe to use in the file-system ..
     file_name = fs_safe_name(file_name)
 
-    # .. now, we can combine it with a temporary directory ..
-    tmp_dir = gettempdir()
-    full_path = os.path.join(tmp_dir, file_name)
+    # .. now, we can obtain a full path to a temporary directory ..
+    full_path = get_new_tmp_full_path(file_name)
 
     # .. and return the result to our caller.
     return full_path
@@ -2069,6 +2129,9 @@ def load_ipc_pid_port(cluster_name:'str', server_name:'str', pid:'int') -> 'int'
 
     # Get a path to load the port from ..
     path = get_ipc_pid_port_path(cluster_name, server_name, pid)
+
+    # .. wait until the file exists (which may be required when the server starts up) ..
+    wait_for_file(path, interval=2.5)
 
     # .. load it now ..
     with open_r(path) as f:
