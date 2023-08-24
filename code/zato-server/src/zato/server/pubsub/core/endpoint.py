@@ -93,16 +93,22 @@ class EndpointAPI:
 # ################################################################################################################################
 
     def create(self, config:'anydict') -> 'None':
-        self.endpoints[config['id']] = Endpoint(config)
 
-        if config['security_id']:
-            self.sec_id_to_endpoint_id[config['security_id']] = config['id']
+        endpoint_id   = config['id']
+        security_id   = config['security_id']
+        ws_channel_id = config.get('ws_channel_id')
+        service_id    = config.get('service_id')
 
-        if config.get('ws_channel_id'):
-            self.ws_channel_id_to_endpoint_id[config['ws_channel_id']] = config['id']
+        self.endpoints[endpoint_id] = Endpoint(config)
 
-        if config.get('service_id'):
-            self.service_id_to_endpoint_id[config['service_id']] = config['id']
+        if security_id:
+            self.sec_id_to_endpoint_id[security_id] = endpoint_id
+
+        if ws_channel_id:
+            self.ws_channel_id_to_endpoint_id[ws_channel_id] = endpoint_id
+
+        if service_id:
+            self.service_id_to_endpoint_id[service_id] = endpoint_id
 
 # ################################################################################################################################
 

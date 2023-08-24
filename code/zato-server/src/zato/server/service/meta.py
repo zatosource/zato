@@ -325,7 +325,8 @@ class GetListMeta(AdminServiceMeta):
             input.cluster_id = input.get('cluster_id') or self.server.cluster_id
 
             with closing(self.odb.session()) as session:
-                self.response.payload[:] = elems_with_opaque(self.get_data(session))
+                elems = elems_with_opaque(self.get_data(session))
+                self.response.payload[:] = elems
 
             if attrs.response_hook:
                 attrs.response_hook(self, self.request.input, None, attrs, 'get_list')

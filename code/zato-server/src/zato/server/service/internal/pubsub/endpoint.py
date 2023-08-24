@@ -44,10 +44,13 @@ if 0:
     from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import anylist, stranydict
+    from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvocationResult
     from zato.server.pubsub.model import subnone
     from zato.server.service import Service
     Bunch   = Bunch
     Column = Column
+    PerPIDResponse = PerPIDResponse
+    ServerInvocationResult = ServerInvocationResult
     Service = Service
     subnone = subnone
 
@@ -76,7 +79,7 @@ for name in msg_pub_attrs:
         continue
     elif name.endswith('_id'):
         msg_pub_attrs_sio.append(AsIs(name))
-    elif name in ('position_in_group', 'priority', 'size', 'delivery_count'):
+    elif name in ('position_in_group', 'priority', 'size', 'delivery_count', 'expiration'):
         msg_pub_attrs_sio.append(Int(name))
     elif name.startswith(('has_', 'is_')):
         msg_pub_attrs_sio.append(Bool(name))
@@ -262,8 +265,8 @@ class GetEndpointQueueNonGDDepth(AdminService):
     """ Returns current depth of non-GD messages for input sub_key which must have a delivery task on current server.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('sub_key',)
-        output_optional = (Int('current_depth_non_gd'),)
+        input_required = 'sub_key'
+        output_optional = Int('current_depth_non_gd')
 
     def handle(self):
         pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
@@ -274,6 +277,7 @@ class GetEndpointQueueNonGDDepth(AdminService):
 # ################################################################################################################################
 
 class _GetEndpointQueue(AdminService):
+
     def _add_queue_depths(self, session:'SASession', item:'stranydict') -> 'None':
 
         cluster_id = self.request.input.cluster_id
@@ -294,17 +298,50 @@ class _GetEndpointQueue(AdminService):
                 pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(item['sub_key'])
                 _, current_depth_non_gd = pubsub_tool.get_queue_depth(item['sub_key'])
             else:
-                response = self.server.rpc[sk_server.server_name].invoke(GetEndpointQueueNonGDDepth.get_name(), {
+
+                # An invoker pointing to that server
+                invoker   = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+
+                # The service we are invoking
+                service_name = GetEndpointQueueNonGDDepth.get_name()
+
+                # Inquire the server about our sub_key
+                request = {
                     'sub_key': item['sub_key'],
-                }, pid=sk_server.server_pid)
-                inner_response = response['response']
-                current_depth_non_gd = inner_response['current_depth_non_gd'] if inner_response else 0
+                }
+
+                # Keyword arguments point to a specific PID in that server
+                kwargs = {
+                    'pid': sk_server.server_pid
+                }
+
+                # Do invoke the server now
+                response = invoker.invoke(service_name, request, **kwargs)
+
+                self.logger.info('*' * 50)
+                self.logger.warn('Invoker  -> %s', invoker)
+                self.logger.warn('RESPONSE -> %s', response)
+                self.logger.info('*' * 50)
+
+                """
+                '''
+
+                pid_data = response['response']
+
+                if pid_data:
+                    pid_data = cast_('anydict', pid_data)
+                    current_depth_non_gd = pid_data['current_depth_non_gd']
+                else:
+                    current_depth_non_gd = 0
 
         # No delivery server = there cannot be any non-GD messages waiting for that subscriber
         else:
             current_depth_non_gd = 0
+            '''
+            """
 
-        item['current_depth_non_gd'] = current_depth_non_gd
+        # item['current_depth_non_gd'] = current_depth_non_gd
+        item['current_depth_non_gd'] = 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -444,7 +481,8 @@ class UpdateEndpointQueue(AdminService):
             self.broker_client.publish(updated_params_msg)
 
             # We change the delivery server in background - note how we send name, not ID, on input.
-            # This is because our invocation target will want to use self.server.rpc[server_name].invoke(...)
+            # This is because our invocation target will want to use
+            # self.server.rpc.get_invoker_by_server_name(server_name).invoke(...)
             if should_update_delivery_server:
                 if old_delivery_server_id != new_delivery_server_id:
                     self.broker_client.publish({
@@ -639,7 +677,8 @@ class GetEndpointQueueMessagesNonGD(NonGDSearchService, _GetMessagesBase):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
 
         if sk_server:
-            response = self.server.rpc[sk_server.server_name].invoke(GetServerEndpointQueueMessagesNonGD.get_name(), {
+            invoker = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+            response = invoker.invoke(GetServerEndpointQueueMessagesNonGD.get_name(), {
                 'cluster_id': self.request.input.cluster_id,
                 'sub_key': sub.sub_key,
             }, pid=sk_server.server_pid)
@@ -806,19 +845,27 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
 
         if sk_server:
-            response = self.server.rpc[sk_server.server_name].invoke(GetServerDeliveryMessages.get_name(), {
+            invoker = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+            response = invoker.invoke(GetServerDeliveryMessages.get_name(), {
                 'sub_key': sub.sub_key,
             }, pid=sk_server.server_pid)
 
             if response:
 
+                # It may be a dict on a successful invocation ..
+                if isinstance(response, dict):
+                    data = response         # type: ignore
+                    data = data['response'] # type: ignore
+
+                # .. otherwise, it may be an IPCResponse object.
+                else:
+                    data = response.data # type: ignore
+
                 # Extract the actual list of messages ..
-                response = response.data
-                response = response[sk_server.server_pid]
-                response = response.pid_data
-                response = response['msg_list']
-                response = reversed(response)
-                response = list(response)
+                data = cast_('stranydict', data)
+                msg_list = data['msg_list']
+                msg_list = reversed(msg_list)
+                msg_list = list(msg_list)
 
                 # .. at this point the topic may have been already deleted ..
                 try:
@@ -830,16 +877,16 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
 
                 # .. make sure that all of the sub_keys actually still exist ..
                 with closing(self.odb.session()) as session:
-                    response = ensure_subs_exist(
+                    msg_list = ensure_subs_exist(
                         session,
                         topic_name,
-                        response,
-                        response,
+                        msg_list,
+                        msg_list,
                         'returning to endpoint',
                         '<no-ctx-string>'
                     )
 
-                self.response.payload[:] = response
+                self.response.payload[:] = msg_list
         else:
             self.logger.info('Could not find delivery server for sub_key:`%s`', sub.sub_key)
 
