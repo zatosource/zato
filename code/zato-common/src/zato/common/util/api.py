@@ -130,7 +130,7 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 if 0:
     from typing import Iterable as iterable
     from zato.client import ZatoClient
-    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strlistnone
+    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strlistnone, strnone
     iterable = iterable
 
 # ################################################################################################################################
