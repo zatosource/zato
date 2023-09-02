@@ -68,6 +68,9 @@ class CreateDeliveryTask(AdminService):
             'sub_key': config['sub_key'],
             'endpoint_type': config['endpoint_type'],
             'task_delivery_interval': config['task_delivery_interval'],
+            'source': 'delivery.CreateDeliveryTask',
+            'source_server_name': self.server.name,
+            'source_server_pid': self.server.pid,
         }
 
         # Update in-RAM state of workers
