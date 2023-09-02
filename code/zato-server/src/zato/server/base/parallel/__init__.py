@@ -203,7 +203,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.crypto_use_tls = False
         self.pid = -1
         self.sync_internal = False
-        self.ipc_api = IPCAPI()
+        self.ipc_api = IPCAPI(self)
         self.fifo_response_buffer_size = -1
         self.is_first_worker = False
         self.process_idx = -1
