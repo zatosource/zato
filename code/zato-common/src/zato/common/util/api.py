@@ -1982,7 +1982,8 @@ def wait_for_dict_key_by_get_func(
 
     def _predicate_dict_key(*_ignored_args, **_ignored_kwargs) -> 'any_':
         try:
-            return get_key_func(key)
+            value = get_key_func(key)
+            return value
         except KeyError:
             return False
 
@@ -2001,9 +2002,10 @@ def wait_for_dict_key(
     # using the dict's own .get method.
 
     def _predicate_dict_key(*_ignored_args, **_ignored_kwargs) -> 'any_':
-        return _dict.get(key)
+        value = _dict.get(key)
+        return value
 
-    return wait_for_dict_key_by_get_func(_predicate_dict_key, timeout, interval)
+    return wait_for_dict_key_by_get_func(_predicate_dict_key, key, timeout, interval)
 
 # ################################################################################################################################
 
