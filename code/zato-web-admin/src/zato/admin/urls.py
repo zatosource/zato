@@ -62,7 +62,6 @@ from zato.admin.web.views.outgoing.redis.data_dict import translation as out_red
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import subscription as pubsub_subscription
-from zato.admin.web.views.pubsub.task import sync as pubsub_task_sync
 from zato.admin.web.views.pubsub.task import delivery as pubsub_task
 from zato.admin.web.views.pubsub.task.delivery import message as pubsub_task_message
 from zato.admin.web.views.pubsub.task.delivery import server as pubsub_task_delivery_server
