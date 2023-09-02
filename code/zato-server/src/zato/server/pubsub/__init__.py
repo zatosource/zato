@@ -27,7 +27,7 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.typing_ import cast_, dict_, optional
-from zato.common.util.api import spawn_greenlet, wait_for_dict_key_by_get_func
+from zato.common.util.api import spawn_greenlet, wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.core.endpoint import EndpointAPI
 from zato.server.pubsub.core.trigger import NotifyPubSubTasksTrigger
@@ -253,10 +253,34 @@ class PubSub:
 
 # ################################################################################################################################
 
+    def _wait_for_sub_key(self, sub_key:'str') -> 'None':
+
+        # Log what we are about to do
+        logger.info('Waiting for sub_key -> %s', sub_key)
+
+        # Make sure the key is there.
+        wait_for_dict_key(self.subscriptions_by_sub_key, sub_key, timeout=180)
+
+# ################################################################################################################################
+
     def _get_subscription_by_sub_key(self, sub_key:'str') -> 'Subscription':
         """ Low-level implementation of self.get_subscription_by_sub_key, must be called with self.lock held.
         """
-        return self.subscriptions_by_sub_key[sub_key]
+        # Make sure the key is there ..
+        # self._wait_for_sub_key(sub_key)
+
+        # .. get the subscription ..
+        sub = self.subscriptions_by_sub_key.get(sub_key)
+
+        # .. and return it to the caller if it exists ..
+        if sub:
+            return sub
+
+        # .. otherwise, raise an error ..
+        else:
+            msg = 'No such subscription `{}` among `{}`'.format(sub_key, sorted(self.subscriptions_by_sub_key))
+            logger.info(msg)
+            raise KeyError(msg)
 
 # ################################################################################################################################
 
@@ -914,7 +938,10 @@ class PubSub:
             'channel_name': channel_name,
             'pub_client_id': pub_client_id,
             'endpoint_type': PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
-            'wsx_info': wsx_info
+            'wsx_info': wsx_info,
+            'source': 'pubsub.PubSub',
+            'source_server_name': self.server.name,
+            'source_server_pid': self.server.pid,
         })
 
 # ################################################################################################################################
@@ -982,33 +1009,48 @@ class PubSub:
     def _set_sub_key_server(
         self,
         config, # type: stranydict
+        *,
+        ignore_missing_sub_key, # type: bool
         _endpoint_type=PUBSUB.ENDPOINT_TYPE # type: type_[PUBSUB.ENDPOINT_TYPE]
     ) -> 'None':
         """ Low-level implementation of self.set_sub_key_server - must be called with self.lock held.
         """
-        sub = self._get_subscription_by_sub_key(config['sub_key'])
-        config['endpoint_id'] = sub.endpoint_id
-        config['endpoint_name'] = self.endpoint_api.get_by_id(sub.endpoint_id)
-        self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
-        endpoint_type = config['endpoint_type']
+        try:
+            # Try to see if we have such a subscription ..
+            sub = self._get_subscription_by_sub_key(config['sub_key'])
+        except KeyError:
 
-        config['wsx'] = int(endpoint_type == _endpoint_type.WEB_SOCKETS.id)
-        config['srv'] = int(endpoint_type == _endpoint_type.SERVICE.id)
+            # .. if we do not, it may be because it was already deleted
+            # before we have been invoked and this may be potentially ignored.
 
-        sks_table = self.format_sk_servers()
-        msg = 'Set sk_server{}for sub_key `%(sub_key)s` (wsx/srv:%(wsx)s/%(srv)s) - `%(server_name)s:%(server_pid)s`, ' + \
-            'current sk_servers:\n{}'
-        msg = msg.format(' ' if config['server_pid'] else ' (no PID) ', sks_table)
+            if not ignore_missing_sub_key:
+                raise
 
-        logger.info(msg, config)
-        logger_zato.info(msg, config)
+        else:
+
+            config['endpoint_id'] = sub.endpoint_id
+            config['endpoint_name'] = self.endpoint_api.get_by_id(sub.endpoint_id)
+            self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
+
+            endpoint_type = config['endpoint_type']
+
+            config['wsx'] = int(endpoint_type == _endpoint_type.WEB_SOCKETS.id)
+            config['srv'] = int(endpoint_type == _endpoint_type.SERVICE.id)
+
+            sks_table = self.format_sk_servers()
+            msg = 'Set sk_server{}for sub_key `%(sub_key)s` (wsx/srv:%(wsx)s/%(srv)s) - `%(server_name)s:%(server_pid)s`, ' + \
+                'current sk_servers:\n{}'
+            msg = msg.format(' ' if config['server_pid'] else ' (no PID) ', sks_table)
+
+            logger.info(msg, config)
+            logger_zato.info(msg, config)
 
 # ################################################################################################################################
 
     def set_sub_key_server(self, config:'anydict') -> 'None':
         with self.lock:
-            self._set_sub_key_server(config)
+            self._set_sub_key_server(config, ignore_missing_sub_key=True)
 
 # ################################################################################################################################
 
@@ -1129,7 +1171,7 @@ class PubSub:
             config['server_pid'] = self.get_server_pid_for_sub_key(data.server_name, sub_key)
 
             # OK, set up the server with what we found above
-            self._set_sub_key_server(config)
+            self._set_sub_key_server(config, ignore_missing_sub_key=False)
 
 # ################################################################################################################################
 
