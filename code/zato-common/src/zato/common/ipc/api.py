@@ -21,6 +21,7 @@ from zato.common.util.api import fs_safe_name, load_ipc_pid_port
 if 0:
     from zato.common.ipc.client import IPCResponse
     from zato.common.typing_ import callable_
+    from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,12 +35,13 @@ class IPCAPI:
     """ API through which IPC is performed.
     """
     pid: 'int'
-    server: 'IPCServer'
+    parallel_server: 'ParallelServer'
     username: 'str'
     password: 'str'
     on_message_callback: 'callable_'
 
-    def __init__(self) -> 'None':
+    def __init__(self, parallel_server:'ParallelServer') -> 'None':
+        self.parallel_server = parallel_server
         self.username = IPC.Credentials.Username
         self.password = ''
 
@@ -113,7 +115,9 @@ class IPCAPI:
             cluster_name=cluster_name,
             server_name=server_name,
             server_pid=target_pid,
-            timeout=timeout
+            timeout=timeout,
+            source_server_name=self.parallel_server.name,
+            source_server_pid=self.parallel_server.pid,
         )
         return response
 
