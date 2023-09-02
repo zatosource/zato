@@ -459,10 +459,8 @@ class RequestDispatcher:
                 _exc = stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
                     add_summary=True, source_lines=20) if stack_format else _format_exc # type: str
 
-                # TODO: This should be configurable. Some people may want such
-                # things to be on DEBUG whereas for others ERROR will make most sense
-                # in given circumstances.
-                logger.error(
+                # Log what happened
+                logger.info(
                     'Caught an exception, cid:`%s`, status_code:`%s`, `%s`', cid, status_code, _exc)
 
                 try:
