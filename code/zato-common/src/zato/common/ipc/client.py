@@ -76,7 +76,9 @@ class IPCClient:
         cluster_name, # type: str
         server_name,  # type: str
         server_pid,   # type: int
-        timeout=90,   # type: int
+        timeout=90,    # type: int
+        source_server_name, # type: str
+        source_server_pid,  # type: int
     ) -> 'IPCResponse':
 
         # This is where we can find the IPC server to invoke ..
@@ -84,6 +86,8 @@ class IPCClient:
 
         # .. prepare the full request ..
         data = dumps({
+            'source_server_name': source_server_name,
+            'source_server_pid':  source_server_pid,
             'action':   SERVER_IPC.INVOKE.value,
             'username': self.username,
             'password': self.password,

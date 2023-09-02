@@ -61,6 +61,8 @@ class AuxServerConfig:
     conf_file_name: 'str'
     crypto_manager: 'CryptoManager'
     crypto_manager_class: 'type_[CryptoManager]'
+    parent_server_name: 'str'
+    parent_server_pid:  'int'
 
     def __init__(self) -> 'None':
         self.main = Bunch()
@@ -166,9 +168,15 @@ class AuxServer:
     config_class: 'type_[AuxServerConfig]'
     crypto_manager_class: 'type_[CryptoManager]'
     has_credentials: 'bool' = True
+    parent_server_name: 'str'
+    parent_server_pid:  'int'
 
     def __init__(self, config:'AuxServerConfig') -> 'None':
         self.config = config
+
+        self.parent_server_name = config.parent_server_name
+        self.parent_server_pid = config.parent_server_pid
+
         main = self.config.main
 
         if main.crypto.use_tls:
@@ -217,7 +225,9 @@ class AuxServer:
         username='',           # type: str
         password='',           # type: str
         callback_func=None,    # type: callnone
-        server_type_suffix=''  # type: str
+        server_type_suffix='', # type: str
+        parent_server_name='', # type: str
+        parent_server_pid=-1,  # type: int
     ) -> 'None':
 
         # Functionality that needs to run before configuration is created
@@ -238,6 +248,9 @@ class AuxServer:
             class_.conf_file_name,
             class_.crypto_manager_class,
         )
+
+        config.parent_server_name = parent_server_name
+        config.parent_server_pid  = parent_server_pid
 
         username = username or 'ipc.username.not.set.' + CryptoManager.generate_secret().decode('utf8')
         password = password or 'ipc.password.not.set.' + CryptoManager.generate_secret().decode('utf8')

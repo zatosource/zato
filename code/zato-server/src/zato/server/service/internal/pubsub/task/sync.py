@@ -19,8 +19,7 @@ from zato.common.pubsub import all_dict_keys, pubsub_main_data
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
-len_keys = 'subscriptions_by_topic', 'subscriptions_by_sub_key', 'sub_key_servers', 'endpoints', 'topics', \
-    'sec_id_to_endpoint_id', 'ws_channel_id_to_endpoint_id', 'service_id_to_endpoint_id', \
+len_keys = 'subscriptions_by_topic', 'subscriptions_by_sub_key', 'sub_key_servers', \
     'pubsub_tool_by_sub_key', 'pubsub_tools'
 
 # ################################################################################################################################
@@ -49,6 +48,11 @@ class GetServerList(AdminService):
             'endpoint_meta_max_history': self.pubsub.endpoint_meta_max_history,
             'data_prefix_len': self.pubsub.data_prefix_len,
             'data_prefix_short_len': self.pubsub.data_prefix_short_len,
+            'endpoints': self.pubsub.endpoint_api.endpoints,
+            'sec_id_to_endpoint_id': self.pubsub.endpoint_api.sec_id_to_endpoint_id,
+            'ws_channel_id_to_endpoint_id': self.pubsub.endpoint_api.ws_channel_id_to_endpoint_id,
+            'service_id_to_endpoint_id': self.pubsub.endpoint_api.service_id_to_endpoint_id,
+            'topics': self.pubsub.topic_api.topics,
         }
 
         for key in len_keys:
