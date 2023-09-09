@@ -48,9 +48,9 @@ def pretty_format_exception(e:'Exception', cid:'str', utcnow_func:'callnone'=Non
     line_number = frame.lineno
     func_name   = frame.name
 
-    error_line = f'⮚⮚⮚ {exc_type}: \'{exc_arg}\''
-    file_line  = f'⮚⮚⮚ File "{file_path}", line {line_number}, in {func_name}'
-    code_line  = f'⮚⮚⮚   {frame.line}'
+    error_line = f'>>> {exc_type}: \'{exc_arg}\''
+    file_line  = f'>>> File "{file_path}", line {line_number}, in {func_name}'
+    code_line  = f'>>>   {frame.line}'
 
     details = ''.join(list(tb.format()))
 
