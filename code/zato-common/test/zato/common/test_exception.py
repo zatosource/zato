@@ -48,9 +48,9 @@ class ExceptionTestCase(TestCase):
         expected = f"""
 ··· Error ···
 
-⮚⮚⮚ ZeroDivisionError: 'division by zero'
-⮚⮚⮚ File "code/zato-common/test/zato/common/test_exception.py", line 39, in test_pretty_format_exception
-⮚⮚⮚   print(12345 * 1/0)
+>>> ZeroDivisionError: 'division by zero'
+>>> File "code/zato-common/test/zato/common/test_exception.py", line 39, in test_pretty_format_exception
+>>>   print(12345 * 1/0)
 
 ··· Details ···
 
