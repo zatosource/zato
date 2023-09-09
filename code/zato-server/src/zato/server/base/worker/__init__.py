@@ -2106,8 +2106,9 @@ class WorkerStore(_WorkerStoreBase):
 
         # If there were any services deployed, let pub/sub know that this service has been just deployed -
         # pub/sub will go through all of its topics and reconfigure any of its hooks that this service implements.
-        if response.services_deployed:
-            self.pubsub.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(response.services_deployed)
+        services_deployed = response.get('zato_hot_deploy_create_response', '{}').get('services_deployed')
+        if services_deployed:
+            self.pubsub.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(services_deployed)
 
 # ################################################################################################################################
 
