@@ -97,7 +97,7 @@ class TimeUtil:
 
 # ################################################################################################################################
 
-    def now(self, format=ModuleCtx.Date_Time_Format, tz=local_tz_zone, needs_format=True, delta=None):
+    def now(self, format=ModuleCtx.Date_Time_Format, tz=local_tz_zone, needs_format=True, delta=None) -> 'str | datetime':
         """ Returns now in a specified timezone.
         """
         now = arrow.now(tz=tz)
