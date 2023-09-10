@@ -107,6 +107,8 @@ class Model:
         api = MarshalAPI()
         return api.from_dict(cast_('Service', None), data, class_, extra=extra)
 
+    from_dict = _zato_from_dict
+
     def to_dict(self):
         return asdict(self)
 
