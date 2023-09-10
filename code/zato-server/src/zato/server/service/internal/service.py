@@ -436,6 +436,10 @@ class Invoke(AdminService):
         if isinstance(payload, bytes):
             payload = payload.decode('utf8')
 
+        # .. ignore payload that seems to be JSON ..
+        if '{' in payload or '}' in payload:
+            return
+
         payload = payload[1:-1]
         payload = payload.replace('\\n', '\n')
         payload = parse_extra_into_dict(payload)

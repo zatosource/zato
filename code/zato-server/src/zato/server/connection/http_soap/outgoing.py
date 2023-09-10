@@ -22,6 +22,7 @@ from gevent.lock import RLock
 from parse import PARSE_RE
 
 # requests
+from requests import Response as _RequestsResponse
 from requests.adapters import HTTPAdapter
 from requests.exceptions import Timeout as RequestsTimeout
 from requests.sessions import Session as RequestsSession
@@ -42,9 +43,8 @@ from zato.server.connection.queue import ConnectionQueue
 # ################################################################################################################################
 
 if 0:
-    from requests import Response
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, dictnone, stranydict, strstrdict
+    from zato.common.typing_ import any_, dictnone, stranydict, stranydictnone, strstrdict
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
     ConfigDict = ConfigDict
@@ -71,6 +71,12 @@ _NTLM = SEC_DEF_TYPE.NTLM
 _OAuth = SEC_DEF_TYPE.OAUTH
 _TLS_Key_Cert = SEC_DEF_TYPE.TLS_KEY_CERT
 _WSS = SEC_DEF_TYPE.WSS
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Response(_RequestsResponse):
+    data: 'stranydictnone'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,7 +138,7 @@ class BaseHTTPSOAPWrapper:
         hooks:'any_',
         *args:'any_',
         **kwargs:'any_'
-    ) -> 'Response':
+    ) -> '_RequestsResponse':
 
         json = kwargs.pop('json', None)
         cert = self.config['tls_key_cert_full_path'] if self.sec_type == _TLS_Key_Cert else None
