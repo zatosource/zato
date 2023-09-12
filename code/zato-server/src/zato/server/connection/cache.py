@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from base64 import b64encode
@@ -27,6 +25,7 @@ from paste.util.converters import asbool
 from zato.cache import Cache as _CyCache
 from zato.common.api import CACHE, ZATO_NOT_GIVEN
 from zato.common.broker_message import CACHE as CACHE_BROKER_MSG
+from zato.common.typing_ import cast_
 from zato.common.util.api import parse_extra_into_dict
 
 # Python 2/3 compatibility
@@ -809,7 +808,7 @@ class Cache:
 
 class _NotConfiguredAPI:
     def set(self, *args, **kwargs):
-        raise Exception('Default cache is not configured')
+        logger.warn('Default cache is not configured')
     get = set
 
 # ################################################################################################################################
@@ -820,7 +819,7 @@ class CacheAPI:
     def __init__(self, server):
         self.server = server
         self.lock = RLock()
-        self.default = _NotConfiguredAPI()
+        self.default = cast_('Cache', _NotConfiguredAPI())
         self.caches = {
             CACHE.TYPE.BUILTIN:{},
             CACHE.TYPE.MEMCACHED:{},
@@ -859,7 +858,9 @@ class CacheAPI:
                 else:
                     data['is_value_pickled'] = True
                     value = _pickle_dumps(value)
-                    data['value'] = b64encode(value)
+                    value = b64encode(value)
+                    value = value.decode('utf8')
+                    data['value'] = value
             else:
                 data['is_value_pickled'] = False
 
