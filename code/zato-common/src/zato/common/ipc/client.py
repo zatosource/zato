@@ -76,7 +76,7 @@ class IPCClient:
         cluster_name, # type: str
         server_name,  # type: str
         server_pid,   # type: int
-        timeout=90,    # type: int
+        timeout=90,   # type: int
         source_server_name, # type: str
         source_server_pid,  # type: int
     ) -> 'IPCResponse':

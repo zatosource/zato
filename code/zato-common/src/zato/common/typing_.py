@@ -20,6 +20,7 @@ from typing import           \
     Dict as dict_,           \
     Generator as generator_, \
     Iterator as iterator_,   \
+    IO as io_,               \
     NoReturn as noreturn,    \
     List as list_,           \
     Optional as optional,    \
@@ -103,6 +104,7 @@ intset        = set_[int]
 intsetdict    = dict_[int, anyset]
 intstrdict    = dict_[int, str]
 iterator_     = iterator_
+iobytes_      = io_[bytes]
 listnone      = anylistnone
 noreturn      = noreturn
 set_          = set_
