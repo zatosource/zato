@@ -1948,7 +1948,7 @@ def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, 
     # Use an explicit loop index for reporting
     loop_idx = 1
 
-    logger.info('Entering wait-for-predicate -> %s -> %s', log_msg_details, is_fulfilled)
+    logger.debug('Entering wait-for-predicate -> %s -> %s', log_msg_details, is_fulfilled)
 
     if not is_fulfilled:
         start = datetime.utcnow()
