@@ -44,9 +44,10 @@ from zato.server.connection.queue import ConnectionQueue
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, dictnone, stranydict, stranydictnone, strstrdict
+    from zato.common.typing_ import any_, callnone, dictnone, stranydict, strdictnone, strstrdict, type_
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
+    from zato.server.service import Model
     ConfigDict = ConfigDict
     ParallelServer = ParallelServer
 
@@ -76,7 +77,7 @@ _WSS = SEC_DEF_TYPE.WSS
 # ################################################################################################################################
 
 class Response(_RequestsResponse):
-    data: 'stranydictnone'
+    data: 'strdictnone'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -559,6 +560,48 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
             # .. now, we can invoke the remote endpoint with our file on input.
             return self.post(cid, data=encoder, headers=headers)
+
+# ################################################################################################################################
+
+    def get_by_query_id(
+        self,
+        *,
+        cid,        # type: str
+        id,         # type: any_
+        model=None, # type: type_[Model] | None
+        callback,   # type: callnone
+    ) -> 'any_':
+
+        # .. build the query parameters ..
+        params:'stranydict' = {
+            'id': id,
+        }
+
+        # .. invoke the system ..
+        try:
+            response:'Response' = self.get(cid, params)
+        except Exception as e:
+            logger.warn('Caught an exception -> %s', e)
+        else:
+
+            # .. log what we received ..
+            logger.info('Get By Query ID response received -> %s', response)
+
+            # .. extract the underlying data ..
+            data = response.data # type: ignore
+
+            # .. if we have a model, do make use of it here ..
+            if model:
+                data:'Model' = model.from_dict(data) # type: TalentCourse
+
+            # .. run our callback, if there is any ..
+            if callback:
+                data = callback(data, cid=cid, id=id, model=model, callback=callback)
+
+            # .. and return the data to our caller ..
+            return data
+
+RESTWrapper = HTTPSOAPWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
