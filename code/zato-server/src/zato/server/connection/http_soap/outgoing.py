@@ -47,7 +47,6 @@ if 0:
     from zato.common.typing_ import any_, callnone, dictnone, stranydict, strdictnone, strstrdict, type_
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
-    from zato.server.service import Model
     ConfigDict = ConfigDict
     ParallelServer = ParallelServer
 
@@ -592,7 +591,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
             # .. if we have a model, do make use of it here ..
             if model:
-                data:'Model' = model.from_dict(data) # type: TalentCourse
+                data:'Model' = model.from_dict(data)
 
             # .. run our callback, if there is any ..
             if callback:
