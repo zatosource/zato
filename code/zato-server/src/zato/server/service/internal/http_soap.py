@@ -282,6 +282,13 @@ class Create(_CreateEdit):
         input.data_encoding = input.get('data_encoding') or 'utf-8'
         input.hl7_version = input.get('hl7_version') or HL7.Const.Version.v2.id
 
+        # Remove extra whitespace
+        input.name = input.name.strip()
+        input.host = input.host.strip()
+        input.url_path = input.url_path.strip()
+        input.ping_method = input.get('ping_method', '').strip() or DEFAULT_HTTP_PING_METHOD
+        input.content_type = input.get('content_type', '').strip()
+
         if input.content_encoding and input.content_encoding != 'gzip':
             raise Exception('Content encoding must be empty or equal to `gzip`')
 
@@ -328,11 +335,11 @@ class Create(_CreateEdit):
                 item.host = input.host
                 item.url_path = input.url_path
                 item.method = input.method
-                item.soap_action = input.soap_action
+                item.soap_action = input.soap_action.strip()
                 item.soap_version = input.soap_version or None
                 item.data_format = input.data_format
                 item.service = service
-                item.ping_method = input.get('ping_method') or DEFAULT_HTTP_PING_METHOD
+                item.ping_method = input.ping_method
                 item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
                 item.merge_url_params_req = input.get('merge_url_params_req') or True
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
@@ -340,7 +347,7 @@ class Create(_CreateEdit):
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.timeout
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
-                item.content_type = input.get('content_type')
+                item.content_type = input.content_type
                 item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
@@ -454,6 +461,13 @@ class Edit(_CreateEdit):
         input.data_encoding = input.get('data_encoding') or 'utf-8'
         input.hl7_version = input.get('hl7_version') or HL7.Const.Version.v2.id
 
+        # Remove extra whitespace
+        input.name = input.name.strip()
+        input.host = input.host.strip()
+        input.url_path = input.url_path.strip()
+        input.ping_method = input.get('ping_method', '').strip() or DEFAULT_HTTP_PING_METHOD
+        input.content_type = input.get('content_type', '').strip()
+
         if input.content_encoding and input.content_encoding != 'gzip':
             raise Exception('Content encoding must be empty or equal to `gzip`')
 
@@ -507,10 +521,10 @@ class Edit(_CreateEdit):
                 old_http_method = item.method
                 old_http_accept = opaque.get('http_accept')
 
-                item.name = input.name
+                item.name = input.name.strip()
                 item.is_active = input.is_active
-                item.host = input.host
-                item.url_path = input.url_path
+                item.host = input.host.strip()
+                item.url_path = input.url_path.strip()
                 item.security_id = input.security_id or None # So that SQLite does not reject ''
                 item.connection = input.connection
                 item.transport = input.transport
@@ -520,7 +534,7 @@ class Edit(_CreateEdit):
                 item.soap_version = input.soap_version or None
                 item.data_format = input.data_format
                 item.service = service
-                item.ping_method = input.get('ping_method') or DEFAULT_HTTP_PING_METHOD
+                item.ping_method = input.ping_method
                 item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
                 item.merge_url_params_req = input.get('merge_url_params_req') or False
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
@@ -528,7 +542,7 @@ class Edit(_CreateEdit):
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout')
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
-                item.content_type = input.get('content_type')
+                item.content_type = input.content_type
                 item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
