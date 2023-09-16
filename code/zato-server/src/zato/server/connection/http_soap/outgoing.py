@@ -35,6 +35,7 @@ from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE
 from zato.common.exception import Inactive, TimeoutException
 from zato.common.json_internal import dumps, loads
 from zato.common.marshal_.api import Model
+from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name
 from zato.common.util.open_ import open_rb
 from zato.server.connection.queue import ConnectionQueue
@@ -498,7 +499,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if model:
             response.data = self.server.marshal_api.from_dict(None, response.data, model) # type: ignore
 
-        return response
+        return cast_('Response', response)
 
 # ################################################################################################################################
 
@@ -584,7 +585,10 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         else:
 
             # .. log what we received ..
-            logger.info('Get By Query ID response received -> %s', response)
+            logger.info('Get By Query ID response received -> %s', response.text)
+
+            if not response.ok:
+                raise Exception(response.text)
 
             # .. extract the underlying data ..
             data = response.data # type: ignore
