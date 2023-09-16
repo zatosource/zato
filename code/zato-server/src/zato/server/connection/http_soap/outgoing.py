@@ -584,7 +584,10 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         else:
 
             # .. log what we received ..
-            logger.info('Get By Query ID response received -> %s', response)
+            logger.info('Get By Query ID response received -> %s', response.text)
+
+            if not response.ok:
+                raise Exception(response.text)
 
             # .. extract the underlying data ..
             data = response.data # type: ignore
