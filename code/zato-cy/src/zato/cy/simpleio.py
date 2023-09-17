@@ -1570,7 +1570,7 @@ class CySimpleIO:
 # ################################################################################################################################
 
     @cy.returns(Elem)
-    def _convert_to_elem_instance(self, elem_name, is_required:cy.bint) -> Elem:
+    def convert_to_elem_instance(self, elem_name, is_required:cy.bint) -> Elem:
 
         # The element we return, at this point we do not know what its exact subtype will be
         _elem:Elem
@@ -1717,7 +1717,7 @@ class CySimpleIO:
                 if isinstance(initial_elem, Elem):
                     elem = initial_elem
                 else:
-                    elem = self._convert_to_elem_instance(initial_elem, is_required)
+                    elem = self.convert_to_elem_instance(initial_elem, is_required)
 
                 # By default all Elem instances are required so we need
                 # to potentially overwrite it with the actual is_required value.

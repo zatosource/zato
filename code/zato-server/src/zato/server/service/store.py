@@ -431,6 +431,9 @@ class ServiceStore:
 
     def set_up_class_attributes(self, class_:'type[Service]', service_store:'ServiceStore') -> 'None':
 
+        # Local aliases
+        _Class_SimpleIO = None # type: ignore
+
         # Set up enforcement of what other services a given service can invoke
         try:
             class_.invokes
@@ -484,12 +487,62 @@ class ServiceStore:
             has_input_data_class  = self._has_io_data_class(class_, sio_input,  'Input')
             has_output_data_class = self._has_io_data_class(class_, sio_output, 'Output')
 
+            # If either input or output is a dataclass but the other one is not,
+            # we need to turn the latter into a dataclass as well.
+
+            # We are here if output is a dataclass ..
+            if has_output_data_class:
+
+                # .. but input is not and it should be ..
+                if (not has_input_data_class) and sio_input:
+
+                    # .. create a name for the dynamically-generated input model class ..
+                    name = class_.__module__ + '_' + class_.__name__
+                    name = name.replace('.', '_')
+                    name += '_AutoInput'
+
+                    # .. generate the input model class now ..
+                    model_input = DataClassModel.build_model_from_flat_input(
+                        service_store.server,
+                        service_store.server.sio_config,
+                        CySimpleIO,
+                        name,
+                        sio_input
+                    )
+
+                    # .. and assign it as input.
+                    if _Class_SimpleIO:
+                        _Class_SimpleIO.input = model_input # type: ignore
+
+            # We are here if input is a dataclass ..
+            if has_input_data_class:
+
+                # .. but output is not and it should be.
+                if (not has_output_data_class) and sio_output:
+
+                    # .. create a name for the dynamically-generated output model class ..
+                    name = class_.__module__ + '_' + class_.__name__
+                    name = name.replace('.', '_')
+                    name += '_AutoOutput'
+
+                    # .. generate the input model class now ..
+                    model_output = DataClassModel.build_model_from_flat_input(
+                        service_store.server,
+                        service_store.server.sio_config,
+                        CySimpleIO,
+                        name,
+                        sio_output
+                    )
+
+                    if _Class_SimpleIO:
+                        _Class_SimpleIO.output = model_output # type: ignore
+
             if has_input_data_class or has_output_data_class:
                 SIOClass = DataClassSimpleIO
             else:
-                SIOClass = CySimpleIO
+                SIOClass = CySimpleIO # type: ignore
 
-            _ = SIOClass.attach_sio(service_store.server, service_store.server.sio_config, class_)
+            _ = SIOClass.attach_sio(service_store.server, service_store.server.sio_config, class_) # type: ignore
 
         # May be None during unit-tests - not every test provides it.
         if service_store:
