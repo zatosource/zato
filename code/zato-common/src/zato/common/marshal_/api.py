@@ -37,10 +37,8 @@ from zato.common.typing_ import cast_, extract_from_union, is_union
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
     from dataclasses import Field
     from zato.common.typing_ import any_, anydict, boolnone, dictnone, intnone, optional, tuplist, type_
-    from zato.simpleio import SIOServerConfig
     from zato.server.base.parallel import ParallelServer
     from zato.server.service import Service
 
