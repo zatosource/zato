@@ -141,6 +141,7 @@ strtuple      = tuple_[str, ...]
 textio_       = textio_
 textionone    = textio_
 tuple_        = tuple_
+tuplist       = union_[anylist, anytuple]
 tupnone       = optional[anytuple]
 type_         = type_
 typealias_    = typealias_
