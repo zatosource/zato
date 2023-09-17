@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from dataclasses import asdict, _FIELDS, MISSING, _PARAMS # type: ignore
+from dataclasses import asdict, _FIELDS, make_dataclass, MISSING, _PARAMS # type: ignore
 from http.client import BAD_REQUEST
 from inspect import isclass
 from typing import Any
@@ -37,8 +37,11 @@ from zato.common.typing_ import cast_, extract_from_union, is_union
 # ################################################################################################################################
 
 if 0:
+    from bunch import Bunch
     from dataclasses import Field
     from zato.common.typing_ import any_, anydict, boolnone, dictnone, intnone, optional, tuplist, type_
+    from zato.simpleio import SIOServerConfig
+    from zato.server.base.parallel import ParallelServer
     from zato.server.service import Service
 
     Field = Field
@@ -134,12 +137,54 @@ class Model(BaseModel):
         return out
 
     @staticmethod
-    def build_model_from_flat_input(name:'str', input:'str | tuplist') -> 'type_[BaseModel]':
+    def build_model_from_flat_input(
+        server,            # type: ParallelServer
+        sio_server_config, # type: ignore
+        _CySimpleIO,       # type: ignore
+        name,  # type: str
+        input, # type: str | tuplist
+    ) -> 'type_[BaseModel]':
 
-        class _Model(BaseModel):
-            pass
+        # Local imports
+        from zato.simpleio import is_sio_bool, is_sio_int
 
-        return _Model
+        # Local aliases
+        model_fields = []
+
+        # Make sure this is a list-like container ..
+        if isinstance(input, str):
+            input = [input]
+
+        # .. build an actual SIO handler ..
+        _cy_simple_io = _CySimpleIO(server, sio_server_config, input) # type: ignore
+
+        # .. now, go through everything we have on input ..
+        for item in input:
+
+            # .. find out if this is a required element or not ..
+            is_optional = item.startswith('-')
+            is_required = not is_optional
+
+            # .. turn each element input into a Cython-based one ..
+            sio_elem = _cy_simple_io.convert_to_elem_instance(item, is_required) # type: ignore
+
+            # .. check if it is not a string ..
+            is_int:'bool'  = is_sio_int(sio_elem)
+            is_bool:'bool' = is_sio_bool(sio_elem)
+
+            # .. turn the type into a model-compatible name ..
+            if is_int:
+                _model_type = int
+            elif is_bool:
+                _model_type = bool
+            else:
+                _model_type = str
+
+            # .. append a model-compatible definition of this field for later use ..
+            model_fields.append((sio_elem.name, _model_type))
+
+        model = make_dataclass(name, model_fields, bases=(Model,))
+        return model # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -231,11 +276,6 @@ class DictCtx:
         self.has_init = dataclass_params.init if dataclass_params else False
 
         self.attrs_container = self.init_attrs if self.has_init else self.setattr_attrs
-
-        # This may be a string-only definition ..
-        #if isinstance(self.DataClass, str):
-        #    self.fields =
-
         self.fields = getattr(self.DataClass, _FIELDS) # type: dictnone
 
 # ################################################################################################################################
