@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -30,6 +30,7 @@ from typing_utils import issubtype
 
 # Zato
 from zato.common.api import ZatoNotGiven
+from zato.common.marshal_.model import BaseModel
 from zato.common.typing_ import cast_, extract_from_union, is_union
 
 # ################################################################################################################################
@@ -90,7 +91,7 @@ def extract_model_class(field_type:'Field') -> 'Model | None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Model:
+class Model(BaseModel):
     __name__: 'str'
     after_created = None
 
