@@ -42,6 +42,9 @@ from dacite.core import from_dict
 # stdlib
 from dataclasses import * # type: ignore
 
+# Zato
+from zato.common.marshal_.model import BaseModel
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -106,6 +109,8 @@ intstrdict    = dict_[int, str]
 iterator_     = iterator_
 iobytes_      = io_[bytes]
 listnone      = anylistnone
+model         = type_[BaseModel]
+modelnone     = optional[type_[BaseModel]]
 noreturn      = noreturn
 set_          = set_
 stranydict    = dict_[str, any_]
@@ -136,6 +141,7 @@ strtuple      = tuple_[str, ...]
 textio_       = textio_
 textionone    = textio_
 tuple_        = tuple_
+tuplist       = union_[anylist, anytuple]
 tupnone       = optional[anytuple]
 type_         = type_
 typealias_    = typealias_
