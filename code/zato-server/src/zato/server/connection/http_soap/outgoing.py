@@ -563,21 +563,16 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
 # ################################################################################################################################
 
-    def get_by_query_id(
+    def get_by_query(
         self,
         *,
         cid,        # type: str
-        id,         # type: any_
         model=None, # type: type_[Model] | None
         callback,   # type: callnone
+        params=None # type: strdictnone
     ) -> 'any_':
 
-        # .. build the query parameters ..
-        params:'stranydict' = {
-            'id': id,
-        }
-
-        # .. invoke the system ..
+        # Invoke the system ..
         try:
             response:'Response' = self.get(cid, params)
         except Exception as e:

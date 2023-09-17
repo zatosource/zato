@@ -489,9 +489,15 @@ class Service:
         self.environ = Bunch()
         self.request = Request(self) # type: Request
         self.response = Response(self.logger) # type: ignore
-        self.user_config = Bunch()
         self.has_validate_input = False
         self.has_validate_output = False
+
+        # This is where user configuration is kept
+        self.config = Bunch()
+
+        # This is kept for backward compatibility with code that uses self.user_config in services.
+        # Only self.config should be used in new services.
+        self.user_config = Bunch()
 
         self.usage = 0 # How many times the service has been invoked
         self.slow_threshold = maxint # After how many ms to consider the response came too late
@@ -1322,6 +1328,7 @@ class Service:
         service.wsgi_environ = wsgi_environ or {}
         service.job_type = job_type
         service.translate = server.kvdb.translate # type: ignore
+        service.config = server.user_config
         service.user_config = server.user_config
         service.static_config = server.static_config
         service.time = server.time_util
