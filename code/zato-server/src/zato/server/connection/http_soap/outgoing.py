@@ -563,29 +563,27 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
 # ################################################################################################################################
 
-    def get_by_query_id(
+    def rest_call(
         self,
         *,
-        cid,        # type: str
-        id,         # type: any_
-        model=None, # type: type_[Model] | None
-        callback,   # type: callnone
+        cid,         # type: str
+        model=None,  # type: type_[Model] | None
+        callback,    # type: callnone
+        params=None, # type: strdictnone
+        method='',   # type: str
+        log_response=True, # type: bool
     ) -> 'any_':
 
-        # .. build the query parameters ..
-        params:'stranydict' = {
-            'id': id,
-        }
-
-        # .. invoke the system ..
+        # Invoke the system ..
         try:
-            response:'Response' = self.get(cid, params)
+            response:'Response' = self.http_request(method, cid, params=params)
         except Exception as e:
             logger.warn('Caught an exception -> %s', e)
         else:
 
-            # .. log what we received ..
-            logger.info('Get By Query ID response received -> %s', response.text)
+            # .. optionally, log what we received ..
+            if log_response:
+                logger.info('REST call response received -> %s', response.text)
 
             if not response.ok:
                 raise Exception(response.text)
