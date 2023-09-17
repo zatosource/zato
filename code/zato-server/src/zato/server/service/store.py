@@ -484,12 +484,53 @@ class ServiceStore:
             has_input_data_class  = self._has_io_data_class(class_, sio_input,  'Input')
             has_output_data_class = self._has_io_data_class(class_, sio_output, 'Output')
 
+            # If either input or output is a dataclass but the other one is not,
+            # we need to turn the latter into a dataclass as well.
+
+            # We are here if output is a dataclass ..
+            if has_output_data_class:
+
+                # .. but input is not and it should be ..
+                if (not has_input_data_class) and sio_input:
+
+                    # .. create a name for the dynamically-generated input model class ..
+                    name = str(class_)
+                    name = name.replace('.', '_')
+                    name += '_AutoInput'
+
+                    # .. generate the input model class now ..
+                    sio_input = DataClassModel.build_model_from_flat_input(name, sio_input)
+
+                    # .. and assign it as input.
+                    if 'ZZZ' in name:
+                        name
+                        name
+
+            # We are here if input is a dataclass ..
+            if has_input_data_class:
+
+                # .. but output is not and it should be.
+                if (not has_output_data_class) and sio_output:
+
+                    # .. create a name for the dynamically-generated output model class ..
+                    name = str(class_)
+                    name = name.replace('.', '_')
+                    name += '_AutoOutput'
+
+                    # .. generate the input model class now ..
+                    sio_output = DataClassModel.build_model_from_flat_input(name, sio_output)
+
+                    # .. and assign it as output.
+                    if 'ZZZ' in name:
+                        name
+                        name
+
             if has_input_data_class or has_output_data_class:
                 SIOClass = DataClassSimpleIO
             else:
-                SIOClass = CySimpleIO
+                SIOClass = CySimpleIO # type: ignore
 
-            _ = SIOClass.attach_sio(service_store.server, service_store.server.sio_config, class_)
+            _ = SIOClass.attach_sio(service_store.server, service_store.server.sio_config, class_) # type: ignore
 
         # May be None during unit-tests - not every test provides it.
         if service_store:

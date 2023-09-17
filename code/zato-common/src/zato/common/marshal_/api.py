@@ -38,7 +38,7 @@ from zato.common.typing_ import cast_, extract_from_union, is_union
 
 if 0:
     from dataclasses import Field
-    from zato.common.typing_ import any_, anydict, boolnone, dictnone, intnone, optional
+    from zato.common.typing_ import any_, anydict, boolnone, dictnone, intnone, optional, tuplist, type_
     from zato.server.service import Service
 
     Field = Field
@@ -133,6 +133,14 @@ class Model(BaseModel):
         out = self.__class__._zato_from_dict(None, data)
         return out
 
+    @staticmethod
+    def build_model_from_flat_input(name:'str', input:'str | tuplist') -> 'type_[BaseModel]':
+
+        class _Model(BaseModel):
+            pass
+
+        return _Model
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -223,6 +231,11 @@ class DictCtx:
         self.has_init = dataclass_params.init if dataclass_params else False
 
         self.attrs_container = self.init_attrs if self.has_init else self.setattr_attrs
+
+        # This may be a string-only definition ..
+        #if isinstance(self.DataClass, str):
+        #    self.fields =
+
         self.fields = getattr(self.DataClass, _FIELDS) # type: dictnone
 
 # ################################################################################################################################
