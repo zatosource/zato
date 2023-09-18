@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 # stdlib
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal as decimal_
 from typing import           \
     Any as any_,             \
@@ -70,6 +70,12 @@ TypedDict = TypedDict
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _ISOTimestamp:
+    pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # Some basic types are defined upfront to make sure that none of the later definitions results in the type "Unknown".
 intnone       = optional[int]
 strnone       = optional[str]
@@ -89,6 +95,9 @@ callable_     = callable_[..., any_]
 callnone      = optional[callable_]
 cast_         = cast_
 commondict    = dict_[str, union_[int, str_, bool, float, anydict, anylist, datetime, None]]
+date_         = date
+datetime_     = datetime
+isotimestamp  = _ISOTimestamp
 decimal_      = decimal_
 decnone       = optional[decimal_]
 dictlist      = list_[anydict]
