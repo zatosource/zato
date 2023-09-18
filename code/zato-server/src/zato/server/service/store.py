@@ -406,6 +406,19 @@ class ServiceStore:
         msg_type:'str'
     ) -> 'bool':
 
+        # Is this a generic alias, e.g. in the form of list_[MyModel]?
+        _is_generic = hasattr(msg_class, '__origin__')
+
+        # Do check it now ..
+        if _is_generic and msg_class.__origin__ is list:
+
+            # .. it is a list but does it have any inner models? ..
+            if msg_class.__args__:
+
+                # .. if we are here, it means that it is a generic class of a list type
+                # .. that has a model inside thus we need to check this model in later steps ..
+                msg_class = msg_class.__args__[0]
+
         # Dataclasses require class objects ..
         if isclass(msg_class):
 
