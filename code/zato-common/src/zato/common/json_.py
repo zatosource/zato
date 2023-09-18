@@ -13,7 +13,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # import their own required library themselves.
 
 # stdlib
-from datetime import datetime
+from datetime import date, datetime
 from json import load, loads
 
 # BSON
@@ -44,7 +44,7 @@ def _ensure_serializable(value, simple_type=(str, dict, int, float, list, tuple,
         if not isinstance(value, simple_type):
 
             # Useful in various contexts
-            if isinstance(value, datetime):
+            if isinstance(value, (date, datetime)):
                 value = value.isoformat()
 
             # Always use Unicode
