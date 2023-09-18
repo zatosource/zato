@@ -38,7 +38,7 @@ from zato.common.typing_ import cast_, extract_from_union, is_union
 
 if 0:
     from dataclasses import Field
-    from zato.common.typing_ import any_, anydict, boolnone, dictnone, intnone, optional, tuplist, type_
+    from zato.common.typing_ import any_, anydict, anylist, boolnone, dictnone, intnone, optional, tuplist, type_
     from zato.server.base.parallel import ParallelServer
     from zato.server.service import Service
 
@@ -335,6 +335,17 @@ class FieldCtx:
             elif isinstance(self.dict_ctx.current_dict, Model): # type: ignore
                 value = getattr(self.dict_ctx.current_dict, self.name, ZatoNotGiven)
 
+        # If this is supposed to be an integer and we have a value, try to convert it to an int now.
+        # Raise an exception in case it does not succeed because we were told
+        # it was really supposed to be an integer.
+        if self.field_type is int and value != ZatoNotGiven:
+            if not isinstance(value, int):
+                try:
+                    value = int(value)
+                except Exception as e:
+                    msg = f'Value `{repr(value)}` could not be converted to an int -> {e} -> {self.dict_ctx.current_dict}'
+                    raise Exception(msg)
+
         # At this point, we know there will be something to assign although it still may be ZatoNotGiven.
         self.value = value
 
@@ -402,8 +413,7 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def _visit_list(self, field_ctx):
-        # type: (FieldCtx) -> list
+    def _visit_list(self, field_ctx:'FieldCtx') -> 'anylist':
 
         # Local aliases
         service     = field_ctx.dict_ctx.service
@@ -425,7 +435,7 @@ class MarshalAPI:
             out.append(instance)
 
         # .. finally, return the response.
-        return out
+        return out # type: ignore
 
 # ################################################################################################################################
 
