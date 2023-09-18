@@ -95,11 +95,12 @@ if 0:
     from zato.common.json_schema import Validator as JSONSchemaValidator
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
-    from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, dictnone, intnone, \
-        stranydict, strnone, strlist
+    from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, callnone, dictnone, intnone, \
+        modelnone, strdict, strdictnone, strnone, strlist
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
     from zato.server.connection.ftp import FTPStore
+    from zato.server.connection.http_soap.outgoing import RESTWrapper
     from zato.server.connection.web_socket import WebSocket
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
@@ -267,7 +268,7 @@ class ChannelSecurityInfo:
 
 # ################################################################################################################################
 
-    def to_dict(self, needs_impl:'bool'=False) -> 'stranydict':
+    def to_dict(self, needs_impl:'bool'=False) -> 'strdict':
         out = {
             'id': self.id,
             'name': self.name,
@@ -1037,8 +1038,8 @@ class Service:
         to_json_string=False, # type: bool
         cid='',        # type: str
         callback=None, # type: str | Service | None
-        zato_ctx=None, # type: stranydict | None
-        environ=None   # type: stranydict | None
+        zato_ctx=None, # type: strdict | None
+        environ=None   # type: strdict | None
     ) -> 'str':
         """ Invokes a service asynchronously by its name.
         """
@@ -1246,7 +1247,7 @@ class Service:
 
 # ################################################################################################################################
 
-    def _log_input_output(self, user_msg:'str', level:'int', suppress_keys:'strlist', is_response:'bool') -> 'stranydict':
+    def _log_input_output(self, user_msg:'str', level:'int', suppress_keys:'strlist', is_response:'bool') -> 'strdict':
 
         suppress_keys = suppress_keys or []
         suppressed_msg = '(suppressed)'
@@ -1277,10 +1278,10 @@ class Service:
 
         return msg
 
-    def log_input(self, user_msg:'str'='', level:'int'=logging.INFO, suppress_keys:'any_'=None) -> 'stranydict':
+    def log_input(self, user_msg:'str'='', level:'int'=logging.INFO, suppress_keys:'any_'=None) -> 'strdict':
         return self._log_input_output(user_msg, level, suppress_keys, False)
 
-    def log_output(self, user_msg:'str'='', level:'int'=logging.INFO, suppress_keys:'any_'=('wsgi_environ',)) -> 'stranydict':
+    def log_output(self, user_msg:'str'='', level:'int'=logging.INFO, suppress_keys:'any_'=('wsgi_environ',)) -> 'strdict':
         return self._log_input_output(user_msg, level, suppress_keys, True)
 
 # ################################################################################################################################
@@ -1341,7 +1342,7 @@ class Service:
         service.environ = environ or {}
 
         channel_item = wsgi_environ.get('zato.channel_item') or {}
-        channel_item = cast_('stranydict', channel_item)
+        channel_item = cast_('strdict', channel_item)
         sec_def_info = wsgi_environ.get('zato.sec_def', {})
 
         if channel_type == _AMQP:
@@ -1393,7 +1394,7 @@ class Service:
 class _Hook(Service):
     """ Base class for all hook services.
     """
-    _hook_func_name: 'stranydict'
+    _hook_func_name: 'strdict'
 
     class SimpleIO:
         input_required = (Opaque('ctx'),)
@@ -1438,6 +1439,7 @@ PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_SUBSCRIBED] = 'on_subscribed'
 PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED] = 'on_unsubscribed'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class WSXHook(_Hook):
     """ Subclasses of this class may act as WebSockets hooks.
@@ -1467,4 +1469,109 @@ WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED] = 'on_disconnected
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_PUBSUB_RESPONSE] = 'on_pubsub_response'
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_VAULT_MOUNT_POINT_NEEDED] = 'on_vault_mount_point_needed'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RESTAdapter(Service):
+
+    # These may be overridden by individual subclasses
+    model               = None
+    conn_name           = ''
+    log_response        = True
+    map_response        = None
+    get_conn_name       = None
+    get_auth            = None
+    get_path            = None
+    get_method          = None
+    get_request         = None
+    get_headers         = None
+    get_query_string    = None
+
+    has_query_string_id   = False
+    query_string_id_param = None
+
+    has_json_id   = False
+    json_id_param = None
+
+    # Default to GET calls
+    method = 'GET'
+
+    def rest_call(
+        self,
+        conn_name,     # type: str
+        *,
+        model=None,    # type: modelnone
+        callback=None, # type: callnone
+        params=None,   # type: strdictnone
+        method='',     # type: str
+        log_response=True, # type: bool
+    ):
+
+        # Get the actual REST connection ..
+        conn:'RESTWrapper' = self.out.rest[conn_name].conn
+
+        # .. invoke the system and map its response back through the callback callable ..
+        out:'any_' = conn.rest_call(
+            cid=self.cid,
+            model=model, # type: ignore
+            callback=callback,
+            params=params,
+            method=method,
+            log_response=log_response,
+        )
+
+        # .. and return the result to our caller.
+        return out
+
+# ################################################################################################################################
+
+    def handle(self):
+
+        # Local aliases
+        params:'strdict' = {}
+
+        if self.get_conn_name:
+            conn_name = self.get_conn_name
+        else:
+            conn_name = self.conn_name
+
+        #
+        # Build our query parameters, which can be partly implicit if this is an ID-only service
+        # or explicitly if we have a method to do so.
+        #
+        if self.has_query_string_id:
+
+            if self.query_string_id_param:
+                query_string_id_param = self.query_string_id_param
+            else:
+                query_string_id_param = 'id'
+
+            params[query_string_id_param] = self.request.input[query_string_id_param]
+
+        if self.get_query_string:
+            _params:'strdict' = self.get_query_string(params)
+            params.update(_params)
+
+        if self.get_method:
+            method:'str' = self.get_method()
+        else:
+            method = self.method
+
+        # Uppercase the method per what HTTP expects
+        method = method.upper()
+
+        # Obtain the result ..
+        out = self.rest_call(
+            conn_name,
+            model=self.model,
+            callback=self.map_response,
+            params=params,
+            method=method,
+            log_response=self.log_response,
+        )
+
+        # .. and return it to our caller.
+        self.response.payload = out
+
+# ################################################################################################################################
 # ################################################################################################################################
