@@ -22,6 +22,9 @@ except ImportError:
 # BSON (MongoDB)
 from bson import ObjectId
 
+# dateutil
+from dateutil.parser import parse as dt_parse
+
 # orjson
 from orjson import dumps
 
@@ -31,7 +34,7 @@ from typing_utils import issubtype
 # Zato
 from zato.common.api import ZatoNotGiven
 from zato.common.marshal_.model import BaseModel
-from zato.common.typing_ import cast_, extract_from_union, is_union
+from zato.common.typing_ import cast_, date_, datetime_, extract_from_union, isotimestamp, is_union
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -335,16 +338,33 @@ class FieldCtx:
             elif isinstance(self.dict_ctx.current_dict, Model): # type: ignore
                 value = getattr(self.dict_ctx.current_dict, self.name, ZatoNotGiven)
 
-        # If this is supposed to be an integer and we have a value, try to convert it to an int now.
-        # Raise an exception in case it does not succeed because we were told
-        # it was really supposed to be an integer.
-        if self.field_type is int and value != ZatoNotGiven:
-            if not isinstance(value, int):
-                try:
+        # If this field has a value, we can try to parse it into a specific type ..
+        if value and (value != ZatoNotGiven):
+
+            try:
+                # .. as an integer ..
+                if self.field_type is int and (not isinstance(value, int)):
                     value = int(value)
-                except Exception as e:
-                    msg = f'Value `{repr(value)}` could not be converted to an int -> {e} -> {self.dict_ctx.current_dict}'
-                    raise Exception(msg)
+
+                # .. as a date object ..
+                if self.name == 'enrolled_on':
+                    value
+
+                if self.field_type is date_ and (not isinstance(value, date_)):
+                    value = dt_parse(value).date() # type: ignore
+
+                # .. as a datetime object ..
+                elif self.field_type is datetime_ and (not isinstance(value, datetime_)):
+                    value = dt_parse(value) # type: ignore
+
+                # .. as a datetime object formatted as string ..
+                elif self.field_type is isotimestamp and isinstance(value, str):
+                    value = dt_parse(value) # type: ignore
+                    value = value.isoformat()
+
+            except Exception as e:
+                msg = f'Value `{repr(value)}` of field {self.name} could not be parsed -> {e} -> {self.dict_ctx.current_dict}'
+                raise Exception(msg)
 
         # At this point, we know there will be something to assign although it still may be ZatoNotGiven.
         self.value = value
