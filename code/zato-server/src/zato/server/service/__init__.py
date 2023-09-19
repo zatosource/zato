@@ -1515,7 +1515,7 @@ class RESTAdapter(Service):
     # These may be overridden by individual subclasses
     model               = None
     conn_name           = ''
-    log_response        = True
+    log_response        = False
     map_response        = None
     get_conn_name       = None
     get_auth            = None
