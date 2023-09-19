@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,6 +14,7 @@ from http.client import OK
 from io import StringIO
 from logging import DEBUG, getLogger
 from traceback import format_exc
+from urllib.parse import urlencode
 
 # gevent
 from gevent.lock import RLock
@@ -460,9 +461,13 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             if needs_request_serialize:
 
                 if self.config['data_format'] == DATA_FORMAT.JSON:
+
                     if isinstance(data, Model):
                         data = data.to_dict()
                     data = dumps(data)
+
+                elif self.config['data_format'] == DATA_FORMAT.FORM_DATA:
+                    data = urlencode(data)
 
         headers = kwargs.pop('headers') or {}
         headers = self._create_headers(cid, headers)
