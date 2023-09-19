@@ -464,7 +464,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                         data = data.to_dict()
                     data = dumps(data)
 
-        headers = self._create_headers(cid, kwargs.pop('headers', {}))
+        headers = kwargs.pop('headers') or {}
+        headers = self._create_headers(cid, headers)
+
         if self.config['transport'] == 'soap':
             data, headers = self._soap_data(data, headers)
 
@@ -566,17 +568,25 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
     def rest_call(
         self,
         *,
-        cid,         # type: str
-        model=None,  # type: type_[Model] | None
-        callback,    # type: callnone
-        params=None, # type: strdictnone
-        method='',   # type: str
+        cid,          # type: str
+        data='',      # type: str
+        model=None,   # type: type_[Model] | None
+        callback,     # type: callnone
+        params=None,  # type: strdictnone
+        headers=None, # type: strdictnone
+        method='',    # type: str
         log_response=True, # type: bool
     ) -> 'any_':
 
         # Invoke the system ..
         try:
-            response:'Response' = self.http_request(method, cid, params=params)
+            response:'Response' = self.http_request(
+                method,
+                cid,
+                data=data,
+                params=params,
+                headers=headers,
+            )
         except Exception as e:
             logger.warn('Caught an exception -> %s', e)
         else:
