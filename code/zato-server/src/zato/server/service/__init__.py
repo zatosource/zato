@@ -368,6 +368,42 @@ class PatternsFacade:
         self.parallel = ParallelExec(invoking_service, cache, lock)
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class _SecurityFacade_Impl:
+
+    config_dict:'ConfigDict'
+    __slots__ = ('config_dict',)
+
+    def __init__(self, config_dict:'ConfigDict') -> 'None':
+        self.config_dict = config_dict
+
+    def get(self, key:'str', default:'any_'=None) -> 'anydict':
+        item:'anydictnone' = self.config_dict.get(key)
+        if item:
+            return item['config']
+        else:
+            raise KeyError(f'Security definition not found -> {key}')
+
+    def __getitem__(self, key:'str') -> 'anydict':
+        item:'anydictnone' = self.config_dict.__getitem__(key)
+        if item:
+            return item['config']
+        else:
+            raise KeyError(f'Security definition not found -> {key}')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SecurityFacade:
+    """ The API through which security definitions can be accessed.
+    """
+    __slots__ = ('basic_auth',)
+
+    def __init__(self, invoking_service:'Service') -> 'None':
+        self.basic_auth = _SecurityFacade_Impl(invoking_service.server.worker_store.worker_config.basic_auth)
+
+# ################################################################################################################################
 
 class Service:
     """ A base class for all services deployed on Zato servers, no matter the transport and protocol, be it REST, IBM MQ
@@ -375,6 +411,7 @@ class Service:
     """
     rest: 'RESTFacade'
     schedule: 'SchedulerFacade'
+    security: 'SecurityFacade'
 
     call_hooks:'bool' = True
     _filter_by = None
@@ -1333,6 +1370,7 @@ class Service:
         service.user_config = server.user_config
         service.static_config = server.static_config
         service.time = server.time_util
+        service.security = SecurityFacade(service)
 
         if channel_params:
             service.request.channel_params.update(channel_params)
@@ -1500,9 +1538,11 @@ class RESTAdapter(Service):
         self,
         conn_name,     # type: str
         *,
+        data='',       # type: str
         model=None,    # type: modelnone
         callback=None, # type: callnone
         params=None,   # type: strdictnone
+        headers=None,  # type: strdictnone
         method='',     # type: str
         log_response=True, # type: bool
     ):
@@ -1513,9 +1553,11 @@ class RESTAdapter(Service):
         # .. invoke the system and map its response back through the callback callable ..
         out:'any_' = conn.rest_call(
             cid=self.cid,
+            data=data,
             model=model, # type: ignore
             callback=callback,
             params=params,
+            headers=headers,
             method=method,
             log_response=log_response,
         )
@@ -1530,10 +1572,13 @@ class RESTAdapter(Service):
         # Local aliases
         params:'strdict' = {}
 
+        # The outgoing connection to use may be static or dynamically generated
         if self.get_conn_name:
             conn_name = self.get_conn_name
         else:
             conn_name = self.conn_name
+
+        # The request to use may be dynamically generated
 
         #
         # Build our query parameters, which can be partly implicit if this is an ID-only service
