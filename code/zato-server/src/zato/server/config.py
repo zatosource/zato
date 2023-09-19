@@ -58,6 +58,7 @@ class ConfigDict:
 
     def get(self, key, default=None):
         with self.lock:
+            key = key.strip()
             return self._impl.get(key, default)
 
 # ################################################################################################################################
