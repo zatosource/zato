@@ -450,66 +450,89 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         model = kwargs.pop('model', None)
 
         # We do not serialize ourselves data based on this content type,
-        # leaving it up to the underlying HTTP library to do it.
+        # leaving it up to the underlying HTTP library to do it ..
         needs_serialize_based_on_content_type = self.config.get('content_type') != ContentType.FormURLEncoded
 
+        # .. otherwise, our input data may need to be serialized ..
         if needs_serialize_based_on_content_type:
 
-            # We never touch strings/unicode because apparently the user already serialized outgoing data
+            # .. but we never serialize string objects,
+            # .. assuming they already represent what ought to be sent as-is ..
             needs_request_serialize = not isinstance(data, str)
 
+            # .. if we are here, we know check further if serialization is required ..
             if needs_request_serialize:
 
+                # .. we are explicitly told to send JSON ..
                 if self.config['data_format'] == DATA_FORMAT.JSON:
 
+                    # .. models need to be converted to dicts before they can be serialized ..
                     if isinstance(data, Model):
                         data = data.to_dict()
+
+                    # .. do serialize to JSON now ..
                     data = dumps(data)
 
+                # .. we are explicitly told to submit form-like data ..
                 elif self.config['data_format'] == DATA_FORMAT.FORM_DATA:
                     data = urlencode(data)
 
+        # .. check if we have custom headers on input ..
         headers = kwargs.pop('headers') or {}
+
+        # .. build a default set of headers now ..
         headers = self._create_headers(cid, headers)
 
+        # .. SOAP requests need to be specifically formatted now ..
         if self.config['transport'] == 'soap':
             data, headers = self._soap_data(data, headers)
 
+        # .. check if we have custom query parameters ..
         params = params or {}
 
+        # .. if the address is a template, format it with input parameters ..
         if self.path_params:
-            address, qs_params = self.format_address(cid, params)
+            address, qs_params = self.format_address(cid, params) # type: ignore
         else:
             address, qs_params = self.address, dict(params)
 
+        # .. make sure that Unicode objects are turned into bytes ..
         if needs_serialize_based_on_content_type:
             if isinstance(data, str):
                 data = data.encode('utf-8')
 
-        logger.info('Sending (%s) -> %s', method, data)
+        # Log what we are sending ..
+        msg = f'HTTP out; cid={cid} → {method} {address} name:{self.config["name"]}; params={params}; len={len(data)}'
+        logger.info(msg)
 
-        logger.info(
-            'CID:`%s`, address:`%s`, qs:`%s`, auth_user:`%s`, kwargs:`%s`', cid, address, qs_params, self.username, kwargs)
-
+        # .. do invoke the connection ..
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
-        if has_debug:
-            logger.debug('CID:`%s`, response:`%s`', cid, response.text)
+        # .. now, log what we received.
+        msg = f'HTTP out; cid={cid} ← {response.status_code} time={response.elapsed}; len={len(response.text)}'
+        logger.info(msg)
 
-        _has_data_format_json  = self.config['data_format'] == DATA_FORMAT.JSON
+        # .. check if we are explicitly told that we handle JSON ..
+        _has_data_format_json = self.config['data_format'] == DATA_FORMAT.JSON
+
+        # .. check if we perhaps received JSON in the response ..
         _has_json_content_type = 'application/json' in response.headers.get('Content-Type') or '' # type: ignore
-        _is_json:'bool'         = _has_data_format_json or _has_json_content_type # type: ignore
 
+        # .. are we actually handling JSON in this response .. ?
+        _is_json:'bool' = _has_data_format_json or _has_json_content_type # type: ignore
+
+        # .. if yes, try to parse the response accordingly ..
         if _is_json:
             try:
                 response.data = loads(response.text) # type: ignore
             except ValueError as e:
                 raise Exception('Could not parse JSON response `{}`; e:`{}`'.format(response.text, e.args[0]))
 
-        # Support for SIO models loading
+        # .. if we have a model class on input, deserialize the received response into one ..
         if model:
             response.data = self.server.marshal_api.from_dict(None, response.data, model) # type: ignore
 
+        # .. now, return the response to the caller.
         return cast_('Response', response)
 
 # ################################################################################################################################
