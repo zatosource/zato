@@ -96,7 +96,7 @@ if 0:
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, callnone, dictnone, intnone, \
-        modelnone, strdict, strdictnone, strnone, strlist
+        modelnone, strdict, strdictnone, strstrdict, strnone, strlist
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
     from zato.server.connection.ftp import FTPStore
@@ -1524,6 +1524,7 @@ class RESTAdapter(Service):
     get_request         = None
     get_headers         = None
     get_query_string    = None
+    get_auth_bearer     = None
 
     has_query_string_id   = False
     query_string_id_param = None
@@ -1533,6 +1534,8 @@ class RESTAdapter(Service):
 
     # Default to GET calls
     method = 'GET'
+
+# ################################################################################################################################
 
     def rest_call(
         self,
@@ -1571,6 +1574,8 @@ class RESTAdapter(Service):
 
         # Local aliases
         params:'strdict' = {}
+        request:'any_' = None
+        headers:'strstrdict' = {}
 
         # The outgoing connection to use may be static or dynamically generated
         if self.get_conn_name:
@@ -1579,6 +1584,8 @@ class RESTAdapter(Service):
             conn_name = self.conn_name
 
         # The request to use may be dynamically generated
+        if self.get_request:
+            request = self.get_request() # type: ignore
 
         #
         # Build our query parameters, which can be partly implicit if this is an ID-only service
@@ -1593,10 +1600,12 @@ class RESTAdapter(Service):
 
             params[query_string_id_param] = self.request.input[query_string_id_param]
 
+        # Update the query string with information obtained earlier
         if self.get_query_string:
             _params:'strdict' = self.get_query_string(params)
             params.update(_params)
 
+        # The REST method may be dynamically generated
         if self.get_method:
             method:'str' = self.get_method()
         else:
@@ -1605,12 +1614,24 @@ class RESTAdapter(Service):
         # Uppercase the method per what HTTP expects
         method = method.upper()
 
+        # Authentication bearer token may be dynamically generated
+        if self.get_auth_bearer:
+            token:'str' = self.get_auth_bearer()
+            headers['Authorization'] = f'Bearer {token}'
+
+        # Headers may be dynamically generated
+        if self.get_headers:
+            _headers:'strstrdict' = self.get_headers()
+            headers.update(_headers)
+
         # Obtain the result ..
         out = self.rest_call(
             conn_name,
+            data=request,
             model=self.model,
             callback=self.map_response,
             params=params,
+            headers=headers,
             method=method,
             log_response=self.log_response,
         )
