@@ -102,6 +102,9 @@ class Model(BaseModel):
     def __getitem__(self, name, default=None):
         return getattr(self, name, default)
 
+    def __contains__(self, name):
+        return hasattr(self, name)
+
     @classmethod
     def zato_get_fields(class_:'any_') -> 'anydict':
         fields = getattr(class_, _FIELDS) # type: anydict
@@ -343,24 +346,24 @@ class FieldCtx:
 
             try:
                 # .. as an integer ..
-                if self.field_type is int and (not isinstance(value, int)):
-                    value = int(value)
+                if self.field_type is int:
+                    if not isinstance(value, int):
+                        value = int(value)
 
-                # .. as a date object ..
-                if self.name == 'enrolled_on':
-                    value
-
-                if self.field_type is date_ and (not isinstance(value, date_)):
-                    value = dt_parse(value).date() # type: ignore
+                if self.field_type is date_:
+                    if not isinstance(value, date_):
+                        value = dt_parse(value).date() # type: ignore
 
                 # .. as a datetime object ..
-                elif self.field_type is datetime_ and (not isinstance(value, datetime_)):
-                    value = dt_parse(value) # type: ignore
+                elif self.field_type is datetime_:
+                    if not isinstance(value, (date_, datetime_)):
+                        value = dt_parse(value) # type: ignore
 
                 # .. as a datetime object formatted as string ..
-                elif self.field_type is isotimestamp and isinstance(value, str):
-                    value = dt_parse(value) # type: ignore
-                    value = value.isoformat()
+                elif self.field_type is isotimestamp:
+                    if isinstance(value, str):
+                        value = dt_parse(value) # type: ignore
+                        value = value.isoformat()
 
             except Exception as e:
                 msg = f'Value `{repr(value)}` of field {self.name} could not be parsed -> {e} -> {self.dict_ctx.current_dict}'
@@ -426,9 +429,8 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def _self_require_dict(self, field_ctx):
-        # type: (FieldCtx) -> None
-        if not isinstance(field_ctx.value, dict):
+    def _self_require_dict_or_model(self, field_ctx:'FieldCtx') -> 'None':
+        if not isinstance(field_ctx.value, (dict, BaseModel)):
             raise self.get_validation_error(field_ctx)
 
 # ################################################################################################################################
@@ -459,8 +461,7 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def from_field_ctx(self, field_ctx):
-        # type: (FieldCtx) -> any_
+    def from_field_ctx(self, field_ctx:'FieldCtx') -> 'any_':
         return self.from_dict(field_ctx.dict_ctx.service, field_ctx.value, field_ctx.field.type,
             extra=None, list_idx=field_ctx.dict_ctx.list_idx, parent=field_ctx)
 
@@ -475,7 +476,7 @@ class MarshalAPI:
     def from_dict(
         self,
         service:      'Service',
-        current_dict: 'dict',
+        current_dict: 'anydict | BaseModel',
         DataClass:    'any_',
         extra:        'dictnone' = None,
         list_idx:     'intnone'  = None,
@@ -516,7 +517,7 @@ class MarshalAPI:
             if field_ctx.is_model:
 
                 # .. first, we need a dict as value as it is the only container that we can extract model fields from ..
-                self._self_require_dict(field_ctx)
+                self._self_require_dict_or_model(field_ctx)
 
                 # .. if we are here, it means that we can check the dict and extract its fields,
                 # but note that we do not pass extra data on to nested models
