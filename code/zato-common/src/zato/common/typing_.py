@@ -73,6 +73,9 @@ TypedDict = TypedDict
 class _ISOTimestamp:
     pass
 
+class DateTimeWithZone(datetime):
+    pass
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -97,6 +100,7 @@ cast_         = cast_
 commondict    = dict_[str, union_[int, str_, bool, float, anydict, anylist, datetime, None]]
 date_         = date
 datetime_     = datetime
+datetimez     = DateTimeWithZone
 isotimestamp  = _ISOTimestamp
 decimal_      = decimal_
 decnone       = optional[decimal_]
