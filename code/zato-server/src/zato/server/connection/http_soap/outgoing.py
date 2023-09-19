@@ -496,7 +496,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if has_debug:
             logger.debug('CID:`%s`, response:`%s`', cid, response.text)
 
-        if self.config['data_format'] == DATA_FORMAT.JSON:
+        _has_data_format_json  = self.config['data_format'] == DATA_FORMAT.JSON
+        _has_json_content_type = 'application/json' in response.headers.get('Content-Type') or '' # type: ignore
+        _is_json:'bool'         = _has_data_format_json or _has_json_content_type # type: ignore
+
+        if _is_json:
             try:
                 response.data = loads(response.text) # type: ignore
             except ValueError as e:
