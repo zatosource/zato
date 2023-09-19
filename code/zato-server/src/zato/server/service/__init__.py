@@ -96,7 +96,7 @@ if 0:
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, callnone, dictnone, intnone, \
-        modelnone, strdict, strdictnone, strnone, strlist
+        modelnone, strdict, strdictnone, strstrdict, strnone, strlist
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
     from zato.server.connection.ftp import FTPStore
@@ -368,6 +368,42 @@ class PatternsFacade:
         self.parallel = ParallelExec(invoking_service, cache, lock)
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class _SecurityFacade_Impl:
+
+    config_dict:'ConfigDict'
+    __slots__ = ('config_dict',)
+
+    def __init__(self, config_dict:'ConfigDict') -> 'None':
+        self.config_dict = config_dict
+
+    def get(self, key:'str', default:'any_'=None) -> 'anydict':
+        item:'anydictnone' = self.config_dict.get(key)
+        if item:
+            return item['config']
+        else:
+            raise KeyError(f'Security definition not found -> {key}')
+
+    def __getitem__(self, key:'str') -> 'anydict':
+        item:'anydictnone' = self.config_dict.__getitem__(key)
+        if item:
+            return item['config']
+        else:
+            raise KeyError(f'Security definition not found -> {key}')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SecurityFacade:
+    """ The API through which security definitions can be accessed.
+    """
+    __slots__ = ('basic_auth',)
+
+    def __init__(self, invoking_service:'Service') -> 'None':
+        self.basic_auth = _SecurityFacade_Impl(invoking_service.server.worker_store.worker_config.basic_auth)
+
+# ################################################################################################################################
 
 class Service:
     """ A base class for all services deployed on Zato servers, no matter the transport and protocol, be it REST, IBM MQ
@@ -375,6 +411,7 @@ class Service:
     """
     rest: 'RESTFacade'
     schedule: 'SchedulerFacade'
+    security: 'SecurityFacade'
 
     call_hooks:'bool' = True
     _filter_by = None
@@ -1333,6 +1370,7 @@ class Service:
         service.user_config = server.user_config
         service.static_config = server.static_config
         service.time = server.time_util
+        service.security = SecurityFacade(service)
 
         if channel_params:
             service.request.channel_params.update(channel_params)
@@ -1477,7 +1515,7 @@ class RESTAdapter(Service):
     # These may be overridden by individual subclasses
     model               = None
     conn_name           = ''
-    log_response        = True
+    log_response        = False
     map_response        = None
     get_conn_name       = None
     get_auth            = None
@@ -1486,6 +1524,7 @@ class RESTAdapter(Service):
     get_request         = None
     get_headers         = None
     get_query_string    = None
+    get_auth_bearer     = None
 
     has_query_string_id   = False
     query_string_id_param = None
@@ -1496,13 +1535,17 @@ class RESTAdapter(Service):
     # Default to GET calls
     method = 'GET'
 
+# ################################################################################################################################
+
     def rest_call(
         self,
         conn_name,     # type: str
         *,
+        data='',       # type: str
         model=None,    # type: modelnone
         callback=None, # type: callnone
         params=None,   # type: strdictnone
+        headers=None,  # type: strdictnone
         method='',     # type: str
         log_response=True, # type: bool
     ):
@@ -1513,9 +1556,11 @@ class RESTAdapter(Service):
         # .. invoke the system and map its response back through the callback callable ..
         out:'any_' = conn.rest_call(
             cid=self.cid,
+            data=data,
             model=model, # type: ignore
             callback=callback,
             params=params,
+            headers=headers,
             method=method,
             log_response=log_response,
         )
@@ -1529,11 +1574,18 @@ class RESTAdapter(Service):
 
         # Local aliases
         params:'strdict' = {}
+        request:'any_' = None
+        headers:'strstrdict' = {}
 
+        # The outgoing connection to use may be static or dynamically generated
         if self.get_conn_name:
             conn_name = self.get_conn_name
         else:
             conn_name = self.conn_name
+
+        # The request to use may be dynamically generated
+        if self.get_request:
+            request = self.get_request() # type: ignore
 
         #
         # Build our query parameters, which can be partly implicit if this is an ID-only service
@@ -1548,10 +1600,12 @@ class RESTAdapter(Service):
 
             params[query_string_id_param] = self.request.input[query_string_id_param]
 
+        # Update the query string with information obtained earlier
         if self.get_query_string:
             _params:'strdict' = self.get_query_string(params)
             params.update(_params)
 
+        # The REST method may be dynamically generated
         if self.get_method:
             method:'str' = self.get_method()
         else:
@@ -1560,12 +1614,24 @@ class RESTAdapter(Service):
         # Uppercase the method per what HTTP expects
         method = method.upper()
 
+        # Authentication bearer token may be dynamically generated
+        if self.get_auth_bearer:
+            token:'str' = self.get_auth_bearer()
+            headers['Authorization'] = f'Bearer {token}'
+
+        # Headers may be dynamically generated
+        if self.get_headers:
+            _headers:'strstrdict' = self.get_headers()
+            headers.update(_headers)
+
         # Obtain the result ..
         out = self.rest_call(
             conn_name,
+            data=request,
             model=self.model,
             callback=self.map_response,
             params=params,
+            headers=headers,
             method=method,
             log_response=self.log_response,
         )
