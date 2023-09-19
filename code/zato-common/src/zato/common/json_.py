@@ -13,7 +13,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # import their own required library themselves.
 
 # stdlib
-from datetime import date, datetime
+from datetime import date, timezone
 from json import load, loads
 
 # BSON
@@ -25,6 +25,10 @@ try:
 except ImportError:
     from json import dump, dumps as json_dumps
 
+# Zato
+from zato.common.typing_ import datetime_, datetimez
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 # These are needed for pyflakes
@@ -36,6 +40,12 @@ load  = load
 loads = loads
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+_utc = timezone.utc
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 def _ensure_serializable(value, simple_type=(str, dict, int, float, list, tuple, set)):
 
@@ -44,7 +54,15 @@ def _ensure_serializable(value, simple_type=(str, dict, int, float, list, tuple,
         if not isinstance(value, simple_type):
 
             # Useful in various contexts
-            if isinstance(value, (date, datetime)):
+            if isinstance(value, (date, datetime_, datetimez)):
+
+                # If it should be a time-zone-aware datetime object
+                # but it does not have any TZ, assume UTC.
+                if isinstance(value, datetimez):
+                    if not value.tzinfo:
+                        value = value.replace(tzinfo=_utc)
+
+                # Now, we can format it as a string object
                 value = value.isoformat()
 
             # Always use Unicode
