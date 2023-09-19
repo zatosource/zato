@@ -34,7 +34,7 @@ from requests_toolbelt import MultipartEncoder
 # Zato
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE
 from zato.common.exception import Inactive, TimeoutException
-from zato.common.json_internal import dumps, loads
+from zato.common.json_ import dumps, loads
 from zato.common.marshal_.api import Model
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name

@@ -34,7 +34,7 @@ from typing_utils import issubtype
 # Zato
 from zato.common.api import ZatoNotGiven
 from zato.common.marshal_.model import BaseModel
-from zato.common.typing_ import cast_, date_, datetime_, extract_from_union, isotimestamp, is_union
+from zato.common.typing_ import cast_, date_, datetime_, datetimez, extract_from_union, isotimestamp, is_union
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -355,9 +355,22 @@ class FieldCtx:
                         value = dt_parse(value).date() # type: ignore
 
                 # .. as a datetime object ..
-                elif self.field_type is datetime_:
-                    if not isinstance(value, (date_, datetime_)):
+                elif self.field_type in (datetime_, datetimez):
+                    if not isinstance(value, (date_, datetime_, datetimez)):
+                        _is_datetimez = self.field_type is datetimez
                         value = dt_parse(value) # type: ignore
+                        if _is_datetimez:
+                            value = datetimez(
+                                year=value.year,
+                                month=value.month,
+                                day=value.day,
+                                hour=value.hour,
+                                minute=value.minute,
+                                second=value.second,
+                                microsecond=value.microsecond,
+                                tzinfo=value.tzinfo,
+                                fold=value.fold,
+                            )
 
                 # .. as a datetime object formatted as string ..
                 elif self.field_type is isotimestamp:
