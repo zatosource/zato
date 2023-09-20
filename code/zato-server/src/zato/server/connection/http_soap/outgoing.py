@@ -55,7 +55,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+logger = getLogger('zato_rest')
 has_debug = logger.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
@@ -502,14 +502,14 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 data = data.encode('utf-8')
 
         # Log what we are sending ..
-        msg = f'HTTP out → cid={cid}; {method} {address} name:{self.config["name"]}; params={params}; len={len(data)}'
+        msg = f'REST out → cid={cid}; {method} {address} name:{self.config["name"]}; params={params}; len={len(data)}'
         logger.info(msg)
 
         # .. do invoke the connection ..
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
         # .. now, log what we received.
-        msg = f'HTTP out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
+        msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
         logger.info(msg)
 
         # .. check if we are explicitly told that we handle JSON ..
