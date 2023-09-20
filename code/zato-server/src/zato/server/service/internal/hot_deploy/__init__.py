@@ -24,6 +24,7 @@ from zato.common.api import DEPLOYMENT_STATUS, KVDB
 from zato.common.broker_message import HOT_DEPLOY
 from zato.common.json_internal import dumps
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
+from zato.common.typing_ import cast_
 from zato.common.util.api import is_python_file, is_archive_file, new_cid
 from zato.common.util.file_system import fs_safe_now
 from zato.server.service import AsIs, dataclass
@@ -32,7 +33,7 @@ from zato.server.service.internal import AdminService, AdminSIO
 # ################################################################################################################################
 
 if 0:
-
+    from zato.common.typing_ import any_, anylistnone, anyset, intlist, strbytes, strlist, strset
     from zato.server.service.store import InRAMService
     InRAMService = InRAMService
 
@@ -46,9 +47,9 @@ _first_prefix = '0' * (len(str(MAX_BACKUPS)) - 1) # So it runs from, e.g.,  000 
 
 @dataclass(init=False)
 class DeploymentCtx:
-    model_name_list:   list
-    service_id_list:   list
-    service_name_list: list
+    model_name_list:   'strlist'
+    service_id_list:   'intlist'
+    service_name_list: 'strlist'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -151,20 +152,22 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _deploy_models(self, current_work_dir, file_name):
-        # type: (str, str) -> list
+    def _deploy_models(self, current_work_dir:'str', file_name:'str') -> 'strset':
 
         # Reusable
         from zato.server.service import store as service_store_mod
+
+        # Local aliases
+        model_class = None
 
         # This returns names of all the model classes deployed from the file
         model_name_list = set(self.server.service_store.import_models_from_file(file_name, False, current_work_dir))
 
         # A set of Python objects, each representing a model class (rather than its name)
-        model_classes = set()
+        model_classes:'anyset' = set()
 
         # All the modules to be reloaded due to changes to the data model
-        to_auto_deploy = set()
+        to_auto_deploy:'anyset' = set()
 
         for item in gc.get_objects():
 
@@ -184,7 +187,7 @@ class Create(AdminService):
             for ref in gc.get_referrers(model_class):
 
                 if isinstance(ref, dict):
-                    mod_name = ref.get('__module__')
+                    mod_name:'str' = ref.get('__module__') # type: ignore
                     if mod_name:
 
                         # Import the live Python module object ..
@@ -209,7 +212,7 @@ class Create(AdminService):
         if to_auto_deploy:
 
             # .. format lexicographically for logging ..
-            to_auto_deploy = sorted(to_auto_deploy)
+            to_auto_deploy = sorted(to_auto_deploy) # type: ignore
 
             #  .. nform users that we are to auto-redeploy services and why we are doing it ..
             self.logger.info('Model class `%s` changed; auto-redeploying `%s`', model_class, to_auto_deploy)
@@ -222,13 +225,13 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _deploy_services(self, current_work_dir, file_name):
-        # type: (str, str) -> list
+    def _deploy_services(self, current_work_dir:'str', file_name:'str') -> 'intlist':
 
-        service_id_list = []
+        service:'InRAMService'
+        service_id_list:'intlist' = []
         info = self.server.service_store.import_services_from_anywhere(file_name, current_work_dir)
 
-        for service in info.to_process: # type: InRAMService
+        for service in info.to_process: # type: ignore
 
             service_id = self.server.service_store.impl_name_to_id[service.impl_name]
             service_id_list.append(service_id)
@@ -266,7 +269,15 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _deploy_package(self, session, package_id, payload_name, payload, should_deploy_in_place, in_place_dir_name):
+    def _deploy_package(
+        self,
+        session,      # type: any_
+        package_id,   # type: int
+        payload_name, # type: str
+        payload,      # type: strbytes
+        should_deploy_in_place, # type: bool
+        in_place_dir_name       # type: str
+    ) -> 'anylistnone':
         """ Deploy a package, either a plain Python file or an archive, and update
         the deployment status.
         """
@@ -276,7 +287,7 @@ class Create(AdminService):
         if should_deploy_in_place:
             work_dir = in_place_dir_name
         else:
-            work_dir = self.server.hot_deploy_config.current_work_dir
+            work_dir:'str' = self.server.hot_deploy_config.current_work_dir
 
         file_name = os.path.join(work_dir, payload_name)
 
@@ -309,8 +320,7 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _report_deployment(self, file_name, items, noun):
-        # type: (str, list, str)
+    def _report_deployment(self, file_name:'str', items:'anylist', noun:'str') -> 'None':
         msg = 'Deployed %s {}%sfrom `%s` -> %s'.format(noun)
         len_items = len(items)
         suffix = 's ' if len_items > 1 else ' '
