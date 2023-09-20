@@ -348,8 +348,8 @@ def new_cid(bytes:'int'=12, _random:'callable_'=random.getrandbits) -> 'str':
     for any cryptographical purposes; it is only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     """
-    # Note that we need to convert bytes to bits here.
-    return hex(_random(bytes * 8))[2:]
+    # Note that we need to convert bytes to bits here and that we ensure it is always 24 characters on output
+    return hex(_random(bytes * 8))[2:].ljust(24, 'a')
 
 # ################################################################################################################################
 
