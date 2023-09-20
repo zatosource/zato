@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -53,8 +53,9 @@ if 0:
 
 # ################################################################################################################################
 
-logger = logging.getLogger(__name__)
-_has_debug = logger.isEnabledFor(logging.DEBUG)
+logger = logging.getLogger('zato_rest')
+_logger_is_enabled_for = logger.isEnabledFor
+_logging_info = logging.INFO
 split_re = regex_compile('........?').findall # type: ignore
 
 # ################################################################################################################################
@@ -220,8 +221,13 @@ class RequestDispatcher:
         cid:'str',
         req_timestamp:'str',
         wsgi_environ:'stranydict',
-        worker_store:'WorkerStore'
+        worker_store:'WorkerStore',
+        user_agent:'str',
+        remote_addr:'str'
     ) -> 'any_':
+
+        # Reusable
+        _has_log_info  = _logger_is_enabled_for(_logging_info)
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -231,7 +237,9 @@ class RequestDispatcher:
         http_accept = http_accept.replace('*', accept_any_internal).replace('/', 'HTTP_SEP')
 
         # Needed in later steps
-        path_info = wsgi_environ['PATH_INFO']
+        path_info        = wsgi_environ['PATH_INFO']
+        wsgi_raw_uri     = wsgi_environ['RAW_URI']
+        wsgi_remote_port = wsgi_environ['REMOTE_PORT']
 
         # Immediately reject the request if it is not a support HTTP method, no matter what channel
         # it would have otherwise matched.
@@ -248,8 +256,11 @@ class RequestDispatcher:
         url_match = cast_('str', url_match)
         channel_item = cast_('anydict', channel_item)
 
-        if _has_debug and channel_item:
-            logger.debug('url_match:`%r`, channel_item:`%r`', url_match, sorted(channel_item.items()))
+        # .. the item itself may be None in case it is a 404 ..
+        if channel_item:
+            channel_name = channel_item['name']
+        else:
+            channel_name = '(None)'
 
         # This is needed in parallel.py's on_wsgi_request
         wsgi_environ['zato.channel_item'] = channel_item
@@ -263,7 +274,15 @@ class RequestDispatcher:
         # Assume that by default we are not authenticated / authorized
         auth_result = None
 
-        # OK, we can possibly handle it
+        # .. before proceeding, log what we have learned so far about the request ..
+        # .. but do not do it for paths that are explicitly configured to be ignored ..
+        if _has_log_info:
+            if not path_info in self.server.rest_log_ignore:
+                msg  = f'REST cha → cid={cid}; {http_method} {wsgi_raw_uri} name={channel_name}; len={len(payload)}; '
+                msg += f'agent={user_agent}; remote-addr={remote_addr}:{wsgi_remote_port}'
+                logger.info(msg)
+
+        # .. we have a match and ee can possibly handle the incoming request ..
         if url_match not in ModuleCtx.No_URL_Match:
 
             try:
@@ -339,9 +358,20 @@ class RequestDispatcher:
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
 
-                # OK, no security exception at that point means we can finally invoke the service.
+                if channel_item['merge_url_params_req']:
+                    channel_params = self.request_handler.create_channel_params(
+                        url_match, # type: ignore
+                        channel_item,
+                        wsgi_environ,
+                        payload,
+                        post_data
+                    )
+                else:
+                    channel_params = {}
+
+                # This is the call that obtains a response.
                 response = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ,
-                    payload, worker_store, self.simple_io_config, post_data, path_info)
+                    payload, worker_store, self.simple_io_config, post_data, path_info, channel_params)
 
                 wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
                 wsgi_environ['zato.http.response.headers'].update(response.headers)
@@ -351,7 +381,7 @@ class RequestDispatcher:
 
                     s = StringIO()
                     with GzipFile(fileobj=s, mode='w') as f: # type: ignore
-                        f.write(response.payload)
+                        _ = f.write(response.payload)
                     response.payload = s.getvalue()
                     s.close()
 
@@ -488,7 +518,7 @@ class RequestDispatcher:
             response = response_404.format(cid)
 
             # .. this goes to logs and it includes the URL sent by the client.
-            logger.error(response_404_log, path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
+            logger.warning(response_404_log, path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
 
             # This is the payload for the caller
             return response
@@ -595,9 +625,6 @@ class RequestHandler:
                 channel_params = {}
             channel_params.update(path_params)
 
-        if _has_debug:
-            logger.debug('channel_params `%s`, path_params `%s`, _qs `%s`', channel_params, path_params, _qs)
-
         wsgi_environ['zato.http.GET'] = _qs
         wsgi_environ['zato.http.POST'] = post
 
@@ -668,7 +695,8 @@ class RequestHandler:
         worker_store:'WorkerStore',
         simple_io_config:'stranydict',
         post_data:'dictnone',
-        path_info:'str'
+        path_info:'str',
+        channel_params:'stranydict',
     ) -> 'any_':
         """ Create a new instance of a service and invoke it.
         """
@@ -677,11 +705,6 @@ class RequestHandler:
             logger.warning('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
             raise NotFound(cid, response_404.format(
                 path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid))
-
-        if channel_item.merge_url_params_req:
-            channel_params = self.create_channel_params(url_match, channel_item, wsgi_environ, raw_request, post_data)
-        else:
-            channel_params = {}
 
         # This is needed for type checking to make sure the name is bound
         cache_key = ''
