@@ -379,12 +379,29 @@ class ConfigLoader:
         query = self.odb.get_email_imap_list(server.cluster.id, True)
         self.config.email_imap = ConfigDict.from_query('email_imap', query, decrypt_func=self.decrypt)
 
-        # HTTP access log should optionally ignore certain requests
-        access_log_ignore = self.fs_server_config.get('logging', {}).get('http_access_log_ignore')
+        # .. reusable ..
+        _logging_stanza = self.fs_server_config.get('logging', {})
+
+        # HTTP access log should optionally ignore certain requests ..
+        access_log_ignore = _logging_stanza.get('http_access_log_ignore')
         if access_log_ignore:
             access_log_ignore = access_log_ignore if isinstance(access_log_ignore, list) else [access_log_ignore]
             self.needs_all_access_log = False
             self.access_log_ignore.update(access_log_ignore)
+
+        # .. same goes for REST log entries that go to the server log ..
+
+        # .. if it does not exist, we need to populate it ourselves ..
+        _has_rest_log_ignore = 'rest_log_ignore' in _logging_stanza
+
+        if not _has_rest_log_ignore:
+            rest_log_ignore = ['/zato/admin/invoke']
+        else:
+            rest_log_ignore = _logging_stanza['rest_log_ignore']
+            rest_log_ignore = rest_log_ignore if isinstance(rest_log_ignore, list) else [rest_log_ignore]
+
+        # .. now, update the set of channels to ignore the REST log for ..
+        self.rest_log_ignore.update(rest_log_ignore)
 
         # Assign config to worker
         self.worker_store.worker_config = self.config
