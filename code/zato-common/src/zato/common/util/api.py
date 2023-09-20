@@ -625,6 +625,7 @@ def visit_py_source(
         '  common*.py',
         '*_common*.py',
 
+        '  model_core*.py',
         '  model*.py',
         '*_model*.py',
 
@@ -636,6 +637,10 @@ def visit_py_source(
 
         '  pri_*.py',
         '*_pri.py',
+
+        '  core_*.py',
+        '  channel_*.py',
+        '  adapter_*.py',
     ]
 
     # For storing names of files that we have already deployed,
