@@ -1,0 +1,170 @@
+amqp==5.1.1
+apispec==5.1.1
+arrow==0.4.2
+asn1crypto==0.21.0
+atlassian-python-api==3.19
+base32-crockford==0.3.0
+boto==2.49.0
+candv==1.3.1
+cffi==1.15.0
+chardet==4.0.0
+click==1.1
+codegen==1.0
+configparser==3.7.1
+convertdate==2.0.3.1
+coverage==3.7.1
+crontab==0.22.9
+cryptography==41.0.3
+dacite==1.6.0
+dataclasses-jsonschema==2.15.0
+dateparser==0.7.6
+debugpy
+decorator==5.1.0
+dictalchemy==0.1.2.6
+dill==0.2.5
+distro==1.5.0
+Django==4.1.10
+django-csp==3.7
+docformatter==0.8
+dropbox==10.10.0
+elasticsearch==7.15.2
+faker==8.12.1
+fastparquet==2022.11.0
+fhirpy==1.3.0
+flake8==4.0.1
+flake8-bugbear
+flake8-coding
+flake8-comprehensions
+flake8-quotes
+flatbuffers==1.12
+fs==2.4.16
+gevent==22.10.2
+geventhttpclient==2.0.8
+globre==0.1.5
+google-api-python-client==2.52.0
+google-auth-httplib2==0.1.0
+google-auth-oauthlib==0.5.2
+greenlet==2.0.2
+hl7==0.4.1
+hl7apy==1.3.4
+hiredis==0.3.1
+httpagentparser==1.9.0
+httplib2==0.19.0
+humanize==3.0.1
+hvac==0.7.2
+idna==3.3
+ipaddress==1.0.16
+iso8601==0.1.10
+jsonpatch==1.23
+jsonpointer==2.0
+jsonschema==4.17.0
+keyring==23.0.0
+kombu==5.0.2
+ldap3==2.8.1
+lxml==4.9.1
+Mako==1.2.2
+markdown==3.3.4
+MarkupSafe==2.1.1
+mccabe==0.6.1
+mock==3.0.5
+more-itertools==9.0.0
+ndg-httpsclient==0.4.0
+netaddr==0.8.0
+netifaces==0.11.0
+o365==2.0.26
+odoo-client-lib==1.2.2
+openpyxl==3.0.5
+orjson==3.8.2
+oslo.config==9.0.0
+# pandas==1.5.0
+parse-type==0.3.4
+parse==1.6.6
+passlib==1.7.1
+Paste==3.5.2
+pbr==5.11.1
+pg8000==1.13.1
+prettytable==3.5.0
+psutil==5.9.4
+py-cpuinfo==3.3.0
+# pyarrow==9.0.0
+pyaml==20.4.0
+pyasn1==0.4.8
+pycparser==2.21
+pyflakes==2.4.0
+pyftpdlib==1.5.7
+pygments==2.15.0
+PyJWT==2.5.0
+pymongo==4.2.0
+PyMySQL==1.0.2
+pyOpenSSL==23.2.0
+pyotp==2.6.0
+pyparsing==2.4.2
+pyprof2calltree==1.4.5
+python-dateutil==2.8.2
+python-editor==1.0.1
+python-memcached==1.59
+python-ntlm==1.1.0
+tabulate==0.9.0
+python-stdnum==1.14
+pytz==2020.1
+pyyaml==6.0
+pyzmq==25.0.2
+raven==5.1.1
+recommonmark==0.6.0
+redis==4.5.4
+regex==2022.3.2
+repoze.lru==0.6
+repoze.profile==2.3
+requests==2.31.0
+requests-toolbelt==0.9.1
+sarge==0.1.7.post1
+setproctitle==1.3.2
+simplejson==3.17.6
+simple-parsing==0.0.17
+six==1.16.0
+slackclient==1.3.1
+sortedcontainers==2.4.0
+sphinx==4.2.0
+SQLAlchemy==1.3.19
+stroll==1.1.0
+suds==1.0.0
+stevedore==3.5.0
+texttable==1.6.1
+twilio==7.15.3
+typing-extensions==4.3.0
+typing-utils==0.1.0
+tzlocal==4.0
+ujson==5.6.0
+umalqurra==0.2
+urllib3==1.26.7
+vine==5.0.0
+watchdog==0.9.0
+WebHelpers==1.3
+wrapt==1.14.1
+ws4py==0.3.5
+wsaccel==0.6.4
+zato-redis-paginator==1.0
+zato-vault-client==1.3
+zope.event==4.5.0
+zxcvbn==4.4.28
+
+zato-ext-inotifyx==0.3.1; sys_platform == 'linux'
+zato-ext-paodate==1.3
+zato-ext-python-tds==1.11.1
+zato-ext-simple-rbac==0.1.1
+
+ciso8601==2.2.0; sys_platform == 'linux'
+ConcurrentLogHandler==0.9.1; sys_platform == 'linux'
+greenify==0.3.2; sys_platform == 'linux'
+# hiredis==2.0.0; sys_platform == 'linux'
+inotify-simple==1.3.5; sys_platform == 'linux'
+memray==1.4.1; sys_platform == 'linux'
+newrelic==8.4.0; sys_platform == 'linux'
+sh==1.14.3; sys_platform == 'linux'
+portalocker==2.6.0
+posix-ipc==1.0.0; sys_platform == 'linux'
+psycopg2-binary==2.9.5; sys_platform == 'linux'
+pysimdjson==5.0.2; sys_platform == 'linux'
+pysolr==3.9.0; sys_platform == 'linux'
+python-ldap==3.4.0; sys_platform == 'linux'
+pywin32==305; platform_system == "Windows"
