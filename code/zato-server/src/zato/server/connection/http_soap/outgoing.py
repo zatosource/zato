@@ -478,7 +478,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                     data = urlencode(data)
 
         # .. check if we have custom headers on input ..
-        headers = kwargs.pop('headers') or {}
+        headers = kwargs.pop('headers', None) or {}
 
         # .. build a default set of headers now ..
         headers = self._create_headers(cid, headers)
