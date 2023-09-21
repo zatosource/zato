@@ -66,7 +66,7 @@ class HTTPHandler:
         user_agent = wsgi_environ.get('HTTP_USER_AGENT', '(None)')
 
         # We need a correlation ID first ..
-        cid = kwargs.get('cid', _new_cid())
+        cid = kwargs.get('cid', _new_cid(needs_padding=True))
 
         # .. this is a timestamp of when the request was received ..
         request_ts_utc = _utcnow()
