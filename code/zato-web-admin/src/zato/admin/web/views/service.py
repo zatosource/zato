@@ -246,25 +246,6 @@ def overview(req, service_name):
 
                 setattr(service, name, value)
 
-            now = datetime.utcnow()
-            start = now+relativedelta(minutes=-60)
-
-            try:
-                response = req.zato.client.invoke(
-                    'zato.stats.get-by-service', {
-                        'service_id':service.id, 'start':start, 'stop':now
-                })
-            except Exception:
-                response = None
-
-            if response and response.has_data:
-                for name in('mean_trend', 'usage_trend', 'min_resp_time', 'max_resp_time', 'mean', 'usage', 'rate'):
-                    value = getattr(response.data, name, ZATO_NONE)
-                    if not value or value == ZATO_NONE:
-                        value = ''
-
-                    setattr(service, 'time_{}_1h'.format(name), value)
-
             for channel_type in('plain_http', 'amqp', 'jms-wmq', 'zmq'):
                 channels = _get_channels(req.zato.client, req.zato.cluster, service.id, channel_type)
                 getattr(service, channel_type.replace('jms-', '') + '_channels').extend(channels)
