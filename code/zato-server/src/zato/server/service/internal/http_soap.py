@@ -283,11 +283,26 @@ class Create(_CreateEdit):
         input.hl7_version = input.get('hl7_version') or HL7.Const.Version.v2.id
 
         # Remove extra whitespace
-        input.name = input.name.strip()
-        input.host = input.host.strip()
-        input.url_path = input.url_path.strip()
-        input.ping_method = input.get('ping_method', '').strip() or DEFAULT_HTTP_PING_METHOD
-        input.content_type = input.get('content_type', '').strip()
+        input_name = input.name
+        input_host = input.host
+        input_url_path = input.url_path
+        input_ping_method = input.get('ping_method')
+        input_content_type = input.get('content_type')
+
+        if input_name:
+            input.name = input_name.strip()
+
+        if input_host:
+            input.host = input_host.strip()
+
+        if input_url_path:
+            input.url_path = input_url_path.strip()
+
+        if input_ping_method:
+            input.ping_method = input_ping_method.strip() or DEFAULT_HTTP_PING_METHOD
+
+        if input_content_type:
+            input.content_type = input_content_type.strip()
 
         if input.content_encoding and input.content_encoding != 'gzip':
             raise Exception('Content encoding must be empty or equal to `gzip`')
@@ -462,11 +477,26 @@ class Edit(_CreateEdit):
         input.hl7_version = input.get('hl7_version') or HL7.Const.Version.v2.id
 
         # Remove extra whitespace
-        input.name = input.name.strip()
-        input.host = input.host.strip()
-        input.url_path = input.url_path.strip()
-        input.ping_method = input.get('ping_method', '').strip() or DEFAULT_HTTP_PING_METHOD
-        input.content_type = input.get('content_type', '').strip()
+        input_name = input.name
+        input_host = input.host
+        input_url_path = input.url_path
+        input_ping_method = input.get('ping_method')
+        input_content_type = input.get('content_type')
+
+        if input_name:
+            input.name = input_name.strip()
+
+        if input_host:
+            input.host = input_host.strip()
+
+        if input_url_path:
+            input.url_path = input_url_path.strip()
+
+        if input_ping_method:
+            input.ping_method = input_ping_method.strip() or DEFAULT_HTTP_PING_METHOD
+
+        if input_content_type:
+            input.content_type = input_content_type.strip()
 
         if input.content_encoding and input.content_encoding != 'gzip':
             raise Exception('Content encoding must be empty or equal to `gzip`')
@@ -521,10 +551,10 @@ class Edit(_CreateEdit):
                 old_http_method = item.method
                 old_http_accept = opaque.get('http_accept')
 
-                item.name = input.name.strip()
+                item.name = input.name
                 item.is_active = input.is_active
-                item.host = input.host.strip()
-                item.url_path = input.url_path.strip()
+                item.host = input.host
+                item.url_path = input.url_path
                 item.security_id = input.security_id or None # So that SQLite does not reject ''
                 item.connection = input.connection
                 item.transport = input.transport
