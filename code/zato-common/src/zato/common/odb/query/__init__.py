@@ -233,10 +233,16 @@ def _sec_base(session, cluster_id):
         filter(SecurityBase.cluster_id==Cluster.id).\
         filter(Cluster.id==cluster_id)
 
-def sec_base(session, cluster_id, sec_base_id):
-    return _sec_base(session, cluster_id).\
-        filter(SecurityBase.id==sec_base_id).\
-        one()
+def sec_base(session, cluster_id, sec_base_id, use_one=True):
+    q = _sec_base(session, cluster_id).\
+        filter(SecurityBase.id==sec_base_id)
+
+    if use_one:
+        result = q.one()
+    else:
+        result = q.first()
+
+    return result
 
 @query_wrapper
 def apikey_security_list(session, cluster_id, needs_columns=False):
