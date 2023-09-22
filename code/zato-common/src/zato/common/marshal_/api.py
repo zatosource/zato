@@ -56,8 +56,7 @@ _None_Type = type(None)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def is_list(field_type, is_class):
-    # type: (Field, bool) -> bool
+def is_list(field_type:'Field', is_class:'bool') -> 'bool':
 
     # Using str is the only reliable method
     if 'typing.Union' in str(field_type):
