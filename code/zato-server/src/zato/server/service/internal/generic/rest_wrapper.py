@@ -66,6 +66,11 @@ class GetList(Service):
         # .. iterate through each of them ..
         for item in response:
 
+            # .. ignore items that are not wrappers ..
+            if not item.get('is_wrapper'):
+                continue
+
+            # .. ignore wrappers of a type other than what was requested ..
             if wrapper_type:
                 if item.get('wrapper_type') != wrapper_type:
                     continue

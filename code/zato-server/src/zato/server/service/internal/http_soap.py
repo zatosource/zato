@@ -99,7 +99,7 @@ class _BaseGet(AdminService):
                 'data_encoding', 'is_audit_log_sent_active', 'is_audit_log_received_active', \
                 Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
                 Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
-                'username', 'wrapper_type'
+                'username', 'is_wrapper', 'wrapper_type'
 
 # ################################################################################################################################
 
