@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import closing
 from inspect import getmodule, isclass
 from itertools import chain
+from json import dumps
 from logging import getLogger
 from time import time
 from traceback import format_exc
@@ -24,6 +25,7 @@ from sqlalchemy.exc import IntegrityError
 # Zato
 from zato.common.api import ZATO_NOT_GIVEN
 from zato.common.odb.model import Base, Cluster
+from zato.common.util.api import parse_literal_dict
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.connection.http_soap import BadRequest
 from zato.server.service import AsIs, Bool as BoolSIO, Int as IntSIO
@@ -359,6 +361,12 @@ class CreateEditMeta(AdminServiceMeta):
             verb = 'edit' if attrs.is_edit else 'create'
             old_name = None
             has_integrity_error = False
+
+            # Try to parse the opaque elements into a dict ..
+            input.opaque1 = parse_literal_dict(input.opaque1)
+
+            # .. only to turn it into a JSON string suitable for SQL storage ..
+            input.opaque1 = dumps(input.opaque1)
 
             with closing(self.odb.session()) as session:
                 try:
