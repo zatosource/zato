@@ -56,6 +56,7 @@ class GetList(Service):
 
         # This response has all the REST connections possible ..
         response = self.invoke(service_name, {
+            'include_wrapper': True,
             'cluster_id': self.server.cluster_id,
             'connection': CONNECTION.OUTGOING,
             'transport': URL_TYPE.PLAIN_HTTP,
@@ -97,6 +98,7 @@ class _WrapperBase(Service):
 
         # Base request to create a new wrapper ..
         request = {
+            'is_wrapper': True,
             'cluster_id': self.server.cluster_id,
             'connection': CONNECTION.OUTGOING,
             'transport': URL_TYPE.PLAIN_HTTP,
@@ -169,7 +171,7 @@ class ChangePassword(_WrapperBase):
     _wrapper_impl_suffix = 'edit'
     _uses_name = False
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         # Reusable
         request = self.request.raw_request
