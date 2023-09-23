@@ -1057,7 +1057,7 @@ def register_diag_handlers():
 
 # ################################################################################################################################
 
-def parse_simple_type(value, convert_bool=True):
+def parse_simple_type(value:'any_', convert_bool:'bool'=True) -> 'any_':
     if convert_bool:
         try:
             value = is_boolean(value)
@@ -1072,13 +1072,20 @@ def parse_simple_type(value, convert_bool=True):
         pass
 
     # Could be a dict or another simple type then
+    value = parse_literal_dict(value)
+
+    # Either parsed out or as it was received
+    return value
+
+# ################################################################################################################################
+
+def parse_literal_dict(value:'str') -> 'str | anydict':
     try:
         value = literal_eval(value)
     except Exception:
         pass
-
-    # Either parsed out or as it was received
-    return value
+    finally:
+        return value
 
 # ################################################################################################################################
 
