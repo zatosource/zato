@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -29,6 +29,7 @@ from zato.common.util.search import SearchResults
 # ################################################################################################################################
 
 if 0:
+    from bunch import Bunch
     from zato.common.typing_ import any_
 
 # ################################################################################################################################
@@ -239,7 +240,7 @@ def elems_with_opaque(elems):
 
 # ################################################################################################################################
 
-def parse_instance_opaque_attr(instance):
+def parse_instance_opaque_attr(instance:'any_') -> 'Bunch':
     opaque = getattr(instance, GENERIC.ATTR_NAME)
     opaque = loads(opaque) if opaque else None
     if not opaque:

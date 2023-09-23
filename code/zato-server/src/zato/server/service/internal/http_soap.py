@@ -30,6 +30,18 @@ from zato.server.service import AsIs, Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_GetList_Optional = ('include_wrapper', 'cluster_id', 'connection', 'transport', 'data_format')
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class _HTTPSOAPService:
     """ A common class for various HTTP/SOAP-related services.
@@ -135,12 +147,19 @@ class GetList(_BaseGet):
     class SimpleIO(GetListAdminSIO, _BaseGet.SimpleIO):
         request_elem = 'zato_http_soap_get_list_request'
         response_elem = 'zato_http_soap_get_list_response'
-        input_optional = GetListAdminSIO.input_optional + ('cluster_id', 'connection', 'transport', 'data_format')
+        input_optional = GetListAdminSIO.input_optional + _GetList_Optional
         output_optional = _BaseGet.SimpleIO.output_optional + ('connection', 'transport')
         output_repeated = True
 
     def get_data(self, session):
+
+        # Local aliases
+        out:'anylist' = []
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
+        include_wrapper = self.request.input.get('include_wrapper') or False
+        should_ignore_wrapper = not include_wrapper
+
+        # Obtain the basic result ..
         result = self._search(http_soap_list, session, cluster_id,
             self.request.input.connection, self.request.input.transport,
             asbool(self.server.fs_server_config.misc.return_internal_objects),
@@ -148,12 +167,24 @@ class GetList(_BaseGet):
             False,
             )
 
-        data = elems_with_opaque(result)
+        # .. extract all the opaque elements ..
+        data:'anylist' = elems_with_opaque(result)
 
+        # .. go through everything we have so far ..
         for item in data:
+
+            # .. this needs to be extracted ..
             item['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(item)
 
-        return data
+            # .. ignore wrapper elements if told do ..
+            if should_ignore_wrapper and item.get('is_wrapper'):
+                continue
+
+            # .. if we are here, it means that this element is to be returned ..
+            out.append(item)
+
+        # .. now, return the result to our caller.
+        return out
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -253,7 +284,7 @@ class Create(_CreateEdit):
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify', \
-            'wrapper_type', 'username', 'password'
+            'is_wrapper', 'wrapper_type', 'username', 'password'
         output_required = 'id', 'name'
         output_optional = 'url_path'
 
@@ -367,6 +398,7 @@ class Create(_CreateEdit):
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
+                item.is_wrapper = bool(input.is_wrapper)
                 item.wrapper_type = input.wrapper_type
 
                 if input.username:
@@ -448,7 +480,7 @@ class Edit(_CreateEdit):
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'cluster_id', 'is_active', 'transport', 'tls_verify', \
-            'wrapper_type', 'username', 'password'
+            'is_wrapper', 'wrapper_type', 'username', 'password'
         output_optional = 'id', 'name'
 
     def handle(self):
@@ -577,6 +609,7 @@ class Edit(_CreateEdit):
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
+                item.is_wrapper = bool(input.is_wrapper)
                 item.wrapper_type = input.wrapper_type
 
                 if input.username:
