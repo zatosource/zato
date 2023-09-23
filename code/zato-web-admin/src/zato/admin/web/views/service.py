@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,9 +14,6 @@ from base64 import b64decode
 from collections import namedtuple
 from datetime import datetime
 from traceback import format_exc
-
-# dateutil
-from dateutil.relativedelta import relativedelta
 
 # Django
 from django.urls import reverse
