@@ -13,7 +13,7 @@ from copy import deepcopy
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common.api import GENERIC as COMMON_GENERIC
+from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -66,8 +66,11 @@ class ModuleCtx:
     # Maps enmasse definition types to include types
     Enmasse_Type      = cast_('strdict', None)
 
-    # Maps enmasse defintions types to their attributes that are to be exported
-    Enmasse_Attr_List = cast_('strlistdict', None)
+    # Maps enmasse defintions types to their attributes that are to be included during an export
+    Enmasse_Attr_List_Include = cast_('strlistdict', None)
+
+    # Maps enmasse defintions types to their attributes that are to be excluded during an export
+    Enmasse_Attr_List_Exclude = cast_('strlistdict', None)
 
 ModuleCtx.Enmasse_Type = {
 
@@ -83,7 +86,7 @@ ModuleCtx.Enmasse_Type = {
     'outconn_sql':ModuleCtx.Include_Type.SQL,
 }
 
-ModuleCtx.Enmasse_Attr_List = {
+ModuleCtx.Enmasse_Attr_List_Include = {
 
     # REST connections - Channels
     'channel_plain_http': [
@@ -100,7 +103,6 @@ ModuleCtx.Enmasse_Attr_List = {
     # REST connections - outgoing connections
     'outconn_plain_http': [
         'name',
-        'service',
         'url_path',
         'security_name',
         'is_active',
@@ -111,6 +113,23 @@ ModuleCtx.Enmasse_Attr_List = {
 
     # Security definitions
     'def_sec':  ['type', 'name', 'username', 'realm']
+}
+
+ModuleCtx.Enmasse_Attr_List_Exclude = {
+
+    # REST connections - Channels
+    'channel_plain_http': [
+        'connection',
+        'service_name',
+        'transport',
+    ],
+
+    # REST connections - outgoing connections
+    'outconn_plain_http': [
+        'connection',
+        'transport'
+    ],
+
 }
 
 # ################################################################################################################################
@@ -1591,7 +1610,7 @@ class Enmasse(ManageCommand):
         results = parser.parse()
         if not results.ok:
             self.logger.error('JSON parsing failed')
-            self.report_warnings_errors([results])
+            _ = self.report_warnings_errors([results])
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
         self.json = parser.json
 
@@ -1651,7 +1670,7 @@ class Enmasse(ManageCommand):
 
         # Turn the string into a list of items that we will process ..
         include_type:'strlist' = include_type.split(',')
-        include_type = [item.strip() for item in include_type]
+        include_type = [item.strip().lower() for item in include_type]
 
         # .. ignore explicit types if all types are to be returned ..
         if ModuleCtx.Include_Type.All in include_type:
@@ -1822,12 +1841,44 @@ class Enmasse(ManageCommand):
         item,         # type: strdict
     ) -> 'strdict':
 
-        print()
-        print(111, item_type)
-        print(222, item)
-        print()
+        # Check if there is an explicit list of include attributes to return for the type ..
+        attr_list_include = ModuleCtx.Enmasse_Attr_List_Include.get(item_type) or []
 
-        attr_list = ModuleCtx.Enmasse_Attr_List.
+        # .. as above, for attributes that are explicitly configured to be excluded ..
+        attr_list_exclude = ModuleCtx.Enmasse_Attr_List_Exclude.get(item_type) or []
+
+        # .. to make sure the dictionary does not change during iteration ..
+        item_copy = deepcopy(item)
+
+        # .. we enter here if there is anything to be explicitly process ..
+        if attr_list_include or attr_list_exclude:
+
+            # .. go through everything that we have ..
+            for attr in item_copy:
+
+                # .. remove from the item that we are returning any attr that is not to be included
+                if attr not in attr_list_include:
+                    _ = item.pop(attr, None)
+
+                # .. remove any attribute that is explictly configured to be excluded ..
+                if attr in attr_list_exclude:
+                    _ = item.pop(attr, None)
+
+        # .. ID's are never returned ..
+        _ = item.pop('id', None)
+
+        # .. the is_active flag is never returned if it is of it default value, which is True ..
+        if item_copy.get('is_active') is True:
+            _ = item.pop('is_active', None)
+
+        # .. names of security definitions attached to an object are also skipped if they are the default ones ..
+        if item_copy.get('security_name') in ('', None):
+            _ = item.pop('security_name', None)
+
+        # .. the data format of REST objects defaults to JSON which is why we do not return it, unless it is different ..
+        if item_type in {'channel_plain_http', 'outconn_plain_http', 'zato_generic_rest_wrapper'}:
+            if item_copy.get('data_format') == DATA_FORMAT.JSON:
+                _ = item.pop('data_format', None)
 
         return item
 
@@ -1847,6 +1898,7 @@ class Enmasse(ManageCommand):
             'zato.',
             'pub.zato',
             'zato.pubsub',
+            'ide_publisher',
         )
 
         # By default, assume this item should be written to ouput unless we contradict it below ..
@@ -1935,6 +1987,9 @@ class Enmasse(ManageCommand):
                 item = cast_('strdict', item)
                 item = deepcopy(item)
 
+                # .. normalize attributes ..
+                normalize_service_name(item)
+
                 # .. make sure we want to write this item on output ..
                 if not self._should_write_to_output(item_type, item, include_type):
                     continue
@@ -1944,9 +1999,6 @@ class Enmasse(ManageCommand):
 
                 # .. if we are here, it means that we want to include this item on output ..
                 to_write_items.append(item)
-
-                # .. normalize attributes ..
-                normalize_service_name(item)
 
             # .. sort item lists to be written ..
             to_write_items.sort(key=lambda item: item.get('name', '').lower())
