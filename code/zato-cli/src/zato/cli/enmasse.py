@@ -1778,32 +1778,7 @@ class Enmasse(ManageCommand):
             return False
 
         # .. if we are here, we know we should write this type to output.
-        print()
-        print(111, item_type)
-        print(222, enmasse_include_type)
-        print(333, include_type)
-        print()
         return True
-
-        '''
-        # Go through each of the types that we know how to handle ..
-        for enmasse_item_type, enmasse_def_types in ModuleCtx.Enmasse_Type.items():
-
-            # .. ignore types that are not to be imported ..
-            #if not enmasse_item_type in include_type:
-            #    return False
-
-            # .. ignore definition types not matching our item type ..
-            if not item_type in enmasse_def_types:
-                print()
-                print(111, item_type)
-                print(222, enmasse_def_types)
-                print()
-                return False
-
-        # .. if we are here, we know we should write this type to output.
-        return True
-        '''
 
 # ################################################################################################################################
 
@@ -1815,6 +1790,8 @@ class Enmasse(ManageCommand):
     ) -> 'bool':
 
         # Local aliases
+        name:'str' = item['name']
+
         zato_name_prefix = (
             'zato.',
             'pub.zato',
@@ -1827,7 +1804,7 @@ class Enmasse(ManageCommand):
         # We will make use of input include types only if we are not to export all the types.
         has_all = ModuleCtx.Include_Type.All in include_type
 
-        # Filter our types that are not needed ..
+        # We enter this branch if we are to export only specific types ..
         if not has_all:
             out = self._should_write_type_to_output(item_type, item, include_type)
 
@@ -1839,9 +1816,12 @@ class Enmasse(ManageCommand):
                 out = False
 
             # .. do not write internal definitions ..
-            name:'str' = item['name']
-            if name.startswith(zato_name_prefix):
+            elif name.startswith(zato_name_prefix):
                 out = False
+
+            # .. otherwise, include this item ..
+            else:
+                out = True
 
         # .. we are ready to return our output
         return out
@@ -1915,7 +1895,9 @@ class Enmasse(ManageCommand):
             to_write_items.sort(key=lambda item: item.get('name', '').lower())
 
             # .. now, item_type this new list to what is to be written ..
-            to_write[item_type] = to_write_items
+            # .. but only if there is anything to be written for that type ..
+            if to_write_items:
+                to_write[item_type] = to_write_items
 
         # .. if we have the name of a file to use, do use it ..
         if output_path:
