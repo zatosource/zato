@@ -9,28 +9,26 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from collections import namedtuple
+from copy import deepcopy
 
 # Zato
 from zato.cli import ManageCommand
 from zato.common.api import GENERIC as COMMON_GENERIC
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-# Type checking
-import typing
+if 0:
 
-if typing.TYPE_CHECKING:
-
-    # stdlib
     from logging import Logger
-
-    # Zato
     from zato.client import APIClient
+    from zato.common.typing_ import dictlist, strdict, strnone
 
-    # For pyflakes
     APIClient = APIClient
     Logger = Logger
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 zato_enmasse_env = 'ZatoEnmasseEnv.'
@@ -38,7 +36,7 @@ zato_enmasse_env = 'ZatoEnmasseEnv.'
 DEFAULT_COLS_WIDTH = '15,100'
 ZATO_NO_SECURITY = 'zato-no-security'
 
-Code = namedtuple('Code', ('symbol', 'desc'))
+Code = namedtuple('Code', ('symbol', 'desc')) # type: ignore
 
 WARNING_ALREADY_EXISTS_IN_ODB = Code('W01', 'already exists in ODB')
 WARNING_MISSING_DEF = Code('W02', 'missing def')
@@ -1288,10 +1286,11 @@ class ObjectManager:
             for item in items:
                 self.fix_up_odb_object(item_type, item)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class JsonCodec:
     extension = '.json'
-
-# ################################################################################################################################
 
     def load(self, file_, results):
 
@@ -1300,8 +1299,6 @@ class JsonCodec:
 
         return loads(file_.read())
 
-# ################################################################################################################################
-
     def dump(self, file_, object_):
 
         # Zato
@@ -1309,10 +1306,11 @@ class JsonCodec:
 
         file_.write(dumps(object_, indent=1, sort_keys=True))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class YamlCodec:
     extension = '.yml'
-
-# ################################################################################################################################
 
     def load(self, file_, results):
 
@@ -1321,14 +1319,15 @@ class YamlCodec:
 
         return yaml.load(file_, yaml.FullLoader)
 
-# ################################################################################################################################
-
     def dump(self, file_, object_):
 
         # pyaml
         import pyaml
 
         file_.write(pyaml.dump(object_, vspacing=True))
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class InputParser:
     def __init__(self, path, logger, codec):
@@ -1481,6 +1480,9 @@ class InputParser:
         self.parse_items(parsed, results)
         return results
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Enmasse(ManageCommand):
     """ Manages server objects en masse.
     """
@@ -1488,9 +1490,11 @@ class Enmasse(ManageCommand):
         {'name':'--server-url', 'help':'URL of the server that enmasse should talk to, provided in host[:port] format. Defaults to server.conf\'s \'gunicorn_bind\''},  # noqa: E501
         {'name':'--export-local', 'help':'Export local file definitions into one file (can be used with --export-odb)', 'action':'store_true'},
         {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
+        {'name':'--output', 'help':'Path to a file to export data to', 'action':'store'},
         {'name':'--import', 'help':'Import definitions from a local file (excludes --export-*)', 'action':'store_true'},
         {'name':'--clean-odb', 'help':'Delete all ODB definitions before proceeding', 'action':'store_true'},
-        {'name':'--dump-format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
+        {'name':'--format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
+        {'name':'--dump-format', 'help':'Same as --format', 'choices':('json', 'yaml'), 'default':'yaml'},
         {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to file', 'action':'store_true'},
         {'name':'--exit-on-missing-file', 'help':'If input file exists, exit with status code 0', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Force replacing objects already existing in ODB during import', 'action':'store_true'},
@@ -1530,21 +1534,49 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def get_file_path(self, arg_name:'str', exit_if_missing:'bool') -> 'str':
+    def normalize_path(
+        self,
+        arg_name,         # type: str
+        exit_if_missing,  # type: bool
+        *,
+        needs_parent_dir=False, # type: bool
+        log_if_missing=False,   # type: bool
+    ) -> 'str':
 
-        arg_param = getattr(self.args, arg_name, None) or ''
-        arg_path = os.path.join(self.curdir, arg_param)
+        # Local aliases
+        path_to_check:'str' = ''
 
-        if not os.path.exists(arg_path):
+        # Turn the name into a full path unless it already is one ..
+        if os.path.isabs(arg_name):
+            arg_path = arg_name
+        else:
+            arg_param = getattr(self.args, arg_name, None) or ''
+            arg_path = os.path.join(self.curdir, arg_param)
+            arg_path = os.path.abspath(arg_path)
+
+        # .. we need for a directory to exist ..
+        if needs_parent_dir:
+            path_to_check = os.path.join(arg_path, '..')
+            path_to_check = os.path.abspath(path_to_check)
+
+        # .. or for the actual file to exist ..
+        else:
+            path_to_check = arg_path
+
+        # .. make sure that it does exist ..
+        if not os.path.exists(path_to_check):
+
+            # .. optionally, exit the process if it does not ..
             if exit_if_missing:
+
+                if log_if_missing:
+                    self.logger.info(f'Path not found: `{path_to_check}`')
 
                 # Zato
                 import sys
-
                 sys.exit()
-        else:
-            arg_path = os.path.abspath(arg_path)
 
+        # .. if we are here, it means that we have a valid, absolute path to return ..
         return arg_path
 
 # ################################################################################################################################
@@ -1565,21 +1597,36 @@ class Enmasse(ManageCommand):
         from zato.common.util.env import populate_environment_from_file
         from zato.common.util.tcp import wait_for_zato_ping
 
+        # Local aliases
+        input_path:'strnone'  = None
+        output_path:'strnone' = None
+        exit_on_missing_file = getattr(self.args, 'exit_on_missing_file', False)
+
         self.args = args
         self.curdir = os.path.abspath(self.original_dir)
         self.json = {}
         has_import = getattr(args, 'import')
 
-        # Initialize environment variables
-        env_path = self.get_file_path('env_file', False)
+        # Initialize environment variables ..
+        env_path = self.normalize_path('env_file', False)
         populate_environment_from_file(env_path)
 
+        # .. make sure the input file path is correct ..
         if args.export_local or has_import:
-            exit_on_missing_file = hasattr(self.args, 'exit_on_missing_file')
-            input_path = self.get_file_path('input', exit_on_missing_file)
+            input_path = self.normalize_path('input', exit_on_missing_file)
 
-        #: The output serialization format. Not used for input.
-        self.codec = self.CODEC_BY_EXTENSION[args.dump_format]()
+        # .. make sure the output file path is correct ..
+        if args.output:
+            output_path = self.normalize_path(
+                'output',
+                exit_if_missing=True,
+                needs_parent_dir=True,
+                log_if_missing=True,
+            )
+
+        # .. the output serialization format. Not used for input ..
+        format:'str' = args.format or args.dump_format
+        self.codec = self.CODEC_BY_EXTENSION[format]()
 
         #
         # Tasks and scenarios
@@ -1637,26 +1684,31 @@ class Enmasse(ManageCommand):
 
         # 3)
         if args.export_local and args.export_odb:
-            self.report_warnings_errors(self.export_local_odb())
-            self.write_output()
+            _ = self.report_warnings_errors(self.export_local_odb())
+            self.write_output(output_path)
 
         # 1)
         elif args.export_local:
-            self.report_warnings_errors(self.export())
-            self.write_output()
+            _ = self.report_warnings_errors(self.export())
+            self.write_output(output_path)
 
         # 2)
         elif args.export_odb:
             if self.report_warnings_errors(self.export_odb()):
-                self.write_output()
+                self.write_output(output_path)
 
         # 4) a/b
         elif has_import:
-            self.report_warnings_errors(self.run_import())
+            _ = self.report_warnings_errors(self.run_import())
 
 # ################################################################################################################################
 
-    def write_output(self):
+    def _should_write_to_output(self, item:'strdict') -> 'bool':
+        return True
+
+# ################################################################################################################################
+
+    def write_output(self, output_path:'strnone') -> 'None':
 
         # stdlib
         import os
@@ -1669,8 +1721,12 @@ class Enmasse(ManageCommand):
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
 
+        # Local aliases
+        to_write:'strdict' = {}
+
         # Make a copy and remove Bunch; pyaml does not like Bunch instances.
-        output = debunchify(self.json)
+        output:'strdict' = debunchify(self.json)
+        output = deepcopy(output)
 
         # Preserve old format by splitting out particular types of http-soap.
         for item in output.pop('http_soap', []):
@@ -1687,18 +1743,49 @@ class Enmasse(ManageCommand):
                     for item in output.pop(service_info.name, [])
                 )
 
-        for _, items in iteritems(output):
+        # .. go through everything that we collected in earlier steps in the process ..
+        for def_type, items in iteritems(output): # type: ignore
+
+            # .. add type hints ..
+            items = cast_('dictlist', items)
+
+            # .. this is a new list of items to write ..
+            # .. based on the list from output ..
+            to_write_items:'dictlist' = []
+
+            # .. now, go through each item in the original output ..
             for item in items:
+
+                # .. add type hints ..
+                item = cast_('strdict', item)
+                item = deepcopy(item)
+
+                # .. make sure we want to write this item on output ..
+                if self._should_write_to_output(item):
+                    to_write_items.append(item)
+
+                # .. normalize attributes ..
                 normalize_service_name(item)
 
-            # Sort item lists by ID.
-            items.sort(key=lambda item: item['id'])
+            # .. sort item lists to be written ..
+            to_write_items.sort(key=lambda item: item.get('name', '').lower())
 
-        now = datetime.now().isoformat() # Not in UTC, we want to use user's TZ
-        name = 'zato-export-{}{}'.format(re.sub('[.:]', '_', now), self.codec.extension)
-        with open(os.path.join(self.curdir, name), 'w') as fp:
-            self.codec.dump(fp, output)
-        self.logger.info('Data exported to {}'.format(fp.name))
+            # .. now, append this new list to what is to be written ..
+            to_write[def_type] = to_write_items
+
+        # .. if we have the name of a file to use, do use it ..
+        if output_path:
+            name = output_path
+
+        # .. otherwise, use a new file ..
+        else:
+            now = datetime.now().isoformat() # Not in UTC, we want to use user's TZ
+            name = 'zato-export-{}{}'.format(re.sub('[.:]', '_', now), self.codec.extension)
+
+        with open(os.path.join(self.curdir, name), 'w') as f:
+            self.codec.dump(f, to_write)
+
+        self.logger.info('Data exported to {}'.format(f.name))
 
 # ################################################################################################################################
 
