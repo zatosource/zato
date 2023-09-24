@@ -72,6 +72,12 @@ class ModuleCtx:
     # Maps enmasse defintions types to their attributes that are to be excluded during an export
     Enmasse_Attr_List_Exclude = cast_('strlistdict', None)
 
+    # Maps pre-3.2 item types to the 3.2+ ones
+    Enmasse_Item_Type_Name_Map = cast_('strdict', None)
+
+    # As above, in the reverse direction
+    Enmasse_Item_Type_Name_Map_Reverse = cast_('strdict', None)
+
 ModuleCtx.Enmasse_Type = {
 
     # REST connections
@@ -131,6 +137,16 @@ ModuleCtx.Enmasse_Attr_List_Exclude = {
     ],
 
 }
+
+ModuleCtx.Enmasse_Item_Type_Name_Map = {
+    'def_sec': 'security',
+    'channel_plain_http': 'channel_rest',
+    'outconn_plain_http': 'outgoing_rest',
+}
+
+ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse = {}
+for key, value in ModuleCtx.Enmasse_Item_Type_Name_Map.items():
+    ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse[value] = key
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1573,6 +1589,7 @@ class Enmasse(ManageCommand):
         {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
         {'name':'--output', 'help':'Path to a file to export data to', 'action':'store'},
         {'name':'--include-type', 'help':'A list of definition types to include in an export', 'action':'store', 'default':'all'},
+        {'name':'--include-name', 'help':'Only objects containing any of the names provided will be exported', 'action':'store', 'default':'all'},
         {'name':'--import', 'help':'Import definitions from a local file (excludes --export-*)', 'action':'store_true'},
         {'name':'--clean-odb', 'help':'Delete all ODB definitions before proceeding', 'action':'store_true'},
         {'name':'--format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
@@ -1663,7 +1680,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def _extract_include_type(self, include_type:'str') -> 'strlist':
+    def _extract_include(self, include_type:'str') -> 'strlist':
 
         # Local aliases
         out:'strlist' = []
@@ -1788,23 +1805,24 @@ class Enmasse(ManageCommand):
         if args.export_local or has_import:
             self.load_input(input_path)
 
-        # .. extra a list of object types to export ..
-        include_type = self._extract_include_type(args.include_type)
+        # .. extract the include lists used to export objects ..
+        include_type = self._extract_include(args.include_type)
+        include_name = self._extract_include(args.include_name)
 
         # 3)
         if args.export_local and args.export_odb:
             _ = self.report_warnings_errors(self.export_local_odb())
-            self.write_output(output_path, include_type)
+            self.write_output(output_path, include_type, include_name)
 
         # 1)
         elif args.export_local:
             _ = self.report_warnings_errors(self.export())
-            self.write_output(output_path, include_type)
+            self.write_output(output_path, include_type, include_name)
 
         # 2)
         elif args.export_odb:
             if self.report_warnings_errors(self.export_odb()):
-                self.write_output(output_path, include_type)
+                self.write_output(output_path, include_type, include_name)
 
         # 4) a/b
         elif has_import:
@@ -1832,6 +1850,26 @@ class Enmasse(ManageCommand):
 
         # .. if we are here, we know we should write this type to output.
         return True
+
+# ################################################################################################################################
+
+    def _should_write_name_to_output(
+        self,
+        item_type,    # type: str
+        item_name,    # type: str
+        include_name, # type: strlist
+    ) -> 'bool':
+
+        # Try every name pattern that we have ..
+        for name in include_name:
+
+            # .. indicate that this item should be written if there is a match
+            if name in item_name:
+                return True
+
+        # .. if we are here, it means that we have not matched any name earlier, ..
+        # .. in which case, this item should not be included in the output.
+        return False
 
 # ################################################################################################################################
 
@@ -1888,7 +1926,8 @@ class Enmasse(ManageCommand):
         self,
         item_type, # type: str
         item,      # type: strdict
-        include_type: 'strlist'
+        include_type, # type: strlist
+        include_name, # type: strlist
     ) -> 'bool':
 
         # Local aliases
@@ -1904,12 +1943,9 @@ class Enmasse(ManageCommand):
         # By default, assume this item should be written to ouput unless we contradict it below ..
         out:'bool' = True
 
-        # We will make use of input include types only if we are not to export all the types.
-        has_all = ModuleCtx.Include_Type.All in include_type
-
-        # We enter this branch if we are to export only specific types ..
-        if not has_all:
-            out = self._should_write_type_to_output(item_type, item, include_type)
+        # We will make use of input includes only if we are not to export all of them
+        has_all_types = ModuleCtx.Include_Type.All in include_type
+        has_all_names = ModuleCtx.Include_Type.All in include_name
 
         # Handle security definitions ..
         if item_type == 'def_sec':
@@ -1926,6 +1962,16 @@ class Enmasse(ManageCommand):
             else:
                 out = True
 
+        # We enter this branch if we are to export only specific types ..
+        if not has_all_types:
+            out = self._should_write_type_to_output(item_type, item, include_type)
+
+        # We enter this branch if we are to export only objects of specific names ..
+        if not has_all_names:
+            item_name = item.get('name') or ''
+            item_name = item_name.lower()
+            out = self._should_write_name_to_output(item_type, item_name, include_name)
+
         # .. we are ready to return our output
         return out
 
@@ -1935,6 +1981,7 @@ class Enmasse(ManageCommand):
         self,
         output_path,  # type: strnone
         include_type, # type: strlist
+        include_name, # type: strlist
     ) -> 'None':
 
         # stdlib
@@ -1991,7 +2038,7 @@ class Enmasse(ManageCommand):
                 normalize_service_name(item)
 
                 # .. make sure we want to write this item on output ..
-                if not self._should_write_to_output(item_type, item, include_type):
+                if not self._should_write_to_output(item_type, item, include_type, include_name):
                     continue
 
                 # .. this will remove any attributes from this item that we do not need ..
