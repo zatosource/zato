@@ -23,7 +23,7 @@ if 0:
 
     from logging import Logger
     from zato.client import APIClient
-    from zato.common.typing_ import dictlist, strdict, strnone
+    from zato.common.typing_ import dictlist, strdict, strlist, strnone
 
     APIClient = APIClient
     Logger = Logger
@@ -53,6 +53,34 @@ ERROR_SERVICE_MISSING = Code('E12', 'service missing')
 ERROR_MISSING_DEP = Code('E13', 'dependency missing')
 ERROR_COULD_NOT_IMPORT_OBJECT = Code('E13', 'could not import object')
 ERROR_TYPE_MISSING = Code('E04', 'type missing')
+
+class ModuleCtx:
+
+    class Include_Type:
+        All  = 'all'
+        LDAP = 'ldap'
+        SQL  = 'sql'
+        REST = 'rest'
+        Security = 'security'
+
+    Enmasse_Type = cast_('strdict', None)
+
+ModuleCtx.Enmasse_Type = {
+
+    # REST connections
+    'channel_plain_http': ModuleCtx.Include_Type.REST,
+    'outconn_plain_http': ModuleCtx.Include_Type.REST,
+    'zato_generic_rest_wrapper': ModuleCtx.Include_Type.REST,
+
+    # Security definitions
+    'def_sec':ModuleCtx.Include_Type.Security,
+
+    # SQL Connections
+    'outconn_sql':ModuleCtx.Include_Type.SQL,
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 def find_first(it, pred):
     """Given any iterable, return the first element `elem` from it matching `pred(elem)`"""
@@ -1491,7 +1519,7 @@ class Enmasse(ManageCommand):
         {'name':'--export-local', 'help':'Export local file definitions into one file (can be used with --export-odb)', 'action':'store_true'},
         {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
         {'name':'--output', 'help':'Path to a file to export data to', 'action':'store'},
-        {'name':'--include', 'help':'A list of definition types to include in an export', 'action':'store', 'default':'all'},
+        {'name':'--include-type', 'help':'A list of definition types to include in an export', 'action':'store', 'default':'all'},
         {'name':'--import', 'help':'Import definitions from a local file (excludes --export-*)', 'action':'store_true'},
         {'name':'--clean-odb', 'help':'Delete all ODB definitions before proceeding', 'action':'store_true'},
         {'name':'--format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
@@ -1579,6 +1607,30 @@ class Enmasse(ManageCommand):
 
         # .. if we are here, it means that we have a valid, absolute path to return ..
         return arg_path
+
+# ################################################################################################################################
+
+    def _extract_include_type(self, include_type:'str') -> 'strlist':
+
+        # Local aliases
+        out:'strlist' = []
+
+        # Turn the string into a list of items that we will process ..
+        include_type:'strlist' = include_type.split(',')
+        include_type = [item.strip() for item in include_type]
+
+        # .. ignore explicit types if all types are to be returned ..
+        if ModuleCtx.Include_Type.All in include_type:
+            include_type = [ModuleCtx.Include_Type.All]
+        else:
+            out[:] = include_type
+
+        # .. if we do not have anything, it means that we are including all types ..
+        if not out:
+            out = [ModuleCtx.Include_Type.All]
+
+        # .. now, we are ready to return our response.
+        return out
 
 # ################################################################################################################################
 
@@ -1683,20 +1735,23 @@ class Enmasse(ManageCommand):
         if args.export_local or has_import:
             self.load_input(input_path)
 
+        # .. extra a list of object types to export ..
+        include_type = self._extract_include_type(args.include_type)
+
         # 3)
         if args.export_local and args.export_odb:
             _ = self.report_warnings_errors(self.export_local_odb())
-            self.write_output(output_path)
+            self.write_output(output_path, include_type)
 
         # 1)
         elif args.export_local:
             _ = self.report_warnings_errors(self.export())
-            self.write_output(output_path)
+            self.write_output(output_path, include_type)
 
         # 2)
         elif args.export_odb:
             if self.report_warnings_errors(self.export_odb()):
-                self.write_output(output_path)
+                self.write_output(output_path, include_type)
 
         # 4) a/b
         elif has_import:
@@ -1704,7 +1759,60 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def _should_write_to_output(self, item_type:'str', item:'strdict') -> 'bool':
+    def _should_write_type_to_output(
+        self,
+        item_type,    # type: str
+        item,         # type: strdict
+        include_type, # type: strlist
+    ) -> 'bool':
+
+        # Get an include type that matches are item type ..
+        enmasse_include_type = ModuleCtx.Enmasse_Type.get(item_type)
+
+        # .. if there is no match, it means that we do not write it on output ..
+        if not enmasse_include_type:
+            return False
+
+        # .. check further if this type is what we had on input ..
+        if not enmasse_include_type in include_type:
+            return False
+
+        # .. if we are here, we know we should write this type to output.
+        print()
+        print(111, item_type)
+        print(222, enmasse_include_type)
+        print(333, include_type)
+        print()
+        return True
+
+        '''
+        # Go through each of the types that we know how to handle ..
+        for enmasse_item_type, enmasse_def_types in ModuleCtx.Enmasse_Type.items():
+
+            # .. ignore types that are not to be imported ..
+            #if not enmasse_item_type in include_type:
+            #    return False
+
+            # .. ignore definition types not matching our item type ..
+            if not item_type in enmasse_def_types:
+                print()
+                print(111, item_type)
+                print(222, enmasse_def_types)
+                print()
+                return False
+
+        # .. if we are here, we know we should write this type to output.
+        return True
+        '''
+
+# ################################################################################################################################
+
+    def _should_write_to_output(
+        self,
+        item_type, # type: str
+        item,      # type: strdict
+        include_type: 'strlist'
+    ) -> 'bool':
 
         # Local aliases
         zato_name_prefix = (
@@ -1716,9 +1824,12 @@ class Enmasse(ManageCommand):
         # By default, assume this item should be written to ouput unless we contradict it below ..
         out:'bool' = True
 
-        print()
-        print(111, item)
-        print()
+        # We will make use of input include types only if we are not to export all the types.
+        has_all = ModuleCtx.Include_Type.All in include_type
+
+        # Filter our types that are not needed ..
+        if not has_all:
+            out = self._should_write_type_to_output(item_type, item, include_type)
 
         # Handle security definitions ..
         if item_type == 'def_sec':
@@ -1732,11 +1843,16 @@ class Enmasse(ManageCommand):
             if name.startswith(zato_name_prefix):
                 out = False
 
+        # .. we are ready to return our output
         return out
 
 # ################################################################################################################################
 
-    def write_output(self, output_path:'strnone') -> 'None':
+    def write_output(
+        self,
+        output_path,  # type: strnone
+        include_type, # type: strlist
+    ) -> 'None':
 
         # stdlib
         import os
@@ -1789,7 +1905,7 @@ class Enmasse(ManageCommand):
                 item = deepcopy(item)
 
                 # .. make sure we want to write this item on output ..
-                if self._should_write_to_output(item_type, item):
+                if self._should_write_to_output(item_type, item, include_type):
                     to_write_items.append(item)
 
                 # .. normalize attributes ..
