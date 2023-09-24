@@ -1491,6 +1491,7 @@ class Enmasse(ManageCommand):
         {'name':'--export-local', 'help':'Export local file definitions into one file (can be used with --export-odb)', 'action':'store_true'},
         {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
         {'name':'--output', 'help':'Path to a file to export data to', 'action':'store'},
+        {'name':'--include', 'help':'A list of definition types to include in an export', 'action':'store', 'default':'all'},
         {'name':'--import', 'help':'Import definitions from a local file (excludes --export-*)', 'action':'store_true'},
         {'name':'--clean-odb', 'help':'Delete all ODB definitions before proceeding', 'action':'store_true'},
         {'name':'--format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
@@ -1703,8 +1704,35 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def _should_write_to_output(self, item:'strdict') -> 'bool':
-        return True
+    def _should_write_to_output(self, item_type:'str', item:'strdict') -> 'bool':
+
+        # Local aliases
+        zato_name_prefix = (
+            'zato.',
+            'pub.zato',
+            'zato.pubsub',
+        )
+
+        # By default, assume this item should be written to ouput unless we contradict it below ..
+        out:'bool' = True
+
+        print()
+        print(111, item)
+        print()
+
+        # Handle security definitions ..
+        if item_type == 'def_sec':
+
+            # .. do not write RBAC definitions ..
+            if 'rbac' in item['type']:
+                out = False
+
+            # .. do not write internal definitions ..
+            name:'str' = item['name']
+            if name.startswith(zato_name_prefix):
+                out = False
+
+        return out
 
 # ################################################################################################################################
 
@@ -1744,7 +1772,7 @@ class Enmasse(ManageCommand):
                 )
 
         # .. go through everything that we collected in earlier steps in the process ..
-        for def_type, items in iteritems(output): # type: ignore
+        for item_type, items in iteritems(output): # type: ignore
 
             # .. add type hints ..
             items = cast_('dictlist', items)
@@ -1761,7 +1789,7 @@ class Enmasse(ManageCommand):
                 item = deepcopy(item)
 
                 # .. make sure we want to write this item on output ..
-                if self._should_write_to_output(item):
+                if self._should_write_to_output(item_type, item):
                     to_write_items.append(item)
 
                 # .. normalize attributes ..
@@ -1770,8 +1798,8 @@ class Enmasse(ManageCommand):
             # .. sort item lists to be written ..
             to_write_items.sort(key=lambda item: item.get('name', '').lower())
 
-            # .. now, append this new list to what is to be written ..
-            to_write[def_type] = to_write_items
+            # .. now, item_type this new list to what is to be written ..
+            to_write[item_type] = to_write_items
 
         # .. if we have the name of a file to use, do use it ..
         if output_path:
