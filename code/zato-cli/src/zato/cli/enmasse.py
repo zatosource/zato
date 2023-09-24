@@ -54,6 +54,8 @@ ERROR_MISSING_DEP = Code('E13', 'dependency missing')
 ERROR_COULD_NOT_IMPORT_OBJECT = Code('E13', 'could not import object')
 ERROR_TYPE_MISSING = Code('E04', 'type missing')
 
+# ################################################################################################################################
+
 class ModuleCtx:
 
     class Include_Type:
@@ -78,6 +80,11 @@ class ModuleCtx:
     # As above, in the reverse direction
     Enmasse_Item_Type_Name_Map_Reverse = cast_('strdict', None)
 
+    # How to sort attributes of a given object
+    Enmasse_Attr_List_Sort_Order = cast_('strlistdict', None)
+
+# ################################################################################################################################
+
 ModuleCtx.Enmasse_Type = {
 
     # REST connections
@@ -91,6 +98,8 @@ ModuleCtx.Enmasse_Type = {
     # SQL Connections
     'outconn_sql':ModuleCtx.Include_Type.SQL,
 }
+
+# ################################################################################################################################
 
 ModuleCtx.Enmasse_Attr_List_Include = {
 
@@ -121,6 +130,8 @@ ModuleCtx.Enmasse_Attr_List_Include = {
     'def_sec':  ['type', 'name', 'username', 'realm']
 }
 
+# ################################################################################################################################
+
 ModuleCtx.Enmasse_Attr_List_Exclude = {
 
     # REST connections - Channels
@@ -138,15 +149,44 @@ ModuleCtx.Enmasse_Attr_List_Exclude = {
 
 }
 
+# ################################################################################################################################
+
 ModuleCtx.Enmasse_Item_Type_Name_Map = {
     'def_sec': 'security',
     'channel_plain_http': 'channel_rest',
     'outconn_plain_http': 'outgoing_rest',
 }
 
+# ################################################################################################################################
+
 ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse = {}
 for key, value in ModuleCtx.Enmasse_Item_Type_Name_Map.items():
     ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse[value] = key
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_Sort_Order = {
+
+    # REST connections - Channels
+    'channel_plain_http': [
+        'name',
+        'service',
+        'url_path',
+        'security_name',
+    ],
+
+    # REST connections - outgoing connections
+    'outconn_plain_http': [
+        'name',
+        'url_path',
+        'security_name',
+        'is_active',
+        'data_format',
+    ],
+
+    # Security definitions
+    'def_sec':  ['name', 'username', 'password', 'type', 'realm']
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1644,12 +1684,15 @@ class Enmasse(ManageCommand):
 
         # Local aliases
         path_to_check:'str' = ''
+        arg_param = getattr(self.args, arg_name, None) or ''
+
+        # Potentially, expand the path to our home directory ..
+        arg_name = os.path.expanduser(arg_param)
 
         # Turn the name into a full path unless it already is one ..
         if os.path.isabs(arg_name):
             arg_path = arg_name
         else:
-            arg_param = getattr(self.args, arg_name, None) or ''
             arg_path = os.path.join(self.curdir, arg_param)
             arg_path = os.path.abspath(arg_path)
 
@@ -1669,6 +1712,7 @@ class Enmasse(ManageCommand):
             if exit_if_missing:
 
                 if log_if_missing:
+                    print(666, repr(arg_name))
                     self.logger.info(f'Path not found: `{path_to_check}`')
 
                 # Zato
@@ -1922,6 +1966,26 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
+    def _sort_item_attrs(
+        self,
+        item_type,    # type: str
+        item,         # type: strdict
+    ) -> 'strdict':
+
+        # Turn the item into an object whose attributes can be sorted ..
+        item = OrderedDict(item)
+
+        # .. go through each of the attribute in the order of preference, assuming that we have any matching one ..
+        # .. it needs to be reversed because we are pushing each such attribute to the front, as in a stack ..
+        for attr in reversed(ModuleCtx.Enmasse_Attr_List_Sort_Order.get(item_type) or []):
+
+            if attr in item:
+                item.move_to_end(attr, last=False)
+
+        return item
+
+# ################################################################################################################################
+
     def _should_write_to_output(
         self,
         item_type, # type: str
@@ -2043,6 +2107,9 @@ class Enmasse(ManageCommand):
 
                 # .. this will remove any attributes from this item that we do not need ..
                 item = self._filter_item_attrs(item_type, item)
+
+                # .. sort the attributes in the order we want them to appear in the outpur file ..
+                item = self._sort_item_attrs(item_type, item)
 
                 # .. if we are here, it means that we want to include this item on output ..
                 to_write_items.append(item)
