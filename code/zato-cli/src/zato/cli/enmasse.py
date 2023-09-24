@@ -31,7 +31,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-zato_enmasse_env = 'ZatoEnmasseEnv.'
+zato_enmasse_env1 = 'ZatoEnmasseEnv.'
+zato_enmasse_env2 = 'Zato_Enmasse_Env.'
+zato_enmasse_env_value_prefix = 'Zato_Enmasse_Env_'
 
 DEFAULT_COLS_WIDTH = '15,100'
 ZATO_NO_SECURITY = 'zato-no-security'
@@ -862,14 +864,27 @@ class ObjectImporter:
 
         # First, resolve values pointing to environment variables
         for key, orig_value in attrs.items():
-            if isinstance(orig_value, str) and orig_value.startswith(zato_enmasse_env):
-                value = orig_value.split(zato_enmasse_env)
-                value = value[1]
-                if not value:
-                    raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
+
+            key        = cast_('str', key)
+            orig_value = cast_('any_', orig_value)
+
+            if isinstance(orig_value, str):
+
+                if orig_value.startswith(zato_enmasse_env1):
+                    _prefix = zato_enmasse_env1
+                elif orig_value.startswith(zato_enmasse_env2):
+                    _prefix = zato_enmasse_env2
                 else:
-                    value = os.environ.get(value)
-                attrs[key] = value
+                    _prefix    = None
+
+                if _prefix:
+                    value = orig_value.split(_prefix)
+                    value = value[1]
+                    if not value:
+                        raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
+                    else:
+                        value = os.environ.get(value)
+                    attrs[key] = value
 
         attrs_dict = dict(attrs)
 
@@ -1479,10 +1494,10 @@ class InputParser:
 
 # ################################################################################################################################
 
-    def _parse_file(self, path, results):
+    def _parse_file(self, path:'str', results:'any_') -> 'strdict':
         try:
             with open(path) as fp:
-                return self.codec.load(fp, results)
+                return self.codec.load(fp, results) # type: ignore
         except (IOError, TypeError, ValueError) as e:
             raw = (path, e)
             results.add_error(raw, ERROR_INVALID_INPUT, 'Failed to parse {}: {}', path, e)
@@ -1606,15 +1621,67 @@ class InputParser:
 
 # ################################################################################################################################
 
+    def _pre_process_input(self, data:'strdict') -> 'strdict':
+
+        # Get all environment variables that we may potentially use ..
+        zato_env = deepcopy(os.environ)
+
+        # .. remove any variables that are not ours ..
+        for key in list(zato_env):
+            if not key.startswith(zato_enmasse_env_value_prefix):
+                _ = zato_env.pop(key)
+
+        print()
+        print(111, zato_env)
+        print()
+
+        # Add values for attributes that are optional ..
+        for def_type, items in data.items():
+
+            # .. go through each definition ..
+            for item in items:
+
+                # .. everything is active unless it is configured not to be ..
+                if not 'is_active' in item:
+                    item['is_active'] = True
+
+                # .. populate REST connections ..
+                if def_type in {'channel_rest', 'outgoing_rest'}:
+
+                    # .. there is no explicit security definition set ..
+                    if not 'security_name' in item:
+                        item['security_name'] = ZATO_NO_SECURITY
+
+                # .. populate attributes based on environment variables ..
+
+        # .. potentially replace new names that are on input with what the server expects (old names) ..
+        for new_name, old_name in ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse.items():
+            value = data.pop(new_name) or None
+            if value is not None:
+                data[old_name] = value
+
+        return data
+
+# ################################################################################################################################
+
     def parse(self):
+
+        # A business object reprenting the results of an import .
         results = Results()
+
+        # .. this is where the actual data is kept ..
         self.json = {}
 
-        parsed = self._parse_file(self.path, results)
+        # .. extract a basic dict ..
+        data = self._parse_file(cast_('str', self.path), results)
+
+        # .. pre-process its contents ..
+        data = self._pre_process_input(data)
+
         if not results.ok:
             return results
 
-        self.parse_items(parsed, results)
+        self.parse_items(data, results)
         return results
 
 # ################################################################################################################################
@@ -2308,12 +2375,15 @@ class Enmasse(ManageCommand):
 # ################################################################################################################################
 
     def run_import(self) -> 'anylist':
+
+        # Make sure we have the latest state of information ..
         self.object_mgr.refresh()
 
+        # .. build an object that will import the definitions ..
         importer = ObjectImporter(self.client, self.logger, self.object_mgr, self.json,
             ignore_missing=self.args.ignore_missing_defs, args=self.args)
 
-        # Find channels and jobs that require services that do not exist
+        # .. find channels and jobs that require services that do not exist ..
         results = importer.validate_import_data()
         if not results.ok:
             return [results]
@@ -2351,7 +2421,7 @@ if __name__ == '__main__':
     args['replace'] = True
     args['import'] = True
 
-    args.path = sys.argv[1]
+    args.path  = sys.argv[1]
     args.input = sys.argv[2]
 
     enmasse = Enmasse(args)
