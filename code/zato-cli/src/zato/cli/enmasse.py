@@ -23,7 +23,7 @@ if 0:
 
     from logging import Logger
     from zato.client import APIClient
-    from zato.common.typing_ import dictlist, strdict, strlist, strnone
+    from zato.common.typing_ import dictlist, strdict, strlistdict, strlist, strnone
 
     APIClient = APIClient
     Logger = Logger
@@ -63,7 +63,11 @@ class ModuleCtx:
         REST = 'rest'
         Security = 'security'
 
-    Enmasse_Type = cast_('strdict', None)
+    # Maps enmasse definition types to include types
+    Enmasse_Type      = cast_('strdict', None)
+
+    # Maps enmasse defintions types to their attributes that are to be exported
+    Enmasse_Attr_List = cast_('strlistdict', None)
 
 ModuleCtx.Enmasse_Type = {
 
@@ -73,10 +77,40 @@ ModuleCtx.Enmasse_Type = {
     'zato_generic_rest_wrapper': ModuleCtx.Include_Type.REST,
 
     # Security definitions
-    'def_sec':ModuleCtx.Include_Type.Security,
+    'def_sec': ModuleCtx.Include_Type.Security,
 
     # SQL Connections
     'outconn_sql':ModuleCtx.Include_Type.SQL,
+}
+
+ModuleCtx.Enmasse_Attr_List = {
+
+    # REST connections - Channels
+    'channel_plain_http': [
+        'name',
+        'service',
+        'url_path',
+        'security_name',
+        'is_active',
+        'data_format',
+        'connection',
+        'transport',
+    ],
+
+    # REST connections - outgoing connections
+    'outconn_plain_http': [
+        'name',
+        'service',
+        'url_path',
+        'security_name',
+        'is_active',
+        'data_format',
+        'connection',
+        'transport',
+    ],
+
+    # Security definitions
+    'def_sec':  ['type', 'name', 'username', 'realm']
 }
 
 # ################################################################################################################################
@@ -1782,6 +1816,21 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
+    def _filter_item_attrs(
+        self,
+        item_type,    # type: str
+        item,         # type: strdict
+    ) -> 'strdict':
+
+        print()
+        print(111, item_type)
+        print(222, item)
+        print()
+
+        return item
+
+# ################################################################################################################################
+
     def _should_write_to_output(
         self,
         item_type, # type: str
@@ -1885,8 +1934,14 @@ class Enmasse(ManageCommand):
                 item = deepcopy(item)
 
                 # .. make sure we want to write this item on output ..
-                if self._should_write_to_output(item_type, item, include_type):
-                    to_write_items.append(item)
+                if not self._should_write_to_output(item_type, item, include_type):
+                    continue
+
+                # .. this will remove any attributes from this item that we do not need ..
+                item = self._filter_item_attrs(item_type, item)
+
+                # .. if we are here, it means that we want to include this item on output ..
+                to_write_items.append(item)
 
                 # .. normalize attributes ..
                 normalize_service_name(item)
