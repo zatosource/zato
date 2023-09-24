@@ -23,7 +23,7 @@ if 0:
 
     from logging import Logger
     from zato.client import APIClient
-    from zato.common.typing_ import dictlist, strdict, strlistdict, strlist, strnone
+    from zato.common.typing_ import any_, anylist, dictlist, strdict, strlistdict, strlist, strnone
 
     APIClient = APIClient
     Logger = Logger
@@ -327,7 +327,7 @@ class ServiceInfo:
         assert name or prefix
 
         # Short service name as appears in export data.
-        self.name = name or prefix
+        self.name = cast_('str', name or prefix)
 
         # Optional name of the object enumeration/retrieval service.
         self.prefix = prefix
@@ -1636,7 +1636,8 @@ class Enmasse(ManageCommand):
         {'name':'--dump-format', 'help':'Same as --format', 'choices':('json', 'yaml'), 'default':'yaml'},
         {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to file', 'action':'store_true'},
         {'name':'--exit-on-missing-file', 'help':'If input file exists, exit with status code 0', 'action':'store_true'},
-        {'name':'--replace-odb-objects', 'help':'Force replacing objects already existing in ODB during import', 'action':'store_true'},
+        {'name':'--replace', 'help':'Force replacing already server objects during import', 'action':'store_true'},
+        {'name':'--replace-odb-objects', 'help':'Same as --replace', 'action':'store_true'},
         {'name':'--input', 'help':'Path to input file with objects to import'},
         {'name':'--env-file', 'help':'Path to an .ini file with environment variables'},
         {'name':'--rbac-sleep', 'help':'How many seconds to sleep for after creating an RBAC object', 'default':'1'},
@@ -1748,7 +1749,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def _on_server(self, args):
+    def _on_server(self, args:'any_') -> 'None':
 
         # stdlib
         import os
@@ -1777,6 +1778,9 @@ class Enmasse(ManageCommand):
         # Initialize environment variables ..
         env_path = self.normalize_path('env_file', False)
         populate_environment_from_file(env_path)
+
+        # .. support both arguments ..
+        self.replace_objects:'bool' = getattr(args, 'replace') or getattr(args, 'replace_odb_objects')
 
         # .. make sure the input file path is correct ..
         if args.export_local or has_import:
@@ -2205,20 +2209,20 @@ class Enmasse(ManageCommand):
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
 
-        cols_width = self.args.cols_width if self.args.cols_width else DEFAULT_COLS_WIDTH
+        cols_width = self.args.cols_width if getattr(self.args, 'cols_width', None) else DEFAULT_COLS_WIDTH
         cols_width = (elem.strip() for elem in cols_width.split(','))
         cols_width = [int(elem) for elem in cols_width]
 
         table = texttable.Texttable()
-        table.set_cols_width(cols_width)
+        _ = table.set_cols_width(cols_width)
 
         # Use text ('t') instead of auto so that boolean values don't get converted into ints
-        table.set_cols_dtype(['t', 't'])
+        _ = table.set_cols_dtype(['t', 't'])
 
         rows = [['Key', 'Value']]
         rows.extend(sorted(iteritems(out)))
 
-        table.add_rows(rows)
+        _ = table.add_rows(rows)
 
         return table
 
@@ -2303,19 +2307,19 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def run_import(self):
+    def run_import(self) -> 'anylist':
         self.object_mgr.refresh()
 
         importer = ObjectImporter(self.client, self.logger, self.object_mgr, self.json,
             ignore_missing=self.args.ignore_missing_defs, args=self.args)
 
-        # Find channels and jobs that require services that don't exist
+        # Find channels and jobs that require services that do not exist
         results = importer.validate_import_data()
         if not results.ok:
             return [results]
 
         already_existing = importer.find_already_existing_odb_objects()
-        if not already_existing.ok and not self.args.replace_odb_objects:
+        if not already_existing.ok and not self.replace_objects:
             return [already_existing]
 
         results = importer.import_objects(already_existing)
@@ -2338,11 +2342,13 @@ if __name__ == '__main__':
     args.verbose = True
     args.store_log = False
     args.store_config = False
-    args.dump_format = 'yaml'
+    args.format = 'yaml'
     args.export_local = False
     args.export_odb = False
-    args.clean_odb = True
+    args.clean_odb = False
     args.ignore_missing_defs = False
+    args.output = None
+    args['replace'] = True
     args['import'] = True
 
     args.path = sys.argv[1]
