@@ -1827,6 +1827,8 @@ class Enmasse(ManageCommand):
         print(222, item)
         print()
 
+        attr_list = ModuleCtx.Enmasse_Attr_List.
+
         return item
 
 # ################################################################################################################################
