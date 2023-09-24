@@ -1984,7 +1984,6 @@ class Enmasse(ManageCommand):
 
         already_existing = importer.find_already_existing_odb_objects()
         if not already_existing.ok and not self.args.replace_odb_objects:
-            z
             return [already_existing]
 
         results = importer.import_objects(already_existing)
