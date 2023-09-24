@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from copy import deepcopy
 
 # Zato
@@ -2054,6 +2054,17 @@ class Enmasse(ManageCommand):
             # .. but only if there is anything to be written for that type ..
             if to_write_items:
                 to_write[item_type] = to_write_items
+
+        # .. replace item type names ..
+        for old_name, new_name in ModuleCtx.Enmasse_Item_Type_Name_Map.items():
+            value = to_write.pop(old_name, None)
+            if value:
+                to_write[new_name] = value
+
+        # .. make sure security definitions come first, assuming that we have any ..
+        if 'security' in to_write:
+            to_write = OrderedDict(to_write)
+            to_write.move_to_end('security', last=False)
 
         # .. if we have the name of a file to use, do use it ..
         if output_path:
