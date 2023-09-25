@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from collections import namedtuple, OrderedDict
 from copy import deepcopy
+from dataclasses import dataclass
 
 # Zato
 from zato.cli import ManageCommand
@@ -23,7 +24,7 @@ if 0:
 
     from logging import Logger
     from zato.client import APIClient
-    from zato.common.typing_ import any_, anylist, dictlist, strdict, strlistdict, strlist, strnone
+    from zato.common.typing_ import any_, anylist, dictlist, list_, strdict, strstrdict, strlistdict, strlist, strnone
 
     APIClient = APIClient
     Logger = Logger
@@ -189,6 +190,16 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
     # Security definitions
     'def_sec':  ['name', 'username', 'password', 'type', 'realm']
 }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class EnvKeyData:
+    def_type:   'str'
+    name:       'str'
+    attr_name:  'str'
+    attr_value: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1622,25 +1633,81 @@ class InputParser:
 
 # ################################################################################################################################
 
+    def _parse_env_key(self, key:'str') -> 'EnvKeyData':
+
+        # Our response to produce
+        out = EnvKeyData()
+
+        # .. remove non-business information first ..
+        key = key.replace(zato_enmasse_env_value_prefix, '')
+
+        # .. turn double underscores into dots that shells do not allow ..
+        key = key.replace('__', '.')
+
+        # .. now, we know that we have components separated by underscores ..
+        key_split = key.split('_')
+
+        # .. we expect for these three components to exist in this order ..
+        def_type  = key_split[0]
+        name      = key_split[1]
+        attr_name = key_split[2]
+
+        # .. populate the response ..
+        out.def_type  = def_type
+        out.name      = name
+        out.attr_name = attr_name
+
+        # .. now, we can return the result.
+        return out
+
+# ################################################################################################################################
+
+    def _extract_config_from_env(self, env:'strstrdict') -> 'list_[EnvKeyData]':
+
+        # Our response to produce
+        out:'list_[EnvKeyData]' = []
+
+        # First pass, through environemnt variables as they were defined ..
+        for key in env.keys():
+
+            # . this is the value, to be used as it is ..
+            value = env.pop(key)
+
+            # .. the key needs to be transformed into a business object ..
+            env_key_data = self._parse_env_key(key)
+
+            # .. enrich the business object with the actual value ..
+            env_key_data.attr_value = value
+
+            # .. make use of it ..
+            out.append(env_key_data)
+
+        # .. now, we can return the result to our caller.
+        return out
+
+# ################################################################################################################################
+
     def _pre_process_input(self, data:'strdict') -> 'strdict':
 
         # Get all environment variables that we may potentially use ..
-        zato_env = deepcopy(os.environ)
+        env = deepcopy(os.environ)
 
         # .. remove any variables that are not ours ..
-        for key in list(zato_env):
+        for key in list(env):
             if not key.startswith(zato_enmasse_env_value_prefix):
-                _ = zato_env.pop(key)
+                _ = env.pop(key)
 
-        print()
-        print(111, zato_env)
-        print()
+        # .. turn it into a config dict ..
+        env_config = self._extract_config_from_env(cast_('strdict', env))
 
         # Add values for attributes that are optional ..
         for def_type, items in data.items():
 
             # .. go through each definition ..
             for item in items:
+
+                # .. add type hints ..
+                item = cast_('strdict', item)
 
                 # .. everything is active unless it is configured not to be ..
                 if not 'is_active' in item:
@@ -1654,12 +1721,26 @@ class InputParser:
                         item['security_name'] = ZATO_NO_SECURITY
 
                 # .. populate attributes based on environment variables ..
+                for env_key_data in env_config:
+
+                    # .. we need to match the type of the object ..
+                    if def_type == env_key_data.def_type:
+
+                        # .. as well as its name ..
+                        if item.get('name') == env_key_data.name:
+
+                            # .. if we do have a match, we can populate the value of an attribute ..
+                            item[env_key_data.attr_name] = env_key_data.attr_value
 
         # .. potentially replace new names that are on input with what the server expects (old names) ..
         for new_name, old_name in ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse.items():
             value = data.pop(new_name) or None
             if value is not None:
                 data[old_name] = value
+
+        print()
+        print(111, data)
+        print()
 
         return data
 
