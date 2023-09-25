@@ -70,13 +70,19 @@ class GetList(Service):
             if not item.get('is_wrapper'):
                 continue
 
+            # .. reusable ..
+            item_wrapper_type = item.get('wrapper_type') or ''
+
             # .. ignore wrappers of a type other than what was requested ..
             if wrapper_type:
-                if item.get('wrapper_type') != wrapper_type:
+                if wrapper_type != item_wrapper_type:
                     continue
 
+            # .. enmasse will not send any wrapper type which is why we use the name from the item here ..
+            suffix_wrapper_type = wrapper_type or item_wrapper_type
+
             # .. replace the name prefix ..
-            item['name'] = _replace_suffix_from_dict_name(item, wrapper_type)
+            item['name'] = _replace_suffix_from_dict_name(item, suffix_wrapper_type)
 
             # .. and append the item to the result ..
             out.append(item)

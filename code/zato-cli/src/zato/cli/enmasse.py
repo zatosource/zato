@@ -8,37 +8,39 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
+from copy import deepcopy
+from dataclasses import dataclass
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common.api import GENERIC as COMMON_GENERIC
+from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-# Type checking
-import typing
+if 0:
 
-if typing.TYPE_CHECKING:
-
-    # stdlib
     from logging import Logger
-
-    # Zato
     from zato.client import APIClient
+    from zato.common.typing_ import any_, anylist, dictlist, list_, strdict, strstrdict, strlist, strlistdict, strnone
 
-    # For pyflakes
     APIClient = APIClient
     Logger = Logger
+    strlistdict = strlistdict
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-zato_enmasse_env = 'ZatoEnmasseEnv.'
+zato_enmasse_env1 = 'ZatoEnmasseEnv.'
+zato_enmasse_env2 = 'Zato_Enmasse_Env.'
+zato_enmasse_env_value_prefix = 'Zato_Enmasse_Env_'
 
 DEFAULT_COLS_WIDTH = '15,100'
 ZATO_NO_SECURITY = 'zato-no-security'
 
-Code = namedtuple('Code', ('symbol', 'desc'))
+Code = namedtuple('Code', ('symbol', 'desc')) # type: ignore
 
 WARNING_ALREADY_EXISTS_IN_ODB = Code('W01', 'already exists in ODB')
 WARNING_MISSING_DEF = Code('W02', 'missing def')
@@ -55,6 +57,155 @@ ERROR_SERVICE_MISSING = Code('E12', 'service missing')
 ERROR_MISSING_DEP = Code('E13', 'dependency missing')
 ERROR_COULD_NOT_IMPORT_OBJECT = Code('E13', 'could not import object')
 ERROR_TYPE_MISSING = Code('E04', 'type missing')
+
+# ################################################################################################################################
+
+class ModuleCtx:
+
+    class Include_Type:
+        All  = 'all'
+        LDAP = 'ldap'
+        SQL  = 'sql'
+        REST = 'rest'
+        Security = 'security'
+
+    # Maps enmasse definition types to include types
+    Enmasse_Type      = cast_('strdict', None)
+
+    # Maps enmasse defintions types to their attributes that are to be included during an export
+    Enmasse_Attr_List_Include = cast_('strlistdict', None)
+
+    # Maps enmasse defintions types to their attributes that are to be excluded during an export
+    Enmasse_Attr_List_Exclude = cast_('strlistdict', None)
+
+    # Maps pre-3.2 item types to the 3.2+ ones
+    Enmasse_Item_Type_Name_Map = cast_('strdict', None)
+
+    # As above, in the reverse direction
+    Enmasse_Item_Type_Name_Map_Reverse = cast_('strdict', None)
+
+    # How to sort attributes of a given object
+    Enmasse_Attr_List_Sort_Order = cast_('strlistdict', None)
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Type = {
+
+    # REST connections
+    'channel_plain_http': ModuleCtx.Include_Type.REST,
+    'outconn_plain_http': ModuleCtx.Include_Type.REST,
+    'zato_generic_rest_wrapper': ModuleCtx.Include_Type.REST,
+
+    # Security definitions
+    'def_sec': ModuleCtx.Include_Type.Security,
+
+    # SQL Connections
+    'outconn_sql':ModuleCtx.Include_Type.SQL,
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_Include = {
+
+    # REST connections - Channels
+    'channel_plain_http': [
+        'name',
+        'service',
+        'url_path',
+        'security_name',
+        'is_active',
+        'data_format',
+        'connection',
+        'transport',
+    ],
+
+    # REST connections - outgoing connections
+    'outconn_plain_http': [
+        'name',
+        'host',
+        'url_path',
+        'security_name',
+        'is_active',
+        'data_format',
+        'connection',
+        'transport',
+    ],
+
+    # Security definitions
+    'def_sec':  ['type', 'name', 'username', 'realm']
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_Exclude = {
+
+    # REST connections - Channels
+    'channel_plain_http': [
+        'connection',
+        'service_name',
+        'transport',
+    ],
+
+    # REST connections - outgoing connections
+    'outconn_plain_http': [
+        'connection',
+        'transport'
+    ],
+
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Item_Type_Name_Map = {
+    'def_sec': 'security',
+    'channel_plain_http': 'channel_rest',
+    'outconn_plain_http': 'outgoing_rest',
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse = {}
+for key, value in ModuleCtx.Enmasse_Item_Type_Name_Map.items():
+    ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse[value] = key
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_Sort_Order = {
+
+    # REST connections - Channels
+    'channel_plain_http': [
+        'name',
+        'service',
+        'url_path',
+        'security_name',
+    ],
+
+    # REST connections - outgoing connections
+    'outconn_plain_http': [
+        'name',
+        'host',
+        'url_path',
+        'security_name',
+        'is_active',
+        'data_format',
+    ],
+
+    # Security definitions
+    'def_sec':  ['name', 'username', 'password', 'type', 'realm']
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class EnvKeyData:
+    def_type:   'str'
+    name:       'str'
+    attr_name:  'str'
+    attr_value: 'str'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 def find_first(it, pred):
     """Given any iterable, return the first element `elem` from it matching `pred(elem)`"""
@@ -192,7 +343,7 @@ class ServiceInfo:
         assert name or prefix
 
         # Short service name as appears in export data.
-        self.name = name or prefix
+        self.name = cast_('str', name or prefix)
 
         # Optional name of the object enumeration/retrieval service.
         self.prefix = prefix
@@ -727,14 +878,28 @@ class ObjectImporter:
 
         # First, resolve values pointing to environment variables
         for key, orig_value in attrs.items():
-            if isinstance(orig_value, str) and orig_value.startswith(zato_enmasse_env):
-                value = orig_value.split(zato_enmasse_env)
-                value = value[1]
-                if not value:
-                    raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
+
+            key        = cast_('str', key)
+            orig_value = cast_('any_', orig_value)
+
+            if isinstance(orig_value, str):
+
+                if orig_value.startswith(zato_enmasse_env1):
+                    _prefix = zato_enmasse_env1
+                elif orig_value.startswith(zato_enmasse_env2):
+                    _prefix = zato_enmasse_env2
                 else:
-                    value = os.environ.get(value)
-                attrs[key] = value
+                    _prefix    = None
+
+                if _prefix:
+
+                    value = orig_value.split(_prefix)
+                    value = value[1]
+                    if not value:
+                        raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
+                    else:
+                        value = os.environ.get(value)
+                    attrs[key] = value
 
         attrs_dict = dict(attrs)
 
@@ -848,7 +1013,8 @@ class ObjectImporter:
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
 
-        rbac_sleep = float(self.args.rbac_sleep)
+        rbac_sleep = getattr(self.args, 'rbac_sleep', 1)
+        rbac_sleep = float(rbac_sleep)
 
         existing_defs = []
         existing_rbac_role = []
@@ -1288,10 +1454,11 @@ class ObjectManager:
             for item in items:
                 self.fix_up_odb_object(item_type, item)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class JsonCodec:
     extension = '.json'
-
-# ################################################################################################################################
 
     def load(self, file_, results):
 
@@ -1300,8 +1467,6 @@ class JsonCodec:
 
         return loads(file_.read())
 
-# ################################################################################################################################
-
     def dump(self, file_, object_):
 
         # Zato
@@ -1309,10 +1474,11 @@ class JsonCodec:
 
         file_.write(dumps(object_, indent=1, sort_keys=True))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class YamlCodec:
     extension = '.yml'
-
-# ################################################################################################################################
 
     def load(self, file_, results):
 
@@ -1321,14 +1487,15 @@ class YamlCodec:
 
         return yaml.load(file_, yaml.FullLoader)
 
-# ################################################################################################################################
-
     def dump(self, file_, object_):
 
         # pyaml
         import pyaml
 
         file_.write(pyaml.dump(object_, vspacing=True))
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class InputParser:
     def __init__(self, path, logger, codec):
@@ -1343,10 +1510,10 @@ class InputParser:
 
 # ################################################################################################################################
 
-    def _parse_file(self, path, results):
+    def _parse_file(self, path:'str', results:'any_') -> 'strdict':
         try:
             with open(path) as fp:
-                return self.codec.load(fp, results)
+                return self.codec.load(fp, results) # type: ignore
         except (IOError, TypeError, ValueError) as e:
             raw = (path, e)
             results.add_error(raw, ERROR_INVALID_INPUT, 'Failed to parse {}: {}', path, e)
@@ -1470,16 +1637,141 @@ class InputParser:
 
 # ################################################################################################################################
 
+    def _parse_env_key(self, key:'str') -> 'EnvKeyData':
+
+        # Our response to produce
+        out = EnvKeyData()
+
+        # .. remove non-business information first ..
+        key = key.replace(zato_enmasse_env_value_prefix, '')
+
+        # .. turn double underscores into dots that shells do not allow ..
+        key = key.replace('__', '.')
+
+        # .. now, we know that we have components separated by underscores ..
+        key_split = key.split('_')
+
+        # .. we expect for these three components to exist in this order ..
+        def_type  = key_split[0]
+        name      = key_split[1]
+        attr_name = key_split[2]
+
+        # .. populate the response ..
+        out.def_type  = def_type
+        out.name      = name
+        out.attr_name = attr_name
+
+        # .. now, we can return the result.
+        return out
+
+# ################################################################################################################################
+
+    def _extract_config_from_env(self, env:'strstrdict') -> 'list_[EnvKeyData]':
+
+        # Our response to produce
+        out:'list_[EnvKeyData]' = []
+
+        # First pass, through environemnt variables as they were defined ..
+        for key in env.keys():
+
+            # . this is the value, to be used as it is ..
+            value = env.pop(key)
+
+            # .. the key needs to be transformed into a business object ..
+            env_key_data = self._parse_env_key(key)
+
+            # .. enrich the business object with the actual value ..
+            env_key_data.attr_value = value
+
+            # .. make use of it ..
+            out.append(env_key_data)
+
+        # .. now, we can return the result to our caller.
+        return out
+
+# ################################################################################################################################
+
+    def _pre_process_input(self, data:'strdict') -> 'strdict':
+
+        # Get all environment variables that we may potentially use ..
+        env = deepcopy(os.environ)
+
+        # .. remove any variables that are not ours ..
+        for key in list(env):
+            if not key.startswith(zato_enmasse_env_value_prefix):
+                _ = env.pop(key)
+
+        # .. turn it into a config dict ..
+        env_config = self._extract_config_from_env(cast_('strdict', env))
+
+        # Add values for attributes that are optional ..
+        for def_type, items in data.items():
+
+            # .. go through each definition ..
+            for item in items:
+
+                # .. add type hints ..
+                item = cast_('strdict', item)
+
+                # .. everything is active unless it is configured not to be ..
+                if not 'is_active' in item:
+                    item['is_active'] = True
+
+                # .. populate REST connections ..
+                if def_type in {'channel_rest', 'outgoing_rest'}:
+
+                    # .. there is no explicit security definition set ..
+                    if not 'security_name' in item:
+                        item['security_name'] = ZATO_NO_SECURITY
+
+                    # .. path parameters should be merged to requests by default ..
+                    if not 'merge_url_params_req' in item:
+                        item['merge_url_params_req'] = True
+
+                # .. populate attributes based on environment variables ..
+                for env_key_data in env_config:
+
+                    # .. we need to match the type of the object ..
+                    if def_type == env_key_data.def_type:
+
+                        # .. as well as its name ..
+                        if item.get('name') == env_key_data.name:
+
+                            # .. if we do have a match, we can populate the value of an attribute ..
+                            item[env_key_data.attr_name] = env_key_data.attr_value
+
+        # .. potentially replace new names that are on input with what the server expects (old names) ..
+        for new_name, old_name in ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse.items():
+            value = data.pop(new_name, None) or None
+            if value is not None:
+                data[old_name] = value
+
+        return data
+
+# ################################################################################################################################
+
     def parse(self):
+
+        # A business object reprenting the results of an import .
         results = Results()
+
+        # .. this is where the actual data is kept ..
         self.json = {}
 
-        parsed = self._parse_file(self.path, results)
+        # .. extract a basic dict ..
+        data = self._parse_file(cast_('str', self.path), results)
+
+        # .. pre-process its contents ..
+        data = self._pre_process_input(data)
+
         if not results.ok:
             return results
 
-        self.parse_items(parsed, results)
+        self.parse_items(data, results)
         return results
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Enmasse(ManageCommand):
     """ Manages server objects en masse.
@@ -1488,12 +1780,17 @@ class Enmasse(ManageCommand):
         {'name':'--server-url', 'help':'URL of the server that enmasse should talk to, provided in host[:port] format. Defaults to server.conf\'s \'gunicorn_bind\''},  # noqa: E501
         {'name':'--export-local', 'help':'Export local file definitions into one file (can be used with --export-odb)', 'action':'store_true'},
         {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
+        {'name':'--output', 'help':'Path to a file to export data to', 'action':'store'},
+        {'name':'--include-type', 'help':'A list of definition types to include in an export', 'action':'store', 'default':'all'},
+        {'name':'--include-name', 'help':'Only objects containing any of the names provided will be exported', 'action':'store', 'default':'all'},
         {'name':'--import', 'help':'Import definitions from a local file (excludes --export-*)', 'action':'store_true'},
         {'name':'--clean-odb', 'help':'Delete all ODB definitions before proceeding', 'action':'store_true'},
-        {'name':'--dump-format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
+        {'name':'--format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
+        {'name':'--dump-format', 'help':'Same as --format', 'choices':('json', 'yaml'), 'default':'yaml'},
         {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to file', 'action':'store_true'},
         {'name':'--exit-on-missing-file', 'help':'If input file exists, exit with status code 0', 'action':'store_true'},
-        {'name':'--replace-odb-objects', 'help':'Force replacing objects already existing in ODB during import', 'action':'store_true'},
+        {'name':'--replace', 'help':'Force replacing already server objects during import', 'action':'store_true'},
+        {'name':'--replace-odb-objects', 'help':'Same as --replace', 'action':'store_true'},
         {'name':'--input', 'help':'Path to input file with objects to import'},
         {'name':'--env-file', 'help':'Path to an .ini file with environment variables'},
         {'name':'--rbac-sleep', 'help':'How many seconds to sleep for after creating an RBAC object', 'default':'1'},
@@ -1524,32 +1821,87 @@ class Enmasse(ManageCommand):
         results = parser.parse()
         if not results.ok:
             self.logger.error('JSON parsing failed')
-            self.report_warnings_errors([results])
+            _ = self.report_warnings_errors([results])
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
         self.json = parser.json
 
 # ################################################################################################################################
 
-    def get_file_path(self, arg_name:'str', exit_if_missing:'bool') -> 'str':
+    def normalize_path(
+        self,
+        arg_name,         # type: str
+        exit_if_missing,  # type: bool
+        *,
+        needs_parent_dir=False, # type: bool
+        log_if_missing=False,   # type: bool
+    ) -> 'str':
 
+        # Local aliases
+        path_to_check:'str' = ''
         arg_param = getattr(self.args, arg_name, None) or ''
-        arg_path = os.path.join(self.curdir, arg_param)
 
-        if not os.path.exists(arg_path):
+        # Potentially, expand the path to our home directory ..
+        arg_name = os.path.expanduser(arg_param)
+
+        # Turn the name into a full path unless it already is one ..
+        if os.path.isabs(arg_name):
+            arg_path = arg_name
+        else:
+            arg_path = os.path.join(self.curdir, arg_param)
+            arg_path = os.path.abspath(arg_path)
+
+        # .. we need for a directory to exist ..
+        if needs_parent_dir:
+            path_to_check = os.path.join(arg_path, '..')
+            path_to_check = os.path.abspath(path_to_check)
+
+        # .. or for the actual file to exist ..
+        else:
+            path_to_check = arg_path
+
+        # .. make sure that it does exist ..
+        if not os.path.exists(path_to_check):
+
+            # .. optionally, exit the process if it does not ..
             if exit_if_missing:
+
+                if log_if_missing:
+                    self.logger.info(f'Path not found: `{path_to_check}`')
 
                 # Zato
                 import sys
-
                 sys.exit()
-        else:
-            arg_path = os.path.abspath(arg_path)
 
+        # .. if we are here, it means that we have a valid, absolute path to return ..
         return arg_path
 
 # ################################################################################################################################
 
-    def _on_server(self, args):
+    def _extract_include(self, include_type:'str') -> 'strlist': # type: ignore
+
+        # Local aliases
+        out:'strlist' = []
+
+        # Turn the string into a list of items that we will process ..
+        include_type:'strlist' = include_type.split(',')
+        include_type = [item.strip().lower() for item in include_type]
+
+        # .. ignore explicit types if all types are to be returned ..
+        if ModuleCtx.Include_Type.All in include_type:
+            include_type = [ModuleCtx.Include_Type.All]
+        else:
+            out[:] = include_type
+
+        # .. if we do not have anything, it means that we are including all types ..
+        if not out:
+            out = [ModuleCtx.Include_Type.All]
+
+        # .. now, we are ready to return our response.
+        return out
+
+# ################################################################################################################################
+
+    def _on_server(self, args:'any_') -> 'None':
 
         # stdlib
         import os
@@ -1565,21 +1917,39 @@ class Enmasse(ManageCommand):
         from zato.common.util.env import populate_environment_from_file
         from zato.common.util.tcp import wait_for_zato_ping
 
+        # Local aliases
+        input_path:'strnone'  = None
+        output_path:'strnone' = None
+        exit_on_missing_file = getattr(self.args, 'exit_on_missing_file', False)
+
         self.args = args
         self.curdir = os.path.abspath(self.original_dir)
         self.json = {}
         has_import = getattr(args, 'import')
 
-        # Initialize environment variables
-        env_path = self.get_file_path('env_file', False)
+        # Initialize environment variables ..
+        env_path = self.normalize_path('env_file', False)
         populate_environment_from_file(env_path)
 
-        if args.export_local or has_import:
-            exit_on_missing_file = hasattr(self.args, 'exit_on_missing_file')
-            input_path = self.get_file_path('input', exit_on_missing_file)
+        # .. support both arguments ..
+        self.replace_objects:'bool' = getattr(args, 'replace', False) or getattr(args, 'replace_odb_objects', False)
 
-        #: The output serialization format. Not used for input.
-        self.codec = self.CODEC_BY_EXTENSION[args.dump_format]()
+        # .. make sure the input file path is correct ..
+        if args.export_local or has_import:
+            input_path = self.normalize_path('input', exit_on_missing_file)
+
+        # .. make sure the output file path is correct ..
+        if args.output:
+            output_path = self.normalize_path(
+                'output',
+                exit_if_missing=True,
+                needs_parent_dir=True,
+                log_if_missing=True,
+            )
+
+        # .. the output serialization format. Not used for input ..
+        format:'str' = args.format or args.dump_format
+        self.codec = self.CODEC_BY_EXTENSION[format]()
 
         #
         # Tasks and scenarios
@@ -1635,28 +2005,207 @@ class Enmasse(ManageCommand):
         if args.export_local or has_import:
             self.load_input(input_path)
 
+        # .. extract the include lists used to export objects ..
+        include_type = getattr(args, 'include_type', '')
+        include_name = getattr(args, 'include_name', '')
+
+        include_type = self._extract_include(include_type)
+        include_name = self._extract_include(include_name)
+
         # 3)
         if args.export_local and args.export_odb:
-            self.report_warnings_errors(self.export_local_odb())
-            self.write_output()
+            _ = self.report_warnings_errors(self.export_local_odb())
+            self.write_output(output_path, include_type, include_name)
 
         # 1)
         elif args.export_local:
-            self.report_warnings_errors(self.export())
-            self.write_output()
+            _ = self.report_warnings_errors(self.export())
+            self.write_output(output_path, include_type, include_name)
 
         # 2)
         elif args.export_odb:
             if self.report_warnings_errors(self.export_odb()):
-                self.write_output()
+                self.write_output(output_path, include_type, include_name)
 
         # 4) a/b
         elif has_import:
-            self.report_warnings_errors(self.run_import())
+            _ = self.report_warnings_errors(self.run_import())
 
 # ################################################################################################################################
 
-    def write_output(self):
+    def _should_write_type_to_output(
+        self,
+        item_type,    # type: str
+        item,         # type: strdict
+        include_type, # type: strlist
+    ) -> 'bool':
+
+        # Get an include type that matches are item type ..
+        enmasse_include_type = ModuleCtx.Enmasse_Type.get(item_type)
+
+        # .. if there is no match, it means that we do not write it on output ..
+        if not enmasse_include_type:
+            return False
+
+        # .. check further if this type is what we had on input ..
+        if not enmasse_include_type in include_type:
+            return False
+
+        # .. if we are here, we know we should write this type to output.
+        return True
+
+# ################################################################################################################################
+
+    def _should_write_name_to_output(
+        self,
+        item_type,    # type: str
+        item_name,    # type: str
+        include_name, # type: strlist
+    ) -> 'bool':
+
+        # Try every name pattern that we have ..
+        for name in include_name:
+
+            # .. indicate that this item should be written if there is a match
+            if name in item_name:
+                return True
+
+        # .. if we are here, it means that we have not matched any name earlier, ..
+        # .. in which case, this item should not be included in the output.
+        return False
+
+# ################################################################################################################################
+
+    def _filter_item_attrs(
+        self,
+        item_type,    # type: str
+        item,         # type: strdict
+    ) -> 'strdict':
+
+        # Check if there is an explicit list of include attributes to return for the type ..
+        attr_list_include = ModuleCtx.Enmasse_Attr_List_Include.get(item_type) or []
+
+        # .. as above, for attributes that are explicitly configured to be excluded ..
+        attr_list_exclude = ModuleCtx.Enmasse_Attr_List_Exclude.get(item_type) or []
+
+        # .. to make sure the dictionary does not change during iteration ..
+        item_copy = deepcopy(item)
+
+        # .. we enter here if there is anything to be explicitly process ..
+        if attr_list_include or attr_list_exclude:
+
+            # .. go through everything that we have ..
+            for attr in item_copy:
+
+                # .. remove from the item that we are returning any attr that is not to be included
+                if attr not in attr_list_include:
+                    _ = item.pop(attr, None)
+
+                # .. remove any attribute that is explictly configured to be excluded ..
+                if attr in attr_list_exclude:
+                    _ = item.pop(attr, None)
+
+        # .. ID's are never returned ..
+        _ = item.pop('id', None)
+
+        # .. the is_active flag is never returned if it is of it default value, which is True ..
+        if item_copy.get('is_active') is True:
+            _ = item.pop('is_active', None)
+
+        # .. names of security definitions attached to an object are also skipped if they are the default ones ..
+        if item_copy.get('security_name') in ('', None):
+            _ = item.pop('security_name', None)
+
+        # .. the data format of REST objects defaults to JSON which is why we do not return it, unless it is different ..
+        if item_type in {'channel_plain_http', 'outconn_plain_http', 'zato_generic_rest_wrapper'}:
+            if item_copy.get('data_format') == DATA_FORMAT.JSON:
+                _ = item.pop('data_format', None)
+
+        return item
+
+# ################################################################################################################################
+
+    def _sort_item_attrs(
+        self,
+        item_type,    # type: str
+        item,         # type: strdict
+    ) -> 'strdict':
+
+        # Turn the item into an object whose attributes can be sorted ..
+        item = OrderedDict(item)
+
+        # .. go through each of the attribute in the order of preference, assuming that we have any matching one ..
+        # .. it needs to be reversed because we are pushing each such attribute to the front, as in a stack ..
+        for attr in reversed(ModuleCtx.Enmasse_Attr_List_Sort_Order.get(item_type) or []):
+
+            if attr in item:
+                item.move_to_end(attr, last=False)
+
+        return item
+
+# ################################################################################################################################
+
+    def _should_write_to_output(
+        self,
+        item_type, # type: str
+        item,      # type: strdict
+        include_type, # type: strlist
+        include_name, # type: strlist
+    ) -> 'bool':
+
+        # Local aliases
+        name:'str' = item['name']
+
+        zato_name_prefix = (
+            'zato.',
+            'pub.zato',
+            'zato.pubsub',
+            'ide_publisher',
+        )
+
+        # By default, assume this item should be written to ouput unless we contradict it below ..
+        out:'bool' = True
+
+        # We will make use of input includes only if we are not to export all of them
+        has_all_types = ModuleCtx.Include_Type.All in include_type
+        has_all_names = ModuleCtx.Include_Type.All in include_name
+
+        # Handle security definitions ..
+        if item_type == 'def_sec':
+
+            # .. do not write RBAC definitions ..
+            if 'rbac' in item['type']:
+                out = False
+
+            # .. do not write internal definitions ..
+            elif name.startswith(zato_name_prefix):
+                out = False
+
+            # .. otherwise, include this item ..
+            else:
+                out = True
+
+        # We enter this branch if we are to export only specific types ..
+        if not has_all_types:
+            out = self._should_write_type_to_output(item_type, item, include_type)
+
+        # We enter this branch if we are to export only objects of specific names ..
+        if not has_all_names:
+            item_name = item.get('name') or ''
+            item_name = item_name.lower()
+            out = self._should_write_name_to_output(item_type, item_name, include_name)
+
+        # .. we are ready to return our output
+        return out
+
+# ################################################################################################################################
+
+    def write_output(
+        self,
+        output_path,  # type: strnone
+        include_type, # type: strlist
+        include_name, # type: strlist
+    ) -> 'None':
 
         # stdlib
         import os
@@ -1669,8 +2218,12 @@ class Enmasse(ManageCommand):
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
 
+        # Local aliases
+        to_write:'strdict' = {}
+
         # Make a copy and remove Bunch; pyaml does not like Bunch instances.
-        output = debunchify(self.json)
+        output:'strdict' = debunchify(self.json)
+        output = deepcopy(output)
 
         # Preserve old format by splitting out particular types of http-soap.
         for item in output.pop('http_soap', []):
@@ -1687,18 +2240,71 @@ class Enmasse(ManageCommand):
                     for item in output.pop(service_info.name, [])
                 )
 
-        for _, items in iteritems(output):
+        # .. go through everything that we collected in earlier steps in the process ..
+        for item_type, items in iteritems(output): # type: ignore
+
+            # .. add type hints ..
+            items = cast_('dictlist', items)
+
+            # .. this is a new list of items to write ..
+            # .. based on the list from output ..
+            to_write_items:'dictlist' = []
+
+            # .. now, go through each item in the original output ..
             for item in items:
+
+                # .. add type hints ..
+                item = cast_('strdict', item)
+                item = deepcopy(item)
+
+                # .. normalize attributes ..
                 normalize_service_name(item)
 
-            # Sort item lists by ID.
-            items.sort(key=lambda item: item['id'])
+                # .. make sure we want to write this item on output ..
+                if not self._should_write_to_output(item_type, item, include_type, include_name):
+                    continue
 
-        now = datetime.now().isoformat() # Not in UTC, we want to use user's TZ
-        name = 'zato-export-{}{}'.format(re.sub('[.:]', '_', now), self.codec.extension)
-        with open(os.path.join(self.curdir, name), 'w') as fp:
-            self.codec.dump(fp, output)
-        self.logger.info('Data exported to {}'.format(fp.name))
+                # .. this will remove any attributes from this item that we do not need ..
+                item = self._filter_item_attrs(item_type, item)
+
+                # .. sort the attributes in the order we want them to appear in the outpur file ..
+                item = self._sort_item_attrs(item_type, item)
+
+                # .. if we are here, it means that we want to include this item on output ..
+                to_write_items.append(item)
+
+            # .. sort item lists to be written ..
+            to_write_items.sort(key=lambda item: item.get('name', '').lower())
+
+            # .. now, item_type this new list to what is to be written ..
+            # .. but only if there is anything to be written for that type ..
+            if to_write_items:
+                to_write[item_type] = to_write_items
+
+        # .. replace item type names ..
+        for old_name, new_name in ModuleCtx.Enmasse_Item_Type_Name_Map.items():
+            value = to_write.pop(old_name, None)
+            if value:
+                to_write[new_name] = value
+
+        # .. make sure security definitions come first, assuming that we have any ..
+        if 'security' in to_write:
+            to_write = OrderedDict(to_write)
+            to_write.move_to_end('security', last=False)
+
+        # .. if we have the name of a file to use, do use it ..
+        if output_path:
+            name = output_path
+
+        # .. otherwise, use a new file ..
+        else:
+            now = datetime.now().isoformat() # Not in UTC, we want to use user's TZ
+            name = 'zato-export-{}{}'.format(re.sub('[.:]', '_', now), self.codec.extension)
+
+        with open(os.path.join(self.curdir, name), 'w') as f:
+            self.codec.dump(f, to_write)
+
+        self.logger.info('Data exported to {}'.format(f.name))
 
 # ################################################################################################################################
 
@@ -1758,20 +2364,20 @@ class Enmasse(ManageCommand):
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
 
-        cols_width = self.args.cols_width if self.args.cols_width else DEFAULT_COLS_WIDTH
+        cols_width = self.args.cols_width if getattr(self.args, 'cols_width', None) else DEFAULT_COLS_WIDTH
         cols_width = (elem.strip() for elem in cols_width.split(','))
         cols_width = [int(elem) for elem in cols_width]
 
         table = texttable.Texttable()
-        table.set_cols_width(cols_width)
+        _ = table.set_cols_width(cols_width)
 
         # Use text ('t') instead of auto so that boolean values don't get converted into ints
-        table.set_cols_dtype(['t', 't'])
+        _ = table.set_cols_dtype(['t', 't'])
 
         rows = [['Key', 'Value']]
         rows.extend(sorted(iteritems(out)))
 
-        table.add_rows(rows)
+        _ = table.add_rows(rows)
 
         return table
 
@@ -1856,19 +2462,22 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def run_import(self):
+    def run_import(self) -> 'anylist':
+
+        # Make sure we have the latest state of information ..
         self.object_mgr.refresh()
 
+        # .. build an object that will import the definitions ..
         importer = ObjectImporter(self.client, self.logger, self.object_mgr, self.json,
             ignore_missing=self.args.ignore_missing_defs, args=self.args)
 
-        # Find channels and jobs that require services that don't exist
+        # .. find channels and jobs that require services that do not exist ..
         results = importer.validate_import_data()
         if not results.ok:
             return [results]
 
         already_existing = importer.find_already_existing_odb_objects()
-        if not already_existing.ok and not self.args.replace_odb_objects:
+        if not already_existing.ok and not self.replace_objects:
             return [already_existing]
 
         results = importer.import_objects(already_existing)
@@ -1891,14 +2500,17 @@ if __name__ == '__main__':
     args.verbose = True
     args.store_log = False
     args.store_config = False
-    args.dump_format = 'yaml'
+    args.format = 'yaml'
     args.export_local = False
     args.export_odb = False
-    args.clean_odb = True
+    args.clean_odb = False
     args.ignore_missing_defs = False
+    args.output = None
+    args.rbac_sleep = 1
+    args['replace'] = True
     args['import'] = True
 
-    args.path = sys.argv[1]
+    args.path  = sys.argv[1]
     args.input = sys.argv[2]
 
     enmasse = Enmasse(args)
