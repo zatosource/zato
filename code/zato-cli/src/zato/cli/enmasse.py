@@ -28,6 +28,7 @@ if 0:
 
     APIClient = APIClient
     Logger = Logger
+    strlistdict = strlistdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1741,7 +1742,7 @@ class InputParser:
 
         # .. potentially replace new names that are on input with what the server expects (old names) ..
         for new_name, old_name in ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse.items():
-            value = data.pop(new_name) or None
+            value = data.pop(new_name, None) or None
             if value is not None:
                 data[old_name] = value
 
