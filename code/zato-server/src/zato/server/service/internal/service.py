@@ -430,7 +430,7 @@ class Invoke(AdminService):
         if not payload:
             return
 
-        if payload in (b'""', b"''"):
+        if payload in (b'""', b"''", b'null', 'null'):
             return
 
         if isinstance(payload, bytes):
