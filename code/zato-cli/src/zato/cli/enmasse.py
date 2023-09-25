@@ -889,13 +889,13 @@ class ObjectImporter:
                     _prefix    = None
 
                 if _prefix:
+
                     value = orig_value.split(_prefix)
                     value = value[1]
                     if not value:
                         raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
                     else:
                         value = os.environ.get(value)
-                    attrs[key] = value
 
         attrs_dict = dict(attrs)
 
@@ -1738,10 +1738,6 @@ class InputParser:
             if value is not None:
                 data[old_name] = value
 
-        print()
-        print(111, data)
-        print()
-
         return data
 
 # ################################################################################################################################
@@ -1862,7 +1858,6 @@ class Enmasse(ManageCommand):
             if exit_if_missing:
 
                 if log_if_missing:
-                    print(666, repr(arg_name))
                     self.logger.info(f'Path not found: `{path_to_check}`')
 
                 # Zato
