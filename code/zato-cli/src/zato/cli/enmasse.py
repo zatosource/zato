@@ -998,7 +998,8 @@ class ObjectImporter:
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
 
-        rbac_sleep = float(self.args.rbac_sleep)
+        rbac_sleep = getattr(self.args, 'rbac_sleep', 1)
+        rbac_sleep = float(rbac_sleep)
 
         existing_defs = []
         existing_rbac_role = []
@@ -1792,7 +1793,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def _extract_include(self, include_type:'str') -> 'strlist':
+    def _extract_include(self, include_type:'str') -> 'strlist': # type: ignore
 
         # Local aliases
         out:'strlist' = []
@@ -1921,8 +1922,11 @@ class Enmasse(ManageCommand):
             self.load_input(input_path)
 
         # .. extract the include lists used to export objects ..
-        include_type = self._extract_include(args.include_type)
-        include_name = self._extract_include(args.include_name)
+        include_type = getattr(args, 'include_type', '')
+        include_name = getattr(args, 'include_name', '')
+
+        include_type = self._extract_include(include_type)
+        include_name = self._extract_include(include_name)
 
         # 3)
         if args.export_local and args.export_odb:
@@ -2418,6 +2422,7 @@ if __name__ == '__main__':
     args.clean_odb = False
     args.ignore_missing_defs = False
     args.output = None
+    args.rbac_sleep = 1
     args['replace'] = True
     args['import'] = True
 
