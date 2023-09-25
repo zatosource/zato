@@ -121,6 +121,7 @@ ModuleCtx.Enmasse_Attr_List_Include = {
     # REST connections - outgoing connections
     'outconn_plain_http': [
         'name',
+        'host',
         'url_path',
         'security_name',
         'is_active',
@@ -181,6 +182,7 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
     # REST connections - outgoing connections
     'outconn_plain_http': [
         'name',
+        'host',
         'url_path',
         'security_name',
         'is_active',
@@ -896,6 +898,7 @@ class ObjectImporter:
                         raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
                     else:
                         value = os.environ.get(value)
+                    attrs[key] = value
 
         attrs_dict = dict(attrs)
 
