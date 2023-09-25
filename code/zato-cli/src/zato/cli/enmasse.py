@@ -24,7 +24,7 @@ if 0:
 
     from logging import Logger
     from zato.client import APIClient
-    from zato.common.typing_ import any_, anylist, dictlist, list_, strdict, strstrdict, strlist, strnone
+    from zato.common.typing_ import any_, anylist, dictlist, list_, strdict, strstrdict, strlist, strlistdict, strnone
 
     APIClient = APIClient
     Logger = Logger
@@ -1722,6 +1722,10 @@ class InputParser:
                     # .. there is no explicit security definition set ..
                     if not 'security_name' in item:
                         item['security_name'] = ZATO_NO_SECURITY
+
+                    # .. path parameters should be merged to requests by default ..
+                    if not 'merge_url_params_req' in item:
+                        item['merge_url_params_req'] = True
 
                 # .. populate attributes based on environment variables ..
                 for env_key_data in env_config:
