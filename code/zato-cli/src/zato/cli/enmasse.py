@@ -24,7 +24,7 @@ if 0:
 
     from logging import Logger
     from zato.client import APIClient
-    from zato.common.typing_ import any_, anylist, dictlist, list_, strdict, strstrdict, strlistdict, strlist, strnone
+    from zato.common.typing_ import any_, anylist, dictlist, list_, strdict, strstrdict, strlist, strnone
 
     APIClient = APIClient
     Logger = Logger
@@ -1927,7 +1927,7 @@ class Enmasse(ManageCommand):
         populate_environment_from_file(env_path)
 
         # .. support both arguments ..
-        self.replace_objects:'bool' = getattr(args, 'replace') or getattr(args, 'replace_odb_objects')
+        self.replace_objects:'bool' = getattr(args, 'replace', False) or getattr(args, 'replace_odb_objects', False)
 
         # .. make sure the input file path is correct ..
         if args.export_local or has_import:
