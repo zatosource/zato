@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -109,7 +109,7 @@ class Generic(WorkerImpl):
 
             # .. and delete the connection from the configuration object.
             conn_name = conn_dict['name']
-            del conn_value[conn_name]
+            _ = conn_value.pop(conn_name, None)
 
         # Run a special path for file transfer channels
         if msg['type_'] == _channel_file_transfer:
