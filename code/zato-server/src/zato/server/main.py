@@ -78,7 +78,7 @@ from zato.sso.util import new_user_id, normalize_sso_config
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, callable_, strintnone
+    from zato.common.typing_ import any_, callable_, dictnone, strintnone
     from zato.server.ext.zunicorn.config import Config as ZunicornConfig
     callable_ = callable_
 
