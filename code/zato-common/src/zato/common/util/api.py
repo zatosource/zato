@@ -2163,31 +2163,3 @@ def load_ipc_pid_port(cluster_name:'str', server_name:'str', pid:'int') -> 'int'
     return out
 
 # ################################################################################################################################
-
-def resolve_path(path:'str') -> 'str':
-
-    # Local aliases
-    has_env  = '$' in path
-    has_home = '~' in path
-
-    # We can return the path as is if there is nothing to resolve
-    if not (has_env or has_home):
-        return path
-
-    # Expand the path to the user's directory first ..
-    if has_home:
-        path = os.path.expanduser(path)
-
-    # .. we can expand environment variables too ..
-    if has_env:
-
-        # .. we need to catch a potential KeyError resulting from a missing key .
-        try:
-            path = os.path.expandvars(path)
-        except KeyError as e:
-            logger.warn(f'Could not resolve env. variable -> {e}')
-
-    # .. now, we can return the result to our caller ..
-    return path
-
-# ################################################################################################################################
