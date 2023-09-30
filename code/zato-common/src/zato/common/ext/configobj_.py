@@ -1687,9 +1687,9 @@ class ConfigObj(Section):
                         # .. by other layers, e.g. pickup configuration ..
                         to_ignore = {'pickup_from'}
 
-                        if key not in to_ignore:
+                        if not key in to_ignore:
 
-                            # .. but not if it's just a $ sign or an actual variable starting with it.
+                            # .. do not process it if it just a $ sign or an actual variable starting with it.
                             if not (len(value) == 1 or value.startswith('$$')):
                                 env_key_name = value[1:]
                                 try:
