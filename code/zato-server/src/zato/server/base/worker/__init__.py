@@ -17,7 +17,6 @@ from copy import deepcopy
 from datetime import datetime
 from errno import ENOENT
 from inspect import isclass
-from os.path import abspath, join as path_join
 from shutil import rmtree
 from tempfile import gettempdir
 from threading import RLock
@@ -52,6 +51,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      fs_safe_name, import_module_from_path, new_cid, parse_extra_into_dict, parse_tls_channel_security_definition, \
      start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source, wait_for_dict_key
+from zato.common.util.file_system import resolve_path
 from zato.common.util.pubsub import is_service_subscription
 from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.server.base.parallel.subprocess_.api import StartConfig as SubprocessStartConfig
@@ -1078,11 +1078,11 @@ class WorkerStore(_WorkerStoreBase):
             return
 
         pickup_from_list = pickup_from_list if isinstance(pickup_from_list, list) else [pickup_from_list]
-        pickup_from_list = [abspath(path_join(self.server.base_dir, elem)) for elem in pickup_from_list]
+        pickup_from_list = [resolve_path(elem, self.server.base_dir) for elem in pickup_from_list]
 
         move_processed_to = config.get('move_processed_to')
         if move_processed_to:
-            move_processed_to = abspath(path_join(self.server.base_dir, move_processed_to))
+            move_processed_to = resolve_path(move_processed_to, self.server.base_dir)
 
         # Make sure we have lists on input
         service_list = config.get('services') or []
