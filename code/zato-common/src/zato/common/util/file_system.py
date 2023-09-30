@@ -8,7 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-'''
 import re
 import string
 from datetime import datetime, timedelta
@@ -69,7 +68,6 @@ def get_tmp_path(prefix:'str'='', body:'str'='', suffix:'str'='') -> 'str':
     return tmp_path
 
 # ################################################################################################################################
-'''
 
 def resolve_path(path:'str') -> 'str':
 
