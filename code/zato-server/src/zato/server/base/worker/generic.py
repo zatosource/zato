@@ -166,7 +166,8 @@ class Generic(WorkerImpl):
                     item_dict[key] = value
 
         config_attr[msg_name] = item_dict
-        config_attr[msg_name].conn = wrapper(item_dict, self.server)
+        conn_wrapper = wrapper(item_dict, self.server)
+        config_attr[msg_name].conn = conn_wrapper
         config_attr[msg_name].conn.build_wrapper()
 
         if not is_starting:

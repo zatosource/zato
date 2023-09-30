@@ -53,7 +53,8 @@ from zato.common.rate_limiting import RateLimiting
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, register_diag_handlers, \
-    resolve_path, save_ipc_pid_port, spawn_greenlet, StaticConfig
+    save_ipc_pid_port, spawn_greenlet, StaticConfig
+from zato.common.util.file_system import resolve_path
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
