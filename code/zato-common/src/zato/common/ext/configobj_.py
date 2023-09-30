@@ -1685,7 +1685,7 @@ class ConfigObj(Section):
 
                         # .. but not if it's just a $ sign or an actual variable starting with it.
                         if not (len(value) == 1 or value.startswith('$$')):
-                            env_key_name = value[1:].upper()
+                            env_key_name = value[1:]
                             try:
                                 value = os.environ[env_key_name]
                             except KeyError:
