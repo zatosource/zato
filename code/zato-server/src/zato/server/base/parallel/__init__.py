@@ -53,7 +53,7 @@ from zato.common.rate_limiting import RateLimiting
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, register_diag_handlers, \
-    save_ipc_pid_port, spawn_greenlet, StaticConfig
+    resolve_path, save_ipc_pid_port, spawn_greenlet, StaticConfig
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
@@ -607,7 +607,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def _after_init_common(self, server:'ParallelServer') -> 'anyset':
         """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
         """
-        def _normalise_service_source_path(name:'str') -> 'str':
+        def _normalize_service_source_path(name:'str') -> 'str':
             if not os.path.isabs(name):
                 name = os.path.normpath(os.path.join(self.base_dir, name))
             return name
@@ -647,7 +647,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         for name in open(os.path.join(self.repo_location, self.fs_server_config.main.service_sources)):
             name = name.strip()
             if name and not name.startswith('#'):
-                name = _normalise_service_source_path(name)
+                name = _normalize_service_source_path(name)
                 self.service_sources.append(name)
 
         # Look up pickup configuration among environment variables
@@ -666,8 +666,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if key.startswith(HotDeploy.UserPrefix):
                 pickup_from = value.get('pickup_from')
                 if pickup_from:
+                    pickup_from = resolve_path(pickup_from)
                     logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix)', pickup_from)
-                    pickup_from = _normalise_service_source_path(pickup_from)
+                    pickup_from = _normalize_service_source_path(pickup_from)
                     self.service_sources.append(pickup_from)
 
         # Read all the user config files that are already available on startup
