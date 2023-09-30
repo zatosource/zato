@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+'''
 import re
 import string
 from datetime import datetime, timedelta
@@ -66,5 +67,29 @@ def get_tmp_path(prefix:'str'='', body:'str'='', suffix:'str'='') -> 'str':
     tmp_path = os.path.join(tmp_dir, file_name)
 
     return tmp_path
+
+# ################################################################################################################################
+'''
+
+def resolve_path(path:'str') -> 'str':
+
+    # Local aliases
+    has_env  = '$' in path
+    has_home = '~' in path
+
+    # We can return the path as is if there is nothing to resolve
+    if not (has_env or has_home):
+        return path
+
+    # Expand the path to the user's directory first ..
+    if has_home:
+        path = os.path.expanduser(path)
+
+    # .. we can expand environment variables too ..
+    if has_env:
+        path = os.path.expandvars(path)
+
+    # .. now, we can return the result to our caller ..
+    return path
 
 # ################################################################################################################################

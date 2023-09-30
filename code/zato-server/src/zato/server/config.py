@@ -24,7 +24,7 @@ from zato.common.py23_.past.builtins import unicode
 # Zato
 from zato.common.api import ZATO_NONE
 from zato.common.const import SECRETS
-from zato.common.util.config import resolve_value
+from zato.common.util.file_system import resolve_path
 from zato.common.util.sql import ElemsWithOpaqueMaker
 
 # ################################################################################################################################
