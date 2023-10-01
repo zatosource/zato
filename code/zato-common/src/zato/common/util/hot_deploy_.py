@@ -70,6 +70,9 @@ def get_project_info(
                 # .. and add it to the project's list of directories ..
                 project.pickup_from_path.append(pickup_dir)
 
+            # .. sort directories for the ease of testing ..
+            project.pickup_from_path.sort()
+
         # .. we can append the project to our result ..
         out.append(project)
 
@@ -83,7 +86,7 @@ def extract_pickup_from_items(
     base_dir,      # type: str
     pickup_config, # type: strdictdict
     src_dir_name,  # type: str
-) -> 'iterator_[str | HotDeployProject]':
+) -> 'iterator_[str | list_[HotDeployProject]]':
 
     # Go through each piece of the hot-deployment configuration ..
     for key, value in pickup_config.items(): # type: ignore
@@ -101,13 +104,10 @@ def extract_pickup_from_items(
                 pickup_from = resolve_path(pickup_from, base_dir)
 
                 # .. check if this path points to a project ..
-                if project := get_project_info(pickup_from, src_dir_name):
-
-                    print()
-                    print(111, project)
-                    print()
-
-                yield pickup_from
+                if project_list := get_project_info(pickup_from, src_dir_name):
+                    yield project_list
+                else:
+                    yield pickup_from
 
 # ################################################################################################################################
 # ################################################################################################################################
