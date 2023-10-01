@@ -20,7 +20,7 @@ from zato.common.util.file_system import resolve_path
 
 class UtilAPITestCase(TestCase):
 
-    def xtest_resolve_path_home_directory(self):
+    def test_resolve_path_home_directory(self):
 
         # Local aliases
         suffix = '/test/abc'
