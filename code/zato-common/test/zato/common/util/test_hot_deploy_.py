@@ -12,7 +12,14 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.api import HotDeploy
+from zato.common.typing_ import cast_
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.hot_deploy_ import HotDeployProject
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,7 +30,7 @@ class HotDeployTestCase(TestCase):
 
         # Skip this test if we do not have an environment variable
         # pointing to a directory with a test project.
-        if not (test_project_dir := os.environ.get('Zato_Test_Hot_Deploy_Project_Root')): # type: ignore
+        if not (root_dir := os.environ.get('Zato_Test_Hot_Deploy_Project_Root')): # type: ignore
             return
 
         # We expect for the source to be kept in this directory
@@ -38,7 +45,7 @@ class HotDeployTestCase(TestCase):
         value1 = '/absolute/path'
 
         name2 = f'{HotDeploy.UserPrefix}.project.1'
-        value2 = test_project_dir
+        value2 = root_dir
 
         # .. build a dictionary for the extracting function to process ..
         pickup_config = {
@@ -46,6 +53,10 @@ class HotDeployTestCase(TestCase):
             name1: {'pickup_from': value1},
             name2: {'pickup_from': value2},
         }
+
+        # .. expected test data on output ..
+        project0_src_dir = os.path.join(root_dir, 'project0', 'subdir0', 'src')
+        project1_src_dir = os.path.join(root_dir, 'project1', 'subdir1', 'src')
 
         for idx, item in enumerate(extract_pickup_from_items(base_dir, pickup_config, HotDeploy.Source_Directory)):
 
@@ -60,7 +71,18 @@ class HotDeployTestCase(TestCase):
                 self.assertEqual(item, expected)
 
             elif idx == 2:
-                z
+
+                # .. there should be two projects on output ..
+                self.assertEqual(len(item), 2)
+
+                # .. do extract them ..
+                project0 = cast_('HotDeployProject', item[0])
+                project1 = cast_('HotDeployProject', item[1])
+
+                # .. and run the assertions now ..
+
+                self.assertEqual(str(project0.sys_path_entry), project0_src_dir)
+                self.assertEqual(str(project1.sys_path_entry), project1_src_dir)
 
             else:
                 raise Exception(f'Unexpected idx -> {idx} and item -> {item} ')
