@@ -11,7 +11,7 @@ from pathlib import Path
 
 # Zato
 from zato.common.api import HotDeploy
-from zato.common.hot_deploy_ import HotDeployProject
+from zato.common.hot_deploy_ import HotDeployProject, pickup_order_patterns
 from zato.common.typing_ import cast_
 from zato.common.util.file_system import resolve_path
 
@@ -19,7 +19,7 @@ from zato.common.util.file_system import resolve_path
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import iterator_, list_, strdictdict
+    from zato.common.typing_ import iterator_, list_, pathlist, strdictdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,20 +27,16 @@ if 0:
 def get_project_info(
     root,          # type: str
     src_dir_name,  # type: str
-    max_levels=10, # type: int
-) -> 'HotDeployProject | None':
-
-    # Visit up to max_levels of the root directory,
-    # trying to find a directory that holds the source code of a project / services.
+) -> 'list_[HotDeployProject] | None':
 
     # Local aliases
     root_path = Path(root)
 
     # Assume we will not find such a directory
-    out = None
+    out:'list_[HotDeployProject]' = []
 
     # Any potential project directories will go here
-    project_dirs:'list_[Path]' = []
+    project_dirs:'pathlist' = []
 
     # Look up the project directories recursively ..
     for item in root_path.rglob(src_dir_name):
@@ -48,10 +44,36 @@ def get_project_info(
         # .. if any is found, append it for later use ..
         project_dirs.append(item)
 
-    print()
-    print(111, project_dirs)
-    print()
+    # .. now, go through all the project directories found and construct project objects ..
+    # .. along with their directories to pick up code from ..
+    for item in project_dirs:
 
+        # .. do build the business object ..
+        project = HotDeployProject()
+        project.pickup_from_path = []
+
+        # .. this is what will be added to sys.path by a starting server ..
+        project.sys_path_entry = item
+
+        # .. look up all the directories to pick up from ..
+        for pattern in pickup_order_patterns:
+
+            # .. remove any potential whitespace ..
+            pattern = pattern.strip()
+
+            # .. do look them up ..
+            pickup_dirs = item.rglob(pattern)
+
+            # .. go over any found ..
+            for pickup_dir in pickup_dirs:
+
+                # .. and add it to the project's list of directories ..
+                project.pickup_from_path.append(pickup_dir)
+
+        # .. we can append the project to our result ..
+        out.append(project)
+
+    # .. now, we can return the result to our caller.
     return out
 
 # ################################################################################################################################

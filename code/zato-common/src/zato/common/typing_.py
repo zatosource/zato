@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,6 +12,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import date, datetime
 from decimal import Decimal as decimal_
+from pathlib import Path
 from typing import           \
     Any as any_,             \
     BinaryIO as binaryio_,   \
@@ -125,6 +126,8 @@ listnone      = anylistnone
 model         = type_[BaseModel]
 modelnone     = optional[type_[BaseModel]]
 noreturn      = noreturn
+path_         = Path
+pathlist      = list_[path_]
 set_          = set_
 stranydict    = dict_[str, any_]
 strcalldict   = dict_[str, callable_]
