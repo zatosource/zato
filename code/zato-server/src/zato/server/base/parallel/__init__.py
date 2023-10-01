@@ -54,8 +54,8 @@ from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, register_diag_handlers, \
     save_ipc_pid_port, spawn_greenlet, StaticConfig
-from zato.common.util.file_system import resolve_path
 from zato.common.util.file_transfer import path_string_list_to_list
+from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
@@ -671,22 +671,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.add_wsx_gateway_service_allowed()
 
         # Service sources from user-defined hot-deployment configuration ..
-        for key, value in self.pickup_config.items():
+        for pickup_from in extract_pickup_from_items(self.base_dir, self.pickup_config):
 
-            # .. we handle only specific keys ..
-            if key.startswith(HotDeploy.UserPrefix):
+            # .. log what we are about to do ..
+            logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix)', pickup_from)
 
-                # .. proceed only if we know where to pick up from ..
-                if pickup_from := value.get('pickup_from'):
-
-                    # .. this will resolve home directories and environment variables ..
-                    pickup_from = resolve_path(pickup_from, self.base_dir)
-
-                    # .. log what we are about to do ..
-                    logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix)', pickup_from)
-
-                    # .. and do append it for later use ..
-                    self.service_sources.append(pickup_from)
+            # .. and do append it for later use ..
+            self.service_sources.append(pickup_from)
 
         # Read all the user config files that are already available on startup
         self.read_user_config()
