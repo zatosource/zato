@@ -26,6 +26,8 @@ class HotDeployTestCase(TestCase):
         if not (test_project_dir := os.environ.get('Zato_Test_Hot_Deploy_Project_Root')): # type: ignore
             return
 
+        # We expect for the source to be kept in this directory
+
         # Prepare test data ..
         base_dir = '/my-base-dir'
 
@@ -45,7 +47,7 @@ class HotDeployTestCase(TestCase):
             name2: {'pickup_from': value2},
         }
 
-        for idx, item in enumerate(extract_pickup_from_items(base_dir, pickup_config)):
+        for idx, item in enumerate(extract_pickup_from_items(base_dir, pickup_config, HotDeploy.Source_Directory)):
 
             # This was a relative path that should have been turned into an absolute one ..
             if idx == 0:
