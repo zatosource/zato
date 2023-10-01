@@ -478,6 +478,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Look up Python hot-deployment directories ..
         path = os.environ.get('ZATO_HOT_DEPLOY_DIR', '')
 
+        # .. try the other name too ..
+        if not path:
+            path = os.environ.get('Zato_Hot_Deploy_Dir', '')
+
         # .. and make it possible to deploy from them.
         self._add_pickup_conf_from_local_path(path)
 
@@ -530,10 +534,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Bunch
         from bunch import bunchify
 
-        # Look up user-defined configuration directories
+        # Look up user-defined configuration directories ..
         items = os.environ.get('ZATO_USER_CONF_DIR', '')
 
-        # Ignore files other than that
+        # .. try the other name too ..
+        if not items:
+            items = os.environ.get('Zati_User_Conf_Dir', '')
+
+        # .. ignore files other than the below ones ..
         suffixes = ['ini', 'conf']
         patterns = ['*.' + elem for elem in suffixes]
         patterns_str = ', '.join(patterns)
@@ -662,14 +670,22 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Append additional services that can be invoked through WebSocket gateways.
         self.add_wsx_gateway_service_allowed()
 
-        # Service sources from user-defined hot-deployment configuration
+        # Service sources from user-defined hot-deployment configuration ..
         for key, value in self.pickup_config.items():
+
+            # .. we handle only specific keys ..
             if key.startswith(HotDeploy.UserPrefix):
-                pickup_from = value.get('pickup_from')
-                if pickup_from:
-                    pickup_from = resolve_path(pickup_from)
+
+                # .. proceed only if we know where to pick up from ..
+                if pickup_from := value.get('pickup_from'):
+
+                    # .. this will resolve home directories and environment variables ..
+                    pickup_from = resolve_path(pickup_from, self.base_dir)
+
+                    # .. log what we are about to do ..
                     logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix)', pickup_from)
-                    pickup_from = _normalize_service_source_path(pickup_from)
+
+                    # .. and do append it for later use ..
                     self.service_sources.append(pickup_from)
 
         # Read all the user config files that are already available on startup
