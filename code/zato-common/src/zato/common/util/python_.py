@@ -92,12 +92,12 @@ def reload_module_(mod_name:'str') -> 'None':
 
 # ################################################################################################################################
 
-def import_module_by_path(path:'str', root:'str'='') -> 'ModuleInfo | None':
+def get_module_name_by_path(path:'str | Path', root:'str'='') -> 'str':
 
     # Local aliases
     mod_path = Path(path)
 
-    # If there is not root, it means that the name of the module is the same as its file ..
+    # If there is no root, it means that the name of the module is the same as its file ..
     if not root:
         mod_name = mod_path.stem
 
@@ -127,6 +127,19 @@ def import_module_by_path(path:'str', root:'str'='') -> 'ModuleInfo | None':
 
         # .. and this gives us the full module name ..
         mod_name = '.'.join(mod_name_parts)
+
+    # .. we are ready to return the name to our caller ..
+    return mod_name
+
+# ################################################################################################################################
+
+def import_module_by_path(path:'str', root:'str'='') -> 'ModuleInfo | None':
+
+    # Local aliases
+    mod_path = Path(path)
+
+    # .. turn the path into its corresponding module name ..
+    mod_name = get_module_name_by_path(mod_path)
 
     # .. we have both the name of a module and its path so we can import it now ..
     if spec := spec_from_file_location(mod_name, path):
