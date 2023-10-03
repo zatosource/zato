@@ -12,6 +12,7 @@ import inspect
 import logging
 import os
 import sys
+from dataclasses import dataclass
 from datetime import datetime
 from functools import total_ordering
 from hashlib import sha256
@@ -54,6 +55,7 @@ from zato.common.odb.model.base import Base as ModelBase
 from zato.common.typing_ import cast_, list_
 from zato.common.util.api import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
 from zato.common.util.platform_ import is_non_windows
+from zato.common.util.python_ import get_module_name_by_path
 from zato.server.config import ConfigDict
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, \
     PubSubHook, SchedulerFacade, Service, WSXFacade
@@ -70,8 +72,8 @@ if 0:
     from inspect import ArgSpec
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.odb.api import ODBManager
-    from zato.common.typing_ import any_, anydict, anylist, callable_, dictnone, intstrdict, module_, stranydict, strint, \
-        strintdict, stroriter, tuple_
+    from zato.common.typing_ import any_, anydict, anylist, callable_, dictnone, intstrdict, module_, stranydict, \
+        strdictdict, strint, strintdict, stroriter, tuple_
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from zato.server.config import ConfigStore
@@ -193,6 +195,19 @@ class InRAMService:
 inramlist = list_[InRAMService]
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class ModelInfo:
+    name: 'str'
+    path: 'str'
+    mod_name: 'str'
+    source: 'str'
+
+modelinfolist = list_[ModelInfo]
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class DeploymentInfo:
     __slots__ = 'to_process', 'total_services', 'total_size', 'total_size_human'
@@ -270,7 +285,7 @@ class ServiceStore:
     def __init__(
         self,
         *,
-        services,   # type: stranydict
+        services,   # type: strdictdict
         odb,        # type: ODBManager
         server,     # type: ParallelServer
         is_testing, # type: bool
@@ -280,6 +295,7 @@ class ServiceStore:
         self.server = server
         self.is_testing = is_testing
         self.max_batch_size = 0
+        self.models = {}            # type: stranydict
         self.id_to_impl_name = {}   # type: intstrdict
         self.impl_name_to_id = {}   # type: strintdict
         self.name_to_impl_name = {} # type: stranydict
@@ -1325,10 +1341,25 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def import_models_from_file(self, file_name:'str', is_internal:'bool', base_dir:'str') -> 'anylist':
+    def import_models_from_file(
+        self,
+        file_name,   # type: str
+        is_internal, # type: bool
+        base_dir,    # type: str
+        root_dir,    # type: str
+    ) -> 'modelinfolist':
         """ Imports all the models from the path to a file.
         """
-        return self.import_objects_from_file(file_name, is_internal, base_dir, self._visit_module_for_models)
+        # This is a list of all the models imported ..
+        model_info_list = self.import_objects_from_file(file_name, is_internal, base_dir, self._visit_module_for_models)
+
+        # .. first, cache the information for later use ..
+        for item in model_info_list:
+            item = cast_('ModelInfo', item)
+            self.models[item.name] = item
+
+        # .. now, return the list to the caller.
+        return model_info_list
 
 # ################################################################################################################################
 
@@ -1372,15 +1403,14 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def get_module_importers(self, mod_name:'str') -> 'strlist':
-        """ Returns a list of paths pointing to modules that import the one given on input.
+    def _get_service_module_imports(self, mod_name:'str') -> 'strlist':
+        """ Returns a list of paths pointing to modules with services that import the module given on input.
         """
-
         # Local aliases
         out = []
         modules_visited = set()
 
-        # Go through all the items that we are aware of ..
+        # Go through all the services that we are aware of ..
         for service_data in self.services.values():
 
             # .. this is the Python class representing a service ..
@@ -1409,6 +1439,60 @@ class ServiceStore:
 
                 # .. cache that item so that we do not have to visit it more than once ..
                 modules_visited.add(mod)
+
+        # .. now, we can return our result to the caller.
+        return out
+
+# ################################################################################################################################
+
+    def _get_model_module_imports(self, mod_name:'str') -> 'strlist':
+        """ Returns a list of paths pointing to modules with services that import the module given on input.
+        """
+        # Local aliases
+        out = []
+        modules_visited = set()
+
+        # Go through all the models that we are aware of ..
+        for model in self.models.values():
+
+            # .. add type hints ..
+            model = cast_('ModelInfo', model)
+
+            # .. ignore this module if we have already visited this module before ..
+            if model.mod_name in modules_visited:
+                continue
+            else:
+                # .. ignore modules that do not import what we had on input ..
+                if not mod_name in model.source:
+                    continue
+
+                # .. otherwise, store that module's path for later use ..
+                out.append(model.path)
+
+                # .. cache that item so that we do not have to visit it more than once ..
+                modules_visited.add(model.mod_name)
+
+        # .. now, we can return our result to the caller.
+        return out
+
+# ################################################################################################################################
+
+    def get_module_importers(self, mod_name:'str') -> 'strlist':
+        """ Returns a list of paths pointing to modules that import the one given on input.
+        """
+
+        # Local aliases
+        out = []
+
+        # .. get files with services that import this module ..
+        service_path_list = self._get_service_module_imports(mod_name)
+
+        # .. get files with models that import this module ..
+        model_path_list = self._get_model_module_imports(mod_name)
+
+        # .. add everything found to the result ..
+        out.extend(service_path_list)
+        out.extend(model_path_list)
 
         # .. now, we can return our result to the caller.
         return out
@@ -1495,18 +1579,32 @@ class ServiceStore:
 
     def _visit_class_for_model(
         self,
-        _ignored_mod,         # type: any_
+        _ignored_mod,         # type: module_
         class_,               # type: any_
-        _ignored_fs_location, # type: any_
+        fs_location,          # type: str
         _ignored_is_internal  # type: any_
-    ) -> 'str':
-        return '{}.{}'.format(class_.__module__, class_.__name__)
+    ) -> 'ModelInfo':
+
+        # Reusable
+        mod_name = get_module_name_by_path(fs_location)
+
+        # Read the source and convert it from bytes to string
+        source = open(fs_location, 'rb').read()
+        source = source.decode('utf8')
+
+        out = ModelInfo()
+        out.name = '{}.{}'.format(mod_name, class_.__name__)
+        out.path = fs_location
+        out.mod_name = mod_name
+        out.source = source
+
+        return out
 
 # ################################################################################################################################
 
     def _visit_class_for_service(
         self,
-        mod,    # type: Module_
+        mod,    # type: module_
         class_, # type: type[Service]
         fs_location, # type: str
         is_internal  # type: bool
@@ -1589,7 +1687,7 @@ class ServiceStore:
 
     def _visit_module_for_objects(
         self,
-        mod,         # type: Module_
+        mod,         # type: module_
         is_internal, # type: bool
         fs_location, # type: str
         should_deploy_func, # type: callable_

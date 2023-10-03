@@ -23,7 +23,7 @@ from zato.common.broker_message import HOT_DEPLOY
 from zato.common.json_internal import dumps
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
 from zato.common.util.api import is_python_file, is_archive_file, new_cid
-from zato.common.util.file_system import fs_safe_now, touch
+from zato.common.util.file_system import fs_safe_now, touch_multiple
 from zato.common.util.python_ import import_module_by_path
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
@@ -163,8 +163,16 @@ class Create(AdminService):
         # Local aliases
         root_dir = 'src'
 
-        # This returns names of all the model classes deployed from the file
-        model_name_list = set(self.server.service_store.import_models_from_file(model_file_name, False, current_work_dir))
+        # This returns details of all the model classes deployed from the file
+        model_info_list = self.server.service_store.import_models_from_file(
+            model_file_name,
+            False,
+            current_work_dir,
+            root_dir,
+        )
+
+        # .. extract unique names only ..
+        model_name_list = set(item.name for item in model_info_list)
 
         # .. if we have deployed any models ..
         if model_name_list:
@@ -175,14 +183,12 @@ class Create(AdminService):
             # .. we enter here if the reload succeeded ..
             if mod_info:
 
-                # .. now, get all the files with services that are making use of this module ..
-                service_file_name_list = self.server.service_store.get_module_importers(mod_info.name)
+                # .. get all the files with that are making use of this module ..
+                # .. which may mean both files with services or models ..
+                file_name_list = self.server.service_store.get_module_importers(mod_info.name)
 
-                # .. go through each file with services using the models found ..
-                for item in service_file_name_list:
-
-                    # .. re-deploy it  ..
-                    touch(item)
+                # .. redeploy all such files  ..
+                touch_multiple(file_name_list)
 
         # .. and return to the caller the list of models deployed.
         return model_name_list
