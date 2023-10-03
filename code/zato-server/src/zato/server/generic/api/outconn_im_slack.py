@@ -15,7 +15,7 @@ from logging import getLogger
 from slackclient import SlackClient
 
 # Zato
-from zato.common.util.http import get_proxy_config
+from zato.common.util.http_ import get_proxy_config
 from zato.server.connection.wrapper import Wrapper
 
 # ################################################################################################################################
