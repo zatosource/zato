@@ -13,6 +13,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import date, datetime
 from decimal import Decimal as decimal_
 from pathlib import Path
+from types import ModuleType
 from typing import           \
     Any as any_,             \
     BinaryIO as binaryio_,   \
@@ -125,6 +126,7 @@ iobytes_      = io_[bytes]
 listnone      = anylistnone
 model         = type_[BaseModel]
 modelnone     = optional[type_[BaseModel]]
+module_       = ModuleType
 noreturn      = noreturn
 path_         = Path
 pathlist      = list_[path_]
