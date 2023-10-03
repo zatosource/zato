@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -22,7 +22,7 @@ from zato.common.broker_message import HOT_DEPLOY
 from zato.common.json_internal import dumps
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
 from zato.common.util.api import is_python_file, is_archive_file, new_cid
-from zato.common.util.file_system import fs_safe_now
+from zato.common.util.file_system import fs_safe_now, touch
 from zato.common.util.python_ import import_module_by_path
 from zato.server.service import AsIs, dataclass
 from zato.server.service.internal import AdminService, AdminSIO
@@ -149,97 +149,33 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _deploy_models(self, current_work_dir:'str', file_name:'str') -> 'strset':
+    def _deploy_models(self, current_work_dir:'str', model_file_name:'str') -> 'strset':
+
+        # Local aliases
+        root_dir = 'src'
 
         # This returns names of all the model classes deployed from the file
-        model_name_list = set(self.server.service_store.import_models_from_file(file_name, False, current_work_dir))
+        model_name_list = set(self.server.service_store.import_models_from_file(model_file_name, False, current_work_dir))
 
         # .. if we have deployed any models ..
         if model_name_list:
 
             # .. reload the module so its newest contents is in sys path ..
-            import_module_by_path(file_name, 'src')
+            mod_info = import_module_by_path(model_file_name, root_dir)
 
-            # .. now, get all the files with services that are making use of this module ..
+            # .. we enter here if the reload succeeded ..
+            if mod_info:
 
-            # .. go through each files found ..
+                # .. now, get all the files with services that are making use of this module ..
+                service_file_name_list = self.server.service_store.get_module_importers(mod_info.name)
 
-            # .. and reload it as well ..
-            # touch_module_path(mod_name)
+                # .. go through each file with services using the models found ..
+                for item in service_file_name_list:
 
-        '''
+                    # .. re-deploy it  ..
+                    touch(item)
 
-        # A set of Python objects, each representing a model class (rather than its name)
-        model_classes:'anyset' = set()
-
-        # All the modules to be reloaded due to changes to the data model
-        to_auto_deploy:'anyset' = set()
-
-        for item in gc.get_objects():
-
-            # It may be None in case it has been already GC-collected
-            if item is not None:
-                try:
-                    is_type = isinstance(item, type)
-                except RuntimeError:
-                    continue
-                else:
-                    if is_type:
-                        item_impl_name = '{}.{}'.format(item.__module__, item.__name__)
-                        if item_impl_name in model_name_list:
-                            model_classes.add(item)
-
-        # .. go through all the classes representing the deployed models ..
-        for model_class in model_classes:
-
-            # .. find any objects currently pointing to this model ..
-            referrers = gc.get_referrers(model_class)
-
-            referrers
-            referrers
-
-            # .. go through all such objects ..
-            for ref in referrers:
-
-                ref
-                ref
-
-                if isinstance(ref, dict):
-                    mod_name:'str' = ref.get('__module__') # type: ignore
-                    if mod_name:
-
-                        # Import the live Python module object ..
-                        mod = import_module(mod_name)
-
-                        # .. the stored module itself may have a reference
-                        # .. to the model, in which case we need to ignore this reference.
-                        if mod is service_store_mod:
-                            continue
-
-                        # .. proceed otherwise.
-                        module_path = getsourcefile(mod)
-
-                        # It is possible that the model class is deployed along
-                        # with a service that uses it. In that case, we do not redeploy
-                        # the service because it will be done anyway in _deploy_services,
-                        # which means that we need to skip this file ..
-                        if file_name != module_path:
-                            to_auto_deploy.add(module_path)
-
-        # If there are any services to be deployed ..
-        if to_auto_deploy:
-
-            # .. format lexicographically for logging ..
-            to_auto_deploy = sorted(to_auto_deploy) # type: ignore
-
-            #  .. inform users that we are to auto-redeploy services and why we are doing it ..
-            self.logger.info('Model class `%s` changed; auto-redeploying `%s`', model_class, to_auto_deploy)
-
-            # .. go through each child service found and hot-deploy it ..
-            for module_path in to_auto_deploy:
-                shutil.copy(module_path, self.server.hot_deploy_config.pickup_dir)
-        '''
-
+        # .. and return to the caller the list of models deployed.
         return model_name_list
 
 # ################################################################################################################################

@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import importlib
 import inspect
 import logging
 import os
@@ -67,10 +68,9 @@ from zato.simpleio import CySimpleIO
 if 0:
 
     from inspect import ArgSpec
-    from types import ModuleType
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.odb.api import ODBManager
-    from zato.common.typing_ import any_, anydict, anylist, callable_, dictnone, intstrdict, stranydict, strint, \
+    from zato.common.typing_ import any_, anydict, anylist, callable_, dictnone, intstrdict, module_, stranydict, strint, \
         strintdict, stroriter, tuple_
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
@@ -169,21 +169,19 @@ class InRAMService:
     slow_threshold: 'int' = 99999
     source_code_info: 'SourceCodeInfo'
 
-    def __repr__(self):
+    def __repr__(self) -> 'str':
         return '<{} at {} name:{} impl_name:{}>'.format(self.__class__.__name__, hex(id(self)), self.name, self.impl_name)
 
-    def __eq__(self, other):
-        # type: (InRAMService) -> bool
+    def __eq__(self, other:'InRAMService') -> 'bool':
         return self.name == other.name
 
-    def __lt__(self, other):
-        # type: (InRAMService) -> bool
+    def __lt__(self, other:'InRAMService') -> 'bool':
         return self.name < other.name
 
-    def __hash__(self):
+    def __hash__(self) -> 'str':
         return hash(self.name)
 
-    def to_dict(self):
+    def to_dict(self) -> 'stranydict':
         return {
             'name': self.name,
             'impl_name': self.impl_name,
@@ -936,6 +934,8 @@ class ServiceStore:
                 self.services[item.impl_name]['name'] = item_name
                 self.services[item.impl_name]['deployment_info'] = item_deployment_info
                 self.services[item.impl_name]['service_class'] = item_service_class
+                self.services[item.impl_name]['path'] = item.source_code_info.path
+                self.services[item.impl_name]['source_code'] = item.source_code_info.source.decode('utf8')
 
                 item_is_active = item.is_active
                 item_slow_threshold = item.slow_threshold
@@ -1366,14 +1366,57 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def import_services_from_module_object(self, mod:'ModuleType', is_internal:'bool') -> 'anylist':
+    def import_services_from_module_object(self, mod:'module_', is_internal:'bool') -> 'anylist':
         """ Imports all the services from a Python module object.
         """
         return self._visit_module_for_services(mod, is_internal, inspect.getfile(mod))
 
 # ################################################################################################################################
 
-    def _should_deploy_model(self, name:'str', item:'any_', current_module:'ModuleType') -> 'bool':
+    def get_module_importers(self, mod_name:'str') -> 'strlist':
+        """ Returns a list of paths pointing to modules that import the one given on input.
+        """
+
+        # Local aliases
+        out = []
+        modules_visited = set()
+
+        # Go through all the items that we are aware of ..
+        for service_data in self.services.values():
+
+            # .. this is the Python class representing a service ..
+            service_class = service_data['service_class']
+
+            # .. get the module of this class based on the module's name ..
+            mod = importlib.import_module(service_class.__module__)
+
+            # .. get the source of the module that this class is in, ..
+            # .. but not if we have already visited this module before ..
+            if mod in modules_visited:
+                continue
+            else:
+                # .. get the actual source code ..
+                source_code = service_data['source_code']
+
+                # .. ignore modules that do not import what we had on input ..
+                if not mod_name in source_code:
+                    continue
+
+                # .. otherwise, extract the path of this module ..
+                path = service_data['path']
+
+                # .. store that module's path for later use ..
+                out.append(path)
+
+                # .. cache that item so that we do not have to visit it more than once ..
+                modules_visited.add(mod)
+
+        # .. now, we can return our result to the caller.
+        return out
+
+# ################################################################################################################################
+
+    def _should_deploy_model(self, name:'str', item:'any_', current_module:'module_') -> 'bool':
         """ Is item a model that we can deploy?
         """
         if isclass(item) and hasattr(item, '__mro__'):
@@ -1386,7 +1429,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _should_deploy_service(self, name:'str', item:'any_', current_module:'ModuleType') -> 'bool':
+    def _should_deploy_service(self, name:'str', item:'any_', current_module:'module_') -> 'bool':
         """ Is item a service that we can deploy?
         """
         # type: (str, object, object) -> bool
@@ -1425,7 +1468,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _get_source_code_info(self, mod:'ModuleType') -> 'SourceCodeInfo':
+    def _get_source_code_info(self, mod:'module_') -> 'SourceCodeInfo':
         """ Returns the source code of and the FS path to the given module.
         """
 
@@ -1466,7 +1509,7 @@ class ServiceStore:
 
     def _visit_class_for_service(
         self,
-        mod,    # type: ModuleType
+        mod,    # type: Module_
         class_, # type: type[Service]
         fs_location, # type: str
         is_internal  # type: bool
@@ -1549,7 +1592,7 @@ class ServiceStore:
 
     def _visit_module_for_objects(
         self,
-        mod,         # type: ModuleType
+        mod,         # type: Module_
         is_internal, # type: bool
         fs_location, # type: str
         should_deploy_func, # type: callable_
@@ -1592,7 +1635,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _visit_module_for_models(self, mod:'ModuleType', is_internal:'bool', fs_location:'str') -> 'anylist':
+    def _visit_module_for_models(self, mod:'module_', is_internal:'bool', fs_location:'str') -> 'anylist':
         """ Imports models from a module object.
         """
         # type: (object, bool, str) -> list
@@ -1602,7 +1645,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _visit_module_for_services(self, mod:'ModuleType', is_internal:'bool', fs_location:'str') -> 'anylist':
+    def _visit_module_for_services(self, mod:'module_', is_internal:'bool', fs_location:'str') -> 'anylist':
         """ Imports services from a module object.
         """
         # type: (object, bool, str) -> list
