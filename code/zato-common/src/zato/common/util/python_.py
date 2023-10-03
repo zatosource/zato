@@ -7,9 +7,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import importlib
 import sys
 import traceback
+from importlib.util import module_from_spec, spec_from_file_location
 from logging import getLogger
 from pathlib import Path
 from threading import current_thread
@@ -90,25 +90,50 @@ def import_module_by_path(path:'str', root:'str'='') -> 'None':
 
     # .. otherwise, we need to traverse up until we found the root directory ..
     else:
-        pass
 
-    # .. and then we can build the name of the module, starting from root down ..
+        # .. first, get all the path parts, reversed, because we are traversing them backwards ..
+        parts = mod_path.parts
+        parts = list(reversed(parts))
 
-    '''
-    if name is None:
-        name = Path(path).stem
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-    '''
+        # .. the first element is the file name so we need to remove its extension ..
+        mod_file = parts[0]
+        mod_file = Path(mod_file)
+        mod_file_name = mod_file.stem
+
+        # .. now, look up our root ..
+        root_idx = parts.index(root)
+
+        # .. get the rest of the module's path, from right above its name (hence we start from 1) until the root ..
+        mod_name_parts = parts[1:root_idx]
+
+        # .. we have the names and we can reverse them back so they run from top to bottom again ..
+        mod_name_parts = list(reversed(mod_name_parts))
+
+        # .. we can append the final file name now ..
+        mod_name_parts.append(mod_file_name)
+
+        # .. and this gives us the full module name ..
+        mod_name = '.'.join(mod_name_parts)
+
+    # .. we have both the name of a module and its path so we can import it now ..
+    if spec := spec_from_file_location(mod_name, path):
+        module = module_from_spec(spec)
+        sys.modules[mod_name] = module
+        spec.loader.exec_module(module) # type: ignore
+
+        print(111, module)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    path =
+
+    import sys
+    sys.path.insert(0, '#################################')
+
+    path = '#################################'
+
+    import_module_by_path(path, 'src')
 
 # ################################################################################################################################
 # ################################################################################################################################
