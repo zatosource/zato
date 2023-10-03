@@ -7,7 +7,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import gc
 import os
 import shutil
 from contextlib import closing
@@ -24,7 +23,7 @@ from zato.common.json_internal import dumps
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
 from zato.common.util.api import is_python_file, is_archive_file, new_cid
 from zato.common.util.file_system import fs_safe_now
-from zato.common.util.python_ import reload_module_, touch_module_path
+from zato.common.util.python_ import import_module_by_path
 from zato.server.service import AsIs, dataclass
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -158,19 +157,15 @@ class Create(AdminService):
         # .. if we have deployed any models ..
         if model_name_list:
 
-            # .. first, get the name of the module these models were in ..
-
-            mod_name = '##################################'
-
-            # .. now, reload the module so its newest contents is in sys path ..
-            reload_module_(mod_name)
+            # .. reload the module so its newest contents is in sys path ..
+            import_module_by_path(file_name, 'src')
 
             # .. now, get all the files with services that are making use of this module ..
 
             # .. go through each files found ..
 
             # .. and reload it as well ..
-            touch_module_path(mod_name)
+            # touch_module_path(mod_name)
 
         '''
 
