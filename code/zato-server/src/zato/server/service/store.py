@@ -1161,7 +1161,6 @@ class ServiceStore:
     ) -> 'DeploymentInfo':
         """ Imports services from any of the supported sources.
         """
-        # type: (Any, str, str) -> DeploymentInfo
 
         items = items if isinstance(items, (list, tuple)) else [items]
         to_process = []
@@ -1432,7 +1431,6 @@ class ServiceStore:
     def _should_deploy_service(self, name:'str', item:'any_', current_module:'module_') -> 'bool':
         """ Is item a service that we can deploy?
         """
-        # type: (str, object, object) -> bool
 
         if isclass(item) and hasattr(item, '__mro__') and hasattr(item, 'get_name'):
             if item is not Service and item is not AdminService and item is not PubSubHook:
@@ -1502,7 +1500,6 @@ class ServiceStore:
         _ignored_fs_location, # type: any_
         _ignored_is_internal  # type: any_
     ) -> 'str':
-        # type: (object, object, str, bool) -> object
         return '{}.{}'.format(class_.__module__, class_.__name__)
 
 # ################################################################################################################################
@@ -1601,7 +1598,6 @@ class ServiceStore:
     ) -> 'anylist':
         """ Imports services or models from a module object.
         """
-        # type: (object, bool, str, object, object, bool) -> list
         to_process = []
         try:
             for name in sorted(dir(mod)):
@@ -1638,7 +1634,6 @@ class ServiceStore:
     def _visit_module_for_models(self, mod:'module_', is_internal:'bool', fs_location:'str') -> 'anylist':
         """ Imports models from a module object.
         """
-        # type: (object, bool, str) -> list
         return self._visit_module_for_objects(mod, is_internal, fs_location,
             self._should_deploy_model, self._visit_class_for_model,
             needs_before_add_to_store_result=False)
@@ -1648,7 +1643,6 @@ class ServiceStore:
     def _visit_module_for_services(self, mod:'module_', is_internal:'bool', fs_location:'str') -> 'anylist':
         """ Imports services from a module object.
         """
-        # type: (object, bool, str) -> list
         return self._visit_module_for_objects(mod, is_internal, fs_location,
             self._should_deploy_service, self._visit_class_for_service,
             needs_before_add_to_store_result=True)
