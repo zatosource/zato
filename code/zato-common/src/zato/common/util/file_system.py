@@ -11,6 +11,7 @@ import os
 import re
 import string
 from datetime import datetime, timedelta
+from pathlib import Path
 from tempfile import gettempdir
 from time import sleep
 from uuid import uuid4
@@ -96,5 +97,10 @@ def resolve_path(path:'str', base_dir:'str'='') -> 'str':
 
     # .. now, we can return the result to our caller ..
     return path
+
+# ################################################################################################################################
+
+def touch(path:'str') -> 'None':
+    Path(path).touch()
 
 # ################################################################################################################################
