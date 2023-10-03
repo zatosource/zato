@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import shutil
 from contextlib import closing
+from dataclasses import dataclass
 from datetime import datetime
 from errno import ENOENT
 from json import loads
@@ -24,13 +25,14 @@ from zato.common.odb.model import DeploymentPackage, DeploymentStatus
 from zato.common.util.api import is_python_file, is_archive_file, new_cid
 from zato.common.util.file_system import fs_safe_now, touch
 from zato.common.util.python_ import import_module_by_path
-from zato.server.service import AsIs, dataclass
+from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, anylistnone, intlist, strbytes, strlist, strset
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.common.typing_ import any_, anylist, anylistnone, commoniter, intlist, strbytes, strlist, strset
     from zato.server.service.store import InRAMService
     InRAMService = InRAMService
 
@@ -63,19 +65,19 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _delete(self, items):
+    def _delete(self, items:'commoniter') -> 'None':
         for item in items:
             if os.path.isfile(item):
                 os.remove(item)
             elif os.path.isdir(item):
                 shutil.rmtree(item)
             else:
-                msg = "Could not delete `%s`, it's neither file nor a directory, stat:`%s`"
+                msg = 'Could not delete `%s`, it is neither file nor a directory, stat:`%s`'
                 self.logger.warning(msg, item, os.stat(item))
 
 # ################################################################################################################################
 
-    def _backup_last(self, fs_now, current_work_dir, backup_format, last_backup_work_dir):
+    def _backup_last(self, fs_now:'str', current_work_dir:'str', backup_format:'str', last_backup_work_dir:'str') -> 'None':
 
         # We want to grab the directory's contents right now, before we place the
         # new backup in there
@@ -93,7 +95,14 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _backup_linear_log(self, fs_now, current_work_dir, backup_format, backup_work_dir, backup_history):
+    def _backup_linear_log(
+        self,
+        fs_now,           # type: str
+        current_work_dir, # type: str
+        backup_format,    # type: str
+        backup_work_dir,  # type: str
+        backup_history,   # type: int
+    ) -> 'None':
 
         delete_previous_backups = False
 
@@ -204,19 +213,24 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _deploy_file(self, current_work_dir, payload, file_name, should_deploy_in_place):
-        # type: (str, object, str) -> DeploymentCtx
+    def _deploy_file(
+        self,
+        current_work_dir, # type: str
+        payload,          # type: any_
+        file_name,        # type: str
+        should_deploy_in_place # type: bool
+    ) -> 'DeploymentCtx':
 
         if not should_deploy_in_place:
             with open(file_name, 'w', encoding='utf-8') as f:
                 payload = payload.decode('utf8') if isinstance(payload, bytes) else payload
-                f.write(payload)
+                _ = f.write(payload)
 
         model_name_list = self._deploy_models(current_work_dir, file_name)
         service_id_list = self._deploy_services(current_work_dir, file_name)
 
         ctx = DeploymentCtx()
-        ctx.model_name_list = model_name_list
+        ctx.model_name_list = model_name_list # type: ignore
         ctx.service_id_list = service_id_list
         ctx.service_name_list = [self.server.service_store.get_service_name_by_id(elem) for elem in service_id_list]
 
@@ -283,7 +297,7 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _update_deployment_status(self, session, package_id, status):
+    def _update_deployment_status(self, session:'SASession', package_id:'int', status:'str') -> 'None':
         ds = session.query(DeploymentStatus).\
             filter(DeploymentStatus.package_id==package_id).\
             filter(DeploymentStatus.server_id==self.server.id).\
@@ -296,31 +310,34 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def deploy_package(self, package_id, session):
+    def deploy_package(self, package_id:'int', session:'SASession') -> 'any_':
+
         dp = self.get_package(package_id, session)
 
-        # Load JSON details so that we can find out if we are to hot-deploy in place or not ..
-        details = loads(dp.details)
+        if dp:
 
-        should_deploy_in_place = details['should_deploy_in_place']
-        in_place_dir_name = os.path.dirname(details['fs_location'])
+            # Load JSON details so that we can find out if we are to hot-deploy in place or not ..
+            details = loads(dp.details)
 
-        if is_archive_file(dp.payload_name) or is_python_file(dp.payload_name):
-            return self._deploy_package(session, package_id, dp.payload_name, dp.payload,
-                should_deploy_in_place, in_place_dir_name)
-        else:
-            # This shouldn't really happen at all because the pickup notifier is to
-            # filter such things out but life is full of surprises
-            self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.IGNORED)
+            should_deploy_in_place = details['should_deploy_in_place']
+            in_place_dir_name = os.path.dirname(details['fs_location'])
 
-            # Log a warning but only if it is not about a compiled bytecode file.
-            if not dp.payload_name.endswith('.pyc'):
-                self.logger.info(
-                    'Ignoring package id:`%s`, payload_name:`%s`, not a Python file nor an archive', dp.id, dp.payload_name)
+            if is_archive_file(dp.payload_name) or is_python_file(dp.payload_name):
+                return self._deploy_package(session, package_id, dp.payload_name, dp.payload,
+                    should_deploy_in_place, in_place_dir_name)
+            else:
+                # This shouldn't really happen at all because the pickup notifier is to
+                # filter such things out but life is full of surprises
+                self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.IGNORED)
+
+                # Log a warning but only if it is not about a compiled bytecode file.
+                if not dp.payload_name.endswith('.pyc'):
+                    self.logger.info(
+                        'Ignoring package id:`%s`, payload_name:`%s`, not a Python file nor an archive', dp.id, dp.payload_name)
 
 # ################################################################################################################################
 
-    def get_package(self, package_id, session):
+    def get_package(self, package_id:'int', session:'SASession') -> 'DeploymentPackage | None':
         return session.query(DeploymentPackage).\
             filter(DeploymentPackage.id==package_id).\
             first()
