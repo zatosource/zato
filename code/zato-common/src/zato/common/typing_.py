@@ -100,6 +100,7 @@ callable_     = callable_[..., any_]
 callnone      = optional[callable_]
 cast_         = cast_
 commondict    = dict_[str, union_[int, str_, bool, float, anydict, anylist, datetime, None]]
+commoniter    = union_[anylist, anytuple]
 date_         = date
 datetime_     = datetime
 datetimez     = DateTimeWithZone
