@@ -13,8 +13,6 @@ import shutil
 from contextlib import closing
 from datetime import datetime
 from errno import ENOENT
-from importlib import import_module
-from inspect import getsourcefile
 from json import loads
 from time import sleep
 from traceback import format_exc
@@ -26,13 +24,14 @@ from zato.common.json_internal import dumps
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
 from zato.common.util.api import is_python_file, is_archive_file, new_cid
 from zato.common.util.file_system import fs_safe_now
+from zato.common.util.python_ import reload_module_, touch_module_path
 from zato.server.service import AsIs, dataclass
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, anylistnone, anyset, intlist, strbytes, strlist, strset
+    from zato.common.typing_ import any_, anylist, anylistnone, intlist, strbytes, strlist, strset
     from zato.server.service.store import InRAMService
     InRAMService = InRAMService
 
@@ -88,7 +87,7 @@ class Create(AdminService):
         # First make the backup to the special 'last' directory
         last_backup_path = os.path.join(last_backup_work_dir, fs_now)
 
-        shutil.make_archive(last_backup_path, backup_format, current_work_dir, verbose=True, logger=None)
+        _ = shutil.make_archive(last_backup_path, backup_format, current_work_dir, verbose=True, logger=None)
 
         # Delete everything previously found in the last backup directory
         self._delete(last_backup_contents)
@@ -124,7 +123,7 @@ class Create(AdminService):
 
         backup_name = '{}-{}'.format(next_prefix, fs_now)
         backup_path = os.path.join(backup_work_dir, backup_name)
-        shutil.make_archive(backup_path, backup_format, current_work_dir, verbose=True, logger=None)
+        _ = shutil.make_archive(backup_path, backup_format, current_work_dir, verbose=True, logger=None)
 
         if delete_previous_backups:
             self._delete(backup_contents)
@@ -153,14 +152,27 @@ class Create(AdminService):
 
     def _deploy_models(self, current_work_dir:'str', file_name:'str') -> 'strset':
 
-        # Reusable
-        from zato.server.service import store as service_store_mod
-
-        # Local aliases
-        model_class = None
-
         # This returns names of all the model classes deployed from the file
         model_name_list = set(self.server.service_store.import_models_from_file(file_name, False, current_work_dir))
+
+        # .. if we have deployed any models ..
+        if model_name_list:
+
+            # .. first, get the name of the module these models were in ..
+
+            mod_name = '##################################'
+
+            # .. now, reload the module so its newest contents is in sys path ..
+            reload_module_(mod_name)
+
+            # .. now, get all the files with services that are making use of this module ..
+
+            # .. go through each files found ..
+
+            # .. and reload it as well ..
+            touch_module_path(mod_name)
+
+        '''
 
         # A set of Python objects, each representing a model class (rather than its name)
         model_classes:'anyset' = set()
@@ -182,8 +194,20 @@ class Create(AdminService):
                         if item_impl_name in model_name_list:
                             model_classes.add(item)
 
+        # .. go through all the classes representing the deployed models ..
         for model_class in model_classes:
-            for ref in gc.get_referrers(model_class):
+
+            # .. find any objects currently pointing to this model ..
+            referrers = gc.get_referrers(model_class)
+
+            referrers
+            referrers
+
+            # .. go through all such objects ..
+            for ref in referrers:
+
+                ref
+                ref
 
                 if isinstance(ref, dict):
                     mod_name:'str' = ref.get('__module__') # type: ignore
@@ -192,7 +216,7 @@ class Create(AdminService):
                         # Import the live Python module object ..
                         mod = import_module(mod_name)
 
-                        # .. the store module itself may have a reference
+                        # .. the stored module itself may have a reference
                         # .. to the model, in which case we need to ignore this reference.
                         if mod is service_store_mod:
                             continue
@@ -213,12 +237,13 @@ class Create(AdminService):
             # .. format lexicographically for logging ..
             to_auto_deploy = sorted(to_auto_deploy) # type: ignore
 
-            #  .. nform users that we are to auto-redeploy services and why we are doing it ..
+            #  .. inform users that we are to auto-redeploy services and why we are doing it ..
             self.logger.info('Model class `%s` changed; auto-redeploying `%s`', model_class, to_auto_deploy)
 
             # .. go through each child service found and hot-deploy it ..
             for module_path in to_auto_deploy:
                 shutil.copy(module_path, self.server.hot_deploy_config.pickup_dir)
+        '''
 
         return model_name_list
 

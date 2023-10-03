@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import inspect
 import logging
 import os
+import sys
 from datetime import datetime
 from functools import total_ordering
 from hashlib import sha256
@@ -41,6 +42,7 @@ except ImportError:
 
 # Zato
 from zato.common.api import CHANNEL, DONT_DEPLOY_ATTR_NAME, RATE_LIMIT, SourceCodeInfo, TRACE1
+from zato.common.hot_deploy_ import HotDeployProject
 from zato.common.json_internal import dumps
 from zato.common.json_schema import get_service_config, ValidationConfig as JSONSchemaValidationConfig, \
      Validator as JSONSchemaValidator
@@ -1196,6 +1198,21 @@ class ServiceStore:
                 # .. a named module
                 else:
                     to_process.extend(self.import_services_from_module(item, is_internal))
+
+            # .. a list of project roots ..
+            elif isinstance(item, list):
+
+                # .. go through each project ..
+                for elem in item:
+
+                    # .. add type hints ..
+                    elem = cast_('HotDeployProject', elem)
+
+                    # .. make the root directory's elements importable by adding the root to $PYTHONPATH ..
+                    sys.path.insert(0, str(elem.sys_path_entry))
+
+                    for dir_name in elem.pickup_from_path:
+                        to_process.extend((self.import_services_from_directory(str(dir_name), base_dir)))
 
             # .. must be a module object
             else:

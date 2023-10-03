@@ -476,6 +476,23 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def add_pickup_conf_from_env(self) -> 'None':
 
+        # These exact names may exist in the environment ..
+        name_list = ['Zato_Project_Root', 'Zato_Hot_Deploy_Dir', 'ZATO_HOT_DEPLOY_DIR']
+
+        # .. same for these prefixes ..
+        prefix_list = ['Zato_Project_Root_', 'Zato_Hot_Deploy_Dir_']
+
+        # .. go through the specific names and add any matching ..
+        for name in name_list:
+            if path := os.environ.get(name, ''):
+                self._add_pickup_conf_from_local_path(path, name)
+
+        # .. go through the list of prefixes and add any matching too.
+        for prefix in prefix_list:
+            for key, value in os.environ.items():
+                if key.startswith(prefix):
+                    self._add_pickup_conf_from_local_path(value, key)
+
         # Look up Python hot-deployment directories ..
         path = os.environ.get('ZATO_HOT_DEPLOY_DIR', '')
 
@@ -484,7 +501,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             path = os.environ.get('Zato_Hot_Deploy_Dir', '')
 
         # .. and make it possible to deploy from them.
-        self._add_pickup_conf_from_local_path(path)
 
 # ################################################################################################################################
 
@@ -494,11 +510,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         path = os.path.join(self.deploy_auto_from, 'code')
 
         # .. and make it possible to deploy from them.
-        self._add_pickup_conf_from_local_path(path)
+        self._add_pickup_conf_from_local_path(path, 'AutoDeploy')
 
 # ################################################################################################################################
 
-    def _add_pickup_conf_from_local_path(self, items:'str') -> 'None':
+    def _add_pickup_conf_from_local_path(self, items:'str', source:'str') -> 'None':
 
         # Bunch
         from bunch import bunchify
@@ -514,7 +530,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             for name in items:
 
                 # .. log what we are about to do ..
-                logger.info('Adding hot-deployment configuration from `%s` (env. variable found -> ZATO_HOT_DEPLOY_DIR)', name)
+                msg = 'Adding hot-deployment configuration from `%s` (source -> %s)'
+                logger.info(msg, name, source)
 
                 # .. stay on the safe side because, here, we do not know where it will be used ..
                 _fs_safe_name = fs_safe_name(name)
