@@ -7,20 +7,33 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import importlib
 import sys
 import traceback
+from dataclasses import dataclass
 from importlib.util import module_from_spec, spec_from_file_location
 from logging import getLogger
 from pathlib import Path
 from threading import current_thread
 
 # Zato
-from zato.common.typing_ import cast_
+from zato.common.typing_ import cast_, module_
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger('zato')
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class ModuleInfo:
+    name: 'str'
+    path: 'Path'
+    module: 'module_'
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def get_python_id(item):
@@ -79,7 +92,7 @@ def reload_module_(mod_name:'str') -> 'None':
 
 # ################################################################################################################################
 
-def import_module_by_path(path:'str', root:'str'='') -> 'None':
+def import_module_by_path(path:'str', root:'str'='') -> 'ModuleInfo | None':
 
     # Local aliases
     mod_path = Path(path)
@@ -121,17 +134,14 @@ def import_module_by_path(path:'str', root:'str'='') -> 'None':
         sys.modules[mod_name] = module
         spec.loader.exec_module(module) # type: ignore
 
-# ################################################################################################################################
-# ################################################################################################################################
+        # .. build an object encapsulating what we know about the module
+        out = ModuleInfo()
+        out.name = mod_name
+        out.path = mod_path
+        out.module = module
 
-if __name__ == '__main__':
-
-    import sys
-    sys.path.insert(0, '#################################')
-
-    path = '#################################'
-
-    import_module_by_path(path, 'src')
+        # .. finally, we can return it to our caller.
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
