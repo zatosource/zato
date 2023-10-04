@@ -67,11 +67,13 @@ def get_project_info(
             # .. go over any found ..
             for pickup_dir in pickup_dirs:
 
-                # .. and add it to the project's list of directories ..
-                project.pickup_from_path.append(pickup_dir)
+                # .. ignore Python's own directories ..
+                if '__pycache__' in pickup_dir.parts:
+                    continue
 
-            # .. sort directories for the ease of testing ..
-            project.pickup_from_path.sort()
+                # .. and add it to the project's list of directories ..
+                if not pickup_dir in project.pickup_from_path:
+                    project.pickup_from_path.append(pickup_dir)
 
         # .. we can append the project to our result ..
         out.append(project)
