@@ -109,9 +109,6 @@ def get_module_name_by_path(path:'str | Path') -> 'str':
     # note that currently there is only one directory configured here.
     immediate_root_list = ['services']
 
-    # We are going to look up the root up to that many levels above our file name
-    root_depth = 10
-
     # All the roots that we may potentially find
     root_list = ['src', 'source']
 

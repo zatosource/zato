@@ -185,7 +185,7 @@ class Create(AdminService):
         )
 
         # .. extract unique names only ..
-        model_name_list = set(item.name for item in model_info_list)
+        model_name_list = {item.name for item in model_info_list}
 
         # .. if we have deployed any models ..
         if model_name_list:

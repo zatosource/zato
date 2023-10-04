@@ -44,7 +44,6 @@ except ImportError:
 
 # Zato
 from zato.common.api import CHANNEL, DONT_DEPLOY_ATTR_NAME, RATE_LIMIT, SourceCodeInfo, TRACE1
-from zato.common.hot_deploy_ import HotDeployProject
 from zato.common.json_internal import dumps
 from zato.common.json_schema import get_service_config, ValidationConfig as JSONSchemaValidationConfig, \
      Validator as JSONSchemaValidator
@@ -71,16 +70,18 @@ if 0:
 
     from inspect import ArgSpec
     from sqlalchemy.orm.session import Session as SASession
+    from zato.common.hot_deploy_ import HotDeployProject
     from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anylist, callable_, dictnone, intstrdict, module_, stranydict, \
-        strdictdict, strint, strintdict, stroriter, tuple_
+        strdictdict, strint, strintdict, strlist, stroriter, tuple_
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from zato.server.config import ConfigStore
-    ConfigStore    = ConfigStore
-    ODBManager     = ODBManager
-    ParallelServer = ParallelServer
-    WorkerStore    = WorkerStore
+    ConfigStore      = ConfigStore
+    HotDeployProject = HotDeployProject
+    ODBManager       = ODBManager
+    ParallelServer   = ParallelServer
+    WorkerStore      = WorkerStore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -180,7 +181,7 @@ class InRAMService:
     def __lt__(self, other:'InRAMService') -> 'bool':
         return self.name < other.name
 
-    def __hash__(self) -> 'str':
+    def __hash__(self) -> 'int':
         return hash(self.name)
 
     def to_dict(self) -> 'stranydict':
