@@ -1347,7 +1347,6 @@ class ServiceStore:
         file_name,   # type: str
         is_internal, # type: bool
         base_dir,    # type: str
-        root_dir,    # type: str
     ) -> 'modelinfolist':
         """ Imports all the models from the path to a file.
         """

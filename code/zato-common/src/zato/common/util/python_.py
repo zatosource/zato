@@ -171,7 +171,7 @@ def get_module_name_by_path(path:'str | Path') -> 'str':
 
 # ################################################################################################################################
 
-def import_module_by_path(path:'str', root:'str'='') -> 'ModuleInfo | None':
+def import_module_by_path(path:'str') -> 'ModuleInfo | None':
 
     # Local aliases
     mod_path = Path(path)

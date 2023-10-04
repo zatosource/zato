@@ -74,11 +74,20 @@ def create_pool(engine_params, ping_query, query_class=None):
     from zato.common.util.api import get_engine_url
 
     engine_params = copy.deepcopy(engine_params)
+
+    # Databases other than SQLite ..
     if engine_params['engine'] != 'sqlite':
         engine_params['password'] = str(engine_params['password'])
         engine_params['extra']['pool_size'] = engine_params.pop('pool_size')
+        conect_args = None
 
-    engine = create_engine(get_engine_url(engine_params), **engine_params.get('extra', {}))
+    # .. we are using SQLite ..
+    else:
+        conect_args = {
+            'check_same_thread': False
+        }
+
+    engine = create_engine(get_engine_url(engine_params), conect_args=conect_args, **engine_params.get('extra', {}))
     engine.execute(ping_query)
     Session = sessionmaker()
     Session.configure(bind=engine, query_cls=query_class)
