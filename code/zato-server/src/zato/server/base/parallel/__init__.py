@@ -83,6 +83,7 @@ from zato.server.sso import SSOTool
 
 if 0:
 
+    from bunch import Bunch
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.ipc.client import IPCResponse
     from zato.common.odb.api import ODBManager
@@ -98,6 +99,7 @@ if 0:
     from zato.server.startup_callable import StartupCallableTool
     from zato.sso.api import SSOAPI
 
+    Bunch = Bunch
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
@@ -1495,8 +1497,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def on_ipc_invoke_callback(self, msg:'Bunch') -> 'anydict':
+    def on_ipc_invoke_callback(self, msg:'Bunch') -> 'anydict': # type: ignore
 
+        msg = cast_('Bunch', msg)
         service = msg['service']
         data    = msg['data']
 
