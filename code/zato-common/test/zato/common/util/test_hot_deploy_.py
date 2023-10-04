@@ -20,6 +20,7 @@ from zato.common.util.hot_deploy_ import extract_pickup_from_items
 
 if 0:
     from zato.common.hot_deploy_ import HotDeployProject
+    HotDeployProject = HotDeployProject
 
 # ################################################################################################################################
 # ################################################################################################################################

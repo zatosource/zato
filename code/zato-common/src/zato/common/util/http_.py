@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 202, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -70,6 +70,8 @@ def get_form_data(wsgi_environ:'stranydict', as_dict:'bool'=True) -> 'stranydict
     # Return the dict now
     return out
 
+# type: ignore
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -93,7 +95,7 @@ are permitted provided that the following conditions are met:
        to endorse or promote products derived from this software without
        specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 'AS IS' AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
@@ -111,13 +113,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 def bytes_to_text(s, encoding):
     """
     Convert bytes objects to strings, using the given encoding. Illegally
-    encoded input characters are replaced with Unicode "unknown" codepoint
+    encoded input characters are replaced with Unicode 'unknown' codepoint
     (\ufffd).
 
     Return any non-bytes objects without change.
     """
     if isinstance(s, bytes):
-        return str(s, encoding, "replace")
+        return str(s, encoding, 'replace')
     else:
         return s
 
@@ -148,7 +150,7 @@ class MultiValueDict(dict):
         super().__init__(key_to_list_mapping)
 
     def __repr__(self):
-        return "<%s: %s>" % (self.__class__.__name__, super().__repr__())
+        return '<%s: %s>' % (self.__class__.__name__, super().__repr__())
 
     def __getitem__(self, key):
         """
@@ -180,10 +182,10 @@ class MultiValueDict(dict):
         return result
 
     def __getstate__(self):
-        return {**self.__dict__, "_data": {k: self._getlist(k) for k in self}}
+        return {**self.__dict__, '_data': {k: self._getlist(k) for k in self}}
 
     def __setstate__(self, obj_dict):
-        data = obj_dict.pop("_data", {})
+        data = obj_dict.pop('_data', {})
         for k, v in data.items():
             self.setlist(k, v)
         self.__dict__.update(obj_dict)
@@ -273,7 +275,7 @@ class MultiValueDict(dict):
     def update(self, *args, **kwargs):
         """Extend rather than replace existing key lists."""
         if len(args) > 1:
-            raise TypeError("update expected at most 1 argument, got %d" % len(args))
+            raise TypeError('update expected at most 1 argument, got %d' % len(args))
         if args:
             arg = args[0]
             if isinstance(arg, MultiValueDict):
@@ -315,12 +317,12 @@ class QueryDict(MultiValueDict):
 
     def __init__(self, query_string=None, mutable=False, encoding=None):
         super().__init__()
-        self.encoding = encoding or "utf8"
-        query_string = query_string or ""
+        self.encoding = encoding or 'utf8'
+        query_string = query_string or ''
         parse_qsl_kwargs = {
-            "keep_blank_values": True,
-            "encoding": self.encoding,
-            "max_num_fields": 123,
+            'keep_blank_values': True,
+            'encoding': self.encoding,
+            'max_num_fields': 123,
         }
         if isinstance(query_string, bytes):
             # query_string normally contains URL-encoded data, a subset of ASCII.
@@ -328,7 +330,7 @@ class QueryDict(MultiValueDict):
                 query_string = query_string.decode(self.encoding)
             except UnicodeDecodeError:
                 # ... but some user agents are misbehaving :-(
-                query_string = query_string.decode("iso-8859-1")
+                query_string = query_string.decode('iso-8859-1')
         try:
             for key, value in parse_qsl(query_string, **parse_qsl_kwargs):
                 self.appendlist(key, value)
@@ -338,18 +340,18 @@ class QueryDict(MultiValueDict):
             # the exception was raised by exceeding the value of max_num_fields
             # instead of fragile checks of exception message strings.
             raise Exception(
-                "The number of GET/POST parameters exceeded "
-                "settings.DATA_UPLOAD_MAX_NUMBER_FIELDS."
+                'The number of GET/POST parameters exceeded '
+                'settings.DATA_UPLOAD_MAX_NUMBER_FIELDS.'
             ) from e
         self._mutable = mutable
 
     @classmethod
-    def fromkeys(cls, iterable, value="", mutable=False, encoding=None):
+    def fromkeys(cls, iterable, value='', mutable=False, encoding=None):
         """
         Return a new QueryDict with keys (may be repeated) from an iterable and
         values from value.
         """
-        q = cls("", mutable=True, encoding=encoding)
+        q = cls('', mutable=True, encoding=encoding)
         for key in iterable:
             q.appendlist(key, value)
         if not mutable:
@@ -359,7 +361,7 @@ class QueryDict(MultiValueDict):
     @property
     def encoding(self):
         if self._encoding is None:
-            self._encoding = "utf8"
+            self._encoding = 'utf8'
         return self._encoding
 
     @encoding.setter
@@ -368,7 +370,7 @@ class QueryDict(MultiValueDict):
 
     def _assert_mutable(self):
         if not self._mutable:
-            raise AttributeError("This QueryDict instance is immutable")
+            raise AttributeError('This QueryDict instance is immutable')
 
     def __setitem__(self, key, value):
         self._assert_mutable()
@@ -381,13 +383,13 @@ class QueryDict(MultiValueDict):
         super().__delitem__(key)
 
     def __copy__(self):
-        result = self.__class__("", mutable=True, encoding=self.encoding)
+        result = self.__class__('', mutable=True, encoding=self.encoding)
         for key, value in self.lists():
             result.setlist(key, value)
         return result
 
     def __deepcopy__(self, memo):
-        result = self.__class__("", mutable=True, encoding=self.encoding)
+        result = self.__class__('', mutable=True, encoding=self.encoding)
         memo[id(self)] = result
         for key, value in self.lists():
             result.setlist(copy.deepcopy(key, memo), copy.deepcopy(value, memo))
@@ -449,7 +451,7 @@ class QueryDict(MultiValueDict):
             safe = safe.encode(self.encoding)
 
             def encode(k, v):
-                return "%s=%s" % ((quote(k, safe), quote(v, safe)))
+                return '%s=%s' % ((quote(k, safe), quote(v, safe)))
 
         else:
 
@@ -461,7 +463,7 @@ class QueryDict(MultiValueDict):
                 encode(k.encode(self.encoding), str(v).encode(self.encoding))
                 for v in list_
             )
-        return "&".join(output)
+        return '&'.join(output)
 
 # ################################################################################################################################
 # ################################################################################################################################
