@@ -158,8 +158,10 @@ def get_module_name_by_path(path:'str | Path') -> 'str':
         # .. we have the names and we can reverse them back so they run from top to bottom again ..
         mod_name_parts = list(reversed(mod_name_parts))
 
-        # .. we can append the final file name now ..
-        mod_name_parts.append(mod_file_name)
+        # .. we can append the final file name now unless it is __init__.py ..
+        # .. which we can ignore because Python recognizes it implicitly ..
+        if mod_file_name != '__init__':
+            mod_name_parts.append(mod_file_name)
 
         # .. and this gives us the full module name ..
         mod_name = '.'.join(mod_name_parts)

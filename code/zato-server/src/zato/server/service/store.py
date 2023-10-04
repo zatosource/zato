@@ -1500,7 +1500,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _should_deploy_model(self, name:'str', item:'any_', current_module:'module_') -> 'bool':
+    def _should_deploy_model(self, name:'str', item:'any_', current_module:'module_', fs_location:'str') -> 'bool':
         """ Is item a model that we can deploy?
         """
         if isclass(item) and hasattr(item, '__mro__'):
@@ -1513,7 +1513,7 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _should_deploy_service(self, name:'str', item:'any_', current_module:'module_') -> 'bool':
+    def _should_deploy_service(self, name:'str', item:'any_', current_module:'module_', fs_location:'str') -> 'bool':
         """ Is item a service that we can deploy?
         """
 
@@ -1529,6 +1529,10 @@ class ServiceStore:
                     # After all the checks, at this point, we know that item must be a service class
                     item = cast_('Service', item)
 
+                    # Make sure the service has its full module's name populated ..
+                    item.zato_set_module_name(fs_location)
+
+                    # .. now, we can access its name.
                     service_name = item.get_name()
 
                     # Don't deploy SSO services if SSO as such is not enabled
@@ -1610,6 +1614,9 @@ class ServiceStore:
         fs_location, # type: str
         is_internal  # type: bool
     ) -> 'InRAMService':
+
+        # Populate the value of the module's name that this class is in
+        _ = class_.zato_set_module_name(fs_location)
 
         name = class_.get_name()
         impl_name = class_.get_impl_name()
@@ -1704,7 +1711,7 @@ class ServiceStore:
                 with self.update_lock:
                     item = getattr(mod, name)
 
-                    if should_deploy_func(name, item, mod):
+                    if should_deploy_func(name, item, mod, fs_location):
 
                         # Only services enter here ..
                         if needs_before_add_to_store_result:
