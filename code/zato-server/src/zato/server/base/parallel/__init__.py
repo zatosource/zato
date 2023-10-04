@@ -40,7 +40,6 @@ from zato.common.audit_log import AuditLog
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.const import SECRETS
 from zato.common.events.common import Default as EventsDefault
-from zato.common.api import HotDeploy
 from zato.common.ipc.api import IPCAPI
 from zato.common.json_internal import dumps, loads
 from zato.common.kv_data import KVDataAPI
