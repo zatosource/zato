@@ -583,7 +583,8 @@ class Service:
         if not hasattr(class_, '__service_name'):
             name = getattr(class_, 'name', None)
             if not name:
-                name = service_name_from_impl(class_.get_impl_name())
+                impl_name = class_.get_impl_name()
+                name = service_name_from_impl(impl_name)
                 name = class_.convert_impl_name(name)
 
             class_.__service_name = name # type: str
@@ -612,6 +613,14 @@ class Service:
         class_name = class_name.replace('.-', '.').replace('_-', '_')
 
         return '{}.{}'.format('.'.join(path), class_name)
+
+# ################################################################################################################################
+
+    @classmethod
+    def set_module_name(class_:'type[Service]') -> 'str':
+        if not hasattr(class_, '__service_impl_name'):
+            class_.__service_impl_name = '{}.{}'.format(class_.__module__, class_.__name__)
+        return class_.__service_impl_name
 
 # ################################################################################################################################
 

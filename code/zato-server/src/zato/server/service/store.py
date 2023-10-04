@@ -1238,7 +1238,8 @@ class ServiceStore:
         to_process = set(to_process)
         to_process = list(to_process)
 
-        for item in to_process: # type: InRAMService
+        for item in to_process:
+            item = cast_('InRAMService', item)
             total_size += item.source_code_info.len_source
 
         info = DeploymentInfo()
@@ -1649,17 +1650,18 @@ class ServiceStore:
             if impl_name == changed_service_impl_name:
                 continue
 
-            # .. a Python class represening each service ..
+            # .. a Python class representing each service ..
             service_class = service_info['service_class']
             service_module = getmodule(service_class)
 
-            # .. get all parent classes of that ..
+            # .. get all parent classes of the current one ..
             service_mro = getmro(service_class)
 
             # .. try to find the deployed service's parents ..
             for base_class in service_mro:
                 if issubclass(base_class, Service) and (base_class is not Service):
-                    if base_class.get_name() == changed_service_name:
+                    base_class_name = base_class.get_name()
+                    if base_class_name == changed_service_name:
 
                         # Do not deploy services that are defined in the same module their parent is
                         # because that would be an infinite loop of auto-deployment.

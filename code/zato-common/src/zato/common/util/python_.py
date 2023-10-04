@@ -22,6 +22,12 @@ from zato.common.typing_ import cast_, module_
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import intnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger('zato')
 
 # ################################################################################################################################
@@ -92,29 +98,59 @@ def reload_module_(mod_name:'str') -> 'None':
 
 # ################################################################################################################################
 
-def get_module_name_by_path(path:'str | Path', root:'str'='') -> 'str':
+def get_module_name_by_path(path:'str | Path') -> 'str':
 
     # Local aliases
+    root = ''
+    root_idx:'intnone' = None
     mod_path = Path(path)
 
-    # If there is no root, it means that the name of the module is the same as its file ..
-    if not root:
+    # If we are in a directory of that name, it means that this directory should be treated as our root,
+    # note that currently there is only one directory configured here.
+    immediate_root_list = ['services']
+
+    # We are going to look up the root up to that many levels above our file name
+    root_depth = 10
+
+    # All the roots that we may potentially find
+    root_list = ['src', 'source']
+
+    # Get and reverse the parts of the path for the ease of their manipulation
+    parts = mod_path.parts
+    parts = list(reversed(parts))
+
+    # This is our parent directory ..
+    parent = parts[1]
+
+    # .. first, check if our immediate root is a name that we recognize ..
+    if parent in immediate_root_list:
+
+        # .. if yes, the name of the file becomes the module's name.
+        mod_name = mod_path.stem
+        return mod_name
+
+    # We are here if our parent directory is not an immediate root and we need to find one ..
+    for root in root_list:
+        try:
+            root_idx = parts.index(root)
+        except ValueError:
+            pass
+        else:
+            # .. we have a match, i.e. we matched a specific root ..
+            break
+
+    # .. if there is no root, it means that we have no choice but to assume ..
+    # .. that the name of the module is the same as its file ..
+    if not root_idx:
         mod_name = mod_path.stem
 
-    # .. otherwise, we need to traverse up until we found the root directory ..
+    # .. otherwise, we can make use of the root found above ..
     else:
-
-        # .. first, get all the path parts, reversed, because we are traversing them backwards ..
-        parts = mod_path.parts
-        parts = list(reversed(parts))
 
         # .. the first element is the file name so we need to remove its extension ..
         mod_file = parts[0]
         mod_file = Path(mod_file)
         mod_file_name = mod_file.stem
-
-        # .. now, look up our root ..
-        root_idx = parts.index(root)
 
         # .. get the rest of the module's path, from right above its name (hence we start from 1) until the root ..
         mod_name_parts = parts[1:root_idx]
