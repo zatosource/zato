@@ -19,10 +19,10 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import DEPLOYMENT_STATUS, KVDB
-from zato.common.broker_message import HOT_DEPLOY
 from zato.common.json_internal import dumps
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
-from zato.common.util.api import is_python_file, is_archive_file, new_cid
+from zato.common.typing_ import cast_
+from zato.common.util.api import is_python_file, is_archive_file
 from zato.common.util.file_system import fs_safe_now, touch_multiple
 from zato.common.util.python_ import import_module_by_path
 from zato.server.service import AsIs
@@ -158,17 +158,30 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _deploy_models(self, current_work_dir:'str', model_file_name:'str') -> 'strset':
+    def _redeploy_module_dependencies(self, file_name:'str') -> 'None':
 
-        # Local aliases
-        root_dir = 'src'
+        # Reload the module so its newest contents is in sys path ..
+        mod_info = import_module_by_path(file_name)
+
+        # .. we enter here if the reload succeeded ..
+        if mod_info:
+
+            # .. get all the files with that are making use of this module ..
+            # .. which may mean both files with services or models ..
+            file_name_list = self.server.service_store.get_module_importers(mod_info.name)
+
+            # .. and redeploy all such files.
+            touch_multiple(file_name_list)
+
+# ################################################################################################################################
+
+    def _deploy_models(self, current_work_dir:'str', model_file_name:'str') -> 'strset':
 
         # This returns details of all the model classes deployed from the file
         model_info_list = self.server.service_store.import_models_from_file(
             model_file_name,
             False,
             current_work_dir,
-            root_dir,
         )
 
         # .. extract unique names only ..
@@ -177,44 +190,38 @@ class Create(AdminService):
         # .. if we have deployed any models ..
         if model_name_list:
 
-            # .. reload the module so its newest contents is in sys path ..
-            mod_info = import_module_by_path(model_file_name, root_dir)
-
-            # .. we enter here if the reload succeeded ..
-            if mod_info:
-
-                # .. get all the files with that are making use of this module ..
-                # .. which may mean both files with services or models ..
-                file_name_list = self.server.service_store.get_module_importers(mod_info.name)
-
-                # .. redeploy all such files  ..
-                touch_multiple(file_name_list)
+            # .. redeploy all the modules that depend on the one we have just deployed ..
+            self._redeploy_module_dependencies(model_file_name)
 
         # .. and return to the caller the list of models deployed.
         return model_name_list
 
 # ################################################################################################################################
 
-    def _deploy_services(self, current_work_dir:'str', file_name:'str') -> 'intlist':
+    def _deploy_services(self, current_work_dir:'str', service_file_name:'str') -> 'intlist':
 
-        service:'InRAMService'
+        # Local aliases
         service_id_list:'intlist' = []
-        info = self.server.service_store.import_services_from_anywhere(file_name, current_work_dir)
 
-        for service in info.to_process: # type: ignore
+        # This returns details of all the model classes deployed from the file
+        service_info_list = self.server.service_store.import_services_from_anywhere(current_work_dir, service_file_name)
 
+        # .. if we have deployed any models ..
+        for service in service_info_list.to_process: # type: ignore
+
+            # .. add type hints ..
+            service = cast_('InRAMService', service)
+
+            # .. extract the ID of the deployed service ..
             service_id = self.server.service_store.impl_name_to_id[service.impl_name]
+
+            # .. append it for later use ..
             service_id_list.append(service_id)
 
-            msg = {}
-            msg['cid'] = new_cid()
-            msg['service_id'] = service_id
-            msg['service_name'] = service.name
-            msg['service_impl_name'] = service.impl_name
-            msg['action'] = HOT_DEPLOY.AFTER_DEPLOY.value
+            # .. redeploy all the modules that depend on the one we have just deployed ..
+            self._redeploy_module_dependencies(service.source_code_info.path)
 
-            self.broker_client.publish(msg)
-
+        # .. and return to the caller the list of IDs of all the services deployed.
         return service_id_list
 
 # ################################################################################################################################
