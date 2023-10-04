@@ -40,6 +40,7 @@ from zato.common.audit_log import AuditLog
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.const import SECRETS
 from zato.common.events.common import Default as EventsDefault
+from zato.common.hot_deploy_ import HotDeployProject
 from zato.common.ipc.api import IPCAPI
 from zato.common.json_internal import dumps, loads
 from zato.common.kv_data import KVDataAPI
@@ -693,7 +694,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         for pickup_from in extract_pickup_from_items(self.base_dir, self.pickup_config, HotDeploy.Source_Directory):
 
             # .. log what we are about to do ..
-            logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix)', pickup_from)
+            if isinstance(pickup_from, list):
+                for project in pickup_from:
+                    for item in project.pickup_from_path:
+                        logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix->Project)', item)
+            else:
+                logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix->Path)', pickup_from)
 
             # .. and do append it for later use ..
             self.service_sources.append(pickup_from)

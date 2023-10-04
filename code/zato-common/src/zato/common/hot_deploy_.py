@@ -29,31 +29,28 @@ class HotDeployProject:
 pickup_order_patterns = [
 
     '  common*',
-    '*_common*',
 
-    '  model_core*_common',
-    '  model*_common',
+    '  model_core*',
+    '  model_channel_*',
+    '  model_adapter_*',
     '  model*',
-    '*_model*_common',
-    '*_model*',
 
+    '  lib_common_*',
     '  lib*',
-    '*_lib*',
 
-    '  util*_common',
+    '  util_common_*',
     '  util*',
-    '*_util*',
 
     '  pri_*',
     '*_pri',
 
-    '  core_*_common',
+    '  core_common_*',
     '  core_*',
 
-    '  channel_*_common',
+    '  channel_common_*',
     '  channel_*',
 
-    '  adapter_*_common',
+    '  adapter_common_*',
     '  adapter_*',
 ]
 
