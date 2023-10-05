@@ -1425,6 +1425,28 @@ class ServiceStore:
 
 # ################################################################################################################################
 
+    def _has_module_import(self, source_code:'str', mod_name:'str') -> 'bool':
+
+        # .. ignore modules that do not import what we had on input ..
+        for line in source_code.splitlines():
+
+            # .. these two will be True if we are importing this module ..
+            has_import   = 'import' in line
+            has_mod_name = mod_name in line
+
+            # .. in which case, there is no need to continue ..
+            if has_import and has_mod_name:
+                break
+
+        # .. otherwise, no, we are not importing this module ..
+        else:
+            has_import   = False
+            has_mod_name = False
+
+        return has_import and has_mod_name
+
+# ################################################################################################################################
+
     def _get_service_module_imports(self, mod_name:'str') -> 'strlist':
         """ Returns a list of paths pointing to modules with services that import the module given on input.
         """
@@ -1449,8 +1471,8 @@ class ServiceStore:
                 # .. get the actual source code ..
                 source_code = service_data['source_code']
 
-                # .. ignore modules that do not import what we had on input ..
-                if not mod_name in source_code:
+                # .. this module can be ignored if it does not import the input one ..
+                if not self._has_module_import(source_code, mod_name):
                     continue
 
                 # .. otherwise, extract the path of this module ..
@@ -1484,8 +1506,8 @@ class ServiceStore:
             if model.mod_name in modules_visited:
                 continue
             else:
-                # .. ignore modules that do not import what we had on input ..
-                if not mod_name in model.source:
+                # .. this module can be ignored if it does not import the input one ..
+                if not self._has_module_import(model.source, mod_name):
                     continue
 
                 # .. otherwise, store that module's path for later use ..
