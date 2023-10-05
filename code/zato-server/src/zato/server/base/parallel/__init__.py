@@ -514,93 +514,104 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _add_pickup_conf_from_local_path(self, items:'str', source:'str') -> 'None':
+    def _add_pickup_conf_from_local_path(self, paths:'str', source:'str') -> 'None':
 
         # Bunch
         from bunch import bunchify
 
         # We have hot-deployment configuration to process ..
-        if items:
+        if paths:
 
             # .. support multiple entries ..
-            items = items.split(':') # type: ignore
-            items = [elem.strip() for elem in items] # type: ignore
+            paths = paths.split(':') # type: ignore
+            paths = [elem.strip() for elem in paths] # type: ignore
 
             # .. add  the actual configuration ..
-            for name in items:
+            for path in paths:
 
                 # .. log what we are about to do ..
                 msg = 'Adding hot-deployment configuration from `%s` (source -> %s)'
-                logger.info(msg, name, source)
+                logger.info(msg, path, source)
 
                 # .. stay on the safe side because, here, we do not know where it will be used ..
-                _fs_safe_name = fs_safe_name(name)
+                _fs_safe_name = fs_safe_name(path)
 
                 # .. use this prefix to indicate that it is a directory to hot-deploy from ..
                 key_name = '{}.{}'.format(HotDeploy.UserPrefix, _fs_safe_name)
 
-                # .. and store the configuration for later use now.
+                # .. store the configuration for later use now ..
                 pickup_from = {
-                    'pickup_from': name
+                    'pickup_from': path
                 }
                 self.pickup_config[key_name] = bunchify(pickup_from)
+
+                # .. go through any of the paths potentially containing user configuration directories ..
+                for user_conf_path in Path(path).rglob(HotDeploy.User_Conf_Directory):
+
+                    # .. and add each of them to hot-deployment.
+                    self._add_user_conf_from_path(str(user_conf_path))
 
 # ################################################################################################################################
 
     def add_user_conf_from_env(self) -> 'None':
 
+        # Look up user-defined configuration directories ..
+        paths = os.environ.get('ZATO_USER_CONF_DIR', '')
+
+        # .. try the other name too ..
+        if not paths:
+            paths = os.environ.get('Zato_User_Conf_Dir', '')
+
+        # We have user-config details to process ..
+        if paths:
+
+            # .. support multiple entries ..
+            paths = paths.split(':')
+            paths = [elem.strip() for elem in paths]
+
+            # .. and the actual configuration.
+            for path in paths:
+                self._add_user_conf_from_path(path)
+
+# ################################################################################################################################
+
+    def _add_user_conf_from_path(self, path:'str') -> 'None':
+
         # Bunch
         from bunch import bunchify
 
-        # Look up user-defined configuration directories ..
-        items = os.environ.get('ZATO_USER_CONF_DIR', '')
-
-        # .. try the other name too ..
-        if not items:
-            items = os.environ.get('Zati_User_Conf_Dir', '')
-
-        # .. ignore files other than the below ones ..
+        # Ignore files other than the below ones
         suffixes = ['ini', 'conf']
         patterns = ['*.' + elem for elem in suffixes]
         patterns_str = ', '.join(patterns)
 
-        # We have user-config details to process ..
-        if items:
+        # Log what we are about to do ..
+        logger.info('Adding user-config from `%s` (env. variable found -> ZATO_USER_CONF_DIR)', path)
 
-            # .. support multiple entries ..
-            items = items.split(':')
-            items = [elem.strip() for elem in items]
+        # .. look up files inside the directory and add the path to each
+        # .. to a list of what should be loaded on startup ..
+        if os.path.exists(path) and os.path.isdir(path):
+            file_item_list = os.listdir(path)
+            for file_item in file_item_list:
+                for suffix in suffixes:
+                    if file_item.endswith(suffix):
+                        self.user_conf_location_extra.add(path)
 
-            # .. add  the actual configuration ..
-            for name in items:
+        # .. stay on the safe side because, here, we do not know where it will be used ..
+        _fs_safe_name = fs_safe_name(path)
 
-                # .. log what we are about to do ..
-                logger.info('Adding user-config from `%s` (env. variable found -> ZATO_USER_CONF_DIR)', name)
+        # .. use this prefix to indicate that it is a directory to deploy user configuration from  ..
+        key_name = '{}.{}'.format(HotDeploy.UserConfPrefix, _fs_safe_name)
 
-                # .. look up files inside the directory and add the path to each
-                # .. to a list of what should be loaded on startup ..
-                if os.path.exists(name) and os.path.isdir(name):
-                    file_item_list = os.listdir(name)
-                    for file_item in file_item_list:
-                        for suffix in suffixes:
-                            if file_item.endswith(suffix):
-                                self.user_conf_location_extra.add(name)
-
-                # .. stay on the safe side because, here, we do not know where it will be used ..
-                _fs_safe_name = fs_safe_name(name)
-
-                # .. use this prefix to indicate that it is a directory to deploy user configuration from  ..
-                key_name = '{}.{}'.format(HotDeploy.UserConfPrefix, _fs_safe_name)
-
-                # .. and store the configuration for later use now.
-                pickup_from = {
-                    'pickup_from': name,
-                    'patterns': patterns_str,
-                    'parse_on_pickup': False,
-                    'delete_after_pickup': False,
-                    'services': 'zato.pickup.update-user-conf',
-                }
-                self.pickup_config[key_name] = bunchify(pickup_from)
+        # .. and store the configuration for later use now.
+        pickup_from = {
+            'pickup_from': path,
+            'patterns': patterns_str,
+            'parse_on_pickup': False,
+            'delete_after_pickup': False,
+            'services': 'zato.pickup.update-user-conf',
+        }
+        self.pickup_config[key_name] = bunchify(pickup_from)
 
 # ################################################################################################################################
 
