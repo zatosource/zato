@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import os
@@ -49,7 +47,7 @@ def resolve_value(key, value, decrypt_func=None, _default=object(), _secrets=SEC
 
             # Use a placeholder if the actual environment key is missing
             if value is _default:
-                value = 'ENV_KEY_MISSING_{}'.format(env_key)
+                value = 'Env_Key_Missing_{}'.format(env_key)
 
     # It may be an encrypted value
     elif key in _secrets.PARAMS and value.startswith(_secrets.PREFIX):
@@ -69,3 +67,5 @@ def resolve_env_variables(data):
         out[key] = resolve_value(None, value)
 
     return out
+
+# ################################################################################################################################
