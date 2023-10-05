@@ -9,13 +9,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from contextlib import closing
+from dataclasses import dataclass
 from unittest import main, TestCase
 from uuid import uuid4
 
 # Zato
 from zato.common.api import INFO_FORMAT
 from zato.common.component_info import get_info
-from zato.common.ext.dataclasses import dataclass
 from zato.common.odb.model import Base, HTTPBasicAuth, Cluster, Server as ServerModel
 from zato.common.odb.api import ODBManager, SQLConnectionPool
 from zato.common.test import TestCluster, TestParallelServer
