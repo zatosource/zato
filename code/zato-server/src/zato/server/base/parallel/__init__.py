@@ -55,6 +55,7 @@ from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_conf
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, register_diag_handlers, \
     save_ipc_pid_port, spawn_greenlet, StaticConfig
 from zato.common.util.file_transfer import path_string_list_to_list
+from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
@@ -97,6 +98,7 @@ if 0:
     from zato.server.startup_callable import StartupCallableTool
     from zato.sso.api import SSOAPI
 
+    Bunch = Bunch
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
@@ -474,11 +476,31 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def add_pickup_conf_from_env(self) -> 'None':
 
+        # These exact names may exist in the environment ..
+        name_list = ['Zato_Project_Root', 'Zato_Hot_Deploy_Dir', 'ZATO_HOT_DEPLOY_DIR']
+
+        # .. same for these prefixes ..
+        prefix_list = ['Zato_Project_Root_', 'Zato_Hot_Deploy_Dir_']
+
+        # .. go through the specific names and add any matching ..
+        for name in name_list:
+            if path := os.environ.get(name, ''):
+                self._add_pickup_conf_from_local_path(path, name)
+
+        # .. go through the list of prefixes and add any matching too.
+        for prefix in prefix_list:
+            for key, value in os.environ.items():
+                if key.startswith(prefix):
+                    self._add_pickup_conf_from_local_path(value, key)
+
         # Look up Python hot-deployment directories ..
         path = os.environ.get('ZATO_HOT_DEPLOY_DIR', '')
 
+        # .. try the other name too ..
+        if not path:
+            path = os.environ.get('Zato_Hot_Deploy_Dir', '')
+
         # .. and make it possible to deploy from them.
-        self._add_pickup_conf_from_local_path(path)
 
 # ################################################################################################################################
 
@@ -488,11 +510,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         path = os.path.join(self.deploy_auto_from, 'code')
 
         # .. and make it possible to deploy from them.
-        self._add_pickup_conf_from_local_path(path)
+        self._add_pickup_conf_from_local_path(path, 'AutoDeploy')
 
 # ################################################################################################################################
 
-    def _add_pickup_conf_from_local_path(self, items:'str') -> 'None':
+    def _add_pickup_conf_from_local_path(self, items:'str', source:'str') -> 'None':
 
         # Bunch
         from bunch import bunchify
@@ -508,7 +530,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             for name in items:
 
                 # .. log what we are about to do ..
-                logger.info('Adding hot-deployment configuration from `%s` (env. variable found -> ZATO_HOT_DEPLOY_DIR)', name)
+                msg = 'Adding hot-deployment configuration from `%s` (source -> %s)'
+                logger.info(msg, name, source)
 
                 # .. stay on the safe side because, here, we do not know where it will be used ..
                 _fs_safe_name = fs_safe_name(name)
@@ -529,10 +552,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Bunch
         from bunch import bunchify
 
-        # Look up user-defined configuration directories
+        # Look up user-defined configuration directories ..
         items = os.environ.get('ZATO_USER_CONF_DIR', '')
 
-        # Ignore files other than that
+        # .. try the other name too ..
+        if not items:
+            items = os.environ.get('Zati_User_Conf_Dir', '')
+
+        # .. ignore files other than the below ones ..
         suffixes = ['ini', 'conf']
         patterns = ['*.' + elem for elem in suffixes]
         patterns_str = ', '.join(patterns)
@@ -607,7 +634,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def _after_init_common(self, server:'ParallelServer') -> 'anyset':
         """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
         """
-        def _normalise_service_source_path(name:'str') -> 'str':
+        def _normalize_service_source_path(name:'str') -> 'str':
             if not os.path.isabs(name):
                 name = os.path.normpath(os.path.join(self.base_dir, name))
             return name
@@ -647,7 +674,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         for name in open(os.path.join(self.repo_location, self.fs_server_config.main.service_sources)):
             name = name.strip()
             if name and not name.startswith('#'):
-                name = _normalise_service_source_path(name)
+                name = _normalize_service_source_path(name)
                 self.service_sources.append(name)
 
         # Look up pickup configuration among environment variables
@@ -661,14 +688,19 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Append additional services that can be invoked through WebSocket gateways.
         self.add_wsx_gateway_service_allowed()
 
-        # Service sources from user-defined hot-deployment configuration
-        for key, value in self.pickup_config.items():
-            if key.startswith(HotDeploy.UserPrefix):
-                pickup_from = value.get('pickup_from')
-                if pickup_from:
-                    logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix)', pickup_from)
-                    pickup_from = _normalise_service_source_path(pickup_from)
-                    self.service_sources.append(pickup_from)
+        # Service sources from user-defined hot-deployment configuration ..
+        for pickup_from in extract_pickup_from_items(self.base_dir, self.pickup_config, HotDeploy.Source_Directory):
+
+            # .. log what we are about to do ..
+            if isinstance(pickup_from, list):
+                for project in pickup_from:
+                    for item in project.pickup_from_path:
+                        logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix->Project)', item)
+            else:
+                logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix->Path)', pickup_from)
+
+            # .. and do append it for later use ..
+            self.service_sources.append(pickup_from)
 
         # Read all the user config files that are already available on startup
         self.read_user_config()
@@ -1097,13 +1129,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         ipc_password = self.decrypt(ipc_password)
 
         # .. this is the same for all processes ..
-        bind_host = self.fs_server_config.main.ipc_host
+        bind_host = self.fs_server_config.main.get('ipc_host') or '0.0.0.0'
 
         # .. this is set to a different value for each process ..
-        bind_port = self.fs_server_config.main.ipc_port_start + self.process_idx
+        bind_port = (self.fs_server_config.main.get('ipc_port_start') or 17050) + self.process_idx
 
         # .. now, the IPC server can be started ..
-        spawn_greenlet(self.ipc_api.start_server,
+        _ = spawn_greenlet(self.ipc_api.start_server,
             self.pid,
             self.base_dir,
             bind_host=bind_host,
@@ -1469,8 +1501,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def on_ipc_invoke_callback(self, msg:'Bunch') -> 'anydict':
+    def on_ipc_invoke_callback(self, msg:'Bunch') -> 'anydict': # type: ignore
 
+        msg = cast_('Bunch', msg)
         service = msg['service']
         data    = msg['data']
 
