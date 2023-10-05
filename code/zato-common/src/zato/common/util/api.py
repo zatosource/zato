@@ -632,7 +632,7 @@ def visit_py_source(
     if not order_patterns:
 
         # .. make a deep copy first because we are going to change this list ..
-        order_patterns = deepcopy(pickup_order_patterns)
+        order_patterns = ['*']
 
         # .. now, append the .py extension to each time so that we can find such files below ..
         for idx, elem in enumerate(order_patterns):
