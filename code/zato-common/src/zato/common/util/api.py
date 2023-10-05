@@ -26,7 +26,6 @@ from ast import literal_eval
 from base64 import b64decode
 from binascii import hexlify as binascii_hexlify
 from contextlib import closing
-from copy import deepcopy
 from datetime import datetime, timedelta
 from getpass import getuser as getpass_getuser
 from glob import glob
@@ -117,7 +116,6 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.exception import ZatoException
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
-from zato.common.hot_deploy_ import pickup_order_patterns
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
