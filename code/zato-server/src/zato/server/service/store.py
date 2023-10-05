@@ -1228,9 +1228,17 @@ class ServiceStore:
                     sys.path.insert(0, str(elem.sys_path_entry))
 
                     for dir_name in elem.pickup_from_path:
-                        to_process.extend((self.import_services_from_directory(str(dir_name), base_dir)))
 
-            # .. must be a module object
+                        # .. turn Path objects into string, which is what is expected by the functions that we call ..
+                        dir_name = str(dir_name)
+
+                        # .. services need to be both imported and stored for later use ..
+                        to_process.extend((self.import_services_from_directory(dir_name, base_dir)))
+
+                        # .. while models we merely import ..
+                        _ = self.import_models_from_directory(dir_name, base_dir)
+
+            # .. if we are here, it must be a module object.
             else:
                 to_process.extend(self.import_services_from_module_object(item, is_internal))
 
@@ -1340,6 +1348,19 @@ class ServiceStore:
             to_process.extend(visit_func(mod_info.module, is_internal, mod_info.file_name))
         finally:
             return to_process
+
+# ################################################################################################################################
+
+    def import_models_from_directory(self, dir_name:'str', base_dir:'str') -> 'modelinfolist':
+        """ Imports models from a specified directory.
+        """
+        out:'modelinfolist' = []
+
+        for py_path in visit_py_source(dir_name):
+            out.extend(self.import_models_from_file(py_path, False, base_dir))
+            gevent_sleep(0.03)
+
+        return out
 
 # ################################################################################################################################
 
@@ -1650,7 +1671,7 @@ class ServiceStore:
         # Local aliases
         to_auto_deploy = []
 
-        # Iterate over all current services to check if any of them subclasses the service just deployed ..
+        # Iterate over all current services to check if any of these subclasses the service just deployed ..
         for impl_name, service_info in self.services.items():
 
             # .. skip the one just deployed ..
