@@ -71,6 +71,10 @@ def get_project_info(
                 if '__pycache__' in pickup_dir.parts:
                     continue
 
+                # .. ignore items that are not directories ..
+                if not pickup_dir.is_dir():
+                    continue
+
                 # .. and add it to the project's list of directories ..
                 if not pickup_dir in project.pickup_from_path:
                     project.pickup_from_path.append(pickup_dir)
