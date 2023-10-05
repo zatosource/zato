@@ -671,6 +671,10 @@ class Arbiter:
         of the master process.
         """
 
+        noun = 'process' if self.num_workers == 1 else 'processes'
+        msg = f'Booting {self.num_workers} {noun}'
+        self.log.info(msg)
+
         for idx, _ in enumerate(range(self.num_workers - len(self.WORKERS.keys()))):
             os.environ['ZATO_SERVER_WORKER_IDX'] = str(idx)
             self.spawn_worker()

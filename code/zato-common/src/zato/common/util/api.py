@@ -130,7 +130,7 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 if 0:
     from typing import Iterable as iterable
     from zato.client import ZatoClient
-    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strlistnone, strnone
+    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strlistnone, strnone, strset
     iterable = iterable
 
 # ################################################################################################################################
@@ -626,33 +626,20 @@ def visit_py_source(
     order_patterns=None # type: strlistnone
 ) -> 'any_':
 
-    # Assume we are not given any patterns on input ..
-    order_patterns = order_patterns or [
+    # We enter here if we are not given any patterns on input ..
+    if not order_patterns:
 
-        '  common*.py',
-        '*_common*.py',
+        # .. make a deep copy first because we are going to change this list ..
+        order_patterns = ['*']
 
-        '  model_core*.py',
-        '  model*.py',
-        '*_model*.py',
-
-        '  lib*.py',
-        '*_lib*.py',
-
-        '  util*.py',
-        '*_util*.py',
-
-        '  pri_*.py',
-        '*_pri.py',
-
-        '  core_*.py',
-        '  channel_*.py',
-        '  adapter_*.py',
-    ]
+        # .. now, append the .py extension to each time so that we can find such files below ..
+        for idx, elem in enumerate(order_patterns):
+            new_item = f'{elem}.py'
+            order_patterns[idx] = new_item
 
     # For storing names of files that we have already deployed,
     # to ensure that there will be no duplicates.
-    already_visited = set()
+    already_visited:'strset' = set()
 
     # .. append the default ones, unless they are already there ..
     for default in ['*.py', '*.pyw']:
