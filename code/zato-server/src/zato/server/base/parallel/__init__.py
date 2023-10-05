@@ -40,7 +40,6 @@ from zato.common.audit_log import AuditLog
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.const import SECRETS
 from zato.common.events.common import Default as EventsDefault
-from zato.common.hot_deploy_ import HotDeployProject
 from zato.common.ipc.api import IPCAPI
 from zato.common.json_internal import dumps, loads
 from zato.common.kv_data import KVDataAPI
@@ -84,7 +83,6 @@ from zato.server.sso import SSOTool
 
 if 0:
 
-    from bunch import Bunch
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.ipc.client import IPCResponse
     from zato.common.odb.api import ODBManager
