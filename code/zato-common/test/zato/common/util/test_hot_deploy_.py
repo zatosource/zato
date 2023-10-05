@@ -118,47 +118,73 @@ class HotDeployTestCase(TestCase):
         # .. run assertions ..
         self.assertEqual(str(project_info.sys_path_entry), expected_sys_path_entry)
 
-        # .. there should be 10 paths extracted ..
-        self.assertEqual(len(project_info.pickup_from_path), 10)
+        for item in project_info.pickup_from_path:
+            print(111, item)
+
+        # .. there should be 13 paths extracted ..
+        self.assertEqual(len(project_info.pickup_from_path), 13)
 
         # .. create local variables for the ease of testing ..
         full_esb_dir = os.path.join(full_src_dir, 'corp', 'esb')
 
-        esb_common         = str(project_info.pickup_from_path[0])
-        esb_model_common   = str(project_info.pickup_from_path[1])
-        esb_adapter_common = str(project_info.pickup_from_path[2])
-        esb_core_common    = str(project_info.pickup_from_path[3])
-        esb_model          = str(project_info.pickup_from_path[4])
-        esb_model_hr       = str(project_info.pickup_from_path[5])
-        esb_core           = str(project_info.pickup_from_path[6])
-        esb_channel        = str(project_info.pickup_from_path[7])
-        esb_channel_edu    = str(project_info.pickup_from_path[8])
-        esb_adapter        = str(project_info.pickup_from_path[9])
+        #
 
-        expected_esb_common         = os.path.join(full_esb_dir, 'common')
-        expected_esb_model_common   = os.path.join(full_esb_dir, 'model', 'common')
-        expected_esb_adapter_common = os.path.join(full_esb_dir, 'adapter', 'common')
-        expected_esb_core_common    = os.path.join(full_esb_dir, 'core', 'common')
-        expected_esb_model          = os.path.join(full_esb_dir, 'model')
-        expected_esb_model_hr       = os.path.join(full_esb_dir, 'model', 'hr')
-        expected_esb_core           = os.path.join(full_esb_dir, 'core')
-        expected_esb_channel        = os.path.join(full_esb_dir, 'channel')
-        expected_esb_channel_edu    = os.path.join(full_esb_dir, 'channel', 'edu')
-        expected_esb_adapter        = os.path.join(full_esb_dir, 'adapter')
+        esb_common           = str(project_info.pickup_from_path[0])
+        esb_model_common     = str(project_info.pickup_from_path[1])
+        esb_adapter_common   = str(project_info.pickup_from_path[2])
 
-        self.assertEqual(esb_common,         expected_esb_common)
-        self.assertEqual(esb_model_common,   expected_esb_model_common)
-        self.assertEqual(esb_adapter_common, expected_esb_adapter_common)
-        self.assertEqual(esb_core_common,    expected_esb_core_common)
-        self.assertEqual(esb_model,          expected_esb_model)
-        self.assertEqual(esb_model_hr,       expected_esb_model_hr)
-        self.assertEqual(esb_core,           expected_esb_core)
-        self.assertEqual(esb_channel,        expected_esb_channel)
-        self.assertEqual(esb_channel_edu,    expected_esb_channel_edu)
-        self.assertEqual(esb_adapter,        expected_esb_adapter)
+        esb_core_common      = str(project_info.pickup_from_path[3])
+        esb_util             = str(project_info.pickup_from_path[4])
+        esb_core_util        = str(project_info.pickup_from_path[5])
 
-        for item in project_info.pickup_from_path:
-            print(111, item)
+        esb_channel_edu_util = str(project_info.pickup_from_path[6])
+        esb_model            = str(project_info.pickup_from_path[7])
+        esb_model_hr         = str(project_info.pickup_from_path[8])
+
+        esb_core             = str(project_info.pickup_from_path[9])
+        esb_channel          = str(project_info.pickup_from_path[10])
+        esb_channel_edu      = str(project_info.pickup_from_path[11])
+        esb_adapter          = str(project_info.pickup_from_path[12])
+
+        #
+
+        expected_esb_common           = os.path.join(full_esb_dir, 'common')
+        expected_esb_model_common     = os.path.join(full_esb_dir, 'model', 'common')
+        expected_esb_adapter_common   = os.path.join(full_esb_dir, 'adapter', 'common')
+
+        expected_esb_core_common      = os.path.join(full_esb_dir, 'core', 'common')
+        expected_esb_util             = os.path.join(full_esb_dir, 'util')
+        expected_esb_core_util        = os.path.join(full_esb_dir, 'core', 'util')
+
+        expected_esb_channel_edu_util = os.path.join(full_esb_dir, 'channel', 'edu', 'util')
+        expected_esb_model            = os.path.join(full_esb_dir, 'model')
+        expected_esb_model_hr         = os.path.join(full_esb_dir, 'model', 'hr')
+
+        expected_esb_core             = os.path.join(full_esb_dir, 'core')
+        expected_esb_channel          = os.path.join(full_esb_dir, 'channel')
+        expected_esb_channel_edu      = os.path.join(full_esb_dir, 'channel', 'edu')
+        expected_esb_adapter          = os.path.join(full_esb_dir, 'adapter')
+
+        #
+
+        self.assertEqual(esb_common,           expected_esb_common)
+        self.assertEqual(esb_model_common,     expected_esb_model_common)
+        self.assertEqual(esb_adapter_common,   expected_esb_adapter_common)
+
+        self.assertEqual(esb_core_common,      expected_esb_core_common)
+        self.assertEqual(esb_util,             expected_esb_util)
+        self.assertEqual(esb_core_util,        expected_esb_core_util)
+
+        self.assertEqual(esb_channel_edu_util, expected_esb_channel_edu_util)
+        self.assertEqual(esb_model,            expected_esb_model)
+        self.assertEqual(esb_model_hr,         expected_esb_model_hr)
+
+        self.assertEqual(esb_core,             expected_esb_core)
+        self.assertEqual(esb_channel,          expected_esb_channel)
+        self.assertEqual(esb_channel_edu,      expected_esb_channel_edu)
+        self.assertEqual(esb_adapter,          expected_esb_adapter)
+
+        #
 
 # ################################################################################################################################
 # ################################################################################################################################

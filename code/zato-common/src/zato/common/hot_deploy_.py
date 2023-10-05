@@ -29,6 +29,7 @@ class HotDeployProject:
 pickup_order_patterns = [
 
     '  common*/**',
+    '  util*/**',
     '  model*/**',
     '  core*/**',
     '  channel*/**',
