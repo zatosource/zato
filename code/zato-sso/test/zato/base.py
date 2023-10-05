@@ -28,14 +28,24 @@ from zato.common.crypto.totp_ import TOTPManager
 from zato.common.test.config import TestConfig
 from zato.common.test.rest_client import RESTClientTestCase
 from zato.common.test import rand_string
+from zato.common.typing_ import cast_
 from zato.sso import const, status_code
 from zato.sso.odb.query import get_user_by_name
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class NotGiven:
@@ -67,7 +77,7 @@ class BaseTest(RESTClientTestCase):
         import os
 
         if not os.environ.get('ZATO_TEST_SSO'):
-            self.ctx = None
+            self.ctx = cast_('any_', None)
             return
 
         # Zato
