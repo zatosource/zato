@@ -514,7 +514,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if paths:
 
             # .. log what we are about to do ..
-            msg = f'Processing hot-deployment configuration paths `{paths!r)}` (source -> {source})'
+            msg = f'Processing hot-deployment configuration paths `{paths!r}` (source -> {source})'
             logger.info(msg)
 
             # .. support multiple entries ..
