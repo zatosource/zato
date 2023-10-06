@@ -513,6 +513,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # We have hot-deployment configuration to process ..
         if paths:
 
+            # .. log what we are about to do ..
+            msg = f'Processing hot-deployment configuration paths `{paths!r)}` (source -> {source})'
+            logger.info(msg)
+
             # .. support multiple entries ..
             paths = paths.split(':') # type: ignore
             paths = [elem.strip() for elem in paths] # type: ignore
