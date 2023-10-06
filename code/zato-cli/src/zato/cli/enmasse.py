@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC
+from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, TLS as COMMON_TLS
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -57,6 +57,10 @@ ERROR_SERVICE_MISSING = Code('E12', 'service missing')
 ERROR_MISSING_DEP = Code('E13', 'dependency missing')
 ERROR_COULD_NOT_IMPORT_OBJECT = Code('E13', 'could not import object')
 ERROR_TYPE_MISSING = Code('E04', 'type missing')
+
+# ################################################################################################################################
+
+outconn_ldap = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP
 
 # ################################################################################################################################
 
@@ -136,7 +140,7 @@ ModuleCtx.Enmasse_Attr_List_Include = {
     ],
 
     # LDAP outgoing connections
-    'zato_generic_connection_outconn-ldap': [
+    f'zato_generic_connection_{outconn_ldap}': [
         'type_',
         'name',
         'username',
@@ -615,14 +619,14 @@ class Results:
     def add_error(self, raw, code, msg, *args):
         if args:
             msg = msg.format(*args)
-        self.errors.append(Notice(raw, msg, code))
+        _= self.errors.append(Notice(raw, msg, code))
 
 # ################################################################################################################################
 
     def add_warning(self, raw, code, msg, *args):
         if args:
             msg = msg.format(*args)
-        self.warnings.append(Notice(raw, msg, code))
+        _= self.warnings.append(Notice(raw, msg, code))
 
 # ################################################################################################################################
 
@@ -830,10 +834,10 @@ class ObjectImporter:
 # ################################################################################################################################
 
     def remove_from_import_list(self, item_type, name):
-        lst = self.json.get(item_type, [])
-        item = find_first(lst, lambda item: item.name == name)
+        list_ = self.json.get(item_type, [])
+        item = find_first(list_, lambda item: item.name == name)
         if item:
-            lst.remove(item)
+            _= list_.remove(item)
         else:
             raise KeyError('Tried to remove missing %r named %r' % (item_type, name))
 
@@ -916,22 +920,22 @@ class ObjectImporter:
 
         # Generic connections cannot import their IDs during edits
         if item_type == 'zato_generic_connection' and is_edit:
-            attrs_dict.pop('id', None)
+            _= attrs_dict.pop('id', None)
 
         # RBAC objects cannot refer to other objects by their IDs
         elif item_type == 'rbac_role_permission':
-            attrs_dict.pop('id', None)
-            attrs_dict.pop('perm_id', None)
-            attrs_dict.pop('role_id', None)
-            attrs_dict.pop('service_id', None)
+            _= attrs_dict.pop('id', None)
+            _= attrs_dict.pop('perm_id', None)
+            _= attrs_dict.pop('role_id', None)
+            _= attrs_dict.pop('service_id', None)
 
         elif item_type == 'rbac_client_role':
-            attrs_dict.pop('id', None)
-            attrs_dict.pop('role_id', None)
+            _= attrs_dict.pop('id', None)
+            _= attrs_dict.pop('role_id', None)
 
         elif item_type == 'rbac_role':
-            attrs_dict.pop('id', None)
-            attrs_dict.pop('parent_id', None)
+            _= attrs_dict.pop('id', None)
+            _= attrs_dict.pop('parent_id', None)
 
         attrs.cluster_id = self.client.cluster_id
         attrs.is_source_external = True
@@ -1714,6 +1718,119 @@ class InputParser:
 
         # .. turn it into a config dict ..
         env_config = self._extract_config_from_env(cast_('strdict', env))
+
+        # .. this can be built upfront in case it is needed ..
+        if not 'zato_generic_connection' in data:
+            data['zato_generic_connection'] = []
+
+        # .. turn out simple definitions into generic ones if this is applicable ..
+        for new_name, old_name in ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse.items():
+
+            # .. this should be a generic connection ..
+            if old_name.startswith('zato_generic_connection'):
+
+                # .. extract its type ..
+                wrapper_type = old_name.replace('zato_generic_connection_', '')
+
+                # .. pop a list of such connections to process ..
+                value_list = data.pop(new_name, [])
+
+                # .. go through each of them ..
+                for value in value_list:
+
+                    # .. populate the type ..
+                    value['type_'] = wrapper_type
+
+                    # .. populate wrapper type-specific attributes ..
+                    if wrapper_type == outconn_ldap:
+
+                        # .. passwords are to be turned into secrets ..
+                        if password := value.pop('password', None):
+                            value['secret'] = password
+
+                        value['is_outconn'] = True
+                        value['is_channel'] = False
+
+                        if not 'auto_bind' in value:
+                            value['auto_bind'] = COMMON_LDAP.AUTO_BIND.DEFAULT.id
+
+                        if not 'connect_timeout' in value:
+                            value['connect_timeout'] = COMMON_LDAP.DEFAULT.CONNECT_TIMEOUT
+
+                        if not 'get_info' in value:
+                            value['get_info'] = COMMON_LDAP.GET_INFO.SCHEMA.id
+
+                        if not 'ip_mode' in value:
+                            value['ip_mode'] = COMMON_LDAP.IP_MODE.IP_SYSTEM_DEFAULT.id
+
+                        if not 'is_internal' in value:
+                            value['is_internal'] = False
+
+                        if not 'is_read_only' in value:
+                            value['is_read_only'] = False
+
+                        if not 'is_stats_enabled' in value:
+                            value['is_stats_enabled'] = False
+
+                        if not 'is_tls_enabled' in value:
+                            value['is_tls_enabled'] = False
+
+                        if not 'pool_exhaust_timeout' in value:
+                            value['pool_exhaust_timeout'] = COMMON_LDAP.DEFAULT.POOL_EXHAUST_TIMEOUT
+
+                        if not 'pool_ha_strategy' in value:
+                            value['pool_ha_strategy'] = COMMON_LDAP.POOL_HA_STRATEGY.ROUND_ROBIN.id
+
+                        if not 'pool_keep_alive' in value:
+                            value['pool_keep_alive'] = COMMON_LDAP.DEFAULT.POOL_KEEP_ALIVE
+
+                        if not 'pool_lifetime' in value:
+                            value['pool_lifetime'] = COMMON_LDAP.DEFAULT.POOL_LIFETIME
+
+                        if not 'pool_max_cycles' in value:
+                            value['pool_max_cycles'] = COMMON_LDAP.DEFAULT.POOL_MAX_CYCLES
+
+                        if not 'pool_name' in value:
+                            value['pool_name'] = ''
+
+                        if not 'pool_size' in value:
+                            value['pool_size'] = COMMON_LDAP.DEFAULT.POOL_SIZE
+
+                        if not 'sasl_mechanism' in value:
+                            value['sasl_mechanism'] = ''
+
+                        if not 'sec_use_rbac' in value:
+                            value['sec_use_rbac'] = False
+
+                        if not 'should_check_names' in value:
+                            value['should_check_names'] = False
+
+                        if not 'should_log_messages' in value:
+                            value['should_log_messages'] = False
+
+                        if not 'should_return_empty_attrs' in value:
+                            value['should_return_empty_attrs'] = True
+
+                        if not 'tls_ciphers' in value:
+                            value['tls_ciphers'] = COMMON_TLS.DEFAULT.CIPHERS
+
+                        if not 'tls_private_key_file' in value:
+                            value['tls_private_key_file'] = ''
+
+                        if not 'tls_validate' in value:
+                            value['tls_validate'] = COMMON_TLS.CERT_VALIDATE.CERT_REQUIRED.id
+
+                        if not 'tls_version' in value:
+                            value['tls_version'] = COMMON_TLS.DEFAULT.VERSION
+
+                        if not 'use_auto_range' in value:
+                            value['use_auto_range'] = True
+
+                        if not 'use_tls' in value:
+                            value['use_tls'] = False
+
+                    # .. finally, we can append it for later use ..
+                    _ = data['zato_generic_connection'].append(value)
 
         # Add values for attributes that are optional ..
         for def_type, items in data.items():
