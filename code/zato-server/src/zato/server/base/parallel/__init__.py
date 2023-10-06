@@ -520,9 +520,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             # .. add  the actual configuration ..
             for path in paths:
 
+                # .. make sure the path is actually given on input, e.g. it is not None or '' ..
+                if not path:
+                    msg = f'Ignoring empty hot-deployment configuration path `{path}` (source -> {source})'
+                    logger.info(msg)
+                    continue
+
                 # .. log what we are about to do ..
-                msg = 'Adding hot-deployment configuration from `%s` (source -> %s)'
-                logger.info(msg, path, source)
+                msg = f'Adding hot-deployment configuration from `{path}` (source -> {source})'
+                logger.info(msg)
 
                 # .. stay on the safe side because, here, we do not know where it will be used ..
                 _fs_safe_name = fs_safe_name(path)
@@ -539,12 +545,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 # .. go through any of the paths potentially containing user configuration directories ..
                 for user_conf_path in Path(path).rglob(HotDeploy.User_Conf_Directory):
 
-                    # .. make sure that this directory exists ..
-                    if not os.path.exists(user_conf_path):
-                        logger.info(f'Ignoring nonexistent pickup directory -> {user_conf_path}')
-                    else:
-                        # .. and add each of them to hot-deployment.
-                        self._add_user_conf_from_path(str(user_conf_path))
+                    # .. and add each of them to hot-deployment.
+                    self._add_user_conf_from_path(str(user_conf_path))
 
 # ################################################################################################################################
 
