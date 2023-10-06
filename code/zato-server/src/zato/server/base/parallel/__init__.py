@@ -519,7 +519,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             # .. support multiple entries ..
             paths = paths.split(':') # type: ignore
-            paths = [elem.strip() for elem in paths] # type: ignore
+            paths = [elem.strip() for elem in paths if elem] # type: ignore
 
             # .. add  the actual configuration ..
             for path in paths:
