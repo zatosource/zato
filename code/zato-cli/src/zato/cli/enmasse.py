@@ -1733,7 +1733,7 @@ class InputParser:
                 wrapper_type = old_name.replace('zato_generic_connection_', '')
 
                 # .. pop a list of such connections to process ..
-                value_list = data.pop(new_name)
+                value_list = data.pop(new_name, [])
 
                 # .. go through each of them ..
                 for value in value_list:
