@@ -2182,7 +2182,7 @@ class Enmasse(ManageCommand):
         has_all_types = ModuleCtx.Include_Type.All in include_type
         has_all_names = ModuleCtx.Include_Type.All in include_name
 
-        # Handle security definitions ..
+        # Handle security definitions, some of which should never be exported ..
         if item_type == 'def_sec':
 
             # .. do not write RBAC definitions ..
@@ -2197,17 +2197,25 @@ class Enmasse(ManageCommand):
             else:
                 out = True
 
-        # We enter this branch if we are to export only specific types ..
-        if not has_all_types:
-            out = self._should_write_type_to_output(item_type, item, include_type)
+        else:
+            # We enter this branch if we are to export only specific types ..
+            if not has_all_types:
+                out = self._should_write_type_to_output(item_type, item, include_type)
 
-        # We enter this branch if we are to export only objects of specific names ..
-        if not has_all_names:
-            item_name = item.get('name') or ''
-            item_name = item_name.lower()
-            out = self._should_write_name_to_output(item_type, item_name, include_name)
+            # We enter this branch if we are to export only objects of specific names ..
+            if not has_all_names:
+                item_name = item.get('name') or ''
+                item_name = item_name.lower()
+                out = self._should_write_name_to_output(item_type, item_name, include_name)
 
         # .. we are ready to return our output
+
+        print()
+        print(111, item_type)
+        print(222, item)
+        print(333, out)
+        print()
+
         return out
 
 # ################################################################################################################################
