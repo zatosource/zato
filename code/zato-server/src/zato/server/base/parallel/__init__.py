@@ -489,18 +489,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # .. go through the list of prefixes and add any matching too.
         for prefix in prefix_list:
-            for key, value in os.environ.items():
-                if key.startswith(prefix):
-                    self._add_pickup_conf_from_local_path(value, key)
-
-        # Look up Python hot-deployment directories ..
-        path = os.environ.get('ZATO_HOT_DEPLOY_DIR', '')
-
-        # .. try the other name too ..
-        if not path:
-            path = os.environ.get('Zato_Hot_Deploy_Dir', '')
-
-        # .. and make it possible to deploy from them.
+            for name, path in os.environ.items():
+                if name.startswith(prefix):
+                    self._add_pickup_conf_from_local_path(path, name)
 
 # ################################################################################################################################
 
@@ -548,8 +539,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 # .. go through any of the paths potentially containing user configuration directories ..
                 for user_conf_path in Path(path).rglob(HotDeploy.User_Conf_Directory):
 
-                    # .. and add each of them to hot-deployment.
-                    self._add_user_conf_from_path(str(user_conf_path))
+                    # .. make sure that this directory exists ..
+                    if not os.path.exists(user_conf_path):
+                        logger.info(f'Ignoring nonexistent pickup directory -> {user_conf_path}')
+                    else:
+                        # .. and add each of them to hot-deployment.
+                        self._add_user_conf_from_path(str(user_conf_path))
 
 # ################################################################################################################################
 
