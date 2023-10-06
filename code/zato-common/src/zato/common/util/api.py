@@ -629,8 +629,13 @@ def visit_py_source(
     # We enter here if we are not given any patterns on input ..
     if not order_patterns:
 
-        # .. make a deep copy first because we are going to change this list ..
-        order_patterns = ['*']
+        # .. individual Python files will be deployed in this order ..
+        order_patterns = [
+            'common*',
+            'util*',
+            'model*',
+            '*'
+        ]
 
         # .. now, append the .py extension to each time so that we can find such files below ..
         for idx, elem in enumerate(order_patterns):
