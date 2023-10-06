@@ -1789,8 +1789,9 @@ class Enmasse(ManageCommand):
     """
     opts = [
         {'name':'--server-url', 'help':'URL of the server that enmasse should talk to, provided in host[:port] format. Defaults to server.conf\'s \'gunicorn_bind\''},  # noqa: E501
-        {'name':'--export-local', 'help':'Export local file definitions into one file (can be used with --export-odb)', 'action':'store_true'},
-        {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
+        {'name':'--export-local', 'help':'Export local file definitions into one file (can be used with --export)', 'action':'store_true'},
+        {'name':'--export', 'help':'Export server objects to a file (can be used with --export-local)', 'action':'store_true'},
+        {'name':'--export-odb', 'help':'Same as --export', 'action':'store_true'},
         {'name':'--output', 'help':'Path to a file to export data to', 'action':'store'},
         {'name':'--include-type', 'help':'A list of definition types to include in an export', 'action':'store', 'default':'all'},
         {'name':'--include-name', 'help':'Only objects containing any of the names provided will be exported', 'action':'store', 'default':'all'},
@@ -1944,6 +1945,7 @@ class Enmasse(ManageCommand):
 
         # .. support both arguments ..
         self.replace_objects:'bool' = getattr(args, 'replace', False) or getattr(args, 'replace_odb_objects', False)
+        self.export_odb:'bool' = getattr(args, 'export', False) or getattr(args, 'export_odb', False)
 
         # .. make sure the input file path is correct ..
         if args.export_local or has_import:
@@ -1990,7 +1992,7 @@ class Enmasse(ManageCommand):
         self.client.invoke('zato.ping')
         populate_services_from_apispec(self.client, self.logger)
 
-        if True not in (args.export_local, args.export_odb, args.clean_odb, has_import):
+        if True not in (args.export_local, self.export_odb, args.clean_odb, has_import):
             self.logger.error('At least one of --clean, --export-local, --export-odb or --import is required, stopping now')
             sys.exit(self.SYS_ERROR.NO_OPTIONS)
 
@@ -1999,7 +2001,7 @@ class Enmasse(ManageCommand):
             count = self.object_mgr.delete_all()
             self.logger.info('Deleted {} items'.format(count))
 
-        if args.export_odb or has_import:
+        if self.export_odb or has_import:
             # Checks if connections to ODB/Redis are configured properly
             cc = CheckConfig(self.args)
             cc.show_output = False
@@ -2009,7 +2011,7 @@ class Enmasse(ManageCommand):
             os.chdir(self.curdir)
 
         # Imports and export are mutually excluding
-        if has_import and (args.export_local or args.export_odb):
+        if has_import and (args.export_local or self.export_odb):
             self.logger.error('Cannot specify import and export options at the same time, stopping now')
             sys.exit(self.SYS_ERROR.CONFLICTING_OPTIONS)
 
@@ -2024,7 +2026,7 @@ class Enmasse(ManageCommand):
         include_name = self._extract_include(include_name)
 
         # 3)
-        if args.export_local and args.export_odb:
+        if args.export_local and self.export_odb:
             _ = self.report_warnings_errors(self.export_local_odb())
             self.write_output(output_path, include_type, include_name)
 
@@ -2034,8 +2036,8 @@ class Enmasse(ManageCommand):
             self.write_output(output_path, include_type, include_name)
 
         # 2)
-        elif args.export_odb:
-            if self.report_warnings_errors(self.export_odb()):
+        elif self.export_odb:
+            if self.report_warnings_errors(self.run_odb_export()):
                 self.write_output(output_path, include_type, include_name)
 
         # 4) a/b
@@ -2209,13 +2211,6 @@ class Enmasse(ManageCommand):
                 out = self._should_write_name_to_output(item_type, item_name, include_name)
 
         # .. we are ready to return our output
-
-        print()
-        print(111, item_type)
-        print(222, item)
-        print(333, out)
-        print()
-
         return out
 
 # ################################################################################################################################
@@ -2519,7 +2514,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def export_odb(self):
+    def run_odb_export(self):
         return self.export_local_odb(False)
 
 # ################################################################################################################################
