@@ -95,6 +95,7 @@ ModuleCtx.Enmasse_Type = {
     'channel_plain_http': ModuleCtx.Include_Type.REST,
     'outconn_plain_http': ModuleCtx.Include_Type.REST,
     'zato_generic_rest_wrapper': ModuleCtx.Include_Type.REST,
+    'zato_generic_connection': ModuleCtx.Include_Type.LDAP,
 
     # Security definitions
     'def_sec': ModuleCtx.Include_Type.Security,
@@ -106,6 +107,9 @@ ModuleCtx.Enmasse_Type = {
 # ################################################################################################################################
 
 ModuleCtx.Enmasse_Attr_List_Include = {
+
+    # Security definitions
+    'def_sec':  ['type', 'name', 'username', 'realm'],
 
     # REST connections - Channels
     'channel_plain_http': [
@@ -131,8 +135,14 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'transport',
     ],
 
-    # Security definitions
-    'def_sec':  ['type', 'name', 'username', 'realm']
+    # LDAP outgoing connections
+    'zato_generic_connection_outconn-ldap': [
+        'type_',
+        'name',
+        'username',
+        'auth_type',
+        'server_list',
+    ]
 }
 
 # ################################################################################################################################
@@ -160,6 +170,7 @@ ModuleCtx.Enmasse_Item_Type_Name_Map = {
     'def_sec': 'security',
     'channel_plain_http': 'channel_rest',
     'outconn_plain_http': 'outgoing_rest',
+    'zato_generic_connection_outconn-ldap': 'outgoing_ldap',
 }
 
 # ################################################################################################################################
@@ -2078,15 +2089,16 @@ class Enmasse(ManageCommand):
 
     def _filter_item_attrs(
         self,
-        item_type,    # type: str
-        item,         # type: strdict
+        attr_key,  # type: str
+        item_type, # type: str
+        item,      # type: strdict
     ) -> 'strdict':
 
         # Check if there is an explicit list of include attributes to return for the type ..
-        attr_list_include = ModuleCtx.Enmasse_Attr_List_Include.get(item_type) or []
+        attr_list_include = ModuleCtx.Enmasse_Attr_List_Include.get(attr_key) or []
 
         # .. as above, for attributes that are explicitly configured to be excluded ..
-        attr_list_exclude = ModuleCtx.Enmasse_Attr_List_Exclude.get(item_type) or []
+        attr_list_exclude = ModuleCtx.Enmasse_Attr_List_Exclude.get(attr_key) or []
 
         # .. to make sure the dictionary does not change during iteration ..
         item_copy = deepcopy(item)
@@ -2127,8 +2139,8 @@ class Enmasse(ManageCommand):
 
     def _sort_item_attrs(
         self,
-        item_type,    # type: str
-        item,         # type: strdict
+        attr_key, # type: str
+        item,     # type: strdict
     ) -> 'strdict':
 
         # Turn the item into an object whose attributes can be sorted ..
@@ -2136,7 +2148,7 @@ class Enmasse(ManageCommand):
 
         # .. go through each of the attribute in the order of preference, assuming that we have any matching one ..
         # .. it needs to be reversed because we are pushing each such attribute to the front, as in a stack ..
-        for attr in reversed(ModuleCtx.Enmasse_Attr_List_Sort_Order.get(item_type) or []):
+        for attr in reversed(ModuleCtx.Enmasse_Attr_List_Sort_Order.get(attr_key) or []):
 
             if attr in item:
                 item.move_to_end(attr, last=False)
@@ -2264,11 +2276,19 @@ class Enmasse(ManageCommand):
                 if not self._should_write_to_output(item_type, item, include_type, include_name):
                     continue
 
+                # .. this is required because generic connections are differentiated ..
+                # .. by their embedded 'type_' attribute, rather but item_type itself ..
+                if item_type == 'zato_generic_connection':
+                    wrapper_type = item['type_']
+                    attr_key = f'{item_type}_{wrapper_type}'
+                else:
+                    attr_key = item_type
+
                 # .. this will remove any attributes from this item that we do not need ..
-                item = self._filter_item_attrs(item_type, item)
+                item = self._filter_item_attrs(attr_key, item_type, item)
 
                 # .. sort the attributes in the order we want them to appear in the outpur file ..
-                item = self._sort_item_attrs(item_type, item)
+                item = self._sort_item_attrs(attr_key, item)
 
                 # .. if we are here, it means that we want to include this item on output ..
                 to_write_items.append(item)
@@ -2276,21 +2296,55 @@ class Enmasse(ManageCommand):
             # .. sort item lists to be written ..
             to_write_items.sort(key=lambda item: item.get('name', '').lower())
 
-            # .. now, item_type this new list to what is to be written ..
+            # .. now, append this new list to what is to be written ..
             # .. but only if there is anything to be written for that type ..
             if to_write_items:
                 to_write[item_type] = to_write_items
 
-        # .. replace item type names ..
+        # .. replace non-generic connection item type names ..
         for old_name, new_name in ModuleCtx.Enmasse_Item_Type_Name_Map.items():
             value = to_write.pop(old_name, None)
             if value:
                 to_write[new_name] = value
 
-        # .. make sure security definitions come first, assuming that we have any ..
-        if 'security' in to_write:
-            to_write = OrderedDict(to_write)
-            to_write.move_to_end('security', last=False)
+        # .. now, replace generic connection types which are more involved ..
+        new_names = {
+            'outgoing_ldap': []
+        }
+        for old_name, value_list in to_write.items():
+            value_list = cast_('anylist', value_list)
+            if old_name == 'zato_generic_connection':
+                for idx, value in enumerate(value_list):
+                    if wrapper_type := value.get('type_'):
+                        attr_key = f'{old_name}_{wrapper_type}'
+                        if new_name := ModuleCtx.Enmasse_Item_Type_Name_Map.get(attr_key):
+                            _ = value.pop('type_')
+                            new_names[new_name].append(value)
+                            value_list.pop(idx)
+
+        # .. append the new names extracted from generic connections to what we need to write ..
+        for new_name, value_list in new_names.items():
+            if value_list:
+                to_write[new_name] = value_list
+
+        # .. if there are no generic connections left at this point, this key can be deleted ..
+        if not to_write.get('zato_generic_connection'):
+            _ = to_write.pop('zato_generic_connection')
+
+        # .. this lets us move individual keys around ..
+        to_write = OrderedDict(to_write)
+
+        # .. certain keys should be stored in a specific order at the head of the output ..
+        key_order = reversed([
+            'security',
+            'channel_rest',
+            'outgoing_rest',
+        ])
+
+        # .. do move the keys now, in the order specified above ..
+        for key in key_order:
+            if key in to_write:
+                to_write.move_to_end(key, last=False)
 
         # .. if we have the name of a file to use, do use it ..
         if output_path:
@@ -2507,11 +2561,12 @@ if __name__ == '__main__':
     args.ignore_missing_defs = False
     args.output = None
     args.rbac_sleep = 1
-    args['replace'] = True
-    args['import'] = True
+
+    # args['replace'] = True
+    args['import'] = False
 
     args.path  = sys.argv[1]
-    args.input = sys.argv[2]
+    # args.input = sys.argv[2]
 
     enmasse = Enmasse(args)
     enmasse.run(args)
