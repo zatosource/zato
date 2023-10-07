@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,6 +11,9 @@ import os
 from io import StringIO
 from logging import getLogger
 from traceback import format_exc
+
+# Watchdog
+from watchdog.events import DirCreatedEvent
 
 # Zato
 from zato.common.util.api import hot_deploy, spawn_greenlet
@@ -134,8 +137,13 @@ class FileTransferEventHandler:
             event.channel_name = self.channel_name
 
             if self.config.is_hot_deploy:
-                spawn_greenlet(hot_deploy, self.manager.server, event.file_name, event.full_path,
-                    self.config.should_delete_after_pickup, should_deploy_in_place=self.config.should_deploy_in_place)
+                if transfer_event.is_directory:
+                    if isinstance(transfer_event, DirCreatedEvent):
+                        logger.info('About to add a new hot-deployment directory -> %s', event.full_path)
+                        self.manager.add_pickup_dir(event.full_path, f'File transfer -> {self.channel_name}')
+                else:
+                    _ = spawn_greenlet(hot_deploy, self.manager.server, event.file_name, event.full_path,
+                        self.config.should_delete_after_pickup, should_deploy_in_place=self.config.should_deploy_in_place)
                 return
 
             if self.config.should_read_on_pickup:
