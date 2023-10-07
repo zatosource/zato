@@ -485,13 +485,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # .. go through the specific names and add any matching ..
         for name in name_list:
             if path := os.environ.get(name, ''):
-                self._add_pickup_conf_from_local_path(path, name)
+                self.add_pickup_conf_from_local_path(path, name)
 
         # .. go through the list of prefixes and add any matching too.
         for prefix in prefix_list:
             for name, path in os.environ.items():
                 if name.startswith(prefix):
-                    self._add_pickup_conf_from_local_path(path, name)
+                    self.add_pickup_conf_from_local_path(path, name)
 
 # ################################################################################################################################
 
@@ -501,11 +501,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         path = os.path.join(self.deploy_auto_from, 'code')
 
         # .. and make it possible to deploy from them.
-        self._add_pickup_conf_from_local_path(path, 'AutoDeploy')
+        self.add_pickup_conf_from_local_path(path, 'AutoDeploy')
 
 # ################################################################################################################################
 
-    def _add_pickup_conf_from_local_path(self, paths:'str', source:'str') -> 'None':
+    def add_pickup_conf_from_local_path(self, paths:'str', source:'str') -> 'None':
 
         # Bunch
         from bunch import bunchify
