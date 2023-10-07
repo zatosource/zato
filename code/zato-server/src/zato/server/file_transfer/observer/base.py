@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
@@ -15,7 +16,7 @@ from traceback import format_exc
 from gevent import sleep
 
 # Watchdog
-from watchdog.events import FileCreatedEvent, FileModifiedEvent
+from watchdog.events import DirCreatedEvent, DirModifiedEvent, FileCreatedEvent, FileModifiedEvent
 
 # Zato
 from zato.common.api import FILE_TRANSFER
@@ -45,8 +46,9 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class PathCreatedEvent:
-    def __init__(self, src_path:'str') -> 'None':
+    def __init__(self, src_path:'str', is_dir:'bool') -> 'None':
         self.src_path = src_path
+        self.is_dir = is_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -271,10 +273,32 @@ class BaseObserver:
                     diff = DirSnapshotDiff(snapshot, new_snapshot)
 
                     for path_created in diff.files_created:
-                        handler_func(FileCreatedEvent(path_created), self, snapshot_maker)
+
+                        # .. ignore Python's own directorries ..
+                        if '__pycache__' in path_created:
+                            continue
+
+                        if os.path.isdir(path_created):
+                            class_ = DirCreatedEvent
+                        else:
+                            class_ = FileCreatedEvent
+
+                        event = class_(path_created)
+                        handler_func(event, self, snapshot_maker)
 
                     for path_modified in diff.files_modified:
-                        handler_func(FileModifiedEvent(path_modified), self, snapshot_maker)
+
+                        # .. ignore Python's own directorries ..
+                        if '__pycache__' in path_modified:
+                            continue
+
+                        if os.path.isdir(path_modified):
+                            class_ = DirModifiedEvent
+                        else:
+                            class_ = FileModifiedEvent
+
+                        event = class_(path_modified)
+                        handler_func(event, self, snapshot_maker)
 
                     # .. a new snapshot which will be treated as the old one in the next iteration
                     snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, True)

@@ -58,13 +58,15 @@ default_interval = 1.1
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FileInfo:
+class ItemInfo:
     """ Information about a single file as found by a snapshot maker.
     """
     full_path: 'str'
     name: 'str'
     size: 'int' = -1
     last_modified: 'datetime'
+    is_dir: 'bool'
+    is_file: 'bool'
 
 # ################################################################################################################################
 
@@ -88,21 +90,23 @@ class DirSnapshot:
 
 # ################################################################################################################################
 
-    def add_file_list(self, data:'anylist') -> 'None':
+    def add_item(self, data:'anylist') -> 'None':
 
         for item in data:
             item = cast_('anydict', item)
 
-            file_info = FileInfo()
-            file_info.full_path = self.get_full_path(item)
-            file_info.name = item['name']
-            file_info.size = item['size']
+            item_info = ItemInfo()
+            item_info.full_path = self.get_full_path(item)
+            item_info.name = item['name']
+            item_info.size = item['size']
+            item_info.is_dir = item['is_dir']
+            item_info.is_file = item['is_file']
 
             # This may be either string or a datetime object
             last_modified = item['last_modified']
-            file_info.last_modified = last_modified if isinstance(last_modified, datetime) else parse_datetime(last_modified)
+            item_info.last_modified = last_modified if isinstance(last_modified, datetime) else parse_datetime(last_modified)
 
-            self.file_data[file_info.full_path] = file_info
+            self.file_data[item_info.full_path] = item_info
 
 # ################################################################################################################################
 
@@ -124,7 +128,7 @@ class DirSnapshot:
         dir_snapshot_file_list = []
         out = {'dir_snapshot_file_list': dir_snapshot_file_list}
 
-        for value in self.file_data.values(): # type: (FileInfo)
+        for value in self.file_data.values(): # type: (ItemInfo)
             value_as_dict = value.to_dict() # type: anydict
             dir_snapshot_file_list.append(value_as_dict)
 
@@ -142,7 +146,7 @@ class DirSnapshot:
         """ Builds a DirSnapshot object out of a dict read from the ODB.
         """
         snapshot = DirSnapshot(path)
-        snapshot.add_file_list(sql_dict['dir_snapshot_file_list'])
+        snapshot.add_item(sql_dict['dir_snapshot_file_list'])
 
         return snapshot
 
@@ -175,7 +179,7 @@ class DirSnapshotDiff:
         # (we would have to download it and check its contents to cover such a case).
 
         for current in current_snapshot.file_data.values():
-            current = cast_('FileInfo', current)
+            current = cast_('ItemInfo', current)
             previous = previous_snapshot.file_data.get(current.full_path)
 
             if previous:
@@ -237,18 +241,19 @@ class LocalSnapshotMaker(AbstractSnapshotMaker):
         # Recursively, get all files
         listing = Path(path).rglob('*')
 
-        for item in listing: # type: Path
-            if item.is_file():
-                full_path = str(item)
-                stat = item.stat()
-                file_list.append({
-                    'full_path': full_path,
-                    'name': item.name,
-                    'size': stat.st_size,
-                    'last_modified': datetime.fromtimestamp(stat.st_mtime)
-                })
+        for item in listing:
+            full_path = str(item)
+            stat = item.stat()
+            file_list.append({
+                'full_path': full_path,
+                'name': item.name,
+                'is_dir': item.is_dir(),
+                'is_file': item.is_file(),
+                'size': stat.st_size,
+                'last_modified': datetime.fromtimestamp(stat.st_mtime)
+            })
 
-        snapshot.add_file_list(file_list)
+        snapshot.add_item(file_list)
 
         return snapshot
 
@@ -310,7 +315,7 @@ class BaseRemoteSnapshotMaker(AbstractSnapshotMaker):
 
         if result:
             # .. now, populate with what we found ..
-            snapshot.add_file_list(result['file_list'])
+            snapshot.add_item(result['file_list'])
 
         # .. and return the result.
         return snapshot
