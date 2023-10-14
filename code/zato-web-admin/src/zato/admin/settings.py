@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -48,6 +48,9 @@ if log_config:
             pass
 else:
     logging.basicConfig(level=logging.DEBUG)
+
+# Session timeout
+SESSION_COOKIE_AGE = 600 # In seconds = 10 minutes
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 
