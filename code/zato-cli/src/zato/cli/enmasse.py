@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC
+from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, TLS as COMMON_TLS
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -60,6 +60,10 @@ ERROR_TYPE_MISSING = Code('E04', 'type missing')
 
 # ################################################################################################################################
 
+outconn_ldap = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP
+
+# ################################################################################################################################
+
 class ModuleCtx:
 
     class Include_Type:
@@ -95,6 +99,7 @@ ModuleCtx.Enmasse_Type = {
     'channel_plain_http': ModuleCtx.Include_Type.REST,
     'outconn_plain_http': ModuleCtx.Include_Type.REST,
     'zato_generic_rest_wrapper': ModuleCtx.Include_Type.REST,
+    'zato_generic_connection': ModuleCtx.Include_Type.LDAP,
 
     # Security definitions
     'def_sec': ModuleCtx.Include_Type.Security,
@@ -106,6 +111,9 @@ ModuleCtx.Enmasse_Type = {
 # ################################################################################################################################
 
 ModuleCtx.Enmasse_Attr_List_Include = {
+
+    # Security definitions
+    'def_sec':  ['type', 'name', 'username', 'realm'],
 
     # REST connections - Channels
     'channel_plain_http': [
@@ -131,8 +139,14 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'transport',
     ],
 
-    # Security definitions
-    'def_sec':  ['type', 'name', 'username', 'realm']
+    # LDAP outgoing connections
+    f'zato_generic_connection_{outconn_ldap}': [
+        'type_',
+        'name',
+        'username',
+        'auth_type',
+        'server_list',
+    ]
 }
 
 # ################################################################################################################################
@@ -160,6 +174,7 @@ ModuleCtx.Enmasse_Item_Type_Name_Map = {
     'def_sec': 'security',
     'channel_plain_http': 'channel_rest',
     'outconn_plain_http': 'outgoing_rest',
+    'zato_generic_connection_outconn-ldap': 'outgoing_ldap',
 }
 
 # ################################################################################################################################
@@ -604,14 +619,14 @@ class Results:
     def add_error(self, raw, code, msg, *args):
         if args:
             msg = msg.format(*args)
-        self.errors.append(Notice(raw, msg, code))
+        _= self.errors.append(Notice(raw, msg, code))
 
 # ################################################################################################################################
 
     def add_warning(self, raw, code, msg, *args):
         if args:
             msg = msg.format(*args)
-        self.warnings.append(Notice(raw, msg, code))
+        _= self.warnings.append(Notice(raw, msg, code))
 
 # ################################################################################################################################
 
@@ -819,10 +834,10 @@ class ObjectImporter:
 # ################################################################################################################################
 
     def remove_from_import_list(self, item_type, name):
-        lst = self.json.get(item_type, [])
-        item = find_first(lst, lambda item: item.name == name)
+        list_ = self.json.get(item_type, [])
+        item = find_first(list_, lambda item: item.name == name)
         if item:
-            lst.remove(item)
+            _= list_.remove(item)
         else:
             raise KeyError('Tried to remove missing %r named %r' % (item_type, name))
 
@@ -905,22 +920,22 @@ class ObjectImporter:
 
         # Generic connections cannot import their IDs during edits
         if item_type == 'zato_generic_connection' and is_edit:
-            attrs_dict.pop('id', None)
+            _= attrs_dict.pop('id', None)
 
         # RBAC objects cannot refer to other objects by their IDs
         elif item_type == 'rbac_role_permission':
-            attrs_dict.pop('id', None)
-            attrs_dict.pop('perm_id', None)
-            attrs_dict.pop('role_id', None)
-            attrs_dict.pop('service_id', None)
+            _= attrs_dict.pop('id', None)
+            _= attrs_dict.pop('perm_id', None)
+            _= attrs_dict.pop('role_id', None)
+            _= attrs_dict.pop('service_id', None)
 
         elif item_type == 'rbac_client_role':
-            attrs_dict.pop('id', None)
-            attrs_dict.pop('role_id', None)
+            _= attrs_dict.pop('id', None)
+            _= attrs_dict.pop('role_id', None)
 
         elif item_type == 'rbac_role':
-            attrs_dict.pop('id', None)
-            attrs_dict.pop('parent_id', None)
+            _= attrs_dict.pop('id', None)
+            _= attrs_dict.pop('parent_id', None)
 
         attrs.cluster_id = self.client.cluster_id
         attrs.is_source_external = True
@@ -1704,6 +1719,119 @@ class InputParser:
         # .. turn it into a config dict ..
         env_config = self._extract_config_from_env(cast_('strdict', env))
 
+        # .. this can be built upfront in case it is needed ..
+        if not 'zato_generic_connection' in data:
+            data['zato_generic_connection'] = []
+
+        # .. turn out simple definitions into generic ones if this is applicable ..
+        for new_name, old_name in ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse.items():
+
+            # .. this should be a generic connection ..
+            if old_name.startswith('zato_generic_connection'):
+
+                # .. extract its type ..
+                wrapper_type = old_name.replace('zato_generic_connection_', '')
+
+                # .. pop a list of such connections to process ..
+                value_list = data.pop(new_name, [])
+
+                # .. go through each of them ..
+                for value in value_list:
+
+                    # .. populate the type ..
+                    value['type_'] = wrapper_type
+
+                    # .. populate wrapper type-specific attributes ..
+                    if wrapper_type == outconn_ldap:
+
+                        # .. passwords are to be turned into secrets ..
+                        if password := value.pop('password', None):
+                            value['secret'] = password
+
+                        value['is_outconn'] = True
+                        value['is_channel'] = False
+
+                        if not 'auto_bind' in value:
+                            value['auto_bind'] = COMMON_LDAP.AUTO_BIND.DEFAULT.id
+
+                        if not 'connect_timeout' in value:
+                            value['connect_timeout'] = COMMON_LDAP.DEFAULT.CONNECT_TIMEOUT
+
+                        if not 'get_info' in value:
+                            value['get_info'] = COMMON_LDAP.GET_INFO.SCHEMA.id
+
+                        if not 'ip_mode' in value:
+                            value['ip_mode'] = COMMON_LDAP.IP_MODE.IP_SYSTEM_DEFAULT.id
+
+                        if not 'is_internal' in value:
+                            value['is_internal'] = False
+
+                        if not 'is_read_only' in value:
+                            value['is_read_only'] = False
+
+                        if not 'is_stats_enabled' in value:
+                            value['is_stats_enabled'] = False
+
+                        if not 'is_tls_enabled' in value:
+                            value['is_tls_enabled'] = False
+
+                        if not 'pool_exhaust_timeout' in value:
+                            value['pool_exhaust_timeout'] = COMMON_LDAP.DEFAULT.POOL_EXHAUST_TIMEOUT
+
+                        if not 'pool_ha_strategy' in value:
+                            value['pool_ha_strategy'] = COMMON_LDAP.POOL_HA_STRATEGY.ROUND_ROBIN.id
+
+                        if not 'pool_keep_alive' in value:
+                            value['pool_keep_alive'] = COMMON_LDAP.DEFAULT.POOL_KEEP_ALIVE
+
+                        if not 'pool_lifetime' in value:
+                            value['pool_lifetime'] = COMMON_LDAP.DEFAULT.POOL_LIFETIME
+
+                        if not 'pool_max_cycles' in value:
+                            value['pool_max_cycles'] = COMMON_LDAP.DEFAULT.POOL_MAX_CYCLES
+
+                        if not 'pool_name' in value:
+                            value['pool_name'] = ''
+
+                        if not 'pool_size' in value:
+                            value['pool_size'] = COMMON_LDAP.DEFAULT.POOL_SIZE
+
+                        if not 'sasl_mechanism' in value:
+                            value['sasl_mechanism'] = ''
+
+                        if not 'sec_use_rbac' in value:
+                            value['sec_use_rbac'] = False
+
+                        if not 'should_check_names' in value:
+                            value['should_check_names'] = False
+
+                        if not 'should_log_messages' in value:
+                            value['should_log_messages'] = False
+
+                        if not 'should_return_empty_attrs' in value:
+                            value['should_return_empty_attrs'] = True
+
+                        if not 'tls_ciphers' in value:
+                            value['tls_ciphers'] = COMMON_TLS.DEFAULT.CIPHERS
+
+                        if not 'tls_private_key_file' in value:
+                            value['tls_private_key_file'] = ''
+
+                        if not 'tls_validate' in value:
+                            value['tls_validate'] = COMMON_TLS.CERT_VALIDATE.CERT_REQUIRED.id
+
+                        if not 'tls_version' in value:
+                            value['tls_version'] = COMMON_TLS.DEFAULT.VERSION
+
+                        if not 'use_auto_range' in value:
+                            value['use_auto_range'] = True
+
+                        if not 'use_tls' in value:
+                            value['use_tls'] = False
+
+                    # .. finally, we can append it for later use ..
+                    _ = data['zato_generic_connection'].append(value)
+
         # Add values for attributes that are optional ..
         for def_type, items in data.items():
 
@@ -1778,8 +1906,9 @@ class Enmasse(ManageCommand):
     """
     opts = [
         {'name':'--server-url', 'help':'URL of the server that enmasse should talk to, provided in host[:port] format. Defaults to server.conf\'s \'gunicorn_bind\''},  # noqa: E501
-        {'name':'--export-local', 'help':'Export local file definitions into one file (can be used with --export-odb)', 'action':'store_true'},
-        {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
+        {'name':'--export-local', 'help':'Export local file definitions into one file (can be used with --export)', 'action':'store_true'},
+        {'name':'--export', 'help':'Export server objects to a file (can be used with --export-local)', 'action':'store_true'},
+        {'name':'--export-odb', 'help':'Same as --export', 'action':'store_true'},
         {'name':'--output', 'help':'Path to a file to export data to', 'action':'store'},
         {'name':'--include-type', 'help':'A list of definition types to include in an export', 'action':'store', 'default':'all'},
         {'name':'--include-name', 'help':'Only objects containing any of the names provided will be exported', 'action':'store', 'default':'all'},
@@ -1933,6 +2062,7 @@ class Enmasse(ManageCommand):
 
         # .. support both arguments ..
         self.replace_objects:'bool' = getattr(args, 'replace', False) or getattr(args, 'replace_odb_objects', False)
+        self.export_odb:'bool' = getattr(args, 'export', False) or getattr(args, 'export_odb', False)
 
         # .. make sure the input file path is correct ..
         if args.export_local or has_import:
@@ -1979,7 +2109,7 @@ class Enmasse(ManageCommand):
         self.client.invoke('zato.ping')
         populate_services_from_apispec(self.client, self.logger)
 
-        if True not in (args.export_local, args.export_odb, args.clean_odb, has_import):
+        if True not in (args.export_local, self.export_odb, args.clean_odb, has_import):
             self.logger.error('At least one of --clean, --export-local, --export-odb or --import is required, stopping now')
             sys.exit(self.SYS_ERROR.NO_OPTIONS)
 
@@ -1988,7 +2118,7 @@ class Enmasse(ManageCommand):
             count = self.object_mgr.delete_all()
             self.logger.info('Deleted {} items'.format(count))
 
-        if args.export_odb or has_import:
+        if self.export_odb or has_import:
             # Checks if connections to ODB/Redis are configured properly
             cc = CheckConfig(self.args)
             cc.show_output = False
@@ -1998,7 +2128,7 @@ class Enmasse(ManageCommand):
             os.chdir(self.curdir)
 
         # Imports and export are mutually excluding
-        if has_import and (args.export_local or args.export_odb):
+        if has_import and (args.export_local or self.export_odb):
             self.logger.error('Cannot specify import and export options at the same time, stopping now')
             sys.exit(self.SYS_ERROR.CONFLICTING_OPTIONS)
 
@@ -2013,7 +2143,7 @@ class Enmasse(ManageCommand):
         include_name = self._extract_include(include_name)
 
         # 3)
-        if args.export_local and args.export_odb:
+        if args.export_local and self.export_odb:
             _ = self.report_warnings_errors(self.export_local_odb())
             self.write_output(output_path, include_type, include_name)
 
@@ -2023,8 +2153,8 @@ class Enmasse(ManageCommand):
             self.write_output(output_path, include_type, include_name)
 
         # 2)
-        elif args.export_odb:
-            if self.report_warnings_errors(self.export_odb()):
+        elif self.export_odb:
+            if self.report_warnings_errors(self.run_odb_export()):
                 self.write_output(output_path, include_type, include_name)
 
         # 4) a/b
@@ -2078,15 +2208,16 @@ class Enmasse(ManageCommand):
 
     def _filter_item_attrs(
         self,
-        item_type,    # type: str
-        item,         # type: strdict
+        attr_key,  # type: str
+        item_type, # type: str
+        item,      # type: strdict
     ) -> 'strdict':
 
         # Check if there is an explicit list of include attributes to return for the type ..
-        attr_list_include = ModuleCtx.Enmasse_Attr_List_Include.get(item_type) or []
+        attr_list_include = ModuleCtx.Enmasse_Attr_List_Include.get(attr_key) or []
 
         # .. as above, for attributes that are explicitly configured to be excluded ..
-        attr_list_exclude = ModuleCtx.Enmasse_Attr_List_Exclude.get(item_type) or []
+        attr_list_exclude = ModuleCtx.Enmasse_Attr_List_Exclude.get(attr_key) or []
 
         # .. to make sure the dictionary does not change during iteration ..
         item_copy = deepcopy(item)
@@ -2127,8 +2258,8 @@ class Enmasse(ManageCommand):
 
     def _sort_item_attrs(
         self,
-        item_type,    # type: str
-        item,         # type: strdict
+        attr_key, # type: str
+        item,     # type: strdict
     ) -> 'strdict':
 
         # Turn the item into an object whose attributes can be sorted ..
@@ -2136,7 +2267,7 @@ class Enmasse(ManageCommand):
 
         # .. go through each of the attribute in the order of preference, assuming that we have any matching one ..
         # .. it needs to be reversed because we are pushing each such attribute to the front, as in a stack ..
-        for attr in reversed(ModuleCtx.Enmasse_Attr_List_Sort_Order.get(item_type) or []):
+        for attr in reversed(ModuleCtx.Enmasse_Attr_List_Sort_Order.get(attr_key) or []):
 
             if attr in item:
                 item.move_to_end(attr, last=False)
@@ -2170,7 +2301,7 @@ class Enmasse(ManageCommand):
         has_all_types = ModuleCtx.Include_Type.All in include_type
         has_all_names = ModuleCtx.Include_Type.All in include_name
 
-        # Handle security definitions ..
+        # Handle security definitions, some of which should never be exported ..
         if item_type == 'def_sec':
 
             # .. do not write RBAC definitions ..
@@ -2185,15 +2316,16 @@ class Enmasse(ManageCommand):
             else:
                 out = True
 
-        # We enter this branch if we are to export only specific types ..
-        if not has_all_types:
-            out = self._should_write_type_to_output(item_type, item, include_type)
+        else:
+            # We enter this branch if we are to export only specific types ..
+            if not has_all_types:
+                out = self._should_write_type_to_output(item_type, item, include_type)
 
-        # We enter this branch if we are to export only objects of specific names ..
-        if not has_all_names:
-            item_name = item.get('name') or ''
-            item_name = item_name.lower()
-            out = self._should_write_name_to_output(item_type, item_name, include_name)
+            # We enter this branch if we are to export only objects of specific names ..
+            if not has_all_names:
+                item_name = item.get('name') or ''
+                item_name = item_name.lower()
+                out = self._should_write_name_to_output(item_type, item_name, include_name)
 
         # .. we are ready to return our output
         return out
@@ -2264,11 +2396,19 @@ class Enmasse(ManageCommand):
                 if not self._should_write_to_output(item_type, item, include_type, include_name):
                     continue
 
+                # .. this is required because generic connections are differentiated ..
+                # .. by their embedded 'type_' attribute, rather but item_type itself ..
+                if item_type == 'zato_generic_connection':
+                    wrapper_type = item['type_']
+                    attr_key = f'{item_type}_{wrapper_type}'
+                else:
+                    attr_key = item_type
+
                 # .. this will remove any attributes from this item that we do not need ..
-                item = self._filter_item_attrs(item_type, item)
+                item = self._filter_item_attrs(attr_key, item_type, item)
 
                 # .. sort the attributes in the order we want them to appear in the outpur file ..
-                item = self._sort_item_attrs(item_type, item)
+                item = self._sort_item_attrs(attr_key, item)
 
                 # .. if we are here, it means that we want to include this item on output ..
                 to_write_items.append(item)
@@ -2276,21 +2416,55 @@ class Enmasse(ManageCommand):
             # .. sort item lists to be written ..
             to_write_items.sort(key=lambda item: item.get('name', '').lower())
 
-            # .. now, item_type this new list to what is to be written ..
+            # .. now, append this new list to what is to be written ..
             # .. but only if there is anything to be written for that type ..
             if to_write_items:
                 to_write[item_type] = to_write_items
 
-        # .. replace item type names ..
+        # .. replace non-generic connection item type names ..
         for old_name, new_name in ModuleCtx.Enmasse_Item_Type_Name_Map.items():
             value = to_write.pop(old_name, None)
             if value:
                 to_write[new_name] = value
 
-        # .. make sure security definitions come first, assuming that we have any ..
-        if 'security' in to_write:
-            to_write = OrderedDict(to_write)
-            to_write.move_to_end('security', last=False)
+        # .. now, replace generic connection types which are more involved ..
+        new_names = {
+            'outgoing_ldap': []
+        }
+        for old_name, value_list in to_write.items():
+            value_list = cast_('anylist', value_list)
+            if old_name == 'zato_generic_connection':
+                for idx, value in enumerate(value_list):
+                    if wrapper_type := value.get('type_'):
+                        attr_key = f'{old_name}_{wrapper_type}'
+                        if new_name := ModuleCtx.Enmasse_Item_Type_Name_Map.get(attr_key):
+                            _ = value.pop('type_')
+                            new_names[new_name].append(value)
+                            value_list.pop(idx)
+
+        # .. append the new names extracted from generic connections to what we need to write ..
+        for new_name, value_list in new_names.items():
+            if value_list:
+                to_write[new_name] = value_list
+
+        # .. if there are no generic connections left at this point, this key can be deleted ..
+        if not to_write.get('zato_generic_connection'):
+            _ = to_write.pop('zato_generic_connection')
+
+        # .. this lets us move individual keys around ..
+        to_write = OrderedDict(to_write)
+
+        # .. certain keys should be stored in a specific order at the head of the output ..
+        key_order = reversed([
+            'security',
+            'channel_rest',
+            'outgoing_rest',
+        ])
+
+        # .. do move the keys now, in the order specified above ..
+        for key in key_order:
+            if key in to_write:
+                to_write.move_to_end(key, last=False)
 
         # .. if we have the name of a file to use, do use it ..
         if output_path:
@@ -2457,7 +2631,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def export_odb(self):
+    def run_odb_export(self):
         return self.export_local_odb(False)
 
 # ################################################################################################################################
@@ -2507,11 +2681,12 @@ if __name__ == '__main__':
     args.ignore_missing_defs = False
     args.output = None
     args.rbac_sleep = 1
-    args['replace'] = True
-    args['import'] = True
+
+    # args['replace'] = True
+    args['import'] = False
 
     args.path  = sys.argv[1]
-    args.input = sys.argv[2]
+    # args.input = sys.argv[2]
 
     enmasse = Enmasse(args)
     enmasse.run(args)

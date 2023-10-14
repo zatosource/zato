@@ -38,6 +38,7 @@ from zato.common.json_internal import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.typing_ import cast_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
+from zato.common.util.python_ import get_module_name_by_path
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
@@ -583,7 +584,8 @@ class Service:
         if not hasattr(class_, '__service_name'):
             name = getattr(class_, 'name', None)
             if not name:
-                name = service_name_from_impl(class_.get_impl_name())
+                impl_name = class_.get_impl_name()
+                name = service_name_from_impl(impl_name)
                 name = class_.convert_impl_name(name)
 
             class_.__service_name = name # type: str
@@ -595,7 +597,7 @@ class Service:
     @classmethod
     def get_impl_name(class_:'type[Service]') -> 'str':
         if not hasattr(class_, '__service_impl_name'):
-            class_.__service_impl_name = '{}.{}'.format(class_.__module__, class_.__name__)
+            class_.__service_impl_name = '{}.{}'.format(class_.__service_module_name, class_.__name__)
         return class_.__service_impl_name
 
 # ################################################################################################################################
@@ -612,6 +614,18 @@ class Service:
         class_name = class_name.replace('.-', '.').replace('_-', '_')
 
         return '{}.{}'.format('.'.join(path), class_name)
+
+# ################################################################################################################################
+
+    @classmethod
+    def zato_set_module_name(class_:'type[Service]', path:'str') -> 'str':
+        if not hasattr(class_, '__service_module_name'):
+            if 'zato' in path and 'internal' in path:
+                mod_name = class_.__module__
+            else:
+                mod_name = get_module_name_by_path(path)
+            class_.__service_module_name = mod_name
+        return class_.__service_module_name
 
 # ################################################################################################################################
 

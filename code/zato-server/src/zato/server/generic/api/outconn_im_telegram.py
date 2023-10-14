@@ -21,7 +21,7 @@ import requests
 
 # Zato
 from zato.common.json_internal import loads
-from zato.common.util.http import get_proxy_config
+from zato.common.util.http_ import get_proxy_config
 from zato.server.connection.wrapper import Wrapper
 
 # ################################################################################################################################
