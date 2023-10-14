@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,6 +12,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import date, datetime
 from decimal import Decimal as decimal_
+from pathlib import Path
+from types import ModuleType
 from typing import           \
     Any as any_,             \
     BinaryIO as binaryio_,   \
@@ -98,6 +100,7 @@ callable_     = callable_[..., any_]
 callnone      = optional[callable_]
 cast_         = cast_
 commondict    = dict_[str, union_[int, str_, bool, float, anydict, anylist, datetime, None]]
+commoniter    = union_[anylist, anytuple]
 date_         = date
 datetime_     = datetime
 datetimez     = DateTimeWithZone
@@ -124,7 +127,10 @@ iobytes_      = io_[bytes]
 listnone      = anylistnone
 model         = type_[BaseModel]
 modelnone     = optional[type_[BaseModel]]
+module_       = ModuleType
 noreturn      = noreturn
+path_         = Path
+pathlist      = list_[path_]
 set_          = set_
 stranydict    = dict_[str, any_]
 strcalldict   = dict_[str, callable_]
