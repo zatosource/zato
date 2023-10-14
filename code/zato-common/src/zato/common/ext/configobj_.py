@@ -1683,14 +1683,20 @@ class ConfigObj(Section):
                     # This may be an environment variable ..
                     if value.startswith('$'):
 
-                        # .. but not if it's just a $ sign or an actual variable starting with it.
-                        if not (len(value) == 1 or value.startswith('$$')):
-                            env_key_name = value[1:]
-                            try:
-                                value = os.environ[env_key_name]
-                            except KeyError:
-                                logger.warning('Environment variable `%s` not found, config key `%s` (%s)',
-                                    env_key_name, key, self.zato_file_name)
+                        # .. certain keys should be ignored because they will be processed ..
+                        # .. by other layers, e.g. pickup configuration ..
+                        to_ignore = {'pickup_from'}
+
+                        if not key in to_ignore:
+
+                            # .. do not process it if it just a $ sign or an actual variable starting with it.
+                            if not (len(value) == 1 or value.startswith('$$')):
+                                env_key_name = value[1:]
+                                try:
+                                    value = os.environ[env_key_name]
+                                except KeyError:
+                                    logger.warning('Environment variable `%s` not found, config key `%s` (%s)',
+                                        env_key_name, key, self.zato_file_name)
 
                     # .. this may be a value to decrypt with a secret key (note that it is an if, not elif,
                     # to make it possible for environment variables to point to secrets.conf).

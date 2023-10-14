@@ -31,7 +31,7 @@ from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.typing_ import cast_
 from zato.common.util.exception import pretty_format_exception
-from zato.common.util.http import get_form_data as util_get_form_data, QueryDict
+from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
 from zato.cy.reqresp.payload import SimpleIOPayload as CySimpleIOPayload
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized

@@ -22,7 +22,7 @@ from zato.common.api import simple_types
 from zato.common.marshal_.api import Model
 from zato.common.json_internal import loads
 from zato.common.util.api import make_repr
-from zato.common.util.http import get_form_data as util_get_form_data
+from zato.common.util.http_ import get_form_data as util_get_form_data
 
 # Zato - Cython
 from zato.simpleio import ServiceInput
