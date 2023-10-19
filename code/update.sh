@@ -24,6 +24,6 @@ echo Activating virtualenv in $CURDIR
 source $CURDIR/bin/activate
 
 echo Updating environment in $CURDIR
-$CURDIR/bin/python $CURDIR/util/zato_environment.py update
+PIP_DISABLE_PIP_VERSION_CHECK=1 $CURDIR/bin/python $CURDIR/util/zato_environment.py update
 
 echo ⭐ Installation updated to `zato --version`
