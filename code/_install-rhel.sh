@@ -54,6 +54,6 @@ echo Activating virtualenv in $CURDIR
 source $CURDIR/bin/activate
 
 echo Setting up environment in $CURDIR
-$CURDIR/bin/python $CURDIR/util/zato_environment.py install
+PIP_DISABLE_PIP_VERSION_CHECK=1 $CURDIR/bin/python $CURDIR/util/zato_environment.py install
 
 echo ⭐ Successfully installed `zato --version`
