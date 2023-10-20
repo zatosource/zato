@@ -2449,7 +2449,7 @@ class Enmasse(ManageCommand):
 
         # .. if there are no generic connections left at this point, this key can be deleted ..
         if not to_write.get('zato_generic_connection'):
-            _ = to_write.pop('zato_generic_connection')
+            _ = to_write.pop('zato_generic_connection', None)
 
         # .. this lets us move individual keys around ..
         to_write = OrderedDict(to_write)
