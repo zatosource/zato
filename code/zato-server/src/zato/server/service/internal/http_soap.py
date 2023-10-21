@@ -18,7 +18,7 @@ from zato.common.api import CONNECTION, DATA_FORMAT, DEFAULT_HTTP_PING_METHOD, D
      HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZATO_DEFAULT, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
-from zato.common.exception import ZatoException
+from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.json_internal import dumps
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
@@ -357,8 +357,8 @@ class Create(_CreateEdit):
 
             if input.connection == CONNECTION.CHANNEL and not service:
                 msg = 'Service `{}` does not exist in this cluster'.format(input.service)
-                self.logger.error(msg)
-                raise Exception(msg)
+                self.logger.info(msg)
+                raise ServiceMissingException(msg)
 
             # Will raise exception if the security type doesn't match connection
             # type and transport
@@ -562,8 +562,8 @@ class Edit(_CreateEdit):
 
             if input.connection == CONNECTION.CHANNEL and not service:
                 msg = 'Service `{}` does not exist in this cluster'.format(input.service)
-                self.logger.error(msg)
-                raise Exception(msg)
+                self.logger.info(msg)
+                raise ServiceMissingException(msg)
 
             # Will raise exception if the security type doesn't match connection
             # type and transport

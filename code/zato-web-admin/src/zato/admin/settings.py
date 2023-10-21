@@ -10,7 +10,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import logging.config
 import os
-import sys
 from uuid import uuid4
 
 # Zato
