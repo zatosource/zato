@@ -1205,15 +1205,18 @@ class ServiceStore:
 
                 # A regular directory
                 if os.path.isdir(item):
-                    to_process.extend(self.import_services_from_directory(item, base_dir))
+                    imported = self.import_services_from_directory(item, base_dir)
+                    to_process.extend(imported)
 
                 # .. a .py/.pyw
                 elif is_python_file(item):
-                    to_process.extend(self.import_services_from_file(item, is_internal, base_dir))
+                    imported = self.import_services_from_file(item, is_internal, base_dir)
+                    to_process.extend(imported)
 
                 # .. a named module
                 else:
-                    to_process.extend(self.import_services_from_module(item, is_internal))
+                    imported = self.import_services_from_module(item, is_internal)
+                    to_process.extend(imported)
 
             # .. a list of project roots ..
             elif isinstance(item, list):
@@ -1233,14 +1236,16 @@ class ServiceStore:
                         dir_name = str(dir_name)
 
                         # .. services need to be both imported and stored for later use ..
-                        to_process.extend((self.import_services_from_directory(dir_name, base_dir)))
+                        imported = self.import_services_from_directory(dir_name, base_dir)
+                        to_process.extend(imported)
 
                         # .. while models we merely import ..
                         _ = self.import_models_from_directory(dir_name, base_dir)
 
             # .. if we are here, it must be a module object.
             else:
-                to_process.extend(self.import_services_from_module_object(item, is_internal))
+                imported = self.import_services_from_module_object(item, is_internal)
+                to_process.extend(imported)
 
         total_size = 0
 
@@ -1388,17 +1393,23 @@ class ServiceStore:
     def import_services_from_file(self, file_name:'str', is_internal:'bool', base_dir:'str') -> 'anylist':
         """ Imports all the services from the path to a file.
         """
-        return self.import_objects_from_file(file_name, is_internal, base_dir, self._visit_module_for_services)
+        imported = self.import_objects_from_file(file_name, is_internal, base_dir, self._visit_module_for_services)
+        return imported
 
 # ################################################################################################################################
 
     def import_services_from_directory(self, dir_name:'str', base_dir:'str') -> 'anylist':
         """ Imports services from a specified directory.
         """
-        to_process = []
 
-        for py_path in visit_py_source(dir_name):
-            to_process.extend(self.import_services_from_file(py_path, False, base_dir))
+        # Local variables
+        to_process = []
+        py_path_list = visit_py_source(dir_name)
+        py_path_list = list(py_path_list)
+
+        for py_path in py_path_list:
+            imported = self.import_services_from_file(py_path, False, base_dir)
+            to_process.extend(imported)
             gevent_sleep(0.03)
 
         return to_process
@@ -1410,7 +1421,8 @@ class ServiceStore:
         """
         try:
             module_object = import_module(mod_name)
-            return self.import_services_from_module_object(module_object, is_internal)
+            imported = self.import_services_from_module_object(module_object, is_internal)
+            return imported
         except Exception as e:
             logger.warning('Could not import module `%s` (internal:%d) -> `%s` -> `%s`',
                 mod_name, is_internal, e.args, format_exc())
@@ -1421,7 +1433,8 @@ class ServiceStore:
     def import_services_from_module_object(self, mod:'module_', is_internal:'bool') -> 'anylist':
         """ Imports all the services from a Python module object.
         """
-        return self._visit_module_for_services(mod, is_internal, inspect.getfile(mod))
+        imported = self._visit_module_for_services(mod, is_internal, inspect.getfile(mod))
+        return imported
 
 # ################################################################################################################################
 

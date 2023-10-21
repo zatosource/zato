@@ -204,7 +204,7 @@ class Create(AdminService):
         service_id_list:'intlist' = []
 
         # This returns details of all the model classes deployed from the file
-        service_info_list = self.server.service_store.import_services_from_anywhere(current_work_dir, service_file_name)
+        service_info_list = self.server.service_store.import_services_from_anywhere(service_file_name, current_work_dir)
 
         # .. if we have deployed any models ..
         for service in service_info_list.to_process: # type: ignore
