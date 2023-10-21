@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import logging.config
 import os
+import sys
 from uuid import uuid4
 
 # Zato
@@ -50,7 +51,9 @@ else:
     logging.basicConfig(level=logging.DEBUG)
 
 # Session timeout
-SESSION_COOKIE_AGE = 600 # In seconds = 10 minutes
+_session_timeout_env_key = 'Zato_Dashboard_Session_Timeout'
+_session_timeout_default = 600 # In seconds = 10 minutes
+SESSION_COOKIE_AGE = os.environ.get(_session_timeout_env_key) or _session_timeout_default
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 
