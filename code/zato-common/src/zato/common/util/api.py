@@ -1950,8 +1950,15 @@ def slugify(value, allow_unicode=False):
 
 # ################################################################################################################################
 
-def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, needs_log=True, *args, **kwargs):
-    # type: (object, int, float, *object, **object) -> bool
+def wait_for_predicate(
+    predicate_func, # type: callable_
+    timeout,        # type: int
+    interval,       # type: float
+    log_msg_details=None, # type: strnone
+    needs_log=True,       # type: bool
+    *args,   # type: any_
+    **kwargs # type: any_
+) -> 'bool':
 
     # Try out first, perhaps it already fulfilled
     is_fulfilled = bool(predicate_func(*args, **kwargs))

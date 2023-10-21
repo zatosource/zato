@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from base64 import b64decode
@@ -24,6 +22,7 @@ from zato.common.py23_ import pickle_loads
 from zato.common.api import CHANNEL
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.ccsid_ import CCSIDConfig
+from zato.common.exception import ServiceMissingException
 from zato.common.json_internal import loads
 from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service as ModelService
 from zato.common.odb.query import channel_wmq_list
@@ -88,8 +87,8 @@ class Create(AdminService):
 
             if not service:
                 msg = 'Service `{}` does not exist in this cluster'.format(input.service)
-                self.logger.error(msg)
-                raise Exception(msg)
+                self.logger.info(msg)
+                raise ServiceMissingException(msg)
 
             try:
 
@@ -154,6 +153,7 @@ class Edit(AdminService):
 
             if not service:
                 msg = 'Service `{}` does not exist in this cluster'.format(input.service)
+                self.logger.info(msg)
                 raise Exception(msg)
 
             try:
