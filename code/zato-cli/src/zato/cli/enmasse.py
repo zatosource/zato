@@ -2671,7 +2671,7 @@ class Enmasse(ManageCommand):
 
         # Local variables
         start_time = datetime.utcnow()
-        wait_until = start_time + timedelta(seconds=1)
+        wait_until = start_time + timedelta(seconds=self.missing_wait_time)
 
         # Run the initial import ..
         warnings_errors = self._run_import()
@@ -2735,7 +2735,6 @@ class Enmasse(ManageCommand):
 
 if __name__ == '__main__':
 
-    """
     # stdlib
     import sys
 
@@ -2757,9 +2756,8 @@ if __name__ == '__main__':
     args['replace'] = True
     args['import'] = True
 
-    # args.path  = sys.argv[1]
-    # args.input = sys.argv[2]
+    args.path  = sys.argv[1]
+    args.input = sys.argv[2]
 
     enmasse = Enmasse(args)
     enmasse.run(args)
-    """
