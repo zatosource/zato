@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 from datetime import datetime, timedelta
+from itertools import chain
 from logging import DEBUG, INFO, WARN
 from pathlib import Path
 from platform import system as platform_system
@@ -510,6 +511,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Bunch
         from bunch import bunchify
 
+        # Local variables
+        path_patterns = chain(HotDeploy.User_Conf_Directory, HotDeploy.Enmasse_File_Pattern)
+
         # We have hot-deployment configuration to process ..
         if paths:
 
@@ -547,14 +551,18 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 self.pickup_config[key_name] = bunchify(pickup_from)
 
                 # .. go through any of the paths potentially containing user configuration directories ..
-                for user_conf_path in Path(path).rglob(HotDeploy.User_Conf_Directory):
+                for path_pattern in path_patterns:
+                    for user_conf_path in Path(path).rglob(path_pattern):
 
-                    # .. and add each of them to hot-deployment.
-                    self._add_user_conf_from_path(str(user_conf_path))
+                        # .. and add each of them to hot-deployment.
+                        self._add_user_conf_from_path(str(user_conf_path), source)
 
 # ################################################################################################################################
 
     def add_user_conf_from_env(self) -> 'None':
+
+        # Local variables
+        env_keys = ['Zato_User_Conf_Dir', 'ZATO_USER_CONF_DIR']
 
         # Look up user-defined configuration directories ..
         paths = os.environ.get('ZATO_USER_CONF_DIR', '')
@@ -563,31 +571,36 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if not paths:
             paths = os.environ.get('Zato_User_Conf_Dir', '')
 
-        # We have user-config details to process ..
-        if paths:
+        # Go through all the possible environment keys ..
+        for key in env_keys:
 
-            # .. support multiple entries ..
-            paths = paths.split(':')
-            paths = [elem.strip() for elem in paths]
+            # .. if we have user-config details to process ..
+            if paths := os.environ.get(key, ''):
 
-            # .. and the actual configuration.
-            for path in paths:
-                self._add_user_conf_from_path(path)
+                # .. support multiple entries ..
+                paths = paths.split(':')
+                paths = [elem.strip() for elem in paths]
+
+                # .. and the actual configuration.
+                for path in paths:
+                    source = f'env. variable found -> {key}'
+                    self._add_user_conf_from_path(path, source)
 
 # ################################################################################################################################
 
-    def _add_user_conf_from_path(self, path:'str') -> 'None':
+    def _add_user_conf_from_path(self, path:'str', source:'str') -> 'None':
 
         # Bunch
         from bunch import bunchify
 
         # Ignore files other than the below ones
-        suffixes = ['ini', 'conf']
+        suffixes = ['ini', 'conf', 'yaml', 'yml']
         patterns = ['*.' + elem for elem in suffixes]
         patterns_str = ', '.join(patterns)
 
         # Log what we are about to do ..
-        logger.info('Adding user-config from `%s` (env. variable found -> ZATO_USER_CONF_DIR)', path)
+        msg = f'Adding user-config from `{path}` ({source})'
+        logger.info(msg)
 
         # .. look up files inside the directory and add the path to each
         # .. to a list of what should be loaded on startup ..
