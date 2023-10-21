@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -199,7 +199,7 @@ class _OnUpdate(Service):
             #
             with self.lock('{}-{}-{}'.format(self.name, self.server.name, ctx.full_path)): # type: ignore
                 with open(ctx.full_path, 'wb') as f:
-                    f.write(ctx.data.encode('utf8'))
+                    _ = f.write(ctx.data.encode('utf8'))
 
                 try:
                     # The file is saved so we can update our in-RAM mirror of it ..
@@ -266,7 +266,7 @@ class OnUpdateStatic(_OnUpdate):
     update_type = 'static file'
 
     def sync_pickup_file_in_ram(self, ctx:'UpdateCtx') -> 'None':
-        self.server.static_config.read_file(ctx.full_path, ctx.file_name)
+        _ = self.server.static_config.read_file(ctx.full_path, ctx.file_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
