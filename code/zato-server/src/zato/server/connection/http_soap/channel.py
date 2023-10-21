@@ -23,7 +23,7 @@ from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, HTTP_SOAP, 
     SSO, TRACE1, URL_PARAMS_PRIORITY, ZATO_NONE
 from zato.common.audit_log import DataReceived, DataSent
 from zato.common.const import ServiceConst
-from zato.common.exception import HTTP_RESPONSES
+from zato.common.exception import HTTP_RESPONSES, ServiceMissingException
 from zato.common.hl7 import HL7Exception
 from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
@@ -486,12 +486,17 @@ class RequestDispatcher:
                 if channel_item['data_format'] == DATA_FORMAT.JSON:
                     wsgi_environ['zato.http.response.headers']['Content-Type'] = CONTENT_TYPE['JSON']
 
-                _exc = stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
-                    add_summary=True, source_lines=20) if stack_format else _format_exc # type: str
+                # We need a traceback unless we merely report information about a missing service,
+                # which may happen if enmasse runs before such a service has been deployed.
+                needs_traceback = not isinstance(e, ServiceMissingException)
 
-                # Log what happened
-                logger.info(
-                    'Caught an exception, cid:`%s`, status_code:`%s`, `%s`', cid, status_code, _exc)
+                if needs_traceback:
+                    _exc_string = stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
+                        add_summary=True, source_lines=20) if stack_format else _format_exc # type: str
+
+                    # Log what happened
+                    logger.info(
+                        'Caught an exception, cid:`%s`, status_code:`%s`, `%s`', cid, status_code, _exc_string)
 
                 try:
                     error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'])
@@ -736,8 +741,6 @@ class RequestHandler:
             self.set_response_in_cache(channel_item, cache_key, response)
 
         # Having used the cache or not, we can return the response now
-        response
-        response
         return response
 
 # ################################################################################################################################

@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -24,7 +22,7 @@ from crontab import CronTab
 # Zato
 from zato.common.api import scheduler_date_time_format, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG
-from zato.common.exception import ZatoException
+from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
 from zato.common.odb.query import job_by_id, job_by_name, job_list
@@ -81,8 +79,8 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
 
     if not service:
         msg = 'Service `{}` does not exist in this cluster'.format(service_name)
-        logger.error(msg)
-        raise ZatoException(cid, msg)
+        logger.info(msg)
+        raise ServiceMissingException(cid, msg)
 
     # We can create/edit a base Job object now and - optionally - another one
     # if the job type's is either interval-based or Cron-style. The base
