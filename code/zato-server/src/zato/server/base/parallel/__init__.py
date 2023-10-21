@@ -10,7 +10,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 from datetime import datetime, timedelta
-from itertools import chain
 from logging import DEBUG, INFO, WARN
 from pathlib import Path
 from platform import system as platform_system
@@ -512,7 +511,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         from bunch import bunchify
 
         # Local variables
-        path_patterns = chain(HotDeploy.User_Conf_Directory, HotDeploy.Enmasse_File_Pattern)
+        path_patterns = [HotDeploy.User_Conf_Directory, HotDeploy.Enmasse_File_Pattern]
 
         # We have hot-deployment configuration to process ..
         if paths:
@@ -550,9 +549,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 }
                 self.pickup_config[key_name] = bunchify(pickup_from)
 
-                # .. go through any of the paths potentially containing user configuration directories ..
+                # .. go through all the path patterns that point to user configuration (including enmasse) ..
                 for path_pattern in path_patterns:
-                    for user_conf_path in Path(path).rglob(path_pattern):
+
+                    # .. get a list of matching paths ..
+                    user_conf_paths = Path(path).rglob(path_pattern)
+                    user_conf_paths = list(user_conf_paths)
+
+                    # .. go through all the paths that matched ..
+                    for user_conf_path in user_conf_paths:
 
                         # .. and add each of them to hot-deployment.
                         self._add_user_conf_from_path(str(user_conf_path), source)
@@ -741,7 +746,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def _read_user_config_from_directory(self, dir_name:'str') -> 'None':
 
-        # We assume that it will be always one of these file name suffixes
+        # We assume that it will be always one of these file name suffixes,
+        # note that we are not reading enmasse (.yaml and .yml) files here,
+        # even though directories with enmasse files may be among what we have in self.user_conf_location_extra.
         suffixes_supported = ('.ini', '.conf')
 
         # User-config from ./config/repo/user-config
