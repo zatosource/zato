@@ -1924,7 +1924,7 @@ class Enmasse(ManageCommand):
         {'name':'--format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
         {'name':'--dump-format', 'help':'Same as --format', 'choices':('json', 'yaml'), 'default':'yaml'},
         {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to file', 'action':'store_true'},
-        {'name':'--exit-on-missing-file', 'help':'If input file exists, exit with status code 0', 'action':'store_true'},
+        {'name':'--exit-on-missing-file', 'help':'If input file exists, exit with status code 0', 'default':True},
         {'name':'--replace', 'help':'Force replacing already server objects during import', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Same as --replace', 'action':'store_true'},
         {'name':'--input', 'help':'Path to input file with objects to import'},
@@ -1961,7 +1961,7 @@ class Enmasse(ManageCommand):
         # Local aliases
         input_path:'strnone'  = None
         output_path:'strnone' = None
-        exit_on_missing_file = getattr(self.args, 'exit_on_missing_file', False)
+        exit_on_missing_file = getattr(self.args, 'exit_on_missing_file', True)
 
         self.args = args
         self.curdir = os.path.abspath(self.original_dir)
@@ -1972,7 +1972,7 @@ class Enmasse(ManageCommand):
         self.missing_wait_time:'int' = getattr(self.args, 'missing_wait_time', None) or ModuleCtx.Missing_Wait_Time
 
         # Initialize environment variables ..
-        env_path = self.normalize_path('env_file', False)
+        env_path = self.normalize_path('env_file', exit_if_missing=False)
         populate_environment_from_file(env_path)
 
         # .. support both arguments ..
@@ -1981,7 +1981,7 @@ class Enmasse(ManageCommand):
 
         # .. make sure the input file path is correct ..
         if args.export_local or has_import:
-            input_path = self.normalize_path('input', exit_on_missing_file)
+            input_path = self.normalize_path('input', exit_if_missing=exit_on_missing_file, log_if_missing=True)
 
         # .. make sure the output file path is correct ..
         if args.output:
@@ -2104,8 +2104,8 @@ class Enmasse(ManageCommand):
     def normalize_path(
         self,
         arg_name,         # type: str
-        exit_if_missing,  # type: bool
         *,
+        exit_if_missing,  # type: bool
         needs_parent_dir=False, # type: bool
         log_if_missing=False,   # type: bool
     ) -> 'str':
