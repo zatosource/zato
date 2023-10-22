@@ -133,17 +133,17 @@ class CommandsFacade:
 
         # First, stdout ..
         try:
-            stdout = result.stdout.decode(encoding)
+            stdout:'str' = result.stdout.decode(encoding)
         except UnicodeDecodeError:
-            stdout = result.stdout.decode(encoding, 'replace') # type: str
+            stdout:'str' = result.stdout.decode(encoding, 'replace') # type: str
             if replace_char != Config.ReplaceChar:
                 stdout = stdout.replace(Config.ReplaceChar, replace_char)
 
         # .. now, stderr ..
         try:
-            stderr = result.stderr.decode(encoding)
+            stderr:'str' = result.stderr.decode(encoding)
         except UnicodeDecodeError:
-            stderr = result.stderr.decode(encoding, 'replace') # type: str
+            stderr:'str' = result.stderr.decode(encoding, 'replace') # type: str
             if replace_char != Config.ReplaceChar:
                 stderr = stderr.replace(Config.ReplaceChar, replace_char)
 
@@ -200,8 +200,8 @@ class CommandsFacade:
             timeout = cast_('float', timeout or None)
 
             # .. invoke the command ..
-            result = subprocess_run(
-                command, input=stdin, timeout=timeout, shell=True, capture_output=True) # type: CompletedProcess
+            result:'CompletedProcess' = subprocess_run(
+                command, input=stdin, timeout=timeout, shell=True, capture_output=True)
 
             # .. if we are here, it means that there was no timeout ..
 
@@ -388,8 +388,8 @@ class CommandsFacade:
 
     def _on_enmasse_completed(self, result:'CommandResult') -> 'None':
 
-        self.logger.info('Enmasse stdout -> `%s`', result.stdout.strip())
-        self.logger.info('Enmasse stderr -> `%s`', result.stderr.strip())
+        logger.info('Enmasse stdout -> `%s`', result.stdout.strip())
+        logger.info('Enmasse stderr -> `%s`', result.stderr.strip())
 
 # ################################################################################################################################
 # ################################################################################################################################
