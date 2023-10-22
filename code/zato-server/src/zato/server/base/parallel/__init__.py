@@ -622,13 +622,21 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # .. use this prefix to indicate that it is a directory to deploy user configuration from  ..
         key_name = '{}.{}'.format(HotDeploy.UserConfPrefix, _fs_safe_name)
 
+        # .. use a specific service if it is an enmasse file ..
+        if 'enmasse' in path:
+            service = 'zato.pickup.update-enmasse'
+
+        # .. or default to the one for user config if it is not ..
+        else:
+            service= 'zato.pickup.update-user-conf'
+
         # .. and store the configuration for later use now.
         pickup_from = {
             'pickup_from': path,
             'patterns': patterns_str,
             'parse_on_pickup': False,
             'delete_after_pickup': False,
-            'services': 'zato.pickup.update-user-conf',
+            'services': service,
         }
         self.pickup_config[key_name] = bunchify(pickup_from)
 
@@ -819,13 +827,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _on_enmasse_completed(self, result:'CommandResult') -> 'None':
-
-        self.logger.info('Enmasse stdout -> `%s`', result.stdout.strip())
-        self.logger.info('Enmasse stderr -> `%s`', result.stderr.strip())
-
-# ################################################################################################################################
-
     def handle_enmasse_auto_from(self) -> 'None':
 
         # Zato
@@ -844,8 +845,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # .. find all the enmasse files in this directory ..
         for file_path in sorted(path.iterdir()):
 
-            command = f'enmasse --import --replace-odb-objects --input {file_path} {self.base_dir} --verbose'
-            _ = commands.run_zato_cli_async(command, callback=self._on_enmasse_completed)
+            # .. and run enmasse with each of them.
+            _ = commands.run_enmasse_async(file_path)
 
 # ################################################################################################################################
 
