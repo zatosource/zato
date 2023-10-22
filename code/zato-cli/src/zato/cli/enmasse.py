@@ -2689,6 +2689,10 @@ class Enmasse(ManageCommand):
             # .. such as missing services, we will keep running ..
             missing = self._get_missing_objects(warnings_errors)
 
+            # .. if nothing is missing, we can return as well ..
+            if not missing:
+                return warnings_errors
+
             # .. for reporting purposes, get information on how much longer are to wait ..
             wait_delta = wait_until - now
 
