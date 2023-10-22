@@ -378,4 +378,18 @@ class CommandsFacade:
         return self.invoke_async(command, callback=callback)
 
 # ################################################################################################################################
+
+    def run_enmasse_async(self, file_path:'str') -> 'CommandResult':
+        command = f'enmasse --import --replace-odb-objects --input {file_path} {self.server.base_dir} --verbose'
+        result = self.run_zato_cli_async(command, callback=self._on_enmasse_completed)
+        return result
+
+# ################################################################################################################################
+
+    def _on_enmasse_completed(self, result:'CommandResult') -> 'None':
+
+        self.logger.info('Enmasse stdout -> `%s`', result.stdout.strip())
+        self.logger.info('Enmasse stderr -> `%s`', result.stderr.strip())
+
+# ################################################################################################################################
 # ################################################################################################################################
