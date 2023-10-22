@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -119,6 +119,23 @@ class UpdateUserConf(_Updater):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class UpdateEnmasse(Service):
+    """ Runs an enmasse file if its contents is changed.
+    """
+    def handle(self) -> 'None':
+
+        # Add type hints ..
+        raw_request = cast_('stranydict', self.request.raw_request)
+
+        # .. extract the path to the enmasse file ..
+        enmasse_file_path = raw_request['full_path']
+
+        # .. and execute it now.
+        _ = self.commands.run_enmasse_async(enmasse_file_path)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _OnUpdate(Service):
     """ Updates user configuration in memory and file system.
     """
@@ -199,7 +216,7 @@ class _OnUpdate(Service):
             #
             with self.lock('{}-{}-{}'.format(self.name, self.server.name, ctx.full_path)): # type: ignore
                 with open(ctx.full_path, 'wb') as f:
-                    f.write(ctx.data.encode('utf8'))
+                    _ = f.write(ctx.data.encode('utf8'))
 
                 try:
                     # The file is saved so we can update our in-RAM mirror of it ..
@@ -266,7 +283,7 @@ class OnUpdateStatic(_OnUpdate):
     update_type = 'static file'
 
     def sync_pickup_file_in_ram(self, ctx:'UpdateCtx') -> 'None':
-        self.server.static_config.read_file(ctx.full_path, ctx.file_name)
+        _ = self.server.static_config.read_file(ctx.full_path, ctx.file_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
