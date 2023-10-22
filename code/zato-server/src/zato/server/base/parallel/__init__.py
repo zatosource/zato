@@ -88,7 +88,6 @@ if 0:
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, dictlist, stranydict, strbytes, strlist, strnone
-    from zato.server.commands import CommandResult
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.ext.zunicorn.arbiter import Arbiter
