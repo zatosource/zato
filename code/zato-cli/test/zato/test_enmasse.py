@@ -37,7 +37,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-template = """
+template1 = """
 
 channel_plain_http:
   - connection: channel
@@ -47,7 +47,6 @@ channel_plain_http:
     name: /test/enmasse1/{test_suffix}
     params_pri: channel -params-over-msg
     sec_def: zato-no-security
-    service: pub.zato.ping
     service_name: pub.zato.ping
     transport: plain_http
     url_path: /test/enmasse1/{test_suffix}
@@ -110,6 +109,49 @@ email_smtp:
 # ################################################################################################################################
 # ################################################################################################################################
 
+template2 = """
+
+security:
+  - name: Test Basic Auth Simple
+    username: "MyUser {test_suffix}"
+    password: "MyPassword"
+    type: basic_auth
+    realm: "My Realm"
+
+  - name: Test Basic Auth Simple.2
+    username: "MyUser {test_suffix}.2"
+    type: basic_auth
+    realm: "My Realm"
+
+channel_rest:
+
+  - name: name: /test/enmasse1/simple/{test_suffix}
+    service: pub.zato.ping
+    url_path: /test/enmasse1/simple/{test_suffix}
+
+outgoing_rest:
+
+  - name: Outgoing Rest Enmasse {test_suffix}
+    host: https://example.com
+    url_path: /enmasse/simple/{test_suffix}
+
+  - name: Outgoing Rest Enmasse {test_suffix}.2
+    host: https://example.com
+    url_path: /enmasse/simple/{test_suffix}.2
+    data_format: form
+
+outgoing_ldap:
+
+  - name: Enmasse LDAP {test_suffix}
+    username: 'CN=example.ldap,OU=example01,OU=Example,OU=Groups,DC=example,DC=corp'
+    auth_type: NTLM
+    server_list: 127.0.0.1:389
+    password: {test_suffix}
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class EnmasseTestCase(TestCase):
 
 # ################################################################################################################################
@@ -160,7 +202,7 @@ class EnmasseTestCase(TestCase):
         command = get_zato_sh_command()
 
         # Invoke enmasse ..
-        out = command('enmasse', TestConfig.server_location,
+        out:'RunningCommand' = command('enmasse', TestConfig.server_location,
             '--import', '--input', config_path, '--replace-odb-objects', '--verbose')
 
         # .. if told to, make sure there was no error in stdout/stderr ..
@@ -183,7 +225,7 @@ class EnmasseTestCase(TestCase):
         conn_name = f'test.enmasse.{test_suffix}'
 
         # Invoke the delete command ..
-        out = command(
+        out:'RunningCommand' = command(
             'delete-wsx-outconn',
             '--path', TestConfig.server_location,
             '--name', conn_name
@@ -194,7 +236,7 @@ class EnmasseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_enmasse_ok(self) -> 'None':
+    def _test_enmasse_ok(self, template:'str') -> 'None':
 
         # sh
         from sh import ErrorReturnCode
@@ -207,7 +249,7 @@ class EnmasseTestCase(TestCase):
 
         smtp_config = self.get_smtp_config()
 
-        data = template.format(test_suffix=test_suffix, smtp_config=smtp_config)
+        data = template1.format(test_suffix=test_suffix, smtp_config=smtp_config)
 
         f = open_w(config_path)
         _ = f.write(data)
@@ -221,15 +263,25 @@ class EnmasseTestCase(TestCase):
             _ = self._invoke_command(config_path)
 
         except ErrorReturnCode as e:
-            stdout = e.stdout # type: bytes
+            stdout:'bytes' = e.stdout # type: bytes
             stdout = stdout.decode('utf8') # type: ignore
-            stderr = e.stderr
+            stderr:'str' = e.stderr
 
             self._warn_on_error(stdout, stderr)
             self.fail(f'Caught an exception while invoking enmasse; stdout -> {stdout}')
 
         finally:
             self._cleanup(test_suffix)
+
+# ################################################################################################################################
+
+    def test_enmasse_ok(self) -> 'None':
+        self._test_enmasse_ok(template1)
+
+# ################################################################################################################################
+
+    def test_enmasse_simple_ok(self) -> 'None':
+        self._test_enmasse_ok(template2)
 
 # ################################################################################################################################
 
@@ -244,7 +296,7 @@ class EnmasseTestCase(TestCase):
         smtp_config = self.get_smtp_config()
 
         # Note that we replace pub.zato.ping with a service that certainly does not exist
-        data = template.replace('pub.zato.ping', 'zato-enmasse-service-does-not-exit')
+        data = template1.replace('pub.zato.ping', 'zato-enmasse-service-does-not-exit')
         data = data.format(test_suffix=test_suffix, smtp_config=smtp_config)
 
         f = open_w(config_path)

@@ -133,17 +133,17 @@ class CommandsFacade:
 
         # First, stdout ..
         try:
-            stdout = result.stdout.decode(encoding)
+            stdout:'str' = result.stdout.decode(encoding)
         except UnicodeDecodeError:
-            stdout = result.stdout.decode(encoding, 'replace') # type: str
+            stdout:'str' = result.stdout.decode(encoding, 'replace') # type: str
             if replace_char != Config.ReplaceChar:
                 stdout = stdout.replace(Config.ReplaceChar, replace_char)
 
         # .. now, stderr ..
         try:
-            stderr = result.stderr.decode(encoding)
+            stderr:'str' = result.stderr.decode(encoding)
         except UnicodeDecodeError:
-            stderr = result.stderr.decode(encoding, 'replace') # type: str
+            stderr:'str' = result.stderr.decode(encoding, 'replace') # type: str
             if replace_char != Config.ReplaceChar:
                 stderr = stderr.replace(Config.ReplaceChar, replace_char)
 
@@ -200,8 +200,8 @@ class CommandsFacade:
             timeout = cast_('float', timeout or None)
 
             # .. invoke the command ..
-            result = subprocess_run(
-                command, input=stdin, timeout=timeout, shell=True, capture_output=True) # type: CompletedProcess
+            result:'CompletedProcess' = subprocess_run(
+                command, input=stdin, timeout=timeout, shell=True, capture_output=True)
 
             # .. if we are here, it means that there was no timeout ..
 
@@ -376,6 +376,20 @@ class CommandsFacade:
         command = f'{zato_bin} {command}'
 
         return self.invoke_async(command, callback=callback)
+
+# ################################################################################################################################
+
+    def run_enmasse_async(self, file_path:'str') -> 'CommandResult':
+        command = f'enmasse --import --replace --input {file_path} {self.server.base_dir} --verbose'
+        result = self.run_zato_cli_async(command, callback=self._on_enmasse_completed)
+        return result
+
+# ################################################################################################################################
+
+    def _on_enmasse_completed(self, result:'CommandResult') -> 'None':
+
+        logger.info('Enmasse stdout -> `%s`', result.stdout.strip())
+        logger.info('Enmasse stderr -> `%s`', result.stderr.strip())
 
 # ################################################################################################################################
 # ################################################################################################################################
