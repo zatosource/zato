@@ -119,6 +119,23 @@ class UpdateUserConf(_Updater):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class UpdateEnmasse(Service):
+    """ Runs an enmasse file if its contents is changed.
+    """
+    def handle(self) -> 'None':
+
+        # Add type hints ..
+        raw_request = cast_('stranydict', self.request.raw_request)
+
+        # .. extract the path to the enmasse file ..
+        enmasse_file_path = raw_request['full_path']
+
+        # .. and execute it now.
+        _ = self.commands.run_enmasse_async(enmasse_file_path)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _OnUpdate(Service):
     """ Updates user configuration in memory and file system.
     """
