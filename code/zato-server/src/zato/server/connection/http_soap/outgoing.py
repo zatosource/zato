@@ -35,7 +35,7 @@ from requests_toolbelt import MultipartEncoder
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE
 from zato.common.exception import Inactive, TimeoutException
 from zato.common.json_ import dumps, loads
-from zato.common.marshal_.api import Model
+from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name
 from zato.common.util.open_ import open_rb
@@ -46,7 +46,7 @@ from zato.server.connection.queue import ConnectionQueue
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, callnone, dictnone, stranydict, strdictnone, strstrdict, type_
+    from zato.common.typing_ import any_, callnone, dictnone, list_, stranydict, strdictnone, strstrdict, type_
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
     ConfigDict = ConfigDict
@@ -631,11 +631,34 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 raise Exception(response.text)
 
             # .. extract the underlying data ..
-            data = response.data # type: ignore
+            response_data = response.data # type: ignore
 
             # .. if we have a model, do make use of it here ..
             if model:
-                data:'Model' = model.from_dict(data)
+
+                # .. if this model is actually a list ..
+                if is_list(model, True):
+
+                    # .. extract the underlying model ..
+                    model_class:'type_[Model]' = extract_model_class(model)
+
+                    # .. build a list that we will map the response to ..
+                    data:'list_[Model]' = []
+
+                    # .. go through everything we had in the response ..
+                    for item in response_data:
+
+                        # .. build an actual model instance ..
+                        _item = model_class.from_dict(item)
+
+                        # .. and append it to the data that we are producing ..
+                        data.append(_item)
+                else:
+                    data:'Model' = model.from_dict(response_data)
+
+            # .. if there is no model, use the response as-is ..
+            else:
+                data = response_data
 
             # .. run our callback, if there is any ..
             if callback:
