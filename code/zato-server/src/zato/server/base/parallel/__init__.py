@@ -88,7 +88,6 @@ if 0:
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, dictlist, stranydict, strbytes, strlist, strnone
-    from zato.server.commands import CommandResult
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.ext.zunicorn.arbiter import Arbiter
@@ -510,6 +509,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Bunch
         from bunch import bunchify
 
+        # Local variables
+        path_patterns = [HotDeploy.User_Conf_Directory, HotDeploy.Enmasse_File_Pattern]
+
         # We have hot-deployment configuration to process ..
         if paths:
 
@@ -546,15 +548,25 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 }
                 self.pickup_config[key_name] = bunchify(pickup_from)
 
-                # .. go through any of the paths potentially containing user configuration directories ..
-                for user_conf_path in Path(path).rglob(HotDeploy.User_Conf_Directory):
+                # .. go through all the path patterns that point to user configuration (including enmasse) ..
+                for path_pattern in path_patterns:
 
-                    # .. and add each of them to hot-deployment.
-                    self._add_user_conf_from_path(str(user_conf_path))
+                    # .. get a list of matching paths ..
+                    user_conf_paths = Path(path).rglob(path_pattern)
+                    user_conf_paths = list(user_conf_paths)
+
+                    # .. go through all the paths that matched ..
+                    for user_conf_path in user_conf_paths:
+
+                        # .. and add each of them to hot-deployment.
+                        self._add_user_conf_from_path(str(user_conf_path), source)
 
 # ################################################################################################################################
 
     def add_user_conf_from_env(self) -> 'None':
+
+        # Local variables
+        env_keys = ['Zato_User_Conf_Dir', 'ZATO_USER_CONF_DIR']
 
         # Look up user-defined configuration directories ..
         paths = os.environ.get('ZATO_USER_CONF_DIR', '')
@@ -563,31 +575,36 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if not paths:
             paths = os.environ.get('Zato_User_Conf_Dir', '')
 
-        # We have user-config details to process ..
-        if paths:
+        # Go through all the possible environment keys ..
+        for key in env_keys:
 
-            # .. support multiple entries ..
-            paths = paths.split(':')
-            paths = [elem.strip() for elem in paths]
+            # .. if we have user-config details to process ..
+            if paths := os.environ.get(key, ''):
 
-            # .. and the actual configuration.
-            for path in paths:
-                self._add_user_conf_from_path(path)
+                # .. support multiple entries ..
+                paths = paths.split(':')
+                paths = [elem.strip() for elem in paths]
+
+                # .. and the actual configuration.
+                for path in paths:
+                    source = f'env. variable found -> {key}'
+                    self._add_user_conf_from_path(path, source)
 
 # ################################################################################################################################
 
-    def _add_user_conf_from_path(self, path:'str') -> 'None':
+    def _add_user_conf_from_path(self, path:'str', source:'str') -> 'None':
 
         # Bunch
         from bunch import bunchify
 
         # Ignore files other than the below ones
-        suffixes = ['ini', 'conf']
+        suffixes = ['ini', 'conf', 'yaml', 'yml']
         patterns = ['*.' + elem for elem in suffixes]
         patterns_str = ', '.join(patterns)
 
         # Log what we are about to do ..
-        logger.info('Adding user-config from `%s` (env. variable found -> ZATO_USER_CONF_DIR)', path)
+        msg = f'Adding user-config from `{path}` ({source})'
+        logger.info(msg)
 
         # .. look up files inside the directory and add the path to each
         # .. to a list of what should be loaded on startup ..
@@ -604,13 +621,21 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # .. use this prefix to indicate that it is a directory to deploy user configuration from  ..
         key_name = '{}.{}'.format(HotDeploy.UserConfPrefix, _fs_safe_name)
 
+        # .. use a specific service if it is an enmasse file ..
+        if 'enmasse' in path:
+            service = 'zato.pickup.update-enmasse'
+
+        # .. or default to the one for user config if it is not ..
+        else:
+            service= 'zato.pickup.update-user-conf'
+
         # .. and store the configuration for later use now.
         pickup_from = {
             'pickup_from': path,
             'patterns': patterns_str,
             'parse_on_pickup': False,
             'delete_after_pickup': False,
-            'services': 'zato.pickup.update-user-conf',
+            'services': service,
         }
         self.pickup_config[key_name] = bunchify(pickup_from)
 
@@ -728,7 +753,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def _read_user_config_from_directory(self, dir_name:'str') -> 'None':
 
-        # We assume that it will be always one of these file name suffixes
+        # We assume that it will be always one of these file name suffixes,
+        # note that we are not reading enmasse (.yaml and .yml) files here,
+        # even though directories with enmasse files may be among what we have in self.user_conf_location_extra.
         suffixes_supported = ('.ini', '.conf')
 
         # User-config from ./config/repo/user-config
@@ -799,13 +826,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _on_enmasse_completed(self, result:'CommandResult') -> 'None':
-
-        self.logger.info('Enmasse stdout -> `%s`', result.stdout.strip())
-        self.logger.info('Enmasse stderr -> `%s`', result.stderr.strip())
-
-# ################################################################################################################################
-
     def handle_enmasse_auto_from(self) -> 'None':
 
         # Zato
@@ -824,8 +844,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # .. find all the enmasse files in this directory ..
         for file_path in sorted(path.iterdir()):
 
-            command = f'enmasse --import --replace-odb-objects --input {file_path} {self.base_dir} --verbose'
-            _ = commands.run_zato_cli_async(command, callback=self._on_enmasse_completed)
+            # .. and run enmasse with each of them.
+            _ = commands.run_enmasse_async(file_path)
 
 # ################################################################################################################################
 
