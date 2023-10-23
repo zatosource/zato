@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -48,6 +48,11 @@ if log_config:
             pass
 else:
     logging.basicConfig(level=logging.DEBUG)
+
+# Session timeout
+_session_timeout_env_key = 'Zato_Dashboard_Session_Timeout'
+_session_timeout_default = 600 # In seconds = 10 minutes
+SESSION_COOKIE_AGE = os.environ.get(_session_timeout_env_key) or _session_timeout_default
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 

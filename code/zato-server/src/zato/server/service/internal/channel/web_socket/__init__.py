@@ -20,7 +20,7 @@ from zato.common.api import DATA_FORMAT
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, PubSubTopic, SecurityBase, Service as ServiceModel, \
      WebSocketClient
-from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service, web_socket_client, \
+from zato.common.odb.query import channel_web_socket_list, channel_web_socket, sec_base, service, web_socket_client, \
      web_socket_client_by_pub_id, web_socket_client_list, web_socket_sub_key_data_list
 from zato.common.util.api import is_port_taken
 from zato.common.util.sql import elems_with_opaque
@@ -57,7 +57,7 @@ skip_input_params = ['cluster_id', 'service_id', 'is_out']
 create_edit_input_required_extra = ['service_name']
 create_edit_input_optional_extra = generic_attrs + ['extra_properties']
 input_optional_extra = ['security']
-output_optional_extra = ['sec_type', 'service_name', 'address'] + generic_attrs
+output_optional_extra = ['sec_type', 'service_name', 'address', 'security_name'] + generic_attrs
 create_edit_force_rewrite = {'service_name', 'address'}
 
 # ################################################################################################################################
@@ -126,10 +126,22 @@ def instance_hook(self, input, instance, attrs):
 # ################################################################################################################################
 
 def response_hook(self, input, _ignored_instance, attrs, service_type):
+
     if service_type == 'get_list' and self.name == 'zato.channel.web-socket.get-list':
+
         with closing(self.odb.session()) as session:
             for item in self.response.payload:
-                item.service_name = service(session, self.server.cluster_id, item.service_id).name
+
+                _service = service(session, self.server.cluster_id, item.service_id)
+                item.service_name = _service.name
+
+                if item.security_id:
+                    _security = sec_base(session, self.server.cluster_id, item.security_id, use_one=False)
+
+                    if _security:
+                        item.security_name = _security.name
+                    else:
+                        item.security_name = None
 
 # ################################################################################################################################
 

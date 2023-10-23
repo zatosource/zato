@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,6 +14,7 @@ from http.client import OK
 from io import StringIO
 from logging import DEBUG, getLogger
 from traceback import format_exc
+from urllib.parse import urlencode
 
 # gevent
 from gevent.lock import RLock
@@ -22,6 +23,7 @@ from gevent.lock import RLock
 from parse import PARSE_RE
 
 # requests
+from requests import Response as _RequestsResponse
 from requests.adapters import HTTPAdapter
 from requests.exceptions import Timeout as RequestsTimeout
 from requests.sessions import Session as RequestsSession
@@ -32,8 +34,9 @@ from requests_toolbelt import MultipartEncoder
 # Zato
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE
 from zato.common.exception import Inactive, TimeoutException
-from zato.common.json_internal import dumps, loads
-from zato.common.marshal_.api import Model
+from zato.common.json_ import dumps, loads
+from zato.common.marshal_.api import extract_model_class, is_list, Model
+from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name
 from zato.common.util.open_ import open_rb
 from zato.server.connection.queue import ConnectionQueue
@@ -42,9 +45,8 @@ from zato.server.connection.queue import ConnectionQueue
 # ################################################################################################################################
 
 if 0:
-    from requests import Response
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, dictnone, stranydict, strstrdict
+    from zato.common.typing_ import any_, callnone, dictnone, list_, stranydict, strdictnone, strstrdict, type_
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
     ConfigDict = ConfigDict
@@ -53,7 +55,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+logger = getLogger('zato_rest')
 has_debug = logger.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
@@ -71,6 +73,12 @@ _NTLM = SEC_DEF_TYPE.NTLM
 _OAuth = SEC_DEF_TYPE.OAUTH
 _TLS_Key_Cert = SEC_DEF_TYPE.TLS_KEY_CERT
 _WSS = SEC_DEF_TYPE.WSS
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Response(_RequestsResponse):
+    data: 'strdictnone'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,7 +140,7 @@ class BaseHTTPSOAPWrapper:
         hooks:'any_',
         *args:'any_',
         **kwargs:'any_'
-    ) -> 'Response':
+    ) -> '_RequestsResponse':
 
         json = kwargs.pop('json', None)
         cert = self.config['tls_key_cert_full_path'] if self.sec_type == _TLS_Key_Cert else None
@@ -442,57 +450,90 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         model = kwargs.pop('model', None)
 
         # We do not serialize ourselves data based on this content type,
-        # leaving it up to the underlying HTTP library to do it.
+        # leaving it up to the underlying HTTP library to do it ..
         needs_serialize_based_on_content_type = self.config.get('content_type') != ContentType.FormURLEncoded
 
+        # .. otherwise, our input data may need to be serialized ..
         if needs_serialize_based_on_content_type:
 
-            # We never touch strings/unicode because apparently the user already serialized outgoing data
+            # .. but we never serialize string objects,
+            # .. assuming they already represent what ought to be sent as-is ..
             needs_request_serialize = not isinstance(data, str)
 
+            # .. if we are here, we know check further if serialization is required ..
             if needs_request_serialize:
 
+                # .. we are explicitly told to send JSON ..
                 if self.config['data_format'] == DATA_FORMAT.JSON:
+
+                    # .. models need to be converted to dicts before they can be serialized ..
                     if isinstance(data, Model):
                         data = data.to_dict()
+
+                    # .. do serialize to JSON now ..
                     data = dumps(data)
 
-        headers = self._create_headers(cid, kwargs.pop('headers', {}))
+                # .. we are explicitly told to submit form-like data ..
+                elif self.config['data_format'] == DATA_FORMAT.FORM_DATA:
+                    data = urlencode(data)
+
+        # .. check if we have custom headers on input ..
+        headers = kwargs.pop('headers', None) or {}
+
+        # .. build a default set of headers now ..
+        headers = self._create_headers(cid, headers)
+
+        # .. SOAP requests need to be specifically formatted now ..
         if self.config['transport'] == 'soap':
             data, headers = self._soap_data(data, headers)
 
+        # .. check if we have custom query parameters ..
         params = params or {}
 
+        # .. if the address is a template, format it with input parameters ..
         if self.path_params:
-            address, qs_params = self.format_address(cid, params)
+            address, qs_params = self.format_address(cid, params) # type: ignore
         else:
             address, qs_params = self.address, dict(params)
 
+        # .. make sure that Unicode objects are turned into bytes ..
         if needs_serialize_based_on_content_type:
             if isinstance(data, str):
                 data = data.encode('utf-8')
 
-        logger.info('Sending (%s) -> %s', method, data)
+        # Log what we are sending ..
+        msg = f'REST out → cid={cid}; {method} {address} name:{self.config["name"]}; params={params}; len={len(data)}'
+        logger.info(msg)
 
-        logger.info(
-            'CID:`%s`, address:`%s`, qs:`%s`, auth_user:`%s`, kwargs:`%s`', cid, address, qs_params, self.username, kwargs)
-
+        # .. do invoke the connection ..
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
-        if has_debug:
-            logger.debug('CID:`%s`, response:`%s`', cid, response.text)
+        # .. now, log what we received.
+        msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
+        logger.info(msg)
 
-        if self.config['data_format'] == DATA_FORMAT.JSON:
+        # .. check if we are explicitly told that we handle JSON ..
+        _has_data_format_json = self.config['data_format'] == DATA_FORMAT.JSON
+
+        # .. check if we perhaps received JSON in the response ..
+        _has_json_content_type = 'application/json' in response.headers.get('Content-Type') or '' # type: ignore
+
+        # .. are we actually handling JSON in this response .. ?
+        _is_json:'bool' = _has_data_format_json or _has_json_content_type # type: ignore
+
+        # .. if yes, try to parse the response accordingly ..
+        if _is_json:
             try:
                 response.data = loads(response.text) # type: ignore
             except ValueError as e:
                 raise Exception('Could not parse JSON response `{}`; e:`{}`'.format(response.text, e.args[0]))
 
-        # Support for SIO models loading
+        # .. if we have a model class on input, deserialize the received response into one ..
         if model:
             response.data = self.server.marshal_api.from_dict(None, response.data, model) # type: ignore
 
-        return response
+        # .. now, return the response to the caller.
+        return cast_('Response', response)
 
 # ################################################################################################################################
 
@@ -553,6 +594,80 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
             # .. now, we can invoke the remote endpoint with our file on input.
             return self.post(cid, data=encoder, headers=headers)
+
+# ################################################################################################################################
+
+    def rest_call(
+        self,
+        *,
+        cid,          # type: str
+        data='',      # type: str
+        model=None,   # type: type_[Model] | None
+        callback,     # type: callnone
+        params=None,  # type: strdictnone
+        headers=None, # type: strdictnone
+        method='',    # type: str
+        log_response=True, # type: bool
+    ) -> 'any_':
+
+        # Invoke the system ..
+        try:
+            response:'Response' = self.http_request(
+                method,
+                cid,
+                data=data,
+                params=params,
+                headers=headers,
+            )
+        except Exception as e:
+            logger.warn('Caught an exception -> %s', e)
+        else:
+
+            # .. optionally, log what we received ..
+            if log_response:
+                logger.info('REST call response received -> %s', response.text)
+
+            if not response.ok:
+                raise Exception(response.text)
+
+            # .. extract the underlying data ..
+            response_data = response.data # type: ignore
+
+            # .. if we have a model, do make use of it here ..
+            if model:
+
+                # .. if this model is actually a list ..
+                if is_list(model, True):
+
+                    # .. extract the underlying model ..
+                    model_class:'type_[Model]' = extract_model_class(model)
+
+                    # .. build a list that we will map the response to ..
+                    data:'list_[Model]' = []
+
+                    # .. go through everything we had in the response ..
+                    for item in response_data:
+
+                        # .. build an actual model instance ..
+                        _item = model_class.from_dict(item)
+
+                        # .. and append it to the data that we are producing ..
+                        data.append(_item)
+                else:
+                    data:'Model' = model.from_dict(response_data)
+
+            # .. if there is no model, use the response as-is ..
+            else:
+                data = response_data
+
+            # .. run our callback, if there is any ..
+            if callback:
+                data = callback(data, cid=cid, id=id, model=model, callback=callback)
+
+            # .. and return the data to our caller ..
+            return data
+
+RESTWrapper = HTTPSOAPWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################

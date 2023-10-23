@@ -37,14 +37,19 @@ from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, 
 from zato.common.odb.query import service_list
 from zato.common.rate_limiting import DefinitionParser
 from zato.common.scheduler import get_startup_job_services
-from zato.common.typing_ import any_
-from zato.common.util.api import hot_deploy, payload_from_request
+from zato.common.util.api import hot_deploy, parse_extra_into_dict, payload_from_request
 from zato.common.util.file_system import get_tmp_path
 from zato.common.util.stats import combine_table_data, collect_current_usage
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Float, Integer, Service as ZatoService
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+from zato.common.typing_ import any_, strnone
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 # For pyflakes
@@ -418,24 +423,63 @@ class Invoke(AdminService):
             Integer('expiration'), Integer('pid'), Boolean('all_pids'), Integer('timeout'), Boolean('skip_response_elem'))
         output_optional = ('response',)
 
+# ################################################################################################################################
+
+    def _get_payload_from_extra(self, payload:'any_') -> 'strnone':
+
+        if not payload:
+            return
+
+        if payload in (b'""', b"''", b'null', 'null'):
+            return
+
+        if isinstance(payload, bytes):
+            payload = payload.decode('utf8')
+
+        # .. ignore payload that seems to be JSON ..
+        if '{' in payload or '}' in payload:
+            return
+
+        payload = payload[1:-1]
+        payload = payload.replace('\\n', '\n')
+        payload = parse_extra_into_dict(payload)
+
+        return payload
+
+# ################################################################################################################################
+
     def handle(self):
-        payload = self.request.input.get('payload')
 
-        if payload:
-            payload = b64decode(payload) # type: ignore
-            payload = payload_from_request(self.server.json_parser, self.cid, payload,
-                self.request.input.data_format, self.request.input.transport) # type: ignore
+        # Local aliases
+        payload:'any_'
 
-            if payload:
+        # This is our input ..
+        orig_payload:'any_' = self.request.input.get('payload')
 
-                if isinstance(payload, str):
-                    scheduler_indicator = SCHEDULER.EmbeddedIndicator
-                else:
-                    scheduler_indicator = SCHEDULER.EmbeddedIndicatorBytes
+        # .. which is optional ..
+        if orig_payload:
 
-                if scheduler_indicator in payload: # type: ignore
-                    payload = loads(payload) # type: ignore
-                    payload = payload['data'] # type: ignore
+            # .. if it exists, it will be BASE64-encoded ..
+            orig_payload = b64decode(orig_payload) # type: ignore
+
+            # .. try and see if it a dict of extra keys and value ..
+            payload = self._get_payload_from_extra(orig_payload)
+
+            # .. if it is not, run the regular parser ..
+            if not payload:
+                payload = payload_from_request(self.server.json_parser, self.cid, orig_payload,
+                    self.request.input.data_format, self.request.input.transport)
+
+                if payload:
+
+                    if isinstance(payload, str):
+                        scheduler_indicator = SCHEDULER.EmbeddedIndicator
+                    else:
+                        scheduler_indicator = SCHEDULER.EmbeddedIndicatorBytes
+
+                    if scheduler_indicator in payload: # type: ignore
+                        payload = loads(payload) # type: ignore
+                        payload = payload['data'] # type: ignore
 
         id = self.request.input.get('id')
         name = self.request.input.get('name')

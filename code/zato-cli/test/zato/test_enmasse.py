@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from datetime import datetime
 from logging import basicConfig, getLogger, WARN
 from tempfile import gettempdir
 from traceback import format_exc
@@ -37,7 +38,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-template = """
+template1 = """
 
 channel_plain_http:
   - connection: channel
@@ -47,7 +48,6 @@ channel_plain_http:
     name: /test/enmasse1/{test_suffix}
     params_pri: channel -params-over-msg
     sec_def: zato-no-security
-    service: pub.zato.ping
     service_name: pub.zato.ping
     transport: plain_http
     url_path: /test/enmasse1/{test_suffix}
@@ -105,6 +105,72 @@ email_smtp:
     password: {smtp_config.password}
     ping_address: {smtp_config.ping_address}
 
+web_socket:
+    - address: "ws://0.0.0.0:10203/api/{test_suffix}"
+      data_format: "json"
+      id: 1
+      is_active: true
+      is_audit_log_received_active: false
+      is_audit_log_sent_active: false
+      is_internal: false
+      max_bytes_per_message_received: null
+      max_bytes_per_message_sent: null
+      max_len_messages_received: null
+      max_len_messages_sent: null
+      name: "wsx.enmasse.{test_suffix}"
+      new_token_wait_time: 5
+      opaque1: '{{"max_bytes_per_message_sent":null,"max_bytes_per_message_received":null,"ping_interval":30,"extra_properties":null,"is_audit_log_received_active":false,"max_len_messages_received":null,"pings_missed_threshold":2,"max_len_messages_sent":null,"security":null,"is_audit_log_sent_active":false,"service_name":"pub.zato.ping"}}'
+      ping_interval: 30
+      pings_missed_threshold: 2
+      sec_def: "zato-no-security"
+      sec_type: null
+      security_id: null
+      service: "pub.zato.ping"
+      service_name: "pub.zato.ping"
+      token_ttl: 3600
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+template2 = """
+
+security:
+  - name: Test Basic Auth Simple
+    username: "MyUser {test_suffix}"
+    password: "MyPassword"
+    type: basic_auth
+    realm: "My Realm"
+
+  - name: Test Basic Auth Simple.2
+    username: "MyUser {test_suffix}.2"
+    type: basic_auth
+    realm: "My Realm"
+
+channel_rest:
+
+  - name: name: /test/enmasse1/simple/{test_suffix}
+    service: pub.zato.ping
+    url_path: /test/enmasse1/simple/{test_suffix}
+
+outgoing_rest:
+
+  - name: Outgoing Rest Enmasse {test_suffix}
+    host: https://example.com
+    url_path: /enmasse/simple/{test_suffix}
+
+  - name: Outgoing Rest Enmasse {test_suffix}.2
+    host: https://example.com
+    url_path: /enmasse/simple/{test_suffix}.2
+    data_format: form
+
+outgoing_ldap:
+
+  - name: Enmasse LDAP {test_suffix}
+    username: 'CN=example.ldap,OU=example01,OU=Example,OU=Groups,DC=example,DC=corp'
+    auth_type: NTLM
+    server_list: 127.0.0.1:389
+    password: {test_suffix}
 """
 
 # ################################################################################################################################
@@ -151,7 +217,7 @@ class EnmasseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def _invoke_command(self, config_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
+    def _invoke_command(self, config_path:'str', require_ok:'bool'=True, missing_wait_time:'int'=1) -> 'RunningCommand':
 
         # Zato
         from zato.common.util.cli import get_zato_sh_command
@@ -160,8 +226,13 @@ class EnmasseTestCase(TestCase):
         command = get_zato_sh_command()
 
         # Invoke enmasse ..
-        out = command('enmasse', TestConfig.server_location,
-            '--import', '--input', config_path, '--replace-odb-objects', '--verbose')
+        out:'RunningCommand' = command('enmasse', TestConfig.server_location,
+            '--import',
+            '--input', config_path,
+            '--replace-odb-objects',
+            '--verbose',
+            '--missing-wait-time', missing_wait_time
+        )
 
         # .. if told to, make sure there was no error in stdout/stderr ..
         if require_ok:
@@ -183,7 +254,7 @@ class EnmasseTestCase(TestCase):
         conn_name = f'test.enmasse.{test_suffix}'
 
         # Invoke the delete command ..
-        out = command(
+        out:'RunningCommand' = command(
             'delete-wsx-outconn',
             '--path', TestConfig.server_location,
             '--name', conn_name
@@ -194,7 +265,7 @@ class EnmasseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_enmasse_ok(self) -> 'None':
+    def _test_enmasse_ok(self, template:'str') -> 'None':
 
         # sh
         from sh import ErrorReturnCode
@@ -207,7 +278,7 @@ class EnmasseTestCase(TestCase):
 
         smtp_config = self.get_smtp_config()
 
-        data = template.format(test_suffix=test_suffix, smtp_config=smtp_config)
+        data = template1.format(test_suffix=test_suffix, smtp_config=smtp_config)
 
         f = open_w(config_path)
         _ = f.write(data)
@@ -221,9 +292,9 @@ class EnmasseTestCase(TestCase):
             _ = self._invoke_command(config_path)
 
         except ErrorReturnCode as e:
-            stdout = e.stdout # type: bytes
+            stdout:'bytes' = e.stdout # type: bytes
             stdout = stdout.decode('utf8') # type: ignore
-            stderr = e.stderr
+            stderr:'str' = e.stderr
 
             self._warn_on_error(stdout, stderr)
             self.fail(f'Caught an exception while invoking enmasse; stdout -> {stdout}')
@@ -233,7 +304,21 @@ class EnmasseTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def test_enmasse_ok(self) -> 'None':
+        self._test_enmasse_ok(template1)
+
+# ################################################################################################################################
+
+    def test_enmasse_simple_ok(self) -> 'None':
+        self._test_enmasse_ok(template2)
+
+# ################################################################################################################################
+
     def test_enmasse_service_does_not_exit(self) -> 'None':
+
+        # We are going to wait that many seconds for enmasse to complete
+        start = datetime.utcnow()
+        missing_wait_time = 3
 
         tmp_dir = gettempdir()
         test_suffix = rand_unicode() + '.' + rand_string()
@@ -244,23 +329,24 @@ class EnmasseTestCase(TestCase):
         smtp_config = self.get_smtp_config()
 
         # Note that we replace pub.zato.ping with a service that certainly does not exist
-        data = template.replace('pub.zato.ping', 'zato-enmasse-service-does-not-exit')
+        data = template1.replace('pub.zato.ping', 'zato-enmasse-service-does-not-exit')
         data = data.format(test_suffix=test_suffix, smtp_config=smtp_config)
 
         f = open_w(config_path)
         _ = f.write(data)
         f.close()
 
-        # Invoke enmasse to create objects (which will fail because the service used above does not exist)
-        out = self._invoke_command(config_path, require_ok=False)
+        # Invoke enmasse to create objects (which will block for missing_wait_time seconds) ..
+        _ = self._invoke_command(config_path, require_ok=False)
 
-        stdout = out.stdout # type: any_
-        stdout = stdout.decode('utf8')
-        stderr = out.stderr
+        # .. now, make sure that we actually had to wait that many seconds ..
+        now = datetime.utcnow()
+        delta = now - start
 
-        if not '3 errors found' in stdout:
-            self._warn_on_error(stdout, stderr)
-            self.fail('Expected for enmasse to return errors')
+        # .. the whole test should have taken longer than what we waited for in enmasse .
+        if not delta.total_seconds() > missing_wait_time:
+            msg = f'Total time should be bigger than {missing_wait_time} (missing_wait_time) instead of {delta}'
+            self.fail(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################

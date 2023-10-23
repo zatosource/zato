@@ -1,38 +1,38 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import gc
 import os
 import shutil
 from contextlib import closing
+from dataclasses import dataclass
 from datetime import datetime
 from errno import ENOENT
-from importlib import import_module
-from inspect import getsourcefile
 from json import loads
 from time import sleep
 from traceback import format_exc
 
 # Zato
 from zato.common.api import DEPLOYMENT_STATUS, KVDB
-from zato.common.broker_message import HOT_DEPLOY
 from zato.common.json_internal import dumps
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
-from zato.common.util.api import is_python_file, is_archive_file, new_cid
-from zato.common.util.file_system import fs_safe_now
-from zato.server.service import AsIs, dataclass
+from zato.common.typing_ import cast_
+from zato.common.util.api import is_python_file, is_archive_file
+from zato.common.util.file_system import fs_safe_now, touch_multiple
+from zato.common.util.python_ import import_module_by_path
+from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
 if 0:
-
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.common.typing_ import any_, anylist, anylistnone, commoniter, intlist, strbytes, strlist, strset
     from zato.server.service.store import InRAMService
     InRAMService = InRAMService
 
@@ -46,9 +46,9 @@ _first_prefix = '0' * (len(str(MAX_BACKUPS)) - 1) # So it runs from, e.g.,  000 
 
 @dataclass(init=False)
 class DeploymentCtx:
-    model_name_list:   list
-    service_id_list:   list
-    service_name_list: list
+    model_name_list:   'strlist'
+    service_id_list:   'intlist'
+    service_name_list: 'strlist'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,19 +65,19 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _delete(self, items):
+    def _delete(self, items:'commoniter') -> 'None':
         for item in items:
             if os.path.isfile(item):
                 os.remove(item)
             elif os.path.isdir(item):
                 shutil.rmtree(item)
             else:
-                msg = "Could not delete `%s`, it's neither file nor a directory, stat:`%s`"
+                msg = 'Could not delete `%s`, it is neither file nor a directory, stat:`%s`'
                 self.logger.warning(msg, item, os.stat(item))
 
 # ################################################################################################################################
 
-    def _backup_last(self, fs_now, current_work_dir, backup_format, last_backup_work_dir):
+    def _backup_last(self, fs_now:'str', current_work_dir:'str', backup_format:'str', last_backup_work_dir:'str') -> 'None':
 
         # We want to grab the directory's contents right now, before we place the
         # new backup in there
@@ -88,14 +88,21 @@ class Create(AdminService):
         # First make the backup to the special 'last' directory
         last_backup_path = os.path.join(last_backup_work_dir, fs_now)
 
-        shutil.make_archive(last_backup_path, backup_format, current_work_dir, verbose=True, logger=None)
+        _ = shutil.make_archive(last_backup_path, backup_format, current_work_dir, verbose=True, logger=None)
 
         # Delete everything previously found in the last backup directory
         self._delete(last_backup_contents)
 
 # ################################################################################################################################
 
-    def _backup_linear_log(self, fs_now, current_work_dir, backup_format, backup_work_dir, backup_history):
+    def _backup_linear_log(
+        self,
+        fs_now,           # type: str
+        current_work_dir, # type: str
+        backup_format,    # type: str
+        backup_work_dir,  # type: str
+        backup_history,   # type: int
+    ) -> 'None':
 
         delete_previous_backups = False
 
@@ -124,7 +131,7 @@ class Create(AdminService):
 
         backup_name = '{}-{}'.format(next_prefix, fs_now)
         backup_path = os.path.join(backup_work_dir, backup_name)
-        shutil.make_archive(backup_path, backup_format, current_work_dir, verbose=True, logger=None)
+        _ = shutil.make_archive(backup_path, backup_format, current_work_dir, verbose=True, logger=None)
 
         if delete_previous_backups:
             self._delete(backup_contents)
@@ -151,114 +158,92 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _deploy_models(self, current_work_dir, file_name):
-        # type: (str, str) -> list
+    def _redeploy_module_dependencies(self, file_name:'str') -> 'None':
 
-        # Reusable
-        from zato.server.service import store as service_store_mod
+        # Reload the module so its newest contents is in sys path ..
+        mod_info = import_module_by_path(file_name)
 
-        # This returns names of all the model classes deployed from the file
-        model_name_list = set(self.server.service_store.import_models_from_file(file_name, False, current_work_dir))
+        # .. we enter here if the reload succeeded ..
+        if mod_info:
 
-        # A set of Python objects, each representing a model class (rather than its name)
-        model_classes = set()
+            # .. get all the files with that are making use of this module ..
+            # .. which may mean both files with services or models ..
+            file_name_list = self.server.service_store.get_module_importers(mod_info.name)
 
-        # All the modules to be reloaded due to changes to the data model
-        to_auto_deploy = set()
+            # .. and redeploy all such files.
+            touch_multiple(file_name_list)
 
-        for item in gc.get_objects():
+# ################################################################################################################################
 
-            # It may be None in case it has been already GC-collected
-            if item is not None:
-                try:
-                    is_type = isinstance(item, type)
-                except RuntimeError:
-                    continue
-                else:
-                    if is_type:
-                        item_impl_name = '{}.{}'.format(item.__module__, item.__name__)
-                        if item_impl_name in model_name_list:
-                            model_classes.add(item)
+    def _deploy_models(self, current_work_dir:'str', model_file_name:'str') -> 'strset':
 
-        for model_class in model_classes:
-            for ref in gc.get_referrers(model_class):
+        # This returns details of all the model classes deployed from the file
+        model_info_list = self.server.service_store.import_models_from_file(
+            model_file_name,
+            False,
+            current_work_dir,
+        )
 
-                if isinstance(ref, dict):
-                    mod_name = ref.get('__module__')
-                    if mod_name:
+        # .. extract unique names only ..
+        model_name_list = {item.name for item in model_info_list}
 
-                        # Import the live Python module object ..
-                        mod = import_module(mod_name)
+        # .. if we have deployed any models ..
+        if model_name_list:
 
-                        # .. the store module itself may have a reference
-                        # .. to the model, in which case we need to ignore this reference.
-                        if mod is service_store_mod:
-                            continue
+            # .. redeploy all the modules that depend on the one we have just deployed ..
+            self._redeploy_module_dependencies(model_file_name)
 
-                        # .. proceed otherwise.
-                        module_path = getsourcefile(mod)
-
-                        # It is possible that the model class is deployed along
-                        # with a service that uses it. In that case, we do not redeploy
-                        # the service because it will be done anyway in _deploy_services,
-                        # which means that we need to skip this file ..
-                        if file_name != module_path:
-                            to_auto_deploy.add(module_path)
-
-        # If there are any services to be deployed ..
-        if to_auto_deploy:
-
-            # .. format lexicographically for logging ..
-            to_auto_deploy = sorted(to_auto_deploy)
-
-            #  .. nform users that we are to auto-redeploy services and why we are doing it ..
-            self.logger.info('Model class `%s` changed; auto-redeploying `%s`', model_class, to_auto_deploy)
-
-            # .. go through each child service found and hot-deploy it ..
-            for module_path in to_auto_deploy:
-                shutil.copy(module_path, self.server.hot_deploy_config.pickup_dir)
-
+        # .. and return to the caller the list of models deployed.
         return model_name_list
 
 # ################################################################################################################################
 
-    def _deploy_services(self, current_work_dir, file_name):
-        # type: (str, str) -> list
+    def _deploy_services(self, current_work_dir:'str', service_file_name:'str') -> 'intlist':
 
-        service_id_list = []
-        info = self.server.service_store.import_services_from_anywhere(file_name, current_work_dir)
+        # Local aliases
+        service_id_list:'intlist' = []
 
-        for service in info.to_process: # type: InRAMService
+        # This returns details of all the model classes deployed from the file
+        service_info_list = self.server.service_store.import_services_from_anywhere(service_file_name, current_work_dir)
 
+        # .. if we have deployed any models ..
+        for service in service_info_list.to_process: # type: ignore
+
+            # .. add type hints ..
+            service = cast_('InRAMService', service)
+
+            # .. extract the ID of the deployed service ..
             service_id = self.server.service_store.impl_name_to_id[service.impl_name]
+
+            # .. append it for later use ..
             service_id_list.append(service_id)
 
-            msg = {}
-            msg['cid'] = new_cid()
-            msg['service_id'] = service_id
-            msg['service_name'] = service.name
-            msg['service_impl_name'] = service.impl_name
-            msg['action'] = HOT_DEPLOY.AFTER_DEPLOY.value
+            # .. redeploy all the modules that depend on the one we have just deployed ..
+            self._redeploy_module_dependencies(service.source_code_info.path)
 
-            self.broker_client.publish(msg)
-
+        # .. and return to the caller the list of IDs of all the services deployed.
         return service_id_list
 
 # ################################################################################################################################
 
-    def _deploy_file(self, current_work_dir, payload, file_name, should_deploy_in_place):
-        # type: (str, object, str) -> DeploymentCtx
+    def _deploy_file(
+        self,
+        current_work_dir, # type: str
+        payload,          # type: any_
+        file_name,        # type: str
+        should_deploy_in_place # type: bool
+    ) -> 'DeploymentCtx':
 
         if not should_deploy_in_place:
             with open(file_name, 'w', encoding='utf-8') as f:
                 payload = payload.decode('utf8') if isinstance(payload, bytes) else payload
-                f.write(payload)
+                _ = f.write(payload)
 
         model_name_list = self._deploy_models(current_work_dir, file_name)
         service_id_list = self._deploy_services(current_work_dir, file_name)
 
         ctx = DeploymentCtx()
-        ctx.model_name_list = model_name_list
+        ctx.model_name_list = model_name_list # type: ignore
         ctx.service_id_list = service_id_list
         ctx.service_name_list = [self.server.service_store.get_service_name_by_id(elem) for elem in service_id_list]
 
@@ -266,7 +251,15 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _deploy_package(self, session, package_id, payload_name, payload, should_deploy_in_place, in_place_dir_name):
+    def _deploy_package(
+        self,
+        session,      # type: any_
+        package_id,   # type: int
+        payload_name, # type: str
+        payload,      # type: strbytes
+        should_deploy_in_place, # type: bool
+        in_place_dir_name       # type: str
+    ) -> 'anylistnone':
         """ Deploy a package, either a plain Python file or an archive, and update
         the deployment status.
         """
@@ -276,7 +269,7 @@ class Create(AdminService):
         if should_deploy_in_place:
             work_dir = in_place_dir_name
         else:
-            work_dir = self.server.hot_deploy_config.current_work_dir
+            work_dir:'str' = self.server.hot_deploy_config.current_work_dir
 
         file_name = os.path.join(work_dir, payload_name)
 
@@ -309,8 +302,7 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _report_deployment(self, file_name, items, noun):
-        # type: (str, list, str)
+    def _report_deployment(self, file_name:'str', items:'anylist', noun:'str') -> 'None':
         msg = 'Deployed %s {}%sfrom `%s` -> %s'.format(noun)
         len_items = len(items)
         suffix = 's ' if len_items > 1 else ' '
@@ -318,7 +310,7 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _update_deployment_status(self, session, package_id, status):
+    def _update_deployment_status(self, session:'SASession', package_id:'int', status:'str') -> 'None':
         ds = session.query(DeploymentStatus).\
             filter(DeploymentStatus.package_id==package_id).\
             filter(DeploymentStatus.server_id==self.server.id).\
@@ -331,31 +323,33 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def deploy_package(self, package_id, session):
+    def deploy_package(self, package_id:'int', session:'SASession') -> 'any_':
+
         dp = self.get_package(package_id, session)
 
-        # Load JSON details so that we can find out if we are to hot-deploy in place or not ..
-        details = loads(dp.details)
+        if dp:
 
-        should_deploy_in_place = details['should_deploy_in_place']
-        in_place_dir_name = os.path.dirname(details['fs_location'])
+            # Load JSON details so that we can find out if we are to hot-deploy in place or not ..
+            details = loads(dp.details)
 
-        if is_archive_file(dp.payload_name) or is_python_file(dp.payload_name):
-            return self._deploy_package(session, package_id, dp.payload_name, dp.payload,
-                should_deploy_in_place, in_place_dir_name)
-        else:
-            # This shouldn't really happen at all because the pickup notifier is to
-            # filter such things out but life is full of surprises
-            self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.IGNORED)
+            should_deploy_in_place = details['should_deploy_in_place']
+            in_place_dir_name = os.path.dirname(details['fs_location'])
 
-            # Log a warning but only if it is not about a compiled bytecode file.
-            if not dp.payload_name.endswith('.pyc'):
-                self.logger.info(
+            if is_archive_file(dp.payload_name) or is_python_file(dp.payload_name):
+                return self._deploy_package(session, package_id, dp.payload_name, dp.payload,
+                    should_deploy_in_place, in_place_dir_name)
+            else:
+                # This shouldn't really happen at all because the pickup notifier is to
+                # filter such things out but life is full of surprises
+                self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.IGNORED)
+
+                # Log a message but only on a debug level
+                self.logger.debug(
                     'Ignoring package id:`%s`, payload_name:`%s`, not a Python file nor an archive', dp.id, dp.payload_name)
 
 # ################################################################################################################################
 
-    def get_package(self, package_id, session):
+    def get_package(self, package_id:'int', session:'SASession') -> 'DeploymentPackage | None':
         return session.query(DeploymentPackage).\
             filter(DeploymentPackage.id==package_id).\
             first()

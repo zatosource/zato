@@ -58,6 +58,7 @@ class ConfigDict:
 
     def get(self, key, default=None):
         with self.lock:
+            key = key.strip()
             return self._impl.get(key, default)
 
 # ################################################################################################################################
@@ -72,6 +73,7 @@ class ConfigDict:
 
     def __getitem__(self, key):
         with self.lock:
+            key = key.strip()
             return self._impl.__getitem__(key)
 
 # ################################################################################################################################

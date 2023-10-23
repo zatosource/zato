@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -29,6 +29,7 @@ from zato.common.util.search import SearchResults
 # ################################################################################################################################
 
 if 0:
+    from bunch import Bunch
     from zato.common.typing_ import any_
 
 # ################################################################################################################################
@@ -179,6 +180,8 @@ class ElemsWithOpaqueMaker:
     def _set_opaque(elem, drop_opaque=False):
         opaque = ElemsWithOpaqueMaker.get_opaque_data(elem)
         opaque = loads(opaque) if opaque else {}
+        opaque = opaque or {}
+
         elem.update(opaque)
 
         if drop_opaque:
@@ -239,7 +242,7 @@ def elems_with_opaque(elems):
 
 # ################################################################################################################################
 
-def parse_instance_opaque_attr(instance):
+def parse_instance_opaque_attr(instance:'any_') -> 'Bunch':
     opaque = getattr(instance, GENERIC.ATTR_NAME)
     opaque = loads(opaque) if opaque else None
     if not opaque:
@@ -283,6 +286,9 @@ def set_instance_opaque_attrs(instance, input, skip=None, only=None, _zato_skip=
         instance_opaque_attrs = getattr(instance, GENERIC.ATTR_NAME)
         if instance_opaque_attrs:
             instance_opaque_attrs = loads(instance_opaque_attrs)
+            instance_opaque_attrs = instance_opaque_attrs or {}
+            if isinstance(instance_opaque_attrs, str):
+                instance_opaque_attrs = loads(instance_opaque_attrs)
         else:
             instance_opaque_attrs = {}
 

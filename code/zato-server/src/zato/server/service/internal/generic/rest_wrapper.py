@@ -56,6 +56,7 @@ class GetList(Service):
 
         # This response has all the REST connections possible ..
         response = self.invoke(service_name, {
+            'include_wrapper': True,
             'cluster_id': self.server.cluster_id,
             'connection': CONNECTION.OUTGOING,
             'transport': URL_TYPE.PLAIN_HTTP,
@@ -65,12 +66,23 @@ class GetList(Service):
         # .. iterate through each of them ..
         for item in response:
 
+            # .. ignore items that are not wrappers ..
+            if not item.get('is_wrapper'):
+                continue
+
+            # .. reusable ..
+            item_wrapper_type = item.get('wrapper_type') or ''
+
+            # .. ignore wrappers of a type other than what was requested ..
             if wrapper_type:
-                if item.get('wrapper_type') != wrapper_type:
+                if wrapper_type != item_wrapper_type:
                     continue
 
+            # .. enmasse will not send any wrapper type which is why we use the name from the item here ..
+            suffix_wrapper_type = wrapper_type or item_wrapper_type
+
             # .. replace the name prefix ..
-            item['name'] = _replace_suffix_from_dict_name(item, wrapper_type)
+            item['name'] = _replace_suffix_from_dict_name(item, suffix_wrapper_type)
 
             # .. and append the item to the result ..
             out.append(item)
@@ -97,6 +109,7 @@ class _WrapperBase(Service):
 
         # Base request to create a new wrapper ..
         request = {
+            'is_wrapper': True,
             'cluster_id': self.server.cluster_id,
             'connection': CONNECTION.OUTGOING,
             'transport': URL_TYPE.PLAIN_HTTP,
@@ -169,7 +182,7 @@ class ChangePassword(_WrapperBase):
     _wrapper_impl_suffix = 'edit'
     _uses_name = False
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         # Reusable
         request = self.request.raw_request

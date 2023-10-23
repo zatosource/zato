@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,8 +10,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 # stdlib
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal as decimal_
+from pathlib import Path
+from types import ModuleType
 from typing import           \
     Any as any_,             \
     BinaryIO as binaryio_,   \
@@ -20,6 +22,7 @@ from typing import           \
     Dict as dict_,           \
     Generator as generator_, \
     Iterator as iterator_,   \
+    IO as io_,               \
     NoReturn as noreturn,    \
     List as list_,           \
     Optional as optional,    \
@@ -40,6 +43,9 @@ from dacite.core import from_dict
 
 # stdlib
 from dataclasses import * # type: ignore
+
+# Zato
+from zato.common.marshal_.model import BaseModel
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,6 +72,15 @@ TypedDict = TypedDict
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _ISOTimestamp:
+    pass
+
+class DateTimeWithZone(datetime):
+    pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # Some basic types are defined upfront to make sure that none of the later definitions results in the type "Unknown".
 intnone       = optional[int]
 strnone       = optional[str]
@@ -85,6 +100,11 @@ callable_     = callable_[..., any_]
 callnone      = optional[callable_]
 cast_         = cast_
 commondict    = dict_[str, union_[int, str_, bool, float, anydict, anylist, datetime, None]]
+commoniter    = union_[anylist, anytuple]
+date_         = date
+datetime_     = datetime
+datetimez     = DateTimeWithZone
+isotimestamp  = _ISOTimestamp
 decimal_      = decimal_
 decnone       = optional[decimal_]
 dictlist      = list_[anydict]
@@ -103,8 +123,14 @@ intset        = set_[int]
 intsetdict    = dict_[int, anyset]
 intstrdict    = dict_[int, str]
 iterator_     = iterator_
+iobytes_      = io_[bytes]
 listnone      = anylistnone
+model         = type_[BaseModel]
+modelnone     = optional[type_[BaseModel]]
+module_       = ModuleType
 noreturn      = noreturn
+path_         = Path
+pathlist      = list_[path_]
 set_          = set_
 stranydict    = dict_[str, any_]
 strcalldict   = dict_[str, callable_]
@@ -113,6 +139,7 @@ strbytes      = union_[str_, bytes]
 strbooldict   = dict_[str, bool]
 strdictdict   = dict_[str, anydict]
 strdictlist   = list_[stranydict]
+strlistdict   = dict_[str, anylist]
 strdictnone   = union_[stranydict, None]
 strint        = union_[str_, int]
 strintbool    = union_[str_, int, bool]
@@ -134,6 +161,7 @@ strtuple      = tuple_[str, ...]
 textio_       = textio_
 textionone    = textio_
 tuple_        = tuple_
+tuplist       = union_[anylist, anytuple]
 tupnone       = optional[anytuple]
 type_         = type_
 typealias_    = typealias_

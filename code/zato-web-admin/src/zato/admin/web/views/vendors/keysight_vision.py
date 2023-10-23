@@ -17,6 +17,12 @@ from zato.common.model.keysight_ import KeysightVisionConfigObject
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, strdict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'vendors-keysight-vision'
@@ -33,7 +39,7 @@ class Index(_Index):
 
 # ################################################################################################################################
 
-    def handle(self):
+    def handle(self) -> 'strdict':
         return {
             'create_form': CreateForm(req=self.req),
             'edit_form': EditForm(req=self.req, prefix='edit'),
@@ -52,13 +58,13 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def populate_initial_input_dict(self, initial_input_dict):
+    def populate_initial_input_dict(self, initial_input_dict:'strdict') -> 'None':
         initial_input_dict['wrapper_type'] = Wrapper_Type.Keysight_Vision
 
 # ################################################################################################################################
 
-    def success_message(self, item):
-        return 'Successfully {} Keysight Vision Series connection `{}`'.format(self.verb, item.name)
+    def success_message(self, item:'any_') -> 'str':
+        return f'Successfully {self.verb} Keysight Vision Series connection `{item.name}`'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,13 +93,13 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def change_password(req):
+def change_password(req:'any_') -> 'any_':
     return _change_password(req, 'zato.generic.rest-wrapper.change-password', success_msg='Password updated')
 
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
+def ping(req:'any_', id:'int', cluster_id:'int') -> 'any_':
     service = 'zato.generic.rest-wrapper.ping'
     ping_path = '/api/users'
     return ping_connection(req, service, id, 'Keysight Vision Series connection', ping_path=ping_path)

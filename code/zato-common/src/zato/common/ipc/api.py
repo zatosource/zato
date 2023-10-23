@@ -101,7 +101,7 @@ class IPCAPI:
 
         # Log what we are about to do
         log_msg = f'Invoking {service} on {cluster_name}:{server_name}:{target_pid}-tcp:{ipc_port}'
-        logger.info(log_msg)
+        logger.debug(log_msg)
 
         # Use this URL path to be able to easily find requests in logs
         url_path = f'{cluster_name}:{server_name}:{target_pid}-tcp:{ipc_port}-service:{service}'
