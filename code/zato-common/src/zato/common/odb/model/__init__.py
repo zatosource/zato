@@ -658,6 +658,7 @@ class HTTPSOAP(Base):
         self.rate_limit_type = None
         self.rate_limit_def = None
         self.rate_limit_check_parent_def = None
+        self.is_wrapper = None
         self.wrapper_type = None
         self.password = None
 

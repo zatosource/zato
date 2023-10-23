@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from json import dumps, loads
+from json import loads
 
 # requests
 from requests import post as requests_post
@@ -16,6 +16,7 @@ from requests import post as requests_post
 from zato.common.api import IPC as Common_IPC
 from zato.common.broker_message import SERVER_IPC
 from zato.common.typing_ import dataclass
+from zato.common.json_ import dumps
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,7 +77,7 @@ class IPCClient:
         cluster_name, # type: str
         server_name,  # type: str
         server_pid,   # type: int
-        timeout=90,    # type: int
+        timeout=90,   # type: int
         source_server_name, # type: str
         source_server_pid,  # type: int
     ) -> 'IPCResponse':
@@ -85,7 +86,7 @@ class IPCClient:
         url = f'http://{self.host}:{self.port}/{url_path}'
 
         # .. prepare the full request ..
-        data = dumps({
+        dict_data = {
             'source_server_name': source_server_name,
             'source_server_pid':  source_server_pid,
             'action':   SERVER_IPC.INVOKE.value,
@@ -93,7 +94,10 @@ class IPCClient:
             'password': self.password,
             'service':  service,
             'data': request,
-        })
+        }
+
+        # .. serialize it into JSON ..
+        data = dumps(dict_data)
 
         # .. invoke the server ..
         response = requests_post(url, data)

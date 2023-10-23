@@ -55,6 +55,7 @@ from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_conf
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, register_diag_handlers, \
     save_ipc_pid_port, spawn_greenlet, StaticConfig
 from zato.common.util.file_transfer import path_string_list_to_list
+from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
@@ -87,7 +88,6 @@ if 0:
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, dictlist, stranydict, strbytes, strlist, strnone
-    from zato.server.commands import CommandResult
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.ext.zunicorn.arbiter import Arbiter
@@ -97,6 +97,7 @@ if 0:
     from zato.server.startup_callable import StartupCallableTool
     from zato.sso.api import SSOAPI
 
+    Bunch = Bunch
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
@@ -286,6 +287,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.needs_access_log = self.access_logger.isEnabledFor(INFO)
         self.needs_all_access_log = True
         self.access_log_ignore = set()
+        self.rest_log_ignore   = set()
         self.has_pubsub_audit_log = logging.getLogger('zato_pubsub_audit').isEnabledFor(DEBUG)
         self.is_enabled_for_warn = logging.getLogger('zato').isEnabledFor(WARN)
         self.is_admin_enabled_for_info = logging.getLogger('zato_admin').isEnabledFor(INFO)
@@ -473,11 +475,22 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def add_pickup_conf_from_env(self) -> 'None':
 
-        # Look up Python hot-deployment directories ..
-        path = os.environ.get('ZATO_HOT_DEPLOY_DIR', '')
+        # These exact names may exist in the environment ..
+        name_list = ['Zato_Project_Root', 'Zato_Hot_Deploy_Dir', 'ZATO_HOT_DEPLOY_DIR']
 
-        # .. and make it possible to deploy from them.
-        self._add_pickup_conf_from_local_path(path)
+        # .. same for these prefixes ..
+        prefix_list = ['Zato_Project_Root_', 'Zato_Hot_Deploy_Dir_']
+
+        # .. go through the specific names and add any matching ..
+        for name in name_list:
+            if path := os.environ.get(name, ''):
+                self.add_pickup_conf_from_local_path(path, name)
+
+        # .. go through the list of prefixes and add any matching too.
+        for prefix in prefix_list:
+            for name, path in os.environ.items():
+                if name.startswith(prefix):
+                    self.add_pickup_conf_from_local_path(path, name)
 
 # ################################################################################################################################
 
@@ -487,92 +500,144 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         path = os.path.join(self.deploy_auto_from, 'code')
 
         # .. and make it possible to deploy from them.
-        self._add_pickup_conf_from_local_path(path)
+        self.add_pickup_conf_from_local_path(path, 'AutoDeploy')
 
 # ################################################################################################################################
 
-    def _add_pickup_conf_from_local_path(self, items:'str') -> 'None':
+    def add_pickup_conf_from_local_path(self, paths:'str', source:'str') -> 'None':
 
         # Bunch
         from bunch import bunchify
 
+        # Local variables
+        path_patterns = [HotDeploy.User_Conf_Directory, HotDeploy.Enmasse_File_Pattern]
+
         # We have hot-deployment configuration to process ..
-        if items:
+        if paths:
+
+            # .. log what we are about to do ..
+            msg = f'Processing hot-deployment configuration paths `{paths!r}` (source -> {source})'
+            logger.info(msg)
 
             # .. support multiple entries ..
-            items = items.split(':') # type: ignore
-            items = [elem.strip() for elem in items] # type: ignore
+            paths = paths.split(':') # type: ignore
+            paths = [elem.strip() for elem in paths if elem] # type: ignore
 
             # .. add  the actual configuration ..
-            for name in items:
+            for path in paths:
+
+                # .. make sure the path is actually given on input, e.g. it is not None or '' ..
+                if not path:
+                    msg = f'Ignoring empty hot-deployment configuration path `{path}` (source -> {source})'
+                    logger.info(msg)
+                    continue
 
                 # .. log what we are about to do ..
-                logger.info('Adding hot-deployment configuration from `%s` (env. variable found -> ZATO_HOT_DEPLOY_DIR)', name)
+                msg = f'Adding hot-deployment configuration from `{path}` (source -> {source})'
+                logger.info(msg)
 
                 # .. stay on the safe side because, here, we do not know where it will be used ..
-                _fs_safe_name = fs_safe_name(name)
+                _fs_safe_name = fs_safe_name(path)
 
                 # .. use this prefix to indicate that it is a directory to hot-deploy from ..
                 key_name = '{}.{}'.format(HotDeploy.UserPrefix, _fs_safe_name)
 
-                # .. and store the configuration for later use now.
+                # .. store the configuration for later use now ..
                 pickup_from = {
-                    'pickup_from': name
+                    'pickup_from': path
                 }
                 self.pickup_config[key_name] = bunchify(pickup_from)
+
+                # .. go through all the path patterns that point to user configuration (including enmasse) ..
+                for path_pattern in path_patterns:
+
+                    # .. get a list of matching paths ..
+                    user_conf_paths = Path(path).rglob(path_pattern)
+                    user_conf_paths = list(user_conf_paths)
+
+                    # .. go through all the paths that matched ..
+                    for user_conf_path in user_conf_paths:
+
+                        # .. and add each of them to hot-deployment.
+                        self._add_user_conf_from_path(str(user_conf_path), source)
 
 # ################################################################################################################################
 
     def add_user_conf_from_env(self) -> 'None':
 
+        # Local variables
+        env_keys = ['Zato_User_Conf_Dir', 'ZATO_USER_CONF_DIR']
+
+        # Look up user-defined configuration directories ..
+        paths = os.environ.get('ZATO_USER_CONF_DIR', '')
+
+        # .. try the other name too ..
+        if not paths:
+            paths = os.environ.get('Zato_User_Conf_Dir', '')
+
+        # Go through all the possible environment keys ..
+        for key in env_keys:
+
+            # .. if we have user-config details to process ..
+            if paths := os.environ.get(key, ''):
+
+                # .. support multiple entries ..
+                paths = paths.split(':')
+                paths = [elem.strip() for elem in paths]
+
+                # .. and the actual configuration.
+                for path in paths:
+                    source = f'env. variable found -> {key}'
+                    self._add_user_conf_from_path(path, source)
+
+# ################################################################################################################################
+
+    def _add_user_conf_from_path(self, path:'str', source:'str') -> 'None':
+
         # Bunch
         from bunch import bunchify
 
-        # Look up user-defined configuration directories
-        items = os.environ.get('ZATO_USER_CONF_DIR', '')
-
-        # Ignore files other than that
-        suffixes = ['ini', 'conf']
+        # Ignore files other than the below ones
+        suffixes = ['ini', 'conf', 'yaml', 'yml']
         patterns = ['*.' + elem for elem in suffixes]
         patterns_str = ', '.join(patterns)
 
-        # We have user-config details to process ..
-        if items:
+        # Log what we are about to do ..
+        msg = f'Adding user-config from `{path}` ({source})'
+        logger.info(msg)
 
-            # .. support multiple entries ..
-            items = items.split(':')
-            items = [elem.strip() for elem in items]
+        # .. look up files inside the directory and add the path to each
+        # .. to a list of what should be loaded on startup ..
+        if os.path.exists(path) and os.path.isdir(path):
+            file_item_list = os.listdir(path)
+            for file_item in file_item_list:
+                for suffix in suffixes:
+                    if file_item.endswith(suffix):
+                        self.user_conf_location_extra.add(path)
 
-            # .. add  the actual configuration ..
-            for name in items:
+        # .. stay on the safe side because, here, we do not know where it will be used ..
+        _fs_safe_name = fs_safe_name(path)
 
-                # .. log what we are about to do ..
-                logger.info('Adding user-config from `%s` (env. variable found -> ZATO_USER_CONF_DIR)', name)
+        # .. use this prefix to indicate that it is a directory to deploy user configuration from  ..
+        key_name = '{}.{}'.format(HotDeploy.UserConfPrefix, _fs_safe_name)
 
-                # .. look up files inside the directory and add the path to each
-                # .. to a list of what should be loaded on startup ..
-                if os.path.exists(name) and os.path.isdir(name):
-                    file_item_list = os.listdir(name)
-                    for file_item in file_item_list:
-                        for suffix in suffixes:
-                            if file_item.endswith(suffix):
-                                self.user_conf_location_extra.add(name)
+        # .. use a specific service if it is an enmasse file ..
+        if 'enmasse' in path:
+            service = 'zato.pickup.update-enmasse'
 
-                # .. stay on the safe side because, here, we do not know where it will be used ..
-                _fs_safe_name = fs_safe_name(name)
+        # .. or default to the one for user config if it is not ..
+        else:
+            service= 'zato.pickup.update-user-conf'
 
-                # .. use this prefix to indicate that it is a directory to deploy user configuration from  ..
-                key_name = '{}.{}'.format(HotDeploy.UserConfPrefix, _fs_safe_name)
-
-                # .. and store the configuration for later use now.
-                pickup_from = {
-                    'pickup_from': name,
-                    'patterns': patterns_str,
-                    'parse_on_pickup': False,
-                    'delete_after_pickup': False,
-                    'services': 'zato.pickup.update-user-conf',
-                }
-                self.pickup_config[key_name] = bunchify(pickup_from)
+        # .. and store the configuration for later use now.
+        pickup_from = {
+            'pickup_from': path,
+            'patterns': patterns_str,
+            'parse_on_pickup': False,
+            'delete_after_pickup': False,
+            'services': service,
+        }
+        self.pickup_config[key_name] = bunchify(pickup_from)
 
 # ################################################################################################################################
 
@@ -606,7 +671,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def _after_init_common(self, server:'ParallelServer') -> 'anyset':
         """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
         """
-        def _normalise_service_source_path(name:'str') -> 'str':
+        def _normalize_service_source_path(name:'str') -> 'str':
             if not os.path.isabs(name):
                 name = os.path.normpath(os.path.join(self.base_dir, name))
             return name
@@ -646,7 +711,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         for name in open(os.path.join(self.repo_location, self.fs_server_config.main.service_sources)):
             name = name.strip()
             if name and not name.startswith('#'):
-                name = _normalise_service_source_path(name)
+                name = _normalize_service_source_path(name)
                 self.service_sources.append(name)
 
         # Look up pickup configuration among environment variables
@@ -660,14 +725,19 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Append additional services that can be invoked through WebSocket gateways.
         self.add_wsx_gateway_service_allowed()
 
-        # Service sources from user-defined hot-deployment configuration
-        for key, value in self.pickup_config.items():
-            if key.startswith(HotDeploy.UserPrefix):
-                pickup_from = value.get('pickup_from')
-                if pickup_from:
-                    logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix)', pickup_from)
-                    pickup_from = _normalise_service_source_path(pickup_from)
-                    self.service_sources.append(pickup_from)
+        # Service sources from user-defined hot-deployment configuration ..
+        for pickup_from in extract_pickup_from_items(self.base_dir, self.pickup_config, HotDeploy.Source_Directory):
+
+            # .. log what we are about to do ..
+            if isinstance(pickup_from, list):
+                for project in pickup_from:
+                    for item in project.pickup_from_path:
+                        logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix->Project)', item)
+            else:
+                logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix->Path)', pickup_from)
+
+            # .. and do append it for later use ..
+            self.service_sources.append(pickup_from)
 
         # Read all the user config files that are already available on startup
         self.read_user_config()
@@ -683,7 +753,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def _read_user_config_from_directory(self, dir_name:'str') -> 'None':
 
-        # We assume that it will be always one of these file name suffixes
+        # We assume that it will be always one of these file name suffixes,
+        # note that we are not reading enmasse (.yaml and .yml) files here,
+        # even though directories with enmasse files may be among what we have in self.user_conf_location_extra.
         suffixes_supported = ('.ini', '.conf')
 
         # User-config from ./config/repo/user-config
@@ -754,13 +826,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _on_enmasse_completed(self, result:'CommandResult') -> 'None':
-
-        self.logger.info('Enmasse stdout -> `%s`', result.stdout.strip())
-        self.logger.info('Enmasse stderr -> `%s`', result.stderr.strip())
-
-# ################################################################################################################################
-
     def handle_enmasse_auto_from(self) -> 'None':
 
         # Zato
@@ -779,8 +844,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # .. find all the enmasse files in this directory ..
         for file_path in sorted(path.iterdir()):
 
-            command = f'enmasse --import --replace-odb-objects --input {file_path} {self.base_dir} --verbose'
-            _ = commands.run_zato_cli_async(command, callback=self._on_enmasse_completed)
+            # .. and run enmasse with each of them.
+            _ = commands.run_enmasse_async(file_path)
 
 # ################################################################################################################################
 
@@ -1096,13 +1161,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         ipc_password = self.decrypt(ipc_password)
 
         # .. this is the same for all processes ..
-        bind_host = self.fs_server_config.main.ipc_host
+        bind_host = self.fs_server_config.main.get('ipc_host') or '0.0.0.0'
 
         # .. this is set to a different value for each process ..
-        bind_port = self.fs_server_config.main.ipc_port_start + self.process_idx
+        bind_port = (self.fs_server_config.main.get('ipc_port_start') or 17050) + self.process_idx
 
         # .. now, the IPC server can be started ..
-        spawn_greenlet(self.ipc_api.start_server,
+        _ = spawn_greenlet(self.ipc_api.start_server,
             self.pid,
             self.base_dir,
             bind_host=bind_host,
@@ -1468,8 +1533,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def on_ipc_invoke_callback(self, msg:'Bunch') -> 'anydict':
+    def on_ipc_invoke_callback(self, msg:'Bunch') -> 'anydict': # type: ignore
 
+        msg = cast_('Bunch', msg)
         service = msg['service']
         data    = msg['data']
 

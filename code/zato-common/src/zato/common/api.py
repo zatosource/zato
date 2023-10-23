@@ -1672,6 +1672,9 @@ class UNITTEST:
 class HotDeploy:
     UserPrefix = 'hot-deploy.user'
     UserConfPrefix = 'user_conf'
+    Source_Directory = 'src'
+    User_Conf_Directory = 'user-conf'
+    Enmasse_File_Pattern = 'enmasse'
 
 # ################################################################################################################################
 # ################################################################################################################################

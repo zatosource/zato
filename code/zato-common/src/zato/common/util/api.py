@@ -130,7 +130,7 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 if 0:
     from typing import Iterable as iterable
     from zato.client import ZatoClient
-    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strlistnone, strnone
+    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strlistnone, strnone, strset
     iterable = iterable
 
 # ################################################################################################################################
@@ -343,13 +343,20 @@ def tech_account_password(password_clear, salt):
 
 # ################################################################################################################################
 
-def new_cid(bytes:'int'=12, _random:'callable_'=random.getrandbits) -> 'str':
+def new_cid(bytes:'int'=12, needs_padding:'bool'=False, _random:'callable_'=random.getrandbits) -> 'str':
     """ Returns a new 96-bit correlation identifier. It is not safe to use the ID
     for any cryptographical purposes; it is only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     """
-    # Note that we need to convert bytes to bits here.
-    return hex(_random(bytes * 8))[2:]
+    # Note that we need to convert bytes to bits here ..
+    out = hex(_random(bytes * 8))[2:]
+
+    # .. and that we optionally ensure it is always 24 characters on output ..
+    if needs_padding:
+        out = out.ljust(24, 'a')
+
+    # .. return the output to the caller.
+    return out
 
 # ################################################################################################################################
 
@@ -619,28 +626,25 @@ def visit_py_source(
     order_patterns=None # type: strlistnone
 ) -> 'any_':
 
-    # Assume we are not given any patterns on input ..
-    order_patterns = order_patterns or [
+    # We enter here if we are not given any patterns on input ..
+    if not order_patterns:
 
-        '  common*.py',
-        '*_common*.py',
+        # .. individual Python files will be deployed in this order ..
+        order_patterns = [
+            'common*',
+            'util*',
+            'model*',
+            '*'
+        ]
 
-        '  model*.py',
-        '*_model*.py',
-
-        '  lib*.py',
-        '*_lib*.py',
-
-        '  util*.py',
-        '*_util*.py',
-
-        '  pri_*.py',
-        '*_pri.py',
-    ]
+        # .. now, append the .py extension to each time so that we can find such files below ..
+        for idx, elem in enumerate(order_patterns):
+            new_item = f'{elem}.py'
+            order_patterns[idx] = new_item
 
     # For storing names of files that we have already deployed,
     # to ensure that there will be no duplicates.
-    already_visited = set()
+    already_visited:'strset' = set()
 
     # .. append the default ones, unless they are already there ..
     for default in ['*.py', '*.pyw']:
@@ -1045,7 +1049,7 @@ def register_diag_handlers():
 
 # ################################################################################################################################
 
-def parse_simple_type(value, convert_bool=True):
+def parse_simple_type(value:'any_', convert_bool:'bool'=True) -> 'any_':
     if convert_bool:
         try:
             value = is_boolean(value)
@@ -1060,13 +1064,20 @@ def parse_simple_type(value, convert_bool=True):
         pass
 
     # Could be a dict or another simple type then
+    value = parse_literal_dict(value)
+
+    # Either parsed out or as it was received
+    return value
+
+# ################################################################################################################################
+
+def parse_literal_dict(value:'str') -> 'str | anydict':
     try:
         value = literal_eval(value)
     except Exception:
         pass
-
-    # Either parsed out or as it was received
-    return value
+    finally:
+        return value
 
 # ################################################################################################################################
 
@@ -1939,8 +1950,15 @@ def slugify(value, allow_unicode=False):
 
 # ################################################################################################################################
 
-def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, needs_log=True, *args, **kwargs):
-    # type: (object, int, float, *object, **object) -> bool
+def wait_for_predicate(
+    predicate_func, # type: callable_
+    timeout,        # type: int
+    interval,       # type: float
+    log_msg_details=None, # type: strnone
+    needs_log=True,       # type: bool
+    *args,   # type: any_
+    **kwargs # type: any_
+) -> 'bool':
 
     # Try out first, perhaps it already fulfilled
     is_fulfilled = bool(predicate_func(*args, **kwargs))
@@ -1948,7 +1966,7 @@ def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, 
     # Use an explicit loop index for reporting
     loop_idx = 1
 
-    logger.info('Entering wait-for-predicate -> %s -> %s', log_msg_details, is_fulfilled)
+    logger.debug('Entering wait-for-predicate -> %s -> %s', log_msg_details, is_fulfilled)
 
     if not is_fulfilled:
         start = datetime.utcnow()

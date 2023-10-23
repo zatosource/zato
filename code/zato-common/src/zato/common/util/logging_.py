@@ -28,6 +28,11 @@ loggers:
         handlers: [stdout, default]
         qualname: zato
         propagate: false
+    zato_rest:
+        level: INFO
+        handlers: [stdout, default]
+        qualname: zato
+        propagate: false
     zato_access_log:
         level: INFO
         handlers: [http_access_log]
