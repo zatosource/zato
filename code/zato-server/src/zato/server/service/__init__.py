@@ -604,7 +604,7 @@ class Service:
 
     @staticmethod
     def convert_impl_name(name:'str') -> 'str':
-        # TODO: Move the replace functionality over to uncamelify, possibly modifying its regexp
+
         split = uncamelify(name).split('.')
 
         path, class_name = split[:-1], split[-1]
@@ -1527,18 +1527,18 @@ WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_VAULT_MOUNT_POINT_NEEDED] = 'on_
 class RESTAdapter(Service):
 
     # These may be overridden by individual subclasses
-    model               = None
-    conn_name           = ''
-    log_response        = False
-    map_response        = None
-    get_conn_name       = None
-    get_auth            = None
-    get_path            = None
-    get_method          = None
-    get_request         = None
-    get_headers         = None
-    get_query_string    = None
-    get_auth_bearer     = None
+    model            = None
+    conn_name        = ''
+    log_response     = False
+    map_response     = None
+    get_conn_name    = None
+    get_auth         = None
+    get_path         = None
+    get_method       = None
+    get_request      = None
+    get_headers      = None
+    get_query_string = None
+    get_auth_bearer  = None
 
     has_query_string_id   = False
     query_string_id_param = None
