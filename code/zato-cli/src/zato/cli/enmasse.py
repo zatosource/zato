@@ -1924,7 +1924,7 @@ class Enmasse(ManageCommand):
         {'name':'--format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
         {'name':'--dump-format', 'help':'Same as --format', 'choices':('json', 'yaml'), 'default':'yaml'},
         {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to file', 'action':'store_true'},
-        {'name':'--exit-on-missing-file', 'help':'If input file exists, exit with status code 0', 'default':True},
+        {'name':'--exit-on-missing-file', 'help':'If input file exists, exit with status code 0', 'action':'store_true'},
         {'name':'--replace', 'help':'Force replacing already server objects during import', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Same as --replace', 'action':'store_true'},
         {'name':'--input', 'help':'Path to input file with objects to import'},
