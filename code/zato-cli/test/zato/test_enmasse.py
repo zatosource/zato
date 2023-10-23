@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from datetime import datetime
 from logging import basicConfig, getLogger, WARN
 from tempfile import gettempdir
 from traceback import format_exc
@@ -104,6 +105,29 @@ email_smtp:
     password: {smtp_config.password}
     ping_address: {smtp_config.ping_address}
 
+web_socket:
+    - address: "ws://0.0.0.0:10203/api/{test_suffix}"
+      data_format: "json"
+      id: 1
+      is_active: true
+      is_audit_log_received_active: false
+      is_audit_log_sent_active: false
+      is_internal: false
+      max_bytes_per_message_received: null
+      max_bytes_per_message_sent: null
+      max_len_messages_received: null
+      max_len_messages_sent: null
+      name: "wsx.enmasse.{test_suffix}"
+      new_token_wait_time: 5
+      opaque1: '{{"max_bytes_per_message_sent":null,"max_bytes_per_message_received":null,"ping_interval":30,"extra_properties":null,"is_audit_log_received_active":false,"max_len_messages_received":null,"pings_missed_threshold":2,"max_len_messages_sent":null,"security":null,"is_audit_log_sent_active":false,"service_name":"pub.zato.ping"}}'
+      ping_interval: 30
+      pings_missed_threshold: 2
+      sec_def: "zato-no-security"
+      sec_type: null
+      security_id: null
+      service: "pub.zato.ping"
+      service_name: "pub.zato.ping"
+      token_ttl: 3600
 """
 
 # ################################################################################################################################
@@ -193,7 +217,7 @@ class EnmasseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def _invoke_command(self, config_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
+    def _invoke_command(self, config_path:'str', require_ok:'bool'=True, missing_wait_time:'int'=1) -> 'RunningCommand':
 
         # Zato
         from zato.common.util.cli import get_zato_sh_command
@@ -203,7 +227,12 @@ class EnmasseTestCase(TestCase):
 
         # Invoke enmasse ..
         out:'RunningCommand' = command('enmasse', TestConfig.server_location,
-            '--import', '--input', config_path, '--replace-odb-objects', '--verbose')
+            '--import',
+            '--input', config_path,
+            '--replace-odb-objects',
+            '--verbose',
+            '--missing-wait-time', missing_wait_time
+        )
 
         # .. if told to, make sure there was no error in stdout/stderr ..
         if require_ok:
@@ -287,6 +316,10 @@ class EnmasseTestCase(TestCase):
 
     def test_enmasse_service_does_not_exit(self) -> 'None':
 
+        # We are going to wait that many seconds for enmasse to complete
+        start = datetime.utcnow()
+        missing_wait_time = 3
+
         tmp_dir = gettempdir()
         test_suffix = rand_unicode() + '.' + rand_string()
 
@@ -303,16 +336,17 @@ class EnmasseTestCase(TestCase):
         _ = f.write(data)
         f.close()
 
-        # Invoke enmasse to create objects (which will fail because the service used above does not exist)
-        out = self._invoke_command(config_path, require_ok=False)
+        # Invoke enmasse to create objects (which will block for missing_wait_time seconds) ..
+        _ = self._invoke_command(config_path, require_ok=False)
 
-        stdout = out.stdout # type: any_
-        stdout = stdout.decode('utf8')
-        stderr = out.stderr
+        # .. now, make sure that we actually had to wait that many seconds ..
+        now = datetime.utcnow()
+        delta = now - start
 
-        if not '3 errors found' in stdout:
-            self._warn_on_error(stdout, stderr)
-            self.fail('Expected for enmasse to return errors')
+        # .. the whole test should have taken longer than what we waited for in enmasse .
+        if not delta.total_seconds() > missing_wait_time:
+            msg = f'Total time should be bigger than {missing_wait_time} (missing_wait_time) instead of {delta}'
+            self.fail(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -287,6 +287,8 @@ def set_instance_opaque_attrs(instance, input, skip=None, only=None, _zato_skip=
         if instance_opaque_attrs:
             instance_opaque_attrs = loads(instance_opaque_attrs)
             instance_opaque_attrs = instance_opaque_attrs or {}
+            if isinstance(instance_opaque_attrs, str):
+                instance_opaque_attrs = loads(instance_opaque_attrs)
         else:
             instance_opaque_attrs = {}
 
