@@ -135,6 +135,11 @@ class FileTransferAPI:
 
 # ################################################################################################################################
 
+    def add_pickup_dir(self, path:'str', source:'str') -> 'None':
+        self.server.add_pickup_conf_from_local_path(path, source)
+
+# ################################################################################################################################
+
     def _create(self, config:'Bunch') -> 'None':
         """ Low-level implementation of self.create.
         """

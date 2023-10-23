@@ -18,7 +18,7 @@ from zato.common.api import CONNECTION, DATA_FORMAT, DEFAULT_HTTP_PING_METHOD, D
      HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZATO_DEFAULT, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
-from zato.common.exception import ZatoException
+from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.json_internal import dumps
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
@@ -29,6 +29,18 @@ from zato.server.connection.http_soap import BadRequest
 from zato.server.service import AsIs, Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_GetList_Optional = ('include_wrapper', 'cluster_id', 'connection', 'transport', 'data_format')
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _HTTPSOAPService:
@@ -87,7 +99,7 @@ class _BaseGet(AdminService):
                 'data_encoding', 'is_audit_log_sent_active', 'is_audit_log_received_active', \
                 Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
                 Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
-                'username', 'wrapper_type'
+                'username', 'is_wrapper', 'wrapper_type'
 
 # ################################################################################################################################
 
@@ -135,12 +147,19 @@ class GetList(_BaseGet):
     class SimpleIO(GetListAdminSIO, _BaseGet.SimpleIO):
         request_elem = 'zato_http_soap_get_list_request'
         response_elem = 'zato_http_soap_get_list_response'
-        input_optional = GetListAdminSIO.input_optional + ('cluster_id', 'connection', 'transport', 'data_format')
+        input_optional = GetListAdminSIO.input_optional + _GetList_Optional
         output_optional = _BaseGet.SimpleIO.output_optional + ('connection', 'transport')
         output_repeated = True
 
     def get_data(self, session):
+
+        # Local aliases
+        out:'anylist' = []
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
+        include_wrapper = self.request.input.get('include_wrapper') or False
+        should_ignore_wrapper = not include_wrapper
+
+        # Obtain the basic result ..
         result = self._search(http_soap_list, session, cluster_id,
             self.request.input.connection, self.request.input.transport,
             asbool(self.server.fs_server_config.misc.return_internal_objects),
@@ -148,12 +167,24 @@ class GetList(_BaseGet):
             False,
             )
 
-        data = elems_with_opaque(result)
+        # .. extract all the opaque elements ..
+        data:'anylist' = elems_with_opaque(result)
 
+        # .. go through everything we have so far ..
         for item in data:
+
+            # .. this needs to be extracted ..
             item['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(item)
 
-        return data
+            # .. ignore wrapper elements if told do ..
+            if should_ignore_wrapper and item.get('is_wrapper'):
+                continue
+
+            # .. if we are here, it means that this element is to be returned ..
+            out.append(item)
+
+        # .. now, return the result to our caller.
+        return out
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -253,7 +284,7 @@ class Create(_CreateEdit):
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify', \
-            'wrapper_type', 'username', 'password'
+            'is_wrapper', 'wrapper_type', 'username', 'password'
         output_required = 'id', 'name'
         output_optional = 'url_path'
 
@@ -282,6 +313,28 @@ class Create(_CreateEdit):
         input.data_encoding = input.get('data_encoding') or 'utf-8'
         input.hl7_version = input.get('hl7_version') or HL7.Const.Version.v2.id
 
+        # Remove extra whitespace
+        input_name = input.name
+        input_host = input.host
+        input_url_path = input.url_path
+        input_ping_method = input.get('ping_method')
+        input_content_type = input.get('content_type')
+
+        if input_name:
+            input.name = input_name.strip()
+
+        if input_host:
+            input.host = input_host.strip()
+
+        if input_url_path:
+            input.url_path = input_url_path.strip()
+
+        if input_ping_method:
+            input.ping_method = input_ping_method.strip() or DEFAULT_HTTP_PING_METHOD
+
+        if input_content_type:
+            input.content_type = input_content_type.strip()
+
         if input.content_encoding and input.content_encoding != 'gzip':
             raise Exception('Content encoding must be empty or equal to `gzip`')
 
@@ -304,8 +357,8 @@ class Create(_CreateEdit):
 
             if input.connection == CONNECTION.CHANNEL and not service:
                 msg = 'Service `{}` does not exist in this cluster'.format(input.service)
-                self.logger.error(msg)
-                raise Exception(msg)
+                self.logger.info(msg)
+                raise ServiceMissingException(msg)
 
             # Will raise exception if the security type doesn't match connection
             # type and transport
@@ -328,11 +381,11 @@ class Create(_CreateEdit):
                 item.host = input.host
                 item.url_path = input.url_path
                 item.method = input.method
-                item.soap_action = input.soap_action
+                item.soap_action = input.soap_action.strip()
                 item.soap_version = input.soap_version or None
                 item.data_format = input.data_format
                 item.service = service
-                item.ping_method = input.get('ping_method') or DEFAULT_HTTP_PING_METHOD
+                item.ping_method = input.ping_method
                 item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
                 item.merge_url_params_req = input.get('merge_url_params_req') or True
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
@@ -340,11 +393,12 @@ class Create(_CreateEdit):
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.timeout
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
-                item.content_type = input.get('content_type')
+                item.content_type = input.content_type
                 item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
+                item.is_wrapper = bool(input.is_wrapper)
                 item.wrapper_type = input.wrapper_type
 
                 if input.username:
@@ -426,7 +480,7 @@ class Edit(_CreateEdit):
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'cluster_id', 'is_active', 'transport', 'tls_verify', \
-            'wrapper_type', 'username', 'password'
+            'is_wrapper', 'wrapper_type', 'username', 'password'
         output_optional = 'id', 'name'
 
     def handle(self):
@@ -453,6 +507,28 @@ class Edit(_CreateEdit):
         # For HL7
         input.data_encoding = input.get('data_encoding') or 'utf-8'
         input.hl7_version = input.get('hl7_version') or HL7.Const.Version.v2.id
+
+        # Remove extra whitespace
+        input_name = input.name
+        input_host = input.host
+        input_url_path = input.url_path
+        input_ping_method = input.get('ping_method')
+        input_content_type = input.get('content_type')
+
+        if input_name:
+            input.name = input_name.strip()
+
+        if input_host:
+            input.host = input_host.strip()
+
+        if input_url_path:
+            input.url_path = input_url_path.strip()
+
+        if input_ping_method:
+            input.ping_method = input_ping_method.strip() or DEFAULT_HTTP_PING_METHOD
+
+        if input_content_type:
+            input.content_type = input_content_type.strip()
 
         if input.content_encoding and input.content_encoding != 'gzip':
             raise Exception('Content encoding must be empty or equal to `gzip`')
@@ -486,8 +562,8 @@ class Edit(_CreateEdit):
 
             if input.connection == CONNECTION.CHANNEL and not service:
                 msg = 'Service `{}` does not exist in this cluster'.format(input.service)
-                self.logger.error(msg)
-                raise Exception(msg)
+                self.logger.info(msg)
+                raise ServiceMissingException(msg)
 
             # Will raise exception if the security type doesn't match connection
             # type and transport
@@ -520,7 +596,7 @@ class Edit(_CreateEdit):
                 item.soap_version = input.soap_version or None
                 item.data_format = input.data_format
                 item.service = service
-                item.ping_method = input.get('ping_method') or DEFAULT_HTTP_PING_METHOD
+                item.ping_method = input.ping_method
                 item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
                 item.merge_url_params_req = input.get('merge_url_params_req') or False
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
@@ -528,11 +604,12 @@ class Edit(_CreateEdit):
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout')
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
-                item.content_type = input.get('content_type')
+                item.content_type = input.content_type
                 item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
+                item.is_wrapper = bool(input.is_wrapper)
                 item.wrapper_type = input.wrapper_type
 
                 if input.username:

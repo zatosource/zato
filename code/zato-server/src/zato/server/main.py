@@ -78,9 +78,28 @@ from zato.sso.util import new_user_id, normalize_sso_config
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, callable_, dictnone
+    from zato.common.typing_ import any_, callable_, dictnone, strintnone
     from zato.server.ext.zunicorn.config import Config as ZunicornConfig
     callable_ = callable_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ModuleCtx:
+
+    num_threads     = 'num_threads'
+    bind_host       = 'bind_host'
+    bind_port       = 'bind_port'
+
+    Env_Num_Threads = 'Zato_Config_Num_Threads'
+    Env_Bind_Host   = 'Zato_Config_Bind_Host'
+    Env_Bind_Port   = 'Zato_Config_Bind_Port'
+
+    Env_Map = {
+        num_threads: Env_Num_Threads,
+        bind_host:   Env_Bind_Host,
+        bind_port:   Env_Bind_Port,
+    }
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -109,7 +128,31 @@ class ZatoGunicornApplication(Application):
 
 # ################################################################################################################################
 
+    def get_config_value(self, config_key:'str') -> 'strintnone':
+
+        # First, map the config key to its corresponding environment variable
+        env_key = ModuleCtx.Env_Map[config_key]
+
+        # First, check if we have such a value among environment variables ..
+        if value := os.environ.get(env_key):
+
+            # .. if yes, we can return it now ..
+            return value
+
+        # .. we are here if there was no such environment variable ..
+        # .. but maybe there is a config key on its own ..
+        if value := self.config_main.get(config_key): # type: ignore
+
+            # ..if yes, we can return it ..
+            return value # type: ignore
+
+        # .. we are here if we have nothing to return, so let's do it explicitly.
+        return None
+
+# ################################################################################################################################
+
     def init(self, *ignored_args:'any_', **ignored_kwargs:'any_') -> 'None':
+
         self.cfg.set('post_fork', self.zato_wsgi_app.post_fork) # Initializes a worker
         self.cfg.set('on_starting', self.zato_wsgi_app.on_starting) # Generates the deployment key
         self.cfg.set('before_pid_kill', self.zato_wsgi_app.before_pid_kill) # Cleans up before the worker exits
@@ -131,6 +174,25 @@ class ZatoGunicornApplication(Application):
                     v = int(v)
 
                 self.zato_config[k] = v
+
+        # Override pre-3.2 names with non-gunicorn specific ones ..
+
+        # .. number of processes / threads ..
+        if num_threads := self.get_config_value('num_threads'):
+            self.cfg.set('workers', num_threads)
+
+        # .. what interface to bind to ..
+        if bind_host := self.get_config_value('bind_host'): # type: ignore
+            self.zato_host = bind_host
+
+        # .. what is our main TCP port ..
+        if bind_port := self.get_config_value('bind_port'): # type: ignore
+            self.zato_port = bind_port
+
+        # .. now, set the bind config value once more in self.cfg  ..
+        # .. because it could have been overwritten via bind_host or bind_port ..
+        bind = f'{self.zato_host}:{self.zato_port}'
+        self.cfg.set('bind', bind)
 
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_wsgi_app, name, self.zato_config[name])

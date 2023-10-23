@@ -955,7 +955,7 @@ def main() -> 'any_':
 
             if missing:
                 missing_noun = 'Option ' if len(missing) == 1 else 'Options '
-                missing_verb = ' is ' if len(missing) == 1 else ' are '
+                missing_verb = ' is '    if len(missing) == 1 else ' are '
                 missing.sort()
 
                 sys.stdout.write(
