@@ -1970,6 +1970,7 @@ class Enmasse(ManageCommand):
 
         # For type hints
         self.missing_wait_time:'int' = getattr(self.args, 'missing_wait_time', None) or ModuleCtx.Missing_Wait_Time
+        self.missing_wait_time = int(self.missing_wait_time)
 
         # Initialize environment variables ..
         env_path = self.normalize_path('env_file', exit_if_missing=False)
