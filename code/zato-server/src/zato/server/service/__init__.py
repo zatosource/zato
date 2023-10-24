@@ -1533,7 +1533,7 @@ class RESTAdapter(Service):
     map_response     = None
     get_conn_name    = None
     get_auth         = None
-    get_path         = None
+    get_path_params  = None
     get_method       = None
     get_request      = None
     get_headers      = None
@@ -1617,6 +1617,11 @@ class RESTAdapter(Service):
         # Update the query string with information obtained earlier
         if self.get_query_string:
             _params:'strdict' = self.get_query_string(params)
+            params.update(_params)
+
+        # Obtain any possible path parameters
+        if self.get_path_params:
+            _params:'strdict' = self.get_path_params(params)
             params.update(_params)
 
         # The REST method may be dynamically generated
