@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -1563,10 +1563,11 @@ class Microsoft365:
 class OAuth:
 
     class Default:
-        Auth_Server_URL = 'https://example.com/oauth2/default/v1/token'
-        Scopes = [
-            'zato.access',
-        ]
+        Auth_Server_URL = 'https://example.com/oauth2/token'
+        Scopes = [] # There are no default scopes
+        Client_ID_Field = 'client_id'
+        Client_Secret_Field = 'client_secret'
+        Grant_Type = 'client_credentials'
 
 # ################################################################################################################################
 # ################################################################################################################################
