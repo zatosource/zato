@@ -59,6 +59,7 @@ $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {
 
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.scopes);
+    row += String.format("<td class='ignore'>{0}</td>", item.extra_fields);
 
     if(include_tr) {
         row += '</tr>';

@@ -34,6 +34,7 @@ class CreateForm(forms.Form):
         widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Client_Secret_Field)
 
     grant_type = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Grant_Type)
+    extra_fields = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:30px'}))
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
