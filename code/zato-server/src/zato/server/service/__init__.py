@@ -399,10 +399,12 @@ class _SecurityFacade_Impl:
 class SecurityFacade:
     """ The API through which security definitions can be accessed.
     """
-    __slots__ = ('basic_auth',)
+    __slots__ = ('basic_auth', 'bearer_token')
 
     def __init__(self, invoking_service:'Service') -> 'None':
         self.basic_auth = _SecurityFacade_Impl(invoking_service.server.worker_store.worker_config.basic_auth)
+        self.bearer_token = _SecurityFacade_Impl(invoking_service.server.worker_store.worker_config.oauth)
+        self
 
 # ################################################################################################################################
 
