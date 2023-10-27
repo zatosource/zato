@@ -34,7 +34,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes'
+        output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
+            'client_id_field', 'client_secret_field', 'grant_type'
         output_repeated = True
 
     def handle(self):
@@ -51,11 +52,12 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'username', 'auth_server_url', 'scopes'
+        input_required = 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
+            'client_id_field', 'client_secret_field', 'grant_type'
         output_required = 'id', 'name'
 
     def success_message(self, item):
-        return 'OAuth client credentials security definition `{}` {} successfully'.format(item.name, self.verb)
+        return 'Bearer token definition `{}` {} successfully'.format(item.name, self.verb)
 
 # ################################################################################################################################
 # ################################################################################################################################
