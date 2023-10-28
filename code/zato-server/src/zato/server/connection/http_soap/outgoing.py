@@ -161,11 +161,26 @@ class BaseHTTPSOAPWrapper:
             sec_def_name = self.config['security_name']
             _sec_type = self.sec_type
 
+        # Force type hints
+        sec_def_name = cast_('str', sec_def_name)
+
         try:
 
-            # OAuth tokens are obtained dynamically ..
+            # Bearer tokens are obtained dynamically ..
             if _sec_type == _OAuth:
-                auth_header = self._get_bearer_token_auth(sec_def_name) # type: ignore
+
+                # .. OAuth scopes can be provided on input ..
+                scopes = kwargs.pop('auth_scopes', '')
+
+                # .. otherwise, we can check if they are provided in the security definition itself ..
+                if not scopes:
+                    sec_def = self.server.security_facade.bearer_token[sec_def_name]
+                    sec_def
+
+                # .. get a Bearer token ..
+                auth_header = self._get_bearer_token_auth(sec_def_name, scopes)
+
+                # .. populate headers ..
                 headers['Authorization'] = auth_header
 
                 # This is needed by request
@@ -184,10 +199,10 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
-    def _get_bearer_token_auth(self, sec_def_name:'str') -> 'str':
+    def _get_bearer_token_auth(self, sec_def_name:'str', scopes:'str') -> 'str':
 
         # This will get the token from cache or from the remote auth. server ..
-        info = self.server.bearer_token_manager.get_bearer_token_info_by_sec_def_name(sec_def_name)
+        info = self.server.bearer_token_manager.get_bearer_token_info_by_sec_def_name(sec_def_name, scopes)
 
         # .. now, we can build the authorization header ..
         out = f'Bearer {info.token}'
