@@ -287,7 +287,7 @@ class BearerTokenManager:
         sec_def:'stranydict' = self.security_facade.bearer_token[sec_def_name]
 
         # .. get a token ..
-        info = self._get_bearer_token_info(sec_def)
+        info = self._get_bearer_token_info(sec_def, scopes)
 
         # .. and return it to our caller now.
         return info
