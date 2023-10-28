@@ -154,7 +154,7 @@ class BearerTokenManager:
 
         # .. raise an exception if the invocation was not successful ..
         if not response.ok:
-            msg =  f'Bearer token for `{config.sec_def_name}` could not be obtained from {config.auth_server_url} -> '
+            msg  = f'Bearer token for `{config.sec_def_name}` could not be obtained from {config.auth_server_url} -> '
             msg += f'{response.status_code} -> {response.text}'
             raise Exception(msg)
 
@@ -193,7 +193,7 @@ class BearerTokenManager:
         key = self._get_cache_key(sec_def_name, scopes)
 
         # .. check if it exists ..
-        has_key = self.cache_api.default.has_key(key)
+        has_key = key in self.cache_api.default
 
         return has_key
 
@@ -234,7 +234,7 @@ class BearerTokenManager:
 
 # ################################################################################################################################
 
-    def _get_bearer_token_info(self, config:'BearerTokenConfig', scopes:'str') -> 'BearerTokenInfo':
+    def _get_bearer_token_info_impl(self, config:'BearerTokenConfig', scopes:'str') -> 'BearerTokenInfo':
 
         # If we have the token in our cache, we can return it immediately ..
         if info := self._get_bearer_token_from_cache(config.sec_def_name, scopes):
@@ -254,19 +254,42 @@ class BearerTokenManager:
 
 # ################################################################################################################################
 
-    def get_bearer_token_info(self, sec_def_name:'str', scopes:'str'='') -> 'BearerTokenInfo':
+    def _get_bearer_token_info(self, sec_def:'stranydict', scopes:'str'='') -> 'BearerTokenInfo':
 
-        # Get our security definition ..
-        sec_def:'stranydict' = self.security_facade.bearer_token[sec_def_name]
-
-        # .. turn the definition into a bearer token configuration ..
+        # Turn the input security definition into a bearer token configuration ..
         config = self._get_bearer_token_config(sec_def)
 
         # .. this gets a token either from the server's cache ..
         # .. or from the remote authentication endpoint ..
-        info = self._get_bearer_token_info(config, scopes)
+        info = self._get_bearer_token_info_impl(config, scopes)
 
         # .. now, we can return the token to our caller.
+        return info
+
+# ################################################################################################################################
+
+    def get_bearer_token_info_by_sec_def_id(self, sec_def_id:'int', scopes:'str'='') -> 'BearerTokenInfo':
+
+        # Get our security definition by its ID ..
+        sec_def:'stranydict' = self.security_facade.bearer_token.get_by_id(sec_def_id)
+
+        # .. get a token ..
+        info = self._get_bearer_token_info(sec_def)
+
+        # .. and return it to our caller now.
+        return info
+
+# ################################################################################################################################
+
+    def get_bearer_token_info_by_sec_def_name(self, sec_def_name:'str', scopes:'str'='') -> 'BearerTokenInfo':
+
+        # Get our security definition by its ID ..
+        sec_def:'stranydict' = self.security_facade.bearer_token[sec_def_name]
+
+        # .. get a token ..
+        info = self._get_bearer_token_info(sec_def)
+
+        # .. and return it to our caller now.
         return info
 
 # ################################################################################################################################

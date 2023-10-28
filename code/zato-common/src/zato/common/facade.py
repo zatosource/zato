@@ -30,14 +30,22 @@ class _SecurityFacade_Impl:
         if item:
             return item['config']
         else:
-            raise KeyError(f'Security definition not found -> {key}')
+            raise KeyError(f'Security definition not found by key (1) -> {key}')
+
+    def get_by_id(self, id:'int') -> 'anydict':
+
+        for value in self.config_dict.values():
+            if value['config']['id'] == id:
+                return value['config']
+        else:
+            raise KeyError(f'Security definition not found ID -> {id}')
 
     def __getitem__(self, key:'str') -> 'anydict':
         item:'anydictnone' = self.config_dict.__getitem__(key)
         if item:
             return item['config']
         else:
-            raise KeyError(f'Security definition not found -> {key}')
+            raise KeyError(f'Security definition not found by key (2) -> {key}')
 
 # ################################################################################################################################
 # ################################################################################################################################
