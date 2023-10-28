@@ -355,6 +355,8 @@ class DATA_FORMAT(Attrs):
         # they may at most only used so that services can invoke each other directly
         return iter((self.JSON, self.CSV, self.POST, self.HL7))
 
+Data_Format = DATA_FORMAT
+
 # ################################################################################################################################
 # ################################################################################################################################
 
