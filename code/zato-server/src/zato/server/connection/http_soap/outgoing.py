@@ -151,11 +151,21 @@ class BaseHTTPSOAPWrapper:
             tls_verify = self.config.get('tls_verify', True)
             tls_verify = tls_verify if isinstance(tls_verify, bool) else tls_verify.encode('utf-8')
 
+        # This is optional and, if not given, we will use the security configuration from self.config
+        sec_def_name = kwargs.pop('sec_def_name', None)
+
+        # If we have a security definition name on input, it must be a Bearer token (OAuth)
+        if sec_def_name:
+            _sec_type = _OAuth
+        else:
+            sec_def_name = self.config['security_name']
+            _sec_type = self.sec_type
+
         try:
 
             # OAuth tokens are obtained dynamically ..
-            if self.sec_type == _OAuth:
-                auth_header = self._get_bearer_token_auth()
+            if _sec_type == _OAuth:
+                auth_header = self._get_bearer_token_auth(sec_def_name)
                 headers['Authorization'] = auth_header
 
                 # This is needed by request
@@ -174,13 +184,10 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
-    def _get_bearer_token_auth(self) -> 'str':
+    def _get_bearer_token_auth(self, sec_def_name:'str') -> 'str':
 
-        # Extract our security ID ..
-        sec_def_id = self.config['security_id']
-
-        # .. this will get the token from cache or from the remote auth. server ..
-        info = self.server.bearer_token_manager.get_bearer_token_info_by_sec_def_id(sec_def_id)
+        # This will get the token from cache or from the remote auth. server ..
+        info = self.server.bearer_token_manager.get_bearer_token_info_by_sec_def_name(sec_def_name)
 
         # .. now, we can build the authorization header ..
         out = f'Bearer {info.token}'
@@ -617,6 +624,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         params=None,  # type: strdictnone
         headers=None, # type: strdictnone
         method='',    # type: str
+        sec_def_name=None, # type: any_
         log_response=True, # type: bool
     ) -> 'any_':
 
@@ -626,11 +634,12 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 method,
                 cid,
                 data=data,
+                sec_def_name=sec_def_name,
                 params=params,
                 headers=headers,
             )
         except Exception as e:
-            logger.warn('Caught an exception -> %s', e)
+            logger.warn('Caught an exception -> %s -> %s', e, format_exc())
         else:
 
             # .. optionally, log what we received ..
