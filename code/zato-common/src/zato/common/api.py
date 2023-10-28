@@ -1662,6 +1662,11 @@ class SIMPLE_IO:
     HTTP_SOAP_FORMAT[HL7.Const.Version.v2.id] = HL7.Const.Version.v2.name
     HTTP_SOAP_FORMAT[DATA_FORMAT.FORM_DATA] = 'Form data'
 
+    Bearer_Token_Format = [
+        NameId('JSON', DATA_FORMAT.JSON),
+        NameId('Form data', DATA_FORMAT.FORM_DATA)
+    ]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
