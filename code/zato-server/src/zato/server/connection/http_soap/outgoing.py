@@ -175,7 +175,9 @@ class BaseHTTPSOAPWrapper:
                 # .. otherwise, we can check if they are provided in the security definition itself ..
                 if not scopes:
                     sec_def = self.server.security_facade.bearer_token[sec_def_name]
-                    sec_def
+                    scopes = sec_def.get('scopes') or ''
+                    scopes = scopes.splitlines()
+                    scopes = ' '.join(scopes)
 
                 # .. get a Bearer token ..
                 auth_header = self._get_bearer_token_auth(sec_def_name, scopes)
