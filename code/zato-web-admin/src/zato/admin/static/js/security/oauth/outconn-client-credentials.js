@@ -19,7 +19,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.security.oauth.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(
-        ['name', 'username', 'auth_server_url', 'client_id_field', 'client_secret_field', 'grant_type']
+        ['name', 'username', 'auth_server_url', 'client_id_field', 'client_secret_field', 'grant_type', 'data_format']
     );
 })
 
@@ -60,6 +60,8 @@ $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.scopes);
     row += String.format("<td class='ignore'>{0}</td>", item.extra_fields);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.data_format);
 
     if(include_tr) {
         row += '</tr>';

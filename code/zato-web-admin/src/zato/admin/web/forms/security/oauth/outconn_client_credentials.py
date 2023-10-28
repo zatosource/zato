@@ -10,7 +10,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.common.api import OAuth as OAuthCommon
+from zato.common.api import OAuth as OAuthCommon, SIMPLE_IO
+from zato.admin.web.forms import add_select
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,7 +24,7 @@ _default = OAuthCommon.Default
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
 
-    name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:60%'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
 
     auth_server_url = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Auth_Server_URL)
@@ -36,8 +37,12 @@ class CreateForm(forms.Form):
     grant_type = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.Grant_Type)
     extra_fields = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:30px'}))
 
+    data_format = forms.ChoiceField(widget=forms.Select())
+
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
+
+        add_select(self, 'data_format', SIMPLE_IO.Bearer_Token_Format, needs_initial_select=False)
 
 # ################################################################################################################################
 # ################################################################################################################################
