@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from json import dumps, loads
 from logging import getLogger
 
@@ -19,8 +19,8 @@ from dateutil.parser import parse as dt_parse
 from requests import post as requests_post
 
 # Zato
+from zato.common.api import Data_Format, ZATO_NOT_GIVEN
 from zato.common.model.security import BearerTokenConfig, BearerTokenInfo
-from zato.common.api import ZATO_NOT_GIVEN
 from zato.common.util.api import parse_extra_into_dict
 
 # ################################################################################################################################
@@ -79,7 +79,7 @@ class BearerTokenManager:
 
         # Local variables
         out = BearerTokenInfo()
-        now = datetime.utcnow()
+        now = datetime.now(tz=timezone.utc)
         expires_in:'timedelta | None' = None
         expires_in_sec:'intnone' = None
         expiration_time:'dtnone' = None
@@ -118,7 +118,21 @@ class BearerTokenManager:
 
 # ################################################################################################################################
 
-    def _get_bearer_token_from_auth_server(self, config:'BearerTokenConfig', scopes:'str') -> 'BearerTokenInfo':
+    def _get_bearer_token_from_auth_server(
+        self,
+        config, # type: BearerTokenConfig
+        scopes, # type: str
+        data_format, # type: str
+    ) -> 'BearerTokenInfo':
+
+        # Local variables
+        _needs_json = data_format == Data_Format
+
+        # The content type will depend on whether it is JSON or not
+        if _needs_json:
+            content_type = 'application/json'
+        else:
+            content_type = 'application/x-www-form-urlencoded'
 
         # If we have any scopes given explicitly, they will take priority,
         # otherwise, the ones from the configuration (if any), will be used.
@@ -143,11 +157,12 @@ class BearerTokenManager:
         # .. the headers that will be sent along with the request ..
         headers = {
             'Cache-Control': 'no-cache',
-            'Content-Type': 'application/json'
+            'Content-Type': content_type
         }
 
-        # .. we send JSON requests ..
-        request = dumps(request)
+        # .. potentially, we send JSON requests ..
+        if _needs_json:
+            request = dumps(request)
 
         # .. now, send the request to the remote end ..
         response = requests_post(config.auth_server_url, request, headers=headers, verify=None)
@@ -234,7 +249,7 @@ class BearerTokenManager:
 
 # ################################################################################################################################
 
-    def _get_bearer_token_info_impl(self, config:'BearerTokenConfig', scopes:'str') -> 'BearerTokenInfo':
+    def _get_bearer_token_info_impl(self, config:'BearerTokenConfig', scopes:'str', data_format:'str') -> 'BearerTokenInfo':
 
         # If we have the token in our cache, we can return it immediately ..
         if info := self._get_bearer_token_from_cache(config.sec_def_name, scopes):
@@ -244,7 +259,7 @@ class BearerTokenManager:
         else:
 
             # .. since the token was not cache, we need to obtain it from the auth server ..
-            info = self._get_bearer_token_from_auth_server(config, scopes)
+            info = self._get_bearer_token_from_auth_server(config, scopes, data_format)
 
             # .. then we can cache it ..
             self._store_bearer_token_in_cache(info, scopes)
@@ -254,40 +269,50 @@ class BearerTokenManager:
 
 # ################################################################################################################################
 
-    def _get_bearer_token_info(self, sec_def:'stranydict', scopes:'str'='') -> 'BearerTokenInfo':
+    def _get_bearer_token_info(self, sec_def:'stranydict', scopes:'str', data_format:'str') -> 'BearerTokenInfo':
 
         # Turn the input security definition into a bearer token configuration ..
         config = self._get_bearer_token_config(sec_def)
 
         # .. this gets a token either from the server's cache ..
         # .. or from the remote authentication endpoint ..
-        info = self._get_bearer_token_info_impl(config, scopes)
+        info = self._get_bearer_token_info_impl(config, scopes, data_format)
 
         # .. now, we can return the token to our caller.
         return info
 
 # ################################################################################################################################
 
-    def get_bearer_token_info_by_sec_def_id(self, sec_def_id:'int', scopes:'str'='') -> 'BearerTokenInfo':
+    def get_bearer_token_info_by_sec_def_id(
+        self,
+        sec_def_id, # type: str
+        scopes,       # type: str
+        data_format,  # type: str
+    ) -> 'BearerTokenInfo':
 
         # Get our security definition by its ID ..
         sec_def:'stranydict' = self.security_facade.bearer_token.get_by_id(sec_def_id)
 
         # .. get a token ..
-        info = self._get_bearer_token_info(sec_def)
+        info = self._get_bearer_token_info(sec_def, scopes, data_format)
 
         # .. and return it to our caller now.
         return info
 
 # ################################################################################################################################
 
-    def get_bearer_token_info_by_sec_def_name(self, sec_def_name:'str', scopes:'str'='') -> 'BearerTokenInfo':
+    def get_bearer_token_info_by_sec_def_name(
+        self,
+        sec_def_name, # type: str
+        scopes,       # type: str
+        data_format,  # type: str
+    ) -> 'BearerTokenInfo':
 
         # Get our security definition by its ID ..
         sec_def:'stranydict' = self.security_facade.bearer_token[sec_def_name]
 
         # .. get a token ..
-        info = self._get_bearer_token_info(sec_def, scopes)
+        info = self._get_bearer_token_info(sec_def, scopes, data_format)
 
         # .. and return it to our caller now.
         return info
