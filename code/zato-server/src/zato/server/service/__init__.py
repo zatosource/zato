@@ -30,7 +30,7 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, \
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, NotGiven, PARAMS_PRIORITY, PUBSUB, \
      WEB_SOCKET, zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.exception import Inactive, Reportable, ZatoException
@@ -1494,16 +1494,20 @@ class RESTAdapter(Service):
     # These may be overridden by individual subclasses
     model            = None
     conn_name        = ''
+    auth_scopes      = ''
+    sec_def_name     = None
     log_response     = False
     map_response     = None
     get_conn_name    = None
     get_auth         = None
+    get_auth_scopes  = None
     get_path_params  = None
     get_method       = None
     get_request      = None
     get_headers      = None
     get_query_string = None
     get_auth_bearer  = None
+    get_sec_def_name = None
 
     has_query_string_id   = False
     query_string_id_param = None
@@ -1526,6 +1530,7 @@ class RESTAdapter(Service):
         params=None,   # type: strdictnone
         headers=None,  # type: strdictnone
         method='',     # type: str
+        sec_def_name=None, # type: any_
         log_response=True, # type: bool
     ):
 
@@ -1541,6 +1546,7 @@ class RESTAdapter(Service):
             params=params,
             headers=headers,
             method=method,
+            sec_def_name=sec_def_name,
             log_response=log_response,
         )
 
@@ -1553,7 +1559,7 @@ class RESTAdapter(Service):
 
         # Local aliases
         params:'strdict' = {}
-        request:'any_' = None
+        request:'any_' = ''
         headers:'strstrdict' = {}
 
         # The outgoing connection to use may be static or dynamically generated
@@ -1603,6 +1609,18 @@ class RESTAdapter(Service):
             token:'str' = self.get_auth_bearer()
             headers['Authorization'] = f'Bearer {token}'
 
+        # Security definition can be dynamically generated ..
+        if self.get_sec_def_name:
+            sec_def_name = self.get_sec_def_name()
+
+        # .. otherwise, it may have been given explicitly ..
+        elif self.sec_def_name:
+            sec_def_name = self.sec_def_name
+
+        # .. otherwise, we will indicate explicitly that it was not given on input in any way.
+        else:
+            sec_def_name = NotGiven
+
         # Headers may be dynamically generated
         if self.get_headers:
             _headers:'strstrdict' = self.get_headers()
@@ -1617,6 +1635,7 @@ class RESTAdapter(Service):
             params=params,
             headers=headers,
             method=method,
+            sec_def_name=sec_def_name,
             log_response=self.log_response,
         )
 
