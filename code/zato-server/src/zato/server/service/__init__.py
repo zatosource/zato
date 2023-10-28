@@ -1633,7 +1633,7 @@ class RESTAdapter(Service):
 
         # .. otherwise, we will indicate explicitly that they were not given on input in any way.
         else:
-            auth_scopes = NotGiven
+            auth_scopes = ''
 
         # Headers may be dynamically generated
         if self.get_headers:
