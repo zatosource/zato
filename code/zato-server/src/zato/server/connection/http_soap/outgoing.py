@@ -99,7 +99,7 @@ class BaseHTTPSOAPWrapper:
     def __init__(
         self,
         config, # type: stranydict
-        _requests_session=None, # type: SASession
+        _requests_session=None, # type: SASession | None
         server=None # type: ParallelServer | None
     ) -> 'None':
         self.config = config
@@ -107,7 +107,7 @@ class BaseHTTPSOAPWrapper:
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
         self.RequestsSession = RequestsSession or _requests_session
-        self.server = server
+        self.server = cast_('ParallelServer', server)
         self.session = RequestsSession()
         self.https_adapter = HTTPSAdapter()
         self.session.mount('https://', self.https_adapter)
@@ -155,7 +155,7 @@ class BaseHTTPSOAPWrapper:
 
             # OAuth tokens are obtained dynamically ..
             if self.sec_type == _OAuth:
-                auth_header = self._get_oauth_auth()
+                auth_header = self._get_bearer_token_auth()
                 headers['Authorization'] = auth_header
 
                 # This is needed by request
@@ -174,9 +174,19 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
-    def _get_oauth_auth(self):
-        auth_header = self.server.oauth_store.get_auth_header(self.config['security_id'])
-        return auth_header
+    def _get_bearer_token_auth(self) -> 'str':
+
+        # Extract our security ID ..
+        sec_def_id = self.config['security_id']
+
+        # .. this will get the token from cache or from the remote auth. server ..
+        info = self.server.bearer_token_manager.get_bearer_token_info_by_sec_def_id(sec_def_id)
+
+        # .. now, we can build the authorization header ..
+        out = f'Bearer {info.token}'
+
+        # .. and return it to our caller.
+        return out
 
 # ################################################################################################################################
 
@@ -742,7 +752,7 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
                 client = Client(self.address, autoblend=True, timeout=self.config['timeout'])
 
             if client:
-                self.client.put_client(client)
+                _  = self.client.put_client(client)
             else:
                 logger.warning('SOAP client to `%s` is None', self.address)
 
