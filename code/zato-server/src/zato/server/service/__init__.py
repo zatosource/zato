@@ -1531,6 +1531,7 @@ class RESTAdapter(Service):
         headers=None,  # type: strdictnone
         method='',     # type: str
         sec_def_name=None, # type: any_
+        auth_scopes=None,  # type: any_
         log_response=True, # type: bool
     ):
 
@@ -1547,6 +1548,7 @@ class RESTAdapter(Service):
             headers=headers,
             method=method,
             sec_def_name=sec_def_name,
+            auth_scopes=auth_scopes,
             log_response=log_response,
         )
 
@@ -1613,13 +1615,25 @@ class RESTAdapter(Service):
         if self.get_sec_def_name:
             sec_def_name = self.get_sec_def_name()
 
-        # .. otherwise, it may have been given explicitly ..
+        # .. it may also have been given explicitly ..
         elif self.sec_def_name:
             sec_def_name = self.sec_def_name
 
         # .. otherwise, we will indicate explicitly that it was not given on input in any way.
         else:
             sec_def_name = NotGiven
+
+        # Auth scopes can be dynamically generated ..
+        if self.get_auth_scopes:
+            auth_scopes = self.get_auth_scopes()
+
+        # .. it may also have been given explicitly ..
+        elif self.auth_scopes:
+            auth_scopes = self.auth_scopes
+
+        # .. otherwise, we will indicate explicitly that they were not given on input in any way.
+        else:
+            auth_scopes = NotGiven
 
         # Headers may be dynamically generated
         if self.get_headers:
@@ -1636,6 +1650,7 @@ class RESTAdapter(Service):
             headers=headers,
             method=method,
             sec_def_name=sec_def_name,
+            auth_scopes=auth_scopes,
             log_response=self.log_response,
         )
 
