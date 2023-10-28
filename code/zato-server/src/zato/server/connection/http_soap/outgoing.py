@@ -32,7 +32,7 @@ from requests.sessions import Session as RequestsSession
 from requests_toolbelt import MultipartEncoder
 
 # Zato
-from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE
+from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE
 from zato.common.exception import Inactive, TimeoutException
 from zato.common.json_ import dumps, loads
 from zato.common.marshal_.api import extract_model_class, is_list, Model
@@ -152,10 +152,10 @@ class BaseHTTPSOAPWrapper:
             tls_verify = tls_verify if isinstance(tls_verify, bool) else tls_verify.encode('utf-8')
 
         # This is optional and, if not given, we will use the security configuration from self.config
-        sec_def_name = kwargs.pop('sec_def_name', None)
+        sec_def_name = kwargs.pop('sec_def_name', NotGiven)
 
         # If we have a security definition name on input, it must be a Bearer token (OAuth)
-        if sec_def_name:
+        if sec_def_name is not NotGiven:
             _sec_type = _OAuth
         else:
             sec_def_name = self.config['security_name']
@@ -165,7 +165,7 @@ class BaseHTTPSOAPWrapper:
 
             # OAuth tokens are obtained dynamically ..
             if _sec_type == _OAuth:
-                auth_header = self._get_bearer_token_auth(sec_def_name)
+                auth_header = self._get_bearer_token_auth(sec_def_name) # type: ignore
                 headers['Authorization'] = auth_header
 
                 # This is needed by request
@@ -625,6 +625,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         headers=None, # type: strdictnone
         method='',    # type: str
         sec_def_name=None, # type: any_
+        auth_scopes=None,  # type: any_
         log_response=True, # type: bool
     ) -> 'any_':
 
@@ -635,6 +636,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 cid,
                 data=data,
                 sec_def_name=sec_def_name,
+                auth_scopes=auth_scopes,
                 params=params,
                 headers=headers,
             )
