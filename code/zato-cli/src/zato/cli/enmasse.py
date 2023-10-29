@@ -17,7 +17,7 @@ from time import sleep
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, TLS as COMMON_TLS
+from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, NotGiven, TLS as COMMON_TLS
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -27,7 +27,7 @@ if 0:
 
     from logging import Logger
     from zato.client import APIClient
-    from zato.common.typing_ import any_, anylist, dictlist, list_, stranydict, strdict, strstrdict, strlist, \
+    from zato.common.typing_ import any_, anylist, dictlist, list_, stranydict, strdict, strdictdict, strstrdict, strlist, \
          strlistdict, strnone
 
     APIClient = APIClient
@@ -86,6 +86,12 @@ class ModuleCtx:
     # Maps enmasse defintions types to their attributes that are to be excluded during an export
     Enmasse_Attr_List_Exclude = cast_('strlistdict', None)
 
+    # Maps enmasse defintions types to their attributes that need to be renamed during an export
+    Enmasse_Attr_List_Rename = cast_('strdictdict', None)
+
+    # Maps enmasse defintions types to their attributes that need to be converted to a list during an export
+    Enmasse_Attr_List_As_List = cast_('strlistdict', None)
+
     # Maps pre-3.2 item types to the 3.2+ ones
     Enmasse_Item_Type_Name_Map = cast_('strdict', None)
 
@@ -123,7 +129,18 @@ ModuleCtx.Enmasse_Type = {
 ModuleCtx.Enmasse_Attr_List_Include = {
 
     # Security definitions
-    'def_sec':  ['type', 'name', 'username', 'realm'],
+    'def_sec':  [
+        'type',
+        'name',
+        'username',
+        'realm',
+        'auth_server_url',
+        'client_id_field',
+        'client_secret_field',
+        'grant_type',
+        'scopes',
+        'extra_fields'
+    ],
 
     # REST connections - Channels
     'channel_plain_http': [
@@ -180,6 +197,24 @@ ModuleCtx.Enmasse_Attr_List_Exclude = {
 
 # ################################################################################################################################
 
+ModuleCtx.Enmasse_Attr_List_Rename = {
+
+    # Security definitions
+    'def_sec':  {
+        'auth_server_url':'auth_endpoint'
+    }
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_As_List = {
+
+    # Security definitions
+    'def_sec':  ['scopes', 'extra_fields'],
+}
+
+# ################################################################################################################################
+
 ModuleCtx.Enmasse_Item_Type_Name_Map = {
     'def_sec': 'security',
     'channel_plain_http': 'channel_rest',
@@ -216,7 +251,19 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
     ],
 
     # Security definitions
-    'def_sec':  ['name', 'username', 'password', 'type', 'realm']
+    'def_sec':  [
+        'name',
+        'username',
+        'password',
+        'type',
+        'realm',
+        'auth_endpoint',
+        'client_id_field',
+        'client_secret_field',
+        'grant_type',
+        'scopes',
+        'extra_fields',
+    ]
 }
 
 # ################################################################################################################################
@@ -2316,7 +2363,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def _filter_item_attrs(
+    def _preprocess_item_attrs(
         self,
         attr_key,  # type: str
         item_type, # type: str
@@ -2328,6 +2375,12 @@ class Enmasse(ManageCommand):
 
         # .. as above, for attributes that are explicitly configured to be excluded ..
         attr_list_exclude = ModuleCtx.Enmasse_Attr_List_Exclude.get(attr_key) or []
+
+        # .. as above, for attributes that need to be renamed ..
+        attr_list_rename  = ModuleCtx.Enmasse_Attr_List_Rename.get(attr_key) or {}
+
+        # .. as above, for attributes that need to be turned into a list ..
+        attr_list_as_list = ModuleCtx.Enmasse_Attr_List_As_List.get(attr_key) or []
 
         # .. to make sure the dictionary does not change during iteration ..
         item_copy = deepcopy(item)
@@ -2345,6 +2398,21 @@ class Enmasse(ManageCommand):
                 # .. remove any attribute that is explictly configured to be excluded ..
                 if attr in attr_list_exclude:
                     _ = item.pop(attr, None)
+
+        # .. optionally, rename selected attributes ..
+        for old_name, new_name in attr_list_rename.items():
+            if value := item.pop(old_name, NotGiven):
+                if not value is NotGiven:
+                    item[new_name] = value
+
+        # .. optionally, turn selected attributes into lists ..
+        for attr in attr_list_as_list:
+            if value := item.pop(attr, NotGiven):
+                if not value is NotGiven:
+                    if isinstance(value, str):
+                        value = value.splitlines()
+                        value.sort()
+                    item[attr] = value
 
         # .. ID's are never returned ..
         _ = item.pop('id', None)
@@ -2509,8 +2577,8 @@ class Enmasse(ManageCommand):
                 else:
                     attr_key = item_type
 
-                # .. this will remove any attributes from this item that we do not need ..
-                item = self._filter_item_attrs(attr_key, item_type, item)
+                # .. this will rename or remove any attributes from this item that we do not need ..
+                item = self._preprocess_item_attrs(attr_key, item_type, item)
 
                 # .. sort the attributes in the order we want them to appear in the outpur file ..
                 item = self._sort_item_attrs(attr_key, item)
