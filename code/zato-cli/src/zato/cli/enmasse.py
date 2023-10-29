@@ -32,6 +32,7 @@ if 0:
 
     APIClient = APIClient
     Logger = Logger
+    strdictdict = strdictdict
     strlistdict = strlistdict
 
 # ################################################################################################################################
@@ -2462,13 +2463,13 @@ class Enmasse(ManageCommand):
         # .. optionally, rename selected attributes ..
         for old_name, new_name in attr_list_rename.items():
             if value := item.pop(old_name, NotGiven):
-                if not value is NotGiven:
+                if value is not NotGiven:
                     item[new_name] = value
 
         # .. optionally, turn selected attributes into lists ..
         for attr in attr_list_as_list:
             if value := item.pop(attr, NotGiven):
-                if not value is NotGiven:
+                if value is not NotGiven:
                     if isinstance(value, str):
                         value = value.splitlines()
                         value.sort()
@@ -2477,7 +2478,7 @@ class Enmasse(ManageCommand):
         # .. optionally, turn selected attributes into multi-line string objects ..
         for attr in attr_list_as_multiline:
             if value := item.pop(attr, NotGiven):
-                if not value is NotGiven:
+                if value is not NotGiven:
                     if isinstance(value, str):
                         value = value.splitlines()
                         value = '\n'.join(value)
@@ -2486,7 +2487,7 @@ class Enmasse(ManageCommand):
         # .. optionally, skip empty attributes ..
         for attr in attr_list_skip_if_empty:
             if value := item.pop(attr, NotGiven):
-                if not value is NotGiven:
+                if value is not NotGiven:
                     if value:
                         item[attr] = value
 
