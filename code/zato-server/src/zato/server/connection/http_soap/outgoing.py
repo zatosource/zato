@@ -32,7 +32,7 @@ from requests.sessions import Session as RequestsSession
 from requests_toolbelt import MultipartEncoder
 
 # Zato
-from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE
+from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE
 from zato.common.exception import Inactive, TimeoutException
 from zato.common.json_ import dumps, loads
 from zato.common.marshal_.api import extract_model_class, is_list, Model
@@ -99,7 +99,7 @@ class BaseHTTPSOAPWrapper:
     def __init__(
         self,
         config, # type: stranydict
-        _requests_session=None, # type: SASession
+        _requests_session=None, # type: SASession | None
         server=None # type: ParallelServer | None
     ) -> 'None':
         self.config = config
@@ -107,7 +107,7 @@ class BaseHTTPSOAPWrapper:
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
         self.RequestsSession = RequestsSession or _requests_session
-        self.server = server
+        self.server = cast_('ParallelServer', server)
         self.session = RequestsSession()
         self.https_adapter = HTTPSAdapter()
         self.session.mount('https://', self.https_adapter)
@@ -151,11 +151,43 @@ class BaseHTTPSOAPWrapper:
             tls_verify = self.config.get('tls_verify', True)
             tls_verify = tls_verify if isinstance(tls_verify, bool) else tls_verify.encode('utf-8')
 
+        # This is optional and, if not given, we will use the security configuration from self.config
+        sec_def_name = kwargs.pop('sec_def_name', NotGiven)
+
+        # If we have a security definition name on input, it must be a Bearer token (OAuth)
+        if sec_def_name is not NotGiven:
+            _sec_type = _OAuth
+        else:
+            sec_def_name = self.config['security_name']
+            _sec_type = self.sec_type
+
+        # Force type hints
+        sec_def_name = cast_('str', sec_def_name)
+
         try:
 
-            # OAuth tokens are obtained dynamically ..
-            if self.sec_type == _OAuth:
-                auth_header = self._get_oauth_auth()
+            # Bearer tokens are obtained dynamically ..
+            if _sec_type == _OAuth:
+
+                # .. this is reusable ..
+                sec_def = self.server.security_facade.bearer_token[sec_def_name]
+
+                # .. each OAuth definition will use a specific data format ..
+                data_format = sec_def['data_format']
+
+                # .. OAuth scopes can be provided on input ..
+                scopes = kwargs.pop('auth_scopes', '')
+
+                # .. otherwise, we can check if they are provided in the security definition itself ..
+                if not scopes:
+                    scopes = sec_def.get('scopes') or ''
+                    scopes = scopes.splitlines()
+                    scopes = ' '.join(scopes)
+
+                # .. get a Bearer token ..
+                auth_header = self._get_bearer_token_auth(sec_def_name, scopes, data_format)
+
+                # .. populate headers ..
                 headers['Authorization'] = auth_header
 
                 # This is needed by request
@@ -174,9 +206,16 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
-    def _get_oauth_auth(self):
-        auth_header = self.server.oauth_store.get_auth_header(self.config['security_id'])
-        return auth_header
+    def _get_bearer_token_auth(self, sec_def_name:'str', scopes:'str', data_format:'str') -> 'str':
+
+        # This will get the token from cache or from the remote auth. server ..
+        info = self.server.bearer_token_manager.get_bearer_token_info_by_sec_def_name(sec_def_name, scopes, data_format)
+
+        # .. now, we can build the authorization header ..
+        out = f'Bearer {info.token}'
+
+        # .. and return it to our caller.
+        return out
 
 # ################################################################################################################################
 
@@ -607,6 +646,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         params=None,  # type: strdictnone
         headers=None, # type: strdictnone
         method='',    # type: str
+        sec_def_name=None, # type: any_
+        auth_scopes=None,  # type: any_
         log_response=True, # type: bool
     ) -> 'any_':
 
@@ -616,11 +657,13 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 method,
                 cid,
                 data=data,
+                sec_def_name=sec_def_name,
+                auth_scopes=auth_scopes,
                 params=params,
                 headers=headers,
             )
         except Exception as e:
-            logger.warn('Caught an exception -> %s', e)
+            logger.warn('Caught an exception -> %s -> %s', e, format_exc())
         else:
 
             # .. optionally, log what we received ..
@@ -742,7 +785,7 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
                 client = Client(self.address, autoblend=True, timeout=self.config['timeout'])
 
             if client:
-                self.client.put_client(client)
+                _  = self.client.put_client(client)
             else:
                 logger.warning('SOAP client to `%s` is None', self.address)
 

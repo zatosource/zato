@@ -124,6 +124,14 @@ class Cache:
 
 # ################################################################################################################################
 
+    def has_key(self, key, default=default_get, details=False) -> 'bool':
+        """ Returns True or False, depending on whether such a key exists in the cache or not.
+        """
+        value = self.get(key, default=default, details=details)
+        return value != ZATO_NOT_GIVEN
+
+# ################################################################################################################################
+
     def get_by_prefix(self, key, details=False, limit=0):
         """ Returns a dictionary of key:value items for keys matching the prefix given on input.
         """
