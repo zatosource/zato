@@ -92,6 +92,12 @@ class ModuleCtx:
     # Maps enmasse defintions types to their attributes that need to be converted to a list during an export
     Enmasse_Attr_List_As_List = cast_('strlistdict', None)
 
+    # Maps enmasse defintions types to their attributes that will be skipped during an export if they are empty
+    Enmasse_Attr_List_Skip_If_Empty = cast_('strlistdict', None)
+
+    # Maps enmasse defintions types to their attributes that will be turned into multiline strings
+    Enmasse_Attr_List_As_Multiline = cast_('strlistdict', None)
+
     # Maps pre-3.2 item types to the 3.2+ ones
     Enmasse_Item_Type_Name_Map = cast_('strdict', None)
 
@@ -173,7 +179,23 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'username',
         'auth_type',
         'server_list',
-    ]
+    ],
+
+    # Scheduled tasks
+    'scheduler':  [
+        'name',
+        'service',
+        'job_type',
+        'start_date',
+        'weeks',
+        'days',
+        'hours',
+        'minutes',
+        'seconds',
+        'cron_definition',
+        'repeats',
+        'extra',
+    ],
 }
 
 # ################################################################################################################################
@@ -211,6 +233,22 @@ ModuleCtx.Enmasse_Attr_List_As_List = {
 
     # Security definitions
     'def_sec':  ['scopes', 'extra_fields'],
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_Skip_If_Empty = {
+
+    # Security definitions
+    'scheduler':  ['weeks', 'days', 'hours', 'minutes', 'seconds', 'cron_definition', 'repeats', 'extra'],
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_As_Multiline = {
+
+    # Security definitions
+    'scheduler':  ['extra'],
 }
 
 # ################################################################################################################################
@@ -263,7 +301,23 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
         'grant_type',
         'scopes',
         'extra_fields',
-    ]
+    ],
+
+    # Scheduled tasks
+    'scheduler':  [
+        'name',
+        'service',
+        'job_type',
+        'start_date',
+        'weeks',
+        'days',
+        'hours',
+        'minutes',
+        'seconds',
+        'cron_definition',
+        'repeats',
+        'extra',
+    ],
 }
 
 # ################################################################################################################################
@@ -2382,6 +2436,12 @@ class Enmasse(ManageCommand):
         # .. as above, for attributes that need to be turned into a list ..
         attr_list_as_list = ModuleCtx.Enmasse_Attr_List_As_List.get(attr_key) or []
 
+        # .. as above, for attributes that should be skipped if they are empty ..
+        attr_list_as_multiline = ModuleCtx.Enmasse_Attr_List_As_Multiline.get(attr_key) or []
+
+        # .. as above, for attributes that should be skipped if they are empty ..
+        attr_list_skip_if_empty = ModuleCtx.Enmasse_Attr_List_Skip_If_Empty.get(attr_key) or []
+
         # .. to make sure the dictionary does not change during iteration ..
         item_copy = deepcopy(item)
 
@@ -2414,8 +2474,27 @@ class Enmasse(ManageCommand):
                         value.sort()
                     item[attr] = value
 
+        # .. optionally, turn selected attributes into multi-line string objects ..
+        for attr in attr_list_as_multiline:
+            if value := item.pop(attr, NotGiven):
+                if not value is NotGiven:
+                    if isinstance(value, str):
+                        value = value.splitlines()
+                        value = '\n'.join(value)
+                        item[attr] = value
+
+        # .. optionally, skip empty attributes ..
+        for attr in attr_list_skip_if_empty:
+            if value := item.pop(attr, NotGiven):
+                if not value is NotGiven:
+                    if value:
+                        item[attr] = value
+
         # .. ID's are never returned ..
         _ = item.pop('id', None)
+
+        # .. service ID's are never returned ..
+        _ = item.pop('service_id', None)
 
         # .. the is_active flag is never returned if it is of it default value, which is True ..
         if item_copy.get('is_active') is True:
