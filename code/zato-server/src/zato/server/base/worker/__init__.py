@@ -522,7 +522,7 @@ class WorkerStore(_WorkerStoreBase):
 
         # Update the security configuration if it is a separate one ..
         if _sec_config:
-            _sec_config_id = _sec_config.get('id') or _sec_config.get('security_id')
+            _sec_config_id = _sec_config.get('security_id') or _sec_config.get('id')
             sec_config['security_id'] = _sec_config_id
             sec_config['sec_type'] = _sec_config['sec_type']
             sec_config['username'] = _sec_config.get('username')
