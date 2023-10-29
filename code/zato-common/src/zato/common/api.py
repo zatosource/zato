@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -261,7 +261,7 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.BASIC_AUTH: 'Basic Auth',
     SEC_DEF_TYPE.JWT: 'JWT',
     SEC_DEF_TYPE.NTLM: 'NTLM',
-    SEC_DEF_TYPE.OAUTH: 'OAuth',
+    SEC_DEF_TYPE.OAUTH: 'Bearer token',
     SEC_DEF_TYPE.TLS_CHANNEL_SEC: 'TLS channel',
     SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
     SEC_DEF_TYPE.VAULT: 'Vault',
@@ -354,6 +354,8 @@ class DATA_FORMAT(Attrs):
         # Note that DICT and other attributes aren't included because they're never exposed to the external world as-is,
         # they may at most only used so that services can invoke each other directly
         return iter((self.JSON, self.CSV, self.POST, self.HL7))
+
+Data_Format = DATA_FORMAT
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1563,10 +1565,11 @@ class Microsoft365:
 class OAuth:
 
     class Default:
-        Auth_Server_URL = 'https://example.com/oauth2/default/v1/token'
-        Scopes = [
-            'zato.access',
-        ]
+        Auth_Server_URL = 'https://example.com/oauth2/token'
+        Scopes = [] # There are no default scopes
+        Client_ID_Field = 'client_id'
+        Client_Secret_Field = 'client_secret'
+        Grant_Type = 'client_credentials'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1660,6 +1663,11 @@ class SIMPLE_IO:
     HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
     HTTP_SOAP_FORMAT[HL7.Const.Version.v2.id] = HL7.Const.Version.v2.name
     HTTP_SOAP_FORMAT[DATA_FORMAT.FORM_DATA] = 'Form data'
+
+    Bearer_Token_Format = [
+        NameId('JSON', DATA_FORMAT.JSON),
+        NameId('Form data', DATA_FORMAT.FORM_DATA)
+    ]
 
 # ################################################################################################################################
 # ################################################################################################################################

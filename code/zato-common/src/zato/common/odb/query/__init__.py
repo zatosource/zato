@@ -360,7 +360,7 @@ def ntlm_list(session, cluster_id, needs_columns=False):
 def oauth_list(session, cluster_id, needs_columns=False):
     """ All the OAuth definitions.
     """
-    return session.query(
+    out = session.query(
         OAuth.id,
         OAuth.name,
         OAuth.is_active,
@@ -372,10 +372,12 @@ def oauth_list(session, cluster_id, needs_columns=False):
         OAuth.sec_type,
         OAuth.opaque1,
         ).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==OAuth.cluster_id).\
-        filter(SecurityBase.id==OAuth.id).\
-        order_by(SecurityBase.name)
+    filter(Cluster.id==cluster_id).\
+    filter(Cluster.id==OAuth.cluster_id).\
+    filter(SecurityBase.id==OAuth.id).\
+    order_by(SecurityBase.name)
+
+    return out
 
 @query_wrapper
 def tls_ca_cert_list(session, cluster_id, needs_columns=False):
