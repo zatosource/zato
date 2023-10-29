@@ -30,10 +30,11 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, \
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, NotGiven, PARAMS_PRIORITY, PUBSUB, \
      WEB_SOCKET, zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.exception import Inactive, Reportable, ZatoException
+from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.typing_ import cast_
@@ -367,42 +368,6 @@ class PatternsFacade:
         self.invoke_retry = InvokeRetry(invoking_service)
         self.fanout = FanOut(invoking_service, cache, lock)
         self.parallel = ParallelExec(invoking_service, cache, lock)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _SecurityFacade_Impl:
-
-    config_dict:'ConfigDict'
-    __slots__ = ('config_dict',)
-
-    def __init__(self, config_dict:'ConfigDict') -> 'None':
-        self.config_dict = config_dict
-
-    def get(self, key:'str', default:'any_'=None) -> 'anydict':
-        item:'anydictnone' = self.config_dict.get(key)
-        if item:
-            return item['config']
-        else:
-            raise KeyError(f'Security definition not found -> {key}')
-
-    def __getitem__(self, key:'str') -> 'anydict':
-        item:'anydictnone' = self.config_dict.__getitem__(key)
-        if item:
-            return item['config']
-        else:
-            raise KeyError(f'Security definition not found -> {key}')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SecurityFacade:
-    """ The API through which security definitions can be accessed.
-    """
-    __slots__ = ('basic_auth',)
-
-    def __init__(self, invoking_service:'Service') -> 'None':
-        self.basic_auth = _SecurityFacade_Impl(invoking_service.server.worker_store.worker_config.basic_auth)
 
 # ################################################################################################################################
 
@@ -1384,7 +1349,7 @@ class Service:
         service.user_config = server.user_config
         service.static_config = server.static_config
         service.time = server.time_util
-        service.security = SecurityFacade(service)
+        service.security = SecurityFacade(service.server)
 
         if channel_params:
             service.request.channel_params.update(channel_params)
@@ -1529,16 +1494,20 @@ class RESTAdapter(Service):
     # These may be overridden by individual subclasses
     model            = None
     conn_name        = ''
+    auth_scopes      = ''
+    sec_def_name     = None
     log_response     = False
     map_response     = None
     get_conn_name    = None
     get_auth         = None
+    get_auth_scopes  = None
     get_path_params  = None
     get_method       = None
     get_request      = None
     get_headers      = None
     get_query_string = None
     get_auth_bearer  = None
+    get_sec_def_name = None
 
     has_query_string_id   = False
     query_string_id_param = None
@@ -1561,6 +1530,8 @@ class RESTAdapter(Service):
         params=None,   # type: strdictnone
         headers=None,  # type: strdictnone
         method='',     # type: str
+        sec_def_name=None, # type: any_
+        auth_scopes=None,  # type: any_
         log_response=True, # type: bool
     ):
 
@@ -1576,6 +1547,8 @@ class RESTAdapter(Service):
             params=params,
             headers=headers,
             method=method,
+            sec_def_name=sec_def_name,
+            auth_scopes=auth_scopes,
             log_response=log_response,
         )
 
@@ -1588,7 +1561,7 @@ class RESTAdapter(Service):
 
         # Local aliases
         params:'strdict' = {}
-        request:'any_' = None
+        request:'any_' = ''
         headers:'strstrdict' = {}
 
         # The outgoing connection to use may be static or dynamically generated
@@ -1638,6 +1611,30 @@ class RESTAdapter(Service):
             token:'str' = self.get_auth_bearer()
             headers['Authorization'] = f'Bearer {token}'
 
+        # Security definition can be dynamically generated ..
+        if self.get_sec_def_name:
+            sec_def_name = self.get_sec_def_name()
+
+        # .. it may also have been given explicitly ..
+        elif self.sec_def_name:
+            sec_def_name = self.sec_def_name
+
+        # .. otherwise, we will indicate explicitly that it was not given on input in any way.
+        else:
+            sec_def_name = NotGiven
+
+        # Auth scopes can be dynamically generated ..
+        if self.get_auth_scopes:
+            auth_scopes = self.get_auth_scopes()
+
+        # .. it may also have been given explicitly ..
+        elif self.auth_scopes:
+            auth_scopes = self.auth_scopes
+
+        # .. otherwise, we will indicate explicitly that they were not given on input in any way.
+        else:
+            auth_scopes = ''
+
         # Headers may be dynamically generated
         if self.get_headers:
             _headers:'strstrdict' = self.get_headers()
@@ -1652,6 +1649,8 @@ class RESTAdapter(Service):
             params=params,
             headers=headers,
             method=method,
+            sec_def_name=sec_def_name,
+            auth_scopes=auth_scopes,
             log_response=self.log_response,
         )
 
