@@ -69,13 +69,6 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class OAuthStore:
-    def __init__(self, oauth_config):
-        self.oauth_config = oauth_config
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class URLData(CyURLData, OAuthDataStore):
     """ Performs URL matching and security checks.
     """
@@ -870,6 +863,8 @@ class URLData(CyURLData, OAuthDataStore):
         """ Updates an existing NTLM security definition.
         """
         with self.url_sec_lock:
+            current_config = self.ntlm_config[msg.old_name]
+            msg.password = current_config.config.password
             del self.ntlm_config[msg.old_name]
             self._update_ntlm(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.NTLM)
@@ -919,6 +914,8 @@ class URLData(CyURLData, OAuthDataStore):
         """ Updates an existing OAuth account.
         """
         with self.url_sec_lock:
+            current_config = self.oauth_config[msg.old_name]
+            msg.password = current_config.config.password
             del self.oauth_config[msg.old_name]
             self._update_oauth(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH)
