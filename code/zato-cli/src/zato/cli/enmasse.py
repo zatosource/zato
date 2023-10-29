@@ -98,6 +98,9 @@ class ModuleCtx:
     # How many seconds to wait for missing objects
     Missing_Wait_Time = 120
 
+    # Extra security types that exist only in enmasse, such as bearer_token in lieu of oauth
+    Extra_Security_Types = ['bearer_token']
+
 # ################################################################################################################################
 
 ModuleCtx.Enmasse_Type = {
@@ -229,11 +232,25 @@ class EnvKeyData:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _replace_item_type(item_type:'str') -> 'str':
+
+    # Certain item types need to be replaced because they exist only in enmasse
+    if item_type == 'bearer_token':
+        return 'oauth'
+    elif item_type == 'oauth':
+        return 'bearer_token'
+    else:
+        return item_type
+
+# ################################################################################################################################
+
 def find_first(it, pred):
     """Given any iterable, return the first element `elem` from it matching `pred(elem)`"""
     for obj in it:
         if pred(obj):
             return obj
+
+# ################################################################################################################################
 
 def dict_match(haystack, needle):
     """Return True if all the keys from `needle` appear in `haystack` with the same value.
@@ -244,12 +261,15 @@ def dict_match(haystack, needle):
 
     return all(haystack.get(key) == value for key, value in iteritems(needle))
 
+# ################################################################################################################################
 
 #: List of zato services we explicitly don't support.
 IGNORE_PREFIXES = {
     'zato.kvdb.data-dict.dictionary',
     'zato.kvdb.data-dict.translation',
 }
+
+# ################################################################################################################################
 
 def populate_services_from_apispec(client, logger):
     """ Request a list of services from the APISpec service, and merge the results into SERVICES_BY_PREFIX,
@@ -323,6 +343,7 @@ SHORTNAME_BY_PREFIX = [
     ('zato.channel.', ''),
 ]
 
+# ################################################################################################################################
 
 def make_service_name(prefix):
 
@@ -340,6 +361,8 @@ def make_service_name(prefix):
             return name_prefix
     return escaped
 
+# ################################################################################################################################
+
 def normalize_service_name(item):
     """ Given an item originating from the API or from an import file, if the item contains either the 'service'
     or 'service_name' keys, ensure the other key is set. Either the dict contains neither key, or both keys set
@@ -347,6 +370,8 @@ def normalize_service_name(item):
     if 'service' in item or 'service_name' in item:
         item.setdefault('service', item.get('service_name'))
         item.setdefault('service_name', item.get('service'))
+
+# ################################################################################################################################
 
 def test_item(item, cond):
     """ Given a dictionary `cond` containing some conditions to test an item for, return True if those conditions match.
@@ -359,6 +384,9 @@ def test_item(item, cond):
         if only_if_field and item.get(only_if_field) not in only_if_value:
             return False
     return True
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class ServiceInfo:
     def __init__(self, prefix=None, name=None, object_dependencies=None, service_dependencies=None, export_filter=None):
@@ -713,6 +741,12 @@ class DependencyScanner:
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
 
+        #
+        # Preprocess item type
+        #
+        if item_type == 'bearer_token':
+            item_type = 'oauth'
+
         service_info = SERVICE_BY_NAME[item_type] # type: ServiceInfo
 
         for dep_key, dep_info in iteritems(service_info.object_dependencies):
@@ -751,6 +785,12 @@ class DependencyScanner:
 
         results = Results()
         for item_type, items in iteritems(self.json):
+
+            #
+            # Preprocess item type
+            #
+            item_type = _replace_item_type(item_type)
+
             for item in items:
                 self.scan_item(item_type, item, results)
 
@@ -833,6 +873,12 @@ class ObjectImporter:
                                     missing_name, missing_type, dep_names)
 
         for item_type, items in iteritems(self.json):
+
+            #
+            # Preprocess item type
+            #
+            item_type = _replace_item_type(item_type)
+
             for item in items:
                 self.validate_service_required(item_type, item)
 
@@ -841,6 +887,12 @@ class ObjectImporter:
 # ################################################################################################################################
 
     def remove_from_import_list(self, item_type, name):
+
+        #
+        # Preprocess item type
+        #
+        item_type = _replace_item_type(item_type)
+
         list_ = self.json.get(item_type, [])
         item = find_first(list_, lambda item: item.name == name)
         if item:
@@ -923,6 +975,10 @@ class ObjectImporter:
                         value = os.environ.get(value)
                     attrs[key] = value
 
+        #
+        # Preprocess the data to be imported
+        #
+
         attrs_dict = dict(attrs)
 
         # Generic connections cannot import their IDs during edits
@@ -943,6 +999,33 @@ class ObjectImporter:
         elif item_type == 'rbac_role':
             _= attrs_dict.pop('id', None)
             _= attrs_dict.pop('parent_id', None)
+
+        elif item_type == 'oauth':
+
+            if not 'data_format' in attrs:
+                attrs['data_format'] = DATA_FORMAT.JSON
+
+            if not 'client_id_field' in attrs:
+                attrs['client_id_field'] = 'client_id'
+
+            if not 'client_secret_field' in attrs:
+                attrs['client_secret_field'] = 'client_secret'
+
+            if not 'grant_type' in attrs:
+                attrs['grant_type'] = 'client_credentials'
+
+            if auth_endpoint := attrs.pop('auth_endpoint', None):
+                attrs['auth_server_url'] = auth_endpoint
+
+            if scopes := attrs.get('scopes'):
+                if isinstance(scopes, list):
+                    scopes = '\n'.join(scopes)
+                    attrs['scopes'] = scopes
+
+            if extra_fields := attrs.get('extra_fields'):
+                if isinstance(extra_fields, list):
+                    extra_fields = '\n'.join(extra_fields)
+                    attrs['extra_fields'] = extra_fields
 
         attrs.cluster_id = self.client.cluster_id
         attrs.is_source_external = True
@@ -991,6 +1074,12 @@ class ObjectImporter:
 
         results = Results()
         for item_type, items in iteritems(self.json):
+
+            #
+            # Preprocess item type
+            #
+            item_type = _replace_item_type(item_type)
+
             for item in items:
                 name = item.get('name')
                 if not name:
@@ -1094,6 +1183,12 @@ class ObjectImporter:
         # Create new objects, again, definitions come first ..
         #
         for item_type, items in iteritems(self.json):
+
+            #
+            # Preprocess item type
+            #
+            item_type = _replace_item_type(item_type)
+
             if self.may_be_dependency(item_type):
                 if item_type == 'rbac_role':
                     append_to = new_rbac_role
@@ -1603,7 +1698,9 @@ class InputParser:
                               item)
             return
 
-        service_names = [si.name for si in SERVICES if si.is_security]
+        service_names = [elem.name for elem in SERVICES if elem.is_security]
+        service_names.extend(ModuleCtx.Extra_Security_Types)
+
         if sec_type not in service_names:
             raw = (sec_type, service_names, item)
             results.add_error(raw, ERROR_INVALID_SEC_DEF_TYPE,
@@ -2319,26 +2416,21 @@ class Enmasse(ManageCommand):
 
             # .. do not write RBAC definitions ..
             if 'rbac' in item['type']:
-                out = False
+                return False
 
             # .. do not write internal definitions ..
             elif name.startswith(zato_name_prefix):
-                out = False
+                return False
 
-            # .. otherwise, include this item ..
-            else:
-                out = True
+        # We enter this branch if we are to export only specific types ..
+        if not has_all_types:
+            out = self._should_write_type_to_output(item_type, item, include_type)
 
-        else:
-            # We enter this branch if we are to export only specific types ..
-            if not has_all_types:
-                out = self._should_write_type_to_output(item_type, item, include_type)
-
-            # We enter this branch if we are to export only objects of specific names ..
-            if not has_all_names:
-                item_name = item.get('name') or ''
-                item_name = item_name.lower()
-                out = self._should_write_name_to_output(item_type, item_name, include_name)
+        # We enter this branch if we are to export only objects of specific names ..
+        if not has_all_names:
+            item_name = item.get('name') or ''
+            item_name = item_name.lower()
+            out = self._should_write_name_to_output(item_type, item_name, include_name)
 
         # .. we are ready to return our output
         return out
