@@ -548,6 +548,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         # .. do invoke the connection ..
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
+        # .. by default, we have no response at all ..
+        response.data = None
+
         # .. now, log what we received.
         msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
         logger.info(msg)
