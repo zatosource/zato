@@ -164,6 +164,10 @@ class BaseHTTPSOAPWrapper:
         # Force type hints
         sec_def_name = cast_('str', sec_def_name)
 
+        # OAuth scopes can be provided on input even if we do not have a Bearer token definition attached,
+        # which is why we .pop them here, to make sure they do not propagate to the requests library.
+        scopes = kwargs.pop('auth_scopes', '')
+
         try:
 
             # Bearer tokens are obtained dynamically ..
@@ -174,9 +178,6 @@ class BaseHTTPSOAPWrapper:
 
                 # .. each OAuth definition will use a specific data format ..
                 data_format = sec_def['data_format']
-
-                # .. OAuth scopes can be provided on input ..
-                scopes = kwargs.pop('auth_scopes', '')
 
                 # .. otherwise, we can check if they are provided in the security definition itself ..
                 if not scopes:
