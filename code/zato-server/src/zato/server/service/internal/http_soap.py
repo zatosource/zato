@@ -14,7 +14,7 @@ from traceback import format_exc
 from paste.util.converters import asbool
 
 # Zato
-from zato.common.api import CONNECTION, DATA_FORMAT, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZATO_DEFAULT, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
@@ -307,7 +307,7 @@ class Create(_CreateEdit):
 
         input.transport   = input.get('transport')   or URL_TYPE.PLAIN_HTTP
         input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id
-        input.data_format = input.get('data_format') or DATA_FORMAT.JSON
+        input.data_format = input.get('data_format') or ''
 
         # For HL7
         input.data_encoding = input.get('data_encoding') or 'utf-8'
@@ -502,7 +502,7 @@ class Edit(_CreateEdit):
 
         input.transport   = input.get('transport')   or URL_TYPE.PLAIN_HTTP
         input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id
-        input.data_format = input.get('data_format') or DATA_FORMAT.JSON
+        input.data_format = input.get('data_format') or ''
 
         # For HL7
         input.data_encoding = input.get('data_encoding') or 'utf-8'
