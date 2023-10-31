@@ -24,16 +24,18 @@ from zato.common.rate_limiting.common import Const, DefinitionItem, ObjectInfo
 from zato.common.rate_limiting.limiter import Approximate, Exact, RateLimitStateDelete, RateLimitStateTable
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
     from zato.common.rate_limiting.limiter import BaseLimiter
-    from zato.common.typing_ import callable_, dict_, list_
+    from zato.common.typing_ import callable_, dict_, list_, strdict
     from zato.distlock import LockManager
 
     # For pyflakes
     BaseLimiter = BaseLimiter
     LockManager = LockManager
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
