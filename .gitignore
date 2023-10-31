@@ -52,6 +52,7 @@ code/*/build
 code/*/dist
 geckodriver.log
 hotfixes
+lib/
 pidfile
 *.egg-info*
 *.geany*
