@@ -76,10 +76,11 @@ class ModuleCtx:
         LDAP = 'ldap'
         SQL  = 'sql'
         REST = 'rest'
+        Scheduler = 'scheduler'
         Security = 'security'
 
     # Maps enmasse definition types to include types
-    Enmasse_Type      = cast_('strdict', None)
+    Enmasse_Type = cast_('strdict', None)
 
     # Maps enmasse defintions types to their attributes that are to be included during an export
     Enmasse_Attr_List_Include = cast_('strlistdict', None)
@@ -129,6 +130,9 @@ ModuleCtx.Enmasse_Type = {
 
     # SQL Connections
     'outconn_sql':ModuleCtx.Include_Type.SQL,
+
+    # Scheduler
+    'scheduler':ModuleCtx.Include_Type.Scheduler,
 }
 
 # ################################################################################################################################
