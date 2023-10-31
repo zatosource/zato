@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -25,28 +23,19 @@ from sqlalchemy import and_
 from zato.common.rate_limiting.common import Const, DefinitionItem, ObjectInfo
 from zato.common.rate_limiting.limiter import Approximate, Exact, RateLimitStateDelete, RateLimitStateTable
 
-# Python 2/3 compatibility
-from zato.common.py23_.past.builtins import unicode
-
+# ################################################################################################################################
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
-
-    # stdlib
-    from typing import Callable
-
-    # Zato
+if 0:
     from zato.common.rate_limiting.limiter import BaseLimiter
+    from zato.common.typing_ import callable_, dict_, list_, strdict
     from zato.distlock import LockManager
 
     # For pyflakes
     BaseLimiter = BaseLimiter
-    Callable = Callable
     LockManager = LockManager
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
@@ -59,15 +48,20 @@ class DefinitionParser:
     """
 
     @staticmethod
-    def get_lines(definition, object_id, object_type, object_name, parse_only=False):
-        # type: (unicode, int, unicode, unicode, bool) -> list
+    def get_lines(
+        definition,  # type: str
+        object_id,   # type: int
+        object_type, # type: str
+        object_name, # type: str
+        parse_only=False # type: bool
+    ) -> 'list_[DefinitionItem]':
 
         if not parse_only:
             out = []
 
-        definition = definition if isinstance(definition, unicode) else definition.decode('utf8')
+        definition = definition if isinstance(definition, str) else definition.decode('utf8')
 
-        for idx, orig_line in enumerate(definition.splitlines(), 1): # type: int, unicode
+        for idx, orig_line in enumerate(definition.splitlines(), 1): # type: int, str
             line = orig_line.strip()
 
             if (not line) or line.startswith('#'):
@@ -76,7 +70,7 @@ class DefinitionParser:
             line = line.split('=')
             if len(line) != 2:
                 raise ValueError('Invalid definition line `{}`; (idx:{})'.format(orig_line, idx))
-            from_, rate_info = line # type: unicode, unicode
+            from_, rate_info = line # type: str, str
 
             from_ = from_.strip()
             if from_ != Const.from_any:
@@ -88,7 +82,7 @@ class DefinitionParser:
                 rate = Const.rate_any
                 unit = Const.Unit.day # This is arbitrary but it does not matter because there is no rate limit in effect
             else:
-                rate, unit = rate_info.split('/') # type: unicode, unicode
+                rate, unit = rate_info.split('/') # type: str, str
                 rate = int(rate.strip())
                 unit = unit.strip()
 
@@ -117,23 +111,26 @@ class DefinitionParser:
 # ################################################################################################################################
 
     @staticmethod
-    def check_definition(definition):
-        # type: (unicode)
+    def check_definition(definition:'str') -> 'list_[DefinitionItem]':
         DefinitionParser.get_lines(definition.strip(), None, None, None, True)
 
 # ################################################################################################################################
 
     @staticmethod
-    def check_definition_from_input(input_data):
-        # type: (dict)
+    def check_definition_from_input(input_data:'strdict') -> 'None':
         rate_limit_def = input_data.get('rate_limit_def') or ''
         if rate_limit_def:
             DefinitionParser.check_definition(rate_limit_def)
 
 # ################################################################################################################################
 
-    def parse(self, definition, object_id, object_type, object_name):
-        # type: (unicode, int, unicode, unicode) -> list
+    def parse(
+        self,
+        definition,  # type: str
+        object_id,   # type: int
+        object_type, # type: str
+        object_name  # type: str
+    ) -> 'list_[DefinitionItem]':
         return DefinitionParser.get_lines(definition.strip(), object_id, object_type, object_name)
 
 # ################################################################################################################################
@@ -144,30 +141,28 @@ class RateLimiting:
     """
     __slots__ = 'parser', 'config_store', 'lock', 'sql_session_func', 'global_lock_func', 'cluster_id'
 
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.parser = DefinitionParser() # type: DefinitionParser
-        self.config_store = {}           # type: dict
+        self.config_store = {}           # type: dict_[str, BaseLimiter]
         self.lock = RLock()
         self.global_lock_func = None     # type: LockManager
-        self.sql_session_func = None     # type: Callable
+        self.sql_session_func = None     # type: callable_
         self.cluster_id = None           # type: int
 
 # ################################################################################################################################
 
-    def _get_config_key(self, object_type, object_name):
-        # type: (unicode, unicode) -> unicode
+    def _get_config_key(self, object_type:'str', object_name:'str') -> 'str':
         return '{}:{}'.format(object_type, object_name)
 
 # ################################################################################################################################
 
-    def _get_config_by_object(self, object_type, object_name):
-        # type: (unicode, unicode) -> BaseLimiter
-        return self.config_store.get(self._get_config_key(object_type, object_name))
+    def _get_config_by_object(self, object_type:'str', object_name:'str') -> 'BaseLimiter':
+        config_key = self._get_config_key(object_type, object_name)
+        return self.config_store.get(config_key)
 
 # ################################################################################################################################
 
-    def _create_config(self, object_dict, definition, is_exact):
-        # type: (dict, unicode, bool) -> BaseLimiter
+    def _create_config(self, object_dict:'strdict', definition:'str', is_exact:'bool') -> 'BaseLimiter':
 
         object_id = object_dict['id']
         object_type = object_dict['type_']
@@ -209,17 +204,16 @@ class RateLimiting:
 
 # ################################################################################################################################
 
-    def create(self, object_dict, definition, is_exact):
-        # type: (dict, unicode, bool)
+    def create(self, object_dict:'strdict', definition:'str', is_exact:'bool') -> 'None':
         config = self._create_config(object_dict, definition, is_exact)
         self.config_store[config.get_config_key()] = config
 
 # ################################################################################################################################
 
-    def check_limit(self, cid, object_type, object_name, from_, needs_warn=True):
+    def check_limit(self, cid:'str', object_type:'str', object_name:'str', from_:'str', needs_warn:'bool'=True) -> 'None':
         """ Checks if input object has already reached its allotted usage limit.
         """
-        # type: (unicode, unicode, unicode, unicode)
+        # type: (str, str, str, str)
 
         with self.lock:
             config = self._get_config_by_object(object_type, object_name)
@@ -235,7 +229,7 @@ class RateLimiting:
 
 # ################################################################################################################################
 
-    def _delete_from_odb(self, object_type, object_id):
+    def _delete_from_odb(self, object_type:'str', object_id:'int') -> 'None':
         with closing(self.sql_session_func()) as session:
             session.execute(RateLimitStateDelete().where(and_(
                 RateLimitStateTable.c.object_type==object_type,
@@ -245,12 +239,10 @@ class RateLimiting:
 
 # ################################################################################################################################
 
-    def _delete(self, object_type, object_name, remove_parent):
+    def _delete(self, object_type:'str', object_name:'str', remove_parent:'bool') -> 'None':
         """ Deletes configuration for input data, optionally deleting references to it from all objects that depended on it.
         Must be called with self.lock held.
         """
-        # type: (unicode, unicode, bool)
-
         config_key = self._get_config_key(object_type, object_name)
         limiter = self.config_store[config_key] # type: BaseLimiter
         del self.config_store[config_key]
@@ -263,10 +255,9 @@ class RateLimiting:
 
 # ################################################################################################################################
 
-    def _set_new_parent(self, parent_type, old_parent_name, new_parent_type, new_parent_name):
+    def _set_new_parent(self, parent_type:'str', old_parent_name:'str', new_parent_type:'str', new_parent_name:'str') -> 'None':
         """ Sets new parent for all configuration entries matching the old one. Must be called with self.lock held.
         """
-        # type: (unicode, unicode, unicode, unicode)
 
         for child_config in self.config_store.values(): # type: BaseLimiter
             object_info = child_config.object_info
@@ -289,10 +280,9 @@ class RateLimiting:
 
 # ################################################################################################################################
 
-    def edit(self, object_type, old_object_name, object_dict, definition, is_exact):
+    def edit(self, object_type:'str', old_object_name:'str', object_dict:'strdict', definition:'str', is_exact:'bool') -> 'None':
         """ Changes, in place, an existing configuration entry to input data.
         """
-        # type: (unicode, unicode, dict, unicode, bool)
 
         # Note the whole of this operation is under self.lock to make sure the update is atomic
         # from our callers' perspective.
@@ -325,39 +315,35 @@ class RateLimiting:
 
 # ################################################################################################################################
 
-    def delete(self, object_type, object_name):
+    def delete(self, object_type:'str', object_name:'str') -> 'None':
         """ Deletes configuration for input object and clears out parent references to it.
         """
-        # type: (unicode, unicode)
         with self.lock:
             self._delete(object_type, object_name, True)
 
 # ################################################################################################################################
 
-    def _get_config(self, object_type, object_name):
+    def _get_config(self, object_type:'str', object_name:'str') -> 'None':
         """ Returns configuration for the input object, assumming we have it at all.
         """
-        # type: (unicode, unicode) -> BaseLimiter
         config_key = self._get_config_key(object_type, object_name)
         return self.config_store.get(config_key)
 
 # ################################################################################################################################
 
-    def get_config(self, object_type, object_name):
-        # type: (unicode, unicode) -> BaseLimiter
+    def get_config(self, object_type:'str', object_name:'str') -> 'BaseLimiter':
         with self.lock:
             return self._get_config(object_type, object_name)
 
 # ################################################################################################################################
 
-    def has_config(self, object_type, object_name):
-        # type: (unicode, unicode) -> bool
+    def has_config(self, object_type:'str', object_name:'str') -> 'bool':
         with self.lock:
             return bool(self._get_config(object_type, object_name))
 
 # ################################################################################################################################
 
-    def cleanup(self):
+    def cleanup(self) -> 'None':
         """ Invoked periodically by the scheduler - goes through all configuration elements and cleans up
         all time periods that are no longer needed.
         """
