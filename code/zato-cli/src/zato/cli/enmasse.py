@@ -1740,7 +1740,7 @@ class InputParser:
         except (IOError, TypeError, ValueError) as e:
             raw = (path, e)
             results.add_error(raw, ERROR_INVALID_INPUT, 'Failed to parse {}: {}', path, e)
-            return None
+            return {}
 
 # ################################################################################################################################
 

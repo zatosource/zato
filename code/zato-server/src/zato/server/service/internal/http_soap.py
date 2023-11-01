@@ -16,13 +16,14 @@ from paste.util.converters import asbool
 # Zato
 from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
-     ZATO_DEFAULT, ZATO_NONE, ZATO_SEC_USE_RBAC
+     ZATO_DEFAULT, ZATO_NONE, ZatoNotGiven, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.json_internal import dumps
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
 from zato.common.rate_limiting import DefinitionParser
+from zato.common.util.api import as_bool
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
 from zato.server.connection.http_soap import BadRequest
@@ -241,7 +242,19 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 
     def _set_sec_tls_ca_cert_id(self, item, input):
 
+        # This can be used by enmasse to simplify its configuration ..
+        tls_verify = input.pop('tls_verify', ZatoNotGiven)
+
+        # .. this can be used by both enmasse and any other client.
         sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
+
+        # If we have a simplified value on input, it will take priority ..
+        if tls_verify is not ZatoNotGiven:
+            tls_verify = as_bool(tls_verify)
+            if tls_verify:
+                sec_tls_ca_cert_id = ZATO_DEFAULT
+            else:
+                sec_tls_ca_cert_id = ZATO_NONE
 
         if sec_tls_ca_cert_id:
 
