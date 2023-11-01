@@ -7,13 +7,13 @@ N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 # Our default branch
 Zato_Default_Branch=support/3.2
 
-# Always switch to a branch support first
+# Always switch to a support branch first
 git checkout "${Zato_Default_Branch}" 2>/dev/null || git checkout -b "${Zato_Default_Branch}" "origin/${Zato_Default_Branch}"
 
 echo "*** Downloading updates ***"
 git -C $CURDIR pull
 
-# A optional, specific branch or commit provded on input
+# An optional, specific branch or commit provided on input
 while getopts "c:" opt; do
     case "$opt" in
     c)
