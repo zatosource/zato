@@ -782,7 +782,10 @@ class RequestHandler:
                         if isinstance(response.payload, Model):
                             value = response.payload.to_json()
                         else:
-                            value = response.payload.getvalue() # type: ignore
+                            if hasattr(response.payload, 'getvalue'):
+                                value = response.payload.getvalue() # type: ignore
+                            else:
+                                value = dumps(response.payload)
                     else:
                         value = ''
                     response.payload = value
