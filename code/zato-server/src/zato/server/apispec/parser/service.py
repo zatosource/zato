@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.marshal_.api import extract_model_class, is_list
 from zato.common.marshal_.api import Model
 from zato.common.marshal_.simpleio import DataClassSimpleIO
+from zato.common.typing_ import any_
 from zato.server.apispec.model import APISpecInfo, Config, FieldInfo, SimpleIO
 from zato.server.apispec.parser.docstring import DocstringParser
 
@@ -26,7 +27,7 @@ _SIO_TYPE_MAP = SIO_TYPE_MAP() # type: ignore
 
 if 0:
     from dataclasses import Field
-    from zato.common.typing_ import any_, anydict, anylist, optional, strorlist, type_
+    from zato.common.typing_ import anydict, anylist, optional, strorlist, type_
     from zato.server.service import Service
 
     Field   = Field
@@ -40,8 +41,17 @@ def build_field_list(model:'Model | str', api_spec_info:'any_') -> 'anylist':
     # Response to produce
     out = [] # type: anylist
 
-    # All the fields of this dataclass ..
-    if isinstance(model, str):
+    # Local variables
+    is_any  = model is any_
+    is_int  = model is int
+    is_str  = model is str
+    is_bool = model is bool
+
+    # This is not a true model that we can process ..
+    should_ignore = is_int or is_str or is_any or is_bool
+
+    # .. in which case we can return immediately ..
+    if should_ignore:
         return out
 
     # .. handle list models as well ..
