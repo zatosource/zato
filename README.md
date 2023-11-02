@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://zato.io?gh1"><img alt="" src="https://zato.io/static/img/intro/banner.webp" /></a>
+  <a href="https://zato.io"><img alt="" src="https://zato.io/static/img/intro/banner.webp" /></a>
 </p>
 
 # Zato /zɑːtəʊ/
@@ -16,13 +16,13 @@ government
 and more.
 
 <p align="center">
-  <a href="https://zato.io?gh2"><img alt="" src="https://zato.io/static/img/intro/bus.png?gh" /></a>
+  <a href="https://zato.io"><img alt="" src="https://zato.io/static/img/intro/bus.png" /></a>
 </p>
 
 ## Learn more
 
 Visit https://zato.io for details, including:
 
-* [Downloads](https://zato.io/en/docs/3.2/admin/guide/install/index.html?gh)
-* [Screenshots](https://zato.io/en/docs/3.2/intro/screenshots.html?gh)
-* [Programming examples](https://zato.io/en/docs/3.2/dev/index.html?gh)
+* [Downloads](https://zato.io/en/docs/3.2/admin/guide/install/index.html)
+* [Screenshots](https://zato.io/en/docs/3.2/intro/screenshots.html)
+* [Programming examples](https://zato.io/en/docs/3.2/dev/index.html)
