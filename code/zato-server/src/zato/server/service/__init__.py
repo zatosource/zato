@@ -90,7 +90,6 @@ UUID = UUID # type: ignore
 
 if 0:
     from logging import Logger
-    from typing import Callable
     from zato.broker.client import BrokerClient
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
@@ -114,12 +113,12 @@ if 0:
 
     AuditPII = AuditPII
     BrokerClient = BrokerClient
-    Callable = Callable
+    callable_ = callable_
     CassandraAPI = CassandraAPI
     CassandraQueryAPI = CassandraQueryAPI
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
-    CySimpleIO = CySimpleIO
+    CySimpleIO = CySimpleIO # type: ignore
     FTPStore = FTPStore
     JSONSchemaValidator = JSONSchemaValidator
     KVDBAPI = KVDBAPI # type: ignore
@@ -724,7 +723,7 @@ class Service:
 # ################################################################################################################################
 
     def update_handle(self,
-        set_response_func, # type: Callable
+        set_response_func, # type: callable_
         service,       # type: Service
         raw_request,   # type: any_
         channel,       # type: str
@@ -935,7 +934,7 @@ class Service:
     def invoke_by_impl_name(
         self,
         impl_name,  # type: str
-        payload='', # type: str | dict
+        payload='', # type: str | anydict
         channel=CHANNEL.INVOKE,       # type: str
         data_format=DATA_FORMAT.DICT, # type: str
         transport='',       # type: str

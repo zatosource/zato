@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.marshal_.api import extract_model_class, is_list
 from zato.common.marshal_.api import Model
 from zato.common.marshal_.simpleio import DataClassSimpleIO
-from zato.common.typing_ import any_
+from zato.common.typing_ import any_, cast_
 from zato.server.apispec.model import APISpecInfo, Config, FieldInfo, SimpleIO
 from zato.server.apispec.parser.docstring import DocstringParser
 
@@ -58,7 +58,7 @@ def build_field_list(model:'Model | str', api_spec_info:'any_') -> 'anylist':
     if is_list(model, True): # type: ignore
         model = extract_model_class(model) # type: ignore
 
-    python_field_list = model.zato_get_fields()
+    python_field_list = cast_('any_', model).zato_get_fields()
 
     for _, field in sorted(python_field_list.items()):
 
