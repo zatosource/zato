@@ -48,7 +48,7 @@ if 0:
     # Zato
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import PoolStore
-    from zato.common.typing_ import any_, stranydict, strnone
+    from zato.common.typing_ import any_, callable_, stranydict, strnone
     from zato.hl7.mllp.server import ConnCtx as HL7ConnCtx
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.email import EMailAPI
@@ -84,17 +84,21 @@ if 0:
     ZMQFacade = ZMQFacade
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 NOT_GIVEN = 'ZATO_NOT_GIVEN'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class HTTPRequestData:
@@ -195,7 +199,7 @@ class Request:
         self.logger = cast_('Logger', service.logger)
         self.payload = ''
         self.raw_request = ''
-        self.input = cast_('any_', None)
+        self.input = None # type: any_
         self.cid = cast_('str', None)
         self.data_format = cast_('str', data_format)
         self.transport = cast_('str', transport)
@@ -212,10 +216,18 @@ class Request:
 
 # ################################################################################################################################
 
-    def init(self, is_sio, cid, sio, data_format, transport, wsgi_environ, encrypt_func):
+    def init(
+        self,
+        is_sio,       # type: bool
+        cid,          # type: str
+        sio,          # type: CySimpleIO
+        data_format,  # type: str
+        transport,    # type: str
+        wsgi_environ, # type: stranydict
+        encrypt_func  # type: callable_
+    ) -> 'None':
         """ Initializes the object with an invocation-specific data.
         """
-        # type: (bool, str, CySimpleIO, str, str, dict, object)
         self.input = ServiceInput()
         self.encrypt_func = encrypt_func
 
