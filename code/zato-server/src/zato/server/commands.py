@@ -24,6 +24,7 @@ from zato.common.marshal_.api import Model
 from zato.common.util.platform_ import is_windows
 from zato.common.typing_ import cast_
 from zato.common.util import new_cid
+from zato.common.util.api import get_zato_command
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -370,7 +371,7 @@ class CommandsFacade:
     ) -> 'CommandResult':
 
         # This will differ depending on our current OS
-        zato_bin = 'zato.bat' if is_windows else 'zato'
+        zato_bin = 'zato.bat' if is_windows else get_zato_command()
 
         # Build the full command to execute
         command = f'{zato_bin} {command}'
