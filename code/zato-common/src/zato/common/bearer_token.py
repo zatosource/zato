@@ -114,6 +114,10 @@ class BearerTokenManager:
         out.expires_in_sec = expires_in_sec
         out.expiration_time = expiration_time
 
+        # .. indicate that this token was not found in cache ..
+        out.is_cache_hit = False
+
+        # .. and return it to our caller.
         return out
 
 # ################################################################################################################################
@@ -221,10 +225,11 @@ class BearerTokenManager:
         key = self._get_cache_key(sec_def_name, scopes)
 
         # .. try to get the token information from our cache ..
-        info = self.cache_api.default.get(key)
+        info = self.cache_api.default.get(key) # type: BearerTokenInfo
 
         # .. and return it to our caller only if it actually exists.
         if info and info != ZATO_NOT_GIVEN:
+            info.is_cache_hit = True
             return info
 
 # ################################################################################################################################
