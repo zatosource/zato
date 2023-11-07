@@ -46,6 +46,7 @@ from zato.server.connection.queue import ConnectionQueue
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
+    from zato.common.bearer_token import BearerTokenInfo
     from zato.common.typing_ import any_, callnone, dictnone, list_, stranydict, strdictnone, strstrdict, type_
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
@@ -186,10 +187,10 @@ class BaseHTTPSOAPWrapper:
                     scopes = ' '.join(scopes)
 
                 # .. get a Bearer token ..
-                auth_header = self._get_bearer_token_auth(sec_def_name, scopes, data_format)
+                info = self._get_bearer_token_auth(sec_def_name, scopes, data_format)
 
                 # .. populate headers ..
-                headers['Authorization'] = auth_header
+                headers['Authorization'] = f'Bearer {info.token}'
 
                 # This is needed by request
                 auth = None
@@ -207,16 +208,13 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
-    def _get_bearer_token_auth(self, sec_def_name:'str', scopes:'str', data_format:'str') -> 'str':
+    def _get_bearer_token_auth(self, sec_def_name:'str', scopes:'str', data_format:'str') -> 'BearerTokenInfo':
 
         # This will get the token from cache or from the remote auth. server ..
         info = self.server.bearer_token_manager.get_bearer_token_info_by_sec_def_name(sec_def_name, scopes, data_format)
 
-        # .. now, we can build the authorization header ..
-        out = f'Bearer {info.token}'
-
-        # .. and return it to our caller.
-        return out
+        # .. which we can return to our caller.
+        return info
 
 # ################################################################################################################################
 
