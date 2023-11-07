@@ -37,6 +37,7 @@ class BearerTokenConfig(Model):
 
 @dataclass(init=False)
 class BearerTokenInfo(Model):
+    is_cache_hit: 'bool'
     sec_def_name: 'str'
     token:'str'
     token_type:'str'

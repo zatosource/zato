@@ -199,6 +199,7 @@ class BaseHTTPSOAPWrapper:
 
                 # .. this is needed for later use ..
                 token_expires_in_sec = info.expires_in_sec
+                token_is_cache_hit = info.is_cache_hit
 
                 # This is needed by request
                 auth = None
@@ -212,6 +213,7 @@ class BaseHTTPSOAPWrapper:
 
                 # .. we have no token to report about.
                 token_expires_in_sec = None
+                token_is_cache_hit = None
 
             # .. basic details about what we are sending what we are sending ..
             msg = f'REST out → cid={cid}; {method} {address}; name:{self.config["name"]}; params={params}; len={len(data)}' + \
@@ -219,7 +221,7 @@ class BaseHTTPSOAPWrapper:
 
             # .. optionally, log details of the Bearer token ..
             if is_bearer_token:
-                msg += f'; expiry={token_expires_in_sec}'
+                msg += f'; token-expiry={token_expires_in_sec}; token-cache-hit={token_is_cache_hit}'
 
             # .. log the information about our request ..
             logger.info(msg)
