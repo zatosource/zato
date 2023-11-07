@@ -114,6 +114,10 @@ class BearerTokenManager:
         out.expires_in_sec = expires_in_sec
         out.expiration_time = expiration_time
 
+        # .. indicate that this token was not found in cache ..
+        out.is_cache_hit = False
+
+        # .. and return it to our caller.
         return out
 
 # ################################################################################################################################
@@ -179,7 +183,8 @@ class BearerTokenManager:
         # .. turn into a business object that represents the token ..
         info = self._build_bearer_token_info(config.sec_def_name, data)
 
-        msg  = f'Bearer token received for `{config.sec_def_name}`; expires_in={info.expires_in_sec} ({info.expires_in})'
+        msg  = f'Bearer token received for `{config.sec_def_name}`'
+        msg += f'; expires_in={info.expires_in_sec} ({info.expires_in} -> {info.expiration_time} UTC)'
         msg += f'; scopes={info.scopes}'
         logger.info(msg)
 
@@ -220,10 +225,11 @@ class BearerTokenManager:
         key = self._get_cache_key(sec_def_name, scopes)
 
         # .. try to get the token information from our cache ..
-        info = self.cache_api.default.get(key)
+        info = self.cache_api.default.get(key) # type: BearerTokenInfo
 
         # .. and return it to our caller only if it actually exists.
         if info and info != ZATO_NOT_GIVEN:
+            info.is_cache_hit = True
             return info
 
 # ################################################################################################################################
@@ -243,8 +249,13 @@ class BearerTokenManager:
         # .. store the token ..
         self.cache_api.default.set(key, info, expiry=expiry)
 
+        # .. make it known when exactly the key will expire ..
+        expiry_in = timedelta(seconds=expiry)
+        expiry_time = datetime.now(tz=timezone.utc) + expiry_in
+
         # .. and log what we have done.
         msg  = f'Bearer token for `{info.sec_def_name}` cached under key `{key}`'
+        msg += f'; expiry={expiry} ({expiry_in} -> {expiry_time} UTC)'
         logger.info(msg)
 
 # ################################################################################################################################
