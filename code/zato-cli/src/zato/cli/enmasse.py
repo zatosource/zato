@@ -492,6 +492,23 @@ def test_item(item, cond):
     return True
 
 # ################################################################################################################################
+
+# Note that the order of items in this list matters
+_security_fields = ['security', 'sec_def', 'security_name']
+
+# ################################################################################################################################
+
+def resolve_security_field_name(item:'strdict') -> 'str':
+
+    default = 'security'
+
+    for name in _security_fields:
+        if name in item:
+            return name
+    else:
+        return default
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ServiceInfo:
@@ -638,6 +655,12 @@ SERVICES = [
         prefix='zato.http-soap',
         # Covers outconn_plain_http, outconn_soap, channel_plain_http, channel_soap
         object_dependencies={
+            'security': {
+                'dependent_type': 'def_sec',
+                'dependent_field': 'name',
+                'empty_value': ZATO_NO_SECURITY,
+                'id_field': 'security_id',
+            },
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
@@ -823,17 +846,23 @@ class DependencyScanner:
 # ################################################################################################################################
 
     def find(self, item_type, fields):
+
         if item_type == 'def_sec':
             return self.find_sec(fields)
-        lst = self.json.get(item_type, ())
-        return find_first(lst, lambda item: dict_match(item, fields))
+
+        items = self.json.get(item_type, ())
+
+        for item in items:
+            if dict_match(item, fields):
+                return item
 
 # ################################################################################################################################
 
     def find_sec(self, fields):
         for service in SERVICES:
             if service.is_security:
-                item = self.find(service.name, fields)
+                service_name = _replace_item_type(service.name)
+                item = self.find(service_name, fields)
                 if item is not None:
                     return item
 
@@ -862,13 +891,13 @@ class DependencyScanner:
             if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
                 continue
 
-            if dep_key == 'sec_def':
-                if 'sec_def' not in item:
-                    dep_key = 'security_name'
+            # Special-case HTTP connections
+            if item_type == 'http_soap':
+                dep_key = resolve_security_field_name(item)
 
             if dep_key not in item:
                 results.add_error(
-                    (dep_key, dep_info), ERROR_MISSING_DEP, '{} lacks required {} field: {}', item_type, dep_key, item)
+                    (dep_key, dep_info), ERROR_MISSING_DEP, '{} lacks required `{}` field: {}', item_type, dep_key, item)
 
             value = item.get(dep_key)
 
@@ -1369,9 +1398,8 @@ class ObjectImporter:
             if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
                 continue
 
-            if field_name == 'sec_def':
-                if 'sec_def' not in item:
-                    field_name = 'security_name'
+            if field_name in _security_fields:
+                field_name = resolve_security_field_name(item)
 
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
                 dep_obj = self.object_mgr.find(info['dependent_type'], {
