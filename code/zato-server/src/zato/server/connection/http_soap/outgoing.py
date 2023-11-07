@@ -143,6 +143,8 @@ class BaseHTTPSOAPWrapper:
         **kwargs:'any_'
     ) -> '_RequestsResponse':
 
+        # Local variables
+        params = kwargs.get('params')
         json = kwargs.pop('json', None)
         cert = self.config['tls_key_cert_full_path'] if self.sec_type == _TLS_Key_Cert else None
 
@@ -165,6 +167,9 @@ class BaseHTTPSOAPWrapper:
         # Force type hints
         sec_def_name = cast_('str', sec_def_name)
 
+        # Reusable
+        is_bearer_token = _sec_type == _OAuth
+
         # OAuth scopes can be provided on input even if we do not have a Bearer token definition attached,
         # which is why we .pop them here, to make sure they do not propagate to the requests library.
         scopes = kwargs.pop('auth_scopes', '')
@@ -172,7 +177,7 @@ class BaseHTTPSOAPWrapper:
         try:
 
             # Bearer tokens are obtained dynamically ..
-            if _sec_type == _OAuth:
+            if is_bearer_token:
 
                 # .. this is reusable ..
                 sec_def = self.server.security_facade.bearer_token[sec_def_name]
@@ -192,17 +197,45 @@ class BaseHTTPSOAPWrapper:
                 # .. populate headers ..
                 headers['Authorization'] = f'Bearer {info.token}'
 
+                # .. this is needed for later use ..
+                token_expires_in_sec = info.expires_in_sec
+
                 # This is needed by request
                 auth = None
 
-            # .. otherwise, the credentials will have been already obtained
-            # .. but note that Suds connections don't have requests_auth, hence the getattr call.
+            # .. we enter here if this is not a Bearer token definition ..
             else:
+
+                # .. otherwise, the credentials will have been already obtained
+                # .. but note that Suds connections don't have requests_auth, hence the getattr call ..
                 auth = getattr(self, 'requests_auth', None)
 
-            return self.session.request(
+                # .. we have no token to report about.
+                token_expires_in_sec = None
+
+            # .. basic details about what we are sending what we are sending ..
+            msg = f'REST out → cid={cid}; {method} {address}; name:{self.config["name"]}; params={params}; len={len(data)}' + \
+                  f'; sec={sec_def_name} ({_sec_type})'
+
+            # .. optionally, log details of the Bearer token ..
+            if is_bearer_token:
+                msg += f'; expiry={token_expires_in_sec}'
+
+            # .. log the information about our request ..
+            logger.info(msg)
+
+            # .. do send it ..
+            response = self.session.request(
                 method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
                 cert=cert, verify=tls_verify, timeout=self.config['timeout'], *args, **kwargs)
+
+            # .. log what we received ..
+            msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
+            logger.info(msg)
+
+            # .. and return it.
+            return response
+
         except RequestsTimeout:
             raise TimeoutException(cid, format_exc())
 
@@ -539,19 +572,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             if isinstance(data, str):
                 data = data.encode('utf-8')
 
-        # Log what we are sending ..
-        msg = f'REST out → cid={cid}; {method} {address} name:{self.config["name"]}; params={params}; len={len(data)}'
-        logger.info(msg)
-
         # .. do invoke the connection ..
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
         # .. by default, we have no response at all ..
         response.data = None # type: ignore
-
-        # .. now, log what we received.
-        msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
-        logger.info(msg)
 
         # .. check if we are explicitly told that we handle JSON ..
         _has_data_format_json = self.config['data_format'] == DATA_FORMAT.JSON
