@@ -179,7 +179,8 @@ class BearerTokenManager:
         # .. turn into a business object that represents the token ..
         info = self._build_bearer_token_info(config.sec_def_name, data)
 
-        msg  = f'Bearer token received for `{config.sec_def_name}`; expires_in={info.expires_in_sec} ({info.expires_in})'
+        msg  = f'Bearer token received for `{config.sec_def_name}`'
+        msg += f'; expires_in={info.expires_in_sec} ({info.expires_in} -> {info.expiration_time} UTC)'
         msg += f'; scopes={info.scopes}'
         logger.info(msg)
 
@@ -243,8 +244,13 @@ class BearerTokenManager:
         # .. store the token ..
         self.cache_api.default.set(key, info, expiry=expiry)
 
+        # .. make it known when exactly the key will expire ..
+        expiry_in = timedelta(seconds=expiry)
+        expiry_time = datetime.now(tz=timezone.utc) + expiry_in
+
         # .. and log what we have done.
         msg  = f'Bearer token for `{info.sec_def_name}` cached under key `{key}`'
+        msg += f'; expiry={expiry} ({expiry_in} -> {expiry_time} UTC)'
         logger.info(msg)
 
 # ################################################################################################################################
