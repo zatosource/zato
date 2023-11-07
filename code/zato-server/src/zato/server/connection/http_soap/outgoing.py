@@ -403,7 +403,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
 # ################################################################################################################################
 
-    def format_address(self, cid:'str', params:'stranydict') -> 'tuple[str, dict]':
+    def format_address(self, cid:'str', params:'stranydict') -> 'tuple[str, stranydict]':
         """ Formats a URL path to an external resource. Note that exceptions raised
         do not contain anything except for CID. This is in order to keep any potentially
         sensitive data from leaking to clients.
@@ -549,7 +549,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
         # .. by default, we have no response at all ..
-        response.data = None
+        response.data = None # type: ignore
 
         # .. now, log what we received.
         msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
@@ -644,7 +644,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         self,
         *,
         cid,          # type: str
-        data='',      # type: str
+        data='',      # type: ignore
         model=None,   # type: type_[Model] | None
         callback,     # type: callnone
         params=None,  # type: strdictnone
@@ -684,28 +684,28 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             if model:
 
                 # .. if this model is actually a list ..
-                if is_list(model, True):
+                if is_list(model, True): # type: ignore
 
                     # .. extract the underlying model ..
-                    model_class:'type_[Model]' = extract_model_class(model)
+                    model_class:'type_[Model]' = extract_model_class(model) # type: ignore
 
                     # .. build a list that we will map the response to ..
-                    data:'list_[Model]' = []
+                    data:'list_[Model]' = [] # type: ignore
 
                     # .. go through everything we had in the response ..
-                    for item in response_data:
+                    for item in response_data: # type: ignore
 
                         # .. build an actual model instance ..
                         _item = model_class.from_dict(item)
 
                         # .. and append it to the data that we are producing ..
-                        data.append(_item)
+                        data.append(_item) # type: ignore
                 else:
                     data:'Model' = model.from_dict(response_data)
 
             # .. if there is no model, use the response as-is ..
             else:
-                data = response_data
+                data = response_data # type: ignore
 
             # .. run our callback, if there is any ..
             if callback:
