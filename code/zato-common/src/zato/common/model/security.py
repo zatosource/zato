@@ -14,8 +14,7 @@ from zato.server.service import Model
 # ################################################################################################################################
 
 if 0:
-    from datetime import timedelta
-    from zato.common.typing_ import dtnone, intnone, stranydict
+    from zato.common.typing_ import datetime, dtnone, intnone, stranydict, timedelta
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,7 +36,7 @@ class BearerTokenConfig(Model):
 
 @dataclass(init=False)
 class BearerTokenInfo(Model):
-    is_cache_hit: 'bool'
+    creation_time: 'datetime'
     sec_def_name: 'str'
     token:'str'
     token_type:'str'
@@ -46,6 +45,16 @@ class BearerTokenInfo(Model):
     expiration_time:'dtnone'
     scopes:'str' = ''
     username:'str' = ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class BearerTokenInfoResult(Model):
+    info: 'BearerTokenInfo'
+    is_cache_hit: 'bool'
+    cache_expiry: 'float'
+    cache_hits: 'int' = 0
 
 # ################################################################################################################################
 # ################################################################################################################################
