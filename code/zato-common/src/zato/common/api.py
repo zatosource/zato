@@ -383,6 +383,10 @@ class SERVER_UP_STATUS(Attrs):
 
 class CACHE:
 
+    class Default_Name:
+        Main = 'default'
+        Bearer_Token = 'zato.bearer.token'
+
     API_USERNAME = 'pub.zato.cache'
 
     class TYPE:

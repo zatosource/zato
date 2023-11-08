@@ -990,6 +990,13 @@ class CacheAPI:
         """
         with self.lock:
             self._clear(cache_type, name)
+#
+# ################################################################################################################################
+
+    def _get_cache(self, cache_type, name):
+        """ Actually returns a cache. Must be called with self.lock held.
+        """
+        return self.caches[cache_type][name]
 
 # ################################################################################################################################
 
@@ -998,6 +1005,22 @@ class CacheAPI:
         """
         with self.lock:
             return self.caches[cache_type][name]
+
+# ################################################################################################################################
+
+    def get_builtin_cache(self, name):
+        """ Returns a built-in cache by its name.
+        """
+        with self.lock:
+            return self._get_cache(CACHE.TYPE.BUILTIN, name)
+
+# ################################################################################################################################
+
+    def get_memcached_cache(self, name):
+        """ Returns a Memcached cache by its name.
+        """
+        with self.lock:
+            return self._get_cache(CACHE.TYPE.MEMCACHED, name)
 
 # ################################################################################################################################
 
