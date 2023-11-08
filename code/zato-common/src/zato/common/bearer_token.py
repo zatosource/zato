@@ -11,6 +11,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import datetime, timedelta, timezone
 from json import dumps, loads
 from logging import getLogger
+from time import time
 
 # dateutil
 from dateutil.parser import parse as dt_parse
@@ -19,16 +20,19 @@ from dateutil.parser import parse as dt_parse
 from requests import post as requests_post
 
 # Zato
-from zato.common.api import Data_Format, ZATO_NOT_GIVEN
-from zato.common.model.security import BearerTokenConfig, BearerTokenInfo
+from zato.cache import KeyExpiredError
+from zato.common.api import CACHE, Data_Format, ZATO_NOT_GIVEN
+from zato.common.model.security import BearerTokenConfig, BearerTokenInfo, BearerTokenInfoResult
 from zato.common.util.api import parse_extra_into_dict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import dtnone, intnone, stranydict
+    from zato.cache import Entry
+    from zato.common.typing_ import any_, dtnone, intnone, stranydict
     from zato.server.base.parallel import ParallelServer
+    from zato.server.connection.cache import Cache
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,10 +44,20 @@ logger = getLogger(__name__)
 
 class BearerTokenManager:
 
+    # Type hints
+    cache: 'Cache'
+
+    # This is where we store the tokens
+    cache_name = CACHE.Default_Name.Bearer_Token
+
     def __init__(self, server:'ParallelServer') -> None:
         self.server = server
-        self.cache_api = self.server.worker_store.cache_api
         self.security_facade = server.security_facade
+        self.set_cache()
+
+    def set_cache(self):
+        cache_api = self.server.worker_store.cache_api
+        self.cache = cache_api.get_builtin_cache(self.cache_name)
 
 # ################################################################################################################################
 
@@ -85,6 +99,7 @@ class BearerTokenManager:
         expiration_time:'dtnone' = None
 
         # These can be built upfront ..
+        out.creation_time = now
         out.sec_def_name = sec_def_name
         out.token = data['access_token']
         out.token_type = data['token_type']
@@ -113,9 +128,6 @@ class BearerTokenManager:
         out.expires_in = expires_in
         out.expires_in_sec = expires_in_sec
         out.expiration_time = expiration_time
-
-        # .. indicate that this token was not found in cache ..
-        out.is_cache_hit = False
 
         # .. and return it to our caller.
         return out
@@ -213,28 +225,36 @@ class BearerTokenManager:
         key = self._get_cache_key(sec_def_name, scopes)
 
         # .. check if it exists ..
-        has_key = key in self.cache_api.default
+        has_key = key in self.cache
 
         return has_key
 
 # ################################################################################################################################
 
-    def _get_bearer_token_from_cache(self, sec_def_name:'str', scopes:'str') -> 'BearerTokenInfo | None':
+    def _get_bearer_token_from_cache(self, sec_def_name:'str', scopes:'str') -> 'any_':
 
         # Build a cache cache key ..
         key = self._get_cache_key(sec_def_name, scopes)
 
         # .. try to get the token information from our cache ..
-        info = self.cache_api.default.get(key) # type: BearerTokenInfo
+        try:
+            cache_entry = self.cache.get(key, details=True) # type: Entry
+        except KeyExpiredError:
 
-        # .. and return it to our caller only if it actually exists.
-        if info and info != ZATO_NOT_GIVEN:
-            info.is_cache_hit = True
-            return info
+            # ..this key has already expired and we cannot get it ..
+            logger.info('Ignoring expired Bearer token key -> %s', key)
+
+            # .. return None explicitly to indicate that there is no such key ..
+            return None
+
+        else:
+            # .. if we are here, we return the key to our caller but only if it actually exists.
+            if cache_entry and cache_entry != ZATO_NOT_GIVEN:
+                return cache_entry
 
 # ################################################################################################################################
 
-    def _store_bearer_token_in_cache(self, info:'BearerTokenInfo', scopes:'str') -> 'None':
+    def _store_bearer_token_in_cache(self, info:'BearerTokenInfo', scopes:'str') -> 'int':
 
         # Build a cache cache key ..
         key = self._get_cache_key(info.sec_def_name, scopes)
@@ -242,29 +262,57 @@ class BearerTokenManager:
         # .. make it expire in half the time the token will be valid for ..
         # .. or in one minute in case the expiration time is not available ..
         if info.expires_in_sec:
-            expiry = info.expires_in_sec / 2
+            expiry = 10 # info.expires_in_sec / 2
         else:
             expiry = 60
 
         # .. store the token ..
-        self.cache_api.default.set(key, info, expiry=expiry)
+        self.cache.set(key, info, expiry=expiry)
 
         # .. make it known when exactly the key will expire ..
         expiry_in = timedelta(seconds=expiry)
         expiry_time = datetime.now(tz=timezone.utc) + expiry_in
 
-        # .. and log what we have done.
+        # .. log what we have done ..
         msg  = f'Bearer token for `{info.sec_def_name}` cached under key `{key}`'
         msg += f'; expiry={expiry} ({expiry_in} -> {expiry_time} UTC)'
         logger.info(msg)
 
+        # .. and return the details to the caller.
+        return expiry # type: ignore
+
 # ################################################################################################################################
 
-    def _get_bearer_token_info_impl(self, config:'BearerTokenConfig', scopes:'str', data_format:'str') -> 'BearerTokenInfo':
+    def _get_bearer_token_info_impl(
+        self,
+        config,      # type: BearerTokenConfig
+        scopes,      # type: str
+        data_format, # type:str
+    ) -> 'BearerTokenInfoResult':
+
+        # Local variables
+        result = BearerTokenInfoResult()
 
         # If we have the token in our cache, we can return it immediately ..
-        if info := self._get_bearer_token_from_cache(config.sec_def_name, scopes):
-            return info
+        if cache_entry := self._get_bearer_token_from_cache(config.sec_def_name, scopes):
+
+            # .. assign the actual value ..
+            result.info = cache_entry.value
+
+            # .. indicate that it came from the cache ..
+            result.is_cache_hit = True
+            result.cache_hits = cache_entry.hits
+
+            # .. build the remaining expiration time, in seconds ..
+            # .. rounded down to make sure it does not take too much log space  ..
+            cache_expiry = cache_entry.expires_at - time()
+            cache_expiry = round(cache_expiry, 2)
+
+            # .. now, can assign the expiration time ..
+            result.cache_expiry = cache_expiry
+
+            # .. and return the result to the caller.
+            return result
 
         # .. we are here if the token was not in the cache ..
         else:
@@ -273,42 +321,47 @@ class BearerTokenManager:
             info = self._get_bearer_token_from_auth_server(config, scopes, data_format)
 
             # .. then we can cache it ..
-            self._store_bearer_token_in_cache(info, scopes)
+            expiry = self._store_bearer_token_in_cache(info, scopes)
+
+            # .. build the result ..
+            result.info = info
+            result.is_cache_hit = False
+            result.cache_expiry = expiry
 
             # .. and now, we can return it to our caller.
-            return info
+            return result
 
 # ################################################################################################################################
 
-    def _get_bearer_token_info(self, sec_def:'stranydict', scopes:'str', data_format:'str') -> 'BearerTokenInfo':
+    def _get_bearer_token_info(self, sec_def:'stranydict', scopes:'str', data_format:'str') -> 'BearerTokenInfoResult':
 
         # Turn the input security definition into a bearer token configuration ..
         config = self._get_bearer_token_config(sec_def)
 
         # .. this gets a token either from the server's cache ..
         # .. or from the remote authentication endpoint ..
-        info = self._get_bearer_token_info_impl(config, scopes, data_format)
+        result = self._get_bearer_token_info_impl(config, scopes, data_format)
 
         # .. now, we can return the token to our caller.
-        return info
+        return result
 
 # ################################################################################################################################
 
     def get_bearer_token_info_by_sec_def_id(
         self,
-        sec_def_id, # type: str
-        scopes,       # type: str
-        data_format,  # type: str
-    ) -> 'BearerTokenInfo':
+        sec_def_id,  # type: int
+        scopes,      # type: str
+        data_format, # type: str
+    ) -> 'BearerTokenInfoResult':
 
         # Get our security definition by its ID ..
         sec_def:'stranydict' = self.security_facade.bearer_token.get_by_id(sec_def_id)
 
         # .. get a token ..
-        info = self._get_bearer_token_info(sec_def, scopes, data_format)
+        result = self._get_bearer_token_info(sec_def, scopes, data_format)
 
         # .. and return it to our caller now.
-        return info
+        return result
 
 # ################################################################################################################################
 
@@ -317,16 +370,16 @@ class BearerTokenManager:
         sec_def_name, # type: str
         scopes,       # type: str
         data_format,  # type: str
-    ) -> 'BearerTokenInfo':
+    ) -> 'BearerTokenInfoResult':
 
         # Get our security definition by its ID ..
         sec_def:'stranydict' = self.security_facade.bearer_token[sec_def_name]
 
         # .. get a token ..
-        info = self._get_bearer_token_info(sec_def, scopes, data_format)
+        result = self._get_bearer_token_info(sec_def, scopes, data_format)
 
         # .. and return it to our caller now.
-        return info
+        return result
 
 # ################################################################################################################################
 # ################################################################################################################################
