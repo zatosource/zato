@@ -182,9 +182,9 @@ class HL7RequestData:
 class Request:
     """ Wraps a service request and adds some useful meta-data.
     """
-    raw_request: 'any_'
+    text: 'any_'
 
-    __slots__ = ('service', 'logger', 'payload', 'raw_request', 'input', 'cid', 'data_format', 'transport',
+    __slots__ = ('service', 'logger', 'payload', 'text', 'input', 'cid', 'data_format', 'transport',
         'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_wsgi_environ', 'channel_params',
         'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq', 'hl7', 'enforce_string_encoding')
 
@@ -198,7 +198,7 @@ class Request:
         self.service = service
         self.logger = cast_('Logger', service.logger)
         self.payload = ''
-        self.raw_request = ''
+        self.text = ''
         self.input = None # type: any_
         self.cid = cast_('str', None)
         self.data_format = cast_('str', data_format)
@@ -248,6 +248,18 @@ class Request:
         else:
             if self.merge_channel_params:
                 self.input.update(self.channel_params)
+
+# ################################################################################################################################
+
+    @property
+    def raw_request(self) -> 'any_':
+        return self.text
+
+# ################################################################################################################################
+
+    @raw_request.setter
+    def raw_request(self, value:'any_') -> 'any_':
+        self.text = value
 
 # ################################################################################################################################
 

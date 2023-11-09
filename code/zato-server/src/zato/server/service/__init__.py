@@ -22,7 +22,7 @@ from lxml.etree import _Element as EtreeElement
 from lxml.objectify import ObjectifiedElement
 
 # gevent
-from gevent import Timeout, spawn
+from gevent import Timeout, spawn as _gevent_spawn
 from gevent.lock import RLock
 
 # Python 2/3 compatibility
@@ -996,7 +996,7 @@ class Service:
         if timeout:
             g = None
             try:
-                g = spawn(self.update_handle, *invoke_args, **kwargs)
+                g = _gevent_spawn(self.update_handle, *invoke_args, **kwargs)
                 return g.get(block=True, timeout=timeout)
             except Timeout:
                 if g:
@@ -1178,8 +1178,10 @@ class Service:
 
 # ################################################################################################################################
 
-    def spawn(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return spawn(*args, **kwargs)
+    def run_in_thread(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return _gevent_spawn(*args, **kwargs)
+
+    spawn = run_in_thread
 
 # ################################################################################################################################
 
