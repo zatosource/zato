@@ -57,7 +57,7 @@ class BearerTokenManager:
 
     def set_cache(self):
         cache_api = self.server.worker_store.cache_api
-        self.cache = cache_api.get_builtin_cache(self.cache_name)
+        # self.cache = cache_api.get_builtin_cache(self.cache_name)
 
 # ################################################################################################################################
 
