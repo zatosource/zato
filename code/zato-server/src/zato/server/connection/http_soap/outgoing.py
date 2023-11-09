@@ -579,8 +579,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         # .. do invoke the connection ..
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
-        # .. by default, we have no response at all ..
-        response.data = None # type: ignore
+        # .. by default, we have no parsed response at all, ..
+        # .. which means that we can assume it will be the same as the raw, text response ..
+        response.data = response.text # type: ignore
 
         # .. check if we are explicitly told that we handle JSON ..
         _has_data_format_json = self.config['data_format'] == DATA_FORMAT.JSON
