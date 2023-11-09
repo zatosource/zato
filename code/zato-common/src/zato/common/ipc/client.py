@@ -118,6 +118,12 @@ class IPCClient:
 
             # .. append the keys with values depending on whether we want to pass them on or not ..
             value = value if include_value else '******'
+
+            # .. make sure there is not too much information to keep the query string short ..
+            if isinstance(value, str):
+                value = value[:30]
+
+            # .. now, do append the new item ..
             params[key] = value
 
         # .. invoke the server ..
