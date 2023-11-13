@@ -15,7 +15,7 @@ from traceback import format_exc
 from gevent import sleep
 
 # ws4py
-from ws4py.client.threadedclient import WebSocketClient
+from zato.server.ext.ws4py.client.threadedclient import WebSocketClient
 
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC, WEB_SOCKET, ZATO_NONE
@@ -312,10 +312,13 @@ class WSXClient:
         self.impl.close(reason=reason)
 
     def is_impl_connected(self) -> 'bool':
+
         if isinstance(self.impl, ZatoWSXClient):
-            return self.impl._zato_client.is_connected
+            is_connected = self.impl._zato_client.is_connected
         else:
-            return not self.impl.terminated
+            is_connected = not self.impl.terminated
+
+        return is_connected
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -401,6 +404,7 @@ class OutconnWSXWrapper(Wrapper):
 # ################################################################################################################################
 
     def on_message_cb(self, msg:'MessageFromServer'):
+
         if self.config.get('on_message_service_name'):
             self.server.invoke(self.config['on_message_service_name'], {
                 'ctx': OnMessage(msg, self.config, self)
@@ -462,9 +466,11 @@ class OutconnWSXWrapper(Wrapper):
             self.conn_in_progress_list.append(conn)
             conn.init()
 
+            sleep(30)
+
             if not conn.is_impl_connected():
                 self.client.decr_in_progress_count()
-                return
+                # return
 
         except Exception:
             logger.warning('WSX client `%s` could not be built `%s`', self.config['name'], format_exc())
