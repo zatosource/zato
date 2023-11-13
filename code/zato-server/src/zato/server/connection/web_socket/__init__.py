@@ -19,7 +19,7 @@ class _UTF8Validator:
     def reset(*ignored_args:'any_', **ignored_kwargs:'any_') -> 'any_':
         pass
 
-from ws4py import streaming
+from zato.server.ext.ws4py import streaming
 streaming.Utf8Validator = _UTF8Validator
 
 # ################################################################################################################################
@@ -43,10 +43,10 @@ from gevent.lock import RLock
 from gevent.pywsgi import WSGIServer as _Gevent_WSGIServer
 
 # ws4py
-from ws4py.exc import HandshakeError
-from ws4py.websocket import WebSocket as _WebSocket
-from ws4py.server.geventserver import GEventWebSocketPool, WebSocketWSGIHandler
-from ws4py.server.wsgiutils import WebSocketWSGIApplication
+from zato.server.ext.ws4py.exc import HandshakeError
+from zato.server.ext.ws4py.websocket import WebSocket as _WebSocket
+from zato.server.ext.ws4py.server.geventserver import GEventWebSocketPool, WebSocketWSGIHandler
+from zato.server.ext.ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
