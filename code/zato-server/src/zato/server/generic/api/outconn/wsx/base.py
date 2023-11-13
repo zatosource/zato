@@ -29,6 +29,7 @@ if 0:
     from zato.common.typing_ import strdict, strlist, strnone
     from zato.common.wsx_client import MessageFromServer
     from zato.server.base.parallel import ParallelServer
+    Bunch = Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
