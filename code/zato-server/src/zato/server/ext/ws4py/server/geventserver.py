@@ -26,7 +26,7 @@ from zato.server.ext.ws4py import format_addresses
 from zato.server.ext.ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 
-logger = logging.getLogger('ws4py')
+logger = logging.getLogger('zato_web_socket')
 
 __all__ = ['WebSocketWSGIHandler', 'WSGIServer',
            'GEventWebSocketPool']

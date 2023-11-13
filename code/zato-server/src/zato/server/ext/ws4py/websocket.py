@@ -23,7 +23,7 @@ from zato.server.ext.ws4py.compat import basestring, unicode
 
 DEFAULT_READING_SIZE = 2
 
-logger = logging.getLogger('ws4py')
+logger = logging.getLogger('zato_web_socket')
 
 __all__ = ['WebSocket', 'EchoWebSocket', 'Heartbeat']
 
@@ -270,7 +270,7 @@ class WebSocket(object):
         The default behaviour of this handler is to log
         the error with a message.
         """
-        logger.exception("Failed to receive data")
+        logger.exception("Failed to receive data -> %s", error)
 
     def _write(self, b):
         """
@@ -379,24 +379,40 @@ class WebSocket(object):
         socket level or during the bytes processing. Otherwise,
         it returns `True`.
         """
+        logger.info('QQQ-1-A IN ONCE')
         if self.terminated:
-            logger.debug("WebSocket is already terminated")
+            logger.info('QQQ-1-B WSX ALREADY TERMINATED')
+            # logger.info("WebSocket is already terminated")
             return False
 
         try:
-            # self.sock.settimeout(20)
+            logger.info('QQQ-2-A RECEIVING...')
+
+            self.sock.settimeout(10)
             b = self.sock.recv(self.reading_buffer_size)
+
+            logger.info('QQQ-2-B RECEIVED -> %s', b)
+
             # self.sock.settimeout(None)
             # This will only make sense with secure sockets.
             if self._is_secure:
                 b += self._get_from_pending()
+        except TimeoutError as e:
+            logger.info('QQQ-3-A TIMEOUT ERROR -> %s', e)
+            return True
         except (socket.error, OSError, pyOpenSSLError) as e:
+            logger.info('QQQ-3-B SOCKET ERROR -> %s', e)
             self.unhandled_error(e)
             return False
         else:
+            logger.info('QQQ-3-C ELSE BLOCK -> %s', b)
             if not self.process(b):
+                logger.info('QQQ-4 SELF PROCESS FALSE -> %s', b)
                 return False
+            else:
+                logger.info('QQQ-5 SELF PROCESS TRUE -> %s', b)
 
+        logger.info('QQQ-6 RETURNING TRUE')
         return True
 
     def terminate(self):
@@ -449,7 +465,7 @@ class WebSocket(object):
         self.reading_buffer_size = s.parser.send(bytes) or DEFAULT_READING_SIZE
 
         if s.closing is not None:
-            logger.debug("Closing message received (%d) '%s'" % (s.closing.code, s.closing.reason))
+            logger.info("Closing message received (%d) '%s'" % (s.closing.code, s.closing.reason))
             if not self.server_terminated:
                 self.close(s.closing.code, s.closing.reason)
             else:
@@ -458,7 +474,7 @@ class WebSocket(object):
 
         if s.errors:
             for error in s.errors:
-                logger.debug("Error message received (%d) '%s'" % (error.code, error.reason))
+                logger.info("Error message received (%d) '%s'" % (error.code, error.reason))
                 self.close(error.code, error.reason)
             s.errors = []
             return False
@@ -512,6 +528,7 @@ class WebSocket(object):
             try:
                 self.opened()
                 while not self.terminated:
+                    logger.info('ZZZ-01-A %s', self.terminated)
                     if not self.once():
                         break
             finally:
