@@ -51,7 +51,7 @@ import time
 from zato.server.ext.ws4py import format_addresses
 from zato.server.ext.ws4py.compat import py3k
 
-logger = logging.getLogger('ws4py')
+logger = logging.getLogger('zato_web_socket')
 
 class SelectPoller(object):
     def __init__(self, timeout=0.1):

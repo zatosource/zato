@@ -43,7 +43,7 @@ from zato.server.ext.ws4py.compat import get_connection
 __all__ = ['WebSocketWSGIHandler', 'WebSocketWSGIRequestHandler',
            'WSGIServer']
 
-logger = logging.getLogger('ws4py')
+logger = logging.getLogger('zato_web_socket')
 
 class WebSocketWSGIHandler(SimpleHandler):
     def setup_environ(self):

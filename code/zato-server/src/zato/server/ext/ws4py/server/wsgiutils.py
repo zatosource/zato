@@ -58,7 +58,7 @@ from zato.server.ext.ws4py.exc import HandshakeError
 from zato.server.ext.ws4py.compat import unicode, py3k
 from zato.server.ext.ws4py import WS_VERSION, WS_KEY, format_addresses
 
-logger = logging.getLogger('ws4py')
+logger = logging.getLogger('zato_web_socket')
 
 __all__ = ['WebSocketWSGIApplication']
 
