@@ -211,7 +211,7 @@ class OutconnWSXWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def on_connected_cb(self, conn:'OutconnWSXWrapper'):
+    def on_connected_cb(self, conn:'OutconnWSXWrapper') -> 'None':
 
         if self.on_connect_service_name:
             try:
@@ -225,7 +225,7 @@ class OutconnWSXWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def on_message_cb(self, msg:'bytes'):
+    def on_message_cb(self, msg:'bytes | MessageFromServer') -> 'None':
 
         if self.on_message_service_name:
             try:
