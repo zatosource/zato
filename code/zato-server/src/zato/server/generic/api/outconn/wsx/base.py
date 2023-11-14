@@ -7,23 +7,24 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from json import loads
 from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC, ZATO_NONE
+from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC, ZATO_NONE
 from zato.common.typing_ import cast_
 from zato.server.connection.queue import Wrapper
 from zato.server.generic.api.outconn.wsx.client_generic import _NonZatoWSXClient
 from zato.server.generic.api.outconn.wsx.client_zato import ZatoWSXClient
-from zato.server.generic.api.outconn.wsx.common import Close, Connected, OnMessage
+from zato.server.generic.api.outconn.wsx.common import OnClosed, OnConnected, OnMessageReceived
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import strdict, strlist, strnone
+    from zato.common.typing_ import callable_, strdict, strlist, strnone
     from zato.common.wsx_client import MessageFromServer
     from zato.server.base.parallel import ParallelServer
     Bunch = Bunch
@@ -36,6 +37,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+_json = DATA_FORMAT.JSON
 msg_closing_superfluous = 'Closing superfluous connection (Zato queue)'
 
 # ################################################################################################################################
@@ -44,6 +46,8 @@ msg_closing_superfluous = 'Closing superfluous connection (Zato queue)'
 class WSXClient:
     """ A client through which outgoing WebSocket messages can be sent.
     """
+    send: 'callable_'
+    invoke: 'callable_'
     is_zato:'bool'
 
     def __init__(self, config:'strdict') -> 'None':
@@ -53,20 +57,30 @@ class WSXClient:
 
     def init(self) -> 'None':
 
+        # Decide which implementation class to use ..
         if self.is_zato:
             _impl_class = ZatoWSXClient
         else:
             _impl_class = _NonZatoWSXClient
 
+        # .. this will create an instance ..
         self.impl = _impl_class(self.config, self.on_connected_cb, self.on_message_cb, self.on_close_cb, self.config['address'])
-        self.send = self.impl.send
 
+        # .. this will initialize it ..
+        self.impl.init()
+
+        # .. so now, we can make use of what was possibly initialized in .init above ..
+        self.send   = self.impl.send
+        self.invoke = self.send
+
+        # .. additional features of the Zato client ..
         if _impl_class is ZatoWSXClient:
-            self.invoke = self.send
             self.invoke_service = self.impl._zato_client.invoke_service # type: ignore
 
-        self.impl.init()
+        # .. now, the client can connect ..
         self.impl.connect()
+
+        # .. and run forever.
         self.impl.run_forever()
 
     def on_connected_cb(self, conn:'OutconnWSXWrapper') -> 'None':
@@ -111,6 +125,7 @@ class OutconnWSXWrapper(Wrapper):
 
     def __init__(self, config:'strdict', server:'ParallelServer') -> 'None':
         config['parent'] = self
+        self._has_json = config.get('data_format') == _json
         self._resolve_config_ids(config, server)
         super(OutconnWSXWrapper, self).__init__(cast_('Bunch', config), COMMON_GENERIC.ConnName.OutconnWSX, server)
 
@@ -159,7 +174,7 @@ class OutconnWSXWrapper(Wrapper):
             config['on_message_service_name'] = self.on_message_service_name
 
         #
-        # Close service
+        # OnClosed service
         #
         if not on_close_service_name:
             if on_close_service_id:
@@ -215,7 +230,7 @@ class OutconnWSXWrapper(Wrapper):
 
         if self.on_connect_service_name:
             try:
-                ctx = Connected(self.config, conn)
+                ctx = OnConnected(self.config, conn)
                 if self.is_on_connect_service_wsx_adapter:
                     self.server.invoke_wsx_adapter(self.on_connect_service_name, ctx)
                 else:
@@ -229,7 +244,10 @@ class OutconnWSXWrapper(Wrapper):
 
         if self.on_message_service_name:
             try:
-                ctx = OnMessage(msg, self.config, self)
+                if self._has_json and isinstance(msg, bytes):
+                    msg = msg.decode('utf8')
+                    msg = loads(msg)
+                ctx = OnMessageReceived(msg, self.config, self)
                 if self.is_on_message_service_wsx_adapter:
                     self.server.invoke_wsx_adapter(self.on_message_service_name, ctx)
                 else:
@@ -260,7 +278,7 @@ class OutconnWSXWrapper(Wrapper):
 
             if self.on_close_service_name:
                 try:
-                    ctx = Close(code, reason, self.config, self)
+                    ctx = OnClosed(code, reason, self.config, self)
                     if self.is_on_close_service_wsx_adapter:
                         self.server.invoke_wsx_adapter(self.on_close_service_name, ctx)
                     else:
