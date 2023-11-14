@@ -27,8 +27,8 @@ from types import GeneratorType
 from gevent import sleep, spawn
 
 # ws4py
-from ws4py.client.geventclient import WebSocketClient
-from ws4py.messaging import Message as ws4py_Message, PingControlMessage
+from zato.server.ext.ws4py.client.geventclient import WebSocketClient
+from zato.server.ext.ws4py.messaging import Message as ws4py_Message, PingControlMessage
 
 # Zato
 from zato.common.api import WEB_SOCKET
@@ -46,7 +46,7 @@ except ImportError:
 # ################################################################################################################################
 
 if 0:
-    from ws4py.messaging import TextMessage
+    from zato.server.ext.ws4py.messaging import TextMessage
     from zato.common.typing_ import any_, anydict, callable_, callnone, strnone
 
 # ################################################################################################################################
@@ -358,7 +358,7 @@ class _WebSocketClientImpl(WebSocketClient):
 # ################################################################################################################################
 
     def close_connection(self):
-        """ Overridden from ws4py.websocket.WebSocket.
+        """ Overridden from zato.server.ext.ws4py.websocket.WebSocket.
         """
         if self.sock:
             try:
