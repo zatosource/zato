@@ -787,10 +787,10 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
 
         try:
 
-            # Lazily-imported here to make sure gevent monkey patches everything well in advance
+            # Lazy-imported here to make sure gevent monkey patches everything well in advance
             from suds.client import Client
             from suds.transport.https import HttpAuthenticated
-            from suds.transport.https import WindowsHttpAuthenticated
+            # from suds.transport.https import WindowsHttpAuthenticated
             from suds.wsse import Security, UsernameToken
 
             client = None
@@ -800,6 +800,17 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
                 transport = HttpAuthenticated(**self.suds_auth)
 
             elif self.sec_type == _NTLM:
+
+                # Suds
+                from suds.transport.http import HttpTransport
+
+                class WindowsHttpAuthenticated(HttpAuthenticated):
+                    def u2handlers(self):
+                        from ntlm3 import HTTPNtlmAuthHandler
+                        handlers = HttpTransport.u2handlers(self)
+                        handlers.append(HTTPNtlmAuthHandler.HTTPNtlmAuthHandler(self.pm))
+                        return handlers
+
                 transport = WindowsHttpAuthenticated(**self.suds_auth)
 
             elif self.sec_type == _WSS:
