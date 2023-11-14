@@ -93,6 +93,10 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var params_pri_tr = '';
     var audit_object_type_label = '';
 
+    var hl7_version = '';
+    var json_path = '';
+    var data_encoding = '';
+
     var serialization_type = item.serialization_type ? item.serialization_type : 'string';
     var security_name = item.security_id ? item.security_select : '<span class="form_hint">---</span>';
 
@@ -118,7 +122,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         audit_object_type_label += 'outgoing connection';
     }
 
-    /* 1,2 */
+    /* 1, 2 */
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
@@ -136,7 +140,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     /* 6 */
     row += String.format('<td>{0}</td>', item.url_path);
 
-    /* 7,8 */
+    /* 7, 8 */
     if(is_channel) {
         row += service_tr;
 
@@ -152,13 +156,13 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     /* 9 */
     row += String.format('<td>{0}</td>', security_name);
 
-    /* 10,11 */
+    /* 10, 11 */
     if(is_soap) {
         row += soap_action_tr;
         row += soap_version_tr;
     }
 
-    /* 12,13,13a */
+    /* 12, 13, 13a */
     if(is_channel) {
 
         row += String.format('<td><a href="/zato/audit-log/http-soap/{0}/?cluster={1}&amp;object_name={2}&amp;object_type_label={3}">View</a></td>',
@@ -167,26 +171,27 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format("<td class='ignore'>{0}</td>", item.content_encoding);
     }
 
-    /* 14,15,16 */
+    /* 14, 15, 16 */
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.security_id);
 
-    /* 17,18,19 */
+    /* 17, 18, 19 */
     row += String.format("<td class='ignore'>{0}</td>", item.cache_id);
     row += String.format("<td class='ignore'>{0}</td>", item.cache_type);
     row += String.format("<td class='ignore'>{0}</td>", item.cache_expiry);
 
-    /* 20,21 */
+    /* 20, 21 */
     row += String.format("<td class='ignore'>{0}</td>", item.has_rbac);
     row += String.format("<td class='ignore'>{0}</td>", item.data_format);
 
-    /* 22,23a,23b */
+    /* 22, 23a, 23b */
     row += String.format("<td class='ignore'>{0}</td>", item.timeout);
     row += String.format("<td class='ignore'>{0}</td>", item.sec_tls_ca_cert_id);
     row += String.format("<td class='ignore'>{0}</td>", item.match_slash);
+    row += String.format("<td class='ignore'>{0}</td>", item.http_accept);
 
-    /* 24,25,26,27 */
+    /* 24, 25, 26, 27 */
     if(is_outgoing) {
         row += String.format("<td class='ignore'>{0}</td>", item.ping_method);
         row += String.format("<td class='ignore'>{0}</td>", item.pool_size);
@@ -194,7 +199,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format("<td class='ignore'>{0}</td>", item.content_type);
     }
 
-    /* 28,29,30,30a */
+    /* 28, 29, 30, 30a */
     if(is_channel) {
         row += merge_url_params_req_tr;
         row += url_params_pri_tr;
@@ -202,7 +207,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += item.method ? item.method : '';
     }
 
-    /* 31,32 */
+    /* 31, 32 */
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.http_soap.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.delete_({0});'>Delete</a>", item.id));
 
@@ -216,6 +221,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
             row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.reload_wsdl({0});'>Reload WSDL</a>", item.id));
         }
         else {
+            row += '<td></td>';
         }
     }
 
@@ -227,15 +233,20 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format("<td class='ignore'>{0}</td>", rate_limit_check_parent_def);
     }
 
-    /* 36 */
+    /* 36a, 36b, 36c */
     row += String.format("<td class='ignore'>{0}</td>", is_audit_log_sent_active);
     row += String.format("<td class='ignore'>{0}</td>", is_audit_log_received_active);
     row += String.format("<td class='ignore'>{0}</td>", data.max_len_messages_sent);
 
-    /* 37 */
+    /* 37a, 37b, 37c */
     row += String.format("<td class='ignore'>{0}</td>", data.max_len_messages_received);
     row += String.format("<td class='ignore'>{0}</td>", data.max_bytes_per_message_sent);
     row += String.format("<td class='ignore'>{0}</td>", data.max_bytes_per_message_received);
+
+    /* 38a, 38b, 38c */
+    row += String.format("<td class='ignore'>{0}</td>", data.hl7_version || hl7_version);
+    row += String.format("<td class='ignore'>{0}</td>", data.json_path || json_path);
+    row += String.format("<td class='ignore'>{0}</td>", data.data_encoding || data_encoding);
 
     if(include_tr) {
         row += '</tr>';
