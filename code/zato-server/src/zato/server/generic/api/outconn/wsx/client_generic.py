@@ -35,8 +35,8 @@ class _NonZatoWSXClientImpl(WebSocketClient, _BaseWSXClient):
         **kwargs:'any_'
     ) -> 'None':
 
-        WebSocketClient.__init__(self, *args, **kwargs)
         _BaseWSXClient.__init__(self, config, on_connected_cb, on_message_cb, on_close_cb)
+        WebSocketClient.__init__(self, *args, **kwargs)
 
 # ################################################################################################################################
 
