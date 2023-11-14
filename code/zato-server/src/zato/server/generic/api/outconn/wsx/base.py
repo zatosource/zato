@@ -10,9 +10,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 from traceback import format_exc
 
-# gevent
-from gevent import sleep
-
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC, ZATO_NONE
 from zato.common.typing_ import cast_
