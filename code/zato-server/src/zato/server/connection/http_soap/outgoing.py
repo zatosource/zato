@@ -28,6 +28,9 @@ from requests.adapters import HTTPAdapter
 from requests.exceptions import Timeout as RequestsTimeout
 from requests.sessions import Session as RequestsSession
 
+# requests-ntlm
+from requests_ntlm import HttpNtlmAuth
+
 # requests-toolbelt
 from requests_toolbelt import MultipartEncoder
 
@@ -120,14 +123,107 @@ class BaseHTTPSOAPWrapper:
         self.base_headers = {}
         self.sec_type = self.config['sec_type']
 
-        # API keys
+        self.soap = {}
+        self.soap['1.1'] = {}
+        self.soap['1.1']['content_type'] = 'text/xml; charset=utf-8'
+        self.soap['1.1']['message'] = """<?xml version="1.0" encoding="utf-8"?>
+<s11:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s11="%s">
+  {header}
+  <s11:Body>{data}</s11:Body>
+</s11:Envelope>""" % (soapenv11_namespace,)
+
+        self.soap['1.1']['header_template'] = """<s11:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
+          <wsse:Security>
+            <wsse:UsernameToken>
+              <wsse:Username>{Username}</wsse:Username>
+              <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">{Password}</wsse:Password>
+            </wsse:UsernameToken>
+          </wsse:Security>
+        </s11:Header>
+        """
+
+        self.soap['1.2'] = {}
+        self.soap['1.2']['content_type'] = 'application/soap+xml; charset=utf-8'
+        self.soap['1.2']['message'] = """<?xml version="1.0" encoding="utf-8"?>
+<s12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s12="%s">{header}
+  <s12:Body>{data}</s12:Body>
+</s12:Envelope>""" % (soapenv12_namespace,)
+
+        self.soap['1.2']['header_template'] = """<s12:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
+          <wsse:Security>
+            <wsse:UsernameToken>
+              <wsse:Username>{Username}</wsse:Username>
+              <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">{Password}</wsse:Password>
+            </wsse:UsernameToken>
+          </wsse:Security>
+        </s12:Header>
+        """
+
+        self.set_address_data()
+        self.set_auth()
+
+# ################################################################################################################################
+
+    def set_auth(self) -> 'None':
+
+        # Local variables
+        self.requests_auth = None
+        self.username = None
+
+        # #######################################
+        #
+        # API Keys
+        #
+        # #######################################
         if self.sec_type == _API_Key:
             username = self.config.get('orig_username')
             if not username:
                 username = self.config['username']
             self.base_headers[username] = self.config['password']
 
-        self.set_address_data()
+        # #######################################
+        #
+        # HTTP Basic Auth
+        #
+        # #######################################
+        elif self.sec_type in {_Basic_Auth}:
+            self.requests_auth = self.auth
+            self.username = self.requests_auth[0]
+
+        # #######################################
+        #
+        # NTLM
+        #
+        # #######################################
+        elif self.sec_type == _NTLM:
+            _username, _password = self.auth
+            _requests_auth = HttpNtlmAuth(_username, _password)
+            self.requests_auth = _requests_auth
+            self.username = _username
+
+        # #######################################
+        #
+        # WS-Security
+        #
+        # #######################################
+        elif self.sec_type == _WSS:
+            self.soap[self.config['soap_version']]['header'] = \
+                self.soap[self.config['soap_version']]['header_template'].format(
+                    Username=self.config['username'], Password=self.config['password'])
+
+# ################################################################################################################################
+
+    def _get_auth(self) -> 'any_':
+        """ Returns a username and password pair or None, if no security definition has been attached.
+        """
+        if self.sec_type in {_Basic_Auth, _NTLM}:
+            auth = (self.config['username'], self.config['password'])
+        else:
+            auth = None
+
+        return auth
+
+    auth = property(fget=_get_auth, doc=_get_auth.__doc__)
 
 # ################################################################################################################################
 
@@ -299,25 +395,25 @@ class BaseHTTPSOAPWrapper:
         if self.config['content_type']:
             return self.config['content_type']
 
-        # Set content type only if we know the data format
+        # For requests other than SOAP, set content type only if we know the data format
         if self.config['data_format']:
 
             # Not SOAP
             if self.config['transport'] == URL_TYPE.PLAIN_HTTP:
 
                 # JSON
-                return CONTENT_TYPE.JSON
+                return CONTENT_TYPE.JSON # type: ignore
 
-            # SOAP
-            elif self.config['transport'] == URL_TYPE.SOAP:
+        # SOAP
+        elif self.config['transport'] == URL_TYPE.SOAP:
 
-                # SOAP 1.1
-                if self.config['soap_version'] == '1.1':
-                    return CONTENT_TYPE.SOAP11
+            # SOAP 1.1
+            if self.config['soap_version'] == '1.1':
+                return CONTENT_TYPE.SOAP11 # type: ignore
 
-                # SOAP 1.2
-                else:
-                    return CONTENT_TYPE.SOAP12
+            # SOAP 1.2
+            else:
+                return CONTENT_TYPE.SOAP12 # type: ignore
 
         # If we are here, assume it is regular text by default
         return 'text/plain'
@@ -376,59 +472,6 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         super(HTTPSOAPWrapper, self).__init__(config, requests_module, server)
         self.server = server
 
-        self.soap = {}
-        self.soap['1.1'] = {}
-        self.soap['1.1']['content_type'] = 'text/xml; charset=utf-8'
-        self.soap['1.1']['message'] = """<?xml version="1.0" encoding="utf-8"?>
-<s11:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s11="%s">
-  {header}
-  <s11:Body>{data}</s11:Body>
-</s11:Envelope>""" % (soapenv11_namespace,)
-
-        self.soap['1.1']['header_template'] = """<s11:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
-          <wsse:Security>
-            <wsse:UsernameToken>
-              <wsse:Username>{Username}</wsse:Username>
-              <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">{Password}</wsse:Password>
-            </wsse:UsernameToken>
-          </wsse:Security>
-        </s11:Header>
-        """
-
-        self.soap['1.2'] = {}
-        self.soap['1.2']['content_type'] = 'application/soap+xml; charset=utf-8'
-        self.soap['1.2']['message'] = """<?xml version="1.0" encoding="utf-8"?>
-<s12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s12="%s">{header}
-  <s12:Body>{data}</s12:Body>
-</s12:Envelope>""" % (soapenv12_namespace,)
-
-        self.soap['1.2']['header_template'] = """<s12:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
-          <wsse:Security>
-            <wsse:UsernameToken>
-              <wsse:Username>{Username}</wsse:Username>
-              <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">{Password}</wsse:Password>
-            </wsse:UsernameToken>
-          </wsse:Security>
-        </s12:Header>
-        """
-        self.set_auth()
-
-    def set_auth(self) -> 'None':
-
-        self.requests_auth = None
-        self.username = None
-
-        # HTTP Basic Auth
-        if self.sec_type == _Basic_Auth:
-            self.requests_auth = self.auth
-            self.username = self.requests_auth[0]
-
-        # WS-Security
-        elif self.sec_type == _WSS:
-            self.soap[self.config['soap_version']]['header'] = \
-                self.soap[self.config['soap_version']]['header_template'].format(
-                    Username=self.config['username'], Password=self.config['password'])
-
 # ################################################################################################################################
 
     def __str__(self) -> 'str':
@@ -443,14 +486,13 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         do not contain anything except for CID. This is in order to keep any potentially
         sensitive data from leaking to clients.
         """
-
         if not params:
             logger.warning('CID:`%s` No parameters given for URL path:`%r`', cid, self.config['address_url_path'])
             raise ValueError('CID:`{}` No parameters given for URL path'.format(cid))
 
         path_params = {}
         try:
-            for name in self.path_params:
+            for name in self.path_params: # type: ignore
                 path_params[name] = params.pop(name)
 
             return (self.address.format(**path_params), dict(params))
@@ -463,26 +505,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 # ################################################################################################################################
 
     def _impl(self) -> 'RequestsSession':
-        """ Returns the self.session object through which access to HTTP/SOAP
-        resources is mediated.
+        """ Returns the self.session object through which access to HTTP/SOAP resources is provided.
         """
         return self.session
 
     impl = property(fget=_impl, doc=_impl.__doc__)
-
-# ################################################################################################################################
-
-    def _get_auth(self) -> 'None | tuple[str, str]':
-        """ Returns a username and password pair or None, if no security definition has been attached.
-        """
-        if self.sec_type in {_Basic_Auth}:
-            auth = (self.config['username'], self.config['password'])
-        else:
-            auth = None
-
-        return auth
-
-    auth = property(fget=_get_auth, doc=_get_auth.__doc__)
 
 # ################################################################################################################################
 
@@ -495,7 +522,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
     def _soap_data(self, data:'str', headers:'stranydict') -> 'tuple[str, stranydict]':
         """ Wraps the data in a SOAP-specific messages and adds the headers required.
         """
-        soap_config = self.soap[self.config['soap_version']] # type: strstrdict
+        soap_config:'strstrdict' = self.soap[self.config['soap_version']]
 
         # The idea here is that even though there usually won't be the Content-Type
         # header provided by the user, we shouldn't overwrite it if one has been
@@ -503,8 +530,13 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if not headers.get('Content-Type'):
             headers['Content-Type'] = soap_config['content_type']
 
-        soap_header = ''
-        return soap_config['message'].format(header=soap_header, data=data), headers
+        # We do not need an envelope if the data already has one ..
+        if ':Envelope>' in data:
+            return data, headers
+
+        # .. otherwise, we need to add it.
+        else:
+            return soap_config['message'].format(header=soap_header, data=data), headers
 
 # ################################################################################################################################
 
@@ -520,6 +552,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # First, make sure that the connection is active
         self._enforce_is_active()
+
+        # Local variables
+        _is_soap = self.config['transport'] == 'soap'
 
         # Pop it here for later use because we cannot pass it to the requests module
         model = kwargs.pop('model', None)
@@ -559,7 +594,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         headers = self._create_headers(cid, headers)
 
         # .. SOAP requests need to be specifically formatted now ..
-        if self.config['transport'] == 'soap':
+        if _is_soap:
             data, headers = self._soap_data(data, headers)
 
         # .. check if we have custom query parameters ..
@@ -572,7 +607,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             address, qs_params = self.address, dict(params)
 
         # .. make sure that Unicode objects are turned into bytes ..
-        if needs_serialize_based_on_content_type:
+        if needs_serialize_based_on_content_type and (not _is_soap):
             if isinstance(data, str):
                 data = data.encode('utf-8')
 
@@ -587,7 +622,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         _has_data_format_json = self.config['data_format'] == DATA_FORMAT.JSON
 
         # .. check if we perhaps received JSON in the response ..
-        _has_json_content_type = 'application/json' in response.headers.get('Content-Type') or '' # type: ignore
+        _has_json_content_type = 'application/json' in (response.headers.get('Content-Type') or '') # type: ignore
 
         # .. are we actually handling JSON in this response .. ?
         _is_json:'bool' = _has_data_format_json or _has_json_content_type # type: ignore
