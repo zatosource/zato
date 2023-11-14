@@ -22,7 +22,7 @@ from lxml.etree import _Element as EtreeElement
 from lxml.objectify import ObjectifiedElement
 
 # gevent
-from gevent import Timeout, spawn as _gevent_spawn
+from gevent import Timeout, sleep as _gevent_sleep, spawn as _gevent_spawn
 from gevent.lock import RLock
 
 # Python 2/3 compatibility
@@ -1170,6 +1170,11 @@ class Service:
                 block = args[1]
 
         return self.server.zato_lock_manager(name or self.name, ttl=ttl, block=block)
+
+# ################################################################################################################################
+
+    def sleep(self, timeout:'int'=1) -> 'None':
+        _gevent_sleep(timeout)
 
 # ################################################################################################################################
 
