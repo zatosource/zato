@@ -16,8 +16,9 @@ from zato.common.api import WEB_SOCKET
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, callable_, stranydict, strnone
+    from zato.common.typing_ import any_, callable_, strdict, strnone
     from zato.common.wsx_client import MessageFromServer
+    from zato.server.base.parallel import ParallelServer
     from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
 
 # ################################################################################################################################
@@ -33,34 +34,45 @@ class WSXCtx:
     """
     type = None
 
-    def __init__(self, config:'stranydict', conn:'OutconnWSXWrapper') -> 'None':
+    def __init__(self, config:'strdict', conn:'OutconnWSXWrapper') -> 'None':
         self.config = config
         self.conn = conn
-
-# ################################################################################################################################
-
-    def invoke_service(self, server:'ParallelServer', service_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Connected(WSXCtx):
+
     type = WEB_SOCKET.OUT_MSG_TYPE.CONNECT
+
+    def invoke_service(self, server:'ParallelServer', service_name:'str') -> 'None':
+        instance, _ = server.service_store.new_instance_by_name(service_name)
+        instance.on_connected(self) # type: ignore
+
+OnConnected = Connected
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class OnMessage(WSXCtx):
+
     type = WEB_SOCKET.OUT_MSG_TYPE.MESSAGE
 
-    def __init__(self, data:'MessageFromServer', *args:'any_', **kwargs:'any_') -> 'None':
+    def __init__(self, data:'strdict | MessageFromServer', *args:'any_', **kwargs:'any_') -> 'None':
         self.data = data
         super(OnMessage, self).__init__(*args, **kwargs)
+
+    def invoke_service(self, server:'ParallelServer', service_name:'str') -> 'None':
+        instance, _ = server.service_store.new_instance_by_name(service_name)
+        instance.on_message_received(self) # type: ignore
+
+OnMessageReceived = OnMessage
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Close(WSXCtx):
+
     type = WEB_SOCKET.OUT_MSG_TYPE.CLOSE
 
     def __init__(self, code:'int', reason:'strnone'=None, *args:'any_', **kwargs:'any_') -> 'None':
@@ -68,13 +80,19 @@ class Close(WSXCtx):
         self.reason = reason
         super(Close, self).__init__(*args, **kwargs)
 
+    def invoke_service(self, server:'ParallelServer', service_name:'str') -> 'None':
+        instance, _ = server.service_store.new_instance_by_name(service_name)
+        instance.on_closed(self) # type: ignore
+
+OnClosed = Close
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class _BaseWSXClient:
     def __init__(
         self,
-        config:'stranydict',
+        config:'strdict',
         on_connected_cb:'callable_',
         on_message_cb:'callable_',
         on_close_cb:'callable_',
