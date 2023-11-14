@@ -124,28 +124,61 @@ class OutconnWSXWrapper(Wrapper):
 
     def _resolve_config_ids(self, config:'strdict', server:'ParallelServer') -> 'None':
 
-        on_connect_service_id   = config.get('on_connect_service_id', 0)   # type: int
-        on_message_service_id   = config.get('on_message_service_id', 0)   # type: int
-        on_close_service_id     = config.get('on_close_service_id', 0)     # type: int
+        on_connect_service_id   = config.get('on_connect_service_id',   0) # type: int
+        on_message_service_id   = config.get('on_message_service_id',   0) # type: int
+        on_close_service_id     = config.get('on_close_service_id',     0) # type: int
         on_subscribe_service_id = config.get('on_subscribe_service_id', 0) # type: int
 
-        if on_connect_service_id:
-            self.on_connect_service_name = server.api_service_store_get_service_name_by_id(on_connect_service_id)
+        on_connect_service_name   = config.get('on_connect_service_name',   '') # type: str
+        on_message_service_name   = config.get('on_message_service_name',   '') # type: str
+        on_close_service_name     = config.get('on_close_service_name',     '') # type: str
+        on_subscribe_service_name = config.get('on_subscribe_service_name', '') # type: str
+
+        #
+        # Connect service
+        #
+        if not on_connect_service_name:
+            if on_connect_service_id:
+                on_connect_service_name = server.api_service_store_get_service_name_by_id(on_connect_service_id)
+
+        if on_connect_service_name:
+            self.on_connect_service_name = on_connect_service_name
             self.is_on_connect_service_wsx_adapter = server.is_service_wsx_adapter(self.on_connect_service_name)
             config['on_connect_service_name'] = self.on_connect_service_name
 
-        if on_message_service_id:
-            self.on_message_service_name = server.api_service_store_get_service_name_by_id(on_message_service_id)
+        #
+        # On message service
+        #
+        if not on_message_service_name:
+            if on_message_service_id:
+                on_message_service_name = server.api_service_store_get_service_name_by_id(on_message_service_id)
+
+        if on_message_service_name:
+            self.on_message_service_name = on_message_service_name
             self.is_on_message_service_wsx_adapter = server.is_service_wsx_adapter(self.on_message_service_name)
             config['on_message_service_name'] = self.on_message_service_name
 
-        if on_close_service_id:
-            self.on_close_service_name = server.api_service_store_get_service_name_by_id(on_close_service_id)
+        #
+        # Close service
+        #
+        if not on_close_service_name:
+            if on_close_service_id:
+                on_close_service_name = server.api_service_store_get_service_name_by_id(on_close_service_id)
+
+        if on_close_service_name:
+            self.on_close_service_name = on_close_service_name
             self.is_on_close_service_wsx_adapter = server.is_service_wsx_adapter(self.on_close_service_name)
             config['on_close_service_name'] = self.on_close_service_name
 
-        if on_subscribe_service_id:
-            self.on_subscribe_service_name = server.api_service_store_get_service_name_by_id(on_subscribe_service_id)
+        #
+        # Subscribe service
+        #
+        if not on_subscribe_service_name:
+            if on_subscribe_service_id:
+                on_subscribe_service_name = server.api_service_store_get_service_name_by_id(on_subscribe_service_id)
+
+        if on_subscribe_service_name:
+            self.on_subscribe_service_name = on_subscribe_service_name
             self.is_on_subscribe_service_wsx_adapter = server.is_service_wsx_adapter(self.on_subscribe_service_name)
             config['on_subscribe_service_name'] = self.on_subscribe_service_name
 
@@ -180,23 +213,29 @@ class OutconnWSXWrapper(Wrapper):
 
     def on_connected_cb(self, conn:'OutconnWSXWrapper'):
 
-        if self.config.get('on_connect_service_name'):
+        if self.on_connect_service_name:
             try:
-                self.server.invoke(self.config['on_connect_service_name'], {
-                    'ctx': Connected(self.config, conn)
-                })
+                ctx = Connected(self.config, conn)
+                if self.is_on_connect_service_wsx_adapter:
+                    self.server.invoke_wsx_adapter(self.on_connect_service_name, ctx)
+                else:
+                    self.server.invoke(self.on_connect_service_name, ctx)
             except Exception:
-                logger.warning('Could not invoke CONNECT service `%s`, e:`%s`',
-                    self.config['on_close_service_name'], format_exc())
+                logger.warning('Could not invoke CONNECT service `%s`, e:`%s`', self.on_connect_service_name, format_exc())
 
 # ################################################################################################################################
 
-    def on_message_cb(self, msg:'MessageFromServer'):
+    def on_message_cb(self, msg:'bytes'):
 
-        if self.config.get('on_message_service_name'):
-            self.server.invoke(self.config['on_message_service_name'], {
-                'ctx': OnMessage(msg, self.config, self)
-            })
+        if self.on_message_service_name:
+            try:
+                ctx = OnMessage(msg, self.config, self)
+                if self.is_on_message_service_wsx_adapter:
+                    self.server.invoke_wsx_adapter(self.on_message_service_name, ctx)
+                else:
+                    self.server.invoke(self.on_message_service_name, ctx)
+            except Exception:
+                logger.warning('Could not invoke MESSAGE service `%s`, e:`%s`', self.on_message_service_name, format_exc())
 
 # ################################################################################################################################
 
@@ -219,14 +258,15 @@ class OutconnWSXWrapper(Wrapper):
 
             logger.info('Remote server closed connection to WebSocket `%s`, c:`%s`, r:`%s`', self.config['name'], code, reason)
 
-            if self.config.get('on_close_service_name'):
-
+            if self.on_close_service_name:
                 try:
-                    self.server.invoke(self.config['on_close_service_name'], {
-                        'ctx': Close(code, reason, self.config, self)
-                    })
+                    ctx = Close(code, reason, self.config, self)
+                    if self.is_on_close_service_wsx_adapter:
+                        self.server.invoke_wsx_adapter(self.on_close_service_name, ctx)
+                    else:
+                        self.server.invoke(self.on_close_service_name, ctx)
                 except Exception:
-                    logger.warning('Could not invoke CLOSE service `%s`, e:`%s`', self.config['on_close_service_name'], format_exc())
+                    logger.warning('Could not invoke CLOSE service `%s`, e:`%s`', self.on_close_service_name, format_exc())
 
             has_auto_reconnect:'bool' = self.config.get('has_auto_reconnect', True)
 
