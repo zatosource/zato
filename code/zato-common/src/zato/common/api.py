@@ -1120,7 +1120,7 @@ class STOMP:
 CONTENT_TYPE = Bunch(
     JSON = 'application/json',
     PLAIN_XML = 'application/xml',
-    SOAP11 = 'text/xml',
+    SOAP11 = 'text/xml; charset=UTF-8',
     SOAP12 = 'application/soap+xml; charset=utf-8',
 ) # type: Bunch
 
