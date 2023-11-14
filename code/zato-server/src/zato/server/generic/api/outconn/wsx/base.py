@@ -68,6 +68,7 @@ class WSXClient:
             self.invoke = self.send
             self.invoke_service = self.impl._zato_client.invoke_service # type: ignore
 
+        self.impl.init()
         self.impl.connect()
         self.impl.run_forever()
 
@@ -88,7 +89,7 @@ class WSXClient:
         if isinstance(self.impl, ZatoWSXClient):
             is_connected = self.impl._zato_client.is_connected
         else:
-            is_connected = not self.impl.terminated # type: ignore
+            is_connected = self.impl.is_connected()
 
         return is_connected
 
@@ -238,11 +239,9 @@ class OutconnWSXWrapper(Wrapper):
             self.conn_in_progress_list.append(conn)
             conn.init()
 
-            sleep(5)
-
             if not conn.is_impl_connected():
                 self.client.decr_in_progress_count()
-                # return
+                return
 
         except Exception:
             logger.warning('WSX client `%s` could not be built `%s`', self.config['name'], format_exc())
