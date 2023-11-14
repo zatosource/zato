@@ -1854,6 +1854,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         is_active = self.worker_store.is_active_generic_conn(conn_id)
         return is_active
 
+    def is_service_wsx_adapter(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self.service_store.is_service_wsx_adapter(*args, **kwargs)
+
 # ################################################################################################################################
 # ################################################################################################################################
 

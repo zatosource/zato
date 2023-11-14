@@ -319,6 +319,11 @@ class ServiceStore:
 
 # ################################################################################################################################
 
+    def is_service_wsx_adapter(self, service_name:'str') -> 'bool':
+        return True
+
+# ################################################################################################################################
+
     def edit_service_data(self, config:'stranydict') -> 'None':
 
         # Udpate the ConfigDict object
