@@ -96,6 +96,7 @@ if 0:
     from zato.server.ext.zunicorn.workers.ggevent import GeventWorker
     from zato.server.service.store import ServiceStore
     from zato.simpleio import SIOServerConfig
+    from zato.server.generic.api.outconn.wsx.common import WSXCtx
     from zato.server.startup_callable import StartupCallableTool
     from zato.sso.api import SSOAPI
 
@@ -1540,6 +1541,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 serialize=kwargs.pop('serialize', True),
                 *args, **kwargs)
             return response
+
+# ################################################################################################################################
+
+    def invoke_wsx_adapter(self, service_name:'str', ctx:'WSXCtx') -> 'None':
+        ctx.invoke_service(self, service_name)
 
 # ################################################################################################################################
 
