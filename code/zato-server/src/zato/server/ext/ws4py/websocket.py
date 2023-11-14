@@ -57,19 +57,15 @@ class Heartbeat(threading.Thread):
     def run(self):
         self.running = True
         while self.running:
-            print()
-            print(222, self.frequency)
-            print(333, self.running)
-            print(444, self.websocket.terminated)
-            print()
+
             time.sleep(self.frequency)
             if self.websocket.terminated:
                 break
 
             try:
                 self.websocket.send(PingControlMessage(data='beep'))
-            except socket.error:
-                logger.info("Heartbeat failed")
+            except socket.error as e:
+                logger.info('WSX PingControl error -> %s', e)
                 self.websocket.server_terminated = True
                 self.websocket.close_connection()
                 break
@@ -170,7 +166,7 @@ class WebSocket(object):
                 self._peer_address = self._peer_address[:2]
         return self._peer_address
 
-    def opened(self):
+    def zopened(self):
         """
         Called by the server when the upgrade handshake
         has succeeeded.
@@ -195,7 +191,7 @@ class WebSocket(object):
             self.server_terminated = True
             self._write(self.stream.close(code=code, reason=reason).single(mask=self.stream.always_mask))
 
-    def closed(self, code, reason=None):
+    def zclosed(self, code, reason=None):
         """
         Called  when the websocket stream and connection are finally closed.
         The provided ``code`` is status set by the other point and
@@ -247,7 +243,7 @@ class WebSocket(object):
         """
         pass
 
-    def received_message(self, message):
+    def zreceived_message(self, message):
         """
         Called whenever a complete ``message``, binary or text,
         is received and ready for application's processing.
@@ -382,40 +378,26 @@ class WebSocket(object):
         socket level or during the bytes processing. Otherwise,
         it returns `True`.
         """
-        logger.info('QQQ-1-A IN ONCE')
         if self.terminated:
-            logger.info('QQQ-1-B WSX ALREADY TERMINATED')
-            # logger.info("WebSocket is already terminated")
             return False
 
         try:
-            logger.info('QQQ-2-A RECEIVING...')
-
-            self.sock.settimeout(10)
+            self.sock.settimeout(180)
             b = self.sock.recv(self.reading_buffer_size)
-
-            logger.info('QQQ-2-B RECEIVED -> %s', b)
 
             # self.sock.settimeout(None)
             # This will only make sense with secure sockets.
             if self._is_secure:
                 b += self._get_from_pending()
         except TimeoutError as e:
-            logger.info('QQQ-3-A TIMEOUT ERROR -> %s', e)
             return True
         except (socket.error, OSError, pyOpenSSLError) as e:
-            logger.info('QQQ-3-B SOCKET ERROR -> %s', e)
             self.unhandled_error(e)
             return False
         else:
-            logger.info('QQQ-3-C ELSE BLOCK -> %s', b)
             if not self.process(b):
-                logger.info('QQQ-4 SELF PROCESS FALSE -> %s', b)
                 return False
-            else:
-                logger.info('QQQ-5 SELF PROCESS TRUE -> %s', b)
 
-        logger.info('QQQ-6 RETURNING TRUE')
         return True
 
     def terminate(self):
@@ -531,7 +513,6 @@ class WebSocket(object):
             try:
                 self.opened()
                 while not self.terminated:
-                    logger.info('ZZZ-01-A %s', self.terminated)
                     if not self.once():
                         break
             finally:
