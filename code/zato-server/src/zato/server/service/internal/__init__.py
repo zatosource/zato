@@ -199,6 +199,7 @@ class Ping(AdminService):
         response_elem = 'zato_ping_response'
 
     def handle(self):
+        self.logger.info('Ping invoked -> %s', self.request.raw_request)
         self.response.payload.pong = 'zato'
 
     def after_handle(self):

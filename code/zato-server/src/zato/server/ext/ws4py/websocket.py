@@ -211,7 +211,10 @@ class WebSocket(object):
         Returns ``True`` if both the client and server have been
         marked as terminated.
         """
-        return self.client_terminated is True and self.server_terminated is True
+        client_terminated = self.client_terminated is True
+        server_terminated = self.server_terminated is True
+        is_terminated = client_terminated and server_terminated
+        return is_terminated
 
     @property
     def connection(self):

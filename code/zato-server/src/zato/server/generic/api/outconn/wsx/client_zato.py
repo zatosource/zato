@@ -76,7 +76,13 @@ class ZatoWSXClient(_BaseWSXClient):
             self._zato_client_config.secret = self.config['secret']
 
         self._zato_client = _ZatoWSXClientImpl(self.opened, self._zato_client_config)
-        self.invoke = self.send = self._zato_client.invoke
+        self.invoke = self._zato_client.invoke
+        self.send = self.invoke
+
+# ################################################################################################################################
+
+    def init(self) -> 'None':
+        pass
 
 # ################################################################################################################################
 
