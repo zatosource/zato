@@ -99,6 +99,16 @@ class OutconnWSXWrapper(Wrapper):
     has_delete_reasons = True
     supports_reconnections = True
 
+    on_connect_service_name:'str' = ''
+    on_message_service_name:'str' = ''
+    on_close_service_name:'str'   = ''
+    on_subscribe_service_name:'str' = ''
+
+    is_on_connect_service_wsx_adapter:'bool'   = False
+    is_on_message_service_wsx_adapter:'bool'   = False
+    is_on_close_service_wsx_adapter:'bool'     = False
+    is_on_subscribe_service_wsx_adapter:'bool' = False
+
     def __init__(self, config:'strdict', server:'ParallelServer') -> 'None':
         config['parent'] = self
         self._resolve_config_ids(config, server)
@@ -120,16 +130,24 @@ class OutconnWSXWrapper(Wrapper):
         on_subscribe_service_id = config.get('on_subscribe_service_id', 0) # type: int
 
         if on_connect_service_id:
-            config['on_connect_service_name'] = server.api_service_store_get_service_name_by_id(on_connect_service_id)
+            self.on_connect_service_name = server.api_service_store_get_service_name_by_id(on_connect_service_id)
+            self.is_on_connect_service_wsx_adapter = server.is_service_wsx_adapter(self.on_connect_service_name)
+            config['on_connect_service_name'] = self.on_connect_service_name
 
         if on_message_service_id:
-            config['on_message_service_name'] = server.api_service_store_get_service_name_by_id(on_message_service_id)
+            self.on_message_service_name = server.api_service_store_get_service_name_by_id(on_message_service_id)
+            self.is_on_message_service_wsx_adapter = server.is_service_wsx_adapter(self.on_message_service_name)
+            config['on_message_service_name'] = self.on_message_service_name
 
         if on_close_service_id:
-            config['on_close_service_name'] = server.api_service_store_get_service_name_by_id(on_close_service_id)
+            self.on_close_service_name = server.api_service_store_get_service_name_by_id(on_close_service_id)
+            self.is_on_close_service_wsx_adapter = server.is_service_wsx_adapter(self.on_close_service_name)
+            config['on_close_service_name'] = self.on_close_service_name
 
         if on_subscribe_service_id:
-            config['on_subscribe_service_name'] = server.api_service_store_get_service_name_by_id(on_subscribe_service_id)
+            self.on_subscribe_service_name = server.api_service_store_get_service_name_by_id(on_subscribe_service_id)
+            self.is_on_subscribe_service_wsx_adapter = server.is_service_wsx_adapter(self.on_subscribe_service_name)
+            config['on_subscribe_service_name'] = self.on_subscribe_service_name
 
         if config.get('security_def'):
             if config['security_def'] != ZATO_NONE:
