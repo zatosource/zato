@@ -178,7 +178,7 @@ class _CreateEdit(_BaseService):
 
             security_id = int(security_id)
 
-            # .. look the security name by its ID ..
+            # .. look up the security name by its ID ..
             if sec_def_type == SEC_DEF_TYPE.BASIC_AUTH:
                 func = self.server.worker_store.basic_auth_get_by_id
             elif sec_def_type == SEC_DEF_TYPE.OAUTH:

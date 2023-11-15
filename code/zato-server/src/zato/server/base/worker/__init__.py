@@ -89,7 +89,7 @@ from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
 from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
-from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
+from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
 from zato.server.pubsub import PubSub
 from zato.server.pubsub.delivery.tool import PubSubTool
 from zato.server.rbac_ import RBAC
@@ -522,7 +522,7 @@ class WorkerStore(_WorkerStoreBase):
 
         # Update the security configuration if it is a separate one ..
         if _sec_config:
-            _sec_config_id = _sec_config.get('id') or _sec_config.get('security_id')
+            _sec_config_id = _sec_config.get('security_id') or _sec_config.get('id')
             sec_config['security_id'] = _sec_config_id
             sec_config['sec_type'] = _sec_config['sec_type']
             sec_config['username'] = _sec_config.get('username')

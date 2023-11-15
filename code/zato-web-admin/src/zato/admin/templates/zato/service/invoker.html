@@ -34,33 +34,6 @@
                     <textarea style="width:100%; height:130px" id="payload" name="payload"></textarea>
                     <br/><br/>
 
-                    <table>
-                        <tr>
-                            <td>
-                                Data format:
-                            </td>
-                            <td>
-                                <select name="data_format" id="data_format">
-                                    <option value="" selected="selected">----------</option>
-                                    <option value="json">JSON</option>
-                                    <option value="xml">XML</option>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                Transport:
-                            </td>
-                            <td>
-                                <select name="transport" id="transport">
-                                    <option value="" selected="selected">----------</option>
-                                    <option value="plain_http">Plain HTTP</option>
-                                    <option value="soap">SOAP</option>
-                                </select>
-                            </td>
-                        </tr>
-                    </table>
-
                     <input type="hidden" id="name" name="name" value="{{ service.name }}" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
 

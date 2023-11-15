@@ -134,7 +134,7 @@ class Create(ZatoCommand):
             self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, ide_pub_rbac_role)
 
             self.add_ping_services(session, cluster)
-            self.add_default_cache(session, cluster)
+            self.add_default_caches(session, cluster)
             self.add_cache_endpoints(session, cluster)
             self.add_crypto_endpoints(session, cluster)
             self.add_pubsub_sec_endpoints(session, cluster)
@@ -409,22 +409,39 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_default_cache(self, session, cluster):
-        """ Adds default cache to cluster.
+    def add_default_caches(self, session, cluster):
+        """ Adds default caches to the cluster.
         """
 
         # Zato
         from zato.common.api import CACHE
         from zato.common.odb.model import CacheBuiltin
 
+        # This is the default cache that is used if a specific one is not selected by users
         item = CacheBuiltin()
         item.cluster = cluster
-        item.name = 'default'
+        item.name = CACHE.Default_Name.Main
         item.is_active = True
         item.is_default = True
         item.max_size = CACHE.DEFAULT.MAX_SIZE
         item.max_item_size = CACHE.DEFAULT.MAX_ITEM_SIZE
         item.extend_expiry_on_get = True
+        item.extend_expiry_on_set = True
+        item.cache_type = CACHE.TYPE.BUILTIN
+        item.sync_method = CACHE.SYNC_METHOD.IN_BACKGROUND.id
+        item.persistent_storage = CACHE.PERSISTENT_STORAGE.SQL.id
+        session.add(item)
+
+        # This is used for Bearer tokens - note that it does not extend the key's expiration on .get.
+        # Otherwise, it is the same as the default one.
+        item = CacheBuiltin()
+        item.cluster = cluster
+        item.name = CACHE.Default_Name.Bearer_Token
+        item.is_active = True
+        item.is_default = True
+        item.max_size = CACHE.DEFAULT.MAX_SIZE
+        item.max_item_size = CACHE.DEFAULT.MAX_ITEM_SIZE
+        item.extend_expiry_on_get = False
         item.extend_expiry_on_set = True
         item.cache_type = CACHE.TYPE.BUILTIN
         item.sync_method = CACHE.SYNC_METHOD.IN_BACKGROUND.id
@@ -613,7 +630,7 @@ class Create(ZatoCommand):
             url_path = service_to_endpoint[name]
 
             http_soap = HTTPSOAP(None, name, True, True, 'channel', 'plain_http', None, url_path, None, '',
-                None, DATA_FORMAT.JSON, security=None, service=service, cluster=cluster)
+                None, DATA_FORMAT.JSON, security=sec, service=service, cluster=cluster)
 
             session.add(http_soap)
 
@@ -657,7 +674,7 @@ class Create(ZatoCommand):
             url_path = service_to_endpoint[name]
 
             http_soap = HTTPSOAP(None, name, True, True, 'channel', 'plain_http', None, url_path, None, '',
-                None, DATA_FORMAT.JSON, security=None, service=service, cluster=cluster)
+                None, DATA_FORMAT.JSON, security=sec, service=service, cluster=cluster)
 
             session.add(http_soap)
 

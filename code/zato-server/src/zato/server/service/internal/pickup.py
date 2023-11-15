@@ -201,7 +201,7 @@ class _OnUpdate(Service):
         #
         # This is why we first (1) add the file name to a skiplist of ignored files,
         # so that our own local notifier does not want to hot-deploy it,
-        # then (2) we save the file, and then (3) we remove the name from the ignore ones.
+        # then (2) we save the file, and then (3) we remove the name from the ignored ones.
         #
 
         try:
@@ -215,6 +215,7 @@ class _OnUpdate(Service):
             # Step (2) - Save the file
             #
             with self.lock('{}-{}-{}'.format(self.name, self.server.name, ctx.full_path)): # type: ignore
+
                 with open(ctx.full_path, 'wb') as f:
                     _ = f.write(ctx.data.encode('utf8'))
 
@@ -270,7 +271,7 @@ class OnUpdateUserConf(_OnUpdate):
         conf = get_config(conf_base_dir, conf_key, raise_on_error=True, log_exception=False)
 
         user_config_name = get_user_config_name(conf_key)
-        entry = self.server.user_config.setdefault(user_config_name, Bunch())
+        entry:'Bunch' = self.server.user_config.setdefault(user_config_name, Bunch())
         entry.clear()
         entry.update(conf)
 
@@ -283,7 +284,7 @@ class OnUpdateStatic(_OnUpdate):
     update_type = 'static file'
 
     def sync_pickup_file_in_ram(self, ctx:'UpdateCtx') -> 'None':
-        _ = self.server.static_config.read_file(ctx.full_path, ctx.file_name)
+        _:'any_' = self.server.static_config.read_file(ctx.full_path, ctx.file_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
