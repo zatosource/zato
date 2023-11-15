@@ -243,6 +243,9 @@ class MessageFromServer:
     data: 'any_'
     msg_impl: 'any_'
 
+    def __getitem__(self, key:'str') -> 'None':
+        raise NotImplementedError()
+
     @staticmethod
     def from_json(msg:'anydict') -> 'MessageFromServer':
         raise NotImplementedError('Must be implemented in subclasses')

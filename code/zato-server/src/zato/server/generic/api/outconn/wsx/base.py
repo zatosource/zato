@@ -11,6 +11,9 @@ from json import loads
 from logging import getLogger
 from traceback import format_exc
 
+# gevent
+from gevent import sleep as _gevent_sleep
+
 # Zato
 from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC, ZATO_NONE
 from zato.common.typing_ import cast_
@@ -302,6 +305,20 @@ class OutconnWSXWrapper(Wrapper):
             # Do not handle it but log information so as not to overlook the event
             logger.info('WSX `%s` (%s) ignoring close event code:`%s` reason:`%s`',
                 self.config['name'], self.config['address'], code, reason)
+
+# ################################################################################################################################
+
+    def send(self, data:'any_') -> 'None':
+
+        # If we are being invoked while the queue is still building, we need to wait until it becomes available ..
+        while self.client.is_building_conn_queue:
+            _gevent_sleep(1)
+
+        # .. now, we can invoke the remote web socket.
+        with self.client() as client:
+            client.send(data)
+
+    invoke = send
 
 # ################################################################################################################################
 
