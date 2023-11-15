@@ -243,6 +243,9 @@ class MessageFromServer:
     data: 'any_'
     msg_impl: 'any_'
 
+    def __getitem__(self, key:'str') -> 'None':
+        raise NotImplementedError()
+
     @staticmethod
     def from_json(msg:'anydict') -> 'MessageFromServer':
         raise NotImplementedError('Must be implemented in subclasses')
@@ -585,7 +588,13 @@ class Client:
         _msg = JSONParser().parse(msg.data) # type: anydict
         self.logger.info('Received message `%s`', _msg)
 
-        in_reply_to = _msg['meta'].get('in_reply_to')
+        meta = _msg.get('meta')
+
+        if not meta:
+            logger.warn('Element \'meta \'missing in message -> %r', msg.data)
+            return
+
+        in_reply_to = meta.get('in_reply_to')
 
         # Reply from Zato to one of our requests
         if in_reply_to:

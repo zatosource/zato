@@ -7,23 +7,27 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from json import loads
 from logging import getLogger
 from traceback import format_exc
 
+# gevent
+from gevent import sleep as _gevent_sleep
+
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC, ZATO_NONE
+from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC, ZATO_NONE
 from zato.common.typing_ import cast_
 from zato.server.connection.queue import Wrapper
 from zato.server.generic.api.outconn.wsx.client_generic import _NonZatoWSXClient
 from zato.server.generic.api.outconn.wsx.client_zato import ZatoWSXClient
-from zato.server.generic.api.outconn.wsx.common import Close, Connected, OnMessage
+from zato.server.generic.api.outconn.wsx.common import OnClosed, OnConnected, OnMessageReceived
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import strdict, strlist, strnone
+    from zato.common.typing_ import any_, callable_, strdict, strlist, strnone
     from zato.common.wsx_client import MessageFromServer
     from zato.server.base.parallel import ParallelServer
     Bunch = Bunch
@@ -36,6 +40,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+_json = DATA_FORMAT.JSON
 msg_closing_superfluous = 'Closing superfluous connection (Zato queue)'
 
 # ################################################################################################################################
@@ -44,6 +49,8 @@ msg_closing_superfluous = 'Closing superfluous connection (Zato queue)'
 class WSXClient:
     """ A client through which outgoing WebSocket messages can be sent.
     """
+    send: 'callable_'
+    invoke: 'callable_'
     is_zato:'bool'
 
     def __init__(self, config:'strdict') -> 'None':
@@ -53,20 +60,30 @@ class WSXClient:
 
     def init(self) -> 'None':
 
+        # Decide which implementation class to use ..
         if self.is_zato:
             _impl_class = ZatoWSXClient
         else:
             _impl_class = _NonZatoWSXClient
 
+        # .. this will create an instance ..
         self.impl = _impl_class(self.config, self.on_connected_cb, self.on_message_cb, self.on_close_cb, self.config['address'])
-        self.send = self.impl.send
 
+        # .. this will initialize it ..
+        self.impl.init()
+
+        # .. so now, we can make use of what was possibly initialized in .init above ..
+        self.send   = self.impl.send
+        self.invoke = self.send
+
+        # .. additional features of the Zato client ..
         if _impl_class is ZatoWSXClient:
-            self.invoke = self.send
             self.invoke_service = self.impl._zato_client.invoke_service # type: ignore
 
-        self.impl.init()
+        # .. now, the client can connect ..
         self.impl.connect()
+
+        # .. and run forever.
         self.impl.run_forever()
 
     def on_connected_cb(self, conn:'OutconnWSXWrapper') -> 'None':
@@ -99,8 +116,19 @@ class OutconnWSXWrapper(Wrapper):
     has_delete_reasons = True
     supports_reconnections = True
 
+    on_connect_service_name:'str' = ''
+    on_message_service_name:'str' = ''
+    on_close_service_name:'str'   = ''
+    on_subscribe_service_name:'str' = ''
+
+    is_on_connect_service_wsx_adapter:'bool'   = False
+    is_on_message_service_wsx_adapter:'bool'   = False
+    is_on_close_service_wsx_adapter:'bool'     = False
+    is_on_subscribe_service_wsx_adapter:'bool' = False
+
     def __init__(self, config:'strdict', server:'ParallelServer') -> 'None':
         config['parent'] = self
+        self._has_json = config.get('data_format') == _json
         self._resolve_config_ids(config, server)
         super(OutconnWSXWrapper, self).__init__(cast_('Bunch', config), COMMON_GENERIC.ConnName.OutconnWSX, server)
 
@@ -114,22 +142,63 @@ class OutconnWSXWrapper(Wrapper):
 
     def _resolve_config_ids(self, config:'strdict', server:'ParallelServer') -> 'None':
 
-        on_connect_service_id   = config.get('on_connect_service_id', 0)   # type: int
-        on_message_service_id   = config.get('on_message_service_id', 0)   # type: int
-        on_close_service_id     = config.get('on_close_service_id', 0)     # type: int
+        on_connect_service_id   = config.get('on_connect_service_id',   0) # type: int
+        on_message_service_id   = config.get('on_message_service_id',   0) # type: int
+        on_close_service_id     = config.get('on_close_service_id',     0) # type: int
         on_subscribe_service_id = config.get('on_subscribe_service_id', 0) # type: int
 
-        if on_connect_service_id:
-            config['on_connect_service_name'] = server.api_service_store_get_service_name_by_id(on_connect_service_id)
+        on_connect_service_name   = config.get('on_connect_service_name',   '') # type: str
+        on_message_service_name   = config.get('on_message_service_name',   '') # type: str
+        on_close_service_name     = config.get('on_close_service_name',     '') # type: str
+        on_subscribe_service_name = config.get('on_subscribe_service_name', '') # type: str
 
-        if on_message_service_id:
-            config['on_message_service_name'] = server.api_service_store_get_service_name_by_id(on_message_service_id)
+        #
+        # Connect service
+        #
+        if not on_connect_service_name:
+            if on_connect_service_id:
+                on_connect_service_name = server.api_service_store_get_service_name_by_id(on_connect_service_id)
 
-        if on_close_service_id:
-            config['on_close_service_name'] = server.api_service_store_get_service_name_by_id(on_close_service_id)
+        if on_connect_service_name:
+            self.on_connect_service_name = on_connect_service_name
+            self.is_on_connect_service_wsx_adapter = server.is_service_wsx_adapter(self.on_connect_service_name)
+            config['on_connect_service_name'] = self.on_connect_service_name
 
-        if on_subscribe_service_id:
-            config['on_subscribe_service_name'] = server.api_service_store_get_service_name_by_id(on_subscribe_service_id)
+        #
+        # On message service
+        #
+        if not on_message_service_name:
+            if on_message_service_id:
+                on_message_service_name = server.api_service_store_get_service_name_by_id(on_message_service_id)
+
+        if on_message_service_name:
+            self.on_message_service_name = on_message_service_name
+            self.is_on_message_service_wsx_adapter = server.is_service_wsx_adapter(self.on_message_service_name)
+            config['on_message_service_name'] = self.on_message_service_name
+
+        #
+        # OnClosed service
+        #
+        if not on_close_service_name:
+            if on_close_service_id:
+                on_close_service_name = server.api_service_store_get_service_name_by_id(on_close_service_id)
+
+        if on_close_service_name:
+            self.on_close_service_name = on_close_service_name
+            self.is_on_close_service_wsx_adapter = server.is_service_wsx_adapter(self.on_close_service_name)
+            config['on_close_service_name'] = self.on_close_service_name
+
+        #
+        # Subscribe service
+        #
+        if not on_subscribe_service_name:
+            if on_subscribe_service_id:
+                on_subscribe_service_name = server.api_service_store_get_service_name_by_id(on_subscribe_service_id)
+
+        if on_subscribe_service_name:
+            self.on_subscribe_service_name = on_subscribe_service_name
+            self.is_on_subscribe_service_wsx_adapter = server.is_service_wsx_adapter(self.on_subscribe_service_name)
+            config['on_subscribe_service_name'] = self.on_subscribe_service_name
 
         if config.get('security_def'):
             if config['security_def'] != ZATO_NONE:
@@ -160,25 +229,34 @@ class OutconnWSXWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def on_connected_cb(self, conn:'OutconnWSXWrapper'):
+    def on_connected_cb(self, conn:'OutconnWSXWrapper') -> 'None':
 
-        if self.config.get('on_connect_service_name'):
+        if self.on_connect_service_name:
             try:
-                self.server.invoke(self.config['on_connect_service_name'], {
-                    'ctx': Connected(self.config, conn)
-                })
+                ctx = OnConnected(self.config, conn)
+                if self.is_on_connect_service_wsx_adapter:
+                    self.server.invoke_wsx_adapter(self.on_connect_service_name, ctx)
+                else:
+                    self.server.invoke(self.on_connect_service_name, ctx)
             except Exception:
-                logger.warning('Could not invoke CONNECT service `%s`, e:`%s`',
-                    self.config['on_close_service_name'], format_exc())
+                logger.warning('Could not invoke CONNECT service `%s`, e:`%s`', self.on_connect_service_name, format_exc())
 
 # ################################################################################################################################
 
-    def on_message_cb(self, msg:'MessageFromServer'):
+    def on_message_cb(self, msg:'bytes | MessageFromServer') -> 'None':
 
-        if self.config.get('on_message_service_name'):
-            self.server.invoke(self.config['on_message_service_name'], {
-                'ctx': OnMessage(msg, self.config, self)
-            })
+        if self.on_message_service_name:
+            try:
+                if self._has_json and isinstance(msg, bytes):
+                    msg = msg.decode('utf8')
+                    msg = loads(msg)
+                ctx = OnMessageReceived(msg, self.config, self)
+                if self.is_on_message_service_wsx_adapter:
+                    self.server.invoke_wsx_adapter(self.on_message_service_name, ctx)
+                else:
+                    self.server.invoke(self.on_message_service_name, ctx)
+            except Exception:
+                logger.warning('Could not invoke MESSAGE service `%s`, e:`%s`', self.on_message_service_name, format_exc())
 
 # ################################################################################################################################
 
@@ -201,14 +279,15 @@ class OutconnWSXWrapper(Wrapper):
 
             logger.info('Remote server closed connection to WebSocket `%s`, c:`%s`, r:`%s`', self.config['name'], code, reason)
 
-            if self.config.get('on_close_service_name'):
-
+            if self.on_close_service_name:
                 try:
-                    self.server.invoke(self.config['on_close_service_name'], {
-                        'ctx': Close(code, reason, self.config, self)
-                    })
+                    ctx = OnClosed(code, reason, self.config, self)
+                    if self.is_on_close_service_wsx_adapter:
+                        self.server.invoke_wsx_adapter(self.on_close_service_name, ctx)
+                    else:
+                        self.server.invoke(self.on_close_service_name, ctx)
                 except Exception:
-                    logger.warning('Could not invoke CLOSE service `%s`, e:`%s`', self.config['on_close_service_name'], format_exc())
+                    logger.warning('Could not invoke CLOSE service `%s`, e:`%s`', self.on_close_service_name, format_exc())
 
             has_auto_reconnect:'bool' = self.config.get('has_auto_reconnect', True)
 
@@ -226,6 +305,20 @@ class OutconnWSXWrapper(Wrapper):
             # Do not handle it but log information so as not to overlook the event
             logger.info('WSX `%s` (%s) ignoring close event code:`%s` reason:`%s`',
                 self.config['name'], self.config['address'], code, reason)
+
+# ################################################################################################################################
+
+    def send(self, data:'any_') -> 'None':
+
+        # If we are being invoked while the queue is still building, we need to wait until it becomes available ..
+        while self.client.is_building_conn_queue:
+            _gevent_sleep(1)
+
+        # .. now, we can invoke the remote web socket.
+        with self.client() as client:
+            client.send(data)
+
+    invoke = send
 
 # ################################################################################################################################
 

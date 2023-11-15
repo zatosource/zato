@@ -22,7 +22,7 @@ from lxml.etree import _Element as EtreeElement
 from lxml.objectify import ObjectifiedElement
 
 # gevent
-from gevent import Timeout, spawn as _gevent_spawn
+from gevent import Timeout, sleep as _gevent_sleep, spawn as _gevent_spawn
 from gevent.lock import RLock
 
 # Python 2/3 compatibility
@@ -1173,6 +1173,11 @@ class Service:
 
 # ################################################################################################################################
 
+    def sleep(self, timeout:'int'=1) -> 'None':
+        _gevent_sleep(timeout)
+
+# ################################################################################################################################
+
     def accept(self, _zato_no_op_marker:'any_'=zato_no_op_marker) -> 'bool':
         return True
 
@@ -1486,6 +1491,16 @@ WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_CONNECTED] = 'on_connected'
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED] = 'on_disconnected'
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_PUBSUB_RESPONSE] = 'on_pubsub_response'
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_VAULT_MOUNT_POINT_NEEDED] = 'on_vault_mount_point_needed'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WSXAdapter(Service):
+    """ Subclasses of this class can be used in events related to outgoing WebSocket connections.
+    """
+    on_connected:'callable_'
+    on_message_received:'callable_'
+    on_closed:'callable_'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -7,6 +7,7 @@ import ssl
 import time
 import threading
 import types
+from json import dumps
 
 try:
     from OpenSSL.SSL import Error as pyOpenSSLError
@@ -298,6 +299,9 @@ class WebSocket(object):
         """
         message_sender = self.stream.binary_message if binary else self.stream.text_message
 
+        if isinstance(payload, dict):
+            payload = dumps(payload)
+
         if isinstance(payload, basestring) or isinstance(payload, bytearray):
             m = message_sender(payload).single(mask=self.stream.always_mask)
             self._write(m)
@@ -306,7 +310,7 @@ class WebSocket(object):
             data = payload.single(mask=self.stream.always_mask)
             self._write(data)
 
-        elif type(payload) == types.GeneratorType:
+        elif isinstance(payload, types.GeneratorType):
             bytes = next(payload)
             first = True
             for chunk in payload:
