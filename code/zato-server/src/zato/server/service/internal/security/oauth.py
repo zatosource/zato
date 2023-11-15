@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -22,8 +22,14 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetList(AdminService):
-    """ Returns a list of OAuth definitions available.
+    """ Returns a list of Bearer token definitions available.
     """
     _filter_by = OAuth.name,
 
@@ -31,11 +37,11 @@ class GetList(AdminService):
         request_elem = 'zato_security_oauth_get_list_request'
         response_elem = 'zato_security_oauth_get_list_response'
         input_required = 'cluster_id'
-        output_required = 'id', 'name', 'is_active', 'username'
-        output_optional = 'auth_server_url', 'scopes'
+        output_required = 'id', 'name', 'is_active', 'username', 'client_id_field', 'client_secret_field', 'grant_type'
+        output_optional = 'auth_server_url', 'scopes', 'extra_fields', 'data_format'
 
-    def get_data(self, session):
-        return elems_with_opaque(self._search(oauth_list, session, self.request.input.cluster_id, False))
+    def get_data(self, session:'any_') -> 'anylist':
+        return elems_with_opaque(self._search(oauth_list, session, self.request.input.cluster_id, False)) # type: ignore
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -46,13 +52,14 @@ class GetList(AdminService):
 # ################################################################################################################################
 
 class Create(AdminService):
-    """ Creates a new OAuth definition.
+    """ Creates a new Bearer token definition.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_oauth_create_request'
         response_elem = 'zato_security_oauth_create_response'
-        input_required = 'cluster_id', 'name', 'is_active', 'username'
-        input_optional = 'auth_server_url', 'scopes'
+        input_required = 'cluster_id', 'name', 'is_active', 'username', 'client_id_field', \
+            'client_secret_field', 'grant_type', 'data_format'
+        input_optional = 'auth_server_url', 'scopes', 'extra_fields'
         output_required = 'id', 'name'
 
     def handle(self):
@@ -70,7 +77,7 @@ class Create(AdminService):
                     filter(OAuth.name==input.name).first()
 
                 if existing_one:
-                    raise Exception('OAuth definition `{}` already exists in this cluster'.format(input.name))
+                    raise Exception('Bearer token definition `{}` already exists in this cluster'.format(input.name))
 
                 definition = OAuth()
                 definition.name = input.name
@@ -87,7 +94,7 @@ class Create(AdminService):
                 session.commit()
 
             except Exception:
-                msg = 'OAuth definition could not be created, e:`%s`'
+                msg = 'Bearer token definition could not be created, e:`%s`'
                 self.logger.error(msg, format_exc())
                 session.rollback()
 
@@ -105,13 +112,14 @@ class Create(AdminService):
 # ################################################################################################################################
 
 class Edit(AdminService):
-    """ Updates an OAuth definition.
+    """ Updates an Bearer token definition.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_oauth_edit_request'
         response_elem = 'zato_security_oauth_edit_response'
-        input_required = 'id', 'cluster_id', 'name', 'is_active', 'username'
-        input_optional = 'auth_server_url', 'scopes'
+        input_required = 'id', 'cluster_id', 'name', 'is_active', 'username', 'client_id_field', \
+            'client_secret_field', 'grant_type', 'data_format'
+        input_optional = 'auth_server_url', 'scopes', 'extra_fields'
         output_required = 'id', 'name'
 
     def handle(self):
@@ -125,7 +133,7 @@ class Edit(AdminService):
                     first()
 
                 if existing_one:
-                    raise Exception('OAuth definition `{}` already exists in this cluster'.format(input.name))
+                    raise Exception('Bearer token definition `{}` already exists in this cluster'.format(input.name))
 
                 definition = session.query(OAuth).filter_by(id=input.id).one()
                 old_name = definition.name
@@ -140,7 +148,7 @@ class Edit(AdminService):
                 session.commit()
 
             except Exception:
-                msg = 'OAuth definition could not be updated, e:`%s`'
+                msg = 'Bearer token definition could not be updated, e:`%s`'
                 self.logger.error(msg, format_exc())
                 session.rollback()
 
@@ -158,7 +166,7 @@ class Edit(AdminService):
 # ################################################################################################################################
 
 class ChangePassword(ChangePasswordBase):
-    """ Changes the password of an OAuth definition.
+    """ Changes the password of an Bearer token definition.
     """
     password_required = False
 
@@ -167,7 +175,7 @@ class ChangePassword(ChangePasswordBase):
         response_elem = 'zato_security_oauth_change_password_response'
 
     def handle(self):
-        def _auth(instance, password):
+        def _auth(instance:'any_', password:'str'):
             instance.password = password
 
         return self._handle(OAuth, _auth, SECURITY.OAUTH_CHANGE_PASSWORD.value)
@@ -176,7 +184,7 @@ class ChangePassword(ChangePasswordBase):
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes an OAuth definition.
+    """ Deletes an Bearer token definition.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_oauth_delete_request'
@@ -193,7 +201,7 @@ class Delete(AdminService):
                 session.delete(auth)
                 session.commit()
             except Exception:
-                msg = 'OAuth definition could not be deleted, e:`%s`'
+                msg = 'Bearer token definition could not be deleted, e:`%s`'
                 self.logger.error(msg, format_exc())
                 session.rollback()
 

@@ -99,7 +99,7 @@ class FileTransferAPI:
         self.keep_running = True
 
         # A list of all observer objects
-        self.observer_list = []
+        self.observer_list:'BaseObserver' = []
 
         # A mapping of channel_id to an observer object associated with the channel.
         # Note that only non-inotify observers are added here.

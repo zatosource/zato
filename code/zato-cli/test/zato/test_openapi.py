@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -86,7 +86,7 @@ class APISpecTestCase(TestCase):
         command = get_zato_sh_command() # type: ignore
 
         # Invoke enmasse ..
-        out = command('openapi', TestConfig.server_location,
+        out:'any_' = command('openapi', TestConfig.server_location,
             '--exclude', '""', '--include', 'helpers.dataclass-service',
             '--file', file_path,
             '--verbose')
@@ -115,7 +115,7 @@ class APISpecTestCase(TestCase):
 
         try:
             # Invoke openapi to create a definition ..
-            self._invoke_command(file_path)
+            _ = self._invoke_command(file_path)
 
             # .. read it back ..
             f = open_r(file_path)
@@ -151,9 +151,9 @@ class APISpecTestCase(TestCase):
 
         except ErrorReturnCode as e:
 
-            stdout = e.stdout # type: bytes
+            stdout = e.stdout # type: ignore
             stdout = stdout.decode('utf8') # type: ignore
-            stderr = e.stderr
+            stderr = e.stderr # type: ignore
 
             self._warn_on_error(stdout, stderr)
             self.fail('Caught an exception while invoking openapi')
@@ -162,6 +162,6 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    _ = main()
 
 # ################################################################################################################################
