@@ -536,7 +536,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # .. otherwise, we need to add it.
         else:
-            return soap_config['message'].format(header=soap_header, data=data), headers
+            return soap_config['message'].format(header='', data=data), headers
 
 # ################################################################################################################################
 
