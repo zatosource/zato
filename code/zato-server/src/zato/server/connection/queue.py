@@ -20,6 +20,7 @@ from gevent.queue import Empty, Queue
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC
 from zato.common.typing_ import cast_
+from zato.common.util.config import replace_query_string_items
 from zato.common.util.python_ import get_python_id
 
 # ################################################################################################################################
@@ -134,6 +135,7 @@ class ConnectionQueue:
         self.conn_name = conn_name
         self.conn_type = conn_type
         self.address = address
+        self.log_address = replace_query_string_items(self.server, self.address)
         self.add_client_func = add_client_func
         self.needs_spawn = needs_spawn
         self.max_attempts = max_attempts

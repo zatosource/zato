@@ -40,6 +40,7 @@ megabyte = 10 ** 6
 zato_no_op_marker = 'zato_no_op_marker'
 
 SECRET_SHADOW = '******'
+Secret_Shadow = SECRET_SHADOW
 
 # TRACE1 logging level, even more details than DEBUG
 TRACE1 = 6
