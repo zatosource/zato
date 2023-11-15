@@ -124,6 +124,14 @@ class Cache:
 
 # ################################################################################################################################
 
+    def has_key(self, key, default=default_get, details=False) -> 'bool':
+        """ Returns True or False, depending on whether such a key exists in the cache or not.
+        """
+        value = self.get(key, default=default, details=details)
+        return value != ZATO_NOT_GIVEN
+
+# ################################################################################################################################
+
     def get_by_prefix(self, key, details=False, limit=0):
         """ Returns a dictionary of key:value items for keys matching the prefix given on input.
         """
@@ -982,6 +990,13 @@ class CacheAPI:
         """
         with self.lock:
             self._clear(cache_type, name)
+#
+# ################################################################################################################################
+
+    def _get_cache(self, cache_type, name):
+        """ Actually returns a cache. Must be called with self.lock held.
+        """
+        return self.caches[cache_type][name]
 
 # ################################################################################################################################
 
@@ -990,6 +1005,22 @@ class CacheAPI:
         """
         with self.lock:
             return self.caches[cache_type][name]
+
+# ################################################################################################################################
+
+    def get_builtin_cache(self, name):
+        """ Returns a built-in cache by its name.
+        """
+        with self.lock:
+            return self._get_cache(CACHE.TYPE.BUILTIN, name)
+
+# ################################################################################################################################
+
+    def get_memcached_cache(self, name):
+        """ Returns a Memcached cache by its name.
+        """
+        with self.lock:
+            return self._get_cache(CACHE.TYPE.MEMCACHED, name)
 
 # ################################################################################################################################
 

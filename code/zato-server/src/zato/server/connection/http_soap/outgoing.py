@@ -28,11 +28,14 @@ from requests.adapters import HTTPAdapter
 from requests.exceptions import Timeout as RequestsTimeout
 from requests.sessions import Session as RequestsSession
 
+# requests-ntlm
+from requests_ntlm import HttpNtlmAuth
+
 # requests-toolbelt
 from requests_toolbelt import MultipartEncoder
 
 # Zato
-from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE
+from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE
 from zato.common.exception import Inactive, TimeoutException
 from zato.common.json_ import dumps, loads
 from zato.common.marshal_.api import extract_model_class, is_list, Model
@@ -46,6 +49,7 @@ from zato.server.connection.queue import ConnectionQueue
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
+    from zato.common.bearer_token import BearerTokenInfoResult
     from zato.common.typing_ import any_, callnone, dictnone, list_, stranydict, strdictnone, strstrdict, type_
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
@@ -99,7 +103,7 @@ class BaseHTTPSOAPWrapper:
     def __init__(
         self,
         config, # type: stranydict
-        _requests_session=None, # type: SASession
+        _requests_session=None, # type: SASession | None
         server=None # type: ParallelServer | None
     ) -> 'None':
         self.config = config
@@ -107,7 +111,7 @@ class BaseHTTPSOAPWrapper:
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
         self.RequestsSession = RequestsSession or _requests_session
-        self.server = server
+        self.server = cast_('ParallelServer', server)
         self.session = RequestsSession()
         self.https_adapter = HTTPSAdapter()
         self.session.mount('https://', self.https_adapter)
@@ -119,14 +123,107 @@ class BaseHTTPSOAPWrapper:
         self.base_headers = {}
         self.sec_type = self.config['sec_type']
 
-        # API keys
+        self.soap = {}
+        self.soap['1.1'] = {}
+        self.soap['1.1']['content_type'] = 'text/xml; charset=utf-8'
+        self.soap['1.1']['message'] = """<?xml version="1.0" encoding="utf-8"?>
+<s11:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s11="%s">
+  {header}
+  <s11:Body>{data}</s11:Body>
+</s11:Envelope>""" % (soapenv11_namespace,)
+
+        self.soap['1.1']['header_template'] = """<s11:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
+          <wsse:Security>
+            <wsse:UsernameToken>
+              <wsse:Username>{Username}</wsse:Username>
+              <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">{Password}</wsse:Password>
+            </wsse:UsernameToken>
+          </wsse:Security>
+        </s11:Header>
+        """
+
+        self.soap['1.2'] = {}
+        self.soap['1.2']['content_type'] = 'application/soap+xml; charset=utf-8'
+        self.soap['1.2']['message'] = """<?xml version="1.0" encoding="utf-8"?>
+<s12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s12="%s">{header}
+  <s12:Body>{data}</s12:Body>
+</s12:Envelope>""" % (soapenv12_namespace,)
+
+        self.soap['1.2']['header_template'] = """<s12:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
+          <wsse:Security>
+            <wsse:UsernameToken>
+              <wsse:Username>{Username}</wsse:Username>
+              <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">{Password}</wsse:Password>
+            </wsse:UsernameToken>
+          </wsse:Security>
+        </s12:Header>
+        """
+
+        self.set_address_data()
+        self.set_auth()
+
+# ################################################################################################################################
+
+    def set_auth(self) -> 'None':
+
+        # Local variables
+        self.requests_auth = None
+        self.username = None
+
+        # #######################################
+        #
+        # API Keys
+        #
+        # #######################################
         if self.sec_type == _API_Key:
             username = self.config.get('orig_username')
             if not username:
                 username = self.config['username']
             self.base_headers[username] = self.config['password']
 
-        self.set_address_data()
+        # #######################################
+        #
+        # HTTP Basic Auth
+        #
+        # #######################################
+        elif self.sec_type in {_Basic_Auth}:
+            self.requests_auth = self.auth
+            self.username = self.requests_auth[0]
+
+        # #######################################
+        #
+        # NTLM
+        #
+        # #######################################
+        elif self.sec_type == _NTLM:
+            _username, _password = self.auth
+            _requests_auth = HttpNtlmAuth(_username, _password)
+            self.requests_auth = _requests_auth
+            self.username = _username
+
+        # #######################################
+        #
+        # WS-Security
+        #
+        # #######################################
+        elif self.sec_type == _WSS:
+            self.soap[self.config['soap_version']]['header'] = \
+                self.soap[self.config['soap_version']]['header_template'].format(
+                    Username=self.config['username'], Password=self.config['password'])
+
+# ################################################################################################################################
+
+    def _get_auth(self) -> 'any_':
+        """ Returns a username and password pair or None, if no security definition has been attached.
+        """
+        if self.sec_type in {_Basic_Auth, _NTLM}:
+            auth = (self.config['username'], self.config['password'])
+        else:
+            auth = None
+
+        return auth
+
+    auth = property(fget=_get_auth, doc=_get_auth.__doc__)
 
 # ################################################################################################################################
 
@@ -142,6 +239,8 @@ class BaseHTTPSOAPWrapper:
         **kwargs:'any_'
     ) -> '_RequestsResponse':
 
+        # Local variables
+        params = kwargs.get('params')
         json = kwargs.pop('json', None)
         cert = self.config['tls_key_cert_full_path'] if self.sec_type == _TLS_Key_Cert else None
 
@@ -151,32 +250,104 @@ class BaseHTTPSOAPWrapper:
             tls_verify = self.config.get('tls_verify', True)
             tls_verify = tls_verify if isinstance(tls_verify, bool) else tls_verify.encode('utf-8')
 
+        # This is optional and, if not given, we will use the security configuration from self.config
+        sec_def_name = kwargs.pop('sec_def_name', NotGiven)
+
+        # If we have a security definition name on input, it must be a Bearer token (OAuth)
+        if sec_def_name is not NotGiven:
+            _sec_type = _OAuth
+        else:
+            sec_def_name = self.config['security_name']
+            _sec_type = self.sec_type
+
+        # Force type hints
+        sec_def_name = cast_('str', sec_def_name)
+
+        # Reusable
+        is_bearer_token = _sec_type == _OAuth
+
+        # OAuth scopes can be provided on input even if we do not have a Bearer token definition attached,
+        # which is why we .pop them here, to make sure they do not propagate to the requests library.
+        scopes = kwargs.pop('auth_scopes', '')
+
         try:
 
-            # OAuth tokens are obtained dynamically ..
-            if self.sec_type == _OAuth:
-                auth_header = self._get_oauth_auth()
-                headers['Authorization'] = auth_header
+            # Bearer tokens are obtained dynamically ..
+            if is_bearer_token:
+
+                # .. this is reusable ..
+                sec_def = self.server.security_facade.bearer_token[sec_def_name]
+
+                # .. each OAuth definition will use a specific data format ..
+                data_format = sec_def['data_format']
+
+                # .. otherwise, we can check if they are provided in the security definition itself ..
+                if not scopes:
+                    scopes = sec_def.get('scopes') or ''
+                    scopes = scopes.splitlines()
+                    scopes = ' '.join(scopes)
+
+                # .. get a Bearer token ..
+                result = self._get_bearer_token_auth(sec_def_name, scopes, data_format)
+
+                # .. populate headers ..
+                headers['Authorization'] = f'Bearer {result.info.token}'
+
+                # .. this is needed for later use ..
+                token_expires_in_sec = result.cache_expiry
+                token_is_cache_hit = result.is_cache_hit
+                token_cache_hits = result.cache_hits
 
                 # This is needed by request
                 auth = None
 
-            # .. otherwise, the credentials will have been already obtained
-            # .. but note that Suds connections don't have requests_auth, hence the getattr call.
+            # .. we enter here if this is not a Bearer token definition ..
             else:
+
+                # .. otherwise, the credentials will have been already obtained
+                # .. but note that Suds connections don't have requests_auth, hence the getattr call ..
                 auth = getattr(self, 'requests_auth', None)
 
-            return self.session.request(
+                # .. we have no token to report about.
+                token_expires_in_sec = None
+                token_is_cache_hit = None
+                token_cache_hits = None
+
+            # .. basic details about what we are sending what we are sending ..
+            msg = f'REST out → cid={cid}; {method} {address}; name:{self.config["name"]}; params={params}; len={len(data)}' + \
+                  f'; sec={sec_def_name} ({_sec_type})'
+
+            # .. optionally, log details of the Bearer token ..
+            if is_bearer_token:
+                msg += f'; expiry={token_expires_in_sec}; tok-from-cache={token_is_cache_hit}; tok-cache-hits={token_cache_hits}'
+
+            # .. log the information about our request ..
+            logger.info(msg)
+
+            # .. do send it ..
+            response = self.session.request(
                 method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
                 cert=cert, verify=tls_verify, timeout=self.config['timeout'], *args, **kwargs)
+
+            # .. log what we received ..
+            msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
+            logger.info(msg)
+
+            # .. and return it.
+            return response
+
         except RequestsTimeout:
             raise TimeoutException(cid, format_exc())
 
 # ################################################################################################################################
 
-    def _get_oauth_auth(self):
-        auth_header = self.server.oauth_store.get_auth_header(self.config['security_id'])
-        return auth_header
+    def _get_bearer_token_auth(self, sec_def_name:'str', scopes:'str', data_format:'str') -> 'BearerTokenInfoResult':
+
+        # This will get the token from cache or from the remote auth. server ..
+        result = self.server.bearer_token_manager.get_bearer_token_info_by_sec_def_name(sec_def_name, scopes, data_format)
+
+        # .. which we can return to our caller.
+        return result
 
 # ################################################################################################################################
 
@@ -224,25 +395,25 @@ class BaseHTTPSOAPWrapper:
         if self.config['content_type']:
             return self.config['content_type']
 
-        # Set content type only if we know the data format
+        # For requests other than SOAP, set content type only if we know the data format
         if self.config['data_format']:
 
             # Not SOAP
             if self.config['transport'] == URL_TYPE.PLAIN_HTTP:
 
                 # JSON
-                return CONTENT_TYPE.JSON
+                return CONTENT_TYPE.JSON # type: ignore
 
-            # SOAP
-            elif self.config['transport'] == URL_TYPE.SOAP:
+        # SOAP
+        elif self.config['transport'] == URL_TYPE.SOAP:
 
-                # SOAP 1.1
-                if self.config['soap_version'] == '1.1':
-                    return CONTENT_TYPE.SOAP11
+            # SOAP 1.1
+            if self.config['soap_version'] == '1.1':
+                return CONTENT_TYPE.SOAP11 # type: ignore
 
-                # SOAP 1.2
-                else:
-                    return CONTENT_TYPE.SOAP12
+            # SOAP 1.2
+            else:
+                return CONTENT_TYPE.SOAP12 # type: ignore
 
         # If we are here, assume it is regular text by default
         return 'text/plain'
@@ -301,59 +472,6 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         super(HTTPSOAPWrapper, self).__init__(config, requests_module, server)
         self.server = server
 
-        self.soap = {}
-        self.soap['1.1'] = {}
-        self.soap['1.1']['content_type'] = 'text/xml; charset=utf-8'
-        self.soap['1.1']['message'] = """<?xml version="1.0" encoding="utf-8"?>
-<s11:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s11="%s">
-  {header}
-  <s11:Body>{data}</s11:Body>
-</s11:Envelope>""" % (soapenv11_namespace,)
-
-        self.soap['1.1']['header_template'] = """<s11:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
-          <wsse:Security>
-            <wsse:UsernameToken>
-              <wsse:Username>{Username}</wsse:Username>
-              <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">{Password}</wsse:Password>
-            </wsse:UsernameToken>
-          </wsse:Security>
-        </s11:Header>
-        """
-
-        self.soap['1.2'] = {}
-        self.soap['1.2']['content_type'] = 'application/soap+xml; charset=utf-8'
-        self.soap['1.2']['message'] = """<?xml version="1.0" encoding="utf-8"?>
-<s12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s12="%s">{header}
-  <s12:Body>{data}</s12:Body>
-</s12:Envelope>""" % (soapenv12_namespace,)
-
-        self.soap['1.2']['header_template'] = """<s12:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
-          <wsse:Security>
-            <wsse:UsernameToken>
-              <wsse:Username>{Username}</wsse:Username>
-              <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">{Password}</wsse:Password>
-            </wsse:UsernameToken>
-          </wsse:Security>
-        </s12:Header>
-        """
-        self.set_auth()
-
-    def set_auth(self) -> 'None':
-
-        self.requests_auth = None
-        self.username = None
-
-        # HTTP Basic Auth
-        if self.sec_type == _Basic_Auth:
-            self.requests_auth = self.auth
-            self.username = self.requests_auth[0]
-
-        # WS-Security
-        elif self.sec_type == _WSS:
-            self.soap[self.config['soap_version']]['header'] = \
-                self.soap[self.config['soap_version']]['header_template'].format(
-                    Username=self.config['username'], Password=self.config['password'])
-
 # ################################################################################################################################
 
     def __str__(self) -> 'str':
@@ -363,19 +481,18 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
 # ################################################################################################################################
 
-    def format_address(self, cid:'str', params:'stranydict') -> 'tuple[str, dict]':
+    def format_address(self, cid:'str', params:'stranydict') -> 'tuple[str, stranydict]':
         """ Formats a URL path to an external resource. Note that exceptions raised
         do not contain anything except for CID. This is in order to keep any potentially
         sensitive data from leaking to clients.
         """
-
         if not params:
             logger.warning('CID:`%s` No parameters given for URL path:`%r`', cid, self.config['address_url_path'])
             raise ValueError('CID:`{}` No parameters given for URL path'.format(cid))
 
         path_params = {}
         try:
-            for name in self.path_params:
+            for name in self.path_params: # type: ignore
                 path_params[name] = params.pop(name)
 
             return (self.address.format(**path_params), dict(params))
@@ -388,26 +505,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 # ################################################################################################################################
 
     def _impl(self) -> 'RequestsSession':
-        """ Returns the self.session object through which access to HTTP/SOAP
-        resources is mediated.
+        """ Returns the self.session object through which access to HTTP/SOAP resources is provided.
         """
         return self.session
 
     impl = property(fget=_impl, doc=_impl.__doc__)
-
-# ################################################################################################################################
-
-    def _get_auth(self) -> 'None | tuple[str, str]':
-        """ Returns a username and password pair or None, if no security definition has been attached.
-        """
-        if self.sec_type in {_Basic_Auth}:
-            auth = (self.config['username'], self.config['password'])
-        else:
-            auth = None
-
-        return auth
-
-    auth = property(fget=_get_auth, doc=_get_auth.__doc__)
 
 # ################################################################################################################################
 
@@ -420,7 +522,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
     def _soap_data(self, data:'str', headers:'stranydict') -> 'tuple[str, stranydict]':
         """ Wraps the data in a SOAP-specific messages and adds the headers required.
         """
-        soap_config = self.soap[self.config['soap_version']] # type: strstrdict
+        soap_config:'strstrdict' = self.soap[self.config['soap_version']]
 
         # The idea here is that even though there usually won't be the Content-Type
         # header provided by the user, we shouldn't overwrite it if one has been
@@ -428,8 +530,13 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if not headers.get('Content-Type'):
             headers['Content-Type'] = soap_config['content_type']
 
-        soap_header = ''
-        return soap_config['message'].format(header=soap_header, data=data), headers
+        # We do not need an envelope if the data already has one ..
+        if ':Envelope>' in data:
+            return data, headers
+
+        # .. otherwise, we need to add it.
+        else:
+            return soap_config['message'].format(header='', data=data), headers
 
 # ################################################################################################################################
 
@@ -445,6 +552,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # First, make sure that the connection is active
         self._enforce_is_active()
+
+        # Local variables
+        _is_soap = self.config['transport'] == 'soap'
 
         # Pop it here for later use because we cannot pass it to the requests module
         model = kwargs.pop('model', None)
@@ -484,7 +594,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         headers = self._create_headers(cid, headers)
 
         # .. SOAP requests need to be specifically formatted now ..
-        if self.config['transport'] == 'soap':
+        if _is_soap:
             data, headers = self._soap_data(data, headers)
 
         # .. check if we have custom query parameters ..
@@ -497,26 +607,22 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             address, qs_params = self.address, dict(params)
 
         # .. make sure that Unicode objects are turned into bytes ..
-        if needs_serialize_based_on_content_type:
+        if needs_serialize_based_on_content_type and (not _is_soap):
             if isinstance(data, str):
                 data = data.encode('utf-8')
-
-        # Log what we are sending ..
-        msg = f'REST out → cid={cid}; {method} {address} name:{self.config["name"]}; params={params}; len={len(data)}'
-        logger.info(msg)
 
         # .. do invoke the connection ..
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
-        # .. now, log what we received.
-        msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
-        logger.info(msg)
+        # .. by default, we have no parsed response at all, ..
+        # .. which means that we can assume it will be the same as the raw, text response ..
+        response.data = response.text # type: ignore
 
         # .. check if we are explicitly told that we handle JSON ..
         _has_data_format_json = self.config['data_format'] == DATA_FORMAT.JSON
 
         # .. check if we perhaps received JSON in the response ..
-        _has_json_content_type = 'application/json' in response.headers.get('Content-Type') or '' # type: ignore
+        _has_json_content_type = 'application/json' in (response.headers.get('Content-Type') or '') # type: ignore
 
         # .. are we actually handling JSON in this response .. ?
         _is_json:'bool' = _has_data_format_json or _has_json_content_type # type: ignore
@@ -601,12 +707,14 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         self,
         *,
         cid,          # type: str
-        data='',      # type: str
+        data='',      # type: ignore
         model=None,   # type: type_[Model] | None
         callback,     # type: callnone
         params=None,  # type: strdictnone
         headers=None, # type: strdictnone
         method='',    # type: str
+        sec_def_name=None, # type: any_
+        auth_scopes=None,  # type: any_
         log_response=True, # type: bool
     ) -> 'any_':
 
@@ -616,11 +724,13 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 method,
                 cid,
                 data=data,
+                sec_def_name=sec_def_name,
+                auth_scopes=auth_scopes,
                 params=params,
                 headers=headers,
             )
         except Exception as e:
-            logger.warn('Caught an exception -> %s', e)
+            logger.warn('Caught an exception -> %s -> %s', e, format_exc())
         else:
 
             # .. optionally, log what we received ..
@@ -637,28 +747,28 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             if model:
 
                 # .. if this model is actually a list ..
-                if is_list(model, True):
+                if is_list(model, True): # type: ignore
 
                     # .. extract the underlying model ..
-                    model_class:'type_[Model]' = extract_model_class(model)
+                    model_class:'type_[Model]' = extract_model_class(model) # type: ignore
 
                     # .. build a list that we will map the response to ..
-                    data:'list_[Model]' = []
+                    data:'list_[Model]' = [] # type: ignore
 
                     # .. go through everything we had in the response ..
-                    for item in response_data:
+                    for item in response_data: # type: ignore
 
                         # .. build an actual model instance ..
                         _item = model_class.from_dict(item)
 
                         # .. and append it to the data that we are producing ..
-                        data.append(_item)
+                        data.append(_item) # type: ignore
                 else:
                     data:'Model' = model.from_dict(response_data)
 
             # .. if there is no model, use the response as-is ..
             else:
-                data = response_data
+                data = response_data # type: ignore
 
             # .. run our callback, if there is any ..
             if callback:
@@ -712,10 +822,10 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
 
         try:
 
-            # Lazily-imported here to make sure gevent monkey patches everything well in advance
+            # Lazy-imported here to make sure gevent monkey patches everything well in advance
             from suds.client import Client
             from suds.transport.https import HttpAuthenticated
-            from suds.transport.https import WindowsHttpAuthenticated
+            # from suds.transport.https import WindowsHttpAuthenticated
             from suds.wsse import Security, UsernameToken
 
             client = None
@@ -725,6 +835,17 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
                 transport = HttpAuthenticated(**self.suds_auth)
 
             elif self.sec_type == _NTLM:
+
+                # Suds
+                from suds.transport.http import HttpTransport
+
+                class WindowsHttpAuthenticated(HttpAuthenticated):
+                    def u2handlers(self):
+                        from ntlm3 import HTTPNtlmAuthHandler
+                        handlers = HttpTransport.u2handlers(self)
+                        handlers.append(HTTPNtlmAuthHandler.HTTPNtlmAuthHandler(self.pm))
+                        return handlers
+
                 transport = WindowsHttpAuthenticated(**self.suds_auth)
 
             elif self.sec_type == _WSS:
@@ -742,7 +863,7 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
                 client = Client(self.address, autoblend=True, timeout=self.config['timeout'])
 
             if client:
-                self.client.put_client(client)
+                _  = self.client.put_client(client)
             else:
                 logger.warning('SOAP client to `%s` is None', self.address)
 

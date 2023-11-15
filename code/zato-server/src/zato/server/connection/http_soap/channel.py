@@ -352,8 +352,6 @@ class RequestDispatcher:
                             self.server.sso_tool.on_external_auth(
                                 sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid,
                                 wsgi_environ, ext_session_id)
-                        else:
-                            raise Exception('Unexpected sec_type `{}`'.format(sec.sec_def.sec_type))
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
@@ -784,7 +782,10 @@ class RequestHandler:
                         if isinstance(response.payload, Model):
                             value = response.payload.to_json()
                         else:
-                            value = response.payload.getvalue() # type: ignore
+                            if hasattr(response.payload, 'getvalue'):
+                                value = response.payload.getvalue() # type: ignore
+                            else:
+                                value = dumps(response.payload)
                     else:
                         value = ''
                     response.payload = value
