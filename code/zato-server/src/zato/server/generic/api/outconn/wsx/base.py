@@ -27,7 +27,7 @@ from zato.server.generic.api.outconn.wsx.common import OnClosed, OnConnected, On
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import callable_, strdict, strlist, strnone
+    from zato.common.typing_ import any_, callable_, strdict, strlist, strnone
     from zato.common.wsx_client import MessageFromServer
     from zato.server.base.parallel import ParallelServer
     Bunch = Bunch
