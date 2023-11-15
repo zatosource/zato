@@ -302,6 +302,11 @@ class ConnectionQueue:
 
 # ################################################################################################################################
 
+    def is_in_progress(self) -> 'bool':
+        return self.in_progress_count > 0
+
+# ################################################################################################################################
+
     def build_queue(self) -> 'None':
         """ Spawns greenlets to populate the queue and waits up to self.queue_build_cap seconds until the queue is full.
         If it never is, raises an exception stating so.
