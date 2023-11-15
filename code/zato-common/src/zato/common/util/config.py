@@ -12,20 +12,25 @@ import os
 # Bunch
 from bunch import Bunch
 
-# Python 2/3 compatibility
-from builtins import bytes
-from zato.common.py23_.past.builtins import basestring
-
 # Zato
+from zato.common.api import Secret_Shadow
 from zato.common.const import SECRETS
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.server.base.parallel import ParallelServer
+    from zato.simpleio import SIOServerConfig
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def resolve_value(key, value, decrypt_func=None, _default=object(), _secrets=SECRETS):
     """ Resolves final value of a given variable by looking it up in environment if applicable.
     """
     # Skip non-resolvable items
-    if not isinstance(value, basestring):
+    if not isinstance(value, str):
         return value
 
     if not value:
@@ -67,5 +72,11 @@ def resolve_env_variables(data):
         out[key] = resolve_value(None, value)
 
     return out
+
+# ################################################################################################################################
+
+def replace_query_string_items(sio_config:'SIOServerConfig', data:'str') -> 'str':
+    # server.sio_config.
+    return data
 
 # ################################################################################################################################
