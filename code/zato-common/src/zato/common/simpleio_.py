@@ -70,7 +70,7 @@ prefix=
 suffix=_count, _id, _size, _size_min, _size_max, _timeout
 
 [secret]
-exact=auth_data, auth_token, password, password1, password2, secret_key, tls_pem_passphrase, token
+exact=auth_data, auth_token, password, password1, password2, secret_key, tls_pem_passphrase, token, api_key, apiKey, xApiKey
 prefix=
 suffix=
 
