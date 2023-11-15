@@ -33,6 +33,7 @@ class WSXCtx:
     """ Details of a message received from a WebSocket outgoing connection.
     """
     type = None
+    invoke_service:'callable_'
 
     def __init__(self, config:'strdict', conn:'OutconnWSXWrapper') -> 'None':
         self.config = config
