@@ -1495,6 +1495,16 @@ WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_VAULT_MOUNT_POINT_NEEDED] = 'on_
 # ################################################################################################################################
 # ################################################################################################################################
 
+class WSXAdapter(Service):
+    """ Subclasses of this class can be used in events related to outgoing WebSocket connections.
+    """
+    on_connected:'callable_'
+    on_message_received:'callable_'
+    on_closed:'callable_'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class RESTAdapter(Service):
 
     # These may be overridden by individual subclasses
