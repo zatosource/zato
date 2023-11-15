@@ -6,8 +6,12 @@ Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# gevent
+from gevent import sleep
+
 # Zato
 from zato.common.api import ZATO_NONE
+from zato.common.typing_ import cast_
 from zato.common.util.api import spawn_greenlet
 from zato.server.generic.api.outconn.wsx.common import _BaseWSXClient
 
@@ -72,6 +76,11 @@ class _NonZatoWSXClient:
         self.init_args = args
         self.init_kwargs = kwargs
 
+        # This will be overwritten in self._init in a new thread
+        # but we need it set to None so that self.init can check
+        # if the client object has been already created.
+        self._non_zato_client = cast_('_NonZatoWSXClientImpl', None)
+
 # ################################################################################################################################
 
     def _init(self) -> 'any_':
@@ -93,7 +102,13 @@ class _NonZatoWSXClient:
 # ################################################################################################################################
 
     def init(self) -> 'any_':
+
+        # This will start a WSX connection in a new thread ..
         _ = spawn_greenlet(self._init)
+
+        # .. which is why we wait here until the object has been created.
+        while not self._non_zato_client:
+            sleep(0.1)
 
 # ################################################################################################################################
 

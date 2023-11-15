@@ -57,7 +57,7 @@ from zato.common.util.platform_ import is_non_windows
 from zato.common.util.python_ import get_module_name_by_path
 from zato.server.config import ConfigDict
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, \
-    PubSubHook, SchedulerFacade, Service, WSXFacade
+    PubSubHook, SchedulerFacade, Service, WSXAdapter, WSXFacade
 from zato.server.service.internal import AdminService
 
 # Zato - Cython
@@ -316,6 +316,14 @@ class ServiceStore:
         if self.is_testing:
             self._testing_worker_store = cast_('WorkerStore', _TestingWorkerStore())
             self._testing_worker_store.worker_config = cast_('ConfigStore', _TestingWorkerConfig())
+
+# ################################################################################################################################
+
+    def is_service_wsx_adapter(self, service_name:'str') -> 'bool':
+        impl_name = self.name_to_impl_name[service_name]
+        service_info = self.services[impl_name]
+        service_class = service_info['service_class']
+        return issubclass(service_class, WSXAdapter)
 
 # ################################################################################################################################
 
