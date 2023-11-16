@@ -2072,6 +2072,9 @@ class InputParser:
                         if not 'data_format' in value:
                             value['data_format'] = Data_Format.JSON
 
+                        if not 'has_auto_reconnect' in value:
+                            value['has_auto_reconnect'] = True
+
                     elif wrapper_type == outconn_ldap:
 
                         # .. passwords are to be turned into secrets ..
