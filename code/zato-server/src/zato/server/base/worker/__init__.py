@@ -1016,10 +1016,11 @@ class WorkerStore(_WorkerStoreBase):
         """ A common method for updating auth-related configuration.
         """
         with self.update_lock:
+
             handler = getattr(self.request_dispatcher.url_data, 'on_broker_msg_' + action_name)
             handler(msg)
 
-            for transport in('plain_http',):
+            for transport in ['plain_http', 'soap']:
                 config_dict = getattr(self.worker_config, 'out_' + transport)
 
                 for conn_name in config_dict.copy_keys():
