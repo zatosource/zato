@@ -23,7 +23,6 @@ from zato.common.const import SECRETS
 if 0:
     from zato.common.typing_ import any_
     from zato.server.base.parallel import ParallelServer
-    from zato.simpleio import SIOServerConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,7 +76,7 @@ def resolve_env_variables(data):
 
 # ################################################################################################################################
 
-def replace_query_string_items(sio_config:'SIOServerConfig', data:'any_') -> 'str':
+def replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
 
     # Local variables
     query_string_new = []
@@ -99,7 +98,7 @@ def replace_query_string_items(sio_config:'SIOServerConfig', data:'any_') -> 'st
         should_continue = True
 
         # .. check exact keys ..
-        for name in sio_config.secret_config.exact:
+        for name in server.sio_config.secret_config.exact:
             if key == name:
                 value = Secret_Shadow
                 should_continue = False
@@ -107,7 +106,7 @@ def replace_query_string_items(sio_config:'SIOServerConfig', data:'any_') -> 'st
 
         # .. check prefixes ..
         if should_continue:
-            for name in sio_config.secret_config.prefixes:
+            for name in server.sio_config.secret_config.prefixes:
                 if key.startswith(name):
                     value = Secret_Shadow
                     should_continue = should_continue
@@ -115,7 +114,7 @@ def replace_query_string_items(sio_config:'SIOServerConfig', data:'any_') -> 'st
 
         # .. check suffixes ..
         if should_continue:
-            for name in sio_config.secret_config.suffixes:
+            for name in server.sio_config.secret_config.suffixes:
                 if key.endswith(name):
                     value = Secret_Shadow
                     break
