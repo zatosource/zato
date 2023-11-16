@@ -135,11 +135,15 @@ class ConnectionQueue:
         self.conn_name = conn_name
         self.conn_type = conn_type
         self.address = address
-        self.log_address = replace_query_string_items(self.server, self.address)
         self.add_client_func = add_client_func
         self.needs_spawn = needs_spawn
         self.max_attempts = max_attempts
         self.lock = RLock()
+
+        if isinstance(self.address, str): # type: ignore
+            self.log_address = replace_query_string_items(self.server, self.address)
+        else:
+            self.log_address = self.address
 
         # We are ready now
         self.logger = getLogger(self.__class__.__name__)
@@ -164,7 +168,7 @@ class ConnectionQueue:
                 log_func = self.logger.info
 
             if self.connection_exists():
-                log_func(msg, self.conn_name, self.address, self.conn_type)
+                log_func(msg, self.conn_name, self.log_address, self.conn_type)
 
             return is_accepted
 
@@ -228,7 +232,7 @@ class ConnectionQueue:
                         num_attempts,
                         self.max_attempts,
                         self.conn_type,
-                        self.address,
+                        self.log_address,
                         self.conn_name
                     )
 
@@ -240,13 +244,13 @@ class ConnectionQueue:
 
                 self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
                     self.queue.qsize(), self.queue_max_size,
-                    self.conn_type, self.address, self.conn_name, now - start, self.queue_build_cap)
+                    self.conn_type, self.log_address, self.conn_name, now - start, self.queue_build_cap)
 
                 if now >= build_until:
 
                     # Log the fact that the queue is not full yet
                     self.logger.info('Built %s/%s %s clients to `%s` within %s seconds, sleeping until %s (UTC)',
-                        self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.queue_build_cap,
+                        self.queue.qsize(), self.queue.maxsize, self.conn_type, self.log_address, self.queue_build_cap,
                         datetime.utcnow() + timedelta(seconds=self.queue_build_cap))
 
                     # Sleep for a predetermined time
@@ -263,9 +267,9 @@ class ConnectionQueue:
 
             if self.keep_connecting and self.connection_exists():
                 self.logger.info('Obtained %d %s client%sto `%s` for `%s`', self.queue.maxsize, self.conn_type, suffix,
-                    self.address, self.conn_name)
+                    self.log_address, self.conn_name)
             else:
-                self.logger.info('Skipped building a queue to `%s` for `%s`', self.address, self.conn_name)
+                self.logger.info('Skipped building a queue to `%s` for `%s`', self.log_address, self.conn_name)
                 self.queue_building_stopped = True
 
             # Ok, got all the connections
@@ -292,7 +296,7 @@ class ConnectionQueue:
         """
         with self.lock:
             if self.queue.full():
-                logger.info('Queue fully prepared -> c:%d (%s %s)', count, self.address, self.conn_name)
+                logger.info('Queue fully prepared -> c:%d (%s %s)', count, self.log_address, self.conn_name)
                 return
             self._spawn_add_client_func_no_lock(count)
 

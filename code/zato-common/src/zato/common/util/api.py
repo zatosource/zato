@@ -1081,9 +1081,12 @@ def parse_literal_dict(value:'str') -> 'str | anydict':
 
 # ################################################################################################################################
 
-def parse_extra_into_dict(lines, convert_bool=True):
+def parse_extra_into_dict(lines:'str | bytes', convert_bool:'bool'=True):
     """ Creates a dictionary out of key=value lines.
     """
+    if isinstance(lines, bytes):
+        lines = lines.decode('utf8')
+
     _extra = {}
 
     if lines:
