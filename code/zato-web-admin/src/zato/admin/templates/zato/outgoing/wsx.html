@@ -42,6 +42,7 @@
             'security_def',
             'subscription_list',
             'has_auto_reconnect',
+            'data_format',
         ]
     }
     </script>
@@ -83,6 +84,7 @@
                         <th><a href="#">On close</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -138,6 +140,7 @@
                         <td class='ignore'>{{ item.security_def }}</td>
                         <td class='ignore'>{{ item.subscription_list }}</td>
                         <td class='ignore'>{{ item.has_auto_reconnect }}</td>
+                        <td class='ignore'>{{ item.data_format|default:"" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
