@@ -450,7 +450,7 @@ class BaseHTTPSOAPWrapper:
 
         # .. and parse out placeholders for path parameters.
         for param_name in extract_param_placeholders(self.config['address_url_path']):
-            self.path_params.append(param_name)
+            self.path_params.append(param_name[1:-1])
 
 # ################################################################################################################################
 # ################################################################################################################################

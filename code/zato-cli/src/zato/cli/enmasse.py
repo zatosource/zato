@@ -1113,30 +1113,72 @@ class ObjectImporter:
 
     def _import(self, item_type, attrs, is_edit):
 
-        # First, resolve values pointing to environment variables
+        # Zato
+        from zato.common.util.config import extract_param_placeholders
+
+        # First, resolve values pointing to parameter placeholders and environment variables ..
         for key, orig_value in attrs.items():
 
+            # .. add type hints ..
             key        = cast_('str', key)
             orig_value = cast_('any_', orig_value)
 
+            # .. preprocess values only if they are strings ..
             if isinstance(orig_value, str):
 
-                if orig_value.startswith(zato_enmasse_env1):
-                    _prefix = zato_enmasse_env1
-                elif orig_value.startswith(zato_enmasse_env2):
-                    _prefix = zato_enmasse_env2
+                # .. assume there will be no placeholders for this value ..
+                has_params = False
+
+                # .. extract any potential placeholders ..
+                params = extract_param_placeholders(orig_value)
+
+                # .. go through each placeholder ..
+                for param in params:
+
+                    # .. indicate that we actually do have a placeholder ..
+                    has_params = True
+
+                    # .. check if it points to an environment variable ..
+                    if zato_enmasse_env2 in param:
+
+                        # .. we are here if we can find an environment variable ..
+                        # .. based on a placeholder parameter, so we now need ..
+                        # .. to extract the value of this variable or use a default one ..
+                        # .. in case the value does not exist ..
+                        env_variable_name = param.replace(zato_enmasse_env2, '')
+                        env_variable_name = env_variable_name[1:-1]
+
+                        # .. let's find this variable or use the default one ..
+                        env_value = os.environ.get(env_variable_name, 'Missing_Value_' + env_variable_name)
+
+                        # .. now, we can insert this variable in the original value ..
+                        orig_value = orig_value.replace(param, env_value)
+
+                # .. if we have at least one placeholder, we can populate the new value already here ..
+                if has_params:
+                    attrs[key] = orig_value
+
+                # .. otherwise, we still need to check if the entire value is not an environment variable ..
                 else:
-                    _prefix    = None
 
-                if _prefix:
-
-                    value = orig_value.split(_prefix)
-                    value = value[1]
-                    if not value:
-                        raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
+                    if orig_value.startswith(zato_enmasse_env1):
+                        _prefix = zato_enmasse_env1
+                    elif orig_value.startswith(zato_enmasse_env2):
+                        _prefix = zato_enmasse_env2
                     else:
-                        value = os.environ.get(value)
-                    attrs[key] = value
+                        _prefix = None
+
+                    if _prefix:
+
+                        value = orig_value.split(_prefix)
+                        value = value[1]
+
+                        if not value:
+                            raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
+                        else:
+                            value = os.environ.get(value)
+
+                        attrs[key] = value
 
         #
         # Preprocess the data to be imported
