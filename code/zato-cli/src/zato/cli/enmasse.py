@@ -17,7 +17,7 @@ from time import sleep
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common.api import All_Sec_Def_Types, DATA_FORMAT, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
+from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
     NotGiven, TLS as COMMON_TLS
 from zato.common.typing_ import cast_
 
@@ -66,6 +66,7 @@ ERROR_TYPE_MISSING = Code('E04', 'type missing')
 
 # ################################################################################################################################
 
+outconn_wsx  = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX
 outconn_ldap = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP
 
 # We need to have our own version because type "bearer_token" exists in enmasse only.
@@ -267,6 +268,7 @@ ModuleCtx.Enmasse_Item_Type_Name_Map = {
     'channel_plain_http': 'channel_rest',
     'outconn_plain_http': 'outgoing_rest',
     'zato_generic_connection_outconn-ldap': 'outgoing_ldap',
+    'zato_generic_connection_outconn-wsx': 'outgoing_wsx',
 }
 
 # ################################################################################################################################
@@ -1111,30 +1113,72 @@ class ObjectImporter:
 
     def _import(self, item_type, attrs, is_edit):
 
-        # First, resolve values pointing to environment variables
+        # Zato
+        from zato.common.util.config import extract_param_placeholders
+
+        # First, resolve values pointing to parameter placeholders and environment variables ..
         for key, orig_value in attrs.items():
 
+            # .. add type hints ..
             key        = cast_('str', key)
             orig_value = cast_('any_', orig_value)
 
+            # .. preprocess values only if they are strings ..
             if isinstance(orig_value, str):
 
-                if orig_value.startswith(zato_enmasse_env1):
-                    _prefix = zato_enmasse_env1
-                elif orig_value.startswith(zato_enmasse_env2):
-                    _prefix = zato_enmasse_env2
+                # .. assume there will be no placeholders for this value ..
+                has_params = False
+
+                # .. extract any potential placeholders ..
+                params = extract_param_placeholders(orig_value)
+
+                # .. go through each placeholder ..
+                for param in params:
+
+                    # .. indicate that we actually do have a placeholder ..
+                    has_params = True
+
+                    # .. check if it points to an environment variable ..
+                    if zato_enmasse_env2 in param:
+
+                        # .. we are here if we can find an environment variable ..
+                        # .. based on a placeholder parameter, so we now need ..
+                        # .. to extract the value of this variable or use a default one ..
+                        # .. in case the value does not exist ..
+                        env_variable_name = param.replace(zato_enmasse_env2, '')
+                        env_variable_name = env_variable_name[1:-1]
+
+                        # .. let's find this variable or use the default one ..
+                        env_value = os.environ.get(env_variable_name, 'Missing_Value_' + env_variable_name)
+
+                        # .. now, we can insert this variable in the original value ..
+                        orig_value = orig_value.replace(param, env_value)
+
+                # .. if we have at least one placeholder, we can populate the new value already here ..
+                if has_params:
+                    attrs[key] = orig_value
+
+                # .. otherwise, we still need to check if the entire value is not an environment variable ..
                 else:
-                    _prefix    = None
 
-                if _prefix:
-
-                    value = orig_value.split(_prefix)
-                    value = value[1]
-                    if not value:
-                        raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
+                    if orig_value.startswith(zato_enmasse_env1):
+                        _prefix = zato_enmasse_env1
+                    elif orig_value.startswith(zato_enmasse_env2):
+                        _prefix = zato_enmasse_env2
                     else:
-                        value = os.environ.get(value)
-                    attrs[key] = value
+                        _prefix = None
+
+                    if _prefix:
+
+                        value = orig_value.split(_prefix)
+                        value = value[1]
+
+                        if not value:
+                            raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
+                        else:
+                            value = os.environ.get(value)
+
+                        attrs[key] = value
 
         #
         # Preprocess the data to be imported
@@ -1164,7 +1208,7 @@ class ObjectImporter:
         elif item_type == 'oauth':
 
             if not 'data_format' in attrs:
-                attrs['data_format'] = DATA_FORMAT.JSON
+                attrs['data_format'] = Data_Format.JSON
 
             if not 'client_id_field' in attrs:
                 attrs['client_id_field'] = 'client_id'
@@ -2005,7 +2049,30 @@ class InputParser:
                     value['type_'] = wrapper_type
 
                     # .. populate wrapper type-specific attributes ..
-                    if wrapper_type == outconn_ldap:
+                    if wrapper_type == outconn_wsx:
+
+                        if not 'is_outconn' in value:
+                            value['is_outconn'] = True
+
+                        if not 'is_channel' in value:
+                            value['is_channel'] = False
+
+                        if not 'is_internal' in value:
+                            value['is_internal'] = False
+
+                        if not 'pool_size' in value:
+                            value['pool_size'] = 1
+
+                        if not 'sec_use_rbac' in value:
+                            value['sec_use_rbac'] = False
+
+                        if not 'is_zato' in value:
+                            value['is_zato'] = False
+
+                        if not 'data_format' in value:
+                            value['data_format'] = Data_Format.JSON
+
+                    elif wrapper_type == outconn_ldap:
 
                         # .. passwords are to be turned into secrets ..
                         if password := value.pop('password', None):
@@ -2575,7 +2642,7 @@ class Enmasse(ManageCommand):
 
         # .. the data format of REST objects defaults to JSON which is why we do not return it, unless it is different ..
         if item_type in {'channel_plain_http', 'outconn_plain_http', 'zato_generic_rest_wrapper'}:
-            if item_copy.get('data_format') == DATA_FORMAT.JSON:
+            if item_copy.get('data_format') == Data_Format.JSON:
                 _ = item.pop('data_format', None)
 
         return item
@@ -2750,7 +2817,8 @@ class Enmasse(ManageCommand):
 
         # .. now, replace generic connection types which are more involved ..
         new_names = {
-            'outgoing_ldap': []
+            'outgoing_ldap': [],
+            'outgoing_wsx': [],
         }
         for old_name, value_list in to_write.items():
             value_list = cast_('anylist', value_list)
@@ -3072,7 +3140,6 @@ if __name__ == '__main__':
 
     args.path  = sys.argv[1]
     args.input = sys.argv[2] if 'import' in args else ''
-    # args.path = ''
 
     enmasse = Enmasse(args)
     enmasse.run(args)
