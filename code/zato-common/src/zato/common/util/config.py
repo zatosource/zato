@@ -13,6 +13,9 @@ from urllib.parse import parse_qsl, urlparse, urlunparse
 # Bunch
 from bunch import Bunch
 
+# parse
+from parse import PARSE_RE as parse_re
+
 # Zato
 from zato.common.api import Secret_Shadow
 from zato.common.const import SECRETS
@@ -134,6 +137,22 @@ def replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
 
     # .. and return it to our caller.
     return data
+
+# ################################################################################################################################
+
+def extract_param_placeholders(data:'str') -> 'any_':
+
+    # Parse out groups for path parameters ..
+    groups = parse_re.split(data)
+
+    # .. go through each group ..
+    for group in groups:
+
+        # .. if it is a parameter placeholder ..
+        if group and group[0] == '{':
+
+            # .. yield it to our caller.
+            yield group
 
 # ################################################################################################################################
 # ################################################################################################################################
