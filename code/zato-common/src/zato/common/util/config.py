@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from urllib.parse import parse_qsl, urlparse, urlunparse
 
 # Bunch
 from bunch import Bunch
@@ -20,6 +21,7 @@ from zato.common.const import SECRETS
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import any_
     from zato.server.base.parallel import ParallelServer
     from zato.simpleio import SIOServerConfig
 
@@ -75,8 +77,64 @@ def resolve_env_variables(data):
 
 # ################################################################################################################################
 
-def replace_query_string_items(sio_config:'SIOServerConfig', data:'str') -> 'str':
-    # server.sio_config.
+def replace_query_string_items(sio_config:'SIOServerConfig', data:'any_') -> 'str':
+
+    # Local variables
+    query_string_new = []
+
+    # Parse the data ..
+    data = urlparse(data)
+
+    # .. extract the query string ..
+    query_string = data.query
+    query_string = parse_qsl(query_string)
+
+    # .. convert the data to a list to make it possible to unparse it later on ..
+    data = list(data)
+
+    # .. replace all the required elements ..
+    for key, value in query_string:
+
+        # .. so we know if we matched something in the inner loops ..
+        should_continue = True
+
+        # .. check exact keys ..
+        for name in sio_config.secret_config.exact:
+            if key == name:
+                value = Secret_Shadow
+                should_continue = False
+                break
+
+        # .. check prefixes ..
+        if should_continue:
+            for name in sio_config.secret_config.prefixes:
+                if key.startswith(name):
+                    value = Secret_Shadow
+                    should_continue = should_continue
+                    break
+
+        # .. check suffixes ..
+        if should_continue:
+            for name in sio_config.secret_config.suffixes:
+                if key.endswith(name):
+                    value = Secret_Shadow
+                    break
+
+        # .. if we are here, either it means that the value was replaced ..
+        # .. or we are going to use as it was because it needed no replacing ..
+        query_string_new.append(f'{key}={value}')
+
+    # .. replace the query string ..
+    query_string_new = '&'.join(query_string_new)
+
+    # .. now, set the query string back ..
+    data[-2] = query_string_new
+
+    # .. build a full address once more ..
+    data = urlunparse(data)
+
+    # .. and return it to our caller.
     return data
 
+# ################################################################################################################################
 # ################################################################################################################################
