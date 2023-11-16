@@ -17,7 +17,7 @@ from time import sleep
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common.api import All_Sec_Def_Types, DATA_FORMAT, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
+from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
     NotGiven, TLS as COMMON_TLS
 from zato.common.typing_ import cast_
 
@@ -66,6 +66,7 @@ ERROR_TYPE_MISSING = Code('E04', 'type missing')
 
 # ################################################################################################################################
 
+outconn_wsx  = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX
 outconn_ldap = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP
 
 # We need to have our own version because type "bearer_token" exists in enmasse only.
@@ -267,6 +268,7 @@ ModuleCtx.Enmasse_Item_Type_Name_Map = {
     'channel_plain_http': 'channel_rest',
     'outconn_plain_http': 'outgoing_rest',
     'zato_generic_connection_outconn-ldap': 'outgoing_ldap',
+    'zato_generic_connection_outconn-wsx': 'outgoing_wsx',
 }
 
 # ################################################################################################################################
@@ -1164,7 +1166,7 @@ class ObjectImporter:
         elif item_type == 'oauth':
 
             if not 'data_format' in attrs:
-                attrs['data_format'] = DATA_FORMAT.JSON
+                attrs['data_format'] = Data_Format.JSON
 
             if not 'client_id_field' in attrs:
                 attrs['client_id_field'] = 'client_id'
@@ -2005,7 +2007,30 @@ class InputParser:
                     value['type_'] = wrapper_type
 
                     # .. populate wrapper type-specific attributes ..
-                    if wrapper_type == outconn_ldap:
+                    if wrapper_type == outconn_wsx:
+
+                        if not 'is_outconn' in value:
+                            value['is_outconn'] = True
+
+                        if not 'is_channel' in value:
+                            value['is_channel'] = False
+
+                        if not 'is_internal' in value:
+                            value['is_internal'] = False
+
+                        if not 'pool_size' in value:
+                            value['pool_size'] = 1
+
+                        if not 'sec_use_rbac' in value:
+                            value['sec_use_rbac'] = False
+
+                        if not 'is_zato' in value:
+                            value['is_zato'] = False
+
+                        if not 'data_format' in value:
+                            value['data_format'] = Data_Format.JSON
+
+                    elif wrapper_type == outconn_ldap:
 
                         # .. passwords are to be turned into secrets ..
                         if password := value.pop('password', None):
@@ -2575,7 +2600,7 @@ class Enmasse(ManageCommand):
 
         # .. the data format of REST objects defaults to JSON which is why we do not return it, unless it is different ..
         if item_type in {'channel_plain_http', 'outconn_plain_http', 'zato_generic_rest_wrapper'}:
-            if item_copy.get('data_format') == DATA_FORMAT.JSON:
+            if item_copy.get('data_format') == Data_Format.JSON:
                 _ = item.pop('data_format', None)
 
         return item
@@ -2750,7 +2775,8 @@ class Enmasse(ManageCommand):
 
         # .. now, replace generic connection types which are more involved ..
         new_names = {
-            'outgoing_ldap': []
+            'outgoing_ldap': [],
+            'outgoing_wsx': [],
         }
         for old_name, value_list in to_write.items():
             value_list = cast_('anylist', value_list)
@@ -3072,7 +3098,6 @@ if __name__ == '__main__':
 
     args.path  = sys.argv[1]
     args.input = sys.argv[2] if 'import' in args else ''
-    # args.path = ''
 
     enmasse = Enmasse(args)
     enmasse.run(args)
