@@ -519,9 +519,10 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
 # ################################################################################################################################
 
-    def _soap_data(self, data:'str', headers:'stranydict') -> 'tuple[str, stranydict]':
+    def _soap_data(self, data:'str | bytes', headers:'stranydict') -> 'tuple[any_, stranydict]':
         """ Wraps the data in a SOAP-specific messages and adds the headers required.
         """
+        needs_soap_wrapper = False
         soap_config:'strstrdict' = self.soap[self.config['soap_version']]
 
         # The idea here is that even though there usually won't be the Content-Type
@@ -531,12 +532,22 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             headers['Content-Type'] = soap_config['content_type']
 
         # We do not need an envelope if the data already has one ..
-        if ':Envelope>' in data:
-            return data, headers
+        if isinstance(data, bytes):
+            if b':Envelope' in data:
+                return data, headers # type: ignore
+            else:
+                needs_soap_wrapper = True
 
-        # .. otherwise, we need to add it.
         else:
+            if ':Envelope' in data:
+                return data, headers # type: ignore
+            else:
+                needs_soap_wrapper = True
+
+        if needs_soap_wrapper:
             return soap_config['message'].format(header='', data=data), headers
+        else:
+            return data, headers
 
 # ################################################################################################################################
 

@@ -17,7 +17,8 @@ from time import sleep
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, NotGiven, TLS as COMMON_TLS
+from zato.common.api import All_Sec_Def_Types, DATA_FORMAT, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
+    NotGiven, TLS as COMMON_TLS
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -66,6 +67,9 @@ ERROR_TYPE_MISSING = Code('E04', 'type missing')
 # ################################################################################################################################
 
 outconn_ldap = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP
+
+# We need to have our own version because type "bearer_token" exists in enmasse only.
+_All_Sec_Def_Types = All_Sec_Def_Types + ['bearer_token']
 
 # ################################################################################################################################
 
@@ -837,18 +841,23 @@ class InputValidator:
                 self.results.add_error(raw, ERROR_KEYS_MISSING, "Key '{}' must exist in {}: {}", req_key, item_type, item_dict)
 
 class DependencyScanner:
-    def __init__(self, json, ignore_missing=False):
+    def __init__(self, json, is_import, is_export, ignore_missing=False):
         self.json = json
+        self.is_import = is_import
+        self.is_export = is_export
         self.ignore_missing = ignore_missing
-        #: (item_type, name): [(item_type, name), ..]
         self.missing = {}
 
 # ################################################################################################################################
 
     def find(self, item_type, fields):
 
-        if item_type == 'def_sec':
+        if item_type in ['def_sec']:
             return self.find_sec(fields)
+
+        elif item_type in _All_Sec_Def_Types:
+            if self.is_export:
+                item_type = 'def_sec'
 
         items = self.json.get(item_type, ())
 
@@ -940,8 +949,17 @@ class DependencyScanner:
         return results
 
 class ObjectImporter:
-    def __init__(self, client, logger, object_mgr, json, ignore_missing, args):
-        # type: (APIClient, Logger, ObjectManager, dict, bool, object)
+    def __init__(
+        self,
+        client,     # type: APIClient
+        logger,     # type: Logger
+        object_mgr, # type: ObjectManager
+        json,       # type: strdict
+        is_import,  # type: bool
+        is_export,  # type: bool
+        ignore_missing, # type: bool
+        args            # type: any_
+    ) -> 'None':
 
         # Bunch
         from bunch import bunchify
@@ -962,6 +980,9 @@ class ObjectImporter:
 
         # Command-line arguments
         self.args = args
+
+        self.is_import = is_import
+        self.is_export = is_export
 
         self.ignore_missing = ignore_missing
 
@@ -994,7 +1015,12 @@ class ObjectImporter:
         from zato.common.ext.future.utils import iteritems
 
         results = Results()
-        dep_scanner = DependencyScanner(self.json, ignore_missing=self.ignore_missing)
+        dep_scanner = DependencyScanner(
+            self.json,
+            self.is_import,
+            self.is_export,
+            ignore_missing=self.ignore_missing
+        )
         scan_results = dep_scanner.scan()
 
         if not scan_results.ok:
@@ -1250,8 +1276,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def import_objects(self, already_existing):
-        # type: (Results)
+    def import_objects(self, already_existing) -> 'Results':
 
         # stdlib
         from time import sleep
@@ -2197,11 +2222,15 @@ class Enmasse(ManageCommand):
         self.args = args
         self.curdir = os.path.abspath(self.original_dir)
         self.json = {}
-        has_import = getattr(args, 'import')
+        has_import = getattr(args, 'import', False)
 
         # For type hints
         self.missing_wait_time:'int' = getattr(self.args, 'missing_wait_time', None) or ModuleCtx.Missing_Wait_Time
         self.missing_wait_time = int(self.missing_wait_time)
+
+        # Assume False unless it is overridden later on
+        self.is_import = False
+        self.is_export = False
 
         # Initialize environment variables ..
         env_path = self.normalize_path('env_file', exit_if_missing=False)
@@ -2259,6 +2288,13 @@ class Enmasse(ManageCommand):
         if True not in (args.export_local, self.export_odb, args.clean_odb, has_import):
             self.logger.error('At least one of --clean, --export-local, --export-odb or --import is required, stopping now')
             sys.exit(self.SYS_ERROR.NO_OPTIONS)
+
+        # Populate the flags for our users
+        if has_import:
+            self.is_import = True
+
+        if args.export_local or self.export_odb:
+            self.is_export = True
 
         if args.clean_odb:
             self.object_mgr.refresh()
@@ -2887,7 +2923,7 @@ class Enmasse(ManageCommand):
 
     def export(self):
         # Find any definitions that are missing
-        dep_scanner = DependencyScanner(self.json, ignore_missing=self.args.ignore_missing_defs)
+        dep_scanner = DependencyScanner(self.json, self.is_import, self.is_export, ignore_missing=self.args.ignore_missing_defs)
         missing_defs = dep_scanner.scan()
         if not missing_defs.ok:
             self.logger.error('Failed to find all definitions needed')
@@ -2991,7 +3027,7 @@ class Enmasse(ManageCommand):
 
         # .. build an object that will import the definitions ..
         importer = ObjectImporter(self.client, self.logger, self.object_mgr, self.json,
-            ignore_missing=self.args.ignore_missing_defs, args=self.args)
+            self.is_import, self.is_export, ignore_missing=self.args.ignore_missing_defs, args=self.args)
 
         # .. find channels and jobs that require services that do not exist ..
         results = importer.validate_import_data()
@@ -3030,11 +3066,13 @@ if __name__ == '__main__':
     args.output = None
     args.rbac_sleep = 1
 
-    args['replace'] = True
-    args['import'] = True
+    # args['replace'] = True
+    # args['import'] = True
+    args['export'] = True
 
     args.path  = sys.argv[1]
-    args.input = sys.argv[2]
+    args.input = sys.argv[2] if 'import' in args else ''
+    # args.path = ''
 
     enmasse = Enmasse(args)
     enmasse.run(args)
