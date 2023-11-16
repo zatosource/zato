@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 # flake8: noqa
 from base64 import b64encode
+from copy import deepcopy
 from hashlib import sha1
 import os
 import socket
 import ssl
 
+from zato.common.api import NotGiven
 from zato.server.ext.ws4py import WS_KEY, WS_VERSION
 from zato.server.ext.ws4py.exc import HandshakeError
 from zato.server.ext.ws4py.websocket import WebSocket
@@ -79,7 +81,6 @@ class WebSocketBaseClient(WebSocket):
         self.resource = None
         self.ssl_options = ssl_options or {}
         self.extra_headers = headers or []
-
         self._parse_url()
 
         if self.unix_socket_path:
@@ -152,6 +153,10 @@ class WebSocketBaseClient(WebSocket):
         else:
             raise ValueError("Invalid hostname from: %s", self.url)
 
+        # We have our host so we can set the TLS options accordingly
+        if not 'server_hostname' in self.ssl_options:
+            self.ssl_options['server_hostname'] = self.host
+
         if parsed.port:
             self.port = parsed.port
 
@@ -205,7 +210,19 @@ class WebSocketBaseClient(WebSocket):
         """
         if self.scheme == "wss":
             # default port is now 443; upgrade self.sender to send ssl
-            self.sock = ssl.wrap_socket(self.sock, **self.ssl_options)
+
+            # This may be specified if needed ..
+            check_hostname = os.environ.get('Zato_WSX_TLS_Check_Hostname', NotGiven)
+
+            # .. if there is no such environment variable, assume the host name needs to be checked.
+            if check_hostname is NotGiven:
+                check_hostname = True
+            else:
+                check_hostname = False
+
+            context = ssl.create_default_context()
+            context.check_hostname = check_hostname
+            self.sock = context.wrap_socket(self.sock, **self.ssl_options)
             self._is_secure = True
 
         self.sock.connect(self.bind_addr)
