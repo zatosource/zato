@@ -41,16 +41,16 @@ class ConfigTestCase(TestCase):
         data01 = 'wss://hello?xApiKey=123'
         data02 = 'wss://hello?xApiKey=123&token=456'
         data03 = 'wss://hello?xApiKey=123&token=456&abc=111'
-        data04 = 'wss://hello?abc=111xApiKey=123&token=456&zxc=456'
-        data05 = 'https://hello?secret_prefix_1=123&password_prefix_2=456'
-        data06 = 'https://hello?secret_prefix_1=123&password_prefix_2=456'
+        data04 = 'wss://hello?abc=111&xApiKey=123&token=456&zxc=456'
+        data05 = 'https://hello?secret_prefix_1=123&1_secret_suffix=456'
+        data06 = 'https://hello?password_prefix_2=123&2_password_suffix=456'
 
         data01_expected = f'wss://hello?xApiKey={Secret_Shadow}'
         data02_expected = f'wss://hello?xApiKey={Secret_Shadow}&token={Secret_Shadow}'
         data03_expected = f'wss://hello?xApiKey={Secret_Shadow}&token={Secret_Shadow}&abc=111'
-        data04_expected = f'wss://hello?abc=111xApiKey={Secret_Shadow}&token={Secret_Shadow}&zxc=456'
-        data05_expected = f'https://hello?secret_prefix_1={Secret_Shadow}&password_prefix_2={Secret_Shadow}'
-        data06_expected = f'https://hello?secret_prefix_1={Secret_Shadow}&password_prefix_2={Secret_Shadow}'
+        data04_expected = f'wss://hello?abc=111&xApiKey={Secret_Shadow}&token={Secret_Shadow}&zxc=456'
+        data05_expected = f'https://hello?secret_prefix_1={Secret_Shadow}&1_secret_suffix={Secret_Shadow}'
+        data06_expected = f'https://hello?password_prefix_2={Secret_Shadow}&2_password_suffix={Secret_Shadow}'
 
         data01_replaced = replace_query_string_items(sio_config, data01)
         data02_replaced = replace_query_string_items(sio_config, data02)
