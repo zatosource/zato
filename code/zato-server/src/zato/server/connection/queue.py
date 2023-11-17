@@ -387,12 +387,32 @@ class Wrapper:
 
 # ################################################################################################################################
 
+    def _get_item_name(self, item:'any_') -> 'str':
+
+        if hasattr(item, 'get_name'):
+            item_name = item.get_name()
+            return item_name
+        else:
+            if config := getattr(item, 'config', None):
+                if item_name := config.get('name'):
+                    return item_name
+
+        # If we are here, it means that have no way extract the name
+        # so we simply return a string representation of this item.
+        return str(item)
+
+# ################################################################################################################################
+
     def delete_in_progress_connections(self, reason:'strnone'=None) -> 'None':
 
         # These connections are trying to connect (e.g. WSXClient objects)
         if self.conn_in_progress_list:
             for item in self.conn_in_progress_list:
-                item.delete(reason)
+                try:
+                    item.delete(reason)
+                except Exception as e:
+                    item_name = self._get_item_name(item)
+                    logger.info('Exception while deleting queue item `%s` -> `%s`', item_name, e)
 
         self.conn_in_progress_list.clear()
 
