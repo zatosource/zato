@@ -523,6 +523,7 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
 
     var instance = $.fn.zato.data_table.data[id];
     var name = '';
+
     if('get_name' in instance) {
         name = instance.get_name();
     }
@@ -1235,6 +1236,10 @@ $.fn.zato.toggle_time = function(link_name, current_value, new_value) {
 
 $.fn.zato.slugify = function(text) {
     return text.toLowerCase().replace(/ /g,'-').replace(/[^\w-]+/g,'');
+}
+
+$.fn.zato.to_json = function(item) {
+    return JSON.stringify(item);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
