@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from json import loads
+from json import dumps, loads
 
 # requests
 from requests import post as requests_post
@@ -16,7 +16,6 @@ from requests import post as requests_post
 from zato.common.api import IPC as Common_IPC
 from zato.common.broker_message import SERVER_IPC
 from zato.common.typing_ import dataclass
-from zato.common.json_ import dumps
 
 # ################################################################################################################################
 # ################################################################################################################################

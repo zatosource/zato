@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.api import HTTP_SOAP_SERIALIZATION_TYPE, PUBSUB, URL_TYPE
+from zato.common.api import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.json_internal import dumps
@@ -21,7 +21,8 @@ from zato.server.service.internal import AdminService, AdminSIO
 
 if 0:
     from zato.common.pubsub import PubSubMessage
-    from zato.common.typing_ import any_, anydict, callable_
+    from zato.common.typing_ import any_, anydict, callable_, strcalldict, strdict
+    from zato.server.connection.http_soap.outgoing import RESTWrapper
     from zato.server.pubsub.model import Subscription
 
     PubSubMessage = PubSubMessage
@@ -113,31 +114,34 @@ class DeliverMessage(AdminService):
 
 # ################################################################################################################################
 
-    def _deliver_rest_soap(self,
+    def _deliver_rest(self,
         msg:'list[PubSubMessage]',
         sub:'Subscription',
         impl_getter:'callable_',
-        _suds:'str'=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id,
-        _rest:'str'=URL_TYPE.PLAIN_HTTP
         ) -> 'None':
 
-        if not sub.config['out_http_soap_id']:
+        # Local variables
+        out_http_method  = sub.config['out_http_method']
+        out_http_soap_id = sub.config.get('out_http_soap_id')
+
+        if not out_http_soap_id:
             raise ValueError('Missing out_http_soap_id for subscription `{}`'.format(sub))
         else:
+            # Extract the actual data from the pub/sub message ..
             data = self._get_data_from_message(msg)
-            http_soap = impl_getter(sub.config['out_http_soap_id']) # type: any_
 
-            _is_rest = http_soap['config']['transport'] == _rest # type: bool
-            _has_suds = http_soap['config']['serialization_type'] == _suds # type: bool
+            # .. the outgoing connection's configuration ..
+            rest_config:'strdict' = impl_getter(out_http_soap_id)
 
-            # If it is REST or a suds-based connection, we can just invoke it directly
-            if _is_rest or (not _has_suds):
-                http_soap.conn.http_request(sub.config['out_http_method'], self.cid, data=data)
+            # .. from which we can extract the actual wrapper ..
+            conn:'RESTWrapper' = rest_config['conn']
 
-            # .. while suds-based outgoing connections need to invoke the hook service which will
-            # in turn issue a SOAP request to the remote server.
-            else:
-                self.pubsub.invoke_on_outgoing_soap_invoke_hook(msg, sub, http_soap)
+            # .. make sure that we send JSON ..
+            if not isinstance(data, str):
+                data = dumps(data)
+
+            # .. which now can be invoked.
+            _ = conn.http_request(out_http_method, self.cid, data=data)
 
 # ################################################################################################################################
 
@@ -211,8 +215,8 @@ class DeliverMessage(AdminService):
 # ################################################################################################################################
 
 # We need to register it here because it refers to DeliverMessage's methods
-deliver_func = {
-    PUBSUB.ENDPOINT_TYPE.REST.id: DeliverMessage._deliver_rest_soap,
+deliver_func:'strcalldict' = {
+    PUBSUB.ENDPOINT_TYPE.REST.id: DeliverMessage._deliver_rest,
     PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: DeliverMessage._deliver_wsx,
     PUBSUB.ENDPOINT_TYPE.SERVICE.id: DeliverMessage._deliver_srv,
 }
