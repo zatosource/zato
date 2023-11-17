@@ -1863,6 +1863,16 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def is_service_wsx_adapter(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.service_store.is_service_wsx_adapter(*args, **kwargs)
 
+    def on_wsx_outconn_stopped_running(self, conn_id:'str') -> 'None':
+        """ This does not do anything by default but tests can overwrite it with custom functionality.
+        """
+        logger.warn('QQQ-1 -> on_wsx_outconn_stopped_running')
+
+    def on_wsx_outconn_connected(self, conn_id:'str') -> 'None':
+        """ This does not do anything by default but tests can overwrite it with custom functionality.
+        """
+        logger.warn('QQQ-2 -> on_wsx_outconn_connected')
+
 # ################################################################################################################################
 # ################################################################################################################################
 

@@ -112,6 +112,12 @@ class Config:
     # This is a method that will tell the client whether its parent connection definition is still active.
     check_is_active_func: 'callable_'
 
+    # This is a callback that the WSX client invokes to notify the server that the WSX connection stopped running.
+    on_outconn_stopped_running_func: 'callable_'
+
+    # This is a callback that the WSX client invokes to notify the server that the WSX connection connected to a remote end.
+    on_outconn_connected_func: 'callable_'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -654,8 +660,17 @@ class Client:
 
             # .. if it is not, we can break out of the loop.
             if not is_active:
+
+                # Log what we are doing ..
                 self.logger.info('Skipped building an inactive WSX connection -> %s', self.config.client_name)
+
+                # .. indicate that we are stopping ..
                 self.keep_running = False
+
+                # .. invoke a callback to notify any interested party in the fact that we are not running anymore ..
+                self.config.on_outconn_stopped_running_func()
+
+                # .. and break out of the loop.
                 break
 
             # Check if we have already run out of attempts.
@@ -722,6 +737,9 @@ class Client:
             else:
                 needs_connect = False
                 self.is_connected = True
+
+                # .. invoke a callback to notify any interested party in the fact that we are not running anymore ..
+                self.config.on_outconn_connected_func()
 
 # ################################################################################################################################
 

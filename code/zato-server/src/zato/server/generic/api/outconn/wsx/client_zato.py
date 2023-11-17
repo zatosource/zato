@@ -65,6 +65,8 @@ class ZatoWSXClient(_BaseWSXClient):
         )
 
         self._zato_client_config.check_is_active_func = self.check_is_active
+        self._zato_client_config.on_outconn_stopped_running_func = self.on_outconn_stopped_running
+        self._zato_client_config.on_outconn_connected_func = self.on_outconn_connected
         self._zato_client_config.client_id = 'wsx.out.{}'.format(new_cid(8))
         self._zato_client_config.address = self.config['address']
         self._zato_client_config.on_request_callback = self.on_message_cb
@@ -115,9 +117,21 @@ class ZatoWSXClient(_BaseWSXClient):
 # ################################################################################################################################
 
     def check_is_active(self):
-        parent = self.config['parent'] # type: OutconnWSXWrapper
+        parent:'OutconnWSXWrapper' = self.config['parent']
         is_active = parent.check_is_active()
         return is_active
+
+# ################################################################################################################################
+
+    def on_outconn_stopped_running(self):
+        parent:'OutconnWSXWrapper' = self.config['parent']
+        parent.on_outconn_stopped_running()
+
+# ################################################################################################################################
+
+    def on_outconn_connected(self):
+        parent:'OutconnWSXWrapper' = self.config['parent']
+        parent.on_outconn_connected()
 
 # ################################################################################################################################
 
