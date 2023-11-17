@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,10 +10,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from logging import basicConfig, getLogger, WARN
 from tempfile import gettempdir
-from time import sleep
 from traceback import format_exc
-
 from unittest import main
+
+# gevent
+from gevent import sleep
 
 # Zato
 from zato.common.test import rand_string, rand_unicode
@@ -141,20 +142,21 @@ class WSXOutconnReconnectTestCase(BaseEnmasseTestCase):
             outconn_config_file = self._save_enmasse_outconn_file(test_suffix)
 
             # .. create the channel ..
-            self.invoke_enmasse(channel_config_file)
+            _ = self.invoke_enmasse(channel_config_file)
 
             # .. create the outgoing connection ..
-            self.invoke_enmasse(outconn_config_file)
+            _ = self.invoke_enmasse(outconn_config_file)
 
             # .. now, delete the channel ..
-            # self._delete_channel(test_suffix)
+
+            self._delete_channel(test_suffix)
 
             # .. create the channel back ..
-            # self.invoke_enmasse(channel_config_file)
+            _ = self.invoke_enmasse(channel_config_file)
 
             # .. wait a few seconds to make sure that the outgoing connection
             # .. has enough time to reconnect ..
-            # sleep(6)
+            sleep(6)
 
             # .. and confirm that it did.
 
