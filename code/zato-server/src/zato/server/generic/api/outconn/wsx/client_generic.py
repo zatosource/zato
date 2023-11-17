@@ -148,25 +148,14 @@ class _NonZatoWSXClient:
 
     def connect(self) -> 'any_':
         self.connection_attempts_so_far += 1
-        if self.connection_attempts_so_far % 5 == 0:
-            try:
-                # self._non_zato_client.close_connection()
-                # self.close('QQQ')
-                pass
-            except OSError as e:
-                logger.warn('OS Error -> %s', e)
-            self.config['address'] = 'QQQ'
-            self.connection_attempts_so_far = 0
-            self._non_zato_client = None # type: ignore
-            self.init()
         try:
             self._non_zato_client.connect(close_on_handshake_error=False)
         except Exception as e:
-            logger.warn('%s WSX could not connect to `%s` -> id:%s -> `%s',
-                self.connection_attempts_so_far,
+            logger.warn('WSX could not connect to `%s` -> id:%s -> `%s (#%s)',
                 self.log_address,
                 hex(id(self._non_zato_client)),
-                e
+                e,
+                self.connection_attempts_so_far,
             )
         else:
             logger.warn('CONNECTED AS ID: %s', self._non_zato_client)
@@ -196,30 +185,8 @@ class _NonZatoWSXClient:
 # ################################################################################################################################
 
     def run_forever(self) -> 'any_':
-
-        # Wait until the client is connected ..
-        while True:
-
-            try:
-
-                # .. do not loop anymore if we are not to keep running ..
-                if not self.should_keep_running():
-                    return
-
-                # .. do not loop anymore if we are already connected ..
-                if self.check_is_connected():
-                    return
-
-                # .. wait for some time until the next connection attempt ..
-                sleep(0.5)
-
-                # .. if we are here, it means that we need to try to connect now ..
-                self.connect()
-
-            except Exception:
-
-                # If we caught an exception, we can log it ..
-                logger.warn('WSX exception in `%s` -> `%s`', self.log_address, format_exc())
+        # Added for API completeness
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################

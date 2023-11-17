@@ -58,8 +58,9 @@ class WSXClient:
         self.server = server
         self.config = config
         self.is_zato = self.config['is_zato']
+        self.impl = cast_('any_', None)
 
-    def init(self) -> 'None':
+    def _init(self) -> 'None':
 
         # Decide which implementation class to use ..
         if self.is_zato:
@@ -93,21 +94,52 @@ class WSXClient:
         # .. and run forever.
         _ = self.impl.run_forever()
 
+# ################################################################################################################################
+
+    def init(self) -> 'None':
+
+        # Keep trying until our underlying client is connected ..
+        while not self.is_impl_connected():
+
+            # .. but stop if the client should not try again, e.g. it has been already deleted ..
+            if self.impl and (not self.impl.should_keep_running()):
+                return
+
+            # .. if we are here, it means that we keep trying ..
+            else:
+
+                # .. do try to connect ..
+                self._init()
+
+                # .. sleep for a while after the attempt.
+                _gevent_sleep(1)
+
     def on_connected_cb(self, conn:'OutconnWSXWrapper') -> 'None':
         self.config['parent'].on_connected_cb(conn)
+
+# ################################################################################################################################
 
     def on_message_cb(self, msg:'MessageFromServer') -> 'None':
         self.config['parent'].on_message_cb(msg)
 
+# ################################################################################################################################
+
     def on_close_cb(self, code:'int', reason:'strnone'=None) -> 'None':
         self.config['parent'].on_close_cb(code, reason)
 
+# ################################################################################################################################
+
     def delete(self, reason:'str'='') -> 'None':
-        self.impl.delete()
-        self.impl.close(reason=reason) # type: ignore
+        if self.impl:
+            self.impl.delete()
+            self.impl.close(reason=reason) # type: ignore
+
+# ################################################################################################################################
 
     def is_impl_connected(self) -> 'bool':
-        return self.impl.check_is_connected()
+        return self.impl and self.impl.check_is_connected()
+
+# ################################################################################################################################
 
     def get_name(self) -> 'str':
         return f'{self.config["name"]} - {self.config["type_"]} - {hex(id(self))}'
