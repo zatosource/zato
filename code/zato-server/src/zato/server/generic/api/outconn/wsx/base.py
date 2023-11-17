@@ -51,13 +51,13 @@ class WSXClient:
     """
     send: 'callable_'
     invoke: 'callable_'
-    is_zato:'bool'
+    is_zato: 'bool'
+    impl: 'ZatoWSXClient | _NonZatoWSXClient'
 
     def __init__(self, server:'ParallelServer', config:'strdict') -> 'None':
         self.server = server
         self.config = config
         self.is_zato = self.config['is_zato']
-        self.impl = None
 
     def init(self) -> 'None':
 
@@ -345,7 +345,7 @@ class OutconnWSXWrapper(Wrapper):
 
         # .. now, we can invoke the remote web socket.
         with self.client() as client:
-            client.send(data)
+            client.send(data) # type: ignore
 
     invoke = send
 
