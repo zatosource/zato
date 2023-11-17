@@ -64,7 +64,7 @@ class Heartbeat(threading.Thread):
                 break
 
             try:
-                self.websocket.send(PingControlMessage(data='beep'))
+                self.websocket.send(PingControlMessage(data='{}'))
             except socket.error as e:
                 logger.info('WSX PingControl error -> %s', e)
                 self.websocket.server_terminated = True
@@ -136,7 +136,7 @@ class WebSocket(object):
         WSGI environ dictionary.
         """
 
-        self.heartbeat_freq = heartbeat_freq
+        self.heartbeat_freq = heartbeat_freq or 30
         """
         At which interval the heartbeat will be running.
         Set this to `0` or `None` to disable it entirely.

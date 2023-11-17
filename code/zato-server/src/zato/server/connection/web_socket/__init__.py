@@ -1508,8 +1508,9 @@ class WebSocket(_WebSocket):
         # Pretend it's an actual response from the client,
         # we cannot use in_reply_to because pong messages are 1:1 copies of ping ones.
         data = self._json_parser.parse(msg.data) # type: any_
-        msg_id = data['meta']['id']
-        self.responses_received[msg_id] = True
+        if data:
+            msg_id = data['meta']['id']
+            self.responses_received[msg_id] = True
 
         # Since we received a pong response, it means that the peer is connected,
         # in which case we update its pub/sub metadata.
