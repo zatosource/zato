@@ -83,6 +83,18 @@ class WebSocketBaseClient(WebSocket):
         self.extra_headers = headers or []
         self._parse_url()
 
+        sock = self.create_socket()
+
+        WebSocket.__init__(self, sock, protocols=protocols,
+                           extensions=extensions,
+                           heartbeat_freq=heartbeat_freq)
+
+        self.stream.always_mask = True
+        self.stream.expect_masking = False
+        self.key = b64encode(os.urandom(16))
+
+    def create_socket(self):
+
         if self.unix_socket_path:
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM, 0)
         else:
@@ -113,13 +125,12 @@ class WebSocketBaseClient(WebSocket):
                 except (AttributeError, socket.error):
                     pass
 
-        WebSocket.__init__(self, sock, protocols=protocols,
-                           extensions=extensions,
-                           heartbeat_freq=heartbeat_freq)
+        return sock
 
-        self.stream.always_mask = True
-        self.stream.expect_masking = False
-        self.key = b64encode(os.urandom(16))
+    def rebuild_socket(self):
+        self.close_connection()
+        socket = self.create_socket()
+        self.sock = socket
 
     # Adpated from: https://github.com/liris/websocket-client/blob/master/websocket.py#L105
     def _parse_url(self):
@@ -203,7 +214,7 @@ class WebSocketBaseClient(WebSocket):
             self.client_terminated = True
             self._write(self.stream.close(code=code, reason=reason).single(mask=True))
 
-    def connect(self):
+    def connect(self, close_on_handshake_error=True):
         """
         Connects this websocket and starts the upgrade handshake
         with the remote endpoint.
@@ -250,7 +261,11 @@ class WebSocketBaseClient(WebSocket):
             self.process_response_line(response_line)
             self.protocols, self.extensions = self.process_handshake_header(headers)
         except HandshakeError:
-            self.close_connection()
+
+            # This will be set to True for backward-compatibility with ws4py
+            # from before it was added to ext.
+            if close_on_handshake_error:
+                self.close_connection()
             raise
 
         self.handshake_ok()
