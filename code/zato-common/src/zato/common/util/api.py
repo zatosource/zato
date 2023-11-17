@@ -1227,6 +1227,8 @@ def store_tls(root_dir, payload, is_key=False):
 
 def replace_private_key(orig_payload):
     if isinstance(orig_payload, basestring):
+        if isinstance(orig_payload, bytes):
+            orig_payload = orig_payload.decode('utf8')
         for item in TLS.BEGIN_END:
             begin = '-----BEGIN {}PRIVATE KEY-----'.format(item)
             if begin in orig_payload:
