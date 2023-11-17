@@ -53,7 +53,8 @@ class WSXClient:
     invoke: 'callable_'
     is_zato:'bool'
 
-    def __init__(self, config:'strdict') -> 'None':
+    def __init__(self, server:'ParallelServer', config:'strdict') -> 'None':
+        self.server = server
         self.config = config
         self.is_zato = self.config['is_zato']
         self.impl = None
@@ -67,7 +68,13 @@ class WSXClient:
             _impl_class = _NonZatoWSXClient
 
         # .. this will create an instance ..
-        self.impl = _impl_class(self.config, self.on_connected_cb, self.on_message_cb, self.on_close_cb, self.config['address'])
+        self.impl = _impl_class(
+            self.server,
+            self.config,
+            self.on_connected_cb,
+            self.on_message_cb,
+            self.on_close_cb
+        )
 
         # .. this will initialize it ..
         self.impl.init()
@@ -96,16 +103,11 @@ class WSXClient:
         self.config['parent'].on_close_cb(code, reason)
 
     def delete(self, reason:'str'='') -> 'None':
+        self.impl.delete()
         self.impl.close(reason=reason) # type: ignore
 
     def is_impl_connected(self) -> 'bool':
-
-        if isinstance(self.impl, ZatoWSXClient):
-            is_connected = self.impl._zato_client.is_connected
-        else:
-            is_connected = self.impl.is_connected()
-
-        return is_connected
+        return self.impl.check_is_connected()
 
     def get_name(self) -> 'str':
         return f'{self.config["name"]} - {self.config["type_"]} - {hex(id(self))}'
@@ -328,7 +330,7 @@ class OutconnWSXWrapper(Wrapper):
     def add_client(self) -> 'None':
 
         try:
-            conn = WSXClient(self.config)
+            conn = WSXClient(self.server, self.config)
             self.conn_in_progress_list.append(conn)
             conn.init()
 

@@ -93,6 +93,7 @@ OnClosed = Close
 class _BaseWSXClient:
     def __init__(
         self,
+        server: 'ParallelServer', # This is needed for API completeness
         config:'strdict',
         on_connected_cb:'callable_',
         on_message_cb:'callable_',

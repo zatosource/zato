@@ -6,6 +6,10 @@ Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from logging import getLogger
+from traceback import format_exc
+
 # gevent
 from gevent import sleep
 
@@ -13,6 +17,7 @@ from gevent import sleep
 from zato.common.api import ZATO_NONE
 from zato.common.typing_ import cast_
 from zato.common.util.api import spawn_greenlet
+from zato.common.util.config import replace_query_string_items
 from zato.server.generic.api.outconn.wsx.common import _BaseWSXClient
 
 # Zato - Ext - ws4py
@@ -23,6 +28,12 @@ from zato.server.ext.ws4py.client.threadedclient import WebSocketClient
 
 if 0:
     from zato.common.typing_ import any_, callable_, stranydict
+    from zato.server.base.parallel import ParallelServer
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,6 +42,7 @@ class _NonZatoWSXClientImpl(WebSocketClient, _BaseWSXClient):
 
     def __init__(
         self,
+        server:'ParallelServer',
         config:'stranydict',
         on_connected_cb:'callable_',
         on_message_cb:'callable_',
@@ -39,8 +51,8 @@ class _NonZatoWSXClientImpl(WebSocketClient, _BaseWSXClient):
         **kwargs:'any_'
     ) -> 'None':
 
-        _BaseWSXClient.__init__(self, config, on_connected_cb, on_message_cb, on_close_cb)
-        WebSocketClient.__init__(self, *args, **kwargs)
+        _BaseWSXClient.__init__(self, server, config, on_connected_cb, on_message_cb, on_close_cb)
+        WebSocketClient.__init__(self, url=self.config['address'], *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -56,11 +68,12 @@ class _NonZatoWSXClient:
 
     send:'callable_' # type: ignore
     invoke:'callable_'
-
+    log_address:'str'
     _non_zato_client:'_NonZatoWSXClientImpl'
 
     def __init__(
         self,
+        server: 'ParallelServer',
         config:'stranydict',
         on_connected_cb:'callable_',
         on_message_cb:'callable_',
@@ -76,6 +89,16 @@ class _NonZatoWSXClient:
         self.init_args = args
         self.init_kwargs = kwargs
 
+        self.server = server
+        self.keep_running = True
+        self.connection_attempts_so_far = 0
+
+        # This is different than that the underlying implementation's .is_connected flag
+        # because this here indicates that we completed a handshake and, for instance,
+        # the remote end has not returned any 40x response, whereas .is_connected
+        # only indicates if a TCP-level connection exists.
+        self.has_established_connection = False
+
         # This will be overwritten in self._init in a new thread
         # but we need it set to None so that self.init can check
         # if the client object has been already created.
@@ -87,6 +110,7 @@ class _NonZatoWSXClient:
 
         # This is the actual client, starting in a new thread ..
         self._non_zato_client = _NonZatoWSXClientImpl(
+            self.server,
             self.config,
             self.on_connected_cb,
             self.on_message_cb,
@@ -94,6 +118,9 @@ class _NonZatoWSXClient:
             *self.init_args,
             **self.init_kwargs,
         )
+
+        # .. build it here as we may want to update it dynamically ..
+        self.log_address = replace_query_string_items(self.server, self.config['address'])
 
         # .. map implementation methods to our own.
         self.invoke = self._non_zato_client.send
@@ -120,22 +147,79 @@ class _NonZatoWSXClient:
 # ################################################################################################################################
 
     def connect(self) -> 'any_':
-        self._non_zato_client.connect()
-
-# ################################################################################################################################
-
-    def is_connected(self) -> 'bool':
-        return not self._non_zato_client.terminated
-
-# ################################################################################################################################
-
-    def run_forever(self) -> 'any_':
-        pass
+        self.connection_attempts_so_far += 1
+        if self.connection_attempts_so_far % 5 == 0:
+            try:
+                # self._non_zato_client.close_connection()
+                # self.close('QQQ')
+                pass
+            except OSError as e:
+                logger.warn('OS Error -> %s', e)
+            self.config['address'] = 'QQQ'
+            self.connection_attempts_so_far = 0
+            self._non_zato_client = None # type: ignore
+            self.init()
+        try:
+            self._non_zato_client.connect(close_on_handshake_error=False)
+        except Exception as e:
+            logger.warn('%s WSX could not connect to `%s` -> id:%s -> `%s',
+                self.connection_attempts_so_far,
+                self.log_address,
+                hex(id(self._non_zato_client)),
+                e
+            )
+        else:
+            logger.warn('CONNECTED AS ID: %s', self._non_zato_client)
+            self.has_established_connection = True
 
 # ################################################################################################################################
 
     def close(self, reason:'str') -> 'any_':
         self._non_zato_client.close(reason=reason)
+
+# ################################################################################################################################
+
+    def delete(self) -> 'None':
+        self.keep_running = False
+
+# ################################################################################################################################
+
+    def should_keep_running(self) -> 'bool':
+        return self.keep_running
+
+# ################################################################################################################################
+
+    def check_is_connected(self) -> 'bool':
+        is_connected = not self._non_zato_client.terminated
+        return is_connected and self.has_established_connection
+
+# ################################################################################################################################
+
+    def run_forever(self) -> 'any_':
+
+        # Wait until the client is connected ..
+        while True:
+
+            try:
+
+                # .. do not loop anymore if we are not to keep running ..
+                if not self.should_keep_running():
+                    return
+
+                # .. do not loop anymore if we are already connected ..
+                if self.check_is_connected():
+                    return
+
+                # .. wait for some time until the next connection attempt ..
+                sleep(0.5)
+
+                # .. if we are here, it means that we need to try to connect now ..
+                self.connect()
+
+            except Exception:
+
+                # If we caught an exception, we can log it ..
+                logger.warn('WSX exception in `%s` -> `%s`', self.log_address, format_exc())
 
 # ################################################################################################################################
 # ################################################################################################################################
