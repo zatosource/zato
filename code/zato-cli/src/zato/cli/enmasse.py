@@ -18,7 +18,7 @@ from time import sleep
 # Zato
 from zato.cli import ManageCommand
 from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
-    NotGiven, TLS as COMMON_TLS
+    NotGiven, TLS as COMMON_TLS, Zato_None
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -2074,6 +2074,9 @@ class InputParser:
 
                         if not 'has_auto_reconnect' in value:
                             value['has_auto_reconnect'] = True
+
+                        if not 'security_def' in value:
+                            value['security_def'] = Zato_None
 
                     elif wrapper_type == outconn_ldap:
 
