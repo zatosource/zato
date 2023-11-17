@@ -42,8 +42,8 @@ def get_match_target(config, sep=MISC.SEPARATOR, accept_any_http=accept_any_http
     url_path = config['url_path']
 
     # Support parentheses in URL paths
-    url_path = url_path.replace('(', '\(')
-    url_path = url_path.replace(')', '\)')
+    url_path = url_path.replace('(', r'\(')
+    url_path = url_path.replace(')', r'\)')
 
     # Build the pattern ..
     pattern = f'{soap_action}{sep}{http_method}{sep}{http_accept}{sep}{url_path}'
