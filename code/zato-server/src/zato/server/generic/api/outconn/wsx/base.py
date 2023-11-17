@@ -77,7 +77,7 @@ class WSXClient:
         )
 
         # .. this will initialize it ..
-        self.impl.init()
+        _ = self.impl.init()
 
         # .. so now, we can make use of what was possibly initialized in .init above ..
         self.send   = self.impl.send
@@ -88,10 +88,10 @@ class WSXClient:
             self.invoke_service = self.impl._zato_client.invoke_service # type: ignore
 
         # .. now, the client can connect ..
-        self.impl.connect()
+        _ = self.impl.connect()
 
         # .. and run forever.
-        self.impl.run_forever()
+        _ = self.impl.run_forever()
 
     def on_connected_cb(self, conn:'OutconnWSXWrapper') -> 'None':
         self.config['parent'].on_connected_cb(conn)
@@ -142,6 +142,16 @@ class OutconnWSXWrapper(Wrapper):
     def check_is_active(self) -> 'bool':
         is_active = self.server.is_active_outconn_wsx(self.config['id'])
         return is_active
+
+# ################################################################################################################################
+
+    def on_outconn_stopped_running(self) -> 'None':
+        self.server.on_wsx_outconn_stopped_running(self.config['id'])
+
+# ################################################################################################################################
+
+    def on_outconn_connected(self) -> 'None':
+        self.server.on_wsx_outconn_connected(self.config['id'])
 
 # ################################################################################################################################
 
@@ -253,9 +263,9 @@ class OutconnWSXWrapper(Wrapper):
         if self.on_message_service_name:
             try:
                 if self._has_json and isinstance(msg, bytes):
-                    msg = msg.decode('utf8')
-                    msg = loads(msg)
-                ctx = OnMessageReceived(msg, self.config, self)
+                    msg = msg.decode('utf8') # type: ignore
+                    msg = loads(msg) # type: ignore
+                ctx = OnMessageReceived(cast_('strdict | MessageFromServer', msg), self.config, self)
                 if self.is_on_message_service_wsx_adapter:
                     self.server.invoke_wsx_adapter(self.on_message_service_name, ctx)
                 else:
@@ -278,11 +288,18 @@ class OutconnWSXWrapper(Wrapper):
 
     def on_close_cb(self, code:'int', reason:'strnone'=None) -> 'None':
 
+        # We need to special-case the situation when it is us who deleted the outgoing connection.
+        reason_is_not_delete = reason != COMMON_GENERIC.DeleteReasonBytes
+
         # Ignore events we generated ourselves, e.g. when someone edits a connection in web-admin
         # this will result in deleting and rerecreating a connection which implicitly calls this callback.
         if self._should_handle_close_cb(code, reason):
 
-            logger.info('Remote server closed connection to WebSocket `%s`, c:`%s`, r:`%s`', self.config['name'], code, reason)
+            # If reason is something else than our deleting the connection, we can log this message
+            # to indicate that it must have been the remote server that did it.
+            if reason_is_not_delete:
+                logger.info('Remote server closed connection to WebSocket `%s`, c:`%s`, r:`%s`',
+                    self.config['name'], code, reason)
 
             if self.on_close_service_name:
                 try:
@@ -294,14 +311,21 @@ class OutconnWSXWrapper(Wrapper):
                 except Exception:
                     logger.warning('Could not invoke CLOSE service `%s`, e:`%s`', self.on_close_service_name, format_exc())
 
-            has_auto_reconnect:'bool' = self.config.get('has_auto_reconnect', True)
+            has_auto_reconnect = self.config.get('has_auto_reconnect', True)
 
             if has_auto_reconnect:
-                logger.info('WebSocket `%s` will reconnect to `%s` (hac:%d)',
-                    self.config['name'], self.config['address'], has_auto_reconnect)
                 try:
-                    if reason != COMMON_GENERIC.DeleteReasonBytes:
+
+                    # Reconnect only if it was not us who deleted the connection ..
+                    if reason_is_not_delete:
+
+                        # .. log what we are about to do ..
+                        logger.info('WebSocket `%s` will reconnect to `%s` (hac:%d)',
+                            self.config['name'], self.config['address'], has_auto_reconnect)
+
+                        # .. and do reconnect now.
                         self.server.api_worker_store_reconnect_generic(self.config['id'])
+
                 except Exception:
                     logger.warning('Could not reconnect WebSocket `%s` to `%s`, e:`%s`',
                         self.config['name'], self.config['address'], format_exc())
