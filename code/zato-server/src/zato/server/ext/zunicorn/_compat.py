@@ -119,7 +119,7 @@ if six.PY3:
     import urllib.parse
 
     def unquote_to_wsgi_str(string):
-        return _unquote_to_bytes(string).decode('latin-1')
+        return _unquote_to_bytes(string).decode('utf-8')
 
     _unquote_to_bytes = urllib.parse.unquote_to_bytes
 
