@@ -11,13 +11,18 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_security_select, add_services, DataFormatForm
+from zato.common.api import WEB_SOCKET
+
+_ping_frequency = WEB_SOCKET.DEFAULT.PING_INTERVAL
 
 class CreateForm(DataFormatForm):
+    data_format = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:60px'}))
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_zato = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     has_auto_reconnect = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    ping_frequency = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50px'}), initial=_ping_frequency)
     on_connect_service_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
     on_message_service_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
     on_close_service_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
