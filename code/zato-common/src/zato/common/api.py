@@ -102,7 +102,7 @@ generic_attrs = (
     'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
     'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding',
     'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq',
-    'max_wait_time', 'oauth_def'
+    'max_wait_time', 'oauth_def', 'ping_interval', 'pings_missed_threshold'
 )
 
 # ################################################################################################################################
@@ -1175,6 +1175,8 @@ class WEB_SOCKET:
         PINGS_MISSED_THRESHOLD = 2
         PINGS_MISSED_THRESHOLD_OUTGOING = 1
         PING_INTERVAL = 45
+        Socket_Read_Timeout  = 60
+        Socket_Write_Timeout = 60
 
     class PATTERN:
         BY_EXT_ID = 'zato.by-ext-id.{}'
