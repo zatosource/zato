@@ -3,11 +3,10 @@
 
 import logging
 import socket
-import ssl
 import time
 import threading
-import types
 from json import dumps
+from types import GeneratorType
 
 try:
     from OpenSSL.SSL import Error as pyOpenSSLError
@@ -15,14 +14,15 @@ except ImportError:
     class pyOpenSSLError(Exception):
         pass
 
-from zato.server.ext.ws4py import WS_KEY, WS_VERSION
-from zato.server.ext.ws4py.exc import HandshakeError, StreamClosed
+from zato.common.api import WEB_SOCKET
+from zato.common.marshal_.api import Model
+from zato.common.util.config import replace_query_string_items
 from zato.server.ext.ws4py.streaming import Stream
-from zato.server.ext.ws4py.messaging import Message, PingControlMessage,\
-    PongControlMessage
-from zato.server.ext.ws4py.compat import basestring, unicode
+from zato.server.ext.ws4py.messaging import Message, PingControlMessage
 
-DEFAULT_READING_SIZE = 2
+Default_Read_Size = 200
+Default_Socket_Read_Timeout  = WEB_SOCKET.DEFAULT.Socket_Read_Timeout
+Default_Socket_Write_Timeout = WEB_SOCKET.DEFAULT.Socket_Write_Timeout
 
 logger = logging.getLogger('zato_web_socket')
 
@@ -64,7 +64,7 @@ class Heartbeat(threading.Thread):
                 break
 
             try:
-                self.websocket.send(PingControlMessage(data='beep'))
+                self.websocket.send(PingControlMessage(data='{}'))
             except socket.error as e:
                 logger.info('WSX PingControl error -> %s', e)
                 self.websocket.server_terminated = True
@@ -72,9 +72,14 @@ class Heartbeat(threading.Thread):
                 break
 
 class WebSocket(object):
-    """ Represents a websocket endpoint and provides a high level interface to drive the endpoint. """
+    """ Represents a websocket endpoint and provides a high level interface to drive the endpoint.
+    """
 
-    def __init__(self, sock, protocols=None, extensions=None, environ=None, heartbeat_freq=None):
+    # This will be provided by subclasses
+    url:'str'
+
+    def __init__(self, server, sock, protocols=None, extensions=None, environ=None, heartbeat_freq=None,
+        socket_read_timeout=None, socket_write_timeout=None):
         """ The ``sock`` is an opened connection
         resulting from the websocket handshake.
 
@@ -84,6 +89,7 @@ class WebSocket(object):
         If ``environ`` is provided, it is a copy of the WSGI environ
         dictionnary from the underlying WSGI server.
         """
+        self.address_masked = replace_query_string_items(server, self.url)
 
         self.stream = Stream(always_mask=False)
         """
@@ -126,7 +132,7 @@ class WebSocket(object):
         Indicates if the server has been marked as terminated.
         """
 
-        self.reading_buffer_size = DEFAULT_READING_SIZE
+        self.reading_buffer_size = Default_Read_Size
         """
         Current connection reading buffer size.
         """
@@ -141,6 +147,9 @@ class WebSocket(object):
         At which interval the heartbeat will be running.
         Set this to `0` or `None` to disable it entirely.
         """
+
+        self.socket_read_timeout  = socket_read_timeout or Default_Socket_Read_Timeout
+        self.socket_write_timeout = socket_write_timeout or Default_Socket_Write_Timeout
 
         self._local_address = None
         self._peer_address = None
@@ -224,8 +233,11 @@ class WebSocket(object):
         if self.sock:
             try:
                 self.sock.shutdown(socket.SHUT_RDWR)
+            except Exception:
+                pass
+            try:
                 self.sock.close()
-            except:
+            except Exception:
                 pass
             finally:
                 self.sock = None
@@ -270,9 +282,9 @@ class WebSocket(object):
         The default behaviour of this handler is to log
         the error with a message.
         """
-        logger.exception("Failed to receive data -> %s", error)
+        logger.warn("Failed to receive WSX data from `%s` -> `%s`", self.address_masked, error)
 
-    def _write(self, b):
+    def _write(self, data):
         """
         Trying to prevent a write operation
         on an already closed websocket stream.
@@ -281,9 +293,11 @@ class WebSocket(object):
         will catch almost all use cases.
         """
         if self.terminated or self.sock is None:
-            raise RuntimeError("Cannot send on a terminated websocket")
-
-        self.sock.sendall(b)
+            logger.info('Could not send message on a terminated socket; `%s` -> %s (%s)',
+                self.config.client_name, self.config.address, self.config.client_id)
+        else:
+            self.sock.settimeout(self.socket_write_timeout)
+            self.sock.sendall(data)
 
     def send(self, payload, binary=False):
         """
@@ -297,12 +311,25 @@ class WebSocket(object):
 
         If ``binary`` is set, handles the payload as a binary message.
         """
-        message_sender = self.stream.binary_message if binary else self.stream.text_message
 
-        if isinstance(payload, dict):
+        if not self.stream:
+            logger.info('Could not send message without self.stream -> %s -> %s (%s -> %s) ',
+                self.config.client_name,
+                self.config.address,
+                self.config.username,
+                self.config.client_id,
+            )
+            return
+
+        message_sender = self.stream.binary_message if binary else self.stream.text_message # type: any_
+
+        if payload is None or isinstance(payload, (dict, list, tuple, int, float)):
             payload = dumps(payload)
 
-        if isinstance(payload, basestring) or isinstance(payload, bytearray):
+        elif isinstance(payload, Model):
+            payload = payload.to_json()
+
+        if isinstance(payload, str) or isinstance(payload, bytearray):
             m = message_sender(payload).single(mask=self.stream.always_mask)
             self._write(m)
 
@@ -310,7 +337,7 @@ class WebSocket(object):
             data = payload.single(mask=self.stream.always_mask)
             self._write(data)
 
-        elif isinstance(payload, types.GeneratorType):
+        elif type(payload) == GeneratorType:
             bytes = next(payload)
             first = True
             for chunk in payload:
@@ -321,7 +348,7 @@ class WebSocket(object):
             self._write(message_sender(bytes).fragment(last=True, mask=self.stream.always_mask))
 
         else:
-            raise ValueError("Unsupported type '%s' passed to send()" % type(payload))
+            raise ValueError('Unsupported type `%s` passed to send()' % type(payload))
 
     def _get_from_pending(self):
         """
@@ -386,13 +413,13 @@ class WebSocket(object):
             return False
 
         try:
-            self.sock.settimeout(180)
+            self.sock.settimeout(self.socket_read_timeout)
             b = self.sock.recv(self.reading_buffer_size)
 
-            # self.sock.settimeout(None)
             # This will only make sense with secure sockets.
             if self._is_secure:
                 b += self._get_from_pending()
+
         except TimeoutError as e:
             return True
         except (socket.error, OSError, pyOpenSSLError) as e:
@@ -451,7 +478,7 @@ class WebSocket(object):
         if not bytes and self.reading_buffer_size > 0:
             return False
 
-        self.reading_buffer_size = s.parser.send(bytes) or DEFAULT_READING_SIZE
+        self.reading_buffer_size = s.parser.send(bytes) or Default_Read_Size
 
         if s.closing is not None:
             logger.info("Closing message received (%d) '%s'" % (s.closing.code, s.closing.reason))
@@ -512,7 +539,6 @@ class WebSocket(object):
         """
         self.sock.setblocking(True)
         with Heartbeat(self, frequency=self.heartbeat_freq):
-            s = self.stream
 
             try:
                 self.opened()
