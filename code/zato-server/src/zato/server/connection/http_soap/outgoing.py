@@ -19,9 +19,6 @@ from urllib.parse import urlencode
 # gevent
 from gevent.lock import RLock
 
-# parse
-from parse import PARSE_RE
-
 # requests
 from requests import Response as _RequestsResponse
 from requests.adapters import HTTPAdapter
@@ -41,6 +38,7 @@ from zato.common.json_ import dumps, loads
 from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name
+from zato.common.util.config import extract_param_placeholders
 from zato.common.util.open_ import open_rb
 from zato.server.connection.queue import ConnectionQueue
 
@@ -446,16 +444,13 @@ class BaseHTTPSOAPWrapper:
         to extract any named parameters that will have to be passed in by users
         during actual calls to the resource.
         """
+
+        # Set the full adddress ..
         self.address = '{}{}'.format(self.config['address_host'], self.config['address_url_path'])
-        groups = PARSE_RE.split(self.config['address_url_path'])
 
-        logger.debug('self.address:[%s], groups:[%s]', self.address, groups)
-
-        for group in groups:
-            if group and group[0] == '{':
-                self.path_params.append(group[1:-1])
-
-        logger.debug('self.address:[%s], self.path_params:[%s]', self.address, self.path_params)
+        # .. and parse out placeholders for path parameters.
+        for param_name in extract_param_placeholders(self.config['address_url_path']):
+            self.path_params.append(param_name[1:-1])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -519,9 +514,10 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
 # ################################################################################################################################
 
-    def _soap_data(self, data:'str', headers:'stranydict') -> 'tuple[str, stranydict]':
+    def _soap_data(self, data:'str | bytes', headers:'stranydict') -> 'tuple[any_, stranydict]':
         """ Wraps the data in a SOAP-specific messages and adds the headers required.
         """
+        needs_soap_wrapper = False
         soap_config:'strstrdict' = self.soap[self.config['soap_version']]
 
         # The idea here is that even though there usually won't be the Content-Type
@@ -531,12 +527,22 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             headers['Content-Type'] = soap_config['content_type']
 
         # We do not need an envelope if the data already has one ..
-        if ':Envelope>' in data:
-            return data, headers
+        if isinstance(data, bytes):
+            if b':Envelope' in data:
+                return data, headers # type: ignore
+            else:
+                needs_soap_wrapper = True
 
-        # .. otherwise, we need to add it.
         else:
+            if ':Envelope' in data:
+                return data, headers # type: ignore
+            else:
+                needs_soap_wrapper = True
+
+        if needs_soap_wrapper:
             return soap_config['message'].format(header='', data=data), headers
+        else:
+            return data, headers
 
 # ################################################################################################################################
 
