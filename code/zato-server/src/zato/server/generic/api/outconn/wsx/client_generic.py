@@ -150,11 +150,11 @@ class _NonZatoWSXClient:
         self.connection_attempts_so_far += 1
         try:
             self._non_zato_client.connect(close_on_handshake_error=False)
-        except Exception as e:
+        except Exception:
             logger.warn('WSX could not connect to `%s` -> id:%s -> `%s (#%s)',
                 self.log_address,
                 hex(id(self._non_zato_client)),
-                e,
+                format_exc(),
                 self.connection_attempts_so_far,
             )
         else:
