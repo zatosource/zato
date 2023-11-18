@@ -13,26 +13,23 @@ _ = monkey.patch_all()
 # stdlib
 import os
 import random
-import socket
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http.client import OK
 from json import dumps as json_dumps
 from logging import getLogger
-from threading import Thread
 from traceback import format_exc
-from types import GeneratorType
 
 # gevent
 from gevent import sleep, spawn
 
 # ws4py
 from zato.server.ext.ws4py.client.geventclient import WebSocketClient
-from zato.server.ext.ws4py.messaging import Message as ws4py_Message, PingControlMessage
 
 # Zato
 from zato.common.api import WEB_SOCKET
 from zato.common.marshal_.api import MarshalAPI, Model
+from zato.common.typing_ import cast_
 from zato.common.util.json_ import JSONParser
 
 try:
@@ -88,7 +85,7 @@ wsx_socket_timeout = _ping_interval + (_ping_interval * 0.1)
 # ################################################################################################################################
 
 class Default:
-    ResponseWaitTime = os.environ.get('Zato_WSX_Response_Wait_Time') or 5 # How many seconds to wait for responses
+    ResponseWaitTime = cast_('int', os.environ.get('Zato_WSX_Response_Wait_Time')) or 5 # How many seconds to wait for responses
     MaxConnectAttempts = 1234567890
     MaxWaitTime = 999_999_999
 
@@ -304,41 +301,6 @@ class RequestFromServer(MessageFromServer):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class WSXHeartbeat(Thread):
-    def __init__(self, websocket:'any_', frequency:'float'=2.0) -> 'None':
-        Thread.__init__(self)
-        self.websocket = websocket
-        self.frequency = frequency
-
-    def __enter__(self) -> 'WSXHeartbeat':
-        if self.frequency:
-            self.start()
-        return self
-
-    def __exit__(self, exc_type:'any_', exc_value:'any_', exc_tb:'any_') -> 'None':
-        self.stop()
-
-    def stop(self) -> 'None':
-        self.running = False
-
-    def run(self) -> 'None':
-        self.running = True
-        while self.running:
-            sleep(self.frequency)
-            if self.websocket.terminated:
-                break
-
-            try:
-                self.websocket.send(PingControlMessage(data='beep'))
-            except socket.error:
-                logger.info('Heartbeat failed')
-                self.websocket.server_terminated = True
-                self.websocket.close_connection()
-                break
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class _WebSocketClientImpl(WebSocketClient):
     """ A low-level subclass of ws4py's WebSocket client functionality.
     """
@@ -361,25 +323,7 @@ class _WebSocketClientImpl(WebSocketClient):
         # .. call the parent ..
         super(_WebSocketClientImpl, self).__init__(url=self.config.address)
 
-        # .. adjust parent's configuration ..
-        self.heartbeat_freq = 5.0
-
 # ################################################################################################################################
-
-    def close_connection(self):
-        """ Overridden from zato.server.ext.ws4py.websocket.WebSocket.
-        """
-        if self.sock:
-            try:
-                self.sock.shutdown(socket.SHUT_RDWR)
-            except Exception:
-                pass
-            try:
-                self.sock.close()
-            except Exception:
-                pass
-            finally:
-                self.sock = None
 
     def opened(self) -> 'None':
         _ = spawn(self.on_connected_callback)
@@ -399,68 +343,6 @@ class _WebSocketClientImpl(WebSocketClient):
     def closed(self, code:'int', reason:'strnone'=None) -> 'None':
         super(_WebSocketClientImpl, self).closed(code, reason)
         self.on_closed_callback(code, reason)
-
-# ################################################################################################################################
-
-    def send(self, payload:'any_', binary:'bool'=False) -> 'None':
-        """ Overloaded from the parent class.
-        """
-        if not self.stream:
-            logger.info('Could not send message without self.stream -> %s -> %s (%s -> %s) ',
-                self.config.client_name,
-                self.config.address,
-                self.config.username,
-                self.config.client_id,
-            )
-            return
-
-        message_sender = self.stream.binary_message if binary else self.stream.text_message # type: any_
-
-        if isinstance(payload, str) or isinstance(payload, bytearray):
-            m = message_sender(payload).single(mask=self.stream.always_mask)
-            self._write(m)
-
-        elif isinstance(payload, ws4py_Message):
-            data = payload.single(mask=self.stream.always_mask)
-            self._write(data)
-
-        elif type(payload) == GeneratorType:
-            bytes = next(payload)
-            first = True
-            for chunk in payload:
-                self._write(message_sender(bytes).fragment(first=first, mask=self.stream.always_mask))
-                bytes = chunk
-                first = False
-
-            self._write(message_sender(bytes).fragment(last=True, mask=self.stream.always_mask))
-
-        else:
-            raise ValueError('Unsupported type `%s` passed to send()' % type(payload))
-
-# ################################################################################################################################
-
-    def _write(self, data:'bytes') -> 'None':
-        """ Overloaded from the parent class.
-        """
-        if self.terminated or self.sock is None:
-            logger.info('Could not send message on a terminated socket; `%s` -> %s (%s)',
-                self.config.client_name, self.config.address, self.config.client_id)
-        else:
-            self.sock.settimeout(60)
-            self.sock.sendall(data)
-
-# ################################################################################################################################
-
-    def run(self):
-        self.sock.setblocking(True) # type: ignore
-        with WSXHeartbeat(self, frequency=self.heartbeat_freq):
-            try:
-                self.opened()
-                while not self.terminated:
-                    if not self.once():
-                        break
-            finally:
-                self.terminate()
 
 # ################################################################################################################################
 # ################################################################################################################################
