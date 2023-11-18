@@ -23,8 +23,9 @@ from zato.server.generic.api.outconn.wsx.common import _BaseWSXClient
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, callable_, strlist
+    from zato.common.typing_ import any_, callable_, strdict, strlist
     from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
+    from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################

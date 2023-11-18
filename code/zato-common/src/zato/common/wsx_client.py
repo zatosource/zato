@@ -587,7 +587,7 @@ class Client:
                 if not self.conn.sock:
 
                     # .. and we need to recreate it .
-                    self.conn = self.create_conn(self.config)
+                    self.conn = self.create_conn(self.server, self.config)
 
                 # If we are here, it means that we likely have a TCP socket to use ..
                 try:
@@ -600,7 +600,7 @@ class Client:
                     self.conn.close_connection()
                     raise
 
-            except Exception as e:
+            except Exception:
                 if use_warn:
                     log_func = self.logger.warning
                 else:
@@ -613,7 +613,7 @@ class Client:
                 log_func('Exception caught in iter %s/%s `%s` while connecting to WSX `%s (%s)`',
                     num_connect_attempts,
                     self.max_connect_attempts,
-                    e,
+                    format_exc(),
                     self.config.address,
                     self.conn.sock,
                 )

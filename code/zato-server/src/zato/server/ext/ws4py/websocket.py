@@ -89,7 +89,7 @@ class WebSocket(object):
         If ``environ`` is provided, it is a copy of the WSGI environ
         dictionnary from the underlying WSGI server.
         """
-        self.log_address = replace_query_string_items(server, self.url)
+        self.address_masked = replace_query_string_items(server, self.url)
 
         self.stream = Stream(always_mask=False)
         """
@@ -282,7 +282,7 @@ class WebSocket(object):
         The default behaviour of this handler is to log
         the error with a message.
         """
-        logger.warn("Failed to receive WSX data from `%s` -> `%s`", self.log_address, error)
+        logger.warn("Failed to receive WSX data from `%s` -> `%s`", self.address_masked, error)
 
     def _write(self, data):
         """
