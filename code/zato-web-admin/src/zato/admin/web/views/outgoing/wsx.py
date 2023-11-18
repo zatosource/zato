@@ -32,7 +32,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'type_')
-        output_required = ('id', 'name', 'address')
+        output_required = ('id', 'name', 'address', 'address_masked')
         output_optional = ('is_active', 'is_zato',
             'on_connect_service_id', 'on_connect_service_name', 'on_message_service_id', 'on_message_service_name',
             'on_close_service_id', 'on_close_service_name', 'subscription_list', 'security_def', 'has_auto_reconnect',

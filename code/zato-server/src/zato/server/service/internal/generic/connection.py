@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,6 +21,7 @@ from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
 from zato.common.typing_ import cast_
 from zato.common.util.api import parse_simple_type
+from zato.common.util.config import replace_query_string_items
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import AsIs, Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
@@ -89,11 +90,17 @@ skip_simple_type = {
     'api_version',
 }
 
-
 # ################################################################################################################################
 
 # Values of these generic attributes should be converted to ints
 int_attrs = ['pool_size', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout']
+
+# ################################################################################################################################
+
+# Values of these generic attributes may contain query string elements that have to be masked out
+query_string_attrs = ['address']
+
+# ################################################################################################################################
 
 def ensure_ints(data:'strdict') -> 'None':
 
@@ -337,10 +344,18 @@ class GetList(AdminService):
         # New items that will be potentially added to conn_dict
         to_add = {}
 
-        # Process all the items found in the database ..
-        for key, value in conn_dict.items():
+        # Process all the items found in the database.
+        # Note that we have a list because we may potentially change the dictionary during iteration.
+        for key, value in list(conn_dict.items()):
 
             if value:
+
+                # Add keys with a value that is masked
+                if key in query_string_attrs:
+                    value_masked = str(value)
+                    value_masked = replace_query_string_items(self.server, value)
+                    key_masked = f'{key}_masked'
+                    conn_dict[key_masked] = value_masked
 
                 if key.endswith('_service_id'):
                     prefix = key.split('_service_id')[0]
