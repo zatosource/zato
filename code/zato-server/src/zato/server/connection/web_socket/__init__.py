@@ -224,6 +224,9 @@ class WebSocket(_WebSocket):
         # Note: configuration object is shared by all WebSockets and any writes will be visible to all of them
         self.config = config
 
+        # This is needed for API completeness with non-Zato WSX clients
+        self.url = self.config.address
+
         # For later reference
         self.initial_http_wsgi_environ = wsgi_environ
 
@@ -256,7 +259,14 @@ class WebSocket(_WebSocket):
         if self.store_ctx:
             self.ctx_handler = ContextHandler(ctx_container_name=self.config.name, is_read_only=False)
 
-        super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
+        super(WebSocket, self).__init__(
+            self.parallel_server,
+            _unusued_sock,
+            _unusued_protocols,
+            _unusued_extensions,
+            wsgi_environ,
+            **kwargs
+        )
 
 # ################################################################################################################################
 
