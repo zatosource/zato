@@ -85,7 +85,7 @@ $.fn.zato.outgoing.wsx.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.subscription_list);
     row += String.format("<td class='ignore'>{0}</td>", has_auto_reconnect);
     row += String.format("<td class='ignore'>{0}</td>", data_format);
-    row += String.format("<td class='ignore'>{0}</td>", data.ping_frequency);
+    row += String.format("<td class='ignore'>{0}</td>", data.ping_interval);
 
     if(include_tr) {
         row += '</tr>';
