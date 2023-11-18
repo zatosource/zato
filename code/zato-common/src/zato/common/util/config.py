@@ -26,13 +26,19 @@ from zato.common.const import SECRETS
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strdict
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Values of these generic attributes may contain query string elements that have to be masked out
+mask_attrs = ['address']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -155,6 +161,19 @@ def replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
 
 # ################################################################################################################################
 
+def replace_query_string_items_in_dict(server:'ParallelServer', data:'strdict') -> 'None':
+
+    # Note that we use a list because we are going to modify the dict in place
+    for key, value in list(data.items()):
+
+        # Add a key with a value that is masked
+        if key in mask_attrs:
+            value_masked = str(value)
+            value_masked = replace_query_string_items(server, value)
+            key_masked = f'{key}_masked'
+            data[key_masked] = value_masked
+
+# ################################################################################################################################
 
 def extract_param_placeholders(data:'str') -> 'any_':
 
