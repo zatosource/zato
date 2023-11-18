@@ -14,11 +14,14 @@ except ImportError:
     class pyOpenSSLError(Exception):
         pass
 
+from zato.common.api import WEB_SOCKET
 from zato.common.marshal_.api import Model
 from zato.server.ext.ws4py.streaming import Stream
 from zato.server.ext.ws4py.messaging import Message, PingControlMessage
 
-DEFAULT_READING_SIZE = 200
+Default_Read_Size = 200
+Default_Socket_Read_Timeout  = WEB_SOCKET.DEFAULT.Socket_Read_Timeout
+Default_Socket_Write_Timeout = WEB_SOCKET.DEFAULT.Socket_Write_Timeout
 
 logger = logging.getLogger('zato_web_socket')
 
@@ -70,7 +73,8 @@ class Heartbeat(threading.Thread):
 class WebSocket(object):
     """ Represents a websocket endpoint and provides a high level interface to drive the endpoint. """
 
-    def __init__(self, sock, protocols=None, extensions=None, environ=None, heartbeat_freq=None):
+    def __init__(self, sock, protocols=None, extensions=None, environ=None, heartbeat_freq=None,
+        socket_read_timeout=None, socket_write_timeout=None):
         """ The ``sock`` is an opened connection
         resulting from the websocket handshake.
 
@@ -122,7 +126,7 @@ class WebSocket(object):
         Indicates if the server has been marked as terminated.
         """
 
-        self.reading_buffer_size = DEFAULT_READING_SIZE
+        self.reading_buffer_size = Default_Read_Size
         """
         Current connection reading buffer size.
         """
@@ -137,6 +141,9 @@ class WebSocket(object):
         At which interval the heartbeat will be running.
         Set this to `0` or `None` to disable it entirely.
         """
+
+        self.socket_read_timeout  = socket_read_timeout or Default_Socket_Read_Timeout
+        self.socket_write_timeout = socket_write_timeout or Default_Socket_Write_Timeout
 
         self._local_address = None
         self._peer_address = None
@@ -269,7 +276,7 @@ class WebSocket(object):
         The default behaviour of this handler is to log
         the error with a message.
         """
-        logger.exception("Failed to receive data -> %s", error)
+        logger.warn("Failed to receive data -> %s", error)
 
     def _write(self, data):
         """
@@ -283,7 +290,7 @@ class WebSocket(object):
             logger.info('Could not send message on a terminated socket; `%s` -> %s (%s)',
                 self.config.client_name, self.config.address, self.config.client_id)
         else:
-            self.sock.settimeout(60)
+            self.sock.settimeout(self.socket_write_timeout)
             self.sock.sendall(data)
 
     def send(self, payload, binary=False):
@@ -400,7 +407,7 @@ class WebSocket(object):
             return False
 
         try:
-            self.sock.settimeout(60)
+            self.sock.settimeout(self.socket_read_timeout)
             b = self.sock.recv(self.reading_buffer_size)
 
             # This will only make sense with secure sockets.
@@ -465,7 +472,7 @@ class WebSocket(object):
         if not bytes and self.reading_buffer_size > 0:
             return False
 
-        self.reading_buffer_size = s.parser.send(bytes) or DEFAULT_READING_SIZE
+        self.reading_buffer_size = s.parser.send(bytes) or Default_Read_Size
 
         if s.closing is not None:
             logger.info("Closing message received (%d) '%s'" % (s.closing.code, s.closing.reason))

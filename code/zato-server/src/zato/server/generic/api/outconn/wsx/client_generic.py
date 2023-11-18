@@ -53,7 +53,9 @@ class _NonZatoWSXClientImpl(WebSocketClient, _BaseWSXClient):
         WebSocketClient.__init__(
             self,
             url=config['address'],
-            heartbeat_freq=config['ping_interval']
+            heartbeat_freq=config['ping_interval'],
+            socket_read_timeout=config['socket_read_timeout'],
+            socket_write_timeout=config['socket_write_timeout'],
         )
 
 # ################################################################################################################################

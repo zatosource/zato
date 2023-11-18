@@ -104,6 +104,10 @@ $.fn.zato.outgoing.wsx.data_table.new_row = function(item, data, include_tr) {
     /* 8 */
     row += String.format("<td class='ignore'>{0}</td>", item.ping_interval);
     row += String.format("<td class='ignore'>{0}</td>", item.pings_missed_threshold);
+    row += String.format("<td class='ignore'>{0}</td>", item.socket_read_timeout);
+
+    /* 9 */
+    row += String.format("<td class='ignore'>{0}</td>", item.socket_write_timeout);
 
     if(include_tr) {
         row += '</tr>';
