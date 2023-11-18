@@ -6,7 +6,7 @@ import gevent
 from gevent import Greenlet
 from gevent.queue import Queue
 
-from ws4py.client import WebSocketBaseClient
+from zato.server.ext.ws4py.client import WebSocketBaseClient
 
 __all__ = ['WebSocketClient']
 
