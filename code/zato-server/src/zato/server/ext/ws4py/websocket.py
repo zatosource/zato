@@ -18,7 +18,7 @@ from zato.common.marshal_.api import Model
 from zato.server.ext.ws4py.streaming import Stream
 from zato.server.ext.ws4py.messaging import Message, PingControlMessage
 
-DEFAULT_READING_SIZE = 2
+DEFAULT_READING_SIZE = 200
 
 logger = logging.getLogger('zato_web_socket')
 
