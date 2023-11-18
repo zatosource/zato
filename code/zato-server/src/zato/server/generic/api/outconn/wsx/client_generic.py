@@ -125,7 +125,7 @@ class _NonZatoWSXClient:
         )
 
         # .. build it here as we may want to update it dynamically ..
-        self.log_address = replace_query_string_items(self.server, self.config['address'])
+        self.address_masked = replace_query_string_items(self.server, self.config['address'])
 
         # .. map implementation methods to our own.
         self.invoke = self._non_zato_client.send
@@ -162,7 +162,7 @@ class _NonZatoWSXClient:
             self._non_zato_client.connect(close_on_handshake_error=False)
         except Exception:
             logger.warn('WSX could not connect to `%s` -> id:%s -> `%s (#%s)',
-                self.log_address,
+                self.address_masked,
                 hex(id(self._non_zato_client)),
                 format_exc(),
                 self.connection_attempts_so_far,
