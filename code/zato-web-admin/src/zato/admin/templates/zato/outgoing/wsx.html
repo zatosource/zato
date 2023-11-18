@@ -181,7 +181,7 @@
                                 </label>
                                 |
                                 <label>
-                                Is Zato
+                                Connecting to Zato
                                 {{ create_form.is_zato }}
                                 </label>
                                 |
@@ -262,7 +262,7 @@
                                 </label>
                                 |
                                 <label>
-                                Is Zato
+                                Connecting to Zato
                                 {{ edit_form.is_zato }}
                                 </label>
                                 |
@@ -275,11 +275,19 @@
                                 Data format
                                 {{ edit_form.data_format }}
                                 </label>
-                                |
+                            </td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>
                                 <label>
-                                Ping freq.
-                                {{ edit_form.ping_interval }}
+                                Ping interval
+                                {{ create_form.ping_interval }}
+                                <span class="form_hint">(in seconds)</span>
                                 </label>
+                                |
+                                Threshold
+                                {{ create_form.pings_missed_threshold }}
                             </td>
                         </tr>
                         <tr>
