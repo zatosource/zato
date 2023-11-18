@@ -15,7 +15,7 @@ from traceback import format_exc
 from gevent import sleep as _gevent_sleep
 
 # Zato
-from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC, ZATO_NONE
+from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC, WEB_SOCKET, ZATO_NONE
 from zato.common.typing_ import cast_
 from zato.server.connection.queue import Wrapper
 from zato.server.generic.api.outconn.wsx.client_generic import _NonZatoWSXClient
@@ -164,6 +164,16 @@ class OutconnWSXWrapper(Wrapper):
     is_on_subscribe_service_wsx_adapter:'bool' = False
 
     def __init__(self, config:'strdict', server:'ParallelServer') -> 'None':
+
+        # .. these used to be optional which is why we need ..
+        # .. to ensure that we have this information here ..
+
+        if not 'ping_internval' in config:
+            config['ping_interval'] = 1 # WEB_SOCKET.DEFAULT.PING_INTERVAL
+
+        if not 'pings_missed_threshold' in config:
+            config['pings_missed_threshold'] = WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD_OUTGOING
+
         config['parent'] = self
         self._has_json = config.get('data_format') == _json
         self._resolve_config_ids(config, server)

@@ -132,7 +132,7 @@ class WebSocket(object):
         WSGI environ dictionary.
         """
 
-        self.heartbeat_freq = heartbeat_freq or 30
+        self.heartbeat_freq = heartbeat_freq
         """
         At which interval the heartbeat will be running.
         Set this to `0` or `None` to disable it entirely.
@@ -400,13 +400,13 @@ class WebSocket(object):
             return False
 
         try:
-            self.sock.settimeout(180)
+            self.sock.settimeout(60)
             b = self.sock.recv(self.reading_buffer_size)
 
-            # self.sock.settimeout(None)
             # This will only make sense with secure sockets.
             if self._is_secure:
                 b += self._get_from_pending()
+
         except TimeoutError as e:
             return True
         except (socket.error, OSError, pyOpenSSLError) as e:
@@ -526,7 +526,6 @@ class WebSocket(object):
         """
         self.sock.setblocking(True)
         with Heartbeat(self, frequency=self.heartbeat_freq):
-            s = self.stream
 
             try:
                 self.opened()
