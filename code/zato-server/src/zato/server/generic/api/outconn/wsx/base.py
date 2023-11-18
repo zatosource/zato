@@ -49,16 +49,21 @@ msg_closing_superfluous = 'Closing superfluous connection (Zato queue)'
 class WSXClient:
     """ A client through which outgoing WebSocket messages can be sent.
     """
-    send: 'callable_'
-    invoke: 'callable_'
+
     is_zato: 'bool'
     impl: 'ZatoWSXClient | _NonZatoWSXClient'
+
+    send: 'callable_'
+    invoke: 'callable_'
+
+    address_masked:'str'
 
     def __init__(self, server:'ParallelServer', config:'strdict') -> 'None':
         self.server = server
         self.config = config
         self.is_zato = self.config['is_zato']
         self.impl = cast_('any_', None)
+        self.address_masked = self.config['address_masked']
 
     def _init(self) -> 'None':
 
@@ -101,8 +106,30 @@ class WSXClient:
         # Keep trying until our underlying client is connected ..
         while not self.is_impl_connected():
 
-            # .. but stop if the client should not try again, e.g. it has been already deleted ..
+            # .. stop if the client should not try again, e.g. it has been already deleted ..
             if self.impl and (not self.impl.should_keep_running()):
+
+                # .. log what we are about to do ..
+                msg  = f'Returning from WSXClient.init -> {self.address_masked} -> '
+                msg += f'self.impl of `{hex(id(self))}` should not keep running'
+                logger.info(msg)
+
+                # .. do return to our caller.
+                return
+
+            # .. also, delete the connection and stop if we are no longer ..
+            # .. in the server-wide list of connection pools that should exist ..
+            if not self.server.wsx_connection_pool_wrapper.has_item(self):
+
+                # .. log what we are about to do ..
+                msg  = f'Returning from WSXClient.init -> `{self.address_masked}` -> '
+                msg += 'pool `{hex(id(self))}` already deleted'
+                logger.info(msg)
+
+                # .. delete and close the underlying client ..
+                self.delete()
+
+                # .. do return to our caller.
                 return
 
             # .. if we are here, it means that we keep trying ..
@@ -403,12 +430,29 @@ class OutconnWSXWrapper(Wrapper):
 
     def add_client(self) -> 'None':
 
+        # Local variables
+        config_id = self.config['id']
+
         try:
+
+            # First, make sure there are no previous connection pools for this ID ..
+            self.server.wsx_connection_pool_wrapper.delete_all(config_id)
+
+            # .. now, initialize the client ..
             conn = WSXClient(self.server, self.config)
+
+            # .. append it for potential later use ..
             self.conn_in_progress_list.append(conn)
+
+            # .. add it to the wrapper for potential later use ..
+            self.server.wsx_connection_pool_wrapper.add_item(config_id, conn)
+
+            # .. try to initialize the connection ..
             conn.init()
 
+            # .. if we are not connected at this point, we need to delete all the reference to the pool ..
             if not conn.is_impl_connected():
+                self.delete()
                 self.client.decr_in_progress_count()
                 return
 
