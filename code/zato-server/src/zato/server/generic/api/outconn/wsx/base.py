@@ -15,7 +15,7 @@ from traceback import format_exc
 from gevent import sleep as _gevent_sleep
 
 # Zato
-from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC, ZATO_NONE
+from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC, WEB_SOCKET, ZATO_NONE
 from zato.common.typing_ import cast_
 from zato.server.connection.queue import Wrapper
 from zato.server.generic.api.outconn.wsx.client_generic import _NonZatoWSXClient
@@ -51,14 +51,16 @@ class WSXClient:
     """
     send: 'callable_'
     invoke: 'callable_'
-    is_zato:'bool'
+    is_zato: 'bool'
+    impl: 'ZatoWSXClient | _NonZatoWSXClient'
 
-    def __init__(self, config:'strdict') -> 'None':
+    def __init__(self, server:'ParallelServer', config:'strdict') -> 'None':
+        self.server = server
         self.config = config
         self.is_zato = self.config['is_zato']
-        self.impl = None
+        self.impl = cast_('any_', None)
 
-    def init(self) -> 'None':
+    def _init(self) -> 'None':
 
         # Decide which implementation class to use ..
         if self.is_zato:
@@ -67,10 +69,16 @@ class WSXClient:
             _impl_class = _NonZatoWSXClient
 
         # .. this will create an instance ..
-        self.impl = _impl_class(self.config, self.on_connected_cb, self.on_message_cb, self.on_close_cb, self.config['address'])
+        self.impl = _impl_class(
+            self.server,
+            self.config,
+            self.on_connected_cb,
+            self.on_message_cb,
+            self.on_close_cb
+        )
 
         # .. this will initialize it ..
-        self.impl.init()
+        _ = self.impl.init()
 
         # .. so now, we can make use of what was possibly initialized in .init above ..
         self.send   = self.impl.send
@@ -81,31 +89,57 @@ class WSXClient:
             self.invoke_service = self.impl._zato_client.invoke_service # type: ignore
 
         # .. now, the client can connect ..
-        self.impl.connect()
+        _ = self.impl.connect()
 
         # .. and run forever.
-        self.impl.run_forever()
+        _ = self.impl.run_forever()
+
+# ################################################################################################################################
+
+    def init(self) -> 'None':
+
+        # Keep trying until our underlying client is connected ..
+        while not self.is_impl_connected():
+
+            # .. but stop if the client should not try again, e.g. it has been already deleted ..
+            if self.impl and (not self.impl.should_keep_running()):
+                return
+
+            # .. if we are here, it means that we keep trying ..
+            else:
+
+                # .. do try to connect ..
+                self._init()
+
+                # .. sleep for a while after the attempt.
+                _gevent_sleep(1)
 
     def on_connected_cb(self, conn:'OutconnWSXWrapper') -> 'None':
         self.config['parent'].on_connected_cb(conn)
 
+# ################################################################################################################################
+
     def on_message_cb(self, msg:'MessageFromServer') -> 'None':
         self.config['parent'].on_message_cb(msg)
+
+# ################################################################################################################################
 
     def on_close_cb(self, code:'int', reason:'strnone'=None) -> 'None':
         self.config['parent'].on_close_cb(code, reason)
 
+# ################################################################################################################################
+
     def delete(self, reason:'str'='') -> 'None':
-        self.impl.close(reason=reason) # type: ignore
+        if self.impl:
+            self.impl.delete()
+            self.impl.close(reason=reason) # type: ignore
+
+# ################################################################################################################################
 
     def is_impl_connected(self) -> 'bool':
+        return self.impl and self.impl.check_is_connected()
 
-        if isinstance(self.impl, ZatoWSXClient):
-            is_connected = self.impl._zato_client.is_connected
-        else:
-            is_connected = self.impl.is_connected()
-
-        return is_connected
+# ################################################################################################################################
 
     def get_name(self) -> 'str':
         return f'{self.config["name"]} - {self.config["type_"]} - {hex(id(self))}'
@@ -130,6 +164,24 @@ class OutconnWSXWrapper(Wrapper):
     is_on_subscribe_service_wsx_adapter:'bool' = False
 
     def __init__(self, config:'strdict', server:'ParallelServer') -> 'None':
+
+        # .. these used to be optional which is why we need ..
+        # .. to ensure that we have this information here ..
+
+        if not config.get('ping_interval'):
+            config['ping_interval'] = WEB_SOCKET.DEFAULT.PING_INTERVAL
+
+        if not config.get('pings_missed_threshold'):
+            config['pings_missed_threshold'] = WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD_OUTGOING
+
+        if not config.get('socket_read_timeout'):
+            config['socket_read_timeout'] = WEB_SOCKET.DEFAULT.Socket_Read_Timeout
+
+        # .. note that it is the same value as with the read timeout ..
+        # .. because the underlying TCP sockets may be shared by multiple threads ..
+        if not config.get('socket_write_timeout'):
+            config['socket_write_timeout'] = config['socket_read_timeout']
+
         config['parent'] = self
         self._has_json = config.get('data_format') == _json
         self._resolve_config_ids(config, server)
@@ -140,6 +192,16 @@ class OutconnWSXWrapper(Wrapper):
     def check_is_active(self) -> 'bool':
         is_active = self.server.is_active_outconn_wsx(self.config['id'])
         return is_active
+
+# ################################################################################################################################
+
+    def on_outconn_stopped_running(self) -> 'None':
+        self.server.on_wsx_outconn_stopped_running(self.config['id'])
+
+# ################################################################################################################################
+
+    def on_outconn_connected(self) -> 'None':
+        self.server.on_wsx_outconn_connected(self.config['id'])
 
 # ################################################################################################################################
 
@@ -251,9 +313,9 @@ class OutconnWSXWrapper(Wrapper):
         if self.on_message_service_name:
             try:
                 if self._has_json and isinstance(msg, bytes):
-                    msg = msg.decode('utf8')
-                    msg = loads(msg)
-                ctx = OnMessageReceived(msg, self.config, self)
+                    msg = msg.decode('utf8') # type: ignore
+                    msg = loads(msg) # type: ignore
+                ctx = OnMessageReceived(cast_('strdict | MessageFromServer', msg), self.config, self)
                 if self.is_on_message_service_wsx_adapter:
                     self.server.invoke_wsx_adapter(self.on_message_service_name, ctx)
                 else:
@@ -276,11 +338,18 @@ class OutconnWSXWrapper(Wrapper):
 
     def on_close_cb(self, code:'int', reason:'strnone'=None) -> 'None':
 
+        # We need to special-case the situation when it is us who deleted the outgoing connection.
+        reason_is_not_delete = reason != COMMON_GENERIC.DeleteReasonBytes
+
         # Ignore events we generated ourselves, e.g. when someone edits a connection in web-admin
         # this will result in deleting and rerecreating a connection which implicitly calls this callback.
         if self._should_handle_close_cb(code, reason):
 
-            logger.info('Remote server closed connection to WebSocket `%s`, c:`%s`, r:`%s`', self.config['name'], code, reason)
+            # If reason is something else than our deleting the connection, we can log this message
+            # to indicate that it must have been the remote server that did it.
+            if reason_is_not_delete:
+                logger.info('Remote server closed connection to WebSocket `%s`, c:`%s`, r:`%s`',
+                    self.config['name'], code, reason)
 
             if self.on_close_service_name:
                 try:
@@ -292,14 +361,21 @@ class OutconnWSXWrapper(Wrapper):
                 except Exception:
                     logger.warning('Could not invoke CLOSE service `%s`, e:`%s`', self.on_close_service_name, format_exc())
 
-            has_auto_reconnect:'bool' = self.config.get('has_auto_reconnect', True)
+            has_auto_reconnect = self.config.get('has_auto_reconnect', True)
 
             if has_auto_reconnect:
-                logger.info('WebSocket `%s` will reconnect to `%s` (hac:%d)',
-                    self.config['name'], self.config['address'], has_auto_reconnect)
                 try:
-                    if reason != COMMON_GENERIC.DeleteReasonBytes:
+
+                    # Reconnect only if it was not us who deleted the connection ..
+                    if reason_is_not_delete:
+
+                        # .. log what we are about to do ..
+                        logger.info('WebSocket `%s` will reconnect to `%s` (hac:%d)',
+                            self.config['name'], self.config['address'], has_auto_reconnect)
+
+                        # .. and do reconnect now.
                         self.server.api_worker_store_reconnect_generic(self.config['id'])
+
                 except Exception:
                     logger.warning('Could not reconnect WebSocket `%s` to `%s`, e:`%s`',
                         self.config['name'], self.config['address'], format_exc())
@@ -319,7 +395,7 @@ class OutconnWSXWrapper(Wrapper):
 
         # .. now, we can invoke the remote web socket.
         with self.client() as client:
-            client.send(data)
+            client.send(data) # type: ignore
 
     invoke = send
 
@@ -328,7 +404,7 @@ class OutconnWSXWrapper(Wrapper):
     def add_client(self) -> 'None':
 
         try:
-            conn = WSXClient(self.config)
+            conn = WSXClient(self.server, self.config)
             self.conn_in_progress_list.append(conn)
             conn.init()
 

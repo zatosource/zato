@@ -23,8 +23,9 @@ from zato.server.generic.api.outconn.wsx.common import _BaseWSXClient
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, callable_, strlist
+    from zato.common.typing_ import any_, callable_, strdict, strlist
     from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
+    from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,9 +55,28 @@ class _ZatoWSXClientImpl(ZatoWSXClientImpl):
 class ZatoWSXClient(_BaseWSXClient):
     """ A client through which Zato services can be invoked over outgoing WebSocket connections.
     """
-    def __init__(self, *args: 'any_', **kwargs: 'any_') -> 'None':
-        super(ZatoWSXClient, self).__init__(*args, **kwargs)
+    def __init__(
+        self,
+        server: 'ParallelServer',
+        config:'strdict',
+        on_connected_cb:'callable_',
+        on_message_cb:'callable_',
+        on_close_cb:'callable_',
+    ) -> 'None':
 
+        # Call our base class first
+        super(ZatoWSXClient, self).__init__(
+            server,
+            config,
+            on_connected_cb,
+            on_message_cb,
+            on_close_cb,
+        )
+
+        # Assign for later use
+        self.server = server
+
+        # Initialize the underlying client's configuration
         self._zato_client_config = _ZatoWSXConfigImpl()
         self._zato_client_config.client_name = 'WSX outconn - {}:{} - {}'.format(
             self.config['id'],
@@ -65,6 +85,8 @@ class ZatoWSXClient(_BaseWSXClient):
         )
 
         self._zato_client_config.check_is_active_func = self.check_is_active
+        self._zato_client_config.on_outconn_stopped_running_func = self.on_outconn_stopped_running
+        self._zato_client_config.on_outconn_connected_func = self.on_outconn_connected
         self._zato_client_config.client_id = 'wsx.out.{}'.format(new_cid(8))
         self._zato_client_config.address = self.config['address']
         self._zato_client_config.on_request_callback = self.on_message_cb
@@ -75,7 +97,7 @@ class ZatoWSXClient(_BaseWSXClient):
             self._zato_client_config.username = self.config['username']
             self._zato_client_config.secret = self.config['secret']
 
-        self._zato_client = _ZatoWSXClientImpl(self.opened, self._zato_client_config)
+        self._zato_client = _ZatoWSXClientImpl(self.opened, self.server, self._zato_client_config)
         self.invoke = self._zato_client.invoke
         self.send = self.invoke
 
@@ -93,6 +115,12 @@ class ZatoWSXClient(_BaseWSXClient):
 
 # ################################################################################################################################
 
+    def delete(self) -> 'None':
+        # Added for API completeness
+        pass
+
+# ################################################################################################################################
+
     def close(self, reason:'str'='') -> 'None':
         self._zato_client.stop(reason)
 
@@ -103,10 +131,27 @@ class ZatoWSXClient(_BaseWSXClient):
 
 # ################################################################################################################################
 
+    def check_is_connected(self):
+        return self._zato_client.is_connected
+
+# ################################################################################################################################
+
     def check_is_active(self):
-        parent = self.config['parent'] # type: OutconnWSXWrapper
+        parent:'OutconnWSXWrapper' = self.config['parent']
         is_active = parent.check_is_active()
         return is_active
+
+# ################################################################################################################################
+
+    def on_outconn_stopped_running(self):
+        parent:'OutconnWSXWrapper' = self.config['parent']
+        parent.on_outconn_stopped_running()
+
+# ################################################################################################################################
+
+    def on_outconn_connected(self):
+        parent:'OutconnWSXWrapper' = self.config['parent']
+        parent.on_outconn_connected()
 
 # ################################################################################################################################
 
