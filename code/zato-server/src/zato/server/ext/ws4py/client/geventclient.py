@@ -11,7 +11,7 @@ from zato.server.ext.ws4py.client import WebSocketBaseClient
 __all__ = ['WebSocketClient']
 
 class WebSocketClient(WebSocketBaseClient):
-    def __init__(self, url, protocols=None, extensions=None, ssl_options=None, headers=None,
+    def __init__(self, server, url, protocols=None, extensions=None, ssl_options=None, headers=None,
         socket_read_timeout=None, socket_write_timeout=None):
         """
         WebSocket client that executes the
@@ -42,7 +42,7 @@ class WebSocketClient(WebSocketBaseClient):
           ]
           gevent.joinall(greenlets)
         """
-        WebSocketBaseClient.__init__(self, url, protocols, extensions,
+        WebSocketBaseClient.__init__(self, server, url, protocols, extensions,
             ssl_options=ssl_options, headers=headers,
             socket_read_timeout=socket_read_timeout,
             socket_write_timeout=socket_write_timeout)
