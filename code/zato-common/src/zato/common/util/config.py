@@ -8,6 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from logging import getLogger
+from traceback import format_exc
 from urllib.parse import parse_qsl, urlparse, urlunparse
 
 # Bunch
@@ -26,6 +28,11 @@ from zato.common.const import SECRETS
 if 0:
     from zato.common.typing_ import any_
     from zato.server.base.parallel import ParallelServer
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,7 +86,7 @@ def resolve_env_variables(data):
 
 # ################################################################################################################################
 
-def replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
+def _replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
 
     # Local variables
     query_string_new = []
@@ -139,6 +146,15 @@ def replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
     return data
 
 # ################################################################################################################################
+
+def replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
+    try:
+        return _replace_query_string_items(server, data)
+    except Exception:
+        logger.info('Items could not be masked -> %s', format_exc())
+
+# ################################################################################################################################
+
 
 def extract_param_placeholders(data:'str') -> 'any_':
 

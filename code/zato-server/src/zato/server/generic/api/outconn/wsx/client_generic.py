@@ -173,7 +173,8 @@ class _NonZatoWSXClient:
 # ################################################################################################################################
 
     def close(self, reason:'str') -> 'any_':
-        self._non_zato_client.close(reason=reason)
+        if self._non_zato_client:
+            self._non_zato_client.close(reason=reason)
 
 # ################################################################################################################################
 
@@ -188,8 +189,11 @@ class _NonZatoWSXClient:
 # ################################################################################################################################
 
     def check_is_connected(self) -> 'bool':
-        is_connected = not self._non_zato_client.terminated
-        return is_connected and self.has_established_connection
+        if self._non_zato_client:
+            is_connected = not self._non_zato_client.terminated
+            return is_connected and self.has_established_connection
+        else:
+            return False
 
 # ################################################################################################################################
 
