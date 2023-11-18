@@ -93,12 +93,11 @@ OnClosed = Close
 class _BaseWSXClient:
     def __init__(
         self,
+        server: 'ParallelServer',
         config:'strdict',
         on_connected_cb:'callable_',
         on_message_cb:'callable_',
         on_close_cb:'callable_',
-        *ignored_args:'any_',
-        **ignored_kwargs:'any_'
     ) -> 'None':
         self.config = config
         self.on_connected_cb = on_connected_cb

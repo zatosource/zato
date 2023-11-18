@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+# stdlib
+import os
 
 # Zato
 from zato.cli import common_totp_opts, ManageCommand
@@ -117,23 +118,27 @@ class CreateUser(_WebAdminAuthCommand):
         Command.stdout = CreateUser._FakeStdout(self.logger)
         Command.stdin = CreateUser._FakeStdin()
 
-        if self.is_interactive:
-            options = {
-                'verbosity':0,
-                'database': None,
-            }
-        else:
-            options = {
-                'verbosity':0,
-                'database': None,
-                'username':self.args.username,
-                'email':self.args.email,
-            }
+        options = {
+            'verbosity':0,
+            'database': None,
+            'username':self.args.username,
+            'email':self.args.email,
+        }
+
+        os.environ['DJANGO_SUPERUSER_PASSWORD'] = self.args.password
 
         try:
             Command().handle(interactive=self.is_interactive, **options)
-        except Exception:
-            self.logger.error('Could not create the user, details: `%s`', format_exc())
+        except Exception as e:
+            if self.args.verbose:
+                suffix = ''
+                exc_info = format_exc()
+            else:
+                suffix = '(use --verbose for more information)'
+                exc_info = e
+
+            self.logger.error(f'User could not be created, details: `{exc_info}` {suffix}')
+
             if needs_sys_exit:
                 sys.exit(self.SYS_ERROR.INVALID_INPUT)
             else:
