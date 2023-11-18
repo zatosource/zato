@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}WSX outconns{% endblock %}
+{% block html_title %}WebSocket outgoing connections{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -43,7 +43,7 @@
             'subscription_list',
             'has_auto_reconnect',
             'data_format',
-            'ping_frequency',
+            'ping_interval',
         ]
     }
     </script>
@@ -149,7 +149,7 @@
                         <td class='ignore'>{{ item.subscription_list }}</td>
                         <td class='ignore'>{{ item.has_auto_reconnect }}</td>
                         <td class='ignore'>{{ item.data_format|default:"" }}</td>
-                        <td class='ignore'>{{ item.ping_frequency|default:"30" }}</td>
+                        <td class='ignore'>{{ item.ping_interval|default:"30" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -194,11 +194,19 @@
                                 Data format
                                 {{ create_form.data_format }}
                                 </label>
-                                |
+                            </td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>
                                 <label>
-                                Ping freq.
-                                {{ create_form.ping_frequency }}
+                                Ping interval
+                                {{ create_form.ping_interval }}
+                                <span class="form_hint">(in seconds)</span>
                                 </label>
+                                |
+                                Threshold
+                                {{ create_form.pings_missed_threshold }}
                             </td>
                         </tr>
                         <tr>
@@ -270,7 +278,7 @@
                                 |
                                 <label>
                                 Ping freq.
-                                {{ edit_form.ping_frequency }}
+                                {{ edit_form.ping_interval }}
                                 </label>
                             </td>
                         </tr>
