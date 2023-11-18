@@ -46,13 +46,15 @@ class _NonZatoWSXClientImpl(WebSocketClient, _BaseWSXClient):
         config:'stranydict',
         on_connected_cb:'callable_',
         on_message_cb:'callable_',
-        on_close_cb:'callable_',
-        *args:'any_',
-        **kwargs:'any_'
+        on_close_cb:'callable_'
     ) -> 'None':
 
         _BaseWSXClient.__init__(self, server, config, on_connected_cb, on_message_cb, on_close_cb)
-        WebSocketClient.__init__(self, url=self.config['address'], *args, **kwargs)
+        WebSocketClient.__init__(
+            self,
+            url=config['address'],
+            heartbeat_freq=config['ping_interval']
+        )
 
 # ################################################################################################################################
 
@@ -158,7 +160,6 @@ class _NonZatoWSXClient:
                 self.connection_attempts_so_far,
             )
         else:
-            logger.warn('CONNECTED AS ID: %s', self._non_zato_client)
             self.has_established_connection = True
 
 # ################################################################################################################################
