@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 # flake8: noqa
-from base64 import b64encode
-from hashlib import sha1
 import os
 import socket
 import ssl
+from base64 import b64encode
+from hashlib import sha1
+from logging import getLogger
 
+from zato.common.api import NotGiven
 from zato.server.ext.ws4py import WS_KEY, WS_VERSION
 from zato.server.ext.ws4py.exc import HandshakeError
 from zato.server.ext.ws4py.websocket import WebSocket
@@ -13,9 +15,19 @@ from zato.server.ext.ws4py.compat import urlsplit
 
 __all__ = ['WebSocketBaseClient']
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class WebSocketBaseClient(WebSocket):
-    def __init__(self, url, protocols=None, extensions=None,
-                 heartbeat_freq=None, ssl_options=None, headers=None):
+    def __init__(self, server, url, protocols=None, extensions=None,
+        heartbeat_freq=None, ssl_options=None, headers=None,
+        socket_read_timeout=None,
+        socket_write_timeout=None):
         """
         A websocket client that implements :rfc:`6455` and provides a simple
         interface to communicate with a websocket server.
@@ -79,8 +91,21 @@ class WebSocketBaseClient(WebSocket):
         self.resource = None
         self.ssl_options = ssl_options or {}
         self.extra_headers = headers or []
-
         self._parse_url()
+
+        sock = self.create_socket()
+
+        WebSocket.__init__(self, server, sock, protocols=protocols,
+            extensions=extensions,
+            heartbeat_freq=heartbeat_freq,
+            socket_read_timeout=socket_read_timeout,
+            socket_write_timeout=socket_write_timeout)
+
+        self.stream.always_mask = True
+        self.stream.expect_masking = False
+        self.key = b64encode(os.urandom(16))
+
+    def create_socket(self):
 
         if self.unix_socket_path:
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM, 0)
@@ -112,13 +137,12 @@ class WebSocketBaseClient(WebSocket):
                 except (AttributeError, socket.error):
                     pass
 
-        WebSocket.__init__(self, sock, protocols=protocols,
-                           extensions=extensions,
-                           heartbeat_freq=heartbeat_freq)
+        return sock
 
-        self.stream.always_mask = True
-        self.stream.expect_masking = False
-        self.key = b64encode(os.urandom(16))
+    def rebuild_socket(self):
+        self.close_connection()
+        socket = self.create_socket()
+        self.sock = socket
 
     # Adpated from: https://github.com/liris/websocket-client/blob/master/websocket.py#L105
     def _parse_url(self):
@@ -151,6 +175,10 @@ class WebSocketBaseClient(WebSocket):
             self.host = 'localhost'
         else:
             raise ValueError("Invalid hostname from: %s", self.url)
+
+        # We have our host so we can set the TLS options accordingly
+        if not 'server_hostname' in self.ssl_options:
+            self.ssl_options['server_hostname'] = self.host
 
         if parsed.port:
             self.port = parsed.port
@@ -196,16 +224,31 @@ class WebSocketBaseClient(WebSocket):
         """
         if not self.client_terminated:
             self.client_terminated = True
-            self._write(self.stream.close(code=code, reason=reason).single(mask=True))
+            try:
+                self._write(self.stream.close(code=code, reason=reason).single(mask=True))
+            except Exception:
+                logger.info('Caught a WSX exception when closing connection to %s', self.address_masked)
 
-    def connect(self):
+    def connect(self, close_on_handshake_error=True):
         """
         Connects this websocket and starts the upgrade handshake
         with the remote endpoint.
         """
         if self.scheme == "wss":
             # default port is now 443; upgrade self.sender to send ssl
-            self.sock = ssl.wrap_socket(self.sock, **self.ssl_options)
+
+            # This may be specified if needed ..
+            check_hostname = os.environ.get('Zato_WSX_TLS_Check_Hostname', NotGiven)
+
+            # .. if there is no such environment variable, assume the host name needs to be checked.
+            if check_hostname is NotGiven:
+                check_hostname = True
+            else:
+                check_hostname = False
+
+            context = ssl.create_default_context()
+            context.check_hostname = check_hostname
+            self.sock = context.wrap_socket(self.sock, **self.ssl_options)
             self._is_secure = True
 
         self.sock.connect(self.bind_addr)
@@ -233,7 +276,11 @@ class WebSocketBaseClient(WebSocket):
             self.process_response_line(response_line)
             self.protocols, self.extensions = self.process_handshake_header(headers)
         except HandshakeError:
-            self.close_connection()
+
+            # This will be set to True for backward-compatibility with ws4py
+            # from before it was added to ext.
+            if close_on_handshake_error:
+                self.close_connection()
             raise
 
         self.handshake_ok()

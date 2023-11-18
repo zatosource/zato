@@ -30,8 +30,15 @@ ExtraProperties = WEB_SOCKET.ExtraProperties
 # ################################################################################################################################
 
 class _ParallelServer:
+
     def is_active_outconn_wsx(self, _ignored_conn_id:'str') -> 'bool':
         return True
+
+    def on_wsx_outconn_stopped_running(self, conn_id:'str') -> 'None':
+        pass
+
+    def on_wsx_outconn_connected(self, conn_id:'str') -> 'None':
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
