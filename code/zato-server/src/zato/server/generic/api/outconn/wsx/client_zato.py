@@ -54,9 +54,28 @@ class _ZatoWSXClientImpl(ZatoWSXClientImpl):
 class ZatoWSXClient(_BaseWSXClient):
     """ A client through which Zato services can be invoked over outgoing WebSocket connections.
     """
-    def __init__(self, *args: 'any_', **kwargs: 'any_') -> 'None':
-        super(ZatoWSXClient, self).__init__(*args, **kwargs)
+    def __init__(
+        self,
+        server: 'ParallelServer',
+        config:'strdict',
+        on_connected_cb:'callable_',
+        on_message_cb:'callable_',
+        on_close_cb:'callable_',
+    ) -> 'None':
 
+        # Call our base class first
+        super(ZatoWSXClient, self).__init__(
+            server,
+            config,
+            on_connected_cb,
+            on_message_cb,
+            on_close_cb,
+        )
+
+        # Assign for later use
+        self.server = server
+
+        # Initialize the underlying client's configuration
         self._zato_client_config = _ZatoWSXConfigImpl()
         self._zato_client_config.client_name = 'WSX outconn - {}:{} - {}'.format(
             self.config['id'],
@@ -77,7 +96,7 @@ class ZatoWSXClient(_BaseWSXClient):
             self._zato_client_config.username = self.config['username']
             self._zato_client_config.secret = self.config['secret']
 
-        self._zato_client = _ZatoWSXClientImpl(self.opened, self._zato_client_config)
+        self._zato_client = _ZatoWSXClientImpl(self.opened, self.server, self._zato_client_config)
         self.invoke = self._zato_client.invoke
         self.send = self.invoke
 

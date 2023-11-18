@@ -43,8 +43,9 @@ except ImportError:
 # ################################################################################################################################
 
 if 0:
-    from zato.server.ext.ws4py.messaging import TextMessage
     from zato.common.typing_ import any_, anydict, callable_, callnone, strnone
+    from zato.server.base.parallel import ParallelServer
+    from zato.server.ext.ws4py.messaging import TextMessage
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,11 +101,13 @@ class Config:
     client_name: 'str'
     on_request_callback: 'callable_'
 
-    username: 'strnone' = None
-    secret: 'strnone' = None
+    username:'strnone' = None
+    secret:'strnone' = None
     on_closed_callback: 'callnone' = None
-    wait_time: 'int' = Default.ResponseWaitTime
-    max_connect_attempts: 'int' = Default.MaxConnectAttempts
+    wait_time:'int' = Default.ResponseWaitTime
+    max_connect_attempts:'int' = Default.MaxConnectAttempts
+    socket_read_timeout:'int' = WEB_SOCKET.DEFAULT.Socket_Read_Timeout
+    socket_write_timeout:'int' = WEB_SOCKET.DEFAULT.Socket_Write_Timeout
 
     # This is a method that will tell the client whether its parent connection definition is still active.
     check_is_active_func: 'callable_'
@@ -306,6 +309,7 @@ class _WebSocketClientImpl(WebSocketClient):
     """
     def __init__(
         self,
+        server:'ParallelServer',
         config:'Config',
         on_connected_callback:'callable_',
         on_message_callback:'callable_',
@@ -358,9 +362,10 @@ class Client:
     max_connect_attempts: 'int'
     conn: '_WebSocketClientImpl'
 
-    def __init__(self, config:'Config') -> 'None':
+    def __init__(self, server:'ParallelServer', config:'Config') -> 'None':
+        self.server = server
         self.config = config
-        self.conn = self.create_conn(self.config)
+        self.conn = self.create_conn(self.server, self.config)
         self.keep_running = True
         self.is_authenticated = False
         self.is_connected = False
@@ -386,8 +391,9 @@ class Client:
         self.logger.info('Starting WSX client: %s -> name:`%s`; id:`%s`; u:`%s`',
             self.config.address, self.config.client_name, self.config.client_id, self.config.username)
 
-    def create_conn(self, config:'Config') -> '_WebSocketClientImpl':
+    def create_conn(self, server:'ParallelServer', config:'Config') -> '_WebSocketClientImpl':
         conn = _WebSocketClientImpl(
+            server,
             config,
             self.on_connected,
             self.on_message,
