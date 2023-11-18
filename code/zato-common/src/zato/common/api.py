@@ -102,7 +102,7 @@ generic_attrs = (
     'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
     'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding',
     'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq',
-    'max_wait_time', 'oauth_def', 'ping_interval', 'pings_missed_threshold'
+    'max_wait_time', 'oauth_def', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout'
 )
 
 # ################################################################################################################################

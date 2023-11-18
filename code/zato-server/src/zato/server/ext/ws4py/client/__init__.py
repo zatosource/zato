@@ -17,7 +17,9 @@ __all__ = ['WebSocketBaseClient']
 
 class WebSocketBaseClient(WebSocket):
     def __init__(self, url, protocols=None, extensions=None,
-                 heartbeat_freq=None, ssl_options=None, headers=None):
+        heartbeat_freq=None, ssl_options=None, headers=None,
+        socket_read_timeout=None,
+        socket_write_timeout=None):
         """
         A websocket client that implements :rfc:`6455` and provides a simple
         interface to communicate with a websocket server.
@@ -86,8 +88,10 @@ class WebSocketBaseClient(WebSocket):
         sock = self.create_socket()
 
         WebSocket.__init__(self, sock, protocols=protocols,
-                           extensions=extensions,
-                           heartbeat_freq=heartbeat_freq)
+            extensions=extensions,
+            heartbeat_freq=heartbeat_freq,
+            socket_read_timeout=socket_read_timeout,
+            socket_write_timeout=socket_write_timeout)
 
         self.stream.always_mask = True
         self.stream.expect_masking = False
