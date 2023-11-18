@@ -321,7 +321,12 @@ class _WebSocketClientImpl(WebSocketClient):
         self.on_closed_callback = on_closed_callback
 
         # .. call the parent ..
-        super(_WebSocketClientImpl, self).__init__(url=self.config.address)
+        super(_WebSocketClientImpl, self).__init__(
+            server,
+            url=self.config.address,
+            socket_read_timeout=self.config.socket_read_timeout,
+            socket_write_timeout=self.config.socket_write_timeout,
+        )
 
 # ################################################################################################################################
 

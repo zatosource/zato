@@ -52,6 +52,7 @@ class _NonZatoWSXClientImpl(WebSocketClient, _BaseWSXClient):
         _BaseWSXClient.__init__(self, server, config, on_connected_cb, on_message_cb, on_close_cb)
         WebSocketClient.__init__(
             self,
+            server=server,
             url=config['address'],
             heartbeat_freq=config['ping_interval'],
             socket_read_timeout=config['socket_read_timeout'],
@@ -151,7 +152,12 @@ class _NonZatoWSXClient:
 # ################################################################################################################################
 
     def connect(self) -> 'any_':
+
+        if not self.should_keep_running():
+            return
+
         self.connection_attempts_so_far += 1
+
         try:
             self._non_zato_client.connect(close_on_handshake_error=False)
         except Exception:

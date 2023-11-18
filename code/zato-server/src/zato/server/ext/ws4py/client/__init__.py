@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 # flake8: noqa
-from base64 import b64encode
-from copy import deepcopy
-from hashlib import sha1
 import os
 import socket
 import ssl
+from base64 import b64encode
+from hashlib import sha1
+from logging import getLogger
 
 from zato.common.api import NotGiven
 from zato.server.ext.ws4py import WS_KEY, WS_VERSION
@@ -15,8 +15,16 @@ from zato.server.ext.ws4py.compat import urlsplit
 
 __all__ = ['WebSocketBaseClient']
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class WebSocketBaseClient(WebSocket):
-    def __init__(self, url, protocols=None, extensions=None,
+    def __init__(self, server, url, protocols=None, extensions=None,
         heartbeat_freq=None, ssl_options=None, headers=None,
         socket_read_timeout=None,
         socket_write_timeout=None):
@@ -87,7 +95,7 @@ class WebSocketBaseClient(WebSocket):
 
         sock = self.create_socket()
 
-        WebSocket.__init__(self, sock, protocols=protocols,
+        WebSocket.__init__(self, server, sock, protocols=protocols,
             extensions=extensions,
             heartbeat_freq=heartbeat_freq,
             socket_read_timeout=socket_read_timeout,
@@ -216,7 +224,10 @@ class WebSocketBaseClient(WebSocket):
         """
         if not self.client_terminated:
             self.client_terminated = True
-            self._write(self.stream.close(code=code, reason=reason).single(mask=True))
+            try:
+                self._write(self.stream.close(code=code, reason=reason).single(mask=True))
+            except Exception:
+                logger.info('Caught a WSX exception when closing connection to %s', self.log_address)
 
     def connect(self, close_on_handshake_error=True):
         """

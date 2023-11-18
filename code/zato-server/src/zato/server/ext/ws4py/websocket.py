@@ -16,6 +16,7 @@ except ImportError:
 
 from zato.common.api import WEB_SOCKET
 from zato.common.marshal_.api import Model
+from zato.common.util.config import replace_query_string_items
 from zato.server.ext.ws4py.streaming import Stream
 from zato.server.ext.ws4py.messaging import Message, PingControlMessage
 
@@ -71,9 +72,13 @@ class Heartbeat(threading.Thread):
                 break
 
 class WebSocket(object):
-    """ Represents a websocket endpoint and provides a high level interface to drive the endpoint. """
+    """ Represents a websocket endpoint and provides a high level interface to drive the endpoint.
+    """
 
-    def __init__(self, sock, protocols=None, extensions=None, environ=None, heartbeat_freq=None,
+    # This will be provided by subclasses
+    url:'str'
+
+    def __init__(self, server, sock, protocols=None, extensions=None, environ=None, heartbeat_freq=None,
         socket_read_timeout=None, socket_write_timeout=None):
         """ The ``sock`` is an opened connection
         resulting from the websocket handshake.
@@ -84,6 +89,7 @@ class WebSocket(object):
         If ``environ`` is provided, it is a copy of the WSGI environ
         dictionnary from the underlying WSGI server.
         """
+        self.log_address = replace_query_string_items(server, self.url)
 
         self.stream = Stream(always_mask=False)
         """
@@ -276,7 +282,7 @@ class WebSocket(object):
         The default behaviour of this handler is to log
         the error with a message.
         """
-        logger.warn("Failed to receive data -> %s", error)
+        logger.warn("Failed to receive WSX data from `%s` -> `%s`", self.log_address, error)
 
     def _write(self, data):
         """

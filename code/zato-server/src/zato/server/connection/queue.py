@@ -412,7 +412,7 @@ class Wrapper:
                     item.delete(reason)
                 except Exception as e:
                     item_name = self._get_item_name(item)
-                    logger.info('Exception while deleting queue item `%s` -> `%s`', item_name, e)
+                    logger.info('Exception while deleting queue item `%s` -> `%s` -> %s', item_name, e, format_exc())
 
         self.conn_in_progress_list.clear()
 
