@@ -22,28 +22,45 @@
     <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.data_table.get_columns = function() {
         return [
+
+            /* 1 */
             '_numbering',
             '_selection',
             'name',
+
+            /* 2 */
             '_is_active',
             'address',
             '_is_zato',
+
+            /* 3 a, b, c */
             '_on_connect_service',
             '_on_message_service',
             '_on_close_service',
+
+            /* 4 */
             '_edit',
             '_delete',
             'id',
+
+            /* 5 */
             'is_active',
             'is_zato',
             'on_connect_service_name',
+
+            /* 6 */
             'on_message_service_name',
             'on_close_service_name',
             'security_def',
+
+            /* 7 */
             'subscription_list',
             'has_auto_reconnect',
             'data_format',
+
+            /* 8 */
             'ping_interval',
+            'pings_missed_threshold',
         ]
     }
     </script>
@@ -80,25 +97,43 @@
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
+
+                        <!-- 1 -->
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
+
+                        <!-- 2 -->
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Address</a></th>
                         <th style="width:4%"><a href="#">Is Zato</a></th>
+
+                        <!-- 3 a, b, c -->
                         <th><a href="#">On connect</a></th>
                         <th><a href="#">On message</a></th>
                         <th><a href="#">On close</a></th>
+
+                        <!-- 4 -->
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        <!-- 5 -->
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        <!-- 6 -->
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        <!-- 7 -->
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <!-- 8 -->
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -106,13 +141,18 @@
                 {% if items %}
                 {% for item in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+
+                        <!-- 1 -->
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
+
+                        <!-- 2 -->
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.address }}</td>
                         <td>{{ item.is_zato|yesno:'Yes,No' }}</td>
 
+                        <!-- 3 -->
                         <td>
                             {% if item.on_connect_service_name %}
                                 <a href="{% url "service-overview" item.on_connect_service_name %}?cluster={{ cluster_id }}">{{ item.on_connect_service_name }}</a>
@@ -120,7 +160,6 @@
                                 <span class="form_hint">---</span>
                             {% endif %}
                         </td>
-
                         <td>
                             {% if item.on_message_service_name %}
                                 <a href="{% url "service-overview" item.on_message_service_name %}?cluster={{ cluster_id }}">{{ item.on_message_service_name }}</a>
@@ -128,7 +167,6 @@
                                 <span class="form_hint">---</span>
                             {% endif %}
                         </td>
-
                         <td>
                             {% if item.on_close_service_name %}
                                 <a href="{% url "service-overview" item.on_close_service_name %}?cluster={{ cluster_id }}">{{ item.on_close_service_name }}</a>
@@ -137,19 +175,29 @@
                             {% endif %}
                         </td>
 
+                        <!-- 4 -->
                         <td><a href="javascript:$.fn.zato.outgoing.wsx.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.wsx.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+
+                        <!-- 5 -->
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_zato }}</td>
                         <td class='ignore'>{{ item.on_connect_service_name }}</td>
+
+                        <!-- 6 -->
                         <td class='ignore'>{{ item.on_message_service_name }}</td>
                         <td class='ignore'>{{ item.on_close_service_name }}</td>
                         <td class='ignore'>{{ item.security_def }}</td>
+
+                        <!-- 7 -->
                         <td class='ignore'>{{ item.subscription_list }}</td>
                         <td class='ignore'>{{ item.has_auto_reconnect }}</td>
                         <td class='ignore'>{{ item.data_format|default:"" }}</td>
-                        <td class='ignore'>{{ item.ping_interval|default:"30" }}</td>
+
+                        <!-- 8 -->
+                        <td class='ignore'>{{ item.ping_interval|default:"45" }}</td>
+                        <td class='ignore'>{{ item.pings_missed_threshold|default:"1" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -282,12 +330,12 @@
                             <td>
                                 <label>
                                 Ping interval
-                                {{ create_form.ping_interval }}
+                                {{ edit_form.ping_interval }}
                                 <span class="form_hint">(in seconds)</span>
                                 </label>
                                 |
                                 Threshold
-                                {{ create_form.pings_missed_threshold }}
+                                {{ edit_form.pings_missed_threshold }}
                             </td>
                         </tr>
                         <tr>

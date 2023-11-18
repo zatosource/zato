@@ -169,7 +169,7 @@ class OutconnWSXWrapper(Wrapper):
         # .. to ensure that we have this information here ..
 
         if not 'ping_internval' in config:
-            config['ping_interval'] = 1 # WEB_SOCKET.DEFAULT.PING_INTERVAL
+            config['ping_interval'] = WEB_SOCKET.DEFAULT.PING_INTERVAL
 
         if not 'pings_missed_threshold' in config:
             config['pings_missed_threshold'] = WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD_OUTGOING
