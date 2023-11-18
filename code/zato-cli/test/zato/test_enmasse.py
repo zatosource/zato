@@ -12,14 +12,18 @@ from datetime import datetime
 from logging import basicConfig, getLogger, WARN
 from tempfile import gettempdir
 from traceback import format_exc
-from unittest import main, TestCase
+from unittest import main
 
 # Bunch
 from bunch import Bunch
 
+# sh
+from sh import RunningCommand
+
 # Zato
-from zato.common.test.config import TestConfig
 from zato.common.test import rand_string, rand_unicode
+from zato.common.test.config import TestConfig
+from zato.common.test.enmasse_ import BaseEnmasseTestCase
 from zato.common.util.open_ import open_w
 
 # ################################################################################################################################
@@ -32,7 +36,6 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 if 0:
-    from sh import RunningCommand
     from zato.common.typing_ import any_
 
 # ################################################################################################################################
@@ -176,7 +179,7 @@ outgoing_ldap:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class EnmasseTestCase(TestCase):
+class EnmasseTestCase(BaseEnmasseTestCase):
 
 # ################################################################################################################################
 
