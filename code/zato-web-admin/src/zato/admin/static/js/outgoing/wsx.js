@@ -48,7 +48,7 @@ $.fn.zato.outgoing.wsx.data_table.new_row = function(item, data, include_tr) {
 
     /* 2 */
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.address);
+    row += String.format('<td>{0}</td>', item.address_masked);
     row += String.format('<td>{0}</td>', is_zato ? 'Yes' : 'No');
 
     /* 3 a */
@@ -108,6 +108,7 @@ $.fn.zato.outgoing.wsx.data_table.new_row = function(item, data, include_tr) {
 
     /* 9 */
     row += String.format("<td class='ignore'>{0}</td>", item.socket_write_timeout);
+    row += String.format("<td class='ignore'>{0}</td>", item.address);
 
     if(include_tr) {
         row += '</tr>';

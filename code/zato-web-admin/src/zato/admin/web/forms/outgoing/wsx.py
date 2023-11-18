@@ -17,9 +17,11 @@ class CreateForm(DataFormatForm):
     data_format = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:60px'}))
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%', 'placeholder':'wss://'}))
     is_zato = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     has_auto_reconnect = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+
+    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%', 'placeholder':'wss://'}))
+    address_masked = forms.CharField(widget=forms.HiddenInput())
 
     ping_interval = forms.CharField(initial=WEB_SOCKET.DEFAULT.PING_INTERVAL,
         widget=forms.TextInput(attrs={'style':'width:10%'}))
