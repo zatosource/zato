@@ -27,6 +27,12 @@ class CreateForm(DataFormatForm):
     pings_missed_threshold = forms.CharField(initial=WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD_OUTGOING,
         widget=forms.TextInput(attrs={'style':'width:10%', 'disabled':'disabled'}))
 
+    socket_read_timeout = forms.CharField(initial=WEB_SOCKET.DEFAULT.Socket_Read_Timeout,
+        widget=forms.TextInput(attrs={'style':'width:10%'}))
+
+    socket_write_timeout = forms.CharField(initial=WEB_SOCKET.DEFAULT.Socket_Write_Timeout,
+        widget=forms.TextInput(attrs={'style':'width:10%', 'disabled':'disabled'}))
+
     on_connect_service_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
     on_message_service_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
     on_close_service_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))

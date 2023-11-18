@@ -34,7 +34,7 @@ from six import add_metaclass
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist, strdict
     from zato.server.service import Service
 
     anylist = anylist
@@ -88,6 +88,23 @@ extra_simple_type = {
 skip_simple_type = {
     'api_version',
 }
+
+
+# ################################################################################################################################
+
+# Values of these generic attributes should be converted to ints
+int_attrs = ['pool_size', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout']
+
+def ensure_ints(data:'strdict') -> 'None':
+
+    for name in int_attrs:
+        value = data.get(name)
+        try:
+            value = int(value) if value else value
+        except ValueError:
+            pass # Not an integer
+        else:
+            data[name] = value
 
 # ################################################################################################################################
 
@@ -159,14 +176,8 @@ class _CreateEdit(_BaseService):
             if data['is_active'] is None:
                 data['is_active'] = False
 
-        # If we have a pool size on input, we want to ensure that it is an integer
-        pool_size = data.get('pool_size')
-        try:
-            pool_size = int(pool_size) if pool_size else pool_size
-        except ValueError:
-            pass # Not an integer
-        else:
-            data['pool_size'] = pool_size
+        # Make sure that specific keys are integers
+        ensure_ints(data)
 
         # Break down security definitions into components
         security_id = data.get('security_id') or ''

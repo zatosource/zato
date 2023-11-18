@@ -36,7 +36,7 @@ class Index(_Index):
         output_optional = ('is_active', 'is_zato',
             'on_connect_service_id', 'on_connect_service_name', 'on_message_service_id', 'on_message_service_name',
             'on_close_service_id', 'on_close_service_name', 'subscription_list', 'security_def', 'has_auto_reconnect',
-            'data_format', 'ping_interval', 'pings_missed_threshold')
+            'data_format', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout')
         output_repeated = True
 
     def handle(self):
@@ -59,7 +59,7 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'is_zato', 'address', 'on_connect_service_name', 'on_message_service_name',
             'on_close_service_name', 'subscription_list', 'security_def', 'has_auto_reconnect', 'data_format',
-            'ping_interval', 'pings_missed_threshold')
+            'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout')
         output_required = ('id', 'name')
 
     def populate_initial_input_dict(self, initial_input_dict):

@@ -168,11 +168,19 @@ class OutconnWSXWrapper(Wrapper):
         # .. these used to be optional which is why we need ..
         # .. to ensure that we have this information here ..
 
-        if not 'ping_internval' in config:
+        if not config.get('ping_interval'):
             config['ping_interval'] = WEB_SOCKET.DEFAULT.PING_INTERVAL
 
-        if not 'pings_missed_threshold' in config:
+        if not config.get('pings_missed_threshold'):
             config['pings_missed_threshold'] = WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD_OUTGOING
+
+        if not config.get('socket_read_timeout'):
+            config['socket_read_timeout'] = WEB_SOCKET.DEFAULT.Socket_Read_Timeout
+
+        # .. note that it is the same value as with the read timeout ..
+        # .. because the underlying TCP sockets may be shared by multiple threads ..
+        if not config.get('socket_write_timeout'):
+            config['socket_write_timeout'] = config['socket_read_timeout']
 
         config['parent'] = self
         self._has_json = config.get('data_format') == _json
