@@ -158,7 +158,7 @@ class WSXClient:
 
     def delete(self, reason:'str'='') -> 'None':
         if self.impl:
-            self.impl.delete()
+            self.impl.delete(reason)
             self.impl.close(reason=reason) # type: ignore
 
 # ################################################################################################################################
@@ -366,7 +366,7 @@ class OutconnWSXWrapper(Wrapper):
     def on_close_cb(self, code:'int', reason:'strnone'=None) -> 'None':
 
         # We need to special-case the situation when it is us who deleted the outgoing connection.
-        reason_is_not_delete = reason != COMMON_GENERIC.DeleteReasonBytes
+        reason_is_not_delete = not reason in {COMMON_GENERIC.DeleteReasonBytes, COMMON_GENERIC.InitialNotSetReason}
 
         # Ignore events we generated ourselves, e.g. when someone edits a connection in web-admin
         # this will result in deleting and rerecreating a connection which implicitly calls this callback.
@@ -430,10 +430,14 @@ class OutconnWSXWrapper(Wrapper):
 
     def add_client(self) -> 'None':
 
+        logger.error('ADD-CLIENT CALLED 001')
+
         # Local variables
         config_id = self.config['id']
 
         try:
+
+            logger.error('WRAPPER-001 -> %s', len(self.server.wsx_connection_pool_wrapper.items))
 
             # First, make sure there are no previous connection pools for this ID ..
             self.server.wsx_connection_pool_wrapper.delete_all(config_id)

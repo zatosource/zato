@@ -260,6 +260,7 @@ class ConnectionQueue:
                     # more greenlets than there are slots in the queue still available.
                     with self.lock:
                         if self.in_progress_count < self.queue_max_size:
+                            logger.error('FILLING UP WITH ADD CLIENT FUNC %s %s', self.in_progress_count, self.queue_max_size)
                             self._spawn_add_client_func(self.queue_max_size - self.in_progress_count)
 
                     start = datetime.utcnow()
@@ -283,6 +284,7 @@ class ConnectionQueue:
 
     def _spawn_add_client_func_no_lock(self, count:'int') -> 'None':
         for _x in range(count):
+            logger.error('SPAWNING ADD CLIENT FUNC %s', count)
             if self.needs_spawn:
                 _ = gevent.spawn(self.add_client_func)
             else:
@@ -467,7 +469,7 @@ class Wrapper:
                     if not self.client.connection_exists():
                         return
                     else:
-                        self.logger.info('Waiting for queue building stopped flag `%s` (%s %s)',
+                        self.logger.info('Waiting for queue building stopped flag before deleting `%s` (%s %s)',
                             self.client.address, self.client.conn_type, self.client.conn_name)
 
             # Reset flags that will allow this client to reconnect in the future

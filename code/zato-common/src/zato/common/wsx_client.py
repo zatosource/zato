@@ -688,10 +688,12 @@ class Client:
 # ################################################################################################################################
 
     def stop(self, reason:'str'='') -> 'None':
+        logger.error('STOP-Client-001 %s -> %s', reason, hex(id(self)))
         self.keep_running = False
         self.conn.close(reason=reason)
         self.conn.close_connection()
         self.is_connected = False
+        logger.error('STOP-Client-002 %s -> %s', reason, hex(id(self)))
 
 # ################################################################################################################################
 
