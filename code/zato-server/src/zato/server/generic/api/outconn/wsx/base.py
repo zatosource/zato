@@ -441,6 +441,8 @@ class OutconnWSXWrapper(Wrapper):
         # Local variables
         config_id = self.config['id']
 
+        # with self.server.wsx_connection_pool_wrapper._lock(config_id):
+
         try:
 
             # First, make sure there are no previous connection pools for this ID ..

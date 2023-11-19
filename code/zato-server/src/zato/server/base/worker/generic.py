@@ -15,6 +15,7 @@ from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.const import SECRETS
 from zato.common.util.api import as_bool, parse_simple_type
 from zato.common.util.config import replace_query_string_items_in_dict
+from zato.distlock import PassThrough as PassThroughLock
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.generic.connection import GenericConnection
 
@@ -30,7 +31,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
+_type_outconn_wsx = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX
+_type_channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
 _secret_prefixes = (SECRETS.EncryptedMarker, SECRETS.PREFIX)
 
 # ################################################################################################################################
@@ -112,11 +114,8 @@ class Generic(WorkerImpl):
             conn_name = conn_dict['name']
             _ = conn_value.pop(conn_name, None)
 
-        if msg['type_'] == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX:
-            self.server.wsx_connection_pool_wrapper.count -= 1
-
         # Run a special path for file transfer channels
-        if msg['type_'] == _channel_file_transfer:
+        if msg['type_'] == _type_channel_file_transfer:
             self._delete_file_transfer_channel(msg)
 
 # ################################################################################################################################
@@ -177,13 +176,10 @@ class Generic(WorkerImpl):
         config_attr[msg_name].conn = conn_wrapper
         config_attr[msg_name].conn.build_wrapper()
 
-        if msg['type_'] == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX:
-            self.server.wsx_connection_pool_wrapper.count += 1
-
         if not is_starting:
 
             # Run a special path for file transfer channels
-            if msg['type_'] == _channel_file_transfer:
+            if msg['type_'] == _type_channel_file_transfer:
                 self._create_file_transfer_channel(msg)
 
 # ################################################################################################################################
@@ -191,7 +187,7 @@ class Generic(WorkerImpl):
     def _edit_generic_connection(self, msg:'stranydict', skip:'any_'=None, secret:'strnone'=None) -> 'None':
 
         # Special-case file transfer channels
-        if msg['type_'] == _channel_file_transfer:
+        if msg['type_'] == _type_channel_file_transfer:
             self._edit_file_transfer_channel(msg)
             return
 
@@ -278,19 +274,36 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
+    def _get_edit_generic_lock(self, is_outconn_wsx:'bool', msg:'stranydict') -> 'callable_':
+
+        # Outgoing WSX connections that connect to Zato use a specific lock type ..
+        if is_outconn_wsx:
+            if msg['is_zato']:
+                return self.server.wsx_connection_pool_wrapper._lock
+
+        # .. if we are here, we use a pass-through lock.
+        return PassThroughLock
+
+# ################################################################################################################################
+
     def on_broker_msg_GENERIC_CONNECTION_EDIT(
         self,
         msg:'stranydict',
         *args: 'any_',
         **kwargs: 'any_'
     ) -> 'None':
-        with self.server.wsx_connection_pool_wrapper._lock(msg['id']):
-            self.logger.error('COUNT-EDIT-001 %s %s',
-                self.server.wsx_connection_pool_wrapper.count,
-                len(self.server.wsx_connection_pool_wrapper.items),
-            )
-            if self.server.wsx_connection_pool_wrapper.count in {1}:
-                return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(msg, *args, **kwargs)
+
+        # Local variables
+        _is_outconn_wsx = msg['type_'] == _type_outconn_wsx
+
+        # Find out what kind of a lock to use ..
+        _lock = self._get_edit_generic_lock(_is_outconn_wsx, msg)
+
+        # .. do use it ..
+        with _lock(msg['id']):
+
+            # .. and update the connection now.
+            return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(msg, *args, **kwargs)
 
 # ################################################################################################################################
 

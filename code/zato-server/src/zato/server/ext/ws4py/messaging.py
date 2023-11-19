@@ -141,7 +141,7 @@ class BinaryMessage(Message):
         return len(self.data)
 
 class CloseControlMessage(Message):
-    def __init__(self, code=1000, reason=''):
+    def __init__(self, code=4042, reason='Z4042'):
         data = b""
         if code:
             data += struct.pack("!H", code)
