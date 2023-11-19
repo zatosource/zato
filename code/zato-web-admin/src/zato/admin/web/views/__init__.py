@@ -659,9 +659,9 @@ class CreateEdit(_BaseView):
             logger.info('Request self.req.GET %s', self.req.GET)
             logger.info('Request self.req.POST %s', self.req.POST)
 
-            logger.info('Sending `%s` to `%s`', self.input_dict, self.service_name)
-
-            response = self.req.zato.client.invoke(self.service_name, self.input_dict)
+            for x in range(5):
+                logger.info('Sending `%s` to `%s`', self.input_dict, self.service_name)
+                response = self.req.zato.client.invoke(self.service_name, self.input_dict)
 
             if response.ok:
                 logger.info('Received `%s` from `%s`', response.data, self.service_name)
