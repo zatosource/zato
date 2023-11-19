@@ -123,7 +123,7 @@ class IPCClient:
                 value = value[:30]
 
             # .. now, do append the new item ..
-            params[key] = value
+            # params[key] = value
 
         # .. invoke the server ..
         response = requests_post(url, data, params=params)

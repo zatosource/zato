@@ -254,7 +254,7 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_GENERIC_CONNECTION_CREATE(
+    def _on_broker_msg_GENERIC_CONNECTION_CREATE_EDIT_DELETE(
         self,
         msg:'stranydict',
         *args: 'any_',
@@ -265,8 +265,29 @@ class Generic(WorkerImpl):
         if func:
             func(msg)
 
-    on_broker_msg_GENERIC_CONNECTION_EDIT            = on_broker_msg_GENERIC_CONNECTION_CREATE
-    on_broker_msg_GENERIC_CONNECTION_DELETE          = on_broker_msg_GENERIC_CONNECTION_CREATE
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_CREATE(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self._on_broker_msg_GENERIC_CONNECTION_CREATE_EDIT_DELETE(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_EDIT(
+        self,
+        msg:'stranydict',
+        *args: 'any_',
+        **kwargs: 'any_'
+    ) -> 'None':
+        with self.server.wsx_connection_pool_wrapper._lock(msg['id']):
+            return self._on_broker_msg_GENERIC_CONNECTION_CREATE_EDIT_DELETE(msg, *args, **kwargs)
+
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_DELETE(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self._on_broker_msg_GENERIC_CONNECTION_CREATE_EDIT_DELETE(*args, **kwargs)
+
+# ################################################################################################################################
+
     on_broker_msg_GENERIC_CONNECTION_CHANGE_PASSWORD = _change_password_generic_connection
 
 # ################################################################################################################################

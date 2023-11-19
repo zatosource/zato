@@ -156,21 +156,20 @@ class ConnectionQueue:
 # ################################################################################################################################
 
     def put_client(self, client:'any_') -> 'bool':
-        with self.lock:
-            if self.queue.full():
-                is_accepted = False
-                msg = 'Skipped adding a superfluous `%s` client to %s (%s)'
-                log_func = self.logger.info
-            else:
-                self.queue.put(client)
-                is_accepted = True
-                msg = 'Added `%s` client to `%s` (%s)'
-                log_func = self.logger.info
+        if self.queue.full():
+            is_accepted = False
+            msg = 'Skipped adding a superfluous `%s` client to %s (%s)'
+            log_func = self.logger.info
+        else:
+            self.queue.put(client)
+            is_accepted = True
+            msg = 'Added `%s` client to `%s` (%s)'
+            log_func = self.logger.info
 
-            if self.connection_exists():
-                log_func(msg, self.conn_name, self.address_masked, self.conn_type)
+        if self.connection_exists():
+            log_func(msg, self.conn_name, self.address_masked, self.conn_type)
 
-            return is_accepted
+        return is_accepted
 
 # ################################################################################################################################
 
@@ -258,10 +257,8 @@ class ConnectionQueue:
 
                     # Spawn additional greenlets to fill up the queue but make sure not to spawn
                     # more greenlets than there are slots in the queue still available.
-                    with self.lock:
-                        if self.in_progress_count < self.queue_max_size:
-                            logger.error('FILLING UP WITH ADD CLIENT FUNC %s %s', self.in_progress_count, self.queue_max_size)
-                            self._spawn_add_client_func(self.queue_max_size - self.in_progress_count)
+                    if self.in_progress_count < self.queue_max_size:
+                        self._spawn_add_client_func(self.queue_max_size - self.in_progress_count)
 
                     start = datetime.utcnow()
                     build_until = start + timedelta(seconds=self.queue_build_cap)
@@ -285,6 +282,8 @@ class ConnectionQueue:
     def _spawn_add_client_func_no_lock(self, count:'int') -> 'None':
         for _x in range(count):
             logger.error('SPAWNING ADD CLIENT FUNC %s', count)
+            from zato.common.util.api import log_current_python_stack
+            log_current_python_stack()
             if self.needs_spawn:
                 _ = gevent.spawn(self.add_client_func)
             else:
@@ -296,17 +295,16 @@ class ConnectionQueue:
     def _spawn_add_client_func(self, count:'int'=1) -> 'None':
         """ Spawns as many greenlets to populate the connection queue as there are free slots in the queue available.
         """
-        with self.lock:
-            if self.queue.full():
-                logger.info('Queue fully prepared -> c:%d (%s %s)', count, self.address_masked, self.conn_name)
-                return
-            self._spawn_add_client_func_no_lock(count)
+        if self.queue.full():
+            logger.info('Queue fully prepared -> c:%d (%s %s)', count, self.address_masked, self.conn_name)
+            return
+
+        self._spawn_add_client_func_no_lock(count)
 
 # ################################################################################################################################
 
     def decr_in_progress_count(self) -> 'None':
-        with self.lock:
-            self.in_progress_count -= 1
+        self.in_progress_count -= 1
 
 # ################################################################################################################################
 
@@ -319,10 +317,11 @@ class ConnectionQueue:
         """ Spawns greenlets to populate the queue and waits up to self.queue_build_cap seconds until the queue is full.
         If it never is, raises an exception stating so.
         """
-        self._spawn_add_client_func(self.queue_max_size)
+        with self.lock:
+            self._spawn_add_client_func(self.queue_max_size)
 
-        # Build the queue in background
-        _ = gevent.spawn(self._build_queue)
+            # Build the queue in background
+            _ = gevent.spawn(self._build_queue)
 
 # ################################################################################################################################
 # ################################################################################################################################

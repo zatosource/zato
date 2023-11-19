@@ -89,7 +89,7 @@ from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
 from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
-from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
+from zato.server.generic.api.outconn.wsx.base.wrapper import OutconnWSXWrapper
 from zato.server.pubsub import PubSub
 from zato.server.pubsub.delivery.tool import PubSubTool
 from zato.server.rbac_ import RBAC
