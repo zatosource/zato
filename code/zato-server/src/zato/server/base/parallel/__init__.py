@@ -33,8 +33,8 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import DATA_FORMAT, default_internal_modules, HotDeploy, IPC, KVDB as CommonKVDB, RATE_LIMIT, \
-    SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
+from zato.common.api import DATA_FORMAT, default_internal_modules, GENERIC,  HotDeploy, IPC, KVDB as CommonKVDB, \
+    RATE_LIMIT, SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
 from zato.common.bearer_token import BearerTokenManager
@@ -64,12 +64,6 @@ from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
 from zato.common.util.tcp import wait_until_port_taken
 from zato.distlock import LockManager
-from zato.server.base.worker import WorkerStore
-from zato.server.config import ConfigStore
-from zato.server.connection.stats import ServiceStatsClient
-from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
-from zato.server.connection.server.rpc.config import ODBConfigSource
-from zato.server.connection.kvdb.api import KVDB as ZatoKVDB
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.subprocess_.api import CurrentState as SubprocessCurrentState, \
@@ -78,6 +72,13 @@ from zato.server.base.parallel.subprocess_.ftp import FTPIPC
 from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
 from zato.server.base.parallel.subprocess_.zato_events import ZatoEventsIPC
 from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
+from zato.server.base.worker import WorkerStore
+from zato.server.config import ConfigStore
+from zato.server.connection.kvdb.api import KVDB as ZatoKVDB
+from zato.server.connection.pool_wrapper import ConnectionPoolWrapper
+from zato.server.connection.stats import ServiceStatsClient
+from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
+from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.sso import SSOTool
 
 # ################################################################################################################################
@@ -296,6 +297,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.has_pubsub_audit_log = logging.getLogger('zato_pubsub_audit').isEnabledFor(DEBUG)
         self.is_enabled_for_warn = logging.getLogger('zato').isEnabledFor(WARN)
         self.is_admin_enabled_for_info = logging.getLogger('zato_admin').isEnabledFor(INFO)
+
+        # A wrapper for outgoing WSX connections
+        self.wsx_connection_pool_wrapper = ConnectionPoolWrapper(self, GENERIC.CONNECTION.TYPE.OUTCONN_WSX)
 
         # The main config store
         self.config = ConfigStore()
