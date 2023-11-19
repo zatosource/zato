@@ -238,13 +238,14 @@ class ConnectionQueue:
                     # .. and exit the loop.
                     return
 
-                gevent.sleep(5)
+                gevent.sleep(1)
                 now = datetime.utcnow()
 
                 self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
                     self.queue.qsize(), self.queue_max_size,
                     self.conn_type, self.address_masked, self.conn_name, now - start, self.queue_build_cap)
 
+                '''
                 if now >= build_until:
 
                     # Log the fact that the queue is not full yet
@@ -262,12 +263,34 @@ class ConnectionQueue:
 
                     start = datetime.utcnow()
                     build_until = start + timedelta(seconds=self.queue_build_cap)
+                '''
 
-            if self.keep_connecting and self.connection_exists():
-                self.logger.info('Obtained %d %s client%sto `%s` for `%s`', self.queue.maxsize, self.conn_type, suffix,
-                    self.address_masked, self.conn_name)
+            if self.should_keep_connecting():
+
+                # Branch variables
+                queue_current_size = self.queue.qsize
+                queue_max_size = self.queue.maxsize
+
+                # Build a log message ..
+                msg  = f'So far, obtained {queue_current_size}/{queue_max_size} client{suffix}'
+                msg += f'to `{self.address_masked}` for `{self.conn_name}` ({self.conn_type}'
+
+                # .. log progress ..
+                self.logger.info(msg)
+
+                # .. and sleep for a while.
+                gevent.sleep(1)
             else:
-                self.logger.info('Skipped building a queue to `%s` for `%s`', self.address_masked, self.conn_name)
+
+                # If we are here, it means that we should keep connecting,
+                # which means that the message saying that we are skipping the building of a queue
+                # should be used only unless the queue is full becuase, if it is,
+                # there is nothing left to build, i.e. nothing to skip anymore.
+                if not self.queue.full():
+                    msg = f'Skipped building a queue to `{self.address_masked}` for `{self.conn_name}`'
+                    self.logger.info(msg)
+
+                self.is_building_conn_queue = False
                 self.queue_building_stopped = True
 
             # Ok, got all the connections
@@ -282,8 +305,8 @@ class ConnectionQueue:
     def _spawn_add_client_func_no_lock(self, count:'int') -> 'None':
         for _x in range(count):
             logger.error('SPAWNING ADD CLIENT FUNC %s', count)
-            from zato.common.util.api import log_current_python_stack
-            log_current_python_stack()
+            # from zato.common.util.api import log_current_python_stack
+            # log_current_python_stack()
             if self.needs_spawn:
                 _ = gevent.spawn(self.add_client_func)
             else:
@@ -426,7 +449,7 @@ class Wrapper:
 
         for item in items:
             try:
-                logger.info('Deleting connection from queue for `%s`', self.config['name'])
+                logger.error('Deleting connection from queue for `%s`', self.config['name'])
 
                 # Some connections (e.g. LDAP) want to expose .delete to user API which conflicts with our own needs.
                 delete_func = getattr(item, 'zato_delete_impl', None)

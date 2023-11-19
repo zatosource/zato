@@ -231,6 +231,13 @@ class WebSocket(object):
         is_terminated = client_terminated and server_terminated
         return is_terminated
 
+    def is_stopped(self) -> 'bool':
+        is_terminated = self.terminated
+        has_socket = bool(self.sock)
+
+        is_stopped = is_terminated and (not has_socket)
+        return is_stopped
+
     @property
     def connection(self):
         return self.sock
@@ -250,6 +257,9 @@ class WebSocket(object):
                 pass
             finally:
                 self.sock = None
+
+        self.client_terminated = True
+        self.server_terminated = True
 
     def ping(self, message):
         """

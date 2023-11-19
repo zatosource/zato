@@ -156,7 +156,6 @@ class WSXClient:
     def delete(self, reason:'str'='') -> 'None':
         if self.impl:
             self.impl.delete(reason)
-            self.impl.close(reason=reason) # type: ignore
 
 # ################################################################################################################################
 

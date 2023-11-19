@@ -40,6 +40,7 @@ class ConnectionPoolWrapper:
         self.server = server
         self.type_ = type_
         self.items = []
+        self.count = 0
 
 # ################################################################################################################################
 

@@ -23,14 +23,16 @@ from zato.server.generic.connection import GenericConnection
 
 if 0:
     from logging import Logger
-    from zato.common.typing_ import any_, callable_, stranydict, strnone, tuple_
+    from zato.common.typing_ import any_, callable_, stranydict, strnone, tuple_, type_
     from zato.server.connection.queue import Wrapper
+    from zato.server.generic.api.outconn.wsx.base.wrapper import OutconnWSXWrapper
     Wrapper = Wrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
+_type_wsx = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX
+_type_channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
 _secret_prefixes = (SECRETS.EncryptedMarker, SECRETS.PREFIX)
 
 # ################################################################################################################################
@@ -104,16 +106,21 @@ class Generic(WorkerImpl):
             # .. provide the reason code if the connection type supports it ..
             has_delete_reasons = getattr(conn, 'has_delete_reasons', None)
             if has_delete_reasons:
-                conn.delete(reason=COMMON_GENERIC.DeleteReason)
+                # conn.delete(reason=COMMON_GENERIC.DeleteReason)
+                pass
             else:
-                conn.delete()
+                pass
+                # conn.delete()
 
             # .. and delete the connection from the configuration object.
             conn_name = conn_dict['name']
             _ = conn_value.pop(conn_name, None)
 
+        if msg['type_'] == _type_wsx:
+            self.server.wsx_connection_pool_wrapper.count -= 1
+
         # Run a special path for file transfer channels
-        if msg['type_'] == _channel_file_transfer:
+        if msg['type_'] == _type_channel_file_transfer:
             self._delete_file_transfer_channel(msg)
 
 # ################################################################################################################################
@@ -134,7 +141,7 @@ class Generic(WorkerImpl):
             msg = conn.to_sql_dict(True)
 
         item = GenericConnection.from_bunch(msg)
-        item_dict = item.to_dict(True) # type: stranydict
+        item_dict:'stranydict' = item.to_dict(True)
 
         for key in msg:
             if key not in item_dict:
@@ -153,9 +160,8 @@ class Generic(WorkerImpl):
             self.logger.info('No config attr found for generic connection `%s`', item.type_)
             return
 
-        wrapper = self._generic_conn_handler[item.type_]
-
-        msg_name = msg['name'] # type: str
+        wrapper:'any_ | type_[OutconnWSXWrapper]' = self._generic_conn_handler[item.type_]
+        msg_name:'str' = msg['name']
 
         # It is possible that some of the input keys point to secrets
         # and other data that will be encrypted. In such a case,
@@ -174,10 +180,13 @@ class Generic(WorkerImpl):
         config_attr[msg_name].conn = conn_wrapper
         config_attr[msg_name].conn.build_wrapper()
 
+        if msg['type_'] == _type_wsx:
+            self.server.wsx_connection_pool_wrapper.count += 1
+
         if not is_starting:
 
             # Run a special path for file transfer channels
-            if msg['type_'] == _channel_file_transfer:
+            if msg['type_'] == _type_channel_file_transfer:
                 self._create_file_transfer_channel(msg)
 
 # ################################################################################################################################
@@ -185,7 +194,7 @@ class Generic(WorkerImpl):
     def _edit_generic_connection(self, msg:'stranydict', skip:'any_'=None, secret:'strnone'=None) -> 'None':
 
         # Special-case file transfer channels
-        if msg['type_'] == _channel_file_transfer:
+        if msg['type_'] == _type_channel_file_transfer:
             self._edit_file_transfer_channel(msg)
             return
 
@@ -254,7 +263,7 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _on_broker_msg_GENERIC_CONNECTION_CREATE_EDIT_DELETE(
+    def _on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(
         self,
         msg:'stranydict',
         *args: 'any_',
@@ -268,7 +277,7 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def on_broker_msg_GENERIC_CONNECTION_CREATE(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self._on_broker_msg_GENERIC_CONNECTION_CREATE_EDIT_DELETE(*args, **kwargs)
+        return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(*args, **kwargs)
 
 # ################################################################################################################################
 
@@ -279,12 +288,17 @@ class Generic(WorkerImpl):
         **kwargs: 'any_'
     ) -> 'None':
         with self.server.wsx_connection_pool_wrapper._lock(msg['id']):
-            return self._on_broker_msg_GENERIC_CONNECTION_CREATE_EDIT_DELETE(msg, *args, **kwargs)
+            self.logger.error('COUNT-EDIT-001 %s %s',
+                self.server.wsx_connection_pool_wrapper.count,
+                len(self.server.wsx_connection_pool_wrapper.items),
+            )
+            if self.server.wsx_connection_pool_wrapper.count in {1}:
+                return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(msg, *args, **kwargs)
 
 # ################################################################################################################################
 
     def on_broker_msg_GENERIC_CONNECTION_DELETE(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self._on_broker_msg_GENERIC_CONNECTION_CREATE_EDIT_DELETE(*args, **kwargs)
+        return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(*args, **kwargs)
 
 # ################################################################################################################################
 

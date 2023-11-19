@@ -325,7 +325,8 @@ class OutconnWSXWrapper(Wrapper):
             # .. try to initialize the connection ..
             conn.init()
 
-            # .. if we are not connected at this point, we need to delete all the reference to the pool ..
+            # .. if we are not connected at this point, for instance, because we were deleted before ..
+            # .. the connection was established, we need to delete all the reference to the pool ..
             if not conn.is_impl_connected():
                 self.delete()
                 self.client.decr_in_progress_count()
