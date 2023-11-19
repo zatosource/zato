@@ -72,7 +72,10 @@ class GenericConnection:
         out = {}
         for name in self.__slots__:
             if name != 'opaque':
-                out[name] = getattr(self, name)
+                value = getattr(self, name)
+                if isinstance(value, bytes):
+                    value = value.decode('utf8')
+                out[name] = value
         out.update(self.opaque)
 
         return bunchify(out) if needs_bunch else out

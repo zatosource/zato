@@ -1,28 +1,33 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # This needs to run as soon as possible
 from gevent.monkey import patch_all
-patch_all()
+_ = patch_all()
 
 # stdlib
 from unittest import main
 
 # Zato
+from zato.common.api import GENERIC
 from zato.common.test.wsx_ import WSXChannelManager, WSXOutconnBaseCase
+from zato.common.typing_ import cast_
 from zato.common.util.api import fs_safe_now
+from zato.distlock import LockManager
+from zato.server.connection.pool_wrapper import ConnectionPoolWrapper
 from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import any_, strlist
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,6 +44,8 @@ class TestServer:
     def __init__(self, topics:'strlist') -> 'None':
         self.topics = topics
         self.ctx = []
+        self.zato_lock_manager = LockManager('zato-pass-through', 'zato', cast_('any_', None))
+        self.wsx_connection_pool_wrapper = ConnectionPoolWrapper(cast_('any_', self), GENERIC.CONNECTION.TYPE.OUTCONN_WSX)
 
 # ################################################################################################################################
 
