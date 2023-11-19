@@ -94,6 +94,10 @@ def resolve_env_variables(data):
 
 def _replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
 
+    # If there is no input, we can return immediately
+    if not data:
+        return ''
+
     # Local variables
     query_string_new = []
 
