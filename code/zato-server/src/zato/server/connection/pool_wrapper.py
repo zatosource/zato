@@ -66,7 +66,8 @@ class ConnectionPoolWrapper:
 
             # First, stop all the items ..
             for item in self.items:
-                item.delete()
+                if item.config['id'] == config_id:
+                    item.delete()
 
             # .. now, clear the list.
             self.items.clear()

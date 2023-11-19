@@ -435,7 +435,7 @@ class Client:
         now = utcnow()
         until = now + timedelta(seconds=wait_time or self.config.wait_time)
 
-        while now < until:
+        while self.keep_running and (now < until):
 
             response = self.responses_received.get(request_id) # type: any_
             if response:
@@ -690,6 +690,7 @@ class Client:
     def stop(self, reason:'str'='') -> 'None':
         self.keep_running = False
         self.conn.close(reason=reason)
+        self.conn.close_connection()
         self.is_connected = False
 
 # ################################################################################################################################
