@@ -14,6 +14,7 @@ from zato.common.api import GENERIC as COMMON_GENERIC, LDAP, ZATO_NONE
 from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.const import SECRETS
 from zato.common.util.api import as_bool, parse_simple_type
+from zato.common.util.config import replace_query_string_items_in_dict
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.generic.connection import GenericConnection
 
@@ -164,6 +165,9 @@ class Generic(WorkerImpl):
                 if value.startswith(_secret_prefixes):
                     value = self.server.decrypt(value)
                     item_dict[key] = value
+
+        # Mask out all the relevant attributes
+        replace_query_string_items_in_dict(self.server, item_dict)
 
         config_attr[msg_name] = item_dict
         conn_wrapper = wrapper(item_dict, self.server)

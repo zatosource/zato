@@ -226,8 +226,8 @@ class WebSocketBaseClient(WebSocket):
             self.client_terminated = True
             try:
                 self._write(self.stream.close(code=code, reason=reason).single(mask=True))
-            except Exception:
-                logger.info('Caught a WSX exception when closing connection to %s', self.address_masked)
+            except Exception as e:
+                logger.info('Caught a WSX exception when closing connection to `%s` -> `%s`', self.address_masked, e)
 
     def connect(self, close_on_handshake_error=True):
         """
