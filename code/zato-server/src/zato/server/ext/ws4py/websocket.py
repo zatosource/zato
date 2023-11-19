@@ -187,7 +187,7 @@ class WebSocket(object):
         """
         pass
 
-    def close(self, code=1000, reason=''):
+    def close(self, code=4041, reason='Z4041'):
         """
         Call this method to initiate the websocket connection
         closing by sending a close frame to the connected peer.
@@ -437,7 +437,7 @@ class WebSocket(object):
 
         except TimeoutError as e:
             return True
-        except (socket.error, OSError, pyOpenSSLError) as e:
+        except (ValueError, socket.error, OSError, pyOpenSSLError) as e:
             self.unhandled_error(e)
             return True
         else:
