@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -96,8 +96,19 @@ class LockInfo:
 class Lock:
     """ Base class for all backend-specific locks.
     """
-    def __init__(self, os_user_name, session, namespace, name, ttl, block, block_interval, _permanent=LOCK_TYPE.PERMANENT,
-            _transient=LOCK_TYPE.TRANSIENT):
+    def __init__(
+        self,
+        os_user_name,
+        session,
+        namespace,
+        name,
+        ttl,
+        block,
+        block_interval,
+        raise_if_not_acquired,
+        _permanent=LOCK_TYPE.PERMANENT,
+        _transient=LOCK_TYPE.TRANSIENT
+    ) -> 'None':
         self.os_user_name = os_user_name
         self.session = session() if session else None
         self.namespace = namespace
@@ -110,6 +121,7 @@ class Lock:
         self.released = False
         self.block = block
         self.block_interval = block_interval
+        self.raise_if_not_acquired = raise_if_not_acquired
 
     def _acquire_impl(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented in subclasses')
@@ -164,7 +176,8 @@ class Lock:
             if not acquired:
                 msg = 'Could not obtain lock for `{}` `{}` within {}s'.format(self.namespace, self.name, _block)
                 logger.warning(msg)
-                raise LockTimeout(msg)
+                if self.raise_if_not_acquired:
+                    raise LockTimeout(msg)
 
         if _has_debug:
             logger.debug('Acquired status for %s (%s %s) is %s', self.priv_id, self.namespace, self.name, acquired)
@@ -362,8 +375,17 @@ class LockManager:
         self.user_name = get_current_user()
 
     # pylint: disable-next=inconsistent-return-statements
-    def __call__(self, name, namespace='', ttl=DEFAULT.TTL, block=DEFAULT.BLOCK, block_interval=DEFAULT.BLOCK_INTERVAL,
-            max_len_ns=MAX.LEN_NS, max_len_name=MAX.LEN_NAME, max_chars=31) -> 'Lock':
+    def __call__(self,
+        name,
+        namespace='',
+        ttl=DEFAULT.TTL,
+        block=DEFAULT.BLOCK,
+        block_interval=DEFAULT.BLOCK_INTERVAL,
+        max_len_ns=MAX.LEN_NS,
+        max_len_name=MAX.LEN_NAME,
+        max_chars=31,
+        raise_if_not_acquired=True,
+    ) -> 'Lock':
 
         try:
             if len(namespace) > max_len_ns:
@@ -405,7 +427,15 @@ class LockManager:
                 self._lock_class, namespace, name, ttl, block, block_interval, self.session)
 
             return self._lock_class(
-                self.user_name, self.session, namespace, name, ttl, block, block_interval)
+                self.user_name,
+                self.session,
+                namespace,
+                name,
+                ttl,
+                block,
+                block_interval,
+                raise_if_not_acquired
+            )
 
     def acquire(self, *args, **kwargs):
         return self(*args, **kwargs).acquire()
