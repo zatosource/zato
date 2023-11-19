@@ -162,13 +162,18 @@ class ConnectionQueue:
                 msg = 'Skipped adding a superfluous `%s` client to %s (%s)'
                 log_func = self.logger.info
             else:
-                self.queue.put(client)
-                is_accepted = True
-                msg = 'Added `%s` client to `%s` (%s)'
-                log_func = self.logger.info
+                if not self.is_building_conn_queue:
+                    is_accepted = False
+                elif not client.is_impl_connected():
+                    is_accepted = False
+                else:
+                    self.queue.put(client)
+                    is_accepted = True
+                    msg = 'Added `%s` client to `%s` (%s)'
+                    log_func = self.logger.info
 
-            if self.connection_exists():
-                log_func(msg, self.conn_name, self.address_masked, self.conn_type)
+                    if self.connection_exists():
+                        log_func(msg, self.conn_name, self.address_masked, self.conn_type)
 
             return is_accepted
 
@@ -239,7 +244,7 @@ class ConnectionQueue:
                     # .. and exit the loop.
                     return
 
-                gevent.sleep(5)
+                gevent.sleep(1)
                 now = datetime.utcnow()
 
                 self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
@@ -269,11 +274,21 @@ class ConnectionQueue:
                 self.logger.info('Obtained %d %s client%sto `%s` for `%s`', self.queue.maxsize, self.conn_type, suffix,
                     self.address_masked, self.conn_name)
             else:
-                self.logger.info('Skipped building a queue to `%s` for `%s`', self.address_masked, self.conn_name)
+
+                # What we log will depend on whether we have already built a queue of connections or not ..
+                if self.queue.full():
+                    msg = 'Built a connection queue to `%s` for `%s`'
+                else:
+                    msg = 'Skipped building a queue to `%s` for `%s`'
+
+                # .. do log it now ..
+                self.logger.info(msg, self.address_masked, self.conn_name)
+
+                # .. indicate that we are not going to continue ..
                 self.is_building_conn_queue = False
                 self.queue_building_stopped = True
 
-            # Ok, got all the connections
+            # If we are here, we are no longer going to build the queue, e.g. if it already fully built.
             self.is_building_conn_queue = False
             return
         except KeyboardInterrupt:
@@ -288,7 +303,7 @@ class ConnectionQueue:
                 _ = gevent.spawn(self.add_client_func)
             else:
                 self.add_client_func()
-            self.in_progress_count += 1
+                self.in_progress_count += 1
 
 # ################################################################################################################################
 
@@ -318,9 +333,12 @@ class ConnectionQueue:
         """ Spawns greenlets to populate the queue and waits up to self.queue_build_cap seconds until the queue is full.
         If it never is, raises an exception stating so.
         """
+
+        # This call spawns greenlet that populate the queue ..
         self._spawn_add_client_func(self.queue_max_size)
 
-        # Build the queue in background
+        # .. whereas this call spawns a different greenlet ..
+        # .. that waits until all the greenlets above build their connections.
         _ = gevent.spawn(self._build_queue)
 
 # ################################################################################################################################

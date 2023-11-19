@@ -40,7 +40,6 @@ class ConnectionPoolWrapper:
         self.server = server
         self.type_ = type_
         self.items = []
-        self.count = 0
 
 # ################################################################################################################################
 
@@ -52,41 +51,43 @@ class ConnectionPoolWrapper:
         lock_name = f'ConnectionPoolWrapper.{self.type_}.{config_id}'
 
         # Acquire a lock that will be held across all the connection pools ..
-        return self.server.zato_lock_manager(lock_name, block=90)
+        return self.server.zato_lock_manager(lock_name, block=1200)
+
+# ################################################################################################################################
 
     def add_item(self, config_id:'any_', item:'any_') -> 'None':
 
-        with self._lock(config_id):
-            self.items.append(item)
+        #with self._lock(config_id):
+        self.items.append(item)
 
 # ################################################################################################################################
 
     def delete_all(self, config_id:'any_') -> 'None':
 
-        with self._lock(config_id):
+        #with self._lock(config_id):
 
-            # First, stop all the items ..
-            for item in self.items:
-                item.delete()
+        # First, stop all the items ..
+        for item in self.items:
+            item.delete()
 
-            # .. now, clear the list.
-            self.items.clear()
+        # .. now, clear the list.
+        self.items.clear()
 
 # ################################################################################################################################
 
     def has_item(self, item:'any_') -> 'bool':
 
-        with self._lock(item):
-            return item in self.items
+        #with self._lock(item):
+        return item in self.items
 
 # ################################################################################################################################
 
     def delete_item(self, config_id:'any_', item_to_delete:'any_') -> 'None':
 
-        with self._lock(config_id):
-            for item in self.items:
-                if item is item_to_delete:
-                    item.delete()
+        #with self._lock(config_id):
+        for item in self.items:
+            if item is item_to_delete:
+                item.delete()
 
 # ################################################################################################################################
 # ################################################################################################################################
