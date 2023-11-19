@@ -239,7 +239,7 @@ class ConnectionQueue:
                     # .. and exit the loop.
                     return
 
-                gevent.sleep(5)
+                gevent.sleep(1)
                 now = datetime.utcnow()
 
                 self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
@@ -265,11 +265,33 @@ class ConnectionQueue:
                     start = datetime.utcnow()
                     build_until = start + timedelta(seconds=self.queue_build_cap)
 
-            if self.keep_connecting and self.connection_exists():
-                self.logger.info('Obtained %d %s client%sto `%s` for `%s`', self.queue.maxsize, self.conn_type, suffix,
-                    self.address_masked, self.conn_name)
+            if self.should_keep_connecting():
+
+                # Branch variables
+                queue_current_size = self.queue.qsize
+                queue_max_size = self.queue.maxsize
+
+                # Build a log message ..
+                msg  = f'So far, obtained {queue_current_size}/{queue_max_size} client{suffix}'
+                msg += f'to `{self.address_masked}` for `{self.conn_name}` ({self.conn_type}'
+
+                # .. log progress ..
+                self.logger.info(msg)
+
+                # .. and sleep for a while.
+                gevent.sleep(1)
+
             else:
-                self.logger.info('Skipped building a queue to `%s` for `%s`', self.address_masked, self.conn_name)
+
+                # If we are here, it means that we should keep connecting,
+                # which means that the message saying that we are skipping the building of a queue
+                # should be used only unless the queue is full becuase, if it is,
+                # there is nothing left to build, i.e. nothing to skip anymore.
+                if not self.queue.full():
+                    msg = f'Skipped building a queue to `{self.address_masked}` for `{self.conn_name}`'
+                    self.logger.info(msg)
+
+                self.is_building_conn_queue = False
                 self.queue_building_stopped = True
 
             # Ok, got all the connections
@@ -467,7 +489,7 @@ class Wrapper:
                     if not self.client.connection_exists():
                         return
                     else:
-                        self.logger.info('Waiting for queue building stopped flag `%s` (%s %s)',
+                        self.logger.info('Waiting for queue building stopped flag before deleting `%s` (%s %s)',
                             self.client.address, self.client.conn_type, self.client.conn_name)
 
             # Reset flags that will allow this client to reconnect in the future

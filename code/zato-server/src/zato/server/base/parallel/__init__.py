@@ -1498,7 +1498,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             # Invoke each of them
             for pid in pids:
                 pid_response = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
-                if pid_response.data is not None:
+                if pid_response and pid_response.data is not None:
 
                     # If this is an internal service, we want to remove its root-level response element.
                     if service.startswith('zato'):

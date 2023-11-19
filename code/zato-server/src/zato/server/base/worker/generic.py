@@ -17,20 +17,22 @@ from zato.common.util.api import as_bool, parse_simple_type
 from zato.common.util.config import replace_query_string_items_in_dict
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.generic.connection import GenericConnection
+from zato.server.generic.api.outconn.wsx.base.wrapper import OutconnWSXWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from logging import Logger
-    from zato.common.typing_ import any_, callable_, stranydict, strnone, tuple_
+    from zato.common.typing_ import any_, callable_, stranydict, strnone, tuple_, type_
     from zato.server.connection.queue import Wrapper
     Wrapper = Wrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
+_type_channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
+_type_wsx = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX
 _secret_prefixes = (SECRETS.EncryptedMarker, SECRETS.PREFIX)
 
 # ################################################################################################################################
@@ -112,8 +114,11 @@ class Generic(WorkerImpl):
             conn_name = conn_dict['name']
             _ = conn_value.pop(conn_name, None)
 
+            if msg['type_'] == _type_wsx:
+                self.server.wsx_connection_pool_wrapper.count -= 1
+
         # Run a special path for file transfer channels
-        if msg['type_'] == _channel_file_transfer:
+        if msg['type_'] == _type_channel_file_transfer:
             self._delete_file_transfer_channel(msg)
 
 # ################################################################################################################################
@@ -134,7 +139,7 @@ class Generic(WorkerImpl):
             msg = conn.to_sql_dict(True)
 
         item = GenericConnection.from_bunch(msg)
-        item_dict = item.to_dict(True) # type: stranydict
+        item_dict:'stranydict' = item.to_dict(True)
 
         for key in msg:
             if key not in item_dict:
@@ -153,9 +158,8 @@ class Generic(WorkerImpl):
             self.logger.info('No config attr found for generic connection `%s`', item.type_)
             return
 
-        wrapper = self._generic_conn_handler[item.type_]
-
-        msg_name = msg['name'] # type: str
+        wrapper:'any_ | type_[OutconnWSXWrapper]' = self._generic_conn_handler[item.type_]
+        msg_name:'str' = msg['name']
 
         # It is possible that some of the input keys point to secrets
         # and other data that will be encrypted. In such a case,
@@ -174,10 +178,13 @@ class Generic(WorkerImpl):
         config_attr[msg_name].conn = conn_wrapper
         config_attr[msg_name].conn.build_wrapper()
 
+        if msg['type_'] == _type_wsx:
+            self.server.wsx_connection_pool_wrapper.count += 1
+
         if not is_starting:
 
             # Run a special path for file transfer channels
-            if msg['type_'] == _channel_file_transfer:
+            if msg['type_'] == _type_channel_file_transfer:
                 self._create_file_transfer_channel(msg)
 
 # ################################################################################################################################
@@ -185,7 +192,7 @@ class Generic(WorkerImpl):
     def _edit_generic_connection(self, msg:'stranydict', skip:'any_'=None, secret:'strnone'=None) -> 'None':
 
         # Special-case file transfer channels
-        if msg['type_'] == _channel_file_transfer:
+        if msg['type_'] == _type_channel_file_transfer:
             self._edit_file_transfer_channel(msg)
             return
 
@@ -254,7 +261,7 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_GENERIC_CONNECTION_CREATE(
+    def _on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(
         self,
         msg:'stranydict',
         *args: 'any_',
@@ -265,8 +272,34 @@ class Generic(WorkerImpl):
         if func:
             func(msg)
 
-    on_broker_msg_GENERIC_CONNECTION_EDIT            = on_broker_msg_GENERIC_CONNECTION_CREATE
-    on_broker_msg_GENERIC_CONNECTION_DELETE          = on_broker_msg_GENERIC_CONNECTION_CREATE
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_CREATE(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_EDIT(
+        self,
+        msg:'stranydict',
+        *args: 'any_',
+        **kwargs: 'any_'
+    ) -> 'None':
+        with self.server.wsx_connection_pool_wrapper._lock(msg['id']):
+            self.logger.error('COUNT-EDIT-001 %s %s',
+                self.server.wsx_connection_pool_wrapper.count,
+                len(self.server.wsx_connection_pool_wrapper.items),
+            )
+            if self.server.wsx_connection_pool_wrapper.count in {1}:
+                return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(msg, *args, **kwargs)
+
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_DELETE(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(*args, **kwargs)
+
+# ################################################################################################################################
+
     on_broker_msg_GENERIC_CONNECTION_CHANGE_PASSWORD = _change_password_generic_connection
 
 # ################################################################################################################################

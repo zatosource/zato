@@ -24,7 +24,7 @@ from zato.server.generic.api.outconn.wsx.common import _BaseWSXClient
 
 if 0:
     from zato.common.typing_ import any_, callable_, strdict, strlist
-    from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
+    from zato.server.generic.api.outconn.wsx.base.wrapper import OutconnWSXWrapper
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -115,7 +115,7 @@ class ZatoWSXClient(_BaseWSXClient):
 
 # ################################################################################################################################
 
-    def delete(self) -> 'None':
+    def delete(self, reason:'str'='') -> 'None':
         self.close()
 
 # ################################################################################################################################

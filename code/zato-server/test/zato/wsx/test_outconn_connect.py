@@ -17,7 +17,7 @@ from uuid import uuid4
 # Zato
 from zato.common.test.wsx_ import WSXChannelManager, WSXOutconnBaseCase
 from zato.common.util.api import fs_safe_now
-from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
+from zato.server.generic.api.outconn.wsx.base.wrapper import OutconnWSXWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################

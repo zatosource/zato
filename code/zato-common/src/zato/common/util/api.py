@@ -1025,7 +1025,7 @@ def get_greenlets_traceback(pid):
 
 # ################################################################################################################################
 
-def dump_stacks(*ignored):
+def log_python_stacks(*ignored):
     pid = os.getpid()
 
     table = Texttable()
@@ -1045,7 +1045,18 @@ def dump_stacks(*ignored):
 def register_diag_handlers():
     """ Registers diagnostic handlers dumping stacks, threads and greenlets on receiving a signal.
     """
-    signal.signal(signal.SIGURG, dump_stacks)
+    signal.signal(signal.SIGURG, log_python_stacks)
+
+ # ################################################################################################################################
+
+def log_current_python_stack():
+
+    # stdlib
+    import traceback
+
+    logger.info('Current Python stack:\n')
+    lines = [line.strip() for line in traceback.format_stack()]
+    logger.info('\n'.join(lines))
 
 # ################################################################################################################################
 

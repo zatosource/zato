@@ -20,7 +20,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import fs_safe_now
 from zato.distlock import LockManager
 from zato.server.connection.pool_wrapper import ConnectionPoolWrapper
-from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
+from zato.server.generic.api.outconn.wsx.base.wrapper import OutconnWSXWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################

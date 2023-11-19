@@ -21,7 +21,7 @@ from zato.server.connection.pool_wrapper import ConnectionPoolWrapper
 
 if 0:
     from zato.common.typing_ import any_, anydict, stranydict, strintdict, strlist, strlistnone
-    from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
+    from zato.server.generic.api.outconn.wsx.base.wrapper import OutconnWSXWrapper
     from zato.server.generic.api.outconn.wsx.client_zato import _ZatoWSXClientImpl
 
 # ################################################################################################################################

@@ -19,7 +19,7 @@ if 0:
     from zato.common.typing_ import any_, callable_, strdict, strnone
     from zato.common.wsx_client import MessageFromServer
     from zato.server.base.parallel import ParallelServer
-    from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
+    from zato.server.generic.api.outconn.wsx.base.wrapper import OutconnWSXWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
