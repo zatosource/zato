@@ -14,7 +14,7 @@ except ImportError:
     class pyOpenSSLError(Exception):
         pass
 
-from zato.common.api import WEB_SOCKET
+from zato.common.api import GENERIC, WEB_SOCKET
 from zato.common.marshal_.api import Model
 from zato.common.util.config import replace_query_string_items
 from zato.server.ext.ws4py.streaming import Stream
@@ -154,6 +154,10 @@ class WebSocket(object):
         self._local_address = None
         self._peer_address = None
 
+        # These will be used by self.terminate
+        self.last_close_code = 4003
+        self.last_close_reason = GENERIC.InitialReason
+
     @property
     def local_address(self):
         """
@@ -197,6 +201,11 @@ class WebSocket(object):
 
         .. seealso:: Defined Status Codes http://tools.ietf.org/html/rfc6455#section-7.4.1
         """
+
+        # Set for self.terminate to use
+        self.last_close_code = code
+        self.last_close_reason = reason
+
         if not self.server_terminated:
             self.server_terminated = True
             self._write(self.stream.close(code=code, reason=reason).single(mask=self.stream.always_mask))
@@ -241,6 +250,9 @@ class WebSocket(object):
                 pass
             finally:
                 self.sock = None
+
+        self.client_terminated = True
+        self.server_terminated = True
 
     def ping(self, message):
         """
@@ -412,6 +424,9 @@ class WebSocket(object):
         if self.terminated:
             return False
 
+        if not self.sock:
+            return False
+
         try:
             self.sock.settimeout(self.socket_read_timeout)
             b = self.sock.recv(self.reading_buffer_size)
@@ -424,7 +439,7 @@ class WebSocket(object):
             return True
         except (socket.error, OSError, pyOpenSSLError) as e:
             self.unhandled_error(e)
-            return False
+            return True
         else:
             if not self.process(b):
                 return False
@@ -448,7 +463,7 @@ class WebSocket(object):
 
         try:
             if s.closing is None:
-                self.closed(1006, "Going away")
+                self.closed(self.last_close_code, self.last_close_reason)
             else:
                 self.closed(s.closing.code, s.closing.reason)
         finally:

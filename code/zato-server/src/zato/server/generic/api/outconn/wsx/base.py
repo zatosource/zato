@@ -157,8 +157,16 @@ class WSXClient:
 # ################################################################################################################################
 
     def delete(self, reason:'str'='') -> 'None':
+
         if self.impl:
-            self.impl.delete()
+
+            # In the Zato client, the .delete method calls its own .close,
+            # so we do not need to call it. But in the non-Zato client,
+            # .delete and .close are distinct and both need to be called.
+            if isinstance(self.impl, _NonZatoWSXClient):
+                self.impl.delete()
+
+            # This is common to both implementations.
             self.impl.close(reason=reason) # type: ignore
 
 # ################################################################################################################################
@@ -366,7 +374,7 @@ class OutconnWSXWrapper(Wrapper):
     def on_close_cb(self, code:'int', reason:'strnone'=None) -> 'None':
 
         # We need to special-case the situation when it is us who deleted the outgoing connection.
-        reason_is_not_delete = reason != COMMON_GENERIC.DeleteReasonBytes
+        reason_is_not_delete = not reason in {COMMON_GENERIC.DeleteReasonBytes, COMMON_GENERIC.InitialReason}
 
         # Ignore events we generated ourselves, e.g. when someone edits a connection in web-admin
         # this will result in deleting and rerecreating a connection which implicitly calls this callback.

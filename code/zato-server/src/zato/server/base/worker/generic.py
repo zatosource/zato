@@ -112,6 +112,9 @@ class Generic(WorkerImpl):
             conn_name = conn_dict['name']
             _ = conn_value.pop(conn_name, None)
 
+        if msg['type_'] == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX:
+            self.server.wsx_connection_pool_wrapper.count -= 1
+
         # Run a special path for file transfer channels
         if msg['type_'] == _channel_file_transfer:
             self._delete_file_transfer_channel(msg)
@@ -173,6 +176,9 @@ class Generic(WorkerImpl):
         conn_wrapper = wrapper(item_dict, self.server)
         config_attr[msg_name].conn = conn_wrapper
         config_attr[msg_name].conn.build_wrapper()
+
+        if msg['type_'] == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX:
+            self.server.wsx_connection_pool_wrapper.count += 1
 
         if not is_starting:
 
@@ -254,7 +260,7 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_GENERIC_CONNECTION_CREATE(
+    def _on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(
         self,
         msg:'stranydict',
         *args: 'any_',
@@ -265,8 +271,34 @@ class Generic(WorkerImpl):
         if func:
             func(msg)
 
-    on_broker_msg_GENERIC_CONNECTION_EDIT            = on_broker_msg_GENERIC_CONNECTION_CREATE
-    on_broker_msg_GENERIC_CONNECTION_DELETE          = on_broker_msg_GENERIC_CONNECTION_CREATE
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_CREATE(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_EDIT(
+        self,
+        msg:'stranydict',
+        *args: 'any_',
+        **kwargs: 'any_'
+    ) -> 'None':
+        with self.server.wsx_connection_pool_wrapper._lock(msg['id']):
+            self.logger.error('COUNT-EDIT-001 %s %s',
+                self.server.wsx_connection_pool_wrapper.count,
+                len(self.server.wsx_connection_pool_wrapper.items),
+            )
+            if self.server.wsx_connection_pool_wrapper.count in {1}:
+                return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(msg, *args, **kwargs)
+
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_DELETE(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(*args, **kwargs)
+
+# ################################################################################################################################
+
     on_broker_msg_GENERIC_CONNECTION_CHANGE_PASSWORD = _change_password_generic_connection
 
 # ################################################################################################################################
