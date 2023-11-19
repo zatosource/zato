@@ -40,6 +40,7 @@ class ConnectionPoolWrapper:
         self.server = server
         self.type_ = type_
         self.items = []
+        self.count = 0
 
 # ################################################################################################################################
 
@@ -51,7 +52,7 @@ class ConnectionPoolWrapper:
         lock_name = f'ConnectionPoolWrapper.{self.type_}.{config_id}'
 
         # Acquire a lock that will be held across all the connection pools ..
-        return self.server.zato_lock_manager(lock_name)
+        return self.server.zato_lock_manager(lock_name, block=90)
 
     def add_item(self, config_id:'any_', item:'any_') -> 'None':
 

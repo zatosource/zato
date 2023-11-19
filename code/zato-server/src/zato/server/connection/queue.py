@@ -265,11 +265,12 @@ class ConnectionQueue:
                     start = datetime.utcnow()
                     build_until = start + timedelta(seconds=self.queue_build_cap)
 
-            if self.keep_connecting and self.connection_exists():
+            if self.should_keep_connecting():
                 self.logger.info('Obtained %d %s client%sto `%s` for `%s`', self.queue.maxsize, self.conn_type, suffix,
                     self.address_masked, self.conn_name)
             else:
                 self.logger.info('Skipped building a queue to `%s` for `%s`', self.address_masked, self.conn_name)
+                self.is_building_conn_queue = False
                 self.queue_building_stopped = True
 
             # Ok, got all the connections
