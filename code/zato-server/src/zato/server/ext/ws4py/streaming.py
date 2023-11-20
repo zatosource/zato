@@ -134,7 +134,7 @@ class Stream(object):
 
         return False
 
-    def close(self, code=1000, reason=''):
+    def close(self, code=4043, reason='Z4043'):
         """
         Returns a close control message built from
         a :class:`ws4py.messaging.CloseControlMessage` instance,
