@@ -278,8 +278,8 @@ class Generic(WorkerImpl):
 
         # Outgoing WSX connections that connect to Zato use a specific lock type ..
         if is_outconn_wsx:
-            if msg['is_zato']:
-                return self.server.wsx_connection_pool_wrapper._lock
+            lock = self.server.wsx_connection_pool_wrapper.get_update_lock(is_zato=msg['is_zato'])
+            return lock
 
         # .. if we are here, we use a pass-through lock.
         return PassThroughLock
