@@ -347,7 +347,7 @@ user={}
 class PassThrough(Lock):
     """ A pass-through lock - used under Windows and for certain generic connections.
     """
-    def __init__(self , *ignored_args, **ignored_kwargs) -> 'None':
+    def __init__(self, *ignored_args, **ignored_kwargs) -> 'None':
         super().__init__(
             os_user_name=None,
             session=None,

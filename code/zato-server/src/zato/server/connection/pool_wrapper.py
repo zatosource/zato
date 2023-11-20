@@ -21,7 +21,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anylist, callable_
     from zato.distlock import Lock
     from zato.server.base.parallel import ParallelServer
 
