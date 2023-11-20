@@ -75,6 +75,8 @@ static-check:
 	cd $(CURDIR)/code/zato-zmq       && $(MAKE) static-check
 	echo "Static checks OK"
 
+	$(MAKE) type-check
+
 type-check:
 	cd $(CURDIR)/code/zato-common && $(MAKE) type-check
 	cd $(CURDIR)/code/zato-server && $(MAKE) type-check
@@ -102,11 +104,7 @@ install-qa-reqs:
 	mkdir -p $(CURDIR)/code/eggs/requests/ || true
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 
-run-tests:
-	$(MAKE) install-qa-reqs
-	$(CURDIR)/code/bin/playwright install
-	$(MAKE) static-check
-	$(MAKE) type-check
+functional-tests:
 	$(MAKE) web-admin-tests
 	$(MAKE) common-tests
 	$(MAKE) server-tests
@@ -114,3 +112,9 @@ run-tests:
 	$(MAKE) scheduler-tests
 	$(MAKE) cy-tests
 	@if [ "$(ZATO_TEST_SSO)" = "true" ]; then $(MAKE) sso-tests; fi
+
+run-tests:
+	$(MAKE) install-qa-reqs
+	$(CURDIR)/code/bin/playwright install
+	$(MAKE) static-check
+	$(MAKE) functional-tests
