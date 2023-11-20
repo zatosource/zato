@@ -9,6 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 
+# Zato
+from zato.distlock import PassThrough as PassThroughLock
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -18,7 +21,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anylist, callable_
     from zato.distlock import Lock
     from zato.server.base.parallel import ParallelServer
 
@@ -51,18 +54,40 @@ class ConnectionPoolWrapper:
         lock_name = f'ConnectionPoolWrapper.{self.type_}.{config_id}'
 
         # Acquire a lock that will be held across all the connection pools ..
-        return self.server.zato_lock_manager(lock_name)
+        return self.server.zato_lock_manager(lock_name, block=1200)
 
-    def add_item(self, config_id:'any_', item:'any_') -> 'None':
+# ################################################################################################################################
 
-        with self._lock(config_id):
+    def get_update_lock(self, *, is_zato:'bool') -> 'callable_':
+
+        if is_zato:
+            return self._lock
+        else:
+            return PassThroughLock
+
+# ################################################################################################################################
+
+    def get_func_call_lock(self, *, is_zato:'bool') -> 'callable_':
+
+        if is_zato:
+            return PassThroughLock
+        else:
+            return self._lock
+
+# ################################################################################################################################
+
+    def add_item(self, *, config_id:'any_', is_zato:'bool', item:'any_') -> 'None':
+
+        _lock = self.get_func_call_lock(is_zato=is_zato)
+        with _lock(config_id):
             self.items.append(item)
 
 # ################################################################################################################################
 
-    def delete_all(self, config_id:'any_') -> 'None':
+    def delete_all(self, *, config_id:'any_', is_zato:'bool') -> 'None':
 
-        with self._lock(config_id):
+        _lock = self.get_func_call_lock(is_zato=is_zato)
+        with _lock(config_id):
 
             # First, stop all the items ..
             for item in self.items:
@@ -73,16 +98,18 @@ class ConnectionPoolWrapper:
 
 # ################################################################################################################################
 
-    def has_item(self, item:'any_') -> 'bool':
+    def has_item(self, *, is_zato:'bool', config_id:'any_', item:'any_') -> 'bool':
 
-        with self._lock(item):
+        _lock = self.get_func_call_lock(is_zato=is_zato)
+        with _lock(config_id):
             return item in self.items
 
 # ################################################################################################################################
 
-    def delete_item(self, config_id:'any_', item_to_delete:'any_') -> 'None':
+    def delete_item(self, *, config_id:'any_', is_zato:'bool', item_to_delete:'any_') -> 'None':
 
-        with self._lock(config_id):
+        _lock = self.get_func_call_lock(is_zato=is_zato)
+        with _lock(config_id):
             for item in self.items:
                 if item is item_to_delete:
                     item.delete()

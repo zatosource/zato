@@ -689,7 +689,7 @@ class Client:
 
     def stop(self, reason:'str'='') -> 'None':
         self.keep_running = False
-        self.conn.close(reason=reason)
+        self.conn.close_connection()
         self.is_connected = False
 
 # ################################################################################################################################
