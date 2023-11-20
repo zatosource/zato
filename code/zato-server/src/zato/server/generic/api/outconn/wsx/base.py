@@ -103,6 +103,10 @@ class WSXClient:
 
     def init(self) -> 'None':
 
+        # Local variables
+        config_id = self.config['id']
+        is_zato = self.config['is_zato']
+
         # Keep trying until our underlying client is connected ..
         while not self.is_impl_connected():
 
@@ -119,7 +123,7 @@ class WSXClient:
 
             # .. also, delete the connection and stop if we are no longer ..
             # .. in the server-wide list of connection pools that should exist ..
-            if not self.server.wsx_connection_pool_wrapper.has_item(self):
+            if not self.server.wsx_connection_pool_wrapper.has_item(is_zato=is_zato, config_id=config_id, item=self):
 
                 # .. log what we are about to do ..
                 msg  = f'Returning from WSXClient.init -> `{self.address_masked}` -> '
@@ -157,8 +161,16 @@ class WSXClient:
 # ################################################################################################################################
 
     def delete(self, reason:'str'='') -> 'None':
+
         if self.impl:
-            self.impl.delete()
+
+            # In the Zato client, the .delete method calls its own .close,
+            # so we do not need to call it. But in the non-Zato client,
+            # .delete and .close are distinct and both need to be called.
+            if isinstance(self.impl, _NonZatoWSXClient):
+                self.impl.delete()
+
+            # This is common to both implementations.
             self.impl.close(reason=reason) # type: ignore
 
 # ################################################################################################################################
@@ -366,7 +378,7 @@ class OutconnWSXWrapper(Wrapper):
     def on_close_cb(self, code:'int', reason:'strnone'=None) -> 'None':
 
         # We need to special-case the situation when it is us who deleted the outgoing connection.
-        reason_is_not_delete = reason != COMMON_GENERIC.DeleteReasonBytes
+        reason_is_not_delete = not reason in {COMMON_GENERIC.DeleteReasonBytes, COMMON_GENERIC.InitialReason}
 
         # Ignore events we generated ourselves, e.g. when someone edits a connection in web-admin
         # this will result in deleting and rerecreating a connection which implicitly calls this callback.
@@ -432,40 +444,47 @@ class OutconnWSXWrapper(Wrapper):
 
         # Local variables
         config_id = self.config['id']
+        is_zato = self.config['is_zato']
 
-        try:
+        # Obtain a lock whose type will differ depending on whether it is a connection to Zato or not ..
+        _lock = self.server.wsx_connection_pool_wrapper.get_update_lock(is_zato=is_zato)
 
-            # First, make sure there are no previous connection pools for this ID ..
-            self.server.wsx_connection_pool_wrapper.delete_all(config_id)
+        # .. do make use of the lock ..
+        with _lock(config_id):
 
-            # .. now, initialize the client ..
-            conn = WSXClient(self.server, self.config)
-
-            # .. append it for potential later use ..
-            self.conn_in_progress_list.append(conn)
-
-            # .. add it to the wrapper for potential later use ..
-            self.server.wsx_connection_pool_wrapper.add_item(config_id, conn)
-
-            # .. try to initialize the connection ..
-            conn.init()
-
-            # .. if we are not connected at this point, we need to delete all the reference to the pool ..
-            if not conn.is_impl_connected():
-                self.delete()
-                self.client.decr_in_progress_count()
-                return
-
-        except Exception:
-            logger.warning('WSX client `%s` could not be built `%s`', self.config['name'], format_exc())
-        else:
             try:
-                if not self.client.put_client(conn):
-                    self.delete_queue_connections(msg_closing_superfluous)
+
+                # First, make sure there are no previous connection pools for this ID ..
+                self.server.wsx_connection_pool_wrapper.delete_all(config_id=config_id, is_zato=is_zato)
+
+                # .. now, initialize the client ..
+                conn = WSXClient(self.server, self.config)
+
+                # .. append it for potential later use ..
+                self.conn_in_progress_list.append(conn)
+
+                # .. add it to the wrapper for potential later use ..
+                self.server.wsx_connection_pool_wrapper.add_item(config_id=config_id, is_zato=is_zato, item=conn)
+
+                # .. try to initialize the connection ..
+                conn.init()
+
+                # .. if we are not connected at this point, we need to delete all the reference to the pool ..
+                if not conn.is_impl_connected():
+                    self.delete()
+                    self.client.decr_in_progress_count()
+                    return
+
             except Exception:
-                logger.warning('WSX error `%s`', format_exc())
-            finally:
-                self.client.decr_in_progress_count()
+                logger.warning('WSX client `%s` could not be built `%s`', self.config['name'], format_exc())
+            else:
+                try:
+                    if not self.client.put_client(conn):
+                        self.delete_queue_connections(msg_closing_superfluous)
+                except Exception:
+                    logger.warning('WSX error `%s`', format_exc())
+                finally:
+                    self.client.decr_in_progress_count()
 
 # ################################################################################################################################
 # ################################################################################################################################
