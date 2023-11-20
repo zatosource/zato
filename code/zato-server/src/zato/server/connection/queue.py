@@ -162,18 +162,13 @@ class ConnectionQueue:
                 msg = 'Skipped adding a superfluous `%s` client to %s (%s)'
                 log_func = self.logger.info
             else:
-                if not self.is_building_conn_queue:
-                    is_accepted = False
-                elif not client.is_impl_connected():
-                    is_accepted = False
-                else:
-                    self.queue.put(client)
-                    is_accepted = True
-                    msg = 'Added `%s` client to `%s` (%s)'
-                    log_func = self.logger.info
+                self.queue.put(client)
+                is_accepted = True
+                msg = 'Added `%s` client to `%s` (%s)'
+                log_func = self.logger.info
 
-                    if self.connection_exists():
-                        log_func(msg, self.conn_name, self.address_masked, self.conn_type)
+            if self.connection_exists():
+                log_func(msg, self.conn_name, self.address_masked, self.conn_type)
 
             return is_accepted
 
