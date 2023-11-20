@@ -1264,6 +1264,7 @@ class GENERIC:
     ATTR_NAME = 'opaque1'
     DeleteReason = 'DeleteGenericConnection'
     DeleteReasonBytes = DeleteReason.encode('utf8')
+    InitialReason = 'ReasonInitial'
 
     class ConnName:
         OutconnWSX = 'outgoing WebSocket'
