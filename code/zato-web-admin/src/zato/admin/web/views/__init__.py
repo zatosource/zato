@@ -660,7 +660,6 @@ class CreateEdit(_BaseView):
             logger.info('Request self.req.POST %s', self.req.POST)
 
             logger.info('Sending `%s` to `%s`', self.input_dict, self.service_name)
-
             response = self.req.zato.client.invoke(self.service_name, self.input_dict)
 
             if response.ok:
