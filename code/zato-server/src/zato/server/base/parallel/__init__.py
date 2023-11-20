@@ -37,9 +37,11 @@ from zato.common.api import DATA_FORMAT, default_internal_modules, HotDeploy, IP
     SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
+from zato.common.bearer_token import BearerTokenManager
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.const import SECRETS
 from zato.common.events.common import Default as EventsDefault
+from zato.common.facade import SecurityFacade
 from zato.common.ipc.api import IPCAPI
 from zato.common.json_internal import dumps, loads
 from zato.common.kv_data import KVDataAPI
@@ -94,6 +96,7 @@ if 0:
     from zato.server.ext.zunicorn.workers.ggevent import GeventWorker
     from zato.server.service.store import ServiceStore
     from zato.simpleio import SIOServerConfig
+    from zato.server.generic.api.outconn.wsx.common import WSXCtx
     from zato.server.startup_callable import StartupCallableTool
     from zato.sso.api import SSOAPI
 
@@ -147,6 +150,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     zato_lock_manager: 'LockManager'
     startup_callable_tool: 'StartupCallableTool'
     oauth_store: 'OAuthStore'
+    bearer_token_manager: 'BearerTokenManager'
+    security_facade: 'SecurityFacade'
 
     stop_after: 'intnone'
     deploy_auto_from: 'str' = ''
@@ -1027,8 +1032,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Configure remaining parts of SSO
         self.configure_sso()
 
+        # Security facade wrapper
+        self.security_facade = SecurityFacade(self)
+
         # Configure the store to obtain OAuth tokens through
         self.set_up_oauth_store()
+
+        # Bearer tokens (OAuth)
+        self.bearer_token_manager = BearerTokenManager(self)
 
         # Cannot be done in __init__ because self.sso_config is not available there yet
         salt_size = self.sso_config.hash_secret.salt_size
@@ -1533,6 +1544,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def invoke_wsx_adapter(self, service_name:'str', ctx:'WSXCtx') -> 'None':
+        ctx.invoke_service(self, service_name)
+
+# ################################################################################################################################
+
     def on_ipc_invoke_callback(self, msg:'Bunch') -> 'anydict': # type: ignore
 
         msg = cast_('Bunch', msg)
@@ -1843,6 +1859,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def is_active_outconn_wsx(self, conn_id:'str') -> 'bool':
         is_active = self.worker_store.is_active_generic_conn(conn_id)
         return is_active
+
+    def is_service_wsx_adapter(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self.service_store.is_service_wsx_adapter(*args, **kwargs)
+
+    def on_wsx_outconn_stopped_running(self, conn_id:'str') -> 'None':
+        """ This does not do anything by default but tests can overwrite it with custom functionality.
+        """
+
+    def on_wsx_outconn_connected(self, conn_id:'str') -> 'None':
+        """ This does not do anything by default but tests can overwrite it with custom functionality.
+        """
 
 # ################################################################################################################################
 # ################################################################################################################################

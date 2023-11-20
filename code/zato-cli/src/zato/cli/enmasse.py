@@ -17,7 +17,8 @@ from time import sleep
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common.api import DATA_FORMAT, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, TLS as COMMON_TLS
+from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
+    NotGiven, TLS as COMMON_TLS, Zato_None
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -27,11 +28,12 @@ if 0:
 
     from logging import Logger
     from zato.client import APIClient
-    from zato.common.typing_ import any_, anylist, dictlist, list_, stranydict, strdict, strstrdict, strlist, \
+    from zato.common.typing_ import any_, anylist, dictlist, list_, stranydict, strdict, strdictdict, strstrdict, strlist, \
          strlistdict, strnone
 
     APIClient = APIClient
     Logger = Logger
+    strdictdict = strdictdict
     strlistdict = strlistdict
 
 # ################################################################################################################################
@@ -64,7 +66,11 @@ ERROR_TYPE_MISSING = Code('E04', 'type missing')
 
 # ################################################################################################################################
 
+outconn_wsx  = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX
 outconn_ldap = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP
+
+# We need to have our own version because type "bearer_token" exists in enmasse only.
+_All_Sec_Def_Types = All_Sec_Def_Types + ['bearer_token']
 
 # ################################################################################################################################
 
@@ -75,16 +81,29 @@ class ModuleCtx:
         LDAP = 'ldap'
         SQL  = 'sql'
         REST = 'rest'
+        Scheduler = 'scheduler'
         Security = 'security'
 
     # Maps enmasse definition types to include types
-    Enmasse_Type      = cast_('strdict', None)
+    Enmasse_Type = cast_('strdict', None)
 
     # Maps enmasse defintions types to their attributes that are to be included during an export
     Enmasse_Attr_List_Include = cast_('strlistdict', None)
 
     # Maps enmasse defintions types to their attributes that are to be excluded during an export
     Enmasse_Attr_List_Exclude = cast_('strlistdict', None)
+
+    # Maps enmasse defintions types to their attributes that need to be renamed during an export
+    Enmasse_Attr_List_Rename = cast_('strdictdict', None)
+
+    # Maps enmasse defintions types to their attributes that need to be converted to a list during an export
+    Enmasse_Attr_List_As_List = cast_('strlistdict', None)
+
+    # Maps enmasse defintions types to their attributes that will be skipped during an export if they are empty
+    Enmasse_Attr_List_Skip_If_Empty = cast_('strlistdict', None)
+
+    # Maps enmasse defintions types to their attributes that will be turned into multiline strings
+    Enmasse_Attr_List_As_Multiline = cast_('strlistdict', None)
 
     # Maps pre-3.2 item types to the 3.2+ ones
     Enmasse_Item_Type_Name_Map = cast_('strdict', None)
@@ -97,6 +116,9 @@ class ModuleCtx:
 
     # How many seconds to wait for missing objects
     Missing_Wait_Time = 120
+
+    # Extra security types that exist only in enmasse, such as bearer_token in lieu of oauth
+    Extra_Security_Types = ['bearer_token']
 
 # ################################################################################################################################
 
@@ -113,6 +135,9 @@ ModuleCtx.Enmasse_Type = {
 
     # SQL Connections
     'outconn_sql':ModuleCtx.Include_Type.SQL,
+
+    # Scheduler
+    'scheduler':ModuleCtx.Include_Type.Scheduler,
 }
 
 # ################################################################################################################################
@@ -120,7 +145,18 @@ ModuleCtx.Enmasse_Type = {
 ModuleCtx.Enmasse_Attr_List_Include = {
 
     # Security definitions
-    'def_sec':  ['type', 'name', 'username', 'realm'],
+    'def_sec':  [
+        'type',
+        'name',
+        'username',
+        'realm',
+        'auth_server_url',
+        'client_id_field',
+        'client_secret_field',
+        'grant_type',
+        'scopes',
+        'extra_fields'
+    ],
 
     # REST connections - Channels
     'channel_plain_http': [
@@ -153,7 +189,23 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'username',
         'auth_type',
         'server_list',
-    ]
+    ],
+
+    # Scheduled tasks
+    'scheduler':  [
+        'name',
+        'service',
+        'job_type',
+        'start_date',
+        'weeks',
+        'days',
+        'hours',
+        'minutes',
+        'seconds',
+        'cron_definition',
+        'repeats',
+        'extra',
+    ],
 }
 
 # ################################################################################################################################
@@ -177,11 +229,46 @@ ModuleCtx.Enmasse_Attr_List_Exclude = {
 
 # ################################################################################################################################
 
+ModuleCtx.Enmasse_Attr_List_Rename = {
+
+    # Security definitions
+    'def_sec':  {
+        'auth_server_url':'auth_endpoint'
+    }
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_As_List = {
+
+    # Security definitions
+    'def_sec':  ['scopes', 'extra_fields'],
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_Skip_If_Empty = {
+
+    # Security definitions
+    'scheduler':  ['weeks', 'days', 'hours', 'minutes', 'seconds', 'cron_definition', 'repeats', 'extra'],
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_As_Multiline = {
+
+    # Security definitions
+    'scheduler':  ['extra'],
+}
+
+# ################################################################################################################################
+
 ModuleCtx.Enmasse_Item_Type_Name_Map = {
     'def_sec': 'security',
     'channel_plain_http': 'channel_rest',
     'outconn_plain_http': 'outgoing_rest',
     'zato_generic_connection_outconn-ldap': 'outgoing_ldap',
+    'zato_generic_connection_outconn-wsx': 'outgoing_wsx',
 }
 
 # ################################################################################################################################
@@ -213,7 +300,35 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
     ],
 
     # Security definitions
-    'def_sec':  ['name', 'username', 'password', 'type', 'realm']
+    'def_sec':  [
+        'name',
+        'username',
+        'password',
+        'type',
+        'realm',
+        'auth_endpoint',
+        'client_id_field',
+        'client_secret_field',
+        'grant_type',
+        'scopes',
+        'extra_fields',
+    ],
+
+    # Scheduled tasks
+    'scheduler':  [
+        'name',
+        'service',
+        'job_type',
+        'start_date',
+        'weeks',
+        'days',
+        'hours',
+        'minutes',
+        'seconds',
+        'cron_definition',
+        'repeats',
+        'extra',
+    ],
 }
 
 # ################################################################################################################################
@@ -229,11 +344,25 @@ class EnvKeyData:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _replace_item_type(item_type:'str') -> 'str':
+
+    # Certain item types need to be replaced because they exist only in enmasse
+    if item_type == 'bearer_token':
+        return 'oauth'
+    elif item_type == 'oauth':
+        return 'bearer_token'
+    else:
+        return item_type
+
+# ################################################################################################################################
+
 def find_first(it, pred):
     """Given any iterable, return the first element `elem` from it matching `pred(elem)`"""
     for obj in it:
         if pred(obj):
             return obj
+
+# ################################################################################################################################
 
 def dict_match(haystack, needle):
     """Return True if all the keys from `needle` appear in `haystack` with the same value.
@@ -244,12 +373,15 @@ def dict_match(haystack, needle):
 
     return all(haystack.get(key) == value for key, value in iteritems(needle))
 
+# ################################################################################################################################
 
 #: List of zato services we explicitly don't support.
 IGNORE_PREFIXES = {
     'zato.kvdb.data-dict.dictionary',
     'zato.kvdb.data-dict.translation',
 }
+
+# ################################################################################################################################
 
 def populate_services_from_apispec(client, logger):
     """ Request a list of services from the APISpec service, and merge the results into SERVICES_BY_PREFIX,
@@ -323,6 +455,7 @@ SHORTNAME_BY_PREFIX = [
     ('zato.channel.', ''),
 ]
 
+# ################################################################################################################################
 
 def make_service_name(prefix):
 
@@ -340,6 +473,8 @@ def make_service_name(prefix):
             return name_prefix
     return escaped
 
+# ################################################################################################################################
+
 def normalize_service_name(item):
     """ Given an item originating from the API or from an import file, if the item contains either the 'service'
     or 'service_name' keys, ensure the other key is set. Either the dict contains neither key, or both keys set
@@ -347,6 +482,8 @@ def normalize_service_name(item):
     if 'service' in item or 'service_name' in item:
         item.setdefault('service', item.get('service_name'))
         item.setdefault('service_name', item.get('service'))
+
+# ################################################################################################################################
 
 def test_item(item, cond):
     """ Given a dictionary `cond` containing some conditions to test an item for, return True if those conditions match.
@@ -359,6 +496,26 @@ def test_item(item, cond):
         if only_if_field and item.get(only_if_field) not in only_if_value:
             return False
     return True
+
+# ################################################################################################################################
+
+# Note that the order of items in this list matters
+_security_fields = ['security', 'sec_def', 'security_name']
+
+# ################################################################################################################################
+
+def resolve_security_field_name(item:'strdict') -> 'str':
+
+    default = 'security'
+
+    for name in _security_fields:
+        if name in item:
+            return name
+    else:
+        return default
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class ServiceInfo:
     def __init__(self, prefix=None, name=None, object_dependencies=None, service_dependencies=None, export_filter=None):
@@ -504,6 +661,12 @@ SERVICES = [
         prefix='zato.http-soap',
         # Covers outconn_plain_http, outconn_soap, channel_plain_http, channel_soap
         object_dependencies={
+            'security': {
+                'dependent_type': 'def_sec',
+                'dependent_field': 'name',
+                'empty_value': ZATO_NO_SECURITY,
+                'id_field': 'security_id',
+            },
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
@@ -680,26 +843,37 @@ class InputValidator:
                 self.results.add_error(raw, ERROR_KEYS_MISSING, "Key '{}' must exist in {}: {}", req_key, item_type, item_dict)
 
 class DependencyScanner:
-    def __init__(self, json, ignore_missing=False):
+    def __init__(self, json, is_import, is_export, ignore_missing=False):
         self.json = json
+        self.is_import = is_import
+        self.is_export = is_export
         self.ignore_missing = ignore_missing
-        #: (item_type, name): [(item_type, name), ..]
         self.missing = {}
 
 # ################################################################################################################################
 
     def find(self, item_type, fields):
-        if item_type == 'def_sec':
+
+        if item_type in ['def_sec']:
             return self.find_sec(fields)
-        lst = self.json.get(item_type, ())
-        return find_first(lst, lambda item: dict_match(item, fields))
+
+        elif item_type in _All_Sec_Def_Types:
+            if self.is_export:
+                item_type = 'def_sec'
+
+        items = self.json.get(item_type, ())
+
+        for item in items:
+            if dict_match(item, fields):
+                return item
 
 # ################################################################################################################################
 
     def find_sec(self, fields):
         for service in SERVICES:
             if service.is_security:
-                item = self.find(service.name, fields)
+                service_name = _replace_item_type(service.name)
+                item = self.find(service_name, fields)
                 if item is not None:
                     return item
 
@@ -713,6 +887,12 @@ class DependencyScanner:
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
 
+        #
+        # Preprocess item type
+        #
+        if item_type == 'bearer_token':
+            item_type = 'oauth'
+
         service_info = SERVICE_BY_NAME[item_type] # type: ServiceInfo
 
         for dep_key, dep_info in iteritems(service_info.object_dependencies):
@@ -722,13 +902,13 @@ class DependencyScanner:
             if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
                 continue
 
-            if dep_key == 'sec_def':
-                if 'sec_def' not in item:
-                    dep_key = 'security_name'
+            # Special-case HTTP connections
+            if item_type == 'http_soap':
+                dep_key = resolve_security_field_name(item)
 
             if dep_key not in item:
                 results.add_error(
-                    (dep_key, dep_info), ERROR_MISSING_DEP, '{} lacks required {} field: {}', item_type, dep_key, item)
+                    (dep_key, dep_info), ERROR_MISSING_DEP, '{} lacks required `{}` field: {}', item_type, dep_key, item)
 
             value = item.get(dep_key)
 
@@ -751,6 +931,12 @@ class DependencyScanner:
 
         results = Results()
         for item_type, items in iteritems(self.json):
+
+            #
+            # Preprocess item type
+            #
+            item_type = _replace_item_type(item_type)
+
             for item in items:
                 self.scan_item(item_type, item, results)
 
@@ -765,8 +951,17 @@ class DependencyScanner:
         return results
 
 class ObjectImporter:
-    def __init__(self, client, logger, object_mgr, json, ignore_missing, args):
-        # type: (APIClient, Logger, ObjectManager, dict, bool, object)
+    def __init__(
+        self,
+        client,     # type: APIClient
+        logger,     # type: Logger
+        object_mgr, # type: ObjectManager
+        json,       # type: strdict
+        is_import,  # type: bool
+        is_export,  # type: bool
+        ignore_missing, # type: bool
+        args            # type: any_
+    ) -> 'None':
 
         # Bunch
         from bunch import bunchify
@@ -787,6 +982,9 @@ class ObjectImporter:
 
         # Command-line arguments
         self.args = args
+
+        self.is_import = is_import
+        self.is_export = is_export
 
         self.ignore_missing = ignore_missing
 
@@ -819,7 +1017,12 @@ class ObjectImporter:
         from zato.common.ext.future.utils import iteritems
 
         results = Results()
-        dep_scanner = DependencyScanner(self.json, ignore_missing=self.ignore_missing)
+        dep_scanner = DependencyScanner(
+            self.json,
+            self.is_import,
+            self.is_export,
+            ignore_missing=self.ignore_missing
+        )
         scan_results = dep_scanner.scan()
 
         if not scan_results.ok:
@@ -833,6 +1036,12 @@ class ObjectImporter:
                                     missing_name, missing_type, dep_names)
 
         for item_type, items in iteritems(self.json):
+
+            #
+            # Preprocess item type
+            #
+            item_type = _replace_item_type(item_type)
+
             for item in items:
                 self.validate_service_required(item_type, item)
 
@@ -841,6 +1050,12 @@ class ObjectImporter:
 # ################################################################################################################################
 
     def remove_from_import_list(self, item_type, name):
+
+        #
+        # Preprocess item type
+        #
+        item_type = _replace_item_type(item_type)
+
         list_ = self.json.get(item_type, [])
         item = find_first(list_, lambda item: item.name == name)
         if item:
@@ -898,30 +1113,76 @@ class ObjectImporter:
 
     def _import(self, item_type, attrs, is_edit):
 
-        # First, resolve values pointing to environment variables
+        # Zato
+        from zato.common.util.config import extract_param_placeholders
+
+        # First, resolve values pointing to parameter placeholders and environment variables ..
         for key, orig_value in attrs.items():
 
+            # .. add type hints ..
             key        = cast_('str', key)
             orig_value = cast_('any_', orig_value)
 
+            # .. preprocess values only if they are strings ..
             if isinstance(orig_value, str):
 
-                if orig_value.startswith(zato_enmasse_env1):
-                    _prefix = zato_enmasse_env1
-                elif orig_value.startswith(zato_enmasse_env2):
-                    _prefix = zato_enmasse_env2
+                # .. assume there will be no placeholders for this value ..
+                has_params = False
+
+                # .. extract any potential placeholders ..
+                params = extract_param_placeholders(orig_value)
+
+                # .. go through each placeholder ..
+                for param in params:
+
+                    # .. indicate that we actually do have a placeholder ..
+                    has_params = True
+
+                    # .. check if it points to an environment variable ..
+                    if zato_enmasse_env2 in param:
+
+                        # .. we are here if we can find an environment variable ..
+                        # .. based on a placeholder parameter, so we now need ..
+                        # .. to extract the value of this variable or use a default one ..
+                        # .. in case the value does not exist ..
+                        env_variable_name = param.replace(zato_enmasse_env2, '')
+                        env_variable_name = env_variable_name[1:-1]
+
+                        # .. let's find this variable or use the default one ..
+                        env_value = os.environ.get(env_variable_name, 'Missing_Value_' + env_variable_name)
+
+                        # .. now, we can insert this variable in the original value ..
+                        orig_value = orig_value.replace(param, env_value)
+
+                # .. if we have at least one placeholder, we can populate the new value already here ..
+                if has_params:
+                    attrs[key] = orig_value
+
+                # .. otherwise, we still need to check if the entire value is not an environment variable ..
                 else:
-                    _prefix    = None
 
-                if _prefix:
-
-                    value = orig_value.split(_prefix)
-                    value = value[1]
-                    if not value:
-                        raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
+                    if orig_value.startswith(zato_enmasse_env1):
+                        _prefix = zato_enmasse_env1
+                    elif orig_value.startswith(zato_enmasse_env2):
+                        _prefix = zato_enmasse_env2
                     else:
-                        value = os.environ.get(value)
-                    attrs[key] = value
+                        _prefix = None
+
+                    if _prefix:
+
+                        value = orig_value.split(_prefix)
+                        value = value[1]
+
+                        if not value:
+                            raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
+                        else:
+                            value = os.environ.get(value)
+
+                        attrs[key] = value
+
+        #
+        # Preprocess the data to be imported
+        #
 
         attrs_dict = dict(attrs)
 
@@ -943,6 +1204,33 @@ class ObjectImporter:
         elif item_type == 'rbac_role':
             _= attrs_dict.pop('id', None)
             _= attrs_dict.pop('parent_id', None)
+
+        elif item_type == 'oauth':
+
+            if not 'data_format' in attrs:
+                attrs['data_format'] = Data_Format.JSON
+
+            if not 'client_id_field' in attrs:
+                attrs['client_id_field'] = 'client_id'
+
+            if not 'client_secret_field' in attrs:
+                attrs['client_secret_field'] = 'client_secret'
+
+            if not 'grant_type' in attrs:
+                attrs['grant_type'] = 'client_credentials'
+
+            if auth_endpoint := attrs.pop('auth_endpoint', None):
+                attrs['auth_server_url'] = auth_endpoint
+
+            if scopes := attrs.get('scopes'):
+                if isinstance(scopes, list):
+                    scopes = '\n'.join(scopes)
+                    attrs['scopes'] = scopes
+
+            if extra_fields := attrs.get('extra_fields'):
+                if isinstance(extra_fields, list):
+                    extra_fields = '\n'.join(extra_fields)
+                    attrs['extra_fields'] = extra_fields
 
         attrs.cluster_id = self.client.cluster_id
         attrs.is_source_external = True
@@ -991,6 +1279,12 @@ class ObjectImporter:
 
         results = Results()
         for item_type, items in iteritems(self.json):
+
+            #
+            # Preprocess item type
+            #
+            item_type = _replace_item_type(item_type)
+
             for item in items:
                 name = item.get('name')
                 if not name:
@@ -1026,8 +1320,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def import_objects(self, already_existing):
-        # type: (Results)
+    def import_objects(self, already_existing) -> 'Results':
 
         # stdlib
         from time import sleep
@@ -1094,6 +1387,12 @@ class ObjectImporter:
         # Create new objects, again, definitions come first ..
         #
         for item_type, items in iteritems(self.json):
+
+            #
+            # Preprocess item type
+            #
+            item_type = _replace_item_type(item_type)
+
             if self.may_be_dependency(item_type):
                 if item_type == 'rbac_role':
                     append_to = new_rbac_role
@@ -1168,9 +1467,8 @@ class ObjectImporter:
             if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
                 continue
 
-            if field_name == 'sec_def':
-                if 'sec_def' not in item:
-                    field_name = 'security_name'
+            if field_name in _security_fields:
+                field_name = resolve_security_field_name(item)
 
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
                 dep_obj = self.object_mgr.find(info['dependent_type'], {
@@ -1539,7 +1837,7 @@ class InputParser:
         except (IOError, TypeError, ValueError) as e:
             raw = (path, e)
             results.add_error(raw, ERROR_INVALID_INPUT, 'Failed to parse {}: {}', path, e)
-            return None
+            return {}
 
 # ################################################################################################################################
 
@@ -1603,7 +1901,9 @@ class InputParser:
                               item)
             return
 
-        service_names = [si.name for si in SERVICES if si.is_security]
+        service_names = [elem.name for elem in SERVICES if elem.is_security]
+        service_names.extend(ModuleCtx.Extra_Security_Types)
+
         if sec_type not in service_names:
             raw = (sec_type, service_names, item)
             results.add_error(raw, ERROR_INVALID_SEC_DEF_TYPE,
@@ -1749,7 +2049,36 @@ class InputParser:
                     value['type_'] = wrapper_type
 
                     # .. populate wrapper type-specific attributes ..
-                    if wrapper_type == outconn_ldap:
+                    if wrapper_type == outconn_wsx:
+
+                        if not 'is_outconn' in value:
+                            value['is_outconn'] = True
+
+                        if not 'is_channel' in value:
+                            value['is_channel'] = False
+
+                        if not 'is_internal' in value:
+                            value['is_internal'] = False
+
+                        if not 'pool_size' in value:
+                            value['pool_size'] = 1
+
+                        if not 'sec_use_rbac' in value:
+                            value['sec_use_rbac'] = False
+
+                        if not 'is_zato' in value:
+                            value['is_zato'] = False
+
+                        if not 'data_format' in value:
+                            value['data_format'] = Data_Format.JSON
+
+                        if not 'has_auto_reconnect' in value:
+                            value['has_auto_reconnect'] = True
+
+                        if not 'security_def' in value:
+                            value['security_def'] = Zato_None
+
+                    elif wrapper_type == outconn_ldap:
 
                         # .. passwords are to be turned into secrets ..
                         if password := value.pop('password', None):
@@ -1966,11 +2295,15 @@ class Enmasse(ManageCommand):
         self.args = args
         self.curdir = os.path.abspath(self.original_dir)
         self.json = {}
-        has_import = getattr(args, 'import')
+        has_import = getattr(args, 'import', False)
 
         # For type hints
         self.missing_wait_time:'int' = getattr(self.args, 'missing_wait_time', None) or ModuleCtx.Missing_Wait_Time
         self.missing_wait_time = int(self.missing_wait_time)
+
+        # Assume False unless it is overridden later on
+        self.is_import = False
+        self.is_export = False
 
         # Initialize environment variables ..
         env_path = self.normalize_path('env_file', exit_if_missing=False)
@@ -2028,6 +2361,13 @@ class Enmasse(ManageCommand):
         if True not in (args.export_local, self.export_odb, args.clean_odb, has_import):
             self.logger.error('At least one of --clean, --export-local, --export-odb or --import is required, stopping now')
             sys.exit(self.SYS_ERROR.NO_OPTIONS)
+
+        # Populate the flags for our users
+        if has_import:
+            self.is_import = True
+
+        if args.export_local or self.export_odb:
+            self.is_export = True
 
         if args.clean_odb:
             self.object_mgr.refresh()
@@ -2219,7 +2559,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def _filter_item_attrs(
+    def _preprocess_item_attrs(
         self,
         attr_key,  # type: str
         item_type, # type: str
@@ -2231,6 +2571,18 @@ class Enmasse(ManageCommand):
 
         # .. as above, for attributes that are explicitly configured to be excluded ..
         attr_list_exclude = ModuleCtx.Enmasse_Attr_List_Exclude.get(attr_key) or []
+
+        # .. as above, for attributes that need to be renamed ..
+        attr_list_rename  = ModuleCtx.Enmasse_Attr_List_Rename.get(attr_key) or {}
+
+        # .. as above, for attributes that need to be turned into a list ..
+        attr_list_as_list = ModuleCtx.Enmasse_Attr_List_As_List.get(attr_key) or []
+
+        # .. as above, for attributes that should be skipped if they are empty ..
+        attr_list_as_multiline = ModuleCtx.Enmasse_Attr_List_As_Multiline.get(attr_key) or []
+
+        # .. as above, for attributes that should be skipped if they are empty ..
+        attr_list_skip_if_empty = ModuleCtx.Enmasse_Attr_List_Skip_If_Empty.get(attr_key) or []
 
         # .. to make sure the dictionary does not change during iteration ..
         item_copy = deepcopy(item)
@@ -2249,8 +2601,42 @@ class Enmasse(ManageCommand):
                 if attr in attr_list_exclude:
                     _ = item.pop(attr, None)
 
+        # .. optionally, rename selected attributes ..
+        for old_name, new_name in attr_list_rename.items():
+            if value := item.pop(old_name, NotGiven):
+                if value is not NotGiven:
+                    item[new_name] = value
+
+        # .. optionally, turn selected attributes into lists ..
+        for attr in attr_list_as_list:
+            if value := item.pop(attr, NotGiven):
+                if value is not NotGiven:
+                    if isinstance(value, str):
+                        value = value.splitlines()
+                        value.sort()
+                    item[attr] = value
+
+        # .. optionally, turn selected attributes into multi-line string objects ..
+        for attr in attr_list_as_multiline:
+            if value := item.pop(attr, NotGiven):
+                if value is not NotGiven:
+                    if isinstance(value, str):
+                        value = value.splitlines()
+                        value = '\n'.join(value)
+                        item[attr] = value
+
+        # .. optionally, skip empty attributes ..
+        for attr in attr_list_skip_if_empty:
+            if value := item.pop(attr, NotGiven):
+                if value is not NotGiven:
+                    if value:
+                        item[attr] = value
+
         # .. ID's are never returned ..
         _ = item.pop('id', None)
+
+        # .. service ID's are never returned ..
+        _ = item.pop('service_id', None)
 
         # .. the is_active flag is never returned if it is of it default value, which is True ..
         if item_copy.get('is_active') is True:
@@ -2262,7 +2648,7 @@ class Enmasse(ManageCommand):
 
         # .. the data format of REST objects defaults to JSON which is why we do not return it, unless it is different ..
         if item_type in {'channel_plain_http', 'outconn_plain_http', 'zato_generic_rest_wrapper'}:
-            if item_copy.get('data_format') == DATA_FORMAT.JSON:
+            if item_copy.get('data_format') == Data_Format.JSON:
                 _ = item.pop('data_format', None)
 
         return item
@@ -2319,26 +2705,21 @@ class Enmasse(ManageCommand):
 
             # .. do not write RBAC definitions ..
             if 'rbac' in item['type']:
-                out = False
+                return False
 
             # .. do not write internal definitions ..
             elif name.startswith(zato_name_prefix):
-                out = False
+                return False
 
-            # .. otherwise, include this item ..
-            else:
-                out = True
+        # We enter this branch if we are to export only specific types ..
+        if not has_all_types:
+            out = self._should_write_type_to_output(item_type, item, include_type)
 
-        else:
-            # We enter this branch if we are to export only specific types ..
-            if not has_all_types:
-                out = self._should_write_type_to_output(item_type, item, include_type)
-
-            # We enter this branch if we are to export only objects of specific names ..
-            if not has_all_names:
-                item_name = item.get('name') or ''
-                item_name = item_name.lower()
-                out = self._should_write_name_to_output(item_type, item_name, include_name)
+        # We enter this branch if we are to export only objects of specific names ..
+        if not has_all_names:
+            item_name = item.get('name') or ''
+            item_name = item_name.lower()
+            out = self._should_write_name_to_output(item_type, item_name, include_name)
 
         # .. we are ready to return our output
         return out
@@ -2417,8 +2798,8 @@ class Enmasse(ManageCommand):
                 else:
                     attr_key = item_type
 
-                # .. this will remove any attributes from this item that we do not need ..
-                item = self._filter_item_attrs(attr_key, item_type, item)
+                # .. this will rename or remove any attributes from this item that we do not need ..
+                item = self._preprocess_item_attrs(attr_key, item_type, item)
 
                 # .. sort the attributes in the order we want them to appear in the outpur file ..
                 item = self._sort_item_attrs(attr_key, item)
@@ -2442,7 +2823,8 @@ class Enmasse(ManageCommand):
 
         # .. now, replace generic connection types which are more involved ..
         new_names = {
-            'outgoing_ldap': []
+            'outgoing_ldap': [],
+            'outgoing_wsx': [],
         }
         for old_name, value_list in to_write.items():
             value_list = cast_('anylist', value_list)
@@ -2615,7 +2997,7 @@ class Enmasse(ManageCommand):
 
     def export(self):
         # Find any definitions that are missing
-        dep_scanner = DependencyScanner(self.json, ignore_missing=self.args.ignore_missing_defs)
+        dep_scanner = DependencyScanner(self.json, self.is_import, self.is_export, ignore_missing=self.args.ignore_missing_defs)
         missing_defs = dep_scanner.scan()
         if not missing_defs.ok:
             self.logger.error('Failed to find all definitions needed')
@@ -2719,7 +3101,7 @@ class Enmasse(ManageCommand):
 
         # .. build an object that will import the definitions ..
         importer = ObjectImporter(self.client, self.logger, self.object_mgr, self.json,
-            ignore_missing=self.args.ignore_missing_defs, args=self.args)
+            self.is_import, self.is_export, ignore_missing=self.args.ignore_missing_defs, args=self.args)
 
         # .. find channels and jobs that require services that do not exist ..
         results = importer.validate_import_data()
@@ -2758,11 +3140,12 @@ if __name__ == '__main__':
     args.output = None
     args.rbac_sleep = 1
 
-    args['replace'] = True
-    args['import'] = True
+    # args['replace'] = True
+    # args['import'] = True
+    args['export'] = True
 
     args.path  = sys.argv[1]
-    args.input = sys.argv[2]
+    args.input = sys.argv[2] if 'import' in args else ''
 
     enmasse = Enmasse(args)
     enmasse.run(args)

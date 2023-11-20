@@ -331,7 +331,7 @@
                         {% if endpoint.endpoint_type == endpoint_type.WEB_SOCKETS.id %}
 
                         <tr>
-                            <td style="vertical-align:middle; width:20%">State</td>
+                            <td style="vertical-align:middle; width:20%"><label for="id_edit-active_status">State</label></td>
                             <td>
                                 {{ edit_form.active_status }}
                             </td>
@@ -340,7 +340,7 @@
                         {% else %}
 
                         <tr>
-                            <td style="vertical-align:middle; width:20%">Delivery server</td>
+                            <td style="vertical-align:middle; width:20%"><label for="id_edit-server_id">Delivery server</label></td>
                             <td>
                                 {{ edit_form.server_id }}
                                 | <label>State {{ edit_form.active_status }}</label>
@@ -352,7 +352,7 @@
                         {% if endpoint.endpoint_type != endpoint_type.WEB_SOCKETS.id and endpoint.endpoint_type != endpoint_type.SERVICE.id %}
 
                         <tr>
-                            <td style="vertical-align:middle; width:12%">Delivery method</td>
+                            <td style="vertical-align:middle; width:12%"><label for="id_edit-delivery_method">Delivery method</label></td>
                             <td>
                                 {{ edit_form.delivery_method }}
                             </td>
@@ -361,23 +361,23 @@
                         {% endif %}
 
                         <tr>
-                            <td style="vertical-align:middle; width:12%">Deliv. batch size</td>
+                            <td style="vertical-align:middle; width:12%"><label for="id_edit-delivery_batch_size">Deliv. batch size</label></td>
                             <td>
                                 {{ edit_form.delivery_batch_size }}
                                 |
-                                As list
+                                <label for="id_edit-wrap_one_msg_in_list">As list</label>
                                 {{ edit_form.wrap_one_msg_in_list }}
                                 |
-                                Deliv. max retries
+                                <label for="id_edit-delivery_max_retry">Deliv. max retries</label>
                                 {{ edit_form.delivery_max_retry }}
                             </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle; width:12%">
-                                Sleep on error
+                                <label for="id_edit-wait_sock_err">Sleep on error</label>
                                 <br/>
-                                socket / other
+                                <label for="id_edit-wait_non_sock_err">socket / other</label>
                             </td>
                             <td>
                                 {{ edit_form.wait_sock_err }}
@@ -421,13 +421,13 @@
                         {% comment %} --------- REST/SOAP --------- {% endcomment %}
                         {% if endpoint.endpoint_type == endpoint_type.REST.id %}
                         <tr id="dyn_form_row_id_out_http_method">
-                            <td style="vertical-align:middle; width:12%">HTTP method</td>
+                            <td style="vertical-align:middle; width:12%"><label for="id_edit-out_http_method">HTTP method</label></td>
                             <td>{{ edit_form.out_http_method }}</td>
                         </tr>
                         {% endif %}
                         {% if endpoint.endpoint_type == endpoint_type.SOAP.id %}
                         <tr id="dyn_form_row_id_out_http_method">
-                            <td style="vertical-align:middle; width:12%">HTTP method</td>
+                            <td style="vertical-align:middle; width:12%"><label for="id_edit-out_http_method">HTTP method</label></td>
                             <td>{{ edit_form.out_http_method }}</td>
                         </tr>
                         {% endif %}
@@ -435,7 +435,7 @@
                         {% comment %} --------- REST --------- {% endcomment %}
                         {% if endpoint.endpoint_type == endpoint_type.REST.id %}
                         <tr id="dyn_form_row_id_out_rest_http_soap_id">
-                            <td style="vertical-align:middle; width:12%">REST outconn</td>
+                            <td style="vertical-align:middle; width:12%"><label for="id_edit-out_rest_http_soap_id">REST connection</label></td>
                             <td>{{ edit_form.out_rest_http_soap_id }}</td>
                         </tr>
                         <tr id="dyn_form_row_id_rest_delivery_endpoint" style="display:none">
@@ -447,7 +447,7 @@
                         {% comment %} --------- Service ---------
                         {% if endpoint.endpoint_type == endpoint_type.SERVICE.id %}
                         <tr id="dyn_form_row_id_service_id">
-                            <td style="vertical-align:middle">Service</td>
+                            <td style="vertical-align:middle"><label for="id_edit-service_id">Service</label></td>
                             <td>{{ edit_form.service_id }} </td>
                         </tr>
                         {% endif %}
@@ -517,6 +517,8 @@
 
                         <tr>
                             <td colspan="2" style="text-align:right">
+                                <input type="hidden" id="id_edit-name" name="edit-name" />
+                                <input type="hidden" id="id_edit-topic_name" name="edit-topic_name" />
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>

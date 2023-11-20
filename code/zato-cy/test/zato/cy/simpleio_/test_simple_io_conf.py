@@ -42,8 +42,10 @@ class SimpleIOConfig(BaseSIOTestCase):
         self.assertEqual(int_.prefix, '')
         self.assertListEqual(int_.suffix, ['_count', '_id', '_size', '_size_min', '_size_max', '_timeout'])
 
-        self.assertListEqual(secret.exact,
-            ['auth_data', 'auth_token', 'password', 'password1', 'password2', 'secret_key', 'tls_pem_passphrase', 'token'])
+        self.assertListEqual(secret.exact, [
+            'auth_data', 'auth_token', 'password', 'password1', 'password2',
+            'secret_key', 'tls_pem_passphrase', 'token', 'api_key', 'apiKey', 'xApiKey',
+        ])
         self.assertEqual(secret.prefix, '')
         self.assertEqual(secret.suffix, '')
 
@@ -111,7 +113,9 @@ class SimpleIOConfig(BaseSIOTestCase):
         self.assertIsInstance(secret.suffixes, set)
 
         self.assertListEqual(sorted(secret.exact),
-            ['auth_data', 'auth_token', 'password', 'password1', 'password2', 'secret_key', 'tls_pem_passphrase', 'token'])
+            ['apiKey', 'api_key', 'auth_data', 'auth_token', 'password', 'password1',
+            'password2', 'secret_key', 'tls_pem_passphrase', 'token', 'xApiKey'])
+
         self.assertListEqual(sorted(secret.prefixes), [])
         self.assertListEqual(sorted(secret.suffixes), [])
 

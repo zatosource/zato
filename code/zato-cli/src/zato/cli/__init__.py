@@ -935,7 +935,10 @@ class ManageCommand(ZatoCommand):
         # Zato
         from zato.common.json_internal import load
 
-        self.component_dir = os.path.abspath(args.path)
+        args_path = os.path.expanduser(args.path)
+        args_path = os.path.expandvars(args_path)
+
+        self.component_dir = os.path.abspath(args_path)
         self.config_dir = os.path.join(self.component_dir, 'config')
         listing = set(os.listdir(self.component_dir))
 

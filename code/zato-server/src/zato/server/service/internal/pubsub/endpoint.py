@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from copy import deepcopy
 
 # SQLAlchemy
 from sqlalchemy import delete
@@ -43,7 +44,7 @@ if 0:
     from bunch import Bunch
     from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import anylist, stranydict
+    from zato.common.typing_ import anylist, strdict
     from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvocationResult
     from zato.server.pubsub.model import subnone
     from zato.server.service import Service
@@ -111,7 +112,7 @@ class _GetEndpointQueueMessagesSIO(GetListAdminSIO):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def instance_hook(self:'Service', input:'stranydict', instance:'PubSubEndpoint', attrs:'stranydict') -> 'None':
+def instance_hook(self:'Service', input:'strdict', instance:'PubSubEndpoint', attrs:'strdict') -> 'None':
 
     if attrs['is_delete']:
         return
@@ -130,9 +131,9 @@ def instance_hook(self:'Service', input:'stranydict', instance:'PubSubEndpoint',
 
 def broker_message_hook(
     self:'Service',
-    input:'stranydict',
+    input:'strdict',
     instance:'PubSubEndpoint',
-    attrs:'stranydict',
+    attrs:'strdict',
     service_type:'str'
 ) -> 'None':
     if service_type == 'create_edit':
@@ -278,7 +279,7 @@ class GetEndpointQueueNonGDDepth(AdminService):
 
 class _GetEndpointQueue(AdminService):
 
-    def _add_queue_depths(self, session:'SASession', item:'stranydict') -> 'None':
+    def _add_queue_depths(self, session:'SASession', item:'strdict') -> 'None':
 
         cluster_id = self.request.input.cluster_id
         sub_key = item['sub_key']
@@ -463,10 +464,12 @@ class UpdateEndpointQueue(AdminService):
 
             for key, value in sorted(self.request.input.items()):
                 if key not in _sub_skip_update:
+                    if isinstance(value, bytes):
+                        value = value.decode('utf8')
                     if value is not None:
                         setattr(item, key, value)
 
-            # This one we set manually based on logic at the top of the method
+            # This one we set manually based on the logic at the top of the method
             item.out_http_soap_id = out_http_soap_id
 
             session.add(item)
@@ -476,7 +479,14 @@ class UpdateEndpointQueue(AdminService):
             self.response.payload.name = item.topic.name
 
             # Notify all processes, including our own, that this subscription's parameters have changed
-            updated_params_msg = item.asdict()
+            updated_params_msg:'strdict' = item.asdict()
+
+            # Remove bytes objects from what we are about to publish - they had to be used
+            # in SQL messages but not here.
+            for key, value in deepcopy(updated_params_msg).items():
+                if isinstance(value, bytes):
+                    updated_params_msg[key] = value.decode('utf8')
+
             updated_params_msg['action'] = PUBSUB.SUBSCRIPTION_EDIT.value
             self.broker_client.publish(updated_params_msg)
 
@@ -862,7 +872,7 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
                     data = response.data # type: ignore
 
                 # Extract the actual list of messages ..
-                data = cast_('stranydict', data)
+                data = cast_('strdict', data)
                 msg_list = data['msg_list']
                 msg_list = reversed(msg_list)
                 msg_list = list(msg_list)

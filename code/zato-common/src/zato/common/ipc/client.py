@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from json import loads
+from json import dumps, loads
 
 # requests
 from requests import post as requests_post
@@ -16,7 +16,6 @@ from requests import post as requests_post
 from zato.common.api import IPC as Common_IPC
 from zato.common.broker_message import SERVER_IPC
 from zato.common.typing_ import dataclass
-from zato.common.json_ import dumps
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,8 +98,35 @@ class IPCClient:
         # .. serialize it into JSON ..
         data = dumps(dict_data)
 
+        # .. build query string parameters to be used in the call ..
+        params = {
+            '_source_server_name': source_server_name,
+            '_source_server_pid':  source_server_pid,
+        }
+
+        # .. append the business data too but skip selected ones ..
+        for key, value in request.items():
+
+            # .. skip selected keys ..
+            for name in ['password', 'secret', 'token']:
+                if name in key:
+                    include_value = False
+                    break
+            else:
+                include_value = True
+
+            # .. append the keys with values depending on whether we want to pass them on or not ..
+            value = value if include_value else '******'
+
+            # .. make sure there is not too much information to keep the query string short ..
+            if isinstance(value, str):
+                value = value[:30]
+
+            # .. now, do append the new item ..
+            params[key] = value
+
         # .. invoke the server ..
-        response = requests_post(url, data)
+        response = requests_post(url, data, params=params)
 
         # .. de-serialize the response ..
         response = loads(response.text)
@@ -145,7 +171,7 @@ def main():
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    _ = main()
 
 # ################################################################################################################################
 # ################################################################################################################################

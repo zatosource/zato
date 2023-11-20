@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -24,27 +22,21 @@ from zato.common.odb.model import RateLimitState
 from zato.common.odb.query.rate_limiting import current_period_list, current_state as current_state_query
 from zato.common.rate_limiting.common import Const, AddressNotAllowed, RateLimitReached
 
-# Python 2/3 compatibility
-from zato.common.ext.future.utils import iterkeys
-
+# ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-
-    # stdlib
-    from typing import Callable
-
-    # Zato
     from zato.common.rate_limiting import Approximate as RateLimiterApproximate, RateLimiting
     from zato.common.rate_limiting.common import DefinitionItem, ObjectInfo
+    from zato.common.typing_ import any_, callable_, commondict, strcalldict, strdict, strlist
 
     # For pyflakes
-    Callable = Callable
     DefinitionItem = DefinitionItem
     ObjectInfo = ObjectInfo
     RateLimiterApproximate = RateLimiterApproximate
     RateLimiting = RateLimiting
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 RateLimitStateTable  = RateLimitState.__table__
@@ -62,7 +54,25 @@ class BaseLimiter:
         'is_exact', 'from_any_object_id', 'from_any_object_type', 'from_any_object_name', 'cluster_id', 'is_active', \
         'invocation_no'
 
-    initial_state = {
+    api:'RateLimiting'
+    object_info:'ObjectInfo'
+    definition:'strlist'
+    has_from_any:'bool'
+    from_any_rate:'int'
+    from_any_unit:'str'
+    parent_type:'str'
+    parent_name:'str'
+    is_exact:'bool'
+    invocation_no:'int'
+
+    ip_address_cache:'strdict'
+    by_period:'strdict'
+
+    from_any_object_id:'int'
+    from_any_object_type:'str'
+    from_any_object_name:'str'
+
+    initial_state:'commondict' = {
         'requests': 0,
         'last_cid': None,
         'last_request_time_utc': None,
@@ -70,30 +80,17 @@ class BaseLimiter:
         'last_network': None,
     }
 
-    def __init__(self, cluster_id):
-        # type: (int)
+    def __init__(self, cluster_id:'int') -> 'None':
         self.cluster_id = cluster_id
-        self.is_active = None
+        self.is_active = False
         self.current_idx = 0
         self.lock = RLock()
-        self.api = None            # type: RateLimiting
-        self.object_info = None    # type: ObjectInfo
-        self.definition = None     # type: list
-        self.has_from_any = None   # type: bool
-        self.from_any_rate = None  # type: int
-        self.from_any_unit = None  # type: str
-        self.ip_address_cache = {} # type: dict
-        self.by_period = {}        # type: dict
-        self.parent_type = None    # type: str
-        self.parent_name = None    # type: str
-        self.is_exact = None       # type: bool
-        self.invocation_no = 0     # type: int
+        self.ip_address_cache = {}
+        self.by_period = {}
+        self.is_exact = False
+        self.invocation_no = 0
 
-        self.from_any_object_id = None   # type: int
-        self.from_any_object_type = None # type: str
-        self.from_any_object_name = None # type: str
-
-        self.current_period_func = {
+        self.current_period_func:'strcalldict' = {
             Const.Unit.day: self._get_current_day,
             Const.Unit.hour: self._get_current_hour,
             Const.Unit.minute: self._get_current_minute,
@@ -102,12 +99,12 @@ class BaseLimiter:
 # ################################################################################################################################
 
     @property
-    def has_parent(self):
+    def has_parent(self) -> 'bool':
         return self.parent_type and self.parent_name
 
 # ################################################################################################################################
 
-    def cleanup(self):
+    def cleanup(self) -> 'None':
         """ Cleans up time periods that are no longer needed.
         """
         with self.lock:
@@ -144,7 +141,7 @@ class BaseLimiter:
 
 # ################################################################################################################################
 
-    def rewrite_rate_data(self, old_config):
+    def rewrite_rate_data(self, old_config) -> 'None':
         """ Writes rate limiting information from old configuration to our own. Used by RateLimiting.edit action.
         """
         # type: (RateLimiterApproximate)
@@ -155,13 +152,13 @@ class BaseLimiter:
 
 # ################################################################################################################################
 
-    def get_config_key(self):
+    def get_config_key(self) -> 'str':
         # type: () -> str
         return '{}:{}'.format(self.object_info.type_, self.object_info.name)
 
 # ################################################################################################################################
 
-    def _get_rate_config_by_from(self, orig_from, _from_any=Const.from_any):
+    def _get_rate_config_by_from(self, orig_from, _from_any=Const.from_any) -> 'DefinitionItem':
         # type: (str, str) -> DefinitionItem
 
         from_ = self.ip_address_cache.setdefault(orig_from, IPAddress(orig_from)) # type: IPAddress
@@ -188,21 +185,21 @@ class BaseLimiter:
 
 # ################################################################################################################################
 
-    def _get_current_day(self, now, _prefix=Const.Unit.day, _format='%Y-%m-%d'):
+    def _get_current_day(self, now, _prefix=Const.Unit.day, _format='%Y-%m-%d') -> 'str':
         # type: (datetime, str, str) -> str
         return '{}.{}'.format(_prefix, now.strftime(_format))
 
-    def _get_current_hour(self, now, _prefix=Const.Unit.hour, _format='%Y-%m-%dT%H'):
+    def _get_current_hour(self, now, _prefix=Const.Unit.hour, _format='%Y-%m-%dT%H') -> 'str':
         # type: (datetime, str, str) -> str
         return '{}.{}'.format(_prefix, now.strftime(_format))
 
-    def _get_current_minute(self, now, _prefix=Const.Unit.minute, _format='%Y-%m-%dT%H:%M'):
+    def _get_current_minute(self, now, _prefix=Const.Unit.minute, _format='%Y-%m-%dT%H:%M') -> 'str':
         # type: (datetime, str, str) -> str
         return '{}.{}'.format(_prefix, now.strftime(_format))
 
 # ################################################################################################################################
 
-    def _format_last_info(self, current_state):
+    def _format_last_info(self, current_state) -> 'str':
         # type: (dict) -> str
 
         return 'last_from:`{last_from}; last_request_time_utc:`{last_request_time_utc}; last_cid:`{last_cid}`;'.format(
@@ -211,7 +208,7 @@ class BaseLimiter:
 # ################################################################################################################################
 
     def _raise_rate_limit_exceeded(self, rate, unit, orig_from, network_found, current_state, cid,
-            def_object_id, def_object_name, def_object_type):
+            def_object_id, def_object_name, def_object_type) -> 'None':
 
         raise RateLimitReached('Max. rate limit of {}/{} reached; from:`{}`, network:`{}`; {} (cid:{}) (def:{} {} {})'.format(
             rate, unit, orig_from, network_found, self._format_last_info(current_state), cid, def_object_id, def_object_type,
@@ -220,7 +217,7 @@ class BaseLimiter:
 # ################################################################################################################################
 
     def _check_limit(self, cid, orig_from, network_found, rate, unit, def_object_id, def_object_name, def_object_type,
-        _rate_any=Const.rate_any, _utcnow=datetime.utcnow):
+        _rate_any=Const.rate_any, _utcnow=datetime.utcnow) -> 'None':
         # type: (str, str, str, int, str, str, object, str, str)
 
         # Increase invocation counter
@@ -256,7 +253,7 @@ class BaseLimiter:
 
 # ################################################################################################################################
 
-    def check_limit(self, cid, orig_from):
+    def check_limit(self, cid, orig_from) -> 'None':
         # type: (str, str)
 
         with self.lock:
@@ -282,7 +279,7 @@ class BaseLimiter:
 
 # ################################################################################################################################
 
-    def _get_current_periods(self):
+    def _get_current_periods(self) -> 'None':
         raise NotImplementedError()
 
     _get_current_state = _set_new_state = _delete_periods = _get_current_periods
@@ -292,18 +289,18 @@ class BaseLimiter:
 
 class Approximate(BaseLimiter):
 
-    def _get_current_periods(self):
-        return list(iterkeys(self.by_period))
+    def _get_current_periods(self) -> 'strlist':
+        return list(self.by_period.keys())
 
 # ################################################################################################################################
 
-    def _delete_periods(self, to_delete):
+    def _delete_periods(self, to_delete) -> 'None':
         for item in to_delete: # item: str
             del self.by_period[item]
 
 # ################################################################################################################################
 
-    def _get_current_state(self, current_period, network_found):
+    def _get_current_state(self, current_period, network_found) -> 'strdict':
         # type: (str, str) -> dict
 
         # Get or create a dictionary of requests information for current period
@@ -314,7 +311,7 @@ class Approximate(BaseLimiter):
 
 # ################################################################################################################################
 
-    def _set_new_state(self, current_state, cid, orig_from, network_found, now, *ignored):
+    def _set_new_state(self, current_state, cid, orig_from, network_found, now, *ignored:'any_') -> 'None':
         current_state['requests'] += 1
         current_state['last_cid'] = cid
         current_state['last_request_time_utc'] = now.isoformat()
@@ -326,14 +323,13 @@ class Approximate(BaseLimiter):
 
 class Exact(BaseLimiter):
 
-    def __init__(self, cluster_id, sql_session_func):
-        # type: (int, Callable)
+    def __init__(self, cluster_id:'int', sql_session_func:'callable_') -> 'None':
         super(Exact, self).__init__(cluster_id)
         self.sql_session_func = sql_session_func
 
 # ################################################################################################################################
 
-    def _fetch_current_state(self, session, current_period, network_found):
+    def _fetch_current_state(self, session, current_period, network_found) -> 'RateLimitState':
         # type: (str, str) -> RateLimitState
 
         # We have a complex Python object but for the query we just need its string representation
@@ -345,7 +341,7 @@ class Exact(BaseLimiter):
 
 # ################################################################################################################################
 
-    def _get_current_state(self, current_period, network_found):
+    def _get_current_state(self, current_period, network_found) -> 'strdict':
         # type: (str, str) -> dict
 
         current_state = deepcopy(self.initial_state) # type: dict
@@ -360,7 +356,7 @@ class Exact(BaseLimiter):
 
 # ################################################################################################################################
 
-    def _set_new_state(self, current_state, cid, orig_from, network_found, now, current_period):
+    def _set_new_state(self, current_state, cid, orig_from, network_found, now, current_period) -> 'None':
 
         # We just need a string representation of this object
         network_found = str(network_found)
@@ -392,13 +388,13 @@ class Exact(BaseLimiter):
 
 # ################################################################################################################################
 
-    def _get_current_periods(self):
+    def _get_current_periods(self) -> 'strlist':
         with closing(self.sql_session_func()) as session:
             return [elem[0] for elem in current_period_list(session, self.cluster_id).all()]
 
 # ################################################################################################################################
 
-    def _delete_periods(self, to_delete):
+    def _delete_periods(self, to_delete) -> 'None':
         with closing(self.sql_session_func()) as session:
             session.execute(RateLimitStateDelete().where(
                 RateLimitStateTable.c.period.in_(to_delete)

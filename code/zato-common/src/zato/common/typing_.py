@@ -137,6 +137,7 @@ strcalldict   = dict_[str, callable_]
 strdict       = stranydict
 strbytes      = union_[str_, bytes]
 strbooldict   = dict_[str, bool]
+strcalldict   = dict_[str, callable_]
 strdictdict   = dict_[str, anydict]
 strdictlist   = list_[stranydict]
 strlistdict   = dict_[str, anylist]

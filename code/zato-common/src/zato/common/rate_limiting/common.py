@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, strset
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,7 +38,7 @@ class Const:
         day    = 'd'
 
     @staticmethod
-    def all_units():
+    def all_units() -> 'strset':
         return {Const.Unit.minute, Const.Unit.hour, Const.Unit.day}
 
 # ################################################################################################################################
@@ -45,10 +49,9 @@ class ObjectInfo:
     """
     __slots__ = 'type_', 'id', 'name'
 
-    def __init__(self):
-        self.type_ = None # type: str
-        self.id    = None # type: int
-        self.name  = None # type: str
+    type_:'str'
+    id:'int'
+    name:'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,16 +59,15 @@ class ObjectInfo:
 class DefinitionItem:
     __slots__ = 'config_line', 'from_', 'rate', 'unit', 'object_id', 'object_type', 'object_name'
 
-    def __init__(self):
-        self.config_line = None # type: int
-        self.from_ = None # type: object
-        self.rate = None  # type: int
-        self.unit = None  # type: str
-        self.object_id = None   # type: int
-        self.object_type = None # type: str
-        self.object_name = None # type: str
+    config_line:'int'
+    from_:'any_'
+    rate:'int'
+    unit:'str'
+    object_id:'int'
+    object_type:'str'
+    object_name:'str'
 
-    def __repr__(self):
+    def __repr__(self) -> 'str':
         return '<{} at {}; line:{}, from:{}, rate:{}, unit:{} ({} {} {})>'.format(
             self.__class__.__name__, hex(id(self)), self.config_line, self.from_, self.rate, self.unit,
             self.object_id, self.object_name, self.object_type)
