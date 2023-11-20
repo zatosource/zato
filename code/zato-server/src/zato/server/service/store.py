@@ -44,6 +44,7 @@ except ImportError:
 
 # Zato
 from zato.common.api import CHANNEL, DONT_DEPLOY_ATTR_NAME, RATE_LIMIT, SourceCodeInfo, TRACE1
+from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.json_schema import get_service_config, ValidationConfig as JSONSchemaValidationConfig, \
      Validator as JSONSchemaValidator
@@ -57,7 +58,7 @@ from zato.common.util.platform_ import is_non_windows
 from zato.common.util.python_ import get_module_name_by_path
 from zato.server.config import ConfigDict
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, \
-    PubSubHook, SchedulerFacade, Service, WSXFacade
+    PubSubHook, SchedulerFacade, Service, WSXAdapter, WSXFacade
 from zato.server.service.internal import AdminService
 
 # Zato - Cython
@@ -316,6 +317,18 @@ class ServiceStore:
         if self.is_testing:
             self._testing_worker_store = cast_('WorkerStore', _TestingWorkerStore())
             self._testing_worker_store.worker_config = cast_('ConfigStore', _TestingWorkerConfig())
+
+# ################################################################################################################################
+
+    def is_service_wsx_adapter(self, service_name:'str') -> 'bool':
+        try:
+            impl_name = self.name_to_impl_name[service_name]
+            service_info = self.services[impl_name]
+            service_class = service_info['service_class']
+            return issubclass(service_class, WSXAdapter)
+        except Exception as e:
+            logger.warn('Exception in ServiceStore.is_service_wsx_adapter -> %s', e.args)
+            return False
 
 # ################################################################################################################################
 
@@ -743,8 +756,26 @@ class ServiceStore:
     def new_instance(self, impl_name:'str', *args:'any_', **kwargs:'any_') -> 'tuple_[Service, bool]':
         """ Returns a new instance of a service of the given impl name.
         """
+
+        # Extract information about this instance ..
         _info = self.services[impl_name]
-        return _info['service_class'](*args, **kwargs), _info['is_active']
+
+        # .. extract details ..
+        service_class = _info['service_class']
+        is_active = _info['is_active']
+
+        # .. do create a new instance ..
+        service:'Service' = service_class(*args, **kwargs)
+
+        # .. populate its basic attributes ..
+        service.server = self.server
+        service.config = self.server.user_config
+        service.user_config = self.server.user_config
+        service.time = self.server.time_util
+        service.security = SecurityFacade(service.server)
+
+        # .. and return everything to our caller.
+        return service, is_active
 
 # ################################################################################################################################
 
@@ -1424,8 +1455,8 @@ class ServiceStore:
             imported = self.import_services_from_module_object(module_object, is_internal)
             return imported
         except Exception as e:
-            logger.warning('Could not import module `%s` (internal:%d) -> `%s` -> `%s`',
-                mod_name, is_internal, e.args, format_exc())
+            logger.info('Could not import module `%s` (internal:%d) -> `%s` -> `%s`',
+                mod_name, is_internal, e.args, e)
             return []
 
 # ################################################################################################################################

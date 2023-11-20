@@ -174,7 +174,7 @@
                 <form novalidate action="{% url "security-apikey-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:12%">Name</td>
                             <td id="change-password-name"></td>
                         </tr>
                         <tr>
@@ -182,7 +182,7 @@
                             <td>{{ change_password_form.password1 }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Confirm API key</td>
+                            <td style="vertical-align:middle">Confirm<br/>API key</td>
                             <td>{{ change_password_form.password2 }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />

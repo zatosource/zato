@@ -13,26 +13,23 @@ _ = monkey.patch_all()
 # stdlib
 import os
 import random
-import socket
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http.client import OK
 from json import dumps as json_dumps
 from logging import getLogger
-from threading import Thread
 from traceback import format_exc
-from types import GeneratorType
 
 # gevent
 from gevent import sleep, spawn
 
 # ws4py
-from ws4py.client.geventclient import WebSocketClient
-from ws4py.messaging import Message as ws4py_Message, PingControlMessage
+from zato.server.ext.ws4py.client.geventclient import WebSocketClient
 
 # Zato
 from zato.common.api import WEB_SOCKET
 from zato.common.marshal_.api import MarshalAPI, Model
+from zato.common.typing_ import cast_
 from zato.common.util.json_ import JSONParser
 
 try:
@@ -46,8 +43,9 @@ except ImportError:
 # ################################################################################################################################
 
 if 0:
-    from ws4py.messaging import TextMessage
     from zato.common.typing_ import any_, anydict, callable_, callnone, strnone
+    from zato.server.base.parallel import ParallelServer
+    from zato.server.ext.ws4py.messaging import TextMessage
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,7 +86,7 @@ wsx_socket_timeout = _ping_interval + (_ping_interval * 0.1)
 # ################################################################################################################################
 
 class Default:
-    ResponseWaitTime = os.environ.get('Zato_WSX_Response_Wait_Time') or 5 # How many seconds to wait for responses
+    ResponseWaitTime = cast_('int', os.environ.get('Zato_WSX_Response_Wait_Time')) or 5 # How many seconds to wait for responses
     MaxConnectAttempts = 1234567890
     MaxWaitTime = 999_999_999
 
@@ -103,14 +101,22 @@ class Config:
     client_name: 'str'
     on_request_callback: 'callable_'
 
-    username: 'strnone' = None
-    secret: 'strnone' = None
+    username:'strnone' = None
+    secret:'strnone' = None
     on_closed_callback: 'callnone' = None
-    wait_time: 'int' = Default.ResponseWaitTime
-    max_connect_attempts: 'int' = Default.MaxConnectAttempts
+    wait_time:'int' = Default.ResponseWaitTime
+    max_connect_attempts:'int' = Default.MaxConnectAttempts
+    socket_read_timeout:'int' = WEB_SOCKET.DEFAULT.Socket_Read_Timeout
+    socket_write_timeout:'int' = WEB_SOCKET.DEFAULT.Socket_Write_Timeout
 
     # This is a method that will tell the client whether its parent connection definition is still active.
     check_is_active_func: 'callable_'
+
+    # This is a callback that the WSX client invokes to notify the server that the WSX connection stopped running.
+    on_outconn_stopped_running_func: 'callable_'
+
+    # This is a callback that the WSX client invokes to notify the server that the WSX connection connected to a remote end.
+    on_outconn_connected_func: 'callable_'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -243,6 +249,9 @@ class MessageFromServer:
     data: 'any_'
     msg_impl: 'any_'
 
+    def __getitem__(self, key:'str') -> 'None':
+        raise NotImplementedError()
+
     @staticmethod
     def from_json(msg:'anydict') -> 'MessageFromServer':
         raise NotImplementedError('Must be implemented in subclasses')
@@ -295,46 +304,12 @@ class RequestFromServer(MessageFromServer):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class WSXHeartbeat(Thread):
-    def __init__(self, websocket:'any_', frequency:'float'=2.0) -> 'None':
-        Thread.__init__(self)
-        self.websocket = websocket
-        self.frequency = frequency
-
-    def __enter__(self) -> 'WSXHeartbeat':
-        if self.frequency:
-            self.start()
-        return self
-
-    def __exit__(self, exc_type:'any_', exc_value:'any_', exc_tb:'any_') -> 'None':
-        self.stop()
-
-    def stop(self) -> 'None':
-        self.running = False
-
-    def run(self) -> 'None':
-        self.running = True
-        while self.running:
-            sleep(self.frequency)
-            if self.websocket.terminated:
-                break
-
-            try:
-                self.websocket.send(PingControlMessage(data='beep'))
-            except socket.error:
-                logger.info('Heartbeat failed')
-                self.websocket.server_terminated = True
-                self.websocket.close_connection()
-                break
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class _WebSocketClientImpl(WebSocketClient):
     """ A low-level subclass of ws4py's WebSocket client functionality.
     """
     def __init__(
         self,
+        server:'ParallelServer',
         config:'Config',
         on_connected_callback:'callable_',
         on_message_callback:'callable_',
@@ -350,27 +325,14 @@ class _WebSocketClientImpl(WebSocketClient):
         self.on_closed_callback = on_closed_callback
 
         # .. call the parent ..
-        super(_WebSocketClientImpl, self).__init__(url=self.config.address)
-
-        # .. adjust parent's configuration ..
-        self.heartbeat_freq = 5.0
+        super(_WebSocketClientImpl, self).__init__(
+            server,
+            url=self.config.address,
+            socket_read_timeout=self.config.socket_read_timeout,
+            socket_write_timeout=self.config.socket_write_timeout,
+        )
 
 # ################################################################################################################################
-
-    def close_connection(self):
-        """ Overridden from ws4py.websocket.WebSocket.
-        """
-        if self.sock:
-            try:
-                self.sock.shutdown(socket.SHUT_RDWR)
-            except Exception:
-                pass
-            try:
-                self.sock.close()
-            except Exception:
-                pass
-            finally:
-                self.sock = None
 
     def opened(self) -> 'None':
         _ = spawn(self.on_connected_callback)
@@ -392,68 +354,6 @@ class _WebSocketClientImpl(WebSocketClient):
         self.on_closed_callback(code, reason)
 
 # ################################################################################################################################
-
-    def send(self, payload:'any_', binary:'bool'=False) -> 'None':
-        """ Overloaded from the parent class.
-        """
-        if not self.stream:
-            logger.info('Could not send message without self.stream -> %s -> %s (%s -> %s) ',
-                self.config.client_name,
-                self.config.address,
-                self.config.username,
-                self.config.client_id,
-            )
-            return
-
-        message_sender = self.stream.binary_message if binary else self.stream.text_message # type: any_
-
-        if isinstance(payload, str) or isinstance(payload, bytearray):
-            m = message_sender(payload).single(mask=self.stream.always_mask)
-            self._write(m)
-
-        elif isinstance(payload, ws4py_Message):
-            data = payload.single(mask=self.stream.always_mask)
-            self._write(data)
-
-        elif type(payload) == GeneratorType:
-            bytes = next(payload)
-            first = True
-            for chunk in payload:
-                self._write(message_sender(bytes).fragment(first=first, mask=self.stream.always_mask))
-                bytes = chunk
-                first = False
-
-            self._write(message_sender(bytes).fragment(last=True, mask=self.stream.always_mask))
-
-        else:
-            raise ValueError('Unsupported type `%s` passed to send()' % type(payload))
-
-# ################################################################################################################################
-
-    def _write(self, data:'bytes') -> 'None':
-        """ Overloaded from the parent class.
-        """
-        if self.terminated or self.sock is None:
-            logger.info('Could not send message on a terminated socket; `%s` -> %s (%s)',
-                self.config.client_name, self.config.address, self.config.client_id)
-        else:
-            self.sock.settimeout(60)
-            self.sock.sendall(data)
-
-# ################################################################################################################################
-
-    def run(self):
-        self.sock.setblocking(True) # type: ignore
-        with WSXHeartbeat(self, frequency=self.heartbeat_freq):
-            try:
-                self.opened()
-                while not self.terminated:
-                    if not self.once():
-                        break
-            finally:
-                self.terminate()
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class Client:
@@ -462,9 +362,10 @@ class Client:
     max_connect_attempts: 'int'
     conn: '_WebSocketClientImpl'
 
-    def __init__(self, config:'Config') -> 'None':
+    def __init__(self, server:'ParallelServer', config:'Config') -> 'None':
+        self.server = server
         self.config = config
-        self.conn = self.create_conn(self.config)
+        self.conn = self.create_conn(self.server, self.config)
         self.keep_running = True
         self.is_authenticated = False
         self.is_connected = False
@@ -490,8 +391,9 @@ class Client:
         self.logger.info('Starting WSX client: %s -> name:`%s`; id:`%s`; u:`%s`',
             self.config.address, self.config.client_name, self.config.client_id, self.config.username)
 
-    def create_conn(self, config:'Config') -> '_WebSocketClientImpl':
+    def create_conn(self, server:'ParallelServer', config:'Config') -> '_WebSocketClientImpl':
         conn = _WebSocketClientImpl(
+            server,
             config,
             self.on_connected,
             self.on_message,
@@ -585,7 +487,13 @@ class Client:
         _msg = JSONParser().parse(msg.data) # type: anydict
         self.logger.info('Received message `%s`', _msg)
 
-        in_reply_to = _msg['meta'].get('in_reply_to')
+        meta = _msg.get('meta')
+
+        if not meta:
+            logger.warn('Element \'meta \'missing in message -> %r', msg.data)
+            return
+
+        in_reply_to = meta.get('in_reply_to')
 
         # Reply from Zato to one of our requests
         if in_reply_to:
@@ -645,8 +553,17 @@ class Client:
 
             # .. if it is not, we can break out of the loop.
             if not is_active:
+
+                # Log what we are doing ..
                 self.logger.info('Skipped building an inactive WSX connection -> %s', self.config.client_name)
+
+                # .. indicate that we are stopping ..
                 self.keep_running = False
+
+                # .. invoke a callback to notify any interested party in the fact that we are not running anymore ..
+                self.config.on_outconn_stopped_running_func()
+
+                # .. and break out of the loop.
                 break
 
             # Check if we have already run out of attempts.
@@ -670,7 +587,7 @@ class Client:
                 if not self.conn.sock:
 
                     # .. and we need to recreate it .
-                    self.conn = self.create_conn(self.config)
+                    self.conn = self.create_conn(self.server, self.config)
 
                 # If we are here, it means that we likely have a TCP socket to use ..
                 try:
@@ -683,7 +600,7 @@ class Client:
                     self.conn.close_connection()
                     raise
 
-            except Exception as e:
+            except Exception:
                 if use_warn:
                     log_func = self.logger.warning
                 else:
@@ -696,7 +613,7 @@ class Client:
                 log_func('Exception caught in iter %s/%s `%s` while connecting to WSX `%s (%s)`',
                     num_connect_attempts,
                     self.max_connect_attempts,
-                    e,
+                    format_exc(),
                     self.config.address,
                     self.conn.sock,
                 )
@@ -713,6 +630,9 @@ class Client:
             else:
                 needs_connect = False
                 self.is_connected = True
+
+                # .. invoke a callback to notify any interested party in the fact that we are not running anymore ..
+                self.config.on_outconn_connected_func()
 
 # ################################################################################################################################
 
