@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,8 +10,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from json import dumps
 
 # Zato
-from zato.common.api import WEB_SOCKET
+from zato.common.api import GENERIC, WEB_SOCKET
 from zato.common.test import CommandLineTestCase
+from zato.common.typing_ import cast_
+from zato.distlock import LockManager
+from zato.server.connection.pool_wrapper import ConnectionPoolWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,6 +33,10 @@ ExtraProperties = WEB_SOCKET.ExtraProperties
 # ################################################################################################################################
 
 class _ParallelServer:
+
+    def __init__(self) -> 'None':
+        self.zato_lock_manager = LockManager('zato-pass-through', 'zato', cast_('any_', None))
+        self.wsx_connection_pool_wrapper = ConnectionPoolWrapper(cast_('any_', self), GENERIC.CONNECTION.TYPE.OUTCONN_WSX)
 
     def is_active_outconn_wsx(self, _ignored_conn_id:'str') -> 'bool':
         return True
@@ -67,7 +74,7 @@ class WSXOutconnBaseCase(CommandLineTestCase):
         config['subscription_list'] = ''
         config['has_auto_reconnect'] = False
 
-        config['auth_url'] = config['address'] = wsx_channel_address
+        config['auth_url'] = config['address'] = config['address_masked'] = wsx_channel_address
 
         return config
 
