@@ -50,6 +50,14 @@ CACHE_TYPE = {
     CACHE.TYPE.MEMCACHED: 'Memcached',
 }
 
+_rest_security_type_supported = {
+    SEC_DEF_TYPE.APIKEY,
+    SEC_DEF_TYPE.BASIC_AUTH,
+    SEC_DEF_TYPE.NTLM,
+    SEC_DEF_TYPE.OAUTH,
+    SEC_DEF_TYPE.TLS_KEY_CERT,
+}
+
 _max_len_messages = AuditLog.Default.max_len_messages
 _max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message
 
@@ -173,8 +181,7 @@ def index(req):
     if req.zato.cluster_id:
         for def_item in req.zato.client.invoke('zato.security.get-list', {'cluster_id': req.zato.cluster.id}):
             if connection == 'outgoing':
-                if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type not in (
-                    SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT, SEC_DEF_TYPE.APIKEY, SEC_DEF_TYPE.OAUTH):
+                if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type not in _rest_security_type_supported:
                     continue
 
             _security.append(def_item)

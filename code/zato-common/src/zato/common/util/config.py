@@ -8,24 +8,40 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from logging import getLogger
+from traceback import format_exc
+from urllib.parse import parse_qsl, urlparse, urlunparse
 
 # Bunch
 from bunch import Bunch
 
-# Python 2/3 compatibility
-from builtins import bytes
-from zato.common.py23_.past.builtins import basestring
+# parse
+from parse import PARSE_RE as parse_re
 
 # Zato
+from zato.common.api import Secret_Shadow
 from zato.common.const import SECRETS
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    from zato.server.base.parallel import ParallelServer
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def resolve_value(key, value, decrypt_func=None, _default=object(), _secrets=SECRETS):
     """ Resolves final value of a given variable by looking it up in environment if applicable.
     """
     # Skip non-resolvable items
-    if not isinstance(value, basestring):
+    if not isinstance(value, str):
         return value
 
     if not value:
@@ -68,4 +84,91 @@ def resolve_env_variables(data):
 
     return out
 
+# ################################################################################################################################
+
+def _replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
+
+    # Local variables
+    query_string_new = []
+
+    # Parse the data ..
+    data = urlparse(data)
+
+    # .. extract the query string ..
+    query_string = data.query
+    query_string = parse_qsl(query_string)
+
+    # .. convert the data to a list to make it possible to unparse it later on ..
+    data = list(data)
+
+    # .. replace all the required elements ..
+    for key, value in query_string:
+
+        # .. so we know if we matched something in the inner loops ..
+        should_continue = True
+
+        # .. check exact keys ..
+        for name in server.sio_config.secret_config.exact:
+            if key == name:
+                value = Secret_Shadow
+                should_continue = False
+                break
+
+        # .. check prefixes ..
+        if should_continue:
+            for name in server.sio_config.secret_config.prefixes:
+                if key.startswith(name):
+                    value = Secret_Shadow
+                    should_continue = should_continue
+                    break
+
+        # .. check suffixes ..
+        if should_continue:
+            for name in server.sio_config.secret_config.suffixes:
+                if key.endswith(name):
+                    value = Secret_Shadow
+                    break
+
+        # .. if we are here, either it means that the value was replaced ..
+        # .. or we are going to use as it was because it needed no replacing ..
+        query_string_new.append(f'{key}={value}')
+
+    # .. replace the query string ..
+    query_string_new = '&'.join(query_string_new)
+
+    # .. now, set the query string back ..
+    data[-2] = query_string_new
+
+    # .. build a full address once more ..
+    data = urlunparse(data)
+
+    # .. and return it to our caller.
+    return data
+
+# ################################################################################################################################
+
+def replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
+    try:
+        return _replace_query_string_items(server, data)
+    except Exception:
+        logger.info('Items could not be masked -> %s', format_exc())
+
+# ################################################################################################################################
+
+
+def extract_param_placeholders(data:'str') -> 'any_':
+
+    # Parse out groups for path parameters ..
+    groups = parse_re.split(data)
+
+    # .. go through each group ..
+    for group in groups:
+
+        # .. if it is a parameter placeholder ..
+        if group and group[0] == '{':
+
+            # .. yield it to our caller.
+            yield group
+
+# ################################################################################################################################
 # ################################################################################################################################

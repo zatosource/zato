@@ -38,7 +38,7 @@ from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
      HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, \
-     URL_TYPE, WEB_SOCKET, Wrapper_Name_Prefix_List, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+     URL_TYPE, WEB_SOCKET, Wrapper_Name_Prefix_List, ZATO_DEFAULT, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -89,7 +89,7 @@ from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
 from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
-from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
+from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
 from zato.server.pubsub import PubSub
 from zato.server.pubsub.delivery.tool import PubSubTool
 from zato.server.rbac_ import RBAC
@@ -475,6 +475,18 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
+    def _get_tls_verify_from_config(self, config:'any_') -> 'bool':
+
+        tls_config = self.worker_config.tls_ca_cert[config.sec_tls_ca_cert_name]
+        tls_config = tls_config.config
+        tls_config = tls_config.value
+        tls_from_payload = get_tls_from_payload(tls_config)
+        tls_verify = get_tls_ca_cert_full_path(self.server.tls_dir, tls_from_payload)
+
+        return tls_verify
+
+# ################################################################################################################################
+
     def _http_soap_wrapper_from_config(self, config:'Bunch', has_sec_config:'bool'=True) -> 'BaseHTTPSOAPWrapper':
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration dictionary.
         """
@@ -522,7 +534,7 @@ class WorkerStore(_WorkerStoreBase):
 
         # Update the security configuration if it is a separate one ..
         if _sec_config:
-            _sec_config_id = _sec_config.get('id') or _sec_config.get('security_id')
+            _sec_config_id = _sec_config.get('security_id') or _sec_config.get('id')
             sec_config['security_id'] = _sec_config_id
             sec_config['sec_type'] = _sec_config['sec_type']
             sec_config['username'] = _sec_config.get('username')
@@ -578,14 +590,12 @@ class WorkerStore(_WorkerStoreBase):
                 tls_verify = False
 
             else:
-                tls_verify = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(
-                    self.worker_config.tls_ca_cert[config.sec_tls_ca_cert_name].config.value))
+                tls_verify = self._get_tls_verify_from_config(config)
 
         # < 3.2
         else:
-            if config.get('sec_tls_ca_cert_id') and config.sec_tls_ca_cert_id != ZATO_NONE:
-                tls_verify = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(
-                    self.worker_config.tls_ca_cert[config.sec_tls_ca_cert_name].config.value))
+            if not config.get('sec_tls_ca_cert_id') and config.sec_tls_ca_cert_id in {ZATO_DEFAULT, ZATO_NONE}:
+                tls_verify = self._get_tls_verify_from_config(config)
             else:
                 tls_verify = False
 
@@ -1016,10 +1026,11 @@ class WorkerStore(_WorkerStoreBase):
         """ A common method for updating auth-related configuration.
         """
         with self.update_lock:
+
             handler = getattr(self.request_dispatcher.url_data, 'on_broker_msg_' + action_name)
             handler(msg)
 
-            for transport in('plain_http',):
+            for transport in ['plain_http', 'soap']:
                 config_dict = getattr(self.worker_config, 'out_' + transport)
 
                 for conn_name in config_dict.copy_keys():

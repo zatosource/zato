@@ -36,7 +36,7 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     }
 
     var topic_link = String.format(
-        '<a href="/zato/pubsub/topic/?cluster={0}&highlight={1}">{2}</a>', data.cluster_id, data.id, data.topic_name);
+        '<a href="/zato/pubsub/topic/?cluster={0}&query={1}">{1}</a>', data.cluster_id, data.topic_name);
 
     var total_link = $.fn.zato.pubsub.endpoint_queue.get_current_depth_link(data, data.cluster_id);
 
@@ -125,6 +125,8 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     row += String.format("<td class='ignore'>{0}</td>", data.out_soap_http_soap_id);
     row += String.format("<td class='ignore'>{0}</td>", data.delivery_err_should_block);
     row += String.format("<td class='ignore'>{0}</td>", data.is_staging_enabled);
+    row += String.format("<td class='ignore'>{0}</td>", data.current_depth_gd);
+    row += String.format("<td class='ignore'>{0}</td>", data.current_depth_non_gd);
 
     if(include_tr) {
         row += '</tr>';

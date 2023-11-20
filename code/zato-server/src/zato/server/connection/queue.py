@@ -20,6 +20,7 @@ from gevent.queue import Empty, Queue
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC
 from zato.common.typing_ import cast_
+from zato.common.util.config import replace_query_string_items
 from zato.common.util.python_ import get_python_id
 
 # ################################################################################################################################
@@ -139,6 +140,11 @@ class ConnectionQueue:
         self.max_attempts = max_attempts
         self.lock = RLock()
 
+        if isinstance(self.address, str): # type: ignore
+            self.address_masked = replace_query_string_items(self.server, self.address)
+        else:
+            self.address_masked = self.address
+
         # We are ready now
         self.logger = getLogger(self.__class__.__name__)
 
@@ -162,7 +168,7 @@ class ConnectionQueue:
                 log_func = self.logger.info
 
             if self.connection_exists():
-                log_func(msg, self.conn_name, self.address, self.conn_type)
+                log_func(msg, self.conn_name, self.address_masked, self.conn_type)
 
             return is_accepted
 
@@ -226,7 +232,7 @@ class ConnectionQueue:
                         num_attempts,
                         self.max_attempts,
                         self.conn_type,
-                        self.address,
+                        self.address_masked,
                         self.conn_name
                     )
 
@@ -238,13 +244,13 @@ class ConnectionQueue:
 
                 self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
                     self.queue.qsize(), self.queue_max_size,
-                    self.conn_type, self.address, self.conn_name, now - start, self.queue_build_cap)
+                    self.conn_type, self.address_masked, self.conn_name, now - start, self.queue_build_cap)
 
                 if now >= build_until:
 
                     # Log the fact that the queue is not full yet
                     self.logger.info('Built %s/%s %s clients to `%s` within %s seconds, sleeping until %s (UTC)',
-                        self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.queue_build_cap,
+                        self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address_masked, self.queue_build_cap,
                         datetime.utcnow() + timedelta(seconds=self.queue_build_cap))
 
                     # Sleep for a predetermined time
@@ -261,9 +267,9 @@ class ConnectionQueue:
 
             if self.keep_connecting and self.connection_exists():
                 self.logger.info('Obtained %d %s client%sto `%s` for `%s`', self.queue.maxsize, self.conn_type, suffix,
-                    self.address, self.conn_name)
+                    self.address_masked, self.conn_name)
             else:
-                self.logger.info('Skipped building a queue to `%s` for `%s`', self.address, self.conn_name)
+                self.logger.info('Skipped building a queue to `%s` for `%s`', self.address_masked, self.conn_name)
                 self.queue_building_stopped = True
 
             # Ok, got all the connections
@@ -290,7 +296,7 @@ class ConnectionQueue:
         """
         with self.lock:
             if self.queue.full():
-                logger.info('Queue fully prepared -> c:%d (%s %s)', count, self.address, self.conn_name)
+                logger.info('Queue fully prepared -> c:%d (%s %s)', count, self.address_masked, self.conn_name)
                 return
             self._spawn_add_client_func_no_lock(count)
 
@@ -299,6 +305,11 @@ class ConnectionQueue:
     def decr_in_progress_count(self) -> 'None':
         with self.lock:
             self.in_progress_count -= 1
+
+# ################################################################################################################################
+
+    def is_in_progress(self) -> 'bool':
+        return self.in_progress_count > 0
 
 # ################################################################################################################################
 
@@ -376,12 +387,32 @@ class Wrapper:
 
 # ################################################################################################################################
 
+    def _get_item_name(self, item:'any_') -> 'str':
+
+        if hasattr(item, 'get_name'):
+            item_name = item.get_name()
+            return item_name
+        else:
+            if config := getattr(item, 'config', None):
+                if item_name := config.get('name'):
+                    return item_name
+
+        # If we are here, it means that have no way extract the name
+        # so we simply return a string representation of this item.
+        return str(item)
+
+# ################################################################################################################################
+
     def delete_in_progress_connections(self, reason:'strnone'=None) -> 'None':
 
         # These connections are trying to connect (e.g. WSXClient objects)
         if self.conn_in_progress_list:
             for item in self.conn_in_progress_list:
-                item.delete(reason)
+                try:
+                    item.delete(reason)
+                except Exception as e:
+                    item_name = self._get_item_name(item)
+                    logger.info('Exception while deleting queue item `%s` -> `%s` -> %s', item_name, e, format_exc())
 
         self.conn_in_progress_list.clear()
 

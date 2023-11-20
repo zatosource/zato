@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,6 +21,7 @@ from lxml.objectify import ObjectifiedElement
 from zato.common.api import simple_types
 from zato.common.marshal_.api import Model
 from zato.common.json_internal import loads
+from zato.common.typing_ import cast_
 from zato.common.util.api import make_repr
 from zato.common.util.http_ import get_form_data as util_get_form_data
 
@@ -47,7 +48,7 @@ if 0:
     # Zato
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import PoolStore
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, callable_, stranydict, strnone
     from zato.hl7.mllp.server import ConnCtx as HL7ConnCtx
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.email import EMailAPI
@@ -76,23 +77,28 @@ if 0:
     Logger = Logger
     PoolStore = PoolStore
     SearchAPI = SearchAPI
+    Service = Service
     SMSAPI = SMSAPI
     VaultConnAPI = VaultConnAPI
     WMQFacade = WMQFacade
     ZMQFacade = ZMQFacade
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 NOT_GIVEN = 'ZATO_NOT_GIVEN'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class HTTPRequestData:
@@ -176,39 +182,52 @@ class HL7RequestData:
 class Request:
     """ Wraps a service request and adds some useful meta-data.
     """
-    raw_request: 'any_'
+    text: 'any_'
 
-    __slots__ = ('service', 'logger', 'payload', 'raw_request', 'input', 'cid', 'data_format', 'transport',
+    __slots__ = ('service', 'logger', 'payload', 'text', 'input', 'cid', 'data_format', 'transport',
         'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_wsgi_environ', 'channel_params',
         'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq', 'hl7', 'enforce_string_encoding')
 
-    def __init__(self, service, simple_io_config=None, data_format=None, transport=None):
-        # type: (Service, object, str, str)
+    def __init__(
+        self,
+        service, # type: Service
+        simple_io_config=None, # type: any_
+        data_format=None, # type: strnone
+        transport=None    # type: strnone
+    ) -> 'None':
         self.service = service
-        self.logger = service.logger # type: Logger
+        self.logger = cast_('Logger', service.logger)
         self.payload = ''
-        self.raw_request = ''
+        self.text = ''
         self.input = None # type: any_
-        self.cid = None # type: str
-        self.data_format = data_format # type: str
-        self.transport = transport # type: str
+        self.cid = cast_('str', None)
+        self.data_format = cast_('str', data_format)
+        self.transport = cast_('str', transport)
         self.http = HTTPRequestData()
-        self._wsgi_environ = None # type: dict
-        self.channel_params = {}
+        self._wsgi_environ = cast_('stranydict', None)
+        self.channel_params = cast_('stranydict', {})
         self.merge_channel_params = True
-        self.amqp = None # type: AMQPRequestData
-        self.wmq = self.ibm_mq = None # type: IBMMQRequestData
-        self.hl7 = None # type: HL7RequestData
+        self.amqp = cast_('AMQPRequestData', None)
+        self.wmq = self.ibm_mq = cast_('IBMMQRequestData', None)
+        self.hl7 = cast_('HL7RequestData', None)
         self.encrypt_func = None
         self.encrypt_secrets = True
-        self.bytes_to_str_encoding = None # type: str
+        self.bytes_to_str_encoding = cast_('str', None)
 
 # ################################################################################################################################
 
-    def init(self, is_sio, cid, sio, data_format, transport, wsgi_environ, encrypt_func):
+    def init(
+        self,
+        is_sio,       # type: bool
+        cid,          # type: str
+        sio,          # type: CySimpleIO
+        data_format,  # type: str
+        transport,    # type: str
+        wsgi_environ, # type: stranydict
+        encrypt_func  # type: callable_
+    ) -> 'None':
         """ Initializes the object with an invocation-specific data.
         """
-        # type: (bool, str, CySimpleIO, str, str, dict, object)
         self.input = ServiceInput()
         self.encrypt_func = encrypt_func
 
@@ -229,6 +248,18 @@ class Request:
         else:
             if self.merge_channel_params:
                 self.input.update(self.channel_params)
+
+# ################################################################################################################################
+
+    @property
+    def raw_request(self) -> 'any_':
+        return self.text
+
+# ################################################################################################################################
+
+    @raw_request.setter
+    def raw_request(self, value:'any_') -> 'any_':
+        self.text = value
 
 # ################################################################################################################################
 
@@ -276,31 +307,35 @@ class Outgoing:
             wsx=None, vault=None, sms=None, sap=None, sftp=None, ldap=None, mongodb=None, def_kafka=None,
             redis=None, hl7=None):
 
-        self.amqp = amqp # type: AMQPFacade
-        self.ftp  = ftp  # type: FTPStore
+        self.amqp = cast_('AMQPFacade', amqp)
+        self.ftp  = cast_('FTPStore', ftp)
 
         # Backward compat with 2.0, self.ibm_mq is now preferred
-        self.ibm_mq = self.wmq = self.jms_wmq = jms_wmq # type: WMQFacade
+        self.ibm_mq = cast_('WMQFacade', jms_wmq)
+        self.wmq = self.ibm_mq
+        self.jms_wmq = self.ibm_mq
 
-        self.odoo       = odoo # type: ConfigDict
-        self.plain_http = self.rest = plain_http # type: ConfigDict
+        self.odoo = cast_('ConfigDict', odoo)
 
-        self.soap  = soap  # type: ConfigDict
-        self.sql   = sql   # type: PoolStore
-        self.zmq   = zmq   # type: ZMQFacade
-        self.wsx   = wsx   # type: dict
-        self.vault = vault # type: VaultConnAPI
+        self.rest = cast_('ConfigDict', plain_http)
+        self.plain_http = self.rest
 
-        self.sms  = sms  # type: SMSAPI
-        self.sap  = sap  # type: ConfigDict
-        self.sftp = sftp # type: ConfigDict
-        self.ldap = ldap # type: dict
+        self.soap  = cast_('ConfigDict', soap)
+        self.sql   = cast_('PoolStore', sql)
+        self.zmq   = cast_('ZMQFacade', zmq)
+        self.wsx   = cast_('stranydict', wsx)
+        self.vault = cast_('VaultConnAPI', vault)
 
-        self.mongodb = mongodb # type: dict
-        self.def_kafka = None  # type: dict
+        self.sms  = cast_('SMSAPI', sms)
+        self.sap  = cast_('ConfigDict', sap)
+        self.sftp = cast_('ConfigDict', sftp)
+        self.ldap = cast_('stranydict', ldap)
 
-        self.redis = redis # type: KVDBAPI
-        self.hl7   = hl7   # type: HL7API
+        self.mongodb = cast_('stranydict', mongodb)
+        self.def_kafka = cast_('stranydict', None)
+
+        self.redis = cast_('KVDBAPI', redis)
+        self.hl7   = cast_('HL7API', hl7)
 
 # ################################################################################################################################
 # ################################################################################################################################

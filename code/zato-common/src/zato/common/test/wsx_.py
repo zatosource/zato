@@ -18,7 +18,8 @@ from zato.common.test import CommandLineTestCase
 
 if 0:
     from zato.common.typing_ import any_, anydict, stranydict, strintdict, strlist, strlistnone
-    from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper, _ZatoWSXClientImpl
+    from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
+    from zato.server.generic.api.outconn.wsx.client_zato import _ZatoWSXClientImpl
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,8 +30,15 @@ ExtraProperties = WEB_SOCKET.ExtraProperties
 # ################################################################################################################################
 
 class _ParallelServer:
+
     def is_active_outconn_wsx(self, _ignored_conn_id:'str') -> 'bool':
         return True
+
+    def on_wsx_outconn_stopped_running(self, conn_id:'str') -> 'None':
+        pass
+
+    def on_wsx_outconn_connected(self, conn_id:'str') -> 'None':
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################

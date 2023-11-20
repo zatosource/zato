@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,6 +21,7 @@ from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
 from zato.common.typing_ import cast_
 from zato.common.util.api import parse_simple_type
+from zato.common.util.config import replace_query_string_items
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import AsIs, Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
@@ -34,7 +35,7 @@ from six import add_metaclass
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist, strdict
     from zato.server.service import Service
 
     anylist = anylist
@@ -88,6 +89,29 @@ extra_simple_type = {
 skip_simple_type = {
     'api_version',
 }
+
+# ################################################################################################################################
+
+# Values of these generic attributes should be converted to ints
+int_attrs = ['pool_size', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout']
+
+# ################################################################################################################################
+
+# Values of these generic attributes may contain query string elements that have to be masked out
+query_string_attrs = ['address']
+
+# ################################################################################################################################
+
+def ensure_ints(data:'strdict') -> 'None':
+
+    for name in int_attrs:
+        value = data.get(name)
+        try:
+            value = int(value) if value else value
+        except ValueError:
+            pass # Not an integer
+        else:
+            data[name] = value
 
 # ################################################################################################################################
 
@@ -159,14 +183,8 @@ class _CreateEdit(_BaseService):
             if data['is_active'] is None:
                 data['is_active'] = False
 
-        # If we have a pool size on input, we want to ensure that it is an integer
-        pool_size = data.get('pool_size')
-        try:
-            pool_size = int(pool_size) if pool_size else pool_size
-        except ValueError:
-            pass # Not an integer
-        else:
-            data['pool_size'] = pool_size
+        # Make sure that specific keys are integers
+        ensure_ints(data)
 
         # Break down security definitions into components
         security_id = data.get('security_id') or ''
@@ -178,7 +196,7 @@ class _CreateEdit(_BaseService):
 
             security_id = int(security_id)
 
-            # .. look the security name by its ID ..
+            # .. look up the security name by its ID ..
             if sec_def_type == SEC_DEF_TYPE.BASIC_AUTH:
                 func = self.server.worker_store.basic_auth_get_by_id
             elif sec_def_type == SEC_DEF_TYPE.OAUTH:
@@ -326,10 +344,18 @@ class GetList(AdminService):
         # New items that will be potentially added to conn_dict
         to_add = {}
 
-        # Process all the items found in the database ..
-        for key, value in conn_dict.items():
+        # Process all the items found in the database.
+        # Note that we have a list because we may potentially change the dictionary during iteration.
+        for key, value in list(conn_dict.items()):
 
             if value:
+
+                # Add keys with a value that is masked
+                if key in query_string_attrs:
+                    value_masked = str(value)
+                    value_masked = replace_query_string_items(self.server, value)
+                    key_masked = f'{key}_masked'
+                    conn_dict[key_masked] = value_masked
 
                 if key.endswith('_service_id'):
                     prefix = key.split('_service_id')[0]
