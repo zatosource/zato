@@ -93,7 +93,7 @@ column_limit=130
 # - VALIGN-RIGHT: Vertically align continuation lines to multiple of
 #   INDENT_WIDTH columns. Slightly right (one tab or a few spaces) if
 #   cannot vertically align continuation lines with indent characters.
-continuation_align_style=FIXED
+continuation_align_style=SPACE
 
 # Indent width used for line continuations.
 continuation_indent_width=4
