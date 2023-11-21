@@ -315,6 +315,11 @@ class AuxServer:
         # .. first, check credentials ..
         if self.has_credentials:
             self._check_credentials(request)
+        else:
+            print()
+            print(222, request)
+            print()
+            ZZZ
 
         # .. look up the action we need to invoke ..
         action = request.get('action') # type: ignore
@@ -349,6 +354,8 @@ class AuxServer:
 
             # Get the contents of our request ..
             request = env['wsgi.input'].read()
+
+            logger.info('REQ-01 %r', env)
 
             # .. if there was any, invoke the business function ..
             if request:
