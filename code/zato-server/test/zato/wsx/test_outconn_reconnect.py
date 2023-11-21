@@ -26,6 +26,12 @@ from zato.common.util.open_ import open_w
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 basicConfig(level=WARN, format='%(asctime)s - %(message)s')
 logger = getLogger(__name__)
 
@@ -82,7 +88,7 @@ class WSXOutconnReconnectTestCase(BaseEnmasseTestCase):
         conn_name = f'test.{conn_type}.WSXOutconnReconnectTestCase.{test_suffix}'
 
         # Invoke the delete command ..
-        out = command(
+        out:'any_' = command(
             command_name,
             '--path', TestConfig.server_location,
             '--name', conn_name
@@ -109,7 +115,7 @@ class WSXOutconnReconnectTestCase(BaseEnmasseTestCase):
         data = template.format(test_suffix=test_suffix)
 
         f = open_w(config_path)
-        f.write(data)
+        _ = f.write(data)
         f.close()
 
         return config_path
@@ -172,6 +178,6 @@ class WSXOutconnReconnectTestCase(BaseEnmasseTestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    _ = main()
 
 # ################################################################################################################################
