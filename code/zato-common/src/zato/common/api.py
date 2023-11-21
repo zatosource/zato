@@ -1139,6 +1139,7 @@ class IPC:
 
     class Default:
         Timeout = 90
+        TCP_Port_Start = 17050
 
     class Credentials:
         Username = 'zato.server.ipc'
