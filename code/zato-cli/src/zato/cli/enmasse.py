@@ -69,6 +69,10 @@ ERROR_TYPE_MISSING = Code('E04', 'type missing')
 outconn_wsx  = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX
 outconn_ldap = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP
 
+_prefix_generic = 'zato_generic_connection'
+_attr_outconn_wsx = f'{_prefix_generic}_{outconn_wsx}'
+_attr_outconn_ldap = f'{_prefix_generic}_{outconn_ldap}'
+
 # We need to have our own version because type "bearer_token" exists in enmasse only.
 _All_Sec_Def_Types = All_Sec_Def_Types + ['bearer_token']
 
@@ -101,6 +105,15 @@ class ModuleCtx:
 
     # Maps enmasse defintions types to their attributes that will be skipped during an export if they are empty
     Enmasse_Attr_List_Skip_If_Empty = cast_('strlistdict', None)
+
+    # Maps enmasse defintions types to their attributes that will be skipped during an export if they are True
+    Enmasse_Attr_List_Skip_If_True = cast_('strlistdict', None)
+
+    # Maps enmasse defintions types to their attributes that will be skipped during an export if they are False
+    Enmasse_Attr_List_Skip_If_False = cast_('strlistdict', None)
+
+    # Maps enmasse defintions types to their attributes that will be skipped during an export if their value matches configuration
+    Enmasse_Attr_List_Skip_If_Value_Matches = cast_('strdictdict', None)
 
     # Maps enmasse defintions types to their attributes that will be turned into multiline strings
     Enmasse_Attr_List_As_Multiline = cast_('strlistdict', None)
@@ -155,7 +168,7 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'client_secret_field',
         'grant_type',
         'scopes',
-        'extra_fields'
+        'extra_fields',
     ],
 
     # REST connections - Channels
@@ -182,15 +195,6 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'transport',
     ],
 
-    # LDAP outgoing connections
-    f'zato_generic_connection_{outconn_ldap}': [
-        'type_',
-        'name',
-        'username',
-        'auth_type',
-        'server_list',
-    ],
-
     # Scheduled tasks
     'scheduler':  [
         'name',
@@ -206,6 +210,28 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'repeats',
         'extra',
     ],
+
+    # LDAP outgoing connections
+    _attr_outconn_ldap: [
+        'type_',
+        'name',
+        'username',
+        'auth_type',
+        'server_list',
+    ],
+
+    # Outgoing WSX connections
+    _attr_outconn_wsx: [
+        'name',
+        'address',
+        'data_format',
+        'has_auto_reconnect',
+        'on_connect_service_name',
+        'on_message_service_name',
+        'on_close_service_name',
+        'subscription_list',
+    ],
+
 }
 
 # ################################################################################################################################
@@ -222,7 +248,7 @@ ModuleCtx.Enmasse_Attr_List_Exclude = {
     # REST connections - outgoing connections
     'outconn_plain_http': [
         'connection',
-        'transport'
+        'transport',
     ],
 
 }
@@ -251,6 +277,31 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Empty = {
 
     # Security definitions
     'scheduler':  ['weeks', 'days', 'hours', 'minutes', 'seconds', 'cron_definition', 'repeats', 'extra'],
+
+    # Outgoing WSX connections
+    _attr_outconn_wsx:  ['data_format', 'subscription_list'],
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_Skip_If_True = {
+
+    # Outgoing WSX connections
+    _attr_outconn_wsx:  ['has_auto_reconnect'],
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_Skip_If_False = {
+    # No such attributes yet
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches = {
+
+    # E-Mail IMAP
+    'email_imap':  {'get_criteria':'UNSEEN', 'timeout':10},
 }
 
 # ################################################################################################################################
@@ -329,6 +380,18 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
         'repeats',
         'extra',
     ],
+
+    # Outgoing WSX connections
+    f'zato_generic_connection_{outconn_wsx}': [
+        'name',
+        'address',
+        'data_format',
+        'has_auto_reconnect',
+        'on_connect_service_name',
+        'on_message_service_name',
+        'on_close_service_name',
+        'subscription_list',
+    ]
 }
 
 # ################################################################################################################################
@@ -2584,6 +2647,15 @@ class Enmasse(ManageCommand):
         # .. as above, for attributes that should be skipped if they are empty ..
         attr_list_skip_if_empty = ModuleCtx.Enmasse_Attr_List_Skip_If_Empty.get(attr_key) or []
 
+        # .. as above, for attributes that should be skipped if their value is True ..
+        attr_list_skip_if_true = ModuleCtx.Enmasse_Attr_List_Skip_If_True.get(attr_key) or []
+
+        # .. as above, for attributes that should be skipped if their value is False ..
+        attr_list_skip_if_false = ModuleCtx.Enmasse_Attr_List_Skip_If_False.get(attr_key) or []
+
+        # .. as above, for attributes that should be skipped if they have a specific value ..
+        attr_list_skip_if_value_matches = ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches.get(attr_key) or {}
+
         # .. to make sure the dictionary does not change during iteration ..
         item_copy = deepcopy(item)
 
@@ -2631,6 +2703,26 @@ class Enmasse(ManageCommand):
                 if value is not NotGiven:
                     if value:
                         item[attr] = value
+
+        # .. optionally, skip True attributes ..
+        for attr in attr_list_skip_if_true:
+            if value := item.pop(attr, NotGiven):
+                if value is not True:
+                    if value:
+                        item[attr] = value
+
+        # .. optionally, skip False attributes ..
+        for attr in attr_list_skip_if_false:
+            if value := item.pop(attr, NotGiven):
+                if value is not False:
+                    if value:
+                        item[attr] = value
+
+        # .. optionally, skip attributes that match configuration ..
+        for pattern_key, pattern_value in attr_list_skip_if_value_matches.items():
+            if value := item.pop(pattern_key, NotGiven): # type: ignore
+                if value != pattern_value:
+                    item[pattern_key] = value
 
         # .. ID's are never returned ..
         _ = item.pop('id', None)

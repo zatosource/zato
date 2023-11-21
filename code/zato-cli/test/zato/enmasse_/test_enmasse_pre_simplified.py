@@ -11,7 +11,6 @@ import os
 from datetime import datetime
 from logging import basicConfig, getLogger, WARN
 from tempfile import gettempdir
-from traceback import format_exc
 from unittest import main
 
 # Bunch
@@ -31,12 +30,6 @@ from zato.common.util.open_ import open_w
 
 basicConfig(level=WARN, format='%(asctime)s - %(message)s')
 logger = getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -196,55 +189,6 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
 # ################################################################################################################################
 
-    def _warn_on_error(self, stdout:'any_', stderr:'any_') -> 'None':
-        logger.warning(format_exc())
-        logger.warning('stdout -> %s', stdout)
-        logger.warning('stderr -> %s', stderr)
-
-# ################################################################################################################################
-
-    def _assert_command_line_result(self, out:'RunningCommand') -> 'None':
-
-        self.assertEqual(out.exit_code, 0)
-
-        stdout = out.stdout.decode('utf8')
-        stderr = out.stderr.decode('utf8')
-
-        if 'error' in stdout:
-            self._warn_on_error(stdout, stderr)
-            self.fail('Found an error in stdout while invoking enmasse')
-
-        if 'error' in stderr:
-            self._warn_on_error(stdout, stderr)
-            self.fail('Found an error in stderr while invoking enmasse')
-
-# ################################################################################################################################
-
-    def _invoke_command(self, config_path:'str', require_ok:'bool'=True, missing_wait_time:'int'=1) -> 'RunningCommand':
-
-        # Zato
-        from zato.common.util.cli import get_zato_sh_command
-
-        # A shortcut
-        command = get_zato_sh_command()
-
-        # Invoke enmasse ..
-        out:'RunningCommand' = command('enmasse', TestConfig.server_location,
-            '--import',
-            '--input', config_path,
-            '--replace-odb-objects',
-            '--verbose',
-            '--missing-wait-time', missing_wait_time
-        )
-
-        # .. if told to, make sure there was no error in stdout/stderr ..
-        if require_ok:
-            self._assert_command_line_result(out)
-
-        return out
-
-# ################################################################################################################################
-
     def _cleanup(self, test_suffix:'str') -> 'None':
 
         # Zato
@@ -289,10 +233,10 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
         try:
             # Invoke enmasse to create objects ..
-            _ = self._invoke_command(config_path)
+            _ = self.invoke_enmasse(config_path)
 
             # .. now invoke it again to edit them in place.
-            _ = self._invoke_command(config_path)
+            _ = self.invoke_enmasse(config_path)
 
         except ErrorReturnCode as e:
             stdout:'bytes' = e.stdout # type: bytes
@@ -340,7 +284,7 @@ class EnmasseTestCase(BaseEnmasseTestCase):
         f.close()
 
         # Invoke enmasse to create objects (which will block for missing_wait_time seconds) ..
-        _ = self._invoke_command(config_path, require_ok=False)
+        _ = self.invoke_enmasse(config_path, require_ok=False)
 
         # .. now, make sure that we actually had to wait that many seconds ..
         now = datetime.utcnow()
