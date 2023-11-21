@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -34,12 +34,12 @@ if 0:
 # ################################################################################################################################
 
 config_template = """[bind]
-host=0.0.0.0
-port=31530
+host={scheduler_bind_host}
+port={scheduler_bind_port}
 
 [cluster]
 id=1
-stats_enabled=True
+stats_enabled=False
 
 [server]
 server_path={server_path}
@@ -68,14 +68,14 @@ key1={secret_key1}
 
 [crypto]
 well_known_data={well_known_data}
-use_tls=False
-tls_protocol=TLSv1
-tls_ciphers=EECDH+AES:EDH+AES:-SHA1:EECDH+RC4:EDH+RC4:RC4-SHA:EECDH+AES256:EDH+AES256:AES256-SHA:!aNULL:!eNULL:!EXP:!LOW:!MD5
-tls_client_certs=optional
-priv_key_location=zato-scheduler-priv-key.pem
-pub_key_location=zato-scheduler-pub-key.pem
-cert_location=zato-scheduler-cert.pem
-ca_certs_location=zato-scheduler-ca-certs.pem
+use_tls={tls_use}
+tls_version={tls_version}
+tls_ciphers={tls_ciphers}
+tls_client_certs={tls_client_certs}
+priv_key_location={tls_priv_key_location}
+pub_key_location={pub_key_location}
+cert_location={cert_location}
+ca_certs_location={ca_certs_location}
 
 [api_users]
 user1={user1_password}
@@ -104,11 +104,24 @@ class Create(ZatoCommand):
     opts.append({'name':'--server-host', 'help':'Remote host of a Zato server'})
     opts.append({'name':'--server-port', 'help':'Remote TCP port of a Zato server'})
 
+    opts.append({'name':'--bind-host', 'help':'Local address to start the scheduler on'})
+    opts.append({'name':'--bind-port', 'help':'Local TCP port to start the scheduler on'})
+
+    opts.append({'name':'--tls-enabled', 'help':'Whether the scheduler should use TLS'})
+    opts.append({'name':'--tls-version', 'help':'What TLS version to use'})
+    opts.append({'name':'--tls-ciphers', 'help':'What TLS ciphers to use'})
+
+    opts.append({'name':'--tls-client-certs', 'help':'Whether TLS client certificates are required or optional'})
+    opts.append({'name':'--tls-private-key', 'help':'Scheduler\'s private key location'})
+    opts.append({'name':'--tls-public-key', 'help':'Scheduler\'s public key location'})
+    opts.append({'name':'--tls-cert', 'help':'Scheduler\'s certificate location'})
+    opts.append({'name':'--tls-ca-certs', 'help':'Scheduler\'s CA certificates location'})
+
     opts.append({'name':'--initial-sleep-time', 'help':'How many seconds to sleep initially when the scheduler starts'})
 
 # ################################################################################################################################
 
-    def __init__(self, args):
+    def __init__(self, args:'any_') -> 'None':
         self.target_dir = os.path.abspath(args.path)
         super(Create, self).__init__(args)
 
@@ -119,7 +132,7 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _get_cluster_id(self, args):
+    def _get_cluster_id(self, args:'any_') -> 'None':
         engine = self._get_engine(args)
         session = self._get_session(engine)
 
@@ -228,6 +241,19 @@ class Create(ZatoCommand):
 
         initial_sleep_time = self.get_arg('initial_sleep_time', SCHEDULER.InitialSleepTime)
 
+        scheduler_bind_host = self.get_arg('bind_host', SCHEDULER.DefaultBindHost)
+        scheduler_bind_port = self.get_arg('bind_port', SCHEDULER.DefaultBindPort)
+
+        tls_use = self.get_arg('tls_enabled', SCHEDULER.TLS_Enabled)
+        tls_client_certs = self.get_arg('', SCHEDULER.)
+        priv_key_location = self.get_arg('', SCHEDULER.)
+        pub_key_location = self.get_arg('', SCHEDULER.)
+        cert_location = self.get_arg('', SCHEDULER.)
+        ca_certs_location = self.get_arg('', SCHEDULER.)
+
+        tls_version = self.get_arg('', SCHEDULER.)
+        tls_ciphers = self.get_arg('', SCHEDULER.)
+
         if isinstance(secret_key, (bytes, bytearray)):
             secret_key = secret_key.decode('utf8')
 
@@ -246,16 +272,26 @@ class Create(ZatoCommand):
             'server_username': server_username,
             'server_password': server_password,
             'initial_sleep_time': initial_sleep_time,
+            'scheduler_bind_host': scheduler_bind_host,
+            'scheduler_bind_port': scheduler_bind_port,
+            'tls_use': tls_use,
+            'tls_version': tls_version,
+            'tls_ciphers': tls_ciphers,
+            'tls_client_certs': tls_client_certs,
+            'priv_key_location': priv_key_location,
+            'pub_key_location': pub_key_location,
+            'cert_location': cert_location,
+            'ca_certs_location': ca_certs_location,
         }
 
         config.update(odb_config)
 
         logging_conf_contents = get_logging_conf_contents()
 
-        open_w(os.path.join(repo_dir, 'logging.conf')).write(logging_conf_contents)
-        open_w(conf_path).write(config_template.format(**config))
-        open_w(startup_jobs_conf_path).write(startup_jobs)
-        open_w(sql_conf_path).write(sql_conf_contents)
+        _ = open_w(os.path.join(repo_dir, 'logging.conf')).write(logging_conf_contents)
+        _ = open_w(conf_path).write(config_template.format(**config))
+        _ = open_w(startup_jobs_conf_path).write(startup_jobs)
+        _ = open_w(sql_conf_path).write(sql_conf_contents)
 
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.SCHEDULER.code)
