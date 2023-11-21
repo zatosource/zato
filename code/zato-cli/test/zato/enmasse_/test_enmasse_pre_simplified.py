@@ -233,10 +233,10 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
         try:
             # Invoke enmasse to create objects ..
-            _ = self._invoke_command(config_path)
+            _ = self.invoke_enmasse(config_path)
 
             # .. now invoke it again to edit them in place.
-            _ = self._invoke_command(config_path)
+            _ = self.invoke_enmasse(config_path)
 
         except ErrorReturnCode as e:
             stdout:'bytes' = e.stdout # type: bytes
@@ -284,7 +284,7 @@ class EnmasseTestCase(BaseEnmasseTestCase):
         f.close()
 
         # Invoke enmasse to create objects (which will block for missing_wait_time seconds) ..
-        _ = self._invoke_command(config_path, require_ok=False)
+        _ = self.invoke_enmasse(config_path, require_ok=False)
 
         # .. now, make sure that we actually had to wait that many seconds ..
         now = datetime.utcnow()
