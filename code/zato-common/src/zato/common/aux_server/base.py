@@ -30,7 +30,7 @@ from zato.common.util.json_ import json_loads
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, byteslist, callable_, callnone, intnone, strnone, type_
+    from zato.common.typing_ import any_, anydict, byteslist, callable_, callnone, intnone, strdict, strnone, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -172,8 +172,11 @@ class AuxServer:
     parent_server_pid:  'int'
 
     def __init__(self, config:'AuxServerConfig') -> 'None':
-        self.config = config
 
+        # Type hints
+        tls_kwargs:'strdict'
+
+        self.config = config
         self.parent_server_name = config.parent_server_name
         self.parent_server_pid = config.parent_server_pid
 
@@ -291,8 +294,8 @@ class AuxServer:
 
     def _check_credentials(self, request:'Bunch') -> 'None':
 
-        username = request.get('username') or ''
-        password = request.get('password') or ''
+        username:'str' = request.get('username') or ''
+        password:'str' = request.get('password') or ''
 
         if not is_string_equal(self.config.username, username):
             logger.info('Invalid IPC username')
@@ -350,6 +353,8 @@ class AuxServer:
             # Get the contents of our request ..
             request = env['wsgi.input'].read()
 
+            logger.info('REQ-01 %r', env)
+
             # .. if there was any, invoke the business function ..
             if request:
                 response = self.handle_api_request(request)
@@ -369,7 +374,7 @@ class AuxServer:
         finally:
 
             # Build our response ..
-            return_data = {
+            return_data:'any_' = {
                 'cid': cid,
                 'status': status_text,
                 'response': response
