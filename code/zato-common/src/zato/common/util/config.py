@@ -57,7 +57,7 @@ def get_env_config_value(
     key = key.replace('.', '__').replace('-','__')
 
     # This is the name of an environment variable that we will be looking up ..
-    env_name = f'Zato_{component}_{file_name}_{stanza}_{key}'
+    env_name = f'Zato_Config_{component}_{file_name}_{stanza}_{key}'
 
     # .. use what we find in the environment ..
     if not (value := os.environ.get(env_name, '')):
