@@ -1179,7 +1179,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         bind_host = self.fs_server_config.main.get('ipc_host') or '0.0.0.0'
 
         # .. this is set to a different value for each process ..
-        bind_port = (self.fs_server_config.main.get('ipc_port_start') or 17050) + self.process_idx
+        bind_port = (self.fs_server_config.main.get('ipc_port_start') or IPC.Default.TCP_Port_Start) + self.process_idx
 
         # .. now, the IPC server can be started ..
         _ = spawn_greenlet(self.ipc_api.start_server,
