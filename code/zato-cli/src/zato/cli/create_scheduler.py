@@ -6,6 +6,7 @@ Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+
 # stdlib
 import os
 from copy import deepcopy
@@ -14,13 +15,14 @@ from copy import deepcopy
 from bunch import Bunch
 
 # Zato
-from zato.cli import common_odb_opts, is_arg_given, sql_conf_contents, ZatoCommand
+from zato.cli import common_odb_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import SCHEDULER
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.crypto.const import well_known_data
 from zato.common.odb.model import Cluster
 from zato.common.scheduler import startup_jobs
 from zato.common.util.open_ import open_w
+from zato.common.util.platform_ import is_linux
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,9 +75,9 @@ tls_version={tls_version}
 tls_ciphers={tls_ciphers}
 tls_client_certs={tls_client_certs}
 priv_key_location={tls_priv_key_location}
-pub_key_location={pub_key_location}
-cert_location={cert_location}
-ca_certs_location={ca_certs_location}
+pub_key_location={tls_pub_key_location}
+cert_location={tls_cert_location}
+ca_certs_location={tls_ca_certs_location}
 
 [api_users]
 user1={user1_password}
@@ -109,11 +111,12 @@ class Create(ZatoCommand):
 
     opts.append({'name':'--tls-enabled', 'help':'Whether the scheduler should use TLS'})
     opts.append({'name':'--tls-version', 'help':'What TLS version to use'})
-    opts.append({'name':'--tls-ciphers', 'help':'What TLS ciphers to use'})
 
+    opts.append({'name':'--tls-ciphers', 'help':'What TLS ciphers to use'})
     opts.append({'name':'--tls-client-certs', 'help':'Whether TLS client certificates are required or optional'})
-    opts.append({'name':'--tls-private-key', 'help':'Scheduler\'s private key location'})
-    opts.append({'name':'--tls-public-key', 'help':'Scheduler\'s public key location'})
+
+    opts.append({'name':'--tls-priv-key-location', 'help':'Scheduler\'s private key location'})
+    opts.append({'name':'--tls-pub-key-location', 'help':'Scheduler\'s public key location'})
     opts.append({'name':'--tls-cert', 'help':'Scheduler\'s certificate location'})
     opts.append({'name':'--tls-ca-certs', 'help':'Scheduler\'s CA certificates location'})
 
@@ -132,19 +135,18 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _get_cluster_id(self, args:'any_') -> 'None':
+    def _get_cluster_id(self, args:'any_') -> 'any_':
         engine = self._get_engine(args)
-        session = self._get_session(engine)
+        session = self._get_session(engine) # type: ignore
 
-        cluster_id_list = session.query(Cluster.id).\
-            all()
+        cluster_id_list = session.query(Cluster.id).all() # type: ignore
 
         if not cluster_id_list:
             raise Exception('No cluster found in `{}`'.format(args))
         else:
 
             cluster_id_list.sort()
-            return cluster_id_list[0][0]
+            return cluster_id_list[0][0] # type: ignore
 
 # ################################################################################################################################
 
@@ -244,28 +246,31 @@ class Create(ZatoCommand):
         scheduler_bind_host = self.get_arg('bind_host', SCHEDULER.DefaultBindHost)
         scheduler_bind_port = self.get_arg('bind_port', SCHEDULER.DefaultBindPort)
 
-        tls_use = self.get_arg('tls_enabled', SCHEDULER.TLS_Enabled)
-        tls_client_certs = self.get_arg('', SCHEDULER.)
-        priv_key_location = self.get_arg('', SCHEDULER.)
-        pub_key_location = self.get_arg('', SCHEDULER.)
-        cert_location = self.get_arg('', SCHEDULER.)
-        ca_certs_location = self.get_arg('', SCHEDULER.)
+        if is_linux:
+            tls_version = SCHEDULER.TLS_Version_Default_Linux
+            tls_ciphers = SCHEDULER.TLS_Ciphers_13
+        else:
+            tls_version = SCHEDULER.TLS_Version_Default_Windows
+            tls_ciphers = SCHEDULER.TLS_Ciphers_12
 
-        tls_version = self.get_arg('', SCHEDULER.)
-        tls_ciphers = self.get_arg('', SCHEDULER.)
+        tls_use = self.get_arg('tls_enabled', SCHEDULER.TLS_Enabled)
+        tls_client_certs = self.get_arg('tls_client_certs', SCHEDULER.TLS_Client_Certs)
+        priv_key_location = self.get_arg('priv_key_location', SCHEDULER.TLS_Private_Key_Location)
+        pub_key_location = self.get_arg('pub_key_location', SCHEDULER.TLS_Public_Key_Location)
+        cert_location = self.get_arg('cert_location', SCHEDULER.TLS_Cert_Location)
+        ca_certs_location = self.get_arg('ca_certs_location', SCHEDULER.TLS_CA_Certs_Key_Location)
+
+        tls_version = self.get_arg('tls_version', tls_version)
+        tls_ciphers = self.get_arg('tls_ciphers', tls_ciphers)
 
         if isinstance(secret_key, (bytes, bytearray)):
             secret_key = secret_key.decode('utf8')
-
-        # We will use TLS only if we were given crypto material on input
-        use_tls = is_arg_given(args, 'priv_key_path')
 
         config = {
             'user1_password': user1_password,
             'cluster_id': cluster_id,
             'secret_key1': secret_key,
             'well_known_data': zato_well_known_data,
-            'use_tls': 'true' if use_tls else 'false',
             'server_path': server_path,
             'server_host': server_host,
             'server_port': server_port,
@@ -278,10 +283,10 @@ class Create(ZatoCommand):
             'tls_version': tls_version,
             'tls_ciphers': tls_ciphers,
             'tls_client_certs': tls_client_certs,
-            'priv_key_location': priv_key_location,
-            'pub_key_location': pub_key_location,
-            'cert_location': cert_location,
-            'ca_certs_location': ca_certs_location,
+            'tls_priv_key_location': priv_key_location,
+            'tls_pub_key_location': pub_key_location,
+            'tls_cert_location': cert_location,
+            'tls_ca_certs_location': ca_certs_location,
         }
 
         config.update(odb_config)
