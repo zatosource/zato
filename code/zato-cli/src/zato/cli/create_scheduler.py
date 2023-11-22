@@ -81,6 +81,12 @@ ca_certs_location={tls_ca_certs_location}
 
 [api_users]
 user1={user1_password}
+
+[action_pause]
+
+[action_resume]
+
+[action_set_server]
 """
 
 # ################################################################################################################################
