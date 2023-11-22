@@ -19,7 +19,7 @@ from bunch import Bunch
 from parse import PARSE_RE as parse_re
 
 # Zato
-from zato.common.api import Secret_Shadow
+from zato.common.api import EnvVariable, Secret_Shadow
 from zato.common.const import SECRETS
 
 # ################################################################################################################################
@@ -48,13 +48,13 @@ def get_env_config_value(
     file_name:'str',
     stanza:'str',
     key:'str',
-    use_default:'bool'=False
+    use_default:'bool'=True
 ) -> 'str':
 
     # Make sure the individual components are what an environment variable can use
-    file_name = file_name.replace('.', '__')
-    stanza = stanza.replace('.', '__')
-    key = key.replace('.', '__')
+    file_name = file_name.replace('.', '__').replace('-','__')
+    stanza = stanza.replace('.', '__').replace('-','__')
+    key = key.replace('.', '__').replace('-','__')
 
     # This is the name of an environment variable that we will be looking up ..
     env_name = f'Zato_{component}_{file_name}_{stanza}_{key}'
@@ -64,7 +64,7 @@ def get_env_config_value(
 
         # .. or, optionally,  build a default value if there is no such key ..
         if use_default:
-            value = env_name + '_Missing'
+            value = env_name + EnvVariable.Key_Missing_Suffix
 
     # .. now, we can return the value to our caller.
     return value
