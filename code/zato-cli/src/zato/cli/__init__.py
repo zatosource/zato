@@ -310,7 +310,7 @@ class ZatoCommand:
 
 # ################################################################################################################################
 
-    def get_arg(self, name, default=''):
+    def get_arg(self, name, default='') -> 'any_':
         if hasattr(self.args, 'get'):
             return self.args.get(name) or default
         else:
