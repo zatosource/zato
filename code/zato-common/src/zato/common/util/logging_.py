@@ -23,6 +23,9 @@ loggers:
     'gunicorn.main':
         level: INFO
         handlers: [stdout, default]
+    'pytds':
+        level: WARN
+        handlers: [stdout, default]
     zato:
         level: INFO
         handlers: [stdout, default]
