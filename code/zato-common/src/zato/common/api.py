@@ -537,7 +537,7 @@ class SCHEDULER:
     DefaultBindHost = '0.0.0.0'
     DefaultBindPort = 31350
 
-    TLS_Enabled = True
+    TLS_Enabled = False
     TLS_Verify = True
     TLS_Client_Certs = 'optional'
 
@@ -557,7 +557,8 @@ class SCHEDULER:
     class Env:
         Host = 'Zato_Scheduler_Host'
         Port = 'Zato_Scheduler_Port'
-        Bind_Host = 'Zato_Scheduler_Bind_Host'
+
+        Bind_Host = 'Zato_Scheduler_scheduler_conf_bind_host'
         Bind_Port = 'Zato_Scheduler_Bind_Port'
         Use_TLS = 'Zato_Scheduler_Use_TLS'
         TLS_Verify = 'Zato_Scheduler_TLS_Verify'
