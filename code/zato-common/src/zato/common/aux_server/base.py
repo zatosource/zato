@@ -353,8 +353,6 @@ class AuxServer:
             # Get the contents of our request ..
             request = env['wsgi.input'].read()
 
-            logger.info('REQ-01 %r', env)
-
             # .. if there was any, invoke the business function ..
             if request:
                 response = self.handle_api_request(request)
