@@ -394,6 +394,7 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
     raise_on_error=False, log_exception=True, require_exists=True, conf_location=None):
     """ Returns the configuration object. Will load additional user-defined config files, if any are available.
     """
+
     # Default output to produce
     result = Bunch()
 
