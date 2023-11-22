@@ -43,6 +43,34 @@ mask_attrs = ['address']
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_env_config_value(
+    component:'str',
+    file_name:'str',
+    stanza:'str',
+    key:'str',
+    use_default:'bool'=False
+) -> 'str':
+
+    # Make sure the individual components are what an environment variable can use
+    file_name = file_name.replace('.', '__')
+    stanza = stanza.replace('.', '__')
+    key = key.replace('.', '__')
+
+    # This is the name of an environment variable that we will be looking up ..
+    env_name = f'Zato_{component}_{file_name}_{stanza}_{key}'
+
+    # .. use what we find in the environment ..
+    if not (value := os.environ.get(env_name, '')):
+
+        # .. or, optionally,  build a default value if there is no such key ..
+        if use_default:
+            value = env_name + '_Missing'
+
+    # .. now, we can return the value to our caller.
+    return value
+
+# ################################################################################################################################
+
 def resolve_value(key, value, decrypt_func=None, _default=object(), _secrets=SECRETS):
     """ Resolves final value of a given variable by looking it up in environment if applicable.
     """
