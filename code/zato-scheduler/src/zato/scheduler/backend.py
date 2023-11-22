@@ -484,7 +484,7 @@ class Scheduler:
 
         try:
 
-            logger.info('Scheduler will start to execute jobs in %d seconds', self.initial_sleep_time)
+            logger.info('Scheduler will start to execute jobs in %s seconds', self.initial_sleep_time)
 
             # Add default jobs to the ODB and start all of them, the default and user-defined ones
             self.init_jobs()
