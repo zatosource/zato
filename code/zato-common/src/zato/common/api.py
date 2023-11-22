@@ -535,7 +535,7 @@ class SCHEDULER:
 
     # This is what a scheduler will bind to
     DefaultBindHost = '0.0.0.0'
-    DefaultBindPort = 31350
+    DefaultBindPort = DefaultPort
 
     TLS_Enabled = False
     TLS_Verify = True
