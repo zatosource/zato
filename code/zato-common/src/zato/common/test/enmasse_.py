@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,7 +14,6 @@ from unittest import TestCase
 
 # Zato
 from zato.common.test.config import TestConfig
-from zato.common.util.cli import get_zato_sh_command
 
 # ################################################################################################################################
 # ################################################################################################################################
