@@ -526,10 +526,65 @@ class KVDB(Attrs):
 class SCHEDULER:
 
     InitialSleepTime = 0.1
-    DefaultHost = '127.0.0.1'
-    DefaultPort = 31530
     EmbeddedIndicator      = 'zato_embedded'
     EmbeddedIndicatorBytes = EmbeddedIndicator.encode('utf8')
+
+    # This is what a server will invoke
+    DefaultHost = '127.0.0.1'
+    DefaultPort = 31530
+
+    # This is what a scheduler will bind to
+    DefaultBindHost = '0.0.0.0'
+    DefaultBindPort = 31350
+
+    TLS_Enabled = False
+    TLS_Verify = True
+    TLS_Client_Certs = 'optional'
+
+    TLS_Private_Key_Location  = 'zato-scheduler-priv-key.pem'
+    TLS_Public_Key_Location   = 'zato-scheduler-pub-key.pem'
+    TLS_Cert_Location         = 'zato-scheduler-cert.pem'
+    TLS_CA_Certs_Key_Location = 'zato-scheduler-ca-certs.pem'
+
+    TLS_Version_Default_Linux   = 'TLSv1_3'
+    TLS_Version_Default_Windows = 'TLSv1_2'
+
+    TLS_Ciphers_13 = 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256'
+    TLS_Ciphers_12 = 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:' + \
+                     'ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:'  + \
+                     'DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305'
+
+    class Env:
+        Host = 'Zato_Scheduler_Host'
+        Port = 'Zato_Scheduler_Port'
+
+        Bind_Host = 'Zato_Scheduler_scheduler_conf_bind_host'
+        Bind_Port = 'Zato_Scheduler_Bind_Port'
+        Use_TLS = 'Zato_Scheduler_Use_TLS'
+        TLS_Verify = 'Zato_Scheduler_TLS_Verify'
+        TLS_Client_Certs = 'Zato_Scheduler_TLS_Client_Certs'
+
+        TLS_Private_Key_Location  = 'Zato_Scheduler_TLS_Private_Key_Location'
+        TLS_Public_Key_Location   = 'Zato_Scheduler_TLS_Public_Key_Location'
+        TLS_Cert_Location         = 'Zato_Scheduler_TLS_Cert_Location'
+        TLS_CA_Certs_Key_Location = 'Zato_Scheduler_TLS_CA_Certs_Key_Location'
+
+        TLS_Version = 'Zato_Scheduler_TLS_Version'
+        TLS_Ciphers = 'Zato_Scheduler_TLS_Ciphers'
+        Path_Action_Prefix = 'Zato_Scheduler_Path_Action_'
+
+        # These are used by servers to invoke the scheduler
+        Server_Username = 'Zato_Scheduler_Server_Username'
+        Server_Password = 'Zato_Scheduler_Server_Password'
+
+        # These are used by configuration agents to manage the scheduler
+        Config_Action_Username = 'Zato_Scheduler_Config_Action_Username'
+        Config_Action_Password = 'Zato_Scheduler_Config_Action_Password'
+
+    class ConfigAction:
+        Pause = 'pause'
+        Resume = 'resume'
+        SetServer = 'set_server'
 
     # These jobs were removed in 3.2 and should be ignored
     JobsToIgnore = {'zato.wsx.cleanup.pub-sub', 'zato.wsx.cleanup'}
@@ -1139,6 +1194,7 @@ class IPC:
 
     class Default:
         Timeout = 90
+        TCP_Port_Start = 17050
 
     class Credentials:
         Username = 'zato.server.ipc'
