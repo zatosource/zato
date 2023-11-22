@@ -52,6 +52,7 @@ from logging import getLogger
 from ast import literal_eval
 from codecs import BOM_UTF8, BOM_UTF16, BOM_UTF16_BE, BOM_UTF16_LE
 from collections import OrderedDict
+from pathlib import Path
 
 import six
 __version__ = '5.0.6'
@@ -1222,6 +1223,38 @@ class ConfigObj(Section):
                     indent_type=None, default_encoding=None, unrepr=False,
                     write_empty_values=False, _inspec=False)``
         """
+
+        # Zato
+        from zato.common.api import EnvVariable
+        from zato.common.util.config import get_env_config_value
+
+        # Local variables
+        if isinstance(infile, str):
+
+            infile = infile.lower()
+
+            if 'server' in infile:
+                zato_component = 'Server'
+            elif 'scheduler' in infile:
+                zato_component = 'Scheduler'
+            elif ('web-admin' in infile) or ('dashboard' in infile):
+                zato_component = 'Dashboard'
+            elif 'user-conf' in infile:
+                zato_component = 'User_Config'
+            else:
+                zato_component = 'Unknown'
+
+            self.zato_component = zato_component
+            self.zato_config_file_name = Path(infile).name
+
+        else:
+            self.zato_component = 'Not_Applicable_Zato_Component'
+            self.zato_config_file_name = 'Not_Applicable_Zato_Config_File_Name'
+
+        # Save it for later use
+        self.zato_env_variable_missing_suffix = EnvVariable.Key_Missing_Suffix
+        self.zato_get_env_config_value = get_env_config_value
+
         self._inspec = _inspec
         self.use_zato = use_zato
         self.zato_crypto_manager = zato_crypto_manager
@@ -1676,6 +1709,11 @@ class ConfigObj(Section):
                 # is a keyword value
                 # value will include any inline comment
                 (indent, key, value) = mat.groups()
+
+                _env_value = self.zato_get_env_config_value(self.zato_component, self.zato_config_file_name, sect_name, key)
+
+                if not _env_value.endswith(self.zato_env_variable_missing_suffix):
+                    value = _env_value
 
                 # Handle Zato-specific needs
                 if self.use_zato:
