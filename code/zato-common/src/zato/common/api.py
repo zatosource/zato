@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from collections import OrderedDict
+from dataclasses import dataclass
 from io import StringIO
 from numbers import Number
 from sys import maxsize
@@ -129,6 +130,22 @@ engine_display_name = {
     'postgresql+pg8000': 'PostgreSQL',
     'sqlite': 'SQLite',
 }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class EnvVariable:
+    Key_Prefix = 'Zato_Config'
+    Key_Missing_Suffix = '_Missing'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class EnvConfigCtx:
+    component:'str'
+    file_name:'str'
+    missing_suffix:'str' = EnvVariable.Key_Missing_Suffix
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1564,9 +1581,6 @@ class CONFIG_FILE:
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
 PLACEHOLDER = 'zato_placeholder'
-
-class EnvVariable:
-    Key_Missing_Suffix = '_Missing'
 
 # ################################################################################################################################
 # ################################################################################################################################
