@@ -51,8 +51,8 @@ server_host={server_host}
 server_port={server_port}
 server_username={server_username}
 server_password={server_password}
-server_use_tls={server_use_tls}
-server_tls_verify={server_tls_verify}
+server_use_tls=False
+server_tls_verify=True
 
 [misc]
 initial_sleep_time={initial_sleep_time}

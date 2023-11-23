@@ -662,7 +662,7 @@ def import_(module_name, backport=False):
 
     Then:
         >>> conn = http.client.HTTPConnection(...)
-        >>> response = urllib.request.urlopen('http://mywebsite.com')
+        >>> response = urllib.request.urlopen('https://mywebsite.com')
         >>> # etc.
 
     Use as follows:
