@@ -117,34 +117,33 @@ def enrich_config_from_environment(file_name:'str', config:'Bunch') -> 'Bunch':
                 key_name = env_name.replace(env_key_prefix, '')
                 extra[stanza][key_name] = env_value
 
-    # .. now, build a new ConfigObj from the extra data, ..
-    # .. which we need because we want for the ConfigObj's parse ..
+    # .. build a temporary string object that ConfigObj will parse in a moment below ..
+    extra_str = StringIO()
+
+    for stanza, key_values in extra.items():
+        _ = extra_str.write(f'[{stanza}]\n')
+        for key, value in key_values.items():
+            _ = extra_str.write(f'{key}={value}\n\n')
+
+    _ = extra_str.seek(0)
+
+    # .. the file has to based to a temporary location now, which is what ConfigObject expects ..
+
+    # .. build a new ConfigObj from the extra data, ..
+    # .. which we need because we want for the ConfigObj's parser ..
     # .. to parse string environment variables to Python objects ..
-    extra = """
-    [bind]
-    port2=111,222
-""".strip()
-
-
-    extra = StringIO(extra)
-    extra_config = ConfigObj(extra)
-
-    print()
-    print(111, extra_config)
-    print()
+    extra_config = ConfigObj(extra_str)
 
     # .. go through all the extra pieces of configuration ..
-    for stanza, extra_values in extra_config.items():
+    for stanza, extra_key_values in extra_config.items():
 
         # .. if we have anything new for that stanza ..
-        if extra_values:
+        if extra_key_values:
 
             # .. do assign it to the original config object ..
             orig_stanza = config[stanza]
-            print()
-            print(222, stanza, extra_values)
-            print()
-            zzz
+            for new_extra_key, new_extra_value in extra_key_values.items(): # type: ignore
+                orig_stanza[new_extra_key] = new_extra_value
 
     # .. now, we are ready to return the enriched the configuration to our caller.
     return config
