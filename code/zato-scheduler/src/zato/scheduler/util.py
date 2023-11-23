@@ -54,7 +54,7 @@ def set_up_zato_client(config:'anydict') -> 'AnyServiceInvoker':
         if server_config.get('server_path'):
             return _set_up_zato_client_by_server_path(server_config.server_path)
         else:
-            server_use_tls = server_config['server_use_tls']
+            server_use_tls = server_config.get('server_use_tls')
             server_host = server_config['server_host']
             server_port = server_config['server_port']
             server_username = server_config['server_username']
