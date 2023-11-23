@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -16,7 +16,7 @@ from logging import getLogger
 from zato.bunch import Bunch
 from zato.common.api import AuditLog, RATE_LIMIT
 from zato.common.audit_log import LogContainerConfig
-from zato.common.const import SECRETS
+from zato.common.const import SECRETS, ServiceConst
 from zato.common.util.api import asbool
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
@@ -395,7 +395,7 @@ class ConfigLoader:
         _has_rest_log_ignore = 'rest_log_ignore' in _logging_stanza
 
         if not _has_rest_log_ignore:
-            rest_log_ignore = ['/zato/admin/invoke']
+            rest_log_ignore = [ServiceConst.API_Admin_Invoke_Url_Path]
         else:
             rest_log_ignore = _logging_stanza['rest_log_ignore']
             rest_log_ignore = rest_log_ignore if isinstance(rest_log_ignore, list) else [rest_log_ignore]

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -29,6 +29,7 @@ from six import PY3
 
 # Zato
 from zato.common.api import BROKER, ZATO_NOT_GIVEN, ZATO_OK
+from zato.common.const import ServiceConst
 from zato.common.exception import ZatoException
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb.model import Server
@@ -462,7 +463,8 @@ class ZatoClient(AnyServiceInvoker):
 # ################################################################################################################################
 
 def get_client_from_credentials(server_url:'str', client_auth:'tuple') -> 'ZatoClient':
-    return ZatoClient('http://{}'.format(server_url), '/zato/admin/invoke', client_auth, max_response_repr=15000)
+    return ZatoClient('http://{}'.format(server_url), ServiceConst.API_Admin_Invoke_Url_Path,
+        client_auth, max_response_repr=15000)
 
 # ################################################################################################################################
 
@@ -512,7 +514,8 @@ def get_client_from_server_conf(
 
     client_auth = client_auth_func(config, repo_location, crypto_manager, False, url_path=url_path)
 
-    client = ZatoClient('http://{}'.format(server_url), '/zato/admin/invoke', client_auth, max_response_repr=15000)
+    client = ZatoClient('http://{}'.format(server_url), ServiceConst.API_Admin_Invoke_Url_Path,
+        client_auth, max_response_repr=15000)
     session = get_odb_session_from_server_config(config, None, False)
 
     client.cluster_id = session.query(Server).\
