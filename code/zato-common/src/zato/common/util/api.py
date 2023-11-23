@@ -199,6 +199,18 @@ TLS_KEY_TYPE = {
 
 # ################################################################################################################################
 
+def is_encrypted(data:'str | bytes') -> 'bool':
+
+    # Zato
+    from zato.common.const import SECRETS
+
+    if isinstance(data, bytes):
+        data = data.decode('utf8')
+
+    return data.startswith(SECRETS.Encrypted_Indicator)
+
+# ################################################################################################################################
+
 def is_method(class_, func=isfunction if PY3 else ismethod):
     return func(class_)
 
@@ -1552,7 +1564,7 @@ def get_server_client_auth(
 
             if security:
                 password = security.password.replace(SECRETS.PREFIX, '')
-                if password.startswith(SECRETS.EncryptedMarker):
+                if password.startswith(SECRETS.Encrypted_Indicator):
                     if cm:
                         password = cm.decrypt(password)
                 return (security.username, password)

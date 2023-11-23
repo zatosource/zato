@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -25,7 +25,7 @@ class SECRETS:
     PREFIX_BYTES = b'zato.secf.'
 
     # Encrypted data has this prefix
-    EncryptedMarker = 'gAAA'
+    Encrypted_Indicator = 'gAAA'
 
     # Zato secret (configuration)
     URL_PREFIX = 'zato+secret://'

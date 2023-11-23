@@ -60,7 +60,7 @@ from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
 from zato.common.simpleio_ import get_sio_server_config
 from zato.common.typing_ import cast_
-from zato.common.util.api import absjoin, asbool, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
+from zato.common.util.api import absjoin, asbool, get_config, get_kvdb_config_for_log, is_encrypted, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.platform_ import is_linux, is_windows
@@ -471,6 +471,10 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     if server.is_sso_enabled:
         server.sso_api = SSOAPI(server, sso_config, cast_('callable_', None), crypto_manager.encrypt, server.decrypt,
             crypto_manager.hash_secret, crypto_manager.verify_hash, new_user_id)
+
+    if scheduler_api_password := server.fs_server_config.scheduler.get('scheduler_api_password'):
+        if is_encrypted(scheduler_api_password):
+            server.fs_server_config.scheduler.scheduler_api_password = crypto_manager.decrypt(scheduler_api_password)
 
     server.return_tracebacks = asbool(server_config.misc.get('return_tracebacks', True))
     server.default_error_message = server_config.misc.get('default_error_message', 'An error has occurred')

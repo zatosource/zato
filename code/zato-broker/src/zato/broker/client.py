@@ -79,9 +79,18 @@ class BrokerClient:
 
         self.zato_client = zato_client
         self.scheduler_url = ''
+        self.scheduler_auth = None
 
         # We are a server so we will have configuration needed to set up the scheduler's details ..
         if scheduler_config:
+
+            if not (scheduler_api_username := scheduler_config.get('scheduler_api_username')):
+                scheduler_api_username = 'scheduler_api_username_missing'
+
+            if not (scheduler_api_password := scheduler_config.get('scheduler_api_password')):
+                scheduler_api_password = 'scheduler_api_password_missing'
+
+            self.scheduler_auth = (scheduler_api_username, scheduler_api_password)
 
             # Introduced after 3.2 was released, hence optional
             scheduler_use_tls = scheduler_config.get('scheduler_use_tls', True)
@@ -106,7 +115,7 @@ class BrokerClient:
 
     def _invoke_scheduler_from_server(self, msg:'anydict') -> 'any_':
         msg_bytes = dumps(msg)
-        response = requests_post(self.scheduler_url, msg_bytes, verify=False)
+        response = requests_post(self.scheduler_url, msg_bytes, auth=self.scheduler_auth, verify=False)
         return response
 
 # ################################################################################################################################

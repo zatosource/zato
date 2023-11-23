@@ -20,7 +20,7 @@ from bunch import Bunch
 from parse import PARSE_RE as parse_re
 
 # Zato
-from zato.common.api import EnvConfigCtx, EnvVariable, Secret_Shadow
+from zato.common.api import EnvConfigCtx, EnvVariable, SCHEDULER, Secret_Shadow
 from zato.common.const import SECRETS
 from zato.common.ext.configobj_ import ConfigObj
 
@@ -28,6 +28,7 @@ from zato.common.ext.configobj_ import ConfigObj
 # ################################################################################################################################
 
 if 0:
+    from zato.common.crypto.api import CryptoManager
     from zato.common.typing_ import any_, strdict
     from zato.server.base.parallel import ParallelServer
 
@@ -40,6 +41,38 @@ logger = getLogger(__name__)
 
 # Values of these generic attributes may contain query string elements that have to be masked out
 mask_attrs = ['address']
+
+# ################################################################################################################################
+
+def get_scheduler_api_client_for_server_auth_required(args:'any_') -> 'str':
+
+    if not (value := os.environ.get(SCHEDULER.Env.Server_Auth_Required)):
+        if not (value := getattr(args, 'scheduler_api_client_for_server_auth_required', None)):
+            value = SCHEDULER.Default_API_Client_For_Server_Auth_Required
+
+    return value
+
+# ################################################################################################################################
+
+def get_scheduler_api_client_for_server_username(args:'any_') -> 'str':
+
+    if not (value := os.environ.get(SCHEDULER.Env.Server_Username)):
+        if not (value := getattr(args, 'scheduler_api_client_for_server_username', None)):
+            value = SCHEDULER.Default_API_Client_For_Server_Username
+
+    return value
+
+# ################################################################################################################################
+
+def get_scheduler_api_client_for_server_password(args:'any_', cm:'CryptoManager') -> 'str':
+
+    if not (value := os.environ.get(SCHEDULER.Env.Server_Password)):
+        if not (value := getattr(args, 'scheduler_api_client_for_server_password', None)):
+            value = cm.generate_password()
+            value = cm.encrypt(value)
+            value = value.decode('utf8')
+
+    return value
 
 # ################################################################################################################################
 
