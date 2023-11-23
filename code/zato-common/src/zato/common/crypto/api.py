@@ -33,7 +33,7 @@ from zato.common.json_internal import loads
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strbytes
+    from zato.common.typing_ import any_, strbytes
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -209,12 +209,22 @@ class CryptoManager:
 
 # ################################################################################################################################
 
-    def encrypt(self, data):
+    def encrypt(self, data:'any_', *, needs_str:'bool'=False) -> 'bytes | str':
         """ Encrypts incoming data, which must be a string.
         """
+        # Make sure we encrypt bytes ..
         if not isinstance(data, bytes):
             data = data.encode('utf8')
-        return self.secret_key.encrypt(data)
+
+        # .. get the encrypted bytes ..
+        data = self.secret_key.encrypt(data)
+
+        # .. optionally, make sure that we return a string ..
+        if needs_str:
+            data = data.decode('utf8')
+
+        # .. now, we are ready to return our result.
+        return data
 
 # ################################################################################################################################
 

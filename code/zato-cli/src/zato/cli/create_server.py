@@ -10,11 +10,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from copy import deepcopy
 
 # Zato
-from zato.cli import common_odb_opts, sql_conf_contents, ZatoCommand
+from zato.cli import common_odb_opts, common_scheduler_api_client_for_server_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import CONTENT_TYPE, default_internal_modules, SCHEDULER, SSO as CommonSSO
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.simpleio_ import simple_io_conf_contents
 from zato.common.util import as_bool
+from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.open_ import open_r, open_w
 from zato.common.events.common import Default as EventsDefault
 
@@ -95,8 +96,8 @@ use_async_driver=True
 scheduler_host={{scheduler_host}}
 scheduler_port={{scheduler_port}}
 scheduler_use_tls=False
-scheduler_api_username={{scheduler_api_username}}
-scheduler_api_password={{scheduler_api_password}}
+scheduler_api_username={{scheduler_api_client_for_server_username}}
+scheduler_api_password={{scheduler_api_client_for_server_password}}
 
 [hot_deploy]
 pickup_dir=../../pickup/incoming/services
@@ -663,15 +664,7 @@ class Create(ZatoCommand):
     opts.append({'name':'--scheduler-host', 'help':"Host to invoke the cluster's scheduler on"})
     opts.append({'name':'--scheduler-port', 'help':"Port for invoking the cluster's scheduler"})
 
-    opts.append({
-        'name':'--scheduler-api-client-for-server-username',
-        'help':'Name of the API user that the server connects to the scheduler with'
-    })
-
-    opts.append({
-        'name':'--scheduler-api-client-for-server-password',
-        'help':'Password of the API user that the server connects to the scheduler with'
-    })
+    opts += deepcopy(common_scheduler_api_client_for_server_opts)
 
 # ################################################################################################################################
 
@@ -820,13 +813,9 @@ class Create(ZatoCommand):
             secret_key = args.secret_key or Fernet.generate_key()
             cm = ServerCryptoManager.from_secret_key(secret_key)
 
-            if not (scheduler_api_client_for_server_username := getattr(args, 'scheduler_api_client_for_server_username', None)):
-                scheduler_api_client_for_server_username = SCHEDULER.Default_API_Client_For_Server_Username
-
-            if not (scheduler_api_client_for_server_password := getattr(args, 'scheduler_api_client_for_server_password', None)):
-                scheduler_api_client_for_server_password = cm.generate_password()
-                scheduler_api_client_for_server_password = cm.encrypt(scheduler_api_client_for_server_password)
-                scheduler_api_client_for_server_password = scheduler_api_client_for_server_password.decode('utf8')
+            scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
+            scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
+            scheduler_api_client_for_server_password = cm.encrypt(scheduler_api_client_for_server_password, needs_str=True)
 
             # Substate the variables ..
             server_conf_data = server_conf_template.format(

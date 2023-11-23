@@ -127,7 +127,7 @@ class KVDB:
             # Heuristics - gAAA is a prefix of encrypted secrets so there is a chance
             # we need to decrypt it. If the decryption fails, this is fine, we need
             # assume in such a case that it was an actual password starting with this prefix.
-            if self.config.password.startswith(SECRETS.EncryptedMarker):
+            if self.config.password.startswith(SECRETS.Encrypted_Indicator):
                 try:
                     config['password'] = self.decrypt_func(self.config.password)
                 except InvalidToken:

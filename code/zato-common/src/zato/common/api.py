@@ -556,6 +556,7 @@ class SCHEDULER:
 
     # This is the username of an API client that servers
     # will use when they invoke their scheduler.
+    Default_API_Client_For_Server_Auth_Required = True
     Default_API_Client_For_Server_Username = 'server_api_client1'
 
     TLS_Enabled = False
@@ -595,12 +596,9 @@ class SCHEDULER:
         Path_Action_Prefix = 'Zato_Scheduler_Path_Action_'
 
         # These are used by servers to invoke the scheduler
-        Server_Username = 'Zato_Scheduler_Server_Username'
-        Server_Password = 'Zato_Scheduler_Server_Password'
-
-        # These are used by configuration agents to manage the scheduler
-        Config_Action_Username = 'Zato_Scheduler_Config_Action_Username'
-        Config_Action_Password = 'Zato_Scheduler_Config_Action_Password'
+        Server_Auth_Required = 'Zato_Scheduler_API_Client_For_Server_Auth_Required'
+        Server_Username = 'Zato_Scheduler_API_Client_For_Server_Username'
+        Server_Password = 'Zato_Scheduler_API_Client_For_Server_Password'
 
     class ConfigCommand:
         Pause = 'pause'
