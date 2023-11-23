@@ -83,6 +83,7 @@ class IPCAPI:
 
     def invoke_by_pid(
         self,
+        use_tls,      # type: bool
         service,      # type: str
         request,      # type: str
         cluster_name, # type: str
@@ -107,7 +108,7 @@ class IPCAPI:
         url_path = f'{cluster_name}:{server_name}:{target_pid}-tcp:{ipc_port}-service:{service}'
         url_path = fs_safe_name(url_path)
 
-        client = IPCClient(ipc_host, ipc_port, IPC.Credentials.Username, self.password)
+        client = IPCClient(use_tls, ipc_host, ipc_port, IPC.Credentials.Username, self.password)
         response = client.invoke(
             service,
             request,
