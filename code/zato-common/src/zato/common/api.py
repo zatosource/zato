@@ -554,6 +554,10 @@ class SCHEDULER:
     DefaultBindHost = '0.0.0.0'
     DefaultBindPort = DefaultPort
 
+    # This is the username of an API client that servers
+    # will use when they invoke their scheduler.
+    Default_API_Client_For_Server_Username = 'server_api_client1'
+
     TLS_Enabled = False
     TLS_Verify = True
     TLS_Client_Certs = 'optional'
@@ -598,7 +602,7 @@ class SCHEDULER:
         Config_Action_Username = 'Zato_Scheduler_Config_Action_Username'
         Config_Action_Password = 'Zato_Scheduler_Config_Action_Password'
 
-    class ConfigAction:
+    class ConfigCommand:
         Pause = 'pause'
         Resume = 'resume'
         SetServer = 'set_server'
