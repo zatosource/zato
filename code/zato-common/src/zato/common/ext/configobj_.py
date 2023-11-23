@@ -52,7 +52,6 @@ from logging import getLogger
 from ast import literal_eval
 from codecs import BOM_UTF8, BOM_UTF16, BOM_UTF16_BE, BOM_UTF16_LE
 from collections import OrderedDict
-from pathlib import Path
 
 import six
 __version__ = '5.0.6'
@@ -1225,34 +1224,16 @@ class ConfigObj(Section):
         """
 
         # Zato
-        from zato.common.api import EnvVariable
-        from zato.common.util.config import get_env_config_value
+        from zato.common.util.config import get_env_config_ctx, get_env_config_value
 
-        # Local variables
-        if isinstance(infile, str):
-
-            infile = infile.lower()
-
-            if 'server' in infile:
-                zato_component = 'Server'
-            elif 'scheduler' in infile:
-                zato_component = 'Scheduler'
-            elif ('web-admin' in infile) or ('dashboard' in infile):
-                zato_component = 'Dashboard'
-            elif 'user-conf' in infile:
-                zato_component = 'User_Config'
-            else:
-                zato_component = 'Unknown'
-
-            self.zato_component = zato_component
-            self.zato_config_file_name = Path(infile).name
-
-        else:
-            self.zato_component = 'Not_Applicable_Zato_Component'
-            self.zato_config_file_name = 'Not_Applicable_Zato_Config_File_Name'
+        # Extract the details about this file
+        zato_env_config_ctx = get_env_config_ctx(infile)
 
         # Save it for later use
-        self.zato_env_variable_missing_suffix = EnvVariable.Key_Missing_Suffix
+        self.zato_env_config_ctx = get_env_config_ctx(infile)
+        self.zato_component = zato_env_config_ctx.component
+        self.zato_config_file_name = zato_env_config_ctx.file_name
+        self.zato_env_variable_missing_suffix = zato_env_config_ctx.missing_suffix
         self.zato_get_env_config_value = get_env_config_value
 
         self._inspec = _inspec
@@ -1653,6 +1634,7 @@ class ConfigObj(Section):
             if mat is not None:
                 # is a section line
                 (indent, sect_open, sect_name, sect_close, comment) = mat.groups()
+
                 if indent and (self.indent_type is None):
                     self.indent_type = indent
                 cur_depth = sect_open.count('[')
