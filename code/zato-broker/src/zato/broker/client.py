@@ -143,7 +143,6 @@ class BrokerClient:
                     response = self._invoke_scheduler_from_server(msg)
                     return response
                 except Exception as e:
-                    logger.warning(format_exc())
                     logger.warning('Invocation error; server -> scheduler -> %s (%d:%r)', e, from_server, action)
                 return
 
@@ -153,7 +152,6 @@ class BrokerClient:
                     response = self._invoke_server_from_scheduler(msg)
                     return response
                 except Exception as e:
-                    logger.warning(format_exc())
                     logger.warning('Invocation error; scheduler -> server -> %s (%d:%r)', e, from_server, action)
                 return
 
@@ -169,7 +167,6 @@ class BrokerClient:
                     self.server_rpc, from_server, action)
 
         except Exception:
-            logger.warning(format_exc())
             logger.warning(format_exc())
 
 # ################################################################################################################################
