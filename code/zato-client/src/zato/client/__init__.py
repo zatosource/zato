@@ -465,7 +465,7 @@ class ZatoClient(AnyServiceInvoker):
 
 def get_client_from_credentials(use_tls:'bool', server_url:'str', client_auth:'tuple') -> 'ZatoClient':
     api_protocol = get_server_api_protocol_from_config_item(use_tls)
-    address = f'{api_protocol}{server_url}'
+    address = f'{api_protocol}://{server_url}'
     return ZatoClient(address, ServiceConst.API_Admin_Invoke_Url_Path, client_auth, max_response_repr=15000)
 
 # ################################################################################################################################
@@ -518,7 +518,7 @@ def get_client_from_server_conf(
 
     use_tls = config.crypto.use_tls
     api_protocol = get_server_api_protocol_from_config_item(use_tls)
-    address = f'{api_protocol}{server_url}'
+    address = f'{api_protocol}://{server_url}'
 
     client = ZatoClient(address, ServiceConst.API_Admin_Invoke_Url_Path,
         client_auth, max_response_repr=15000)
