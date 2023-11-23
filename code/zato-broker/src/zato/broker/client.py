@@ -23,6 +23,7 @@ from requests.models import Response
 
 # Zato
 from zato.common.broker_message import code_to_name, SCHEDULER
+from zato.common.util.config import get_server_api_protocol_from_config_item
 from zato.common.util.platform_ import is_non_windows
 
 # ################################################################################################################################
@@ -84,6 +85,10 @@ class BrokerClient:
         # We are a server so we will have configuration needed to set up the scheduler's details ..
         if scheduler_config:
 
+            # Branch-local variables
+            scheduler_host = scheduler_config['scheduler_host']
+            scheduler_port = scheduler_config['scheduler_port']
+
             if not (scheduler_api_username := scheduler_config.get('scheduler_api_username')):
                 scheduler_api_username = 'scheduler_api_username_missing'
 
@@ -93,13 +98,13 @@ class BrokerClient:
             self.scheduler_auth = (scheduler_api_username, scheduler_api_password)
 
             # Introduced after 3.2 was released, hence optional
-            scheduler_use_tls = scheduler_config.get('scheduler_use_tls', True)
+            scheduler_use_tls = scheduler_config.get('scheduler_use_tls', False)
 
-            self.scheduler_url = 'http{}://{}:{}/'.format(
-                's' if scheduler_use_tls else '',
-                scheduler_config['scheduler_host'],
-                scheduler_config['scheduler_port'],
-            )
+            # Decide whether to use HTTPS or HTTP
+            api_protocol = get_server_api_protocol_from_config_item(scheduler_use_tls)
+
+            # Build a full URL for later use
+            self.scheduler_url = f'{api_protocol}://{scheduler_host}:{scheduler_port}'
 
         # .. otherwise, we are a scheduler so we have a client to invoke servers with.
         else:
