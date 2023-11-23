@@ -245,7 +245,7 @@ class SEARCH:
 
     class SOLR:
         class DEFAULTS:
-            ADDRESS = 'http://127.0.0.1:8983/solr'
+            ADDRESS = 'https://127.0.0.1:8983/solr'
             PING_PATH = '/solr/admin/ping'
             TIMEOUT = '10'
             POOL_SIZE = '5'

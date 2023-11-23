@@ -44,6 +44,11 @@ mask_attrs = ['address']
 
 # ################################################################################################################################
 
+def get_server_api_protocol_from_config_item(use_tls:'bool') -> 'str':
+    return 'https://' if use_tls else 'http://'
+
+# ################################################################################################################################
+
 def get_scheduler_api_client_for_server_auth_required(args:'any_') -> 'str':
 
     if not (value := os.environ.get(SCHEDULER.Env.Server_Auth_Required)):

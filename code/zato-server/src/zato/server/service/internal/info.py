@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -16,8 +16,16 @@ from zato.common.api import INFO_FORMAT, MISC, SERVER_JOIN_STATUS, SERVER_UP_STA
 from zato.common.component_info import format_info, get_info, get_worker_pids
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.query import server_list
+from zato.common.util.config import get_server_api_protocol_from_config_item
 from zato.server.service import List, Service
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetInfo(Service):
@@ -26,13 +34,17 @@ class GetInfo(Service):
     def handle(self):
 
         # Let's prepare as much as we can upfront.
-        sec_def = self.server.worker_store.basic_auth_get('admin.invoke').config
-        channel = self.server.worker_store.get_channel_rest(MISC.DefaultAdminInvokeChannel)
+        sec_def:'any_' = self.server.worker_store.basic_auth_get('admin.invoke').config
+        channel:'any_' = self.server.worker_store.get_channel_rest(MISC.DefaultAdminInvokeChannel)
         out = {}
 
+        # We assume that if the current server uses TLS or not,
+        # the same will go for all the other servers in the cluster.
+        api_protocol = get_server_api_protocol_from_config_item(self.server.fs_server_config.crypto.use_tls)
+
         with closing(self.odb.session()) as session:
-            for item in server_list(session, self.server.cluster_id, None, None, False):
-                server_info = out.setdefault(item.name, {})
+            for item in server_list(session, self.server.cluster_id, None, None, False): # type: ignore
+                server_info:'any_' = out.setdefault(item.name, {})
                 server_info['cluster_name'] = item.cluster_name
 
                 server_info['up_mod_date'] = item.up_mod_date.isoformat() if item.up_status == SERVER_UP_STATUS.RUNNING else None
@@ -44,9 +56,11 @@ class GetInfo(Service):
 
                 if item.up_status == SERVER_UP_STATUS.RUNNING:
 
-                    client = AnyServiceInvoker(
-                        'http://{}:{}'.format(item.bind_host, item.bind_port),
-                        channel.url_path, (sec_def.username, sec_def.password))
+                    address = f'{api_protocol}://{item.bind_host}:{item.bind_port}'
+                    auth = (sec_def.username, sec_def.password) # type: ignore
+
+                    client = AnyServiceInvoker(address, channel.url_path, auth=auth)
+
                     response = client.invoke('zato.info.get-server-info')
                     if response.ok:
                         response = loads(response.inner.text)['zato_service_invoke_response']['response']
@@ -76,7 +90,7 @@ class GetServerInfo(Service):
 class GetWorkerPids(Service):
     """ Returns PIDs of all processes of current server.
     """
-    output = List('pids')
+    output:'any_' = List('pids')
 
     def handle(self):
         self.response.payload.pids = get_worker_pids(self.server.base_dir)
