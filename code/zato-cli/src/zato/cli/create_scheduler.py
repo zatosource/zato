@@ -80,7 +80,7 @@ cert_location={tls_cert_location}
 ca_certs_location={tls_ca_certs_location}
 
 [api_clients]
-{api_client_for_server_username}={api_client_for_server_password}
+{scheduler_api_client_for_server_username}={scheduler_api_client_for_server_password}
 
 [command_pause]
 
@@ -109,12 +109,12 @@ class Create(ZatoCommand):
     opts.append({'name':'--secret-key', 'help':'Scheduler\'s secret crypto key'})
 
     opts.append({
-        'name':'--api-client-for-server-username',
+        'name':'--scheduler-api-client-for-server-username',
         'help':'Name of the API user that servers connect to the scheduler with'
     })
 
     opts.append({
-        'name':'--api-client-for-server-password',
+        'name':'--scheduler-api-client-for-server-password',
         'help':'Password of the API user that servers connect to the scheduler with'
     })
 
@@ -239,13 +239,13 @@ class Create(ZatoCommand):
             'odb_username': args.odb_user or '',
         }
 
-        if not (api_client_for_server_username := getattr(args, 'api_client_for_server_username', None)):
-            api_client_for_server_username = SCHEDULER.Default_API_Client_For_Server_Username
+        if not (scheduler_api_client_for_server_username := getattr(args, 'scheduler_api_client_for_server_username', None)):
+            scheduler_api_client_for_server_username = SCHEDULER.Default_API_Client_For_Server_Username
 
-        if not (api_client_for_server_password := getattr(args, 'api_client_for_server_password', None)):
-            api_client_for_server_password = cm.generate_password()
-            api_client_for_server_password = cm.encrypt(api_client_for_server_password)
-            api_client_for_server_password = api_client_for_server_password.decode('utf8')
+        if not (scheduler_api_client_for_server_password := getattr(args, 'scheduler_api_client_for_server_password', None)):
+            scheduler_api_client_for_server_password = cm.generate_password()
+            scheduler_api_client_for_server_password = cm.encrypt(api_client_for_server_password)
+            scheduler_api_client_for_server_password = scheduler_api_client_for_server_password.decode('utf8')
 
         zato_well_known_data = well_known_data.encode('utf8')
         zato_well_known_data = cm.encrypt(zato_well_known_data)
@@ -287,8 +287,8 @@ class Create(ZatoCommand):
             secret_key = secret_key.decode('utf8')
 
         config = {
-            'api_client_for_server_username': api_client_for_server_username,
-            'api_client_for_server_password': api_client_for_server_password,
+            'scheduler_api_client_for_server_username': scheduler_api_client_for_server_username,
+            'scheduler_api_client_for_server_password': scheduler_api_client_for_server_password,
             'cluster_id': cluster_id,
             'secret_key1': secret_key,
             'well_known_data': zato_well_known_data,
