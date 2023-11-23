@@ -667,7 +667,6 @@ class Create(ZatoCommand):
             self.logger.info('User [admin] already exists in the ODB')
 
         self.logger.info('Start the cluster by issuing this command: %s', zato_qs_start_path)
-
         self.logger.info('Visit https://zato.io/support for more information and support options')
 
 # ################################################################################################################################
