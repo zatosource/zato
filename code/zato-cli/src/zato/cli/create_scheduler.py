@@ -15,12 +15,14 @@ from copy import deepcopy
 from bunch import Bunch
 
 # Zato
-from zato.cli import common_odb_opts, sql_conf_contents, ZatoCommand
+from zato.cli import common_odb_opts, common_scheduler_api_client_for_server_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import SCHEDULER
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.crypto.const import well_known_data
 from zato.common.odb.model import Cluster
 from zato.common.scheduler import startup_jobs
+from zato.common.util.config import get_scheduler_api_client_for_server_auth_required, \
+    get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.open_ import open_w
 from zato.common.util.platform_ import is_linux
 
@@ -80,6 +82,7 @@ cert_location={tls_cert_location}
 ca_certs_location={tls_ca_certs_location}
 
 [api_clients]
+auth_required={scheduler_api_client_for_server_auth_required}
 {scheduler_api_client_for_server_username}={scheduler_api_client_for_server_password}
 
 [command_pause]
@@ -108,16 +111,6 @@ class Create(ZatoCommand):
     opts.append({'name':'--cluster-id', 'help':'ID of the cluster this scheduler will belong to'})
     opts.append({'name':'--secret-key', 'help':'Scheduler\'s secret crypto key'})
 
-    opts.append({
-        'name':'--scheduler-api-client-for-server-username',
-        'help':'Name of the API user that servers connect to the scheduler with'
-    })
-
-    opts.append({
-        'name':'--scheduler-api-client-for-server-password',
-        'help':'Password of the API user that servers connect to the scheduler with'
-    })
-
     opts.append({'name':'--server-path', 'help':'Local path to a Zato server'})
     opts.append({'name':'--server-host', 'help':'Remote host of a Zato server'})
     opts.append({'name':'--server-port', 'help':'Remote TCP port of a Zato server'})
@@ -137,6 +130,8 @@ class Create(ZatoCommand):
     opts.append({'name':'--tls-ca-certs', 'help':'Scheduler\'s CA certificates location'})
 
     opts.append({'name':'--initial-sleep-time', 'help':'How many seconds to sleep initially when the scheduler starts'})
+
+    opts += deepcopy(common_scheduler_api_client_for_server_opts)
 
 # ################################################################################################################################
 
@@ -226,8 +221,7 @@ class Create(ZatoCommand):
         # We need to have a reference to it before we encrypt it later on.
         odb_password = args.odb_password or ''
         odb_password = odb_password.encode('utf8')
-        odb_password = cm.encrypt(odb_password)
-        odb_password = odb_password.decode('utf8')
+        odb_password = cm.encrypt(odb_password, needs_str=True)
 
         # Collect ODB configuration in one place as it will be reusable further below.
         odb_config = {
@@ -239,17 +233,13 @@ class Create(ZatoCommand):
             'odb_username': args.odb_user or '',
         }
 
-        if not (scheduler_api_client_for_server_username := getattr(args, 'scheduler_api_client_for_server_username', None)):
-            scheduler_api_client_for_server_username = SCHEDULER.Default_API_Client_For_Server_Username
-
-        if not (scheduler_api_client_for_server_password := getattr(args, 'scheduler_api_client_for_server_password', None)):
-            scheduler_api_client_for_server_password = cm.generate_password()
-            scheduler_api_client_for_server_password = cm.encrypt(api_client_for_server_password)
-            scheduler_api_client_for_server_password = scheduler_api_client_for_server_password.decode('utf8')
+        scheduler_api_client_for_server_auth_required = get_scheduler_api_client_for_server_auth_required(args)
+        scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
+        scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
+        scheduler_api_client_for_server_password = cm.encrypt(scheduler_api_client_for_server_password, needs_str=True)
 
         zato_well_known_data = well_known_data.encode('utf8')
-        zato_well_known_data = cm.encrypt(zato_well_known_data)
-        zato_well_known_data = zato_well_known_data.decode('utf8')
+        zato_well_known_data = cm.encrypt(zato_well_known_data, needs_str=True)
 
         server_path = self.get_arg('server_path') or ''
         server_host = self.get_arg('server_host', '127.0.0.1')
@@ -258,8 +248,7 @@ class Create(ZatoCommand):
         server_username, server_password = self._get_server_admin_invoke_credentials(cm, odb_config)
 
         server_password = server_password.encode('utf8')
-        server_password = cm.encrypt(server_password)
-        server_password = server_password.decode('utf8')
+        server_password = cm.encrypt(server_password, needs_str=True)
 
         initial_sleep_time = self.get_arg('initial_sleep_time', SCHEDULER.InitialSleepTime)
 
@@ -287,6 +276,7 @@ class Create(ZatoCommand):
             secret_key = secret_key.decode('utf8')
 
         config = {
+            'scheduler_api_client_for_server_auth_required': scheduler_api_client_for_server_auth_required,
             'scheduler_api_client_for_server_username': scheduler_api_client_for_server_username,
             'scheduler_api_client_for_server_password': scheduler_api_client_for_server_password,
             'cluster_id': cluster_id,

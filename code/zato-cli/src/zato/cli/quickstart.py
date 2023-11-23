@@ -11,7 +11,7 @@ import os
 from copy import deepcopy
 
 # Zato
-from zato.cli import common_odb_opts, ZatoCommand
+from zato.cli import common_odb_opts, common_scheduler_api_client_for_server_opts, ZatoCommand
 from zato.common.util.platform_ import is_windows, is_non_windows
 from zato.common.util.open_ import open_w
 
@@ -268,6 +268,8 @@ class Create(ZatoCommand):
     opts.append({'name':'--secret-key', 'help':'Main secret key the server(s) will use'})
     opts.append({'name':'--jwt-secret-key', 'help':'Secret key for JWT (JSON Web Tokens)'})
 
+    opts += deepcopy(common_scheduler_api_client_for_server_opts)
+
     def _bunch_from_args(self, args:'any_', cluster_name:'str') -> 'Bunch':
 
         # Bunch
@@ -354,6 +356,9 @@ class Create(ZatoCommand):
         # These are shared by all servers
         secret_key = getattr(args, 'secret_key', None) or Fernet.generate_key()
         jwt_secret = getattr(args, 'jwt_secret_key', None) or Fernet.generate_key()
+        scheduler_api_client_for_server_auth_required = getattr(args, 'scheduler_api_client_for_server_auth_required', None)
+        scheduler_api_client_for_server_username = getattr(args, 'scheduler_api_client_for_server_username', None)
+        scheduler_api_client_for_server_password = getattr(args, 'scheduler_api_client_for_server_password', None)
 
         # Zato
         from zato.cli import ca_create_ca, ca_create_lb_agent, ca_create_scheduler, ca_create_server, \
@@ -473,6 +478,9 @@ class Create(ZatoCommand):
             create_server_args.path = server_path
             create_server_args.jwt_secret = jwt_secret
             create_server_args.secret_key = secret_key
+            create_server_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
+            create_server_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
+            create_server_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
 
             if has_tls:
                 create_server_args.cert_path = server_crypto_loc[name].cert_path # type: ignore
@@ -568,6 +576,9 @@ class Create(ZatoCommand):
         create_scheduler_args.path = scheduler_path
         create_scheduler_args.cluster_id = cluster_id
         create_scheduler_args.server_path = first_server_path
+        create_scheduler_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
+        create_scheduler_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
+        create_scheduler_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
 
         if has_tls:
             create_scheduler_args.cert_path = scheduler_crypto_loc.cert_path # type: ignore

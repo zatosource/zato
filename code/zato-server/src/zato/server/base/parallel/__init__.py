@@ -1637,7 +1637,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def decrypt(self, data:'strbytes', _prefix:'str'=SECRETS.PREFIX, _marker:'str'=SECRETS.EncryptedMarker) -> 'str':
+    def decrypt(self, data:'strbytes', _prefix:'str'=SECRETS.PREFIX, _marker:'str'=SECRETS.Encrypted_Indicator) -> 'str':
         """ Returns data decrypted using server's CryptoManager.
         """
 
