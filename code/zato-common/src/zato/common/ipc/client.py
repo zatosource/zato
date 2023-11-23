@@ -85,7 +85,7 @@ class IPCClient:
     ) -> 'IPCResponse':
 
         # This is where we can find the IPC server to invoke ..
-        url = f'{self.api_protocol}{self.host}:{self.port}/{url_path}'
+        url = f'{self.api_protocol}://{self.host}:{self.port}/{url_path}'
 
         # .. prepare the full request ..
         dict_data = {
