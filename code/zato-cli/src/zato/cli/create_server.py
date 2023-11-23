@@ -12,6 +12,7 @@ from copy import deepcopy
 # Zato
 from zato.cli import common_odb_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import CONTENT_TYPE, default_internal_modules, SCHEDULER, SSO as CommonSSO
+from zato.common.crypto.api import ServerCryptoManager
 from zato.common.simpleio_ import simple_io_conf_contents
 from zato.common.util import as_bool
 from zato.common.util.open_ import open_r, open_w
@@ -94,6 +95,8 @@ use_async_driver=True
 scheduler_host={{scheduler_host}}
 scheduler_port={{scheduler_port}}
 scheduler_use_tls=False
+scheduler_api_username={{scheduler_api_username}}
+scheduler_api_password={{scheduler_api_password}}
 
 [hot_deploy]
 pickup_dir=../../pickup/incoming/services
@@ -660,6 +663,16 @@ class Create(ZatoCommand):
     opts.append({'name':'--scheduler-host', 'help':"Host to invoke the cluster's scheduler on"})
     opts.append({'name':'--scheduler-port', 'help':"Port for invoking the cluster's scheduler"})
 
+    opts.append({
+        'name':'--scheduler-api-client-username',
+        'help':'Name of the API user that the server connects to the scheduler with'
+    })
+
+    opts.append({
+        'name':'--scheduler-api-client-password',
+        'help':'Password of the API user that the server connects to the scheduler with'
+    })
+
 # ################################################################################################################################
 
     def __init__(self, args:'any_') -> 'None':
@@ -803,6 +816,18 @@ class Create(ZatoCommand):
             server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
             server_conf = open_w(server_conf_loc)
 
+            # There will be multiple keys in future releases to allow for key rotation
+            secret_key = args.secret_key or Fernet.generate_key()
+            cm = ServerCryptoManager.from_secret_key(secret_key)
+
+            if not (scheduler_api_client_username := getattr(args, 'scheduler_api_client_username', None)):
+                scheduler_api_client_username = SCHEDULER.Default_API_Client_For_Server_Username
+
+            if not (scheduler_api_client_password := getattr(args, 'scheduler_api_client_password', None)):
+                scheduler_api_client_password = cm.generate_password()
+                scheduler_api_client_password = cm.encrypt(scheduler_api_client_password)
+                scheduler_api_client_password = scheduler_api_client_password.decode('utf8')
+
             # Substate the variables ..
             server_conf_data = server_conf_template.format(
                     port=getattr(args, 'http_port', None) or default_http_port,
@@ -822,7 +847,9 @@ class Create(ZatoCommand):
                     events_sync_interval=EventsDefault.sync_interval,
                     scheduler_host=self.get_arg('scheduler_host', SCHEDULER.DefaultHost),
                     scheduler_port=self.get_arg('scheduler_port', SCHEDULER.DefaultPort),
-                    scheduler_use_tls=scheduler_use_tls
+                    scheduler_use_tls=scheduler_use_tls,
+                    scheduler_api_client_username=scheduler_api_client_username,
+                    scheduler_api_client_password=scheduler_api_client_password,
                 )
 
             # .. and special-case this one as it contains the {} characters
@@ -859,8 +886,6 @@ class Create(ZatoCommand):
                 user_conf_dest = os.path.join(self.target_dir, 'config', 'repo', 'user-conf')
                 os.symlink(user_conf_src, user_conf_dest)
 
-            # There will be multiple keys in future releases to allow for key rotation
-            secret_key = args.secret_key or Fernet.generate_key()
             fernet1 = Fernet(secret_key)
 
             secrets_conf_loc = os.path.join(self.target_dir, 'config/repo/secrets.conf')
