@@ -111,7 +111,7 @@ if PY3:
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, HL7, KVDB, MISC, \
      SCHEDULER, SECRET_SHADOW, SIMPLE_IO, TLS, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
-from zato.common.const import SECRETS
+from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
 from zato.common.exception import ZatoException
 from zato.common.ext.configobj_ import ConfigObj
@@ -196,6 +196,18 @@ TLS_KEY_TYPE = {
     crypto.TYPE_DSA: 'DSA',
     crypto.TYPE_RSA: 'RSA'
 }
+
+# ################################################################################################################################
+
+def is_encrypted(data:'str | bytes') -> 'bool':
+
+    # Zato
+    from zato.common.const import SECRETS
+
+    if isinstance(data, bytes):
+        data = data.decode('utf8')
+
+    return data.startswith(SECRETS.Encrypted_Indicator)
 
 # ################################################################################################################################
 
@@ -1515,7 +1527,7 @@ def get_server_client_auth(
     """ Returns credentials to authenticate with against Zato's own inocation channels.
     """
     # This is optional on input
-    url_path = url_path or '/zato/admin/invoke'
+    url_path = url_path or ServiceConst.API_Admin_Invoke_Url_Path
 
     session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
 
@@ -1552,7 +1564,7 @@ def get_server_client_auth(
 
             if security:
                 password = security.password.replace(SECRETS.PREFIX, '')
-                if password.startswith(SECRETS.EncryptedMarker):
+                if password.startswith(SECRETS.Encrypted_Indicator):
                     if cm:
                         password = cm.decrypt(password)
                 return (security.username, password)
