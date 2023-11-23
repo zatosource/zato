@@ -39,7 +39,7 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-address_pattern='{}127.0.0.1:{}/{}'
+address_pattern='{}://127.0.0.1:{}/{}'
 not_enabled_pattern  = '{connector_name} component is not enabled - install PyMQI, set component_enabled.{check_enabled} '
 not_enabled_pattern += 'to True in server.conf and restart all servers before {connector_name} connections can be used.'
 
