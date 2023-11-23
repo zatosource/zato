@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from collections import OrderedDict
+from dataclasses import dataclass
 from io import StringIO
 from numbers import Number
 from sys import maxsize
@@ -133,6 +134,22 @@ engine_display_name = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+class EnvVariable:
+    Key_Prefix = 'Zato_Config'
+    Key_Missing_Suffix = '_Missing'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class EnvConfigCtx:
+    component:'str'
+    file_name:'str'
+    missing_suffix:'str' = EnvVariable.Key_Missing_Suffix
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # All URL types Zato understands.
 class URL_TYPE:
     SOAP       = 'soap' # Used only by outgoing connections
@@ -228,7 +245,7 @@ class SEARCH:
 
     class SOLR:
         class DEFAULTS:
-            ADDRESS = 'http://127.0.0.1:8983/solr'
+            ADDRESS = 'https://127.0.0.1:8983/solr'
             PING_PATH = '/solr/admin/ping'
             TIMEOUT = '10'
             POOL_SIZE = '5'
@@ -537,6 +554,11 @@ class SCHEDULER:
     DefaultBindHost = '0.0.0.0'
     DefaultBindPort = DefaultPort
 
+    # This is the username of an API client that servers
+    # will use when they invoke their scheduler.
+    Default_API_Client_For_Server_Auth_Required = True
+    Default_API_Client_For_Server_Username = 'server_api_client1'
+
     TLS_Enabled = False
     TLS_Verify = True
     TLS_Client_Certs = 'optional'
@@ -574,14 +596,11 @@ class SCHEDULER:
         Path_Action_Prefix = 'Zato_Scheduler_Path_Action_'
 
         # These are used by servers to invoke the scheduler
-        Server_Username = 'Zato_Scheduler_Server_Username'
-        Server_Password = 'Zato_Scheduler_Server_Password'
+        Server_Auth_Required = 'Zato_Scheduler_API_Client_For_Server_Auth_Required'
+        Server_Username = 'Zato_Scheduler_API_Client_For_Server_Username'
+        Server_Password = 'Zato_Scheduler_API_Client_For_Server_Password'
 
-        # These are used by configuration agents to manage the scheduler
-        Config_Action_Username = 'Zato_Scheduler_Config_Action_Username'
-        Config_Action_Password = 'Zato_Scheduler_Config_Action_Password'
-
-    class ConfigAction:
+    class ConfigCommand:
         Pause = 'pause'
         Resume = 'resume'
         SetServer = 'set_server'
@@ -1564,9 +1583,6 @@ class CONFIG_FILE:
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
 PLACEHOLDER = 'zato_placeholder'
-
-class EnvVariable:
-    Key_Missing_Suffix = '_Missing'
 
 # ################################################################################################################################
 # ################################################################################################################################

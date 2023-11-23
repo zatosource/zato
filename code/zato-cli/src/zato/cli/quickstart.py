@@ -11,9 +11,16 @@ import os
 from copy import deepcopy
 
 # Zato
-from zato.cli import common_odb_opts, ZatoCommand
+from zato.cli import common_odb_opts, common_scheduler_api_client_for_server_opts, ZatoCommand
 from zato.common.util.platform_ import is_windows, is_non_windows
 from zato.common.util.open_ import open_w
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from bunch import Bunch
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -232,7 +239,7 @@ $BASE_DIR/zato-qs-start.sh
 class CryptoMaterialLocation:
     """ Locates and remembers location of various crypto material for Zato components.
     """
-    def __init__(self, ca_dir, component_pattern):
+    def __init__(self, ca_dir:'str', component_pattern:'str') -> 'None':
         self.ca_dir = ca_dir
         self.component_pattern = component_pattern
         self.ca_certs_path = os.path.join(self.ca_dir, 'ca-material', 'ca-cert.pem')
@@ -241,7 +248,7 @@ class CryptoMaterialLocation:
         self.priv_path = None
         self.locate()
 
-    def locate(self):
+    def locate(self) -> 'None':
         for crypto_name in('cert', 'priv', 'pub'):
             path = os.path.join(self.ca_dir, 'out-{}'.format(crypto_name))
             for name in os.listdir(path):
@@ -261,7 +268,9 @@ class Create(ZatoCommand):
     opts.append({'name':'--secret-key', 'help':'Main secret key the server(s) will use'})
     opts.append({'name':'--jwt-secret-key', 'help':'Secret key for JWT (JSON Web Tokens)'})
 
-    def _bunch_from_args(self, args, cluster_name):
+    opts += deepcopy(common_scheduler_api_client_for_server_opts)
+
+    def _bunch_from_args(self, args:'any_', cluster_name:'str') -> 'Bunch':
 
         # Bunch
         from bunch import Bunch
@@ -289,27 +298,27 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def allow_empty_secrets(self):
+    def allow_empty_secrets(self) -> 'bool':
         return True
 
 # ################################################################################################################################
 
-    def _set_pubsub_server(self, args, server_id, cluster_name, topic_name):
+    def _set_pubsub_server(self, args:'any_', server_id:'int', cluster_name:'str', topic_name:'str') -> 'None':
 
         # Zato
         from zato.common.odb.model import Cluster, PubSubSubscription, PubSubTopic
 
-        engine = self._get_engine(args)
-        session = self._get_session(engine)
+        engine = self._get_engine(args) # type: ignore
+        session = self._get_session(engine) # type: ignore
 
-        sub_list = session.query(PubSubSubscription).\
+        sub_list:'any_' = session.query(PubSubSubscription).\
             filter(PubSubTopic.id==PubSubSubscription.topic_id).\
             filter(PubSubTopic.name==topic_name).\
             filter(PubSubTopic.cluster_id==Cluster.id).\
             filter(Cluster.name==cluster_name).\
             all()
 
-        for sub in sub_list:
+        for sub in sub_list: # type: ignore
 
             # Set publishing server for that subscription
             sub.server_id = server_id
@@ -319,7 +328,7 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def execute(self, args):
+    def execute(self, args:'any_') -> 'None':
         """ Quickly creates Zato components
         1) CA and crypto material
         2) ODB
@@ -347,6 +356,9 @@ class Create(ZatoCommand):
         # These are shared by all servers
         secret_key = getattr(args, 'secret_key', None) or Fernet.generate_key()
         jwt_secret = getattr(args, 'jwt_secret_key', None) or Fernet.generate_key()
+        scheduler_api_client_for_server_auth_required = getattr(args, 'scheduler_api_client_for_server_auth_required', None)
+        scheduler_api_client_for_server_username = getattr(args, 'scheduler_api_client_for_server_username', None)
+        scheduler_api_client_for_server_password = getattr(args, 'scheduler_api_client_for_server_password', None)
 
         # Zato
         from zato.cli import ca_create_ca, ca_create_lb_agent, ca_create_scheduler, ca_create_server, \
@@ -369,7 +381,7 @@ class Create(ZatoCommand):
         cluster_name = getattr(args, 'cluster_name', None) or 'quickstart-{}'.format(random.getrandbits(20)).zfill(7)
         servers = int(getattr(args, 'servers', 0) or DEFAULT_NO_SERVERS)
 
-        server_names = OrderedDict()
+        server_names = OrderedDict() # type: ignore
         for idx in range(1, servers+1):
             server_names['{}'.format(idx)] = 'server{}'.format(idx)
 
@@ -411,7 +423,7 @@ class Create(ZatoCommand):
 
             server_crypto_loc = {}
 
-            for name in server_names:
+            for name in server_names: # type: ignore
                 ca_args_server = deepcopy(ca_args)
                 ca_args_server.server_name = server_names[name]
                 ca_create_server.Create(ca_args_server).execute(ca_args_server, False)
@@ -444,7 +456,7 @@ class Create(ZatoCommand):
         create_cluster_args.lb_agent_port = lb_agent_port
         create_cluster_args['admin-invoke-password'] = admin_invoke_password
         create_cluster_args.secret_key = secret_key
-        create_cluster.Create(create_cluster_args).execute(create_cluster_args, False)
+        create_cluster.Create(create_cluster_args).execute(create_cluster_args, False) # type: ignore
 
         self.logger.info('[{}/{}] ODB initial data created'.format(next(next_step), total_steps))
 
@@ -457,7 +469,7 @@ class Create(ZatoCommand):
         # This is populated lower in order for the scheduler to use it.
         first_server_path = ''
 
-        for idx, name in enumerate(server_names):
+        for idx, name in enumerate(server_names): # type: ignore
             server_path = os.path.join(args_path, server_names[name])
             os.mkdir(server_path)
 
@@ -466,12 +478,15 @@ class Create(ZatoCommand):
             create_server_args.path = server_path
             create_server_args.jwt_secret = jwt_secret
             create_server_args.secret_key = secret_key
+            create_server_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
+            create_server_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
+            create_server_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
 
             if has_tls:
-                create_server_args.cert_path = server_crypto_loc[name].cert_path
-                create_server_args.pub_key_path = server_crypto_loc[name].pub_path
-                create_server_args.priv_key_path = server_crypto_loc[name].priv_path
-                create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path
+                create_server_args.cert_path = server_crypto_loc[name].cert_path # type: ignore
+                create_server_args.pub_key_path = server_crypto_loc[name].pub_path # type: ignore
+                create_server_args.priv_key_path = server_crypto_loc[name].priv_path # type: ignore
+                create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path # type: ignore
 
             server_id = create_server.Create(create_server_args).execute(create_server_args, next(next_port), False, True)
 
@@ -479,7 +494,7 @@ class Create(ZatoCommand):
             if idx == 0:
 
                 # .. make it a delivery server for sample pub/sub topics ..
-                self._set_pubsub_server(args, server_id, cluster_name, '/zato/demo/sample')
+                self._set_pubsub_server(args, server_id, cluster_name, '/zato/demo/sample') # type: ignore
 
                 # .. make the scheduler use it.
                 first_server_path = server_path
@@ -499,10 +514,10 @@ class Create(ZatoCommand):
         create_lb_args.path = lb_path
 
         if has_tls:
-            create_lb_args.cert_path = lb_agent_crypto_loc.cert_path
-            create_lb_args.pub_key_path = lb_agent_crypto_loc.pub_path
-            create_lb_args.priv_key_path = lb_agent_crypto_loc.priv_path
-            create_lb_args.ca_certs_path = lb_agent_crypto_loc.ca_certs_path
+            create_lb_args.cert_path = lb_agent_crypto_loc.cert_path # type: ignore
+            create_lb_args.pub_key_path = lb_agent_crypto_loc.pub_path # type: ignore
+            create_lb_args.priv_key_path = lb_agent_crypto_loc.priv_path # type: ignore
+            create_lb_args.ca_certs_path = lb_agent_crypto_loc.ca_certs_path # type: ignore
 
         # Need to substract 1 because we've already called .next() twice
         # when creating servers above.
@@ -528,10 +543,10 @@ class Create(ZatoCommand):
         create_web_admin_args.admin_invoke_password = admin_invoke_password
 
         if has_tls:
-            create_web_admin_args.cert_path = web_admin_crypto_loc.cert_path
-            create_web_admin_args.pub_key_path = web_admin_crypto_loc.pub_path
-            create_web_admin_args.priv_key_path = web_admin_crypto_loc.priv_path
-            create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path
+            create_web_admin_args.cert_path = web_admin_crypto_loc.cert_path # type: ignore
+            create_web_admin_args.pub_key_path = web_admin_crypto_loc.pub_path # type: ignore
+            create_web_admin_args.priv_key_path = web_admin_crypto_loc.priv_path # type: ignore
+            create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path # type: ignore
 
         web_admin_password = CryptoManager.generate_password()
         admin_created = create_web_admin.Create(create_web_admin_args).execute(
@@ -550,10 +565,10 @@ class Create(ZatoCommand):
         scheduler_path = os.path.join(args_path, 'scheduler')
         os.mkdir(scheduler_path)
 
-        session = get_session(get_engine(args))
+        session = get_session(get_engine(args)) # type: ignore
 
         with closing(session):
-            cluster_id = session.query(Cluster.id).\
+            cluster_id:'int' = session.query(Cluster.id).\
                 filter(Cluster.name==cluster_name).\
                 one()[0]
 
@@ -561,14 +576,17 @@ class Create(ZatoCommand):
         create_scheduler_args.path = scheduler_path
         create_scheduler_args.cluster_id = cluster_id
         create_scheduler_args.server_path = first_server_path
+        create_scheduler_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
+        create_scheduler_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
+        create_scheduler_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
 
         if has_tls:
-            create_scheduler_args.cert_path = scheduler_crypto_loc.cert_path
-            create_scheduler_args.pub_key_path = scheduler_crypto_loc.pub_path
-            create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path
-            create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path
+            create_scheduler_args.cert_path = scheduler_crypto_loc.cert_path # type: ignore
+            create_scheduler_args.pub_key_path = scheduler_crypto_loc.pub_path # type: ignore
+            create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path # type: ignore
+            create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path # type: ignore
 
-        _ = create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True)
+        _ = create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True) # type: ignore
         self.logger.info('[{}/{}] Scheduler created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
@@ -599,7 +617,7 @@ class Create(ZatoCommand):
         start_servers = []
         stop_servers = []
 
-        for name in server_names:
+        for name in server_names: # type: ignore
             check_config.append(check_config_template.format(server_name=server_names[name]))
             start_servers.append(start_servers_template.format(server_name=server_names[name], step_number=int(name)+4))
             stop_servers.append(stop_servers_template.format(server_name=server_names[name], step_number=int(name)+1))
@@ -655,12 +673,11 @@ class Create(ZatoCommand):
         self.logger.info('Quickstart cluster {} created'.format(cluster_name))
 
         if admin_created:
-            self.logger.info('Dashboard user:[admin], password:[%s]', web_admin_password.decode('utf8'))
+            self.logger.info('Dashboard user:[admin], password:[%s]', web_admin_password.decode('utf8')) # type: ignore
         else:
             self.logger.info('User [admin] already exists in the ODB')
 
         self.logger.info('Start the cluster by issuing this command: %s', zato_qs_start_path)
-
         self.logger.info('Visit https://zato.io/support for more information and support options')
 
 # ################################################################################################################################
