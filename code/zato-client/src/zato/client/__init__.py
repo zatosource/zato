@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -29,9 +29,11 @@ from six import PY3
 
 # Zato
 from zato.common.api import BROKER, ZATO_NOT_GIVEN, ZATO_OK
+from zato.common.const import ServiceConst
 from zato.common.exception import ZatoException
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb.model import Server
+from zato.common.util.config import get_server_api_protocol_from_config_item
 
 # Set max_cid_repr to CID_NO_CLIP if it's desired to return the whole of a CID
 # in a response's __repr__ method.
@@ -461,8 +463,10 @@ class ZatoClient(AnyServiceInvoker):
 
 # ################################################################################################################################
 
-def get_client_from_credentials(server_url:'str', client_auth:'tuple') -> 'ZatoClient':
-    return ZatoClient('http://{}'.format(server_url), '/zato/admin/invoke', client_auth, max_response_repr=15000)
+def get_client_from_credentials(use_tls:'bool', server_url:'str', client_auth:'tuple') -> 'ZatoClient':
+    api_protocol = get_server_api_protocol_from_config_item(use_tls)
+    address = f'{api_protocol}://{server_url}'
+    return ZatoClient(address, ServiceConst.API_Admin_Invoke_Url_Path, client_auth, max_response_repr=15000)
 
 # ################################################################################################################################
 
@@ -512,7 +516,12 @@ def get_client_from_server_conf(
 
     client_auth = client_auth_func(config, repo_location, crypto_manager, False, url_path=url_path)
 
-    client = ZatoClient('http://{}'.format(server_url), '/zato/admin/invoke', client_auth, max_response_repr=15000)
+    use_tls = config.crypto.use_tls
+    api_protocol = get_server_api_protocol_from_config_item(use_tls)
+    address = f'{api_protocol}://{server_url}'
+
+    client = ZatoClient(address, ServiceConst.API_Admin_Invoke_Url_Path,
+        client_auth, max_response_repr=15000)
     session = get_odb_session_from_server_config(config, None, False)
 
     client.cluster_id = session.query(Server).\

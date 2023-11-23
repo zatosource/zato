@@ -23,6 +23,7 @@ from requests.models import Response
 
 # Zato
 from zato.common.broker_message import code_to_name, SCHEDULER
+from zato.common.util.config import get_server_api_protocol_from_config_item
 from zato.common.util.platform_ import is_non_windows
 
 # ################################################################################################################################
@@ -79,18 +80,31 @@ class BrokerClient:
 
         self.zato_client = zato_client
         self.scheduler_url = ''
+        self.scheduler_auth = None
 
         # We are a server so we will have configuration needed to set up the scheduler's details ..
         if scheduler_config:
 
-            # Introduced after 3.2 was released, hence optional
-            scheduler_use_tls = scheduler_config.get('scheduler_use_tls', True)
+            # Branch-local variables
+            scheduler_host = scheduler_config['scheduler_host']
+            scheduler_port = scheduler_config['scheduler_port']
 
-            self.scheduler_url = 'http{}://{}:{}/'.format(
-                's' if scheduler_use_tls else '',
-                scheduler_config['scheduler_host'],
-                scheduler_config['scheduler_port'],
-            )
+            if not (scheduler_api_username := scheduler_config.get('scheduler_api_username')):
+                scheduler_api_username = 'scheduler_api_username_missing'
+
+            if not (scheduler_api_password := scheduler_config.get('scheduler_api_password')):
+                scheduler_api_password = 'scheduler_api_password_missing'
+
+            self.scheduler_auth = (scheduler_api_username, scheduler_api_password)
+
+            # Introduced after 3.2 was released, hence optional
+            scheduler_use_tls = scheduler_config.get('scheduler_use_tls', False)
+
+            # Decide whether to use HTTPS or HTTP
+            api_protocol = get_server_api_protocol_from_config_item(scheduler_use_tls)
+
+            # Build a full URL for later use
+            self.scheduler_url = f'{api_protocol}://{scheduler_host}:{scheduler_port}'
 
         # .. otherwise, we are a scheduler so we have a client to invoke servers with.
         else:
@@ -106,7 +120,7 @@ class BrokerClient:
 
     def _invoke_scheduler_from_server(self, msg:'anydict') -> 'any_':
         msg_bytes = dumps(msg)
-        response = requests_post(self.scheduler_url, msg_bytes, verify=False)
+        response = requests_post(self.scheduler_url, msg_bytes, auth=self.scheduler_auth, verify=False)
         return response
 
 # ################################################################################################################################
@@ -134,7 +148,6 @@ class BrokerClient:
                     response = self._invoke_scheduler_from_server(msg)
                     return response
                 except Exception as e:
-                    logger.warning(format_exc())
                     logger.warning('Invocation error; server -> scheduler -> %s (%d:%r)', e, from_server, action)
                 return
 
@@ -144,7 +157,6 @@ class BrokerClient:
                     response = self._invoke_server_from_scheduler(msg)
                     return response
                 except Exception as e:
-                    logger.warning(format_exc())
                     logger.warning('Invocation error; scheduler -> server -> %s (%d:%r)', e, from_server, action)
                 return
 
@@ -160,7 +172,6 @@ class BrokerClient:
                     self.server_rpc, from_server, action)
 
         except Exception:
-            logger.warning(format_exc())
             logger.warning(format_exc())
 
 # ################################################################################################################################

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,6 +12,7 @@ from copy import deepcopy
 # Zato
 from zato.cli import common_odb_opts, is_arg_given, ZatoCommand
 from zato.common.api import SSO
+from zato.common.const import ServiceConst
 
 # ################################################################################################################################
 
@@ -328,7 +329,8 @@ class Create(ZatoCommand):
 
         channel = HTTPSOAP(
             None, MISC.DefaultAdminInvokeChannel, True, True, 'channel', 'plain_http',
-            None, '/zato/admin/invoke', None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
+            None, ServiceConst.API_Admin_Invoke_Url_Path, None, '', None,
+            SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
             security=admin_invoke_sec)
         session.add(channel)
 
