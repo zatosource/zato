@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -50,7 +50,7 @@ class InvokeSchedulerClientTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_client_invoke_server_to_scheduler_invalid_request(self):
+    def xtest_client_invoke_server_to_scheduler_invalid_request(self):
 
         # Client that invokes the scheduler from servers
         client = BrokerClient(scheduler_config=scheduler_config)

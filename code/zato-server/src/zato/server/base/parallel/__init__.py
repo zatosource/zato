@@ -161,6 +161,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.logger = logger
         self.host = ''
         self.port = -1
+        self.use_tls = False
         self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
         self.repo_location = ''
@@ -1522,7 +1523,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     ) -> 'IPCResponse':
         """ Invokes a service in a worker process by the latter's PID.
         """
-        response = self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid, timeout)
+        response = self.ipc_api.invoke_by_pid(self.use_tls, service, request, self.cluster_name, self.name, target_pid, timeout)
         return response
 
 # ################################################################################################################################
@@ -1637,7 +1638,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def decrypt(self, data:'strbytes', _prefix:'str'=SECRETS.PREFIX, _marker:'str'=SECRETS.EncryptedMarker) -> 'str':
+    def decrypt(self, data:'strbytes', _prefix:'str'=SECRETS.PREFIX, _marker:'str'=SECRETS.Encrypted_Indicator) -> 'str':
         """ Returns data decrypted using server's CryptoManager.
         """
 
