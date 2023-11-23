@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from datetime import datetime, timedelta
@@ -24,19 +22,14 @@ from requests import get, post
 from zato.common.exception import ConnectorClosedException
 from zato.common.json_internal import dumps, loads
 from zato.common.util.api import get_free_port
+from zato.common.util.config import get_server_api_protocol_from_config_item
 from zato.common.util.proc import start_python_process
 
 # ################################################################################################################################
 
 if 0:
-
-    # requests
     from requests import Response
-
-    # Zato
     from zato.server.base.parallel import ParallelServer
-
-    # For pyflakes
     ParallelServer = ParallelServer
     Response = Response
 
@@ -46,9 +39,9 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-address_pattern='http://127.0.0.1:{}/{}'
-not_enabled_pattern = '{connector_name} component is not enabled - install PyMQI, set component_enabled.{check_enabled} ' \
-     'to True in server.conf and restart all servers before {connector_name} connections can be used.'
+address_pattern='{}127.0.0.1:{}/{}'
+not_enabled_pattern  = '{connector_name} component is not enabled - install PyMQI, set component_enabled.{check_enabled} '
+not_enabled_pattern += 'to True in server.conf and restart all servers before {connector_name} connections can be used.'
 
 # ################################################################################################################################
 
@@ -75,10 +68,10 @@ class SubprocessIPC:
 
 # ################################################################################################################################
 
-    def __init__(self, server):
-        # type: (ParallelServer)
+    def __init__(self, server:'ParallelServer') -> 'None':
         self.server = server
-        self.ipc_tcp_port = None # type: int
+        self.api_protocol = get_server_api_protocol_from_config_item(self.server.use_tls)
+        self.ipc_tcp_port:'int | None' = None
 
 # ################################################################################################################################
 
@@ -140,7 +133,7 @@ class SubprocessIPC:
         should_warn = False
         until = now + timedelta(seconds=timeout)
         is_ok = False
-        address = address_pattern.format(self.ipc_tcp_port, 'ping')
+        address = address_pattern.format(self.api_protocol, self.ipc_tcp_port, 'ping')
         auth = self.get_credentials()
 
         while not is_ok or now >= until:
@@ -228,7 +221,7 @@ class SubprocessIPC:
         if self.check_enabled:
             self._check_enabled()
 
-        address = address_pattern.format(self.ipc_tcp_port, 'api')
+        address = address_pattern.format(self.api_protocol, self.ipc_tcp_port, 'api')
         response = post(address, data=dumps(msg), auth=self.get_credentials()) # type: Response
 
         if not response.ok:
