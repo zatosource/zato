@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
+
+# Zato
+from zato.common.const import ServiceConst
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,7 +51,7 @@ class Util:
         config = get_config(repo_dir, 'server.conf')
 
         self.client = ZatoClient('http://{}'.format(config.main.gunicorn_bind),
-            '/zato/admin/invoke', get_server_client_auth(config, repo_dir), max_response_repr=15000)
+            ServiceConst.API_Admin_Invoke_Url_Path, get_server_client_auth(config, repo_dir), max_response_repr=15000)
 
         session = get_odb_session_from_server_config(
             config, get_crypto_manager_from_server_config(config, repo_dir))
