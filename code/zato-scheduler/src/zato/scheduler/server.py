@@ -100,14 +100,14 @@ class SchedulerServer(AuxServer):
 
         # Fix up configuration so it uses the format that internal utilities expect
         startup_jobs_config = get_config(repo_location, startup_jobs_config_file, needs_user_config=False)
-        for name, job_config in startup_jobs_config.items():
+        for name, job_config in startup_jobs_config.items(): # type: ignore
 
             # Ignore jobs that have been removed
             if name in SCHEDULER.JobsToIgnore:
                 logger.info('Ignoring job `%s (%s)`', name, startup_jobs_config_file)
                 continue
 
-            job_config['name'] = name
+            job_config['name'] = name # type: ignore
             cast_('SchedulerServerConfig', config).startup_jobs.append(job_config)
 
 # ################################################################################################################################
