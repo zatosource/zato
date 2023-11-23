@@ -446,6 +446,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.odb_data = server_config.odb
     server.host = zato_gunicorn_app.zato_host
     server.port = zato_gunicorn_app.zato_port
+    server.use_tls = server_config.crypto.use_tls
     server.repo_location = repo_location
     server.pickup_config = pickup_config
     server.base_dir = base_dir
@@ -490,8 +491,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.set_ipc_password(ipc_password)
 
     # .. this is for other processes.
-    ipc_password_encrypted = crypto_manager.encrypt(ipc_password)
-    ipc_password_encrypted = ipc_password_encrypted.decode('utf8')
+    ipc_password_encrypted = crypto_manager.encrypt(ipc_password, needs_str=True)
     _ipc_password_key = IPC.Credentials.Password_Key
     os.environ[_ipc_password_key] = ipc_password_encrypted
 

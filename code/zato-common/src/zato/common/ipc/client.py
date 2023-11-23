@@ -15,6 +15,7 @@ from requests import post as requests_post
 # Zato
 from zato.common.api import IPC as Common_IPC
 from zato.common.broker_message import SERVER_IPC
+from zato.common.util.config import get_server_api_protocol_from_config_item
 from zato.common.typing_ import dataclass
 
 # ################################################################################################################################
@@ -54,12 +55,14 @@ class IPCClient:
 
     def __init__(
         self,
-        host,     # type: str
-        port,     # type: int
-        username, # type: str
-        password, # type: str
+        use_tls:  'bool',
+        host:     'str',
+        port:     'int',
+        username: 'str',
+        password: 'str',
     ) -> 'None':
 
+        self.api_protocol = get_server_api_protocol_from_config_item(use_tls)
         self.host = host
         self.port = port
         self.username = username
@@ -82,7 +85,7 @@ class IPCClient:
     ) -> 'IPCResponse':
 
         # This is where we can find the IPC server to invoke ..
-        url = f'http://{self.host}:{self.port}/{url_path}'
+        url = f'{self.api_protocol}{self.host}:{self.port}/{url_path}'
 
         # .. prepare the full request ..
         dict_data = {
@@ -163,7 +166,7 @@ def main():
     service = 'pub.zato.ping'
     request = {'Hello': 'World'}
 
-    client = IPCClient(host, port, username, password)
+    client = IPCClient(False, host, port, username, password)
     response = client.invoke(service, request)
 
     logger.info('Response -> %s', response)
