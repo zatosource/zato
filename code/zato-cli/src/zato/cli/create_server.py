@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,10 +18,18 @@ from zato.common.util.open_ import open_r, open_w
 from zato.common.events.common import Default as EventsDefault
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # For pyflakes
 simple_io_conf_contents = simple_io_conf_contents
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 server_conf_dict = deepcopy(CONTENT_TYPE)
@@ -34,6 +42,7 @@ for key, value in default_internal_modules.items():
 
 server_conf_dict.deploy_internal = '\n'.join(deploy_internal)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 server_conf_template = """[main]
@@ -653,7 +662,7 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def __init__(self, args):
+    def __init__(self, args:'any_') -> 'None':
 
         # stdlib
         import os
@@ -671,7 +680,7 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def prepare_directories(self, show_output):
+    def prepare_directories(self, show_output:'bool') -> 'None':
 
         # stdlib
         import os
@@ -689,7 +698,7 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def execute(self, args, default_http_port=None, show_output=True, return_server_id=False):
+    def execute(self, args:'any_', default_http_port:'any_'=None, show_output:'bool'=True, return_server_id:'bool'=False):
 
         # stdlib
         import os
@@ -734,11 +743,9 @@ class Create(ZatoCommand):
         default_http_port = default_http_port or http_plain_server_port
 
         engine = self._get_engine(args)
-        session = self._get_session(engine)
+        session = self._get_session(engine) # type: ignore
 
-        cluster = session.query(Cluster).\
-            filter(Cluster.name == args.cluster_name).\
-            first()
+        cluster = session.query(Cluster).filter(Cluster.name == args.cluster_name).first() # type: ignore
 
         if not cluster:
             self.logger.error("Cluster `%s` doesn't exist in ODB", args.cluster_name)
@@ -746,13 +753,13 @@ class Create(ZatoCommand):
 
         server = Server(cluster=cluster)
         server.name = args.server_name
-        if isinstance(self.token, (bytes, bytearray)):
-            server.token = self.token.decode('utf8')
+        if isinstance(self.token, (bytes, bytearray)): # type: ignore
+            server.token = self.token.decode('utf8') # type: ignore
         else:
             server.token = self.token
-        server.last_join_status = SERVER_JOIN_STATUS.ACCEPTED
-        server.last_join_mod_by = self._get_user_host()
-        server.last_join_mod_date = datetime.utcnow()
+        server.last_join_status = SERVER_JOIN_STATUS.ACCEPTED # type: ignore
+        server.last_join_mod_by = self._get_user_host() # type: ignore
+        server.last_join_mod_date = datetime.utcnow() # type: ignore
         session.add(server)
 
         try:
@@ -774,14 +781,13 @@ class Create(ZatoCommand):
                 if show_output:
                     self.logger.debug('Creating {}'.format(file_name))
                 f = open_w(file_name)
-                f.write(contents)
+                _ = f.write(contents)
                 f.close()
 
             logging_conf_loc = os.path.join(self.target_dir, 'config/repo/logging.conf')
 
             logging_conf = open_r(logging_conf_loc).read()
-            open_w(logging_conf_loc).write(logging_conf.format(
-                log_path=os.path.join(self.target_dir, 'logs', 'zato.log')))
+            _ = open_w(logging_conf_loc).write(logging_conf.format(log_path=os.path.join(self.target_dir, 'logs', 'zato.log')))
 
             if show_output:
                 self.logger.debug('Logging configuration stored in {}'.format(logging_conf_loc))
@@ -823,22 +829,22 @@ class Create(ZatoCommand):
             # .. which makes it more complex to substitute them.
             server_conf_data = server_conf_data.replace('/zato/api/invoke/service_name', '/zato/api/invoke/{service_name}')
 
-            server_conf.write(server_conf_data)
+            _ = server_conf.write(server_conf_data)
             server_conf.close()
 
             pickup_conf_loc = os.path.join(self.target_dir, 'config/repo/pickup.conf')
             pickup_conf_file = open_w(pickup_conf_loc)
-            pickup_conf_file.write(pickup_conf)
+            _ = pickup_conf_file.write(pickup_conf)
             pickup_conf_file.close()
 
             user_conf_loc = os.path.join(self.target_dir, 'config/repo/user.conf')
             user_conf = open_w(user_conf_loc)
-            user_conf.write(user_conf_contents)
+            _ = user_conf.write(user_conf_contents)
             user_conf.close()
 
             sso_conf_loc = os.path.join(self.target_dir, 'config/repo/sso.conf')
             sso_conf = open_w(sso_conf_loc)
-            sso_conf.write(sso_conf_contents)
+            _ = sso_conf.write(sso_conf_contents)
             sso_conf.close()
 
             # On systems other than Windows, where symlinks are not fully supported,
@@ -888,10 +894,10 @@ class Create(ZatoCommand):
 
             zato_misc_jwt_secret = fernet1.encrypt(zato_misc_jwt_secret)
 
-            if isinstance(zato_misc_jwt_secret, bytes):
+            if isinstance(zato_misc_jwt_secret, bytes): # type: ignore
                 zato_misc_jwt_secret = zato_misc_jwt_secret.decode('utf8')
 
-            secrets_conf.write(secrets_conf_template.format(
+            _ = secrets_conf.write(secrets_conf_template.format(
                 keys_key1=secret_key,
                 zato_well_known_data=zato_well_known_data,
                 zato_kvdb_password=kvdb_password,
@@ -905,7 +911,7 @@ class Create(ZatoCommand):
 
             simple_io_conf_loc = os.path.join(self.target_dir, 'config/repo/simple-io.conf')
             simple_io_conf = open_w(simple_io_conf_loc)
-            simple_io_conf.write(simple_io_conf_contents.format(
+            _ = simple_io_conf.write(simple_io_conf_contents.format(
                 bytes_to_str_encoding=bytes_to_str_encoding
             ))
             simple_io_conf.close()
@@ -914,7 +920,7 @@ class Create(ZatoCommand):
                 self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))
 
             # Sphinx APISpec files
-            for file_path, contents in apispec_files.items():
+            for file_path, contents in apispec_files.items(): # type: ignore
                 full_path = os.path.join(self.target_dir, 'config/repo/static/sphinxdoc/apispec', file_path)
                 dir_name = os.path.dirname(full_path)
                 try:
@@ -924,7 +930,7 @@ class Create(ZatoCommand):
                     pass
                 finally:
                     api_file = open_w(full_path)
-                    api_file.write(contents)
+                    _ = api_file.write(contents)
                     api_file.close()
 
             # Initial info
