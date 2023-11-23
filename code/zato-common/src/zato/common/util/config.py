@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from logging import getLogger
+from pathlib import Path
 from traceback import format_exc
 from urllib.parse import parse_qsl, urlparse, urlunparse
 
@@ -19,8 +20,9 @@ from bunch import Bunch
 from parse import PARSE_RE as parse_re
 
 # Zato
-from zato.common.api import EnvVariable, Secret_Shadow
+from zato.common.api import EnvConfigCtx, EnvVariable, Secret_Shadow
 from zato.common.const import SECRETS
+from zato.common.ext.configobj_ import ConfigObj
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,10 +37,116 @@ if 0:
 logger = getLogger(__name__)
 
 # ################################################################################################################################
-# ################################################################################################################################
 
 # Values of these generic attributes may contain query string elements that have to be masked out
 mask_attrs = ['address']
+
+# ################################################################################################################################
+
+def make_name_env_compatible(name:'str') -> 'str':
+    return name.replace('.', '__').replace('-','__')
+
+# ################################################################################################################################
+
+def get_env_config_ctx(file_path:'str | any_') -> 'EnvConfigCtx':
+
+    # Our response that will be populated
+    out = EnvConfigCtx()
+
+    if file_path and isinstance(file_path, str):
+
+        file_path = file_path.lower()
+
+        if 'server' in file_path:
+            component = 'Server'
+        elif 'scheduler' in file_path:
+            component = 'Scheduler'
+        elif ('web-admin' in file_path) or ('dashboard' in file_path):
+            component = 'Dashboard'
+        elif 'user-conf' in file_path:
+            component = 'User_Config'
+        else:
+            component = 'Unknown'
+
+        file_name = Path(file_path).name
+
+    else:
+        component = 'Not_Applicable_component'
+        file_name = 'Not_Applicable_Zato_file_path'
+
+    # Now, we can return the response to our caller
+    out.component = component
+    out.file_name = file_name
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def enrich_config_from_environment(file_name:'str', config:'Bunch') -> 'Bunch':
+
+    # stdlib
+    from io import StringIO
+
+    # Local variables
+    _env_key_prefix = EnvVariable.Key_Prefix
+
+    # Make the file name use only the characters that an environment variable can have
+    file_name = make_name_env_compatible(file_name)
+
+    # This is the basic context of the configuration file that we are processing ..
+    ctx = get_env_config_ctx(file_name)
+
+    # This is a map of stanzas to key/value pairs that exist in the environment for this stanza
+    # but do not exist in the stanza itself. These new keys will be merged into each such stanza.
+    extra = {}
+
+    # .. go through each of the stanzas ..
+    for stanza in config:
+
+        # .. make sure the name is what an environment variable would use ..
+        stanza = make_name_env_compatible(stanza)
+
+        # .. populate it because we may need to use it ..
+        extra[stanza] = {}
+
+        # .. find all the keys in the environment that correspond to this stanza ..
+        env_key_prefix = f'{_env_key_prefix}_{ctx.component}_{ctx.file_name}_{stanza}_'
+        for env_name, env_value in os.environ.items():
+            if env_name.startswith(env_key_prefix):
+                key_name = env_name.replace(env_key_prefix, '')
+                extra[stanza][key_name] = env_value
+
+    # .. build a temporary string object that ConfigObj will parse in a moment below ..
+    extra_str = StringIO()
+
+    for stanza, key_values in extra.items():
+        _ = extra_str.write(f'[{stanza}]\n')
+        for key, value in key_values.items():
+            _ = extra_str.write(f'{key}={value}\n\n')
+
+    _ = extra_str.seek(0)
+
+    # .. the file has to based to a temporary location now, which is what ConfigObject expects ..
+
+    # .. build a new ConfigObj from the extra data, ..
+    # .. which we need because we want for the ConfigObj's parser ..
+    # .. to parse string environment variables to Python objects ..
+    extra_config = ConfigObj(extra_str)
+
+    # .. go through all the extra pieces of configuration ..
+    for stanza, extra_key_values in extra_config.items():
+
+        # .. if we have anything new for that stanza ..
+        if extra_key_values:
+
+            # .. do assign it to the original config object ..
+            orig_stanza = config[stanza]
+            for new_extra_key, new_extra_value in extra_key_values.items(): # type: ignore
+                orig_stanza[new_extra_key] = new_extra_value
+
+    # .. now, we are ready to return the enriched the configuration to our caller.
+    return config
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,18 +159,26 @@ def get_env_config_value(
     use_default:'bool'=True
 ) -> 'str':
 
+    # Local variables
+    _env_key_prefix = EnvVariable.Key_Prefix
+
     # Make sure the individual components are what an environment variable can use
-    file_name = file_name.replace('.', '__').replace('-','__')
-    stanza = stanza.replace('.', '__').replace('-','__')
-    key = key.replace('.', '__').replace('-','__')
+    file_name = make_name_env_compatible(file_name)
+    stanza = make_name_env_compatible(stanza)
+    key = make_name_env_compatible(key)
 
     # This is the name of an environment variable that we will be looking up ..
-    env_name = f'Zato_Config_{component}_{file_name}_{stanza}_{key}'
+    env_name = f'{_env_key_prefix}_{component}_{file_name}_{stanza}_{key}'
 
     # .. use what we find in the environment ..
-    if not (value := os.environ.get(env_name, '')):
+    if value := os.environ.get(env_name, ''):
 
-        # .. or, optionally,  build a default value if there is no such key ..
+        # .. store an entry that we did find it ..
+        logger.info('Found env. key -> %s', env_name)
+
+    # .. or, optionally,  build a default value if there is no such key ..
+    else:
+
         if use_default:
             value = env_name + EnvVariable.Key_Missing_Suffix
 

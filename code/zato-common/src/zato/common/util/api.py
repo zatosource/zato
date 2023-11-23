@@ -118,6 +118,7 @@ from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
+from zato.common.util.config import enrich_config_from_environment
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
@@ -367,31 +368,53 @@ def get_user_config_name(name:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _get_config(conf, bunchified, needs_user_config, repo_location=None):
-    # type: (bool, bool, str) -> Bunch
+def _get_config(
+    *,
+    conf, # type: ConfigObj
+    config_name, # type: str
+    bunchified, # type: bool
+    needs_user_config, # type: bool
+    repo_location=None # type: strnone
+) -> 'Bunch | ConfigObj':
 
-    conf = bunchify(conf) if bunchified else conf
+    conf = bunchify(conf) if bunchified else conf # type: ignore
 
     if needs_user_config:
-        conf.user_config_items = {}
+        conf.user_config_items = {} # type: ignore
 
         user_config = conf.get('user_config')
         if user_config:
-            for name, path in user_config.items():
+            for name, path in user_config.items(): # type: ignore
                 path = absolutize(path, repo_location)
                 if not os.path.exists(path):
                     logger.warning('User config not found `%s`, name:`%s`', path, name)
                 else:
                     user_conf = ConfigObj(path)
                     user_conf = bunchify(user_conf) if bunchified else user_conf
-                    conf.user_config_items[name] = user_conf
+                    conf.user_config_items[name] = user_conf # type: ignore
 
-    return conf
+    # At this point, we have a Bunch instance that contains
+    # the contents of the file. Now, we need to enrich it
+    # with values that may be potentially found in the environment.
+    if isinstance(conf, Bunch):
+        conf = enrich_config_from_environment(config_name, conf) # type: ignore
+
+    return conf # type: ignore
 
 # ################################################################################################################################
 
-def get_config(repo_location, config_name, bunchified=True, needs_user_config=True, crypto_manager=None, secrets_conf=None,
-    raise_on_error=False, log_exception=True, require_exists=True, conf_location=None):
+def get_config(
+    repo_location,   # type: str
+    config_name,     # type: str
+    bunchified=True, # type: bool
+    needs_user_config=True, # type: bool
+    crypto_manager=None,    # type: CryptoManager | None
+    secrets_conf=None,      # type: any_
+    raise_on_error=False,   # type: bool
+    log_exception=True,     # type: bool
+    require_exists=True,    # type: bool
+    conf_location=None      # type: strnone
+) -> 'Bunch | ConfigObj':
     """ Returns the configuration object. Will load additional user-defined config files, if any are available.
     """
 
@@ -409,7 +432,13 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
 
         logger.info('Getting configuration from `%s`', conf_location)
         conf = ConfigObj(conf_location, zato_crypto_manager=crypto_manager, zato_secrets_conf=secrets_conf)
-        result = _get_config(conf, bunchified, needs_user_config, repo_location)
+        result = _get_config(
+            conf=conf,
+            config_name=config_name,
+            bunchified=bunchified,
+            needs_user_config=needs_user_config,
+            repo_location=repo_location
+        )
     except Exception:
         if log_exception:
             logger.warning('Error while reading %s from %s; e:`%s`', config_name, repo_location, format_exc())
@@ -437,11 +466,11 @@ def get_config_from_string(data):
     """ A simplified version of get_config which creates a config object from string, skipping any user-defined config files.
     """
     buff = StringIO()
-    buff.write(data)
-    buff.seek(0)
+    _ = buff.write(data)
+    _ = buff.seek(0)
 
     conf = ConfigObj(buff)
-    out = _get_config(conf, True, False)
+    out = _get_config(conf=conf, config_name='', bunchified=True, needs_user_config=False)
 
     buff.close()
     return out
