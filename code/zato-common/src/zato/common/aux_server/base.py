@@ -21,9 +21,10 @@ from gevent.pywsgi import WSGIServer
 # Zato
 from zato.common.api import IPC as Common_IPC, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
-from zato.common.crypto.api import CryptoManager, is_string_equal
+from zato.common.crypto.api import CryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.util.api import as_bool, absjoin, get_config, new_cid, set_up_logging
+from zato.common.util.auth import check_basic_auth
 from zato.common.util.json_ import json_loads
 
 # ################################################################################################################################
@@ -292,22 +293,21 @@ class AuxServer:
 
 # ################################################################################################################################
 
-    def _check_credentials(self, request:'Bunch') -> 'None':
+    def _check_credentials(self, credentials:'str') -> 'None':
 
-        username:'str' = request.get('username') or ''
-        password:'str' = request.get('password') or ''
-
-        if not is_string_equal(self.config.username, username):
-            logger.info('Invalid IPC username')
-            raise Exception('Invalid IPC username or password')
-
-        if not is_string_equal(self.config.password, password):
-            logger.info('Invalid IPC password')
-            raise Exception('Invalid IPC username or password')
+        result = check_basic_auth(credentials, self.config.username, self.config.password)
+        if not result is True:
+            logger.info('Credentials error -> %s', result)
+            raise Exception('Invalid credentials')
 
 # ################################################################################################################################
 
-    def handle_api_request(self, data:'bytes') -> 'any_':
+    def should_check_credentials(self) -> 'bool':
+        return True
+
+# ################################################################################################################################
+
+    def handle_api_request(self, data:'bytes', credentials:'str') -> 'any_':
 
         # Convert to a Python dict ..
         request = json_loads(data)
@@ -317,7 +317,8 @@ class AuxServer:
 
         # .. first, check credentials ..
         if self.has_credentials:
-            self._check_credentials(request)
+            if self.should_check_credentials():
+                self._check_credentials(credentials)
 
         # .. look up the action we need to invoke ..
         action = request.get('action') # type: ignore
@@ -353,9 +354,12 @@ class AuxServer:
             # Get the contents of our request ..
             request = env['wsgi.input'].read()
 
+            # .. this is where we expect to find Basic Auth credentials ..
+            credentials = env.get('HTTP_AUTHORIZATION') or ''
+
             # .. if there was any, invoke the business function ..
             if request:
-                response = self.handle_api_request(request)
+                response = self.handle_api_request(request, credentials)
 
             # If we are here, it means that there was no exception
             status_text = Common_IPC.Status_OK
