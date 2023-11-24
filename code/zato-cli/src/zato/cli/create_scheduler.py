@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import sys
 from copy import deepcopy
 
 # Bunch
@@ -116,6 +117,8 @@ class Create(ZatoCommand):
     opts.append({'name':'--server-path', 'help':'Local path to a Zato server'})
     opts.append({'name':'--server-host', 'help':'Remote host of a Zato server'})
     opts.append({'name':'--server-port', 'help':'Remote TCP port of a Zato server'})
+    opts.append({'name':'--server-username', 'help':'Username to invoke the remote server with'})
+    opts.append({'name':'--server-password', 'help':'Password to invoke the remote server with'})
 
     opts.append({'name':'--bind-host', 'help':'Local address to start the scheduler on'})
     opts.append({'name':'--bind-port', 'help':'Local TCP port to start the scheduler on'})
@@ -246,9 +249,26 @@ class Create(ZatoCommand):
         server_host = self.get_arg('server_host', '127.0.0.1')
         server_port = self.get_arg('server_port', 17010)
 
-        server_username, server_password = self._get_server_admin_invoke_credentials(cm, odb_config)
+        server_username = self.get_arg('server_username', '')
+        server_password = self.get_arg('server_password', '')
 
-        server_password = server_password.encode('utf8')
+        # We enter this branch if we have credentials given on input ..
+        if server_username or server_password:
+            if server_username:
+                if not server_password:
+                    self.logger.warn('Server password is required if server username is provided')
+                    sys.exit(self.SYS_ERROR.INVALID_INPUT)
+
+            if server_password:
+                if not server_username:
+                    self.logger.warn('Server username is required if server password is provided')
+                    sys.exit(self.SYS_ERROR.INVALID_INPUT)
+
+        # .. we enter this branch if server credentials needed to be looked up in the ODB.
+        else:
+            server_username, server_password = self._get_server_admin_invoke_credentials(cm, odb_config)
+
+        # .. encrypt the password before making use of it ..
         server_password = cm.encrypt(server_password, needs_str=True)
 
         initial_sleep_time = self.get_arg('initial_sleep_time', SCHEDULER.InitialSleepTime)

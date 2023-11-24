@@ -19,6 +19,7 @@ from time import sleep
 from zato.cli import ManageCommand
 from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
     NotGiven, TLS as COMMON_TLS, Zato_None
+from zato.common.const import ServiceConst
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -1693,7 +1694,7 @@ class ObjectManager:
 # ################################################################################################################################
 
     ignored_names = (
-        'admin.invoke',
+        ServiceConst.API_Admin_Invoke_Username,
         'pubapi',
     )
 

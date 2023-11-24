@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,6 +11,7 @@ from contextlib import closing
 
 # Zato
 from zato.common.api import SEC_DEF_TYPE
+from zato.common.const import ServiceConst
 from zato.common.odb import query
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, GetListAdminSIO
@@ -56,7 +57,7 @@ class GetList(AdminService):
     def handle(self):
 
         _needs_internal = self.request.input.get('needs_internal') != ''
-        _internal = {'admin.invoke'}
+        _internal = {ServiceConst.API_Admin_Invoke_Username}
 
         if _needs_internal:
             needs_internal = True if self.request.input.get('needs_internal') is True else False
