@@ -353,19 +353,14 @@ topics=
 
 # ################################################################################################################################
 
-service_sources_contents = """# Visit https://zato.io/docs for more information.
+service_sources_contents = """
+#
+# This file is kept for backward compatibility with previous versions of Zato.
+# Do not modify it and do not use it in new deployments.
+#
 
-# All paths are relative to server root so that, for instance,
-# ./my-services will resolve to /opt/zato/server1/my-services if a server has been
-# installed into /opt/zato/server1
-
-# List your service sources below, each on a separate line.
-
-# Recommended to be always the very last line so all services that have been
-# hot-deployed are picked up last.
 ./work/hot-deploy/current
-
-# Visit https://zato.io/docs for more information."""
+""".strip()
 
 # ################################################################################################################################
 
