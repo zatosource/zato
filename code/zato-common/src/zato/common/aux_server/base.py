@@ -19,11 +19,11 @@ from bunch import Bunch
 from gevent.pywsgi import WSGIServer
 
 # Zato
-from zato.common.api import IPC as Common_IPC, ZATO_ODB_POOL_NAME
+from zato.common.api import IPC as Common_IPC, SCHEDULER, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
-from zato.common.util.api import as_bool, absjoin, get_config, new_cid, set_up_logging
+from zato.common.util.api import as_bool, absjoin, get_config, is_encrypted, new_cid, set_up_logging
 from zato.common.util.auth import check_basic_auth
 from zato.common.util.json_ import json_loads
 
@@ -37,6 +37,12 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_scheduler_api_username = SCHEDULER.Default_API_Client_For_Server_Username
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,8 +61,8 @@ class AuxServerConfig:
     """ Encapsulates configuration of various server-related layers.
     """
     odb: 'ODBManager'
-    username: 'str'
-    password: 'str'
+    username: 'str' = ''
+    password: 'str' = ''
     server_type: 'str'
     callback_func: 'callable_'
     conf_file_name: 'str'
@@ -145,6 +151,25 @@ class AuxServerConfig:
                 server_password = config.crypto_manager.decrypt(server_password)
                 config.main.server.server_password = server_password
 
+        # Obtain the credentials used to invoke schedulers
+        api_clients = config.main.get('api_clients') or {}
+
+        # Check if we have an expect API client in this stanza ..
+        if _scheduler_api_username in api_clients:
+
+            # .. if we are here, it means that such a client exists .
+
+            # .. we can set its username ..
+            config.username = _scheduler_api_username
+
+            # .. decrypt its password ..
+            _password = api_clients[_scheduler_api_username]
+            if is_encrypted(_password):
+                _password = config.crypto_manager.decrypt(_password)
+
+            # .. and set it too ..
+            config.password = _password
+
         sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
 
         odb.pool = sql_pool_store[ZATO_ODB_POOL_NAME].pool
@@ -221,7 +246,7 @@ class AuxServer:
 
     @classmethod
     def start(
-        class_,            # type 'type_[AuxServer]
+        class_,                # type: type_[AuxServer]
         *,
         base_dir=None,         # type: strnone
         bind_host='127.0.0.1', # type: str
@@ -256,11 +281,13 @@ class AuxServer:
         config.parent_server_name = parent_server_name
         config.parent_server_pid  = parent_server_pid
 
-        username = username or 'ipc.username.not.set.' + CryptoManager.generate_secret().decode('utf8')
-        password = password or 'ipc.password.not.set.' + CryptoManager.generate_secret().decode('utf8')
+        if not config.username:
+            username = username or 'ipc.username.not.set.' + CryptoManager.generate_secret().decode('utf8')
+            config.username = username
 
-        config.username = username
-        config.password = password
+        if not config.password:
+            password = password or 'ipc.password.not.set.' + CryptoManager.generate_secret().decode('utf8')
+            config.password = password
 
         if callback_func:
             config.callback_func = callback_func
