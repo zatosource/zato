@@ -166,7 +166,7 @@ class Create(ZatoCommand):
             'DATABASE_PORT': args.odb_port or '',
             'SITE_ID': django_site_id,
             'SECRET_KEY': cm.encrypt(django_secret_key),
-            'ADMIN_INVOKE_NAME':'admin.invoke',
+            'ADMIN_INVOKE_NAME':ServiceConst.API_Admin_Invoke_Username,
             'ADMIN_INVOKE_PASSWORD':cm.encrypt(admin_invoke_password),
         }
         import platform
