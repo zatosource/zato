@@ -15,11 +15,11 @@ from zato.common.py23_.past.builtins import basestring, unicode
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import any_
     from zato.cy.simpleio import BoolConfig as PyBoolConfig
     from zato.cy.simpleio import IntConfig as PyIntConfig
     from zato.cy.simpleio import SecretConfig as PySecretConfig
     from zato.cy.simpleio import SIOServerConfig as PySIOServerConfig
-
     PyBoolConfig = PyBoolConfig
     PyIntConfig  = PyIntConfig
     PySecretConfig = PySecretConfig
@@ -220,7 +220,7 @@ def get_sio_server_config(sio_fs_config):
 
 # ################################################################################################################################
 
-def drop_sio_elems(elems, *to_drop):
+def drop_sio_elems(elems:'any_', *to_drop:'any_') -> 'any_':
     out = list(set(elems))
     for out_elem in out:
         out_name = out_elem.name if isinstance(out_elem, Elem) else out_elem
