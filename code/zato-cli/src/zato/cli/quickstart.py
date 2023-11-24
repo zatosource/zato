@@ -12,6 +12,8 @@ from copy import deepcopy
 
 # Zato
 from zato.cli import common_odb_opts, common_scheduler_api_client_for_server_opts, ZatoCommand
+from zato.common.typing_ import cast_
+from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.platform_ import is_windows, is_non_windows
 from zato.common.util.open_ import open_w
 
@@ -356,9 +358,6 @@ class Create(ZatoCommand):
         # These are shared by all servers
         secret_key = getattr(args, 'secret_key', None) or Fernet.generate_key()
         jwt_secret = getattr(args, 'jwt_secret_key', None) or Fernet.generate_key()
-        scheduler_api_client_for_server_auth_required = getattr(args, 'scheduler_api_client_for_server_auth_required', None)
-        scheduler_api_client_for_server_username = getattr(args, 'scheduler_api_client_for_server_username', None)
-        scheduler_api_client_for_server_password = getattr(args, 'scheduler_api_client_for_server_password', None)
 
         # Zato
         from zato.cli import ca_create_ca, ca_create_lb_agent, ca_create_scheduler, ca_create_server, \
@@ -369,6 +368,17 @@ class Create(ZatoCommand):
         from zato.common.util.api import get_engine, get_session
 
         random.seed()
+
+        scheduler_api_client_for_server_auth_required = getattr(args, 'scheduler_api_client_for_server_auth_required', None)
+        scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
+        scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(
+            args,
+            cast_('CryptoManager', None),
+            initial_password=cast_('str', CryptoManager.generate_password(to_str=True)),
+            needs_encrypt=False
+        )
+
+        get_scheduler_api_client_for_server_password,
 
         # Make sure we always work with absolute paths
         args_path = os.path.abspath(args.path)
