@@ -238,7 +238,6 @@ class Create(ZatoCommand):
         scheduler_api_client_for_server_auth_required = get_scheduler_api_client_for_server_auth_required(args)
         scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
         scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
-        scheduler_api_client_for_server_password = cm.encrypt(scheduler_api_client_for_server_password, needs_str=True)
 
         zato_well_known_data = well_known_data.encode('utf8')
         zato_well_known_data = cm.encrypt(zato_well_known_data, needs_str=True)
