@@ -556,7 +556,7 @@ class SCHEDULER:
 
     # This is the username of an API client that servers
     # will use when they invoke their scheduler.
-    Default_API_Client_For_Server_Auth_Required = True
+    Default_API_Client_For_Server_Auth_Required = False
     Default_API_Client_For_Server_Username = 'server_api_client1'
 
     TLS_Enabled = False
