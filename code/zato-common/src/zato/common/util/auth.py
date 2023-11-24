@@ -156,13 +156,6 @@ def check_basic_auth(auth, expected_username, expected_password):
     auth = auth if isinstance(auth, unicode) else auth.decode('utf8')
     username, password = auth.split(':', 1)
 
-    print()
-    print(111, username)
-    print(222, password)
-    print(333, expected_username)
-    print(444, expected_password)
-    print()
-
     if is_string_equal(username, expected_username) and is_string_equal(password, expected_password):
         return True
     else:
