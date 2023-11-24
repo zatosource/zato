@@ -207,7 +207,8 @@ def is_encrypted(data:'str | bytes') -> 'bool':
     if isinstance(data, bytes):
         data = data.decode('utf8')
 
-    return data.startswith(SECRETS.Encrypted_Indicator)
+    result = data.startswith(SECRETS.Encrypted_Indicator)
+    return result
 
 # ################################################################################################################################
 
