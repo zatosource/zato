@@ -54,6 +54,7 @@ geckodriver.log
 hotfixes
 lib/
 pidfile
+vscode
 *.egg-info*
 *.geany*
 *.pyc

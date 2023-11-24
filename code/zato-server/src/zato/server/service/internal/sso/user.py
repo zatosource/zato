@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -19,6 +19,7 @@ from zato.common.py23_.past.builtins import unicode
 # Zato
 from zato.common import NotGiven
 from zato.common.broker_message import SSO as BROKER_MSG_SSO
+from zato.common.simpleio_ import drop_sio_elems
 from zato.common.util import asbool
 from zato.server.service import AsIs, Bool, Int, List, Opaque, SIOElem
 from zato.server.service.internal.sso import BaseService, BaseRESTService, BaseSIO
@@ -59,7 +60,7 @@ class Login(BaseService):
         input_required = ('username', 'password', 'current_app')
         input_optional = ('totp_code', 'new_password', 'remote_addr', 'user_agent')
         output_required = ('status',)
-        output_optional = BaseSIO.output_optional + ('ust',)
+        output_optional = tuple(drop_sio_elems(BaseSIO.output_optional, 'status')) + ('ust',)
 
 # ################################################################################################################################
 
@@ -102,6 +103,7 @@ class Logout(BaseService):
     class SimpleIO(BaseSIO):
         input_required = ('ust', 'current_app')
         output_required = ('status',)
+        output_optional = tuple(drop_sio_elems(BaseSIO.output_optional, 'status'))
 
     def _handle_sso(self, ctx):
 
@@ -436,8 +438,9 @@ class Search(_CtxInputUsing):
             'sign_up_status', 'approval_status', Bool('paginate'), Int('cur_page'), Int('page_size'), 'name_op',
             'is_name_exact')
         output_required = ('status',)
-        output_optional = BaseSIO.output_optional + (Int('total'), Int('num_pages'), Int('page_size'), Int('cur_page'),
-            'has_next_page', 'has_prev_page', Int('next_page'), Int('prev_page'), List('result'))
+        output_optional = tuple(drop_sio_elems(BaseSIO.output_optional, 'status')) + (Int('total'), Int('num_pages'),
+            Int('page_size'), Int('cur_page'), 'has_next_page', 'has_prev_page', Int('next_page'), Int('prev_page'),
+            List('result'))
         default_value = _invalid
 
 # ################################################################################################################################
