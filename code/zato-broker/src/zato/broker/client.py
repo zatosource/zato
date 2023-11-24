@@ -95,6 +95,10 @@ class BrokerClient:
             if not (scheduler_api_password := scheduler_config.get('scheduler_api_password')):
                 scheduler_api_password = 'scheduler_api_password_missing'
 
+            # Make sure both parts are string objects
+            scheduler_api_username = str(scheduler_api_username)
+            scheduler_api_password = str(scheduler_api_password)
+
             self.scheduler_auth = (scheduler_api_username, scheduler_api_password)
 
             # Introduced after 3.2 was released, hence optional
