@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from copy import deepcopy
 
 # Zato
 from zato.cli import common_odb_opts, ZatoCommand
+from zato.common.const import ServiceConst
 from zato.common.util.open_ import open_r, open_w
 
 config_template = """{{
