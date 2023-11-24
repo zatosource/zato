@@ -556,7 +556,7 @@ class SCHEDULER:
 
     # This is the username of an API client that servers
     # will use when they invoke their scheduler.
-    Default_API_Client_For_Server_Auth_Required = True
+    Default_API_Client_For_Server_Auth_Required = False
     Default_API_Client_For_Server_Username = 'server_api_client1'
 
     TLS_Enabled = False
@@ -2050,6 +2050,12 @@ Wrapper_Name_Prefix_List = {
 class Wrapper_Type:
     Keysight_Hawkeye = 'KeysightHawkeye'
     Keysight_Vision  = 'KeysightVision'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HAProxy:
+    Default_Memory_Limit = '4096' # In megabytes = 4 GB
 
 # ################################################################################################################################
 # ################################################################################################################################
