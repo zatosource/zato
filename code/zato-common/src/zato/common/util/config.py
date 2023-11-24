@@ -69,13 +69,21 @@ def get_scheduler_api_client_for_server_username(args:'any_') -> 'str':
 
 # ################################################################################################################################
 
-def get_scheduler_api_client_for_server_password(args:'any_', cm:'CryptoManager') -> 'str':
+def get_scheduler_api_client_for_server_password(
+    args:'any_',
+    cm:'CryptoManager',
+    *,
+    initial_password:'str'='',
+    needs_encrypt:'bool'=False
+) -> 'str':
 
     if not (value := os.environ.get(SCHEDULER.Env.Server_Password)):
         if not (value := getattr(args, 'scheduler_api_client_for_server_password', None)):
-            value = cm.generate_password()
-            value = cm.encrypt(value)
-            value = value.decode('utf8')
+            if not (value := initial_password):
+                value = cm.generate_password()
+                if needs_encrypt:
+                    value = cm.encrypt(value)
+                value = value.decode('utf8')
 
     return value
 
