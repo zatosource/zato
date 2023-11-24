@@ -92,8 +92,6 @@ class IPCClient:
             'source_server_name': source_server_name,
             'source_server_pid':  source_server_pid,
             'action':   SERVER_IPC.INVOKE.value,
-            'username': self.username,
-            'password': self.password,
             'service':  service,
             'data': request,
         }
@@ -128,8 +126,11 @@ class IPCClient:
             # .. now, do append the new item ..
             params[key] = value
 
+        # .. build our credentials ..
+        auth = (self.username, self.password)
+
         # .. invoke the server ..
-        response = requests_post(url, data, params=params)
+        response = requests_post(url, data, params=params, auth=auth)
 
         # .. de-serialize the response ..
         response = loads(response.text)

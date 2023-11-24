@@ -57,7 +57,7 @@ class SchedulerServer(AuxServer):
     conf_file_name = 'scheduler.conf'
     config_class = SchedulerServerConfig
     crypto_manager_class = SchedulerCryptoManager
-    has_credentials = False
+    has_credentials = True
 
     def __init__(self, config:'AuxServerConfig') -> 'None':
 
@@ -69,6 +69,19 @@ class SchedulerServer(AuxServer):
         # SchedulerAPI
         self.scheduler_api = SchedulerAPI(self.config)
         self.scheduler_api.broker_client = BrokerClient(zato_client=self.zato_client, server_rpc=None, scheduler_config=None)
+
+# ################################################################################################################################
+
+    def should_check_credentials(self) -> 'bool':
+
+        api_clients = self.config.main.get('api_clients')
+        api_clients = api_clients or self.config.main.get('api_users')
+        api_clients = api_clients or {}
+
+        auth_required = api_clients.get('auth_required')
+        auth_required = auth_required or False
+
+        return auth_required
 
 # ################################################################################################################################
 
