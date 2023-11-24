@@ -815,7 +815,6 @@ class Create(ZatoCommand):
 
             scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
             scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
-            scheduler_api_client_for_server_password = cm.encrypt(scheduler_api_client_for_server_password, needs_str=True)
 
             # Substate the variables ..
             server_conf_data = server_conf_template.format(
