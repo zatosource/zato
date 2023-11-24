@@ -19,10 +19,11 @@ from bunch import Bunch
 from gevent.pywsgi import WSGIServer
 
 # Zato
-from zato.common.api import IPC as Common_IPC, SCHEDULER, ZATO_ODB_POOL_NAME
+from zato.common.api import IPC as Common_IPC, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
+from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool, absjoin, get_config, is_encrypted, new_cid, set_up_logging
 from zato.common.util.auth import check_basic_auth
 from zato.common.util.json_ import json_loads
@@ -37,12 +38,6 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
-
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-_scheduler_api_username = SCHEDULER.Default_API_Client_For_Server_Username
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -110,13 +105,13 @@ class AuxServerConfig:
             secrets_conf = None
 
         # Read config in and extend it with ODB-specific information
-        config.main = get_config(
+        config.main = cast_('Bunch', get_config(
             repo_location,
             conf_file_name,
             crypto_manager=crypto_manager,
             secrets_conf=secrets_conf,
             require_exists=True
-        )
+        ))
         config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
         config.main.crypto.use_tls = as_bool(config.main.crypto.use_tls)
 
@@ -154,21 +149,35 @@ class AuxServerConfig:
         # Obtain the credentials used to invoke schedulers
         api_clients = config.main.get('api_clients') or {}
 
-        # Check if we have an expect API client in this stanza ..
-        if _scheduler_api_username in api_clients:
+        # Proceed if any API clients are defined ..
+        if api_clients:
 
-            # .. if we are here, it means that such a client exists .
+            # .. this will give us all the keys in this part of the configuration ..
+            api_clients_keys = list(api_clients.keys())
 
-            # .. we can set its username ..
-            config.username = _scheduler_api_username
+            # .. out of which we can discard some ..
+            for name in ['auth_required']:
+                if name in api_clients:
+                    api_clients_keys.remove(name)
 
-            # .. decrypt its password ..
-            _password = api_clients[_scheduler_api_username]
-            if is_encrypted(_password):
-                _password = config.crypto_manager.decrypt(_password)
+            # .. if we still have any keys left, we choose the first one to be our API credentials ..
+            if api_clients_keys:
 
-            # .. and set it too ..
-            config.password = _password
+                # .. note that we currently handle only one username ..
+                username = api_clients_keys[0]
+
+                # .. decrypt its password ..
+                password = api_clients[username]
+                if is_encrypted(password):
+                    password = config.crypto_manager.decrypt(password)
+
+                # .. make sure both credentials are strings ..
+                username = str(username)
+                password = str(password)
+
+                # .. we can set its username ..
+                config.username = username
+                config.password = password
 
         sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
 
