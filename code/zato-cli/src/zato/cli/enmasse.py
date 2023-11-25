@@ -941,6 +941,17 @@ class DependencyScanner:
 
 # ################################################################################################################################
 
+    def find_sec(self, fields:'strdict') -> 'strdictnone':
+
+        for service in SERVICES:
+            if service.is_security:
+                service_name = _replace_item_type(service.name)
+                item = self.find(service_name, fields)
+                if item is not None:
+                    return item
+
+# ################################################################################################################################
+
     def find(self, item_type:'str', fields:'strdict') -> 'strdictnone':
 
         if item_type in ['def_sec']:
@@ -955,16 +966,6 @@ class DependencyScanner:
         for item in items:
             if dict_match(item, fields):
                 return item
-
-# ################################################################################################################################
-
-    def find_sec(self, fields:'strdict') -> 'strdictnone':
-        for service in SERVICES:
-            if service.is_security:
-                service_name = _replace_item_type(service.name)
-                item = self.find(service_name, fields)
-                if item is not None:
-                    return item
 
 # ################################################################################################################################
 
@@ -1012,8 +1013,7 @@ class DependencyScanner:
 
 # ################################################################################################################################
 
-    def scan(self):
-        # type: () -> Results
+    def scan(self) -> 'Results':
 
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
@@ -1033,6 +1033,14 @@ class DependencyScanner:
             for (missing_type, missing_name), dep_names in sorted(iteritems(self.missing)):
                 existing = sorted(item.name for item in self.json.get(missing_type, []))
                 raw = (missing_type, missing_name, dep_names, existing)
+
+                print()
+                print(222, missing_type)
+                print(333, self.json.get(missing_type))
+                for key, values in self.json.items():
+                    print(444, key, values)
+                print()
+
                 results.add_warning(
                     raw, WARNING_MISSING_DEF, "'{}' is needed by '{}' but was not among '{}'",
                         missing_name, sorted(dep_names), existing)
@@ -2003,18 +2011,6 @@ class InputParser:
 
 # ################################################################################################################################
 
-    def load_include(self, path:'str', results:'Results') -> 'None':
-
-        abs_path = self._get_full_path(path)
-        result = self._parse_file(abs_path, results)
-
-        for item_type, items in result.items():
-            item_type = ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse.get(item_type) or item_type
-            _existing_items = self.json.setdefault(item_type, [])
-            _existing_items.extend(items)
-
-# ################################################################################################################################
-
     def parse_def_sec(self, item:'strdict', results:'Results') -> 'None':
 
         # Bunch
@@ -2041,19 +2037,18 @@ class InputParser:
 
 # ################################################################################################################################
 
-    def parse_item(self, item_type:'str', item:'str | strdict', results:'strdict') -> 'None':
+    def parse_item(self, item_type:'str', item:'str | strdict', results:'Results') -> 'None':
 
         # Bunch
         from bunch import Bunch
 
-        if self.is_include(item_type, item):
-            self.load_include(cast_('str', item))
-
-        elif item_type == 'def_sec':
-            self.parse_def_sec(item, results)
+        if item_type == 'def_sec':
+            self.parse_def_sec(cast_('strdict', item), results)
 
         else:
-            self.json.setdefault(item_type, []).append(Bunch(item)) # type: ignore
+            items = self.json.get(item_type) or []
+            _ = items.append(Bunch(cast_('strdict', item)))
+            self.json[item_type] = items
 
 # ################################################################################################################################
 
@@ -2443,7 +2438,6 @@ class Enmasse(ManageCommand):
         from zato.cli.check_config import CheckConfig
         from zato.common.util.api import get_client_from_server_conf
         from zato.common.util.env import populate_environment_from_file
-        from zato.common.util.tcp import wait_for_zato_ping
 
         # Local aliases
         input_path:'strnone'  = None
