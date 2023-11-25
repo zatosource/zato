@@ -66,7 +66,7 @@
     {% include "zato/no-clusters.html" %}
 {% else %}
 
-    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+    <div id="user-message-div"><pre id="user-message" class="user-message">OK, data loaded. {{ meta.total }} result{% if meta.total > 1 %}s{% endif %} found.</pre></div>
 
 {% include "zato/search-form.html" with page_prompt="Show jobs"%}
 
