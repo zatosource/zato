@@ -1033,14 +1033,6 @@ class DependencyScanner:
             for (missing_type, missing_name), dep_names in sorted(iteritems(self.missing)):
                 existing = sorted(item.name for item in self.json.get(missing_type, []))
                 raw = (missing_type, missing_name, dep_names, existing)
-
-                print()
-                print(222, missing_type)
-                print(333, self.json.get(missing_type))
-                for key, values in self.json.items():
-                    print(444, key, values)
-                print()
-
                 results.add_warning(
                     raw, WARNING_MISSING_DEF, "'{}' is needed by '{}' but was not among '{}'",
                         missing_name, sorted(dep_names), existing)
@@ -1333,7 +1325,7 @@ class ObjectImporter:
         attrs.is_source_external = True
 
         response = self._import_object(item_type, attrs, is_edit)
-        if response.ok:
+        if response and response.ok:
             if self._needs_change_password(item_type, attrs, is_edit):
                 object_id = response.data['id']
                 response = self._maybe_change_password(object_id, item_type, attrs)
@@ -1574,14 +1566,16 @@ class ObjectImporter:
 
                 item[info['id_field']] = dep_obj.id
 
-        self.logger.info('Invoking %s for %s', service_name, service_info.name)
+        if service_name and service_info.name != 'def_sec':
 
-        response = self.client.invoke(service_name, item)
-        if response.ok:
-            verb = 'Updated' if is_edit else 'Created'
-            self.logger.info('%s object `%s` with %s', verb, item.name, service_name)
+            self.logger.info(f'Invoking {service_name} for {service_info.name}')
+            response = self.client.invoke(service_name, item)
 
-        return response
+            if response.ok:
+                verb = 'Updated' if is_edit else 'Created'
+                self.logger.info('%s object `%s` with %s', verb, item.name, service_name)
+
+            return response
 
 # ################################################################################################################################
 
@@ -1800,7 +1794,11 @@ class ObjectManager:
 
 # ################################################################################################################################
 
-    def get_objects_by_type(self, item_type):
+    def get_objects_by_type(self, item_type:'str') -> 'None':
+
+        # Ignore artificial objects
+        if item_type in {'def_sec'}:
+            return
 
         # Bunch
         from bunch import Bunch
@@ -2034,6 +2032,7 @@ class InputParser:
             return
 
         self.json.setdefault(sec_type, []).append(Bunch(item))
+        self.json.setdefault('def_sec', []).append(Bunch(item))
 
 # ################################################################################################################################
 
