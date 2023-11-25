@@ -598,6 +598,8 @@ ZIP_EXTENSIONS = ('.zip', '.whl')
 TAR_EXTENSIONS = ('.tar.gz', '.tgz', '.tar')
 ARCHIVE_EXTENSIONS = (ZIP_EXTENSIONS + BZ2_EXTENSIONS + TAR_EXTENSIONS + XZ_EXTENSIONS)
 
+# ################################################################################################################################
+
 def splitext(path):
     """Like os.path.splitext, but take off .tar too"""
     base, ext = os.path.splitext(path)
@@ -605,6 +607,8 @@ def splitext(path):
         ext = base[-4:] + ext
         base = base[:-4]
     return base, ext
+
+# ################################################################################################################################
 
 def is_archive_file(name):
     """Return True if `name` is a considered as an archive file."""
@@ -623,6 +627,7 @@ def is_python_file(name):
             return True
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class _DummyLink:
     """ A dummy class for staying consistent with pip's API in certain places
@@ -631,6 +636,7 @@ class _DummyLink:
     def __init__(self, url):
         self.url = url
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ModuleInfo:
