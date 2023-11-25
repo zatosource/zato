@@ -50,11 +50,11 @@ ZATO_NO_SECURITY = 'zato-no-security'
 Code = namedtuple('Code', ('symbol', 'desc')) # type: ignore
 
 WARNING_ALREADY_EXISTS_IN_ODB = Code('W01', 'already exists in ODB')
-WARNING_MISSING_DEF = Code('W02', 'missing def')
+WARNING_MISSING_DEF = Code('W02', 'missing definition')
 WARNING_MISSING_DEF_INCL_ODB = Code('W04', 'missing def incl. ODB')
-ERROR_ITEM_INCLUDED_MULTIPLE_TIMES = Code('E01', 'item incl multiple')
-ERROR_INCLUDE_COULD_NOT_BE_PARSED = Code('E03', 'incl parsing error')
-ERROR_INVALID_INPUT = Code('E05', 'invalid JSON')
+ERROR_ITEM_INCLUDED_MULTIPLE_TIMES = Code('E01', 'item included multiple')
+ERROR_INCLUDE_COULD_NOT_BE_PARSED = Code('E03', 'include parsing error')
+ERROR_INVALID_INPUT = Code('E05', 'invalid input')
 ERROR_UNKNOWN_ELEM = Code('E06', 'unrecognized import element')
 ERROR_KEYS_MISSING = Code('E08', 'missing keys')
 ERROR_INVALID_SEC_DEF_TYPE = Code('E09', 'invalid sec def type')
@@ -64,6 +64,7 @@ ERROR_SERVICE_MISSING = Code('E12', 'service missing')
 ERROR_MISSING_DEP = Code('E13', 'dependency missing')
 ERROR_COULD_NOT_IMPORT_OBJECT = Code('E13', 'could not import object')
 ERROR_TYPE_MISSING = Code('E04', 'type missing')
+Error_Include_Not_Found = Code('E14', 'include not found')
 
 # ################################################################################################################################
 
@@ -1906,7 +1907,13 @@ class YamlCodec:
 # ################################################################################################################################
 
 class InputParser:
-    def __init__(self, path, logger, codec):
+    def __init__(
+        self,
+        path:'str',
+        logger:'Logger',
+        codec:'YamlCodec | JsonCodec',
+        ignore_missing_includes:'bool',
+    ) -> 'None':
 
         # stdlib
         import os
@@ -1914,16 +1921,72 @@ class InputParser:
         self.path = os.path.abspath(path)
         self.logger = logger
         self.codec = codec
+        self.ignore_missing_includes = ignore_missing_includes
 
 # ################################################################################################################################
 
-    def _parse_file(self, path:'str') -> 'strdict':
-        with open(path) as f:
-            return self.codec.load(f, None) # type: ignore
+    def _load_file(self, path:'str') -> 'strdict':
+
+        try:
+            with open(path) as f:
+                data:'strdict' = self.codec.load(f, None) # type: ignore
+        except Exception:
+            data = {}
+
+        return data
 
 # ################################################################################################################################
 
-    def _get_include_path(self, include_path:'str') -> 'str':
+    def _parse_file(self, path:'str', results:'Results') -> 'strdict':
+
+        # First, open the main file ..
+        data:'strdict' = self._load_file(path)
+
+        # .. go through all the files that we potentially need to include ..
+        for item_type, values in deepcopy(data).items():
+
+            for item in values:
+
+                # .. only include files will be taken into account ..
+                if self.is_include(item_type, item):
+
+                    # .. build a full path to the file to be included ..
+                    include_path = self._get_full_path(item)
+
+                    if path == include_path:
+                        raw = (include_path,)
+                        results.add_error(raw, ERROR_INVALID_INPUT, f'Include cannot include itself `{include_path}`', item)
+                        continue
+
+                    if not os.path.exists(include_path):
+                        if not self.ignore_missing_includes:
+                            raw = (include_path,)
+                            results.add_error(raw, Error_Include_Not_Found, f'Include not found `{include_path}`', item)
+                            continue
+
+                    # .. load the actual contents to be included ..
+                    data_to_include = self._parse_file(include_path, results)
+
+                    # .. go through each of the items that the file to be included defines ..
+                    for item_type_to_include, values_to_include in data_to_include.items():
+
+                        # .. make sure we append the new data to what we potentially already have ..
+                        if item_type_to_include in data:
+                            data[item_type_to_include].extend(values_to_include)
+
+                        # .. otherwise, we create a new key for it ..
+                        else:
+                            data[item_type_to_include] = values_to_include
+
+        # .. remove any potential include section from further processing ..
+        _ = data.pop(ModuleCtx.Item_Type_Include, None)
+
+        # .. now, we are ready to return the whole data set to our caller.
+        return data
+
+# ################################################################################################################################
+
+    def _get_full_path(self, include_path:'str') -> 'str':
 
         # stdlib
         import os
@@ -1940,10 +2003,10 @@ class InputParser:
 
 # ################################################################################################################################
 
-    def load_include(self, path:'str') -> 'None':
+    def load_include(self, path:'str', results:'Results') -> 'None':
 
-        abs_path = self._get_include_path(path)
-        result = self._parse_file(abs_path)
+        abs_path = self._get_full_path(path)
+        result = self._parse_file(abs_path, results)
 
         for item_type, items in result.items():
             item_type = ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse.get(item_type) or item_type
@@ -1952,7 +2015,7 @@ class InputParser:
 
 # ################################################################################################################################
 
-    def parse_def_sec(self, item, results):
+    def parse_def_sec(self, item:'strdict', results:'Results') -> 'None':
 
         # Bunch
         from bunch import Bunch
@@ -2028,10 +2091,6 @@ class InputParser:
 # ################################################################################################################################
 
     def parse_items(self, items:'strdict', results:'Results') -> 'None':
-
-        print()
-        print(111, items)
-        print()
 
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
@@ -2320,7 +2379,7 @@ class InputParser:
         self.json = {}
 
         # .. extract a basic dict ..
-        data = self._parse_file(cast_('str', self.path))
+        data = self._parse_file(cast_('str', self.path), results)
 
         # .. pre-process its contents ..
         data = self._pre_process_input(data)
@@ -2350,7 +2409,8 @@ class Enmasse(ManageCommand):
         {'name':'--format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
         {'name':'--dump-format', 'help':'Same as --format', 'choices':('json', 'yaml'), 'default':'yaml'},
         {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to file', 'action':'store_true'},
-        {'name':'--exit-on-missing-file', 'help':'If input file exists, exit with status code 0', 'action':'store_true'},
+        {'name':'--ignore-missing-includes', 'help':'Ignore include files that do not exist', 'action':'store_true'},
+        {'name':'--exit-on-missing-file', 'help':'If input file does not exist, exit with status code 0', 'action':'store_true'},
         {'name':'--replace', 'help':'Force replacing already server objects during import', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Same as --replace', 'action':'store_true'},
         {'name':'--input', 'help':'Path to input file with objects to import'},
@@ -2403,12 +2463,14 @@ class Enmasse(ManageCommand):
         self.is_import = False
         self.is_export = False
 
+        # Whether we should include files that do not exist
+        self.ignore_missing_includes = getattr(self.args, 'ignore_missing_includes', False)
+
         # Initialize environment variables ..
         env_path = self.normalize_path('env_file', exit_if_missing=False)
         populate_environment_from_file(env_path)
 
-        # .. support both arguments ..
-        self.replace_objects:'bool' = getattr(args, 'replace', True) or getattr(args, 'replace_odb_objects', True)
+        self.replace_objects:'bool' = True
         self.export_odb:'bool' = getattr(args, 'export', False) or getattr(args, 'export_odb', False)
 
         # .. make sure the input file path is correct ..
@@ -2532,12 +2594,14 @@ class Enmasse(ManageCommand):
             self.logger.error('Unrecognized file extension "{}": must be one of {}'.format(ext.lower(), exts))
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
 
-        parser = InputParser(input_path, self.logger, codec_class())
+        parser = InputParser(input_path, self.logger, codec_class(), self.ignore_missing_includes)
         results = parser.parse()
+
         if not results.ok:
-            self.logger.error('JSON parsing failed')
+            self.logger.error('Input parsing failed')
             _ = self.report_warnings_errors([results])
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
+
         self.json = parser.json
 
 # ################################################################################################################################
