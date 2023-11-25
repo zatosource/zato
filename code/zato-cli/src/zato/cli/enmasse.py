@@ -89,6 +89,9 @@ class ModuleCtx:
         Scheduler = 'scheduler'
         Security = 'security'
 
+    # An indicator that this is an include directive
+    Item_Type_Include = 'include'
+
     # Maps enmasse definition types to include types
     Enmasse_Type = cast_('strdict', None)
 
@@ -819,7 +822,7 @@ HTTP_SOAP_KINDS = (
     ('outconn_soap',        'outgoing',     'soap'),
     ('outconn_plain_http',  'outgoing',     'plain_http')
 )
-HTTP_SOAP_ITEM_TYPES = {tup[0] for tup in HTTP_SOAP_KINDS}
+HTTP_SOAP_ITEM_TYPES = {elem[0] for elem in HTTP_SOAP_KINDS}
 
 class _DummyLink:
     """ Pip requires URLs to have a .url attribute.
@@ -1893,64 +1896,41 @@ class InputParser:
         self.path = os.path.abspath(path)
         self.logger = logger
         self.codec = codec
-        self.seen_includes = set()
 
 # ################################################################################################################################
 
-    def _parse_file(self, path:'str', results:'any_') -> 'strdict':
-        try:
-            with open(path) as fp:
-                return self.codec.load(fp, results) # type: ignore
-        except (IOError, TypeError, ValueError) as e:
-            raw = (path, e)
-            results.add_error(raw, ERROR_INVALID_INPUT, 'Failed to parse {}: {}', path, e)
-            return {}
+    def _parse_file(self, path:'str') -> 'strdict':
+        with open(path) as f:
+            return self.codec.load(f, None) # type: ignore
 
 # ################################################################################################################################
 
-    def _get_include_path(self, include_path):
+    def _get_include_path(self, include_path:'str') -> 'str':
 
         # stdlib
         import os
 
         curdir = os.path.dirname(self.path)
-        joined = os.path.join(curdir, include_path.replace('file://', ''))
+        joined = os.path.join(curdir, include_path.replace('file://', '')) # type: ignore
+
         return os.path.abspath(joined)
 
 # ################################################################################################################################
 
-    def is_include(self, value):
-
-        # Python 2/3 compatibility
-        from zato.common.py23_.past.builtins import basestring
-
-        return isinstance(value, basestring)
+    def is_include(self, item_type:'str', item:'str | strdict') -> 'bool':
+        return item_type == ModuleCtx.Item_Type_Include and isinstance(item, str)
 
 # ################################################################################################################################
 
-    def load_include(self, item_type, relpath, results):
-        abs_path = self._get_include_path(relpath)
-        if abs_path in self.seen_includes:
-            raw = (abs_path,)
-            results.add_error(raw, ERROR_ITEM_INCLUDED_MULTIPLE_TIMES, '{} included repeatedly', abs_path)
-        self.seen_includes.add(abs_path)
+    def load_include(self, path:'str') -> 'None':
 
-        obj = self._parse_file(abs_path, results)
-        if obj is None:
-            return  # Failure, error was recorded.
+        abs_path = self._get_include_path(path)
+        result = self._parse_file(abs_path)
 
-        if not isinstance(obj, dict):
-            raw = (abs_path, obj)
-            results.add_error(raw, ERROR_INVALID_INPUT,
-                'Include {} is incorrect: expected a dictionary containing one item, or a fully formed dump file.')
-            return
-
-        if 'name' in obj or 'id' in obj:
-            # Classic raw include.
-            self.parse_item(item_type, obj, results)
-        else:
-            # Fully formed dump input file. This allows an include file to be imported directly, or simply included.
-            self.parse_items(obj, results)
+        for item_type, items in result.items():
+            item_type = ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse.get(item_type) or item_type
+            _existing_items = self.json.setdefault(item_type, [])
+            _existing_items.extend(items)
 
 # ################################################################################################################################
 
@@ -1963,9 +1943,8 @@ class InputParser:
         sec_type = item.pop('type', None)
         if sec_type is None:
             raw = ('def_sec', item)
-            results.add_error(raw, ERROR_TYPE_MISSING,
-                              "security definition '{}' has no required 'type' key (def_sec)",
-                              item)
+            results.add_error(
+                raw, ERROR_TYPE_MISSING, "security definition '{}' has no required 'type' key (def_sec)", item)
             return
 
         service_names = [elem.name for elem in SERVICES if elem.is_security]
@@ -1981,21 +1960,23 @@ class InputParser:
 
 # ################################################################################################################################
 
-    def parse_item(self, item_type, item, results):
+    def parse_item(self, item_type:'str', item:'str | strdict', results:'strdict') -> 'None':
 
         # Bunch
         from bunch import Bunch
 
-        if self.is_include(item):
-            self.load_include(item_type, item, results)
+        if self.is_include(item_type, item):
+            self.load_include(cast_('str', item))
+
         elif item_type == 'def_sec':
             self.parse_def_sec(item, results)
+
         else:
-            self.json.setdefault(item_type, []).append(Bunch(item))
+            self.json.setdefault(item_type, []).append(Bunch(item)) # type: ignore
 
 # ################################################################################################################################
 
-    def _maybe_fixup_http_soap(self, original_item_type, item):
+    def _maybe_fixup_http_soap(self, original_item_type:'str', item:'strdict') -> 'str':
         # Preserve old format by merging http-soap subtypes into one.
         for item_type, connection, transport in HTTP_SOAP_KINDS:
             if item_type == original_item_type:
@@ -2006,13 +1987,40 @@ class InputParser:
 
 # ################################################################################################################################
 
-    def parse_items(self, dict_, results):
+    def _is_item_type_recognized(self, item_type:'str') -> 'bool':
+
+        if item_type == ModuleCtx.Item_Type_Include:
+            return True
+
+        elif item_type in ModuleCtx.Enmasse_Type:
+            return True
+
+        elif item_type in ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse:
+            return True
+
+        elif item_type in SERVICE_BY_NAME:
+            return True
+
+        elif item_type in HTTP_SOAP_ITEM_TYPES:
+            return True
+
+        else:
+            return False
+
+# ################################################################################################################################
+
+    def parse_items(self, items:'strdict', results:'Results') -> 'None':
+
+        print()
+        print(111, items)
+        print()
 
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
 
-        for item_type, items in iteritems(dict_):
-            if item_type not in SERVICE_BY_NAME and item_type not in HTTP_SOAP_ITEM_TYPES:
+        for item_type, items in iteritems(items):
+
+            if not self._is_item_type_recognized(item_type):
                 raw = (item_type,)
                 results.add_error(raw, ERROR_UNKNOWN_ELEM, 'Ignoring unknown element type {} in the input.', item_type)
                 continue
@@ -2241,6 +2249,10 @@ class InputParser:
             # .. go through each definition ..
             for item in items:
 
+                # .. this could be an include directive which we can skip here ..
+                if not isinstance(item, dict):
+                    continue
+
                 # .. add type hints ..
                 item = cast_('strdict', item)
 
@@ -2290,7 +2302,7 @@ class InputParser:
         self.json = {}
 
         # .. extract a basic dict ..
-        data = self._parse_file(cast_('str', self.path), results)
+        data = self._parse_file(cast_('str', self.path))
 
         # .. pre-process its contents ..
         data = self._pre_process_input(data)
