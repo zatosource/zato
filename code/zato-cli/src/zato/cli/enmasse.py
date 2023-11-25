@@ -1946,7 +1946,7 @@ class InputParser:
     def _parse_file(self, path:'str', results:'Results') -> 'strdict':
 
         # First, open the main file ..
-        data:'strdict' = self._load_file(path)
+        data:'strdict' = self._load_file(path) or {}
 
         # .. go through all the files that we potentially need to include ..
         for item_type, values in deepcopy(data).items():
