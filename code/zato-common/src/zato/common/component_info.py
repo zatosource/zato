@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import os
@@ -17,7 +15,7 @@ from operator import attrgetter
 from time import time
 
 # psutil
-from psutil import Process
+from psutil import NoSuchProcess, Process
 
 # PyYAML
 import yaml
@@ -79,7 +77,12 @@ def get_worker_pids(component_path):
     """ Returns PIDs of all workers of a given server, which must be already started.
     """
     master_proc_pid = int(open_r(os.path.join(component_path, MISC.PIDFILE)).read())
-    return sorted(elem.pid for elem in Process(master_proc_pid).children())
+    try:
+        out = sorted(elem.pid for elem in Process(master_proc_pid).children())
+    except NoSuchProcess:
+        out = []
+    finally:
+        return out
 
 def get_info(component_path, format, _now=datetime.utcnow) -> 'stranydict':
 
