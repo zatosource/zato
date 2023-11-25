@@ -29,8 +29,8 @@ if 0:
 
     from logging import Logger
     from zato.client import APIClient
-    from zato.common.typing_ import any_, anylist, dictlist, list_, stranydict, strdict, strdictdict, strstrdict, strlist, \
-         strlistdict, strnone
+    from zato.common.typing_ import any_, anylist, dictlist, list_, stranydict, strdict, strdictnone, strdictdict, \
+        strstrdict, strlist, strlistdict, strnone
 
     APIClient = APIClient
     Logger = Logger
@@ -558,13 +558,18 @@ def normalize_service_name(item):
 def test_item(item, cond):
     """ Given a dictionary `cond` containing some conditions to test an item for, return True if those conditions match.
     Currently only supports testing whether a field has a particular value. Returns ``True`` if `cond` is ``None``."""
+
     if cond is not None:
+
         only_if_field = cond.get('only_if_field')
         only_if_value = cond.get('only_if_value')
+
         if not isinstance(only_if_value, (list, tuple)):
             only_if_value = [only_if_value]
+
         if only_if_field and item.get(only_if_field) not in only_if_value:
             return False
+
     return True
 
 # ################################################################################################################################
@@ -822,7 +827,11 @@ HTTP_SOAP_KINDS = (
     ('outconn_soap',        'outgoing',     'soap'),
     ('outconn_plain_http',  'outgoing',     'plain_http')
 )
+
 HTTP_SOAP_ITEM_TYPES = {elem[0] for elem in HTTP_SOAP_KINDS}
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class _DummyLink:
     """ Pip requires URLs to have a .url attribute.
@@ -830,18 +839,24 @@ class _DummyLink:
     def __init__(self, url):
         self.url = url
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Notice:
+
     def __init__(self, value_raw, value, code):
         self.value_raw = value_raw
         self.value = value
         self.code = code
 
-# ################################################################################################################################
-
     def __repr__(self):
         return "<{} at {} value_raw:'{}' value:'{}' code:'{}'>".format(
             self.__class__.__name__, hex(id(self)), self.value_raw,
             self.value, self.code)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 
 class Results:
     def __init__(self, warnings=None, errors=None, service=None):
@@ -853,8 +868,6 @@ class Results:
         self.errors = errors or []
 
         self.service_name = service.get_name() if service else None
-
-# ################################################################################################################################
 
     def add_error(self, raw, code, msg, *args):
         if args:
@@ -897,7 +910,7 @@ class InputValidator:
 
 # ################################################################################################################################
 
-    def validate_one(self, item_type, item):
+    def validate_one(self, item_type:'str', item:'strdict') -> 'None':
         if item_type not in SERVICE_BY_NAME:
             raw = (item_type, sorted(SERVICE_BY_NAME))
             self.results.add_error(raw, ERROR_INVALID_KEY, "Invalid key '{}', must be one of '{}'", item_type, sorted(SERVICE_BY_NAME))
@@ -906,14 +919,19 @@ class InputValidator:
         item_dict = dict(item)
         service_info = SERVICE_BY_NAME[item_type]
         required_keys = service_info.get_required_keys()
+
         # OK, the keys are there, but do they all have non-None values?
         for req_key in required_keys:
             if item.get(req_key) is None: # 0 or '' can be correct values
                 raw = (req_key, required_keys, item_dict, item_type)
                 self.results.add_error(raw, ERROR_KEYS_MISSING, "Key '{}' must exist in {}: {}", req_key, item_type, item_dict)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class DependencyScanner:
-    def __init__(self, json, is_import, is_export, ignore_missing=False):
+
+    def __init__(self, json:'strdict', is_import:'bool', is_export:'bool', ignore_missing:'bool'=False) -> 'None':
         self.json = json
         self.is_import = is_import
         self.is_export = is_export
@@ -922,7 +940,7 @@ class DependencyScanner:
 
 # ################################################################################################################################
 
-    def find(self, item_type, fields):
+    def find(self, item_type:'str', fields:'strdict') -> 'strdictnone':
 
         if item_type in ['def_sec']:
             return self.find_sec(fields)
@@ -939,7 +957,7 @@ class DependencyScanner:
 
 # ################################################################################################################################
 
-    def find_sec(self, fields):
+    def find_sec(self, fields:'strdict') -> 'strdictnone':
         for service in SERVICES:
             if service.is_security:
                 service_name = _replace_item_type(service.name)
@@ -949,13 +967,9 @@ class DependencyScanner:
 
 # ################################################################################################################################
 
-    def scan_item(self, item_type, item, results):
+    def scan_item(self, item_type:'str', item:'Bunch', results:'Results') -> 'None':
         """ Scan the data of a single item for required dependencies, recording any that are missing in self.missing.
         """
-        # type: (str, dict, Results)
-
-        # Python 2/3 compatibility
-        from zato.common.ext.future.utils import iteritems
 
         #
         # Preprocess item type
@@ -965,7 +979,8 @@ class DependencyScanner:
 
         service_info = SERVICE_BY_NAME[item_type] # type: ServiceInfo
 
-        for dep_key, dep_info in iteritems(service_info.object_dependencies):
+        for dep_key, dep_info in service_info.object_dependencies.items():
+
             if not test_item(item, dep_info.get('condition')):
                 continue
 
@@ -973,7 +988,7 @@ class DependencyScanner:
                 continue
 
             # Special-case HTTP connections
-            if item_type == 'http_soap':
+            if item_type == 'http_soap': # type: ignore
                 dep_key = resolve_security_field_name(item)
 
             if dep_key not in item:
@@ -984,10 +999,13 @@ class DependencyScanner:
 
             if value != dep_info.get('empty_value'):
 
-                dep = self.find(dep_info['dependent_type'], {dep_info['dependent_field']: value})
-                if dep is None:
+                dep_type = dep_info['dependent_type']
+                dep_field = dep_info['dependent_field']
 
-                    key = (dep_info['dependent_type'], value)
+                dep = self.find(dep_type, {dep_field: value})
+
+                if dep is None:
+                    key = (dep_type, value)
                     names = self.missing.setdefault(key, [])
                     names.append(item.name)
 
