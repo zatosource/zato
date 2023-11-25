@@ -128,6 +128,9 @@ class ModuleCtx:
     # How to sort attributes of a given object
     Enmasse_Attr_List_Sort_Order = cast_('strlistdict', None)
 
+    # How many seconds to wait for servers to start up
+    Initial_Wait_Time = 60 * 60 * 12 # In seconds = 12 hours
+
     # How many seconds to wait for missing objects
     Missing_Wait_Time = 120
 
@@ -2321,6 +2324,7 @@ class Enmasse(ManageCommand):
         {'name':'--replace', 'help':'Force replacing already server objects during import', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Same as --replace', 'action':'store_true'},
         {'name':'--input', 'help':'Path to input file with objects to import'},
+        {'name':'--initial-wait-time', 'help':'How many seconds to initially wait for a server', 'default':ModuleCtx.Initial_Wait_Time},
         {'name':'--missing-wait-time', 'help':'How many seconds to wait for missing objects', 'default':ModuleCtx.Missing_Wait_Time},
         {'name':'--env-file', 'help':'Path to an .ini file with environment variables'},
         {'name':'--rbac-sleep', 'help':'How many seconds to sleep for after creating an RBAC object', 'default':'1'},
@@ -2405,11 +2409,13 @@ class Enmasse(ManageCommand):
         #    4b) override whatever is found in ODB with values from JSON (--replace-odb-objects)
         #
 
-        # Get the client object ..
-        self.client = get_client_from_server_conf(self.component_dir)
+        try:
+            initial_wait_time = float(args.initial_wait_time)
+        except Exception:
+            initial_wait_time = ModuleCtx.Initial_Wait_Time
 
-        # .. make sure /zato/ping replies which means the server is started
-        wait_for_zato_ping(self.client.address, 300)
+        # Get the client object, waiting until the server is started ..
+        self.client = get_client_from_server_conf(self.component_dir, initial_wait_time=initial_wait_time)
 
         # .. just to be on the safe side, optionally wait a bit more
         initial_wait_time = os.environ.get('ZATO_ENMASSE_INITIAL_WAIT_TIME')

@@ -1580,6 +1580,7 @@ def get_client_from_server_conf(
     stdin_data=None,     # type: strnone
     *,
     url_path=None,       # type: strnone
+    initial_wait_time=60 # type: int
 ) -> 'ZatoClient':
 
     # Imports go here to avoid circular dependencies
@@ -1596,7 +1597,7 @@ def get_client_from_server_conf(
 
     # .. make sure the server is available ..
     if require_server:
-        wait_for_zato_ping(client.address)
+        wait_for_zato_ping(client.address, initial_wait_time)
 
     # .. return the client to our caller now.
     return client
