@@ -1200,21 +1200,15 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _import(self, item_type, attrs, is_edit):
-
-        # Zato
-        from zato.common.util.config import extract_param_placeholders
+    def _import(self, item_type:'str', attrs:'strdict', is_edit:'bool') -> 'None':
 
         # First, resolve values pointing to parameter placeholders and environment variables ..
         for key, orig_value in attrs.items():
 
-            # .. add type hints ..
-            key        = cast_('str', key)
-            orig_value = cast_('any_', orig_value)
-
             # .. preprocess values only if they are strings ..
             if isinstance(orig_value, str):
 
+                '''
                 # .. assume there will be no placeholders for this value ..
                 has_params = False
 
@@ -1233,7 +1227,6 @@ class ObjectImporter:
                         # .. we are here if we can find an environment variable ..
                         # .. based on a placeholder parameter, so we now need ..
                         # .. to extract the value of this variable or use a default one ..
-                        # .. in case the value does not exist ..
                         env_variable_name = param.replace(zato_enmasse_env2, '')
                         env_variable_name = env_variable_name[1:-1]
 
@@ -1243,31 +1236,42 @@ class ObjectImporter:
                         # .. now, we can insert this variable in the original value ..
                         orig_value = orig_value.replace(param, env_value)
 
+                        print()
+                        print(111, is_edit, orig_value, hex(id(orig_value)))
+                        print()
+
                 # .. if we have at least one placeholder, we can populate the new value already here ..
                 if has_params:
                     attrs[key] = orig_value
 
+                    print()
+                    print(222, is_edit, orig_value, hex(id(orig_value)))
+                    print(333, attrs)
+                    print()
+
+
                 # .. otherwise, we still need to check if the entire value is not an environment variable ..
                 else:
+                '''
 
-                    if orig_value.startswith(zato_enmasse_env1):
-                        _prefix = zato_enmasse_env1
-                    elif orig_value.startswith(zato_enmasse_env2):
-                        _prefix = zato_enmasse_env2
+                if orig_value.startswith(zato_enmasse_env1):
+                    _prefix = zato_enmasse_env1
+                elif orig_value.startswith(zato_enmasse_env2):
+                    _prefix = zato_enmasse_env2
+                else:
+                    _prefix = None
+
+                if _prefix:
+
+                    value = orig_value.split(_prefix)
+                    value = value[1]
+
+                    if not value:
+                        raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
                     else:
-                        _prefix = None
+                        value = os.environ.get(value)
 
-                    if _prefix:
-
-                        value = orig_value.split(_prefix)
-                        value = value[1]
-
-                        if not value:
-                            raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
-                        else:
-                            value = os.environ.get(value)
-
-                        attrs[key] = value
+                    attrs[key] = value
 
         #
         # Preprocess the data to be imported
@@ -1895,12 +1899,38 @@ class JsonCodec:
 class YamlCodec:
     extension = '.yaml'
 
-    def load(self, file_, results):
+    def load(self, file_:'any_', results:'any_') -> 'strdict':
 
-        # yaml
+        # Local imports
         import yaml
+        from zato.common.util.config import extract_param_placeholders
 
-        return yaml.load(file_, yaml.FullLoader)
+        # Read the data as string ..
+        data = file_.read()
+
+        # .. replace named placeholders ..
+        params = extract_param_placeholders(data)
+
+        # .. go through each placeholder ..
+        for param in params:
+
+            # .. check if it points to an environment variable ..
+            if zato_enmasse_env2 in param:
+
+                # .. we are here if we can find an environment variable ..
+                # .. based on a placeholder parameter, so we now need ..
+                # .. to extract the value of this variable or use a default one ..
+                env_variable_name = param.replace(zato_enmasse_env2, '')
+                env_variable_name = env_variable_name[1:-1]
+
+                # .. let's find this variable or use the default one ..
+                env_value = os.environ.get(env_variable_name, 'Missing_Value_' + env_variable_name)
+
+                # .. now, we can insert this variable in the original value ..
+                data = data.replace(param, env_value)
+
+        # .. and return a dict object representing the file.
+        return yaml.load(data, yaml.FullLoader)
 
     def dump(self, file_, object_):
 
