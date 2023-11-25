@@ -1862,7 +1862,7 @@ class JsonCodec:
 # ################################################################################################################################
 
 class YamlCodec:
-    extension = '.yml'
+    extension = '.yaml'
 
     def load(self, file_, results):
 
@@ -2374,7 +2374,7 @@ class Enmasse(ManageCommand):
         populate_environment_from_file(env_path)
 
         # .. support both arguments ..
-        self.replace_objects:'bool' = getattr(args, 'replace', False) or getattr(args, 'replace_odb_objects', False)
+        self.replace_objects:'bool' = getattr(args, 'replace', True) or getattr(args, 'replace_odb_objects', True)
         self.export_odb:'bool' = getattr(args, 'export', False) or getattr(args, 'export_odb', False)
 
         # .. make sure the input file path is correct ..
@@ -2793,6 +2793,9 @@ class Enmasse(ManageCommand):
         has_all_types = ModuleCtx.Include_Type.All in include_type
         has_all_names = ModuleCtx.Include_Type.All in include_name
 
+        has_type = not has_all_types
+        has_name = not has_all_names
+
         # Handle security definitions, some of which should never be exported ..
         if item_type == 'def_sec':
 
@@ -2804,15 +2807,28 @@ class Enmasse(ManageCommand):
             elif name.startswith(zato_name_prefix):
                 return False
 
-        # We enter this branch if we are to export only specific types ..
+        # We enter this branch if we are to export specific types ..
         if not has_all_types:
-            out = self._should_write_type_to_output(item_type, item, include_type)
+            out_by_type = self._should_write_type_to_output(item_type, item, include_type)
+        else:
+            out_by_type = False
 
-        # We enter this branch if we are to export only objects of specific names ..
+        # We enter this branch if we are to export objects of specific names ..
         if not has_all_names:
             item_name = item.get('name') or ''
             item_name = item_name.lower()
-            out = self._should_write_name_to_output(item_type, item_name, include_name)
+            out_by_name = self._should_write_name_to_output(item_type, item_name, include_name)
+        else:
+            out_by_name = False
+
+        # We enter here if we have both type and name on input, which means that we need to and-join them ..
+        if has_type and has_name:
+            out = out_by_type and out_by_name
+        else:
+            if has_type:
+                out = out_by_type
+            elif has_name:
+                out = out_by_name
 
         # .. we are ready to return our output
         return out
