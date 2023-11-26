@@ -215,10 +215,9 @@ span.like-a {
 }
 
 .user-message {
-    font-size: 0.8rem;
     padding: 6px;
-    color: #000;
-    background-color: #ddd;
+    border-style: dotted;
+    color: #333333;
     text-align: left
 }
 
