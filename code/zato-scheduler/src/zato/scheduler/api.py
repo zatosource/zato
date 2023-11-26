@@ -23,7 +23,7 @@ from crontab import CronTab
 from gevent import sleep
 
 # Zato
-from zato.common.api import SCHEDULER, ZATO_NONE
+from zato.common.api import MISC, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.scheduler.backend import Interval, Job, Scheduler as _Scheduler
@@ -82,6 +82,22 @@ class SchedulerAPI:
 
         except Exception:
             logger.warning(format_exc())
+
+# ################################################################################################################################
+
+    def invoke_service(self, name:'str', request:'strdict') -> 'strdict':
+
+        # Make sure we have a request to send
+        request = request or {}
+
+        # Enrich the business data ..
+        request['cluster_id'] = MISC.Default_Cluster_ID
+
+        # .. invoke the server ..
+        response = self.broker_client.zato_client.invoke(name, request)
+
+        # .. and returns its response to our caller.
+        return response.data
 
 # ################################################################################################################################
 
