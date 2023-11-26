@@ -34,7 +34,7 @@ _service_name_prefix = 'zato.scheduler.job.'
 
 # ################################################################################################################################
 
-def _create_edit(action, cid, input, payload, logger, session, broker_client, response):
+def _create_edit(action, cid, input, payload, logger, session, broker_client, response, should_ignore_existing):
     """ Creating and updating a job requires a series of very similar steps
     so they've been all put here and depending on the 'action' parameter
     (be it 'create'/'edit') some additional operations are performed.
@@ -68,7 +68,10 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             first()
 
     if existing_one:
-        raise ZatoException(cid, 'Job `{}` already exists on this cluster'.format(name))
+        if should_ignore_existing:
+            return
+        else:
+            raise ZatoException(cid, 'Job `{}` already exists on this cluster'.format(name))
 
     # Is the service's name correct?
     service = session.query(Service).\
@@ -187,16 +190,17 @@ class _CreateEdit(AdminService):
     """ A base class for both creating and editing scheduler jobs.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date')
-        input_optional = ('id', 'extra', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
-        output_required = ('id', 'name')
-        output_optional = ('cron_definition',)
+        input_required = 'cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date'
+        input_optional = 'id', 'extra', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', \
+            'cron_definition', 'should_ignore_existing'
+        output_optional = 'id', 'name', 'cron_definition'
         default_value = ''
 
     def handle(self):
         with closing(self.odb.session()) as session:
             _create_edit(self.__class__.__name__.lower(), self.cid, self.request.input, self.request.payload,
-                    self.logger, session, self.broker_client, self.response)
+                    self.logger, session, self.broker_client, self.response,
+                    self.request.input.should_ignore_existing)
 
 # ################################################################################################################################
 # ################################################################################################################################

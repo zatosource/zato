@@ -11,6 +11,7 @@ import os
 from json import dumps
 from logging import getLogger
 from traceback import format_exc
+from uuid import uuid4
 
 # Bunch
 from bunch import Bunch
@@ -58,18 +59,76 @@ class AuxServerConfig:
     odb: 'ODBManager'
     username: 'str' = ''
     password: 'str' = ''
+    env_key_username: 'str' = ''
+    env_key_password: 'str' = ''
+    env_key_auth_required: 'str' = ''
     server_type: 'str'
     callback_func: 'callable_'
     conf_file_name: 'str'
     crypto_manager: 'CryptoManager'
     crypto_manager_class: 'type_[CryptoManager]'
     parent_server_name: 'str'
-    parent_server_pid:  'int'
+    parent_server_pid: 'int'
 
     def __init__(self) -> 'None':
         self.main = Bunch()
         self.stats_enabled = None
         self.component_dir = 'not-set-component_dir'
+
+# ################################################################################################################################
+
+    @staticmethod
+    def get_odb(config:'AuxServerConfig') -> 'ODBManager':
+
+        odb = ODBManager()
+        sql_pool_store = PoolStore()
+
+        if config.main.odb.engine != 'sqlite':
+
+            config.main.odb.host = config.main.odb.host
+            config.main.odb.username = config.main.odb.username
+            config.main.odb.pool_size = config.main.odb.pool_size
+
+            odb_password:'str' = config.main.odb.password or ''
+
+            if odb_password and odb_password.startswith('gA'):
+                config.main.odb.password = config.crypto_manager.decrypt(odb_password)
+
+        sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
+
+        odb.pool = sql_pool_store[ZATO_ODB_POOL_NAME].pool
+        odb.init_session(ZATO_ODB_POOL_NAME, config.main.odb, odb.pool, False)
+        odb.pool.ping(odb.fs_sql_config)
+
+        return odb
+
+# ################################################################################################################################
+
+    def set_credentials_from_env(self) -> 'bool':
+
+        # Return if there is no environment variable indicating what our credentials are
+        if not self.env_key_auth_required:
+            return False
+
+        # Return if the variable is set but its boolean value is not True
+        auth_required = os.environ.get(self.env_key_auth_required)
+        auth_required = as_bool(auth_required)
+
+        if not auth_required:
+            return False
+
+        # If we are here, we can read our credentials from environment variables
+        username = os.environ.get(self.env_key_username) or 'env_key_username_missing'
+        password = os.environ.get(self.env_key_password) or 'env_key_password_missing.' + uuid4().hex
+
+        self.username = username
+        self.password = password
+
+        logger.info(f'Set username from env. variable `{self.env_key_username}`')
+        logger.info(f'Set password from env. variable `{self.env_key_password}`')
+
+        # Return True to indicate that we have set the credentials
+        return True
 
 # ################################################################################################################################
 
@@ -80,6 +139,7 @@ class AuxServerConfig:
         repo_location,  # type: str
         conf_file_name, # type: str
         crypto_manager_class, # type: type_[CryptoManager]
+        needs_odb=True, # type: bool
     ) -> 'AuxServerConfig':
 
         # Zato
@@ -104,7 +164,7 @@ class AuxServerConfig:
         else:
             secrets_conf = None
 
-        # Read config in and extend it with ODB-specific information
+        # Read configuration in
         config.main = cast_('Bunch', get_config(
             repo_location,
             conf_file_name,
@@ -112,7 +172,7 @@ class AuxServerConfig:
             secrets_conf=secrets_conf,
             require_exists=True
         ))
-        config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
+
         config.main.crypto.use_tls = as_bool(config.main.crypto.use_tls)
 
         # Make all paths absolute
@@ -124,20 +184,18 @@ class AuxServerConfig:
         # Set up the crypto manager need to access credentials
         config.crypto_manager = crypto_manager
 
-        # ODB connection
-        odb = ODBManager()
-        sql_pool_store = PoolStore()
+        # Optionally, establish an ODB connection
+        has_odb = False
 
-        if config.main.odb.engine != 'sqlite':
+        if needs_odb:
+            if 'odb' in config.main:
+                config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
+                config.odb = class_.get_odb(config)
+                has_odb = True
 
-            config.main.odb.host = config.main.odb.host
-            config.main.odb.username = config.main.odb.username
-            config.main.odb.pool_size = config.main.odb.pool_size
-
-            odb_password = config.main.odb.password or '' # type: str
-
-            if odb_password and odb_password.startswith('gA'):
-                config.main.odb.password = config.crypto_manager.decrypt(odb_password)
+        # We want to have something set, even None, to make sure we do not get AttributeErrors when accessing config.odb
+        if not has_odb:
+            config.odb = None # type: ignore
 
         # Decrypt the password used to invoke servers
         if config.main.get('server'):
@@ -146,46 +204,45 @@ class AuxServerConfig:
                 server_password = config.crypto_manager.decrypt(server_password)
                 config.main.server.server_password = server_password
 
-        # Obtain the credentials used to invoke schedulers
-        api_clients = config.main.get('api_clients') or {}
+        # Environment variables have precedence ..
+        has_credentials_from_env = config.set_credentials_from_env()
 
-        # Proceed if any API clients are defined ..
-        if api_clients:
+        # .. if we have not set the credentials in the environment ..
+        # .. we still need to try to set them based on our configuration ..
+        if not has_credentials_from_env:
 
-            # .. this will give us all the keys in this part of the configuration ..
-            api_clients_keys = list(api_clients.keys())
+            # .. otherwise, check the configuration to obtain the credentials used to invoke schedulers
+            api_clients = config.main.get('api_clients') or {}
 
-            # .. out of which we can discard some ..
-            for name in ['auth_required']:
-                if name in api_clients:
-                    api_clients_keys.remove(name)
+            # Proceed if any API clients are defined ..
+            if api_clients:
 
-            # .. if we still have any keys left, we choose the first one to be our API credentials ..
-            if api_clients_keys:
+                # .. this will give us all the keys in this part of the configuration ..
+                api_clients_keys = list(api_clients.keys())
 
-                # .. note that we currently handle only one username ..
-                username = api_clients_keys[0]
+                # .. out of which we can discard some ..
+                for name in ['auth_required']:
+                    if name in api_clients:
+                        api_clients_keys.remove(name)
 
-                # .. decrypt its password ..
-                password = api_clients[username]
-                if is_encrypted(password):
-                    password = config.crypto_manager.decrypt(password)
+                # .. if we still have any keys left, we choose the first one to be our API credentials ..
+                if api_clients_keys:
 
-                # .. make sure both credentials are strings ..
-                username = str(username)
-                password = str(password)
+                    # .. note that we currently handle only one username ..
+                    username = api_clients_keys[0]
 
-                # .. we can set its username ..
-                config.username = username
-                config.password = password
+                    # .. decrypt its password ..
+                    password = api_clients[username]
+                    if is_encrypted(password):
+                        password = config.crypto_manager.decrypt(password)
 
-        sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
+                    # .. make sure both credentials are strings ..
+                    username = str(username)
+                    password = str(password)
 
-        odb.pool = sql_pool_store[ZATO_ODB_POOL_NAME].pool
-        odb.init_session(ZATO_ODB_POOL_NAME, config.main.odb, odb.pool, False)
-        odb.pool.ping(odb.fs_sql_config)
-
-        config.odb = odb
+                    # .. we can set its username ..
+                    config.username = username
+                    config.password = password
 
         return config
 
@@ -202,6 +259,7 @@ class AuxServer:
     conf_file_name: 'str'
     config_class: 'type_[AuxServerConfig]'
     crypto_manager_class: 'type_[CryptoManager]'
+    needs_odb: 'bool' = True
     has_credentials: 'bool' = True
     parent_server_name: 'str'
     parent_server_pid:  'int'
@@ -285,6 +343,7 @@ class AuxServer:
             repo_location,
             class_.conf_file_name,
             class_.crypto_manager_class,
+            class_.needs_odb,
         )
 
         config.parent_server_name = parent_server_name
