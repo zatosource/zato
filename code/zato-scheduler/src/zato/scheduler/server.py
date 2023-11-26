@@ -57,7 +57,6 @@ class SchedulerServer(AuxServer):
     conf_file_name = 'scheduler.conf'
     config_class = SchedulerServerConfig
     crypto_manager_class = SchedulerCryptoManager
-    has_credentials = True
 
     def __init__(self, config:'AuxServerConfig') -> 'None':
 
