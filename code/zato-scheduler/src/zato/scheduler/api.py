@@ -33,7 +33,7 @@ from zato.scheduler.backend import Interval, Job, Scheduler as _Scheduler
 
 if 0:
     from zato.broker.client import BrokerClient
-    from zato.common.typing_ import strdictnone
+    from zato.common.typing_ import strdict, strdictnone
     from zato.scheduler.server import Config
 
 # ################################################################################################################################
