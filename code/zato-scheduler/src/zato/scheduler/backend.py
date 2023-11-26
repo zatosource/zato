@@ -26,7 +26,9 @@ from zato.common.ext.future.utils import iterkeys, itervalues
 
 # Zato
 from zato.common.api import FILE_TRANSFER, SCHEDULER
-from zato.common.util.api import add_scheduler_jobs, add_startup_jobs, asbool, make_repr, new_cid, spawn_greenlet
+from zato.common.util.api import asbool, make_repr, new_cid, spawn_greenlet
+from zato.common.util.scheduler import load_scheduler_jobs_by_api, load_scheduler_jobs_by_odb, add_startup_jobs_to_odb_by_api, \
+    add_startup_jobs_to_odb_by_odb
 from zato.scheduler.cleanup.cli import start_cleanup
 
 # ################################################################################################################################
@@ -51,10 +53,10 @@ initial_sleep = 0.1
 
 class Interval:
     def __init__(self, days:'int'=0, hours:'int'=0, minutes:'int'=0, seconds:'int'=0, in_seconds:'int'=0) -> 'None':
-        self.days = days
-        self.hours = hours
-        self.minutes = minutes
-        self.seconds = seconds
+        self.days = int(days) if days else days
+        self.hours = int(hours) if hours else hours
+        self.minutes = int(minutes) if minutes else minutes
+        self.seconds = int(seconds) if seconds else seconds
         self.in_seconds = in_seconds or self.get_in_seconds()
 
     def __str__(self):
@@ -65,6 +67,7 @@ class Interval:
     def get_in_seconds(self):
         return Delta(days=self.days, hours=self.hours, minutes=self.minutes, seconds=self.seconds).total_seconds
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Job:
@@ -106,7 +109,7 @@ class Job:
         self.wait_iter_cb = None
         self.wait_iter_cb_args = ()
 
-        # TODO: Add skip_days, skip_hours and skip_dates
+# ################################################################################################################################
 
     def __str__(self):
         return make_repr(self)
@@ -120,6 +123,8 @@ class Job:
     def __lt__(self, other):
         return self.name < other.name
 
+# ################################################################################################################################
+
     def clone(self, name=None, is_active=None):
 
         # It will not be None if an edit changed it from True to False or the other way around
@@ -128,6 +133,8 @@ class Job:
         return Job(self.id, self.name, self.type, self.interval, self.start_time, self.callback, self.cb_kwargs,
             self.max_repeats, self.on_max_repeats_reached_cb, is_active, True, self.cron_definition, self.service,
             self.extra)
+
+# ################################################################################################################################
 
     def get_start_time(self, start_time):
         """ Converts initial start time to the time the job should be invoked next.
@@ -198,6 +205,8 @@ class Job:
                     'Cannot compute start_time. Job `%s` max repeats reached at `%s` (UTC)',
                     self.name, self.max_repeats_reached_at)
 
+# ################################################################################################################################
+
     def get_context(self):
         ctx = {
             'cid':new_cid(),
@@ -215,6 +224,8 @@ class Job:
 
         return ctx
 
+# ################################################################################################################################
+
     def get_sleep_time(self, now):
         """ Returns a number of seconds the job should sleep for before the next run.
         For interval-based jobs this is a constant value pre-computed well ahead by self.interval
@@ -226,6 +237,8 @@ class Job:
             return self.interval.next(now)
         else:
             raise ValueError('Unsupported job type `{}` ({})'.format(self.type, self.name))
+
+# ################################################################################################################################
 
     def _spawn(self, *args, **kwargs):
         """ A thin wrapper so that it is easier to mock this method out in unit-tests.
@@ -274,6 +287,8 @@ class Job:
 
         return True
 
+# ################################################################################################################################
+
     def run(self):
 
         # OK, we're ready
@@ -311,8 +326,10 @@ class Job:
             logger.warning(format_exc())
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Scheduler:
+
     def __init__(self, config:'Config', api:'SchedulerAPI') -> 'None':
         self.config = config
         self.api = api
@@ -332,9 +349,13 @@ class Scheduler:
         self.job_log = getattr(logger, config.job_log_level)
         self.initial_sleep_time = self.config.main.get('misc', {}).get('initial_sleep_time') or SCHEDULER.InitialSleepTime
 
+# ################################################################################################################################
+
     def on_max_repeats_reached(self, job):
         with self.lock:
             job.is_active = False
+
+# ################################################################################################################################
 
     def _create(self, job, spawn=True):
         """ Actually creates a job. Must be called with self.lock held.
@@ -350,9 +371,13 @@ class Scheduler:
         except Exception:
             logger.warning(format_exc())
 
+# ################################################################################################################################
+
     def create(self, *args, **kwargs):
         with self.lock:
             self._create(*args, **kwargs)
+
+# ################################################################################################################################
 
     def edit(self, job):
         """ Edits a job - this means an already existing job is unscheduled and created again,
@@ -361,6 +386,8 @@ class Scheduler:
         with self.lock:
             self._unschedule_stop(job, '(src:edit)')
             self._create(job.clone(job.is_active), True)
+
+# ################################################################################################################################
 
     def _unschedule(self, job):
         """ Actually unschedules a job. Must be called with self.lock held.
@@ -381,6 +408,8 @@ class Scheduler:
 
         return found
 
+# ################################################################################################################################
+
     def _unschedule_stop(self, job, message):
         """ API for job deletion and stopping. Must be called with a self.lock held.
         """
@@ -390,11 +419,15 @@ class Scheduler:
         else:
             logger.info('Job not found `%s`', job)
 
+# ################################################################################################################################
+
     def unschedule(self, job):
         """ Deletes a job.
         """
         with self.lock:
             self._unschedule_stop(job, '(src:unschedule)')
+
+# ################################################################################################################################
 
     def unschedule_by_name(self, name):
         """ Deletes a job by its name.
@@ -411,11 +444,15 @@ class Scheduler:
         if _job:
             self.unschedule(job)
 
+# ################################################################################################################################
+
     def stop_job(self, job):
         """ Stops a job by deleting it.
         """
         with self.lock:
             self._unschedule_stop(job, 'stopped')
+
+# ################################################################################################################################
 
     def stop(self):
         """ Stops all jobs and the scheduler itself.
@@ -425,10 +462,14 @@ class Scheduler:
             for job in jobs:
                 self._unschedule_stop(job.clone(), 'stopped')
 
+# ################################################################################################################################
+
     def sleep(self, value):
         """ A method introduced so the class is easier to mock out in tests.
         """
         gevent.sleep(value)
+
+# ################################################################################################################################
 
     def execute(self, name):
         """ Executes a job no matter if it's active or not. One-time job are not unscheduled afterwards.
@@ -440,6 +481,8 @@ class Scheduler:
                     break
             else:
                 logger.warning('No such job `%s` in `%s`', name, [elem.get_context() for elem in itervalues(self.jobs)])
+
+# ################################################################################################################################
 
     def on_job_executed(self, ctx:'stranydict', unschedule_one_time:'bool'=True) -> 'None':
 
@@ -456,10 +499,14 @@ class Scheduler:
             if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME and unschedule_one_time:
                 self.unschedule_by_name(ctx['name'])
 
+# ################################################################################################################################
+
     def _spawn(self, *args, **kwargs):
         """ As in the Job class, this is a thin wrapper so that it is easier to mock this method out in unit-tests.
         """
         return spawn_greenlet(*args, **kwargs)
+
+# ################################################################################################################################
 
     def spawn_job(self, job):
         """ Spawns a job's greenlet. Must be called with self.lock held.
@@ -468,17 +515,44 @@ class Scheduler:
         job.on_max_repeats_reached_cb = self.on_max_repeats_reached
         self.job_greenlets[job.name] = self._spawn(job.run)
 
+# ################################################################################################################################
+
+    def _init_jobs_by_odb(self):
+
+        cluster_conf = self.config.main.cluster
+        add_startup_jobs_to_odb_by_odb(cluster_conf.id, self.odb, self.startup_jobs, asbool(cluster_conf.stats_enabled))
+
+        # Actually start jobs now, including any added above
+        if self._add_scheduler_jobs:
+            load_scheduler_jobs_by_odb(self.api, self.odb, self.config.main.cluster.id, spawn=False)
+
+# ################################################################################################################################
+
+    def _init_jobs_by_api(self):
+
+        cluster_conf = self.config.main.cluster
+        add_startup_jobs_to_odb_by_api(self.api, self.startup_jobs, asbool(cluster_conf.stats_enabled))
+
+        # Actually start jobs now, including any added above
+        if self._add_scheduler_jobs:
+            load_scheduler_jobs_by_api(self.api, spawn=False)
+
+# ################################################################################################################################
+
     def init_jobs(self):
 
         # Sleep to make sure that at least one server is running if the environment was started from quickstart scripts
         sleep(self.initial_sleep_time)
 
-        cluster_conf = self.config.main.cluster
-        add_startup_jobs(cluster_conf.id, self.odb, self.startup_jobs, asbool(cluster_conf.stats_enabled))
+        # If we have ODB configuration, we will be initializing jobs in the ODB ..
+        if self.odb:
+            self._init_jobs_by_odb()
 
-        # Actually start jobs now, including any added above
-        if self._add_scheduler_jobs:
-            add_scheduler_jobs(self.api, self.odb, self.config.main.cluster.id, spawn=False)
+        # .. otherwise, we are initializing jobs via API calls to a remote server.
+        else:
+            self._init_jobs_by_api()
+
+# ################################################################################################################################
 
     def run(self):
 
@@ -517,3 +591,6 @@ class Scheduler:
 
         except Exception:
             logger.warning(format_exc())
+
+# ################################################################################################################################
+# ################################################################################################################################
