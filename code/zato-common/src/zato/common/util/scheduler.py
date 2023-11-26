@@ -59,8 +59,22 @@ def wait_for_odb_service(session:'any_', cluster_id:'int', service_name:'str') -
 
 # ################################################################################################################################
 
+def _add_scheduler_job(api:'SchedulerAPI', job_data:'Bunch', spawn:'bool', source:'str') -> 'None':
+
+    # Ignore jobs that have been removed
+    if job_data.name in SCHEDULER.JobsToIgnore:
+        logger.info(f'Ignoring job `{job_data.name}` ({source})`')
+        return
+
+    if job_data.is_active:
+        api.create_edit('create', job_data, spawn=spawn)
+    else:
+        logger.info(f'Not adding an inactive job `{job_data}`')
+
+# ################################################################################################################################
+
 def add_startup_jobs_by_odb(cluster_id:'int', odb:'any_', jobs:'any_', stats_enabled:'bool') -> 'None':
-    """ Uses ODB connections directly to make the ODB aware of scheduler's own startup jobs.
+    """ Uses a direction ODB connection to add initial startup jobs to the ODB.
     """
     with closing(odb.session()) as session:
         now = datetime.utcnow()
@@ -149,28 +163,14 @@ def add_scheduler_jobs_by_odb(api:'SchedulerAPI', odb:'any_', cluster_id:'int', 
 
 # ################################################################################################################################
 
-def _add_scheduler_job(api:'SchedulerAPI', job_data:'Bunch', spawn:'bool', source:'str') -> 'None':
-
-    # Ignore jobs that have been removed
-    if job_data.name in SCHEDULER.JobsToIgnore:
-        logger.info(f'Ignoring job `{job_data.name}` ({source})`')
-        return
-
-    if job_data.is_active:
-        api.create_edit('create', job_data, spawn=spawn)
-    else:
-        logger.info(f'Not adding an inactive job `{job_data}`')
-
-# ################################################################################################################################
-
-def add_startup_jobs_by_api(jobs:'strdict') -> 'None':
-    """ Adds internal jobs directly to the ODB.
+def add_startup_jobs_by_api(api:'SchedulerAPI', jobs:'strdict', stats_enabled:'bool') -> 'None':
+    """ Uses server API calls to add initial startup jobs to the ODB.
     """
 
 # ################################################################################################################################
 
-def add_scheduler_jobs_by_api(jobs:'strdict') -> 'None':
-    """ Adds internal jobs directly to the ODB.
+def add_scheduler_jobs_by_api(api:'SchedulerAPI', jobs:'strdict') -> 'None':
+    """ Uses server API calls to obtain a list of all jobs that the scheduler should run.
     """
 
 # ################################################################################################################################
