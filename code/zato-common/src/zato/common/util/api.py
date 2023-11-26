@@ -131,7 +131,7 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 if 0:
     from typing import Iterable as iterable
     from zato.client import ZatoClient
-    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strlistnone, strnone, strset
+    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strdict, strlistnone, strnone, strset
     iterable = iterable
 
 # ################################################################################################################################
@@ -898,7 +898,7 @@ def wait_for_odb_service(session, cluster_id, service_name):
 
 # ################################################################################################################################
 
-def add_startup_jobs_by_odb(cluster_id, odb, jobs, stats_enabled):
+def add_startup_jobs_by_odb(cluster_id:'int', odb:'any_', jobs:'strdict', stats_enabled:'bool') -> 'None':
     """ Adds internal jobs to the ODB. Note that it isn't being added
     directly to the scheduler because we want users to be able to fine-tune the job's
     settings.
@@ -961,6 +961,12 @@ def add_startup_jobs_by_odb(cluster_id, odb, jobs, stats_enabled):
 
             else:
                 logger.info('Initial job added `%s`', job.name)
+
+# ################################################################################################################################
+
+def add_startup_jobs_by_api(jobs:'strdict') -> 'None':
+    """ Adds internal jobs directly to the ODB.
+    """
 
 # ################################################################################################################################
 
