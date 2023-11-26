@@ -53,10 +53,10 @@ initial_sleep = 0.1
 
 class Interval:
     def __init__(self, days:'int'=0, hours:'int'=0, minutes:'int'=0, seconds:'int'=0, in_seconds:'int'=0) -> 'None':
-        self.days = days
-        self.hours = hours
-        self.minutes = minutes
-        self.seconds = seconds
+        self.days = int(days) if days else days
+        self.hours = int(hours) if hours else hours
+        self.minutes = int(minutes) if minutes else minutes
+        self.seconds = int(seconds) if seconds else seconds
         self.in_seconds = in_seconds or self.get_in_seconds()
 
     def __str__(self):
@@ -534,11 +534,8 @@ class Scheduler:
         add_startup_jobs_to_odb_by_api(self.api, self.startup_jobs, asbool(cluster_conf.stats_enabled))
 
         # Actually start jobs now, including any added above
-        #if self._add_scheduler_jobs:
-        #    load_scheduler_jobs_by_api(self.api, spawn=False)
-
-        # Obtain a list of initial jobs ..
-        # response = self.api.invoke_service('zato.scheduler.job.get-list')
+        if self._add_scheduler_jobs:
+            load_scheduler_jobs_by_api(self.api, spawn=False)
 
 # ################################################################################################################################
 
