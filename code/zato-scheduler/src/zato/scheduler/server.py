@@ -36,6 +36,10 @@ logger = getLogger(__name__)
 
 class SchedulerServerConfig(AuxServerConfig):
 
+    env_key_username = SCHEDULER.Env.Server_Username
+    env_key_password = SCHEDULER.Env.Server_Password
+    env_key_auth_required = SCHEDULER.Env.Server_Auth_Required
+
     def __init__(self) -> 'None':
         super().__init__()
 
