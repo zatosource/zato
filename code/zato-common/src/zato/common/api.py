@@ -596,9 +596,9 @@ class SCHEDULER:
         Path_Action_Prefix = 'Zato_Scheduler_Path_Action_'
 
         # These are used by servers to invoke the scheduler
-        Server_Auth_Required = 'Zato_Scheduler_API_Client_For_Server_Auth_Required'
         Server_Username = 'Zato_Scheduler_API_Client_For_Server_Username'
         Server_Password = 'Zato_Scheduler_API_Client_For_Server_Password'
+        Server_Auth_Required = 'Zato_Scheduler_API_Client_For_Server_Auth_Required'
 
     class ConfigCommand:
         Pause = 'pause'
@@ -709,6 +709,7 @@ class MISC:
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
     DefaultAdminInvokeChannel = 'admin.invoke.json'
+    Default_Cluster_ID = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
