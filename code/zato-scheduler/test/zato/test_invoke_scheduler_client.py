@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from unittest import main, TestCase
 
 # Zato
@@ -31,6 +32,16 @@ class InvokeSchedulerClientTestCase(TestCase):
 
     def test_client_invoke_server_to_scheduler_message_valid(self):
 
+        if not (username := os.environ.get('Zato_Scheduler_API_Client_For_Server_Username')):
+            return
+
+        if not (password := os.environ.get('Zato_Scheduler_API_Client_For_Server_Password')):
+            return
+
+        # If we are here, it means that we have the credentials
+        scheduler_config['scheduler_api_username'] = username
+        scheduler_config['scheduler_api_password'] = password
+
         # Client that invokes the scheduler from servers
         client = BrokerClient(scheduler_config=scheduler_config)
 
@@ -51,6 +62,16 @@ class InvokeSchedulerClientTestCase(TestCase):
 # ################################################################################################################################
 
     def xtest_client_invoke_server_to_scheduler_invalid_request(self):
+
+        if not (username := os.environ.get('Zato_Scheduler_API_Client_For_Server_Username')):
+            return
+
+        if not (password := os.environ.get('Zato_Scheduler_API_Client_For_Server_Password')):
+            return
+
+        # If we are here, it means that we have the credentials
+        scheduler_config['scheduler_api_username'] = username
+        scheduler_config['scheduler_api_password'] = password
 
         # Client that invokes the scheduler from servers
         client = BrokerClient(scheduler_config=scheduler_config)

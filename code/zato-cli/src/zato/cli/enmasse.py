@@ -1208,52 +1208,6 @@ class ObjectImporter:
             # .. preprocess values only if they are strings ..
             if isinstance(orig_value, str):
 
-                '''
-                # .. assume there will be no placeholders for this value ..
-                has_params = False
-
-                # .. extract any potential placeholders ..
-                params = extract_param_placeholders(orig_value)
-
-                # .. go through each placeholder ..
-                for param in params:
-
-                    # .. indicate that we actually do have a placeholder ..
-                    has_params = True
-
-                    # .. check if it points to an environment variable ..
-                    if zato_enmasse_env2 in param:
-
-                        # .. we are here if we can find an environment variable ..
-                        # .. based on a placeholder parameter, so we now need ..
-                        # .. to extract the value of this variable or use a default one ..
-                        env_variable_name = param.replace(zato_enmasse_env2, '')
-                        env_variable_name = env_variable_name[1:-1]
-
-                        # .. let's find this variable or use the default one ..
-                        env_value = os.environ.get(env_variable_name, 'Missing_Value_' + env_variable_name)
-
-                        # .. now, we can insert this variable in the original value ..
-                        orig_value = orig_value.replace(param, env_value)
-
-                        print()
-                        print(111, is_edit, orig_value, hex(id(orig_value)))
-                        print()
-
-                # .. if we have at least one placeholder, we can populate the new value already here ..
-                if has_params:
-                    attrs[key] = orig_value
-
-                    print()
-                    print(222, is_edit, orig_value, hex(id(orig_value)))
-                    print(333, attrs)
-                    print()
-
-
-                # .. otherwise, we still need to check if the entire value is not an environment variable ..
-                else:
-                '''
-
                 if orig_value.startswith(zato_enmasse_env1):
                     _prefix = zato_enmasse_env1
                 elif orig_value.startswith(zato_enmasse_env2):
@@ -2114,12 +2068,12 @@ class InputParser:
 
 # ################################################################################################################################
 
-    def parse_items(self, items:'strdict', results:'Results') -> 'None':
+    def parse_items(self, data:'strdict', results:'Results') -> 'None':
 
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
 
-        for item_type, items in iteritems(items):
+        for item_type, items in iteritems(data):
 
             if not self._is_item_type_recognized(item_type):
                 raw = (item_type,)

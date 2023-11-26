@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,7 +12,7 @@ from json import loads
 from traceback import format_exc
 
 # gevent
-from gevent import spawn
+from gevent import sleep, spawn
 
 # orjson
 from orjson import dumps
@@ -123,9 +123,50 @@ class BrokerClient:
 # ################################################################################################################################
 
     def _invoke_scheduler_from_server(self, msg:'anydict') -> 'any_':
+
+        idx = 0
+        response = None
         msg_bytes = dumps(msg)
-        response = requests_post(self.scheduler_url, msg_bytes, auth=self.scheduler_auth, verify=False)
-        return response
+
+        while not response:
+
+            # Increase the loop counter
+            idx += 1
+
+            try:
+                response = requests_post(
+                    self.scheduler_url,
+                    msg_bytes,
+                    auth=self.scheduler_auth,
+                    verify=False,
+                    timeout=5,
+                )
+            except Exception as e:
+
+                # .. log what happened ..
+                logger.warn('Scheduler invocation error -> %s', e)
+
+            # .. keep retrying or return the response ..
+            finally:
+
+                # .. we can return the response if we have it ..
+                if response:
+                    return response
+
+                # .. otherwise, wait until the scheduler responds ..
+                else:
+
+                    # .. The first time around, wait a little longer ..
+                    # .. because the scheduler may be only starting now ..
+                    if idx == 1:
+                        logger.info('Waiting for the scheduler to respond (1)')
+                        sleep(5)
+
+                    # .. log what is happening ..
+                    logger.info('Waiting for the scheduler to respond (2)')
+
+                    # .. wait for a moment ..
+                    sleep(3)
 
 # ################################################################################################################################
 
@@ -146,7 +187,7 @@ class BrokerClient:
 
         try:
 
-            # Special cases messages that are actually destined to the scheduler, not to servers ..
+            # Special-case messages that are actually destined to the scheduler, not to servers ..
             if from_server and action in to_scheduler_actions:
                 try:
                     response = self._invoke_scheduler_from_server(msg)
