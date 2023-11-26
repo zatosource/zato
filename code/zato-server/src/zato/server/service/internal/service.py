@@ -33,7 +33,8 @@ from zato.common.json_ import dumps as json_dumps
 from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import get_service_config
 from zato.common.marshal_.api import Model
-from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
+from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, \
+    Service as ODBService
 from zato.common.odb.query import service_list
 from zato.common.rate_limiting import DefinitionParser
 from zato.common.scheduler import get_startup_job_services
@@ -41,7 +42,7 @@ from zato.common.util.api import hot_deploy, parse_extra_into_dict, payload_from
 from zato.common.util.file_system import get_tmp_path
 from zato.common.util.stats import combine_table_data, collect_current_usage
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
-from zato.server.service import Boolean, Float, Integer, Service as ZatoService
+from zato.server.service import Boolean, Float, Integer, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
@@ -53,7 +54,7 @@ from zato.common.typing_ import any_, strnone
 # ################################################################################################################################
 
 # For pyflakes
-ZatoService = ZatoService
+Service = Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,7 +82,7 @@ def _dumps(response:'any_') -> 'any_':
 class GetList(AdminService):
     """ Returns a list of services.
     """
-    _filter_by = Service.name,
+    _filter_by = ODBService.name,
 
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_service_get_list_request'
@@ -199,6 +200,18 @@ class GetServiceStats(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class IsDeployed(Service):
+
+    input = 'name'
+    output = 'is_deployed'
+
+    def handle(self):
+        is_deployed = self.server.service_store.is_deployed(self.request.input.name)
+        self.response.payload.is_deployed = is_deployed
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _Get(AdminService):
 
     class SimpleIO(AdminSIO):
@@ -211,9 +224,9 @@ class _Get(AdminService):
             'usage_min', 'usage_max', 'usage_mean'
 
     def get_data(self, session):
-        query = session.query(Service.id, Service.name, Service.is_active,
-            Service.impl_name, Service.is_internal, Service.slow_threshold).\
-            filter(Cluster.id==Service.cluster_id).\
+        query = session.query(ODBService.id, ODBService.name, ODBService.is_active,
+            ODBService.impl_name, ODBService.is_internal, ODBService.slow_threshold).\
+            filter(Cluster.id==ODBService.cluster_id).\
             filter(Cluster.id==self.request.input.cluster_id)
 
         query = self.add_filter(query)
@@ -259,7 +272,7 @@ class GetByName(_Get):
 
     def add_filter(self, query):
         return query.\
-               filter(Service.name==self.request.input.name)
+               filter(ODBService.name==self.request.input.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -274,7 +287,7 @@ class GetByID(_Get):
 
     def add_filter(self, query):
         return query.\
-               filter(Service.id==self.request.input.id)
+               filter(ODBService.id==self.request.input.id)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -298,7 +311,7 @@ class Edit(AdminService):
 
         with closing(self.odb.session()) as session:
             try:
-                service = session.query(Service).filter_by(id=input.id).one() # type: Service
+                service = session.query(ODBService).filter_by(id=input.id).one() # type: ODBService
                 service.is_active = input.is_active
                 service.slow_threshold = input.slow_threshold
 
@@ -306,7 +319,7 @@ class Edit(AdminService):
 
                 # Configure JSON Schema validation if service has a schema assigned by user.
                 class_info = self.server.service_store.get_service_info_by_id(input.id) # type: dict
-                class_ = class_info['service_class'] # type: Service
+                class_ = class_info['service_class'] # type: ODBService
                 if class_.schema:
                     self.server.service_store.set_up_class_json_schema(class_, input)
 
@@ -326,7 +339,7 @@ class Edit(AdminService):
                 self.response.payload.may_be_deleted = internal_del if service.is_internal else True
 
             except Exception:
-                self.logger.error('Service could not be updated, e:`%s`', format_exc())
+                self.logger.error('ODBService could not be updated, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -345,9 +358,9 @@ class Delete(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                service = session.query(Service).\
-                    filter(Service.id==self.request.input.id).\
-                    one() # type: Service
+                service = session.query(ODBService).\
+                    filter(ODBService.id==self.request.input.id).\
+                    one() # type: ODBService
 
                 internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
 
@@ -371,7 +384,7 @@ class Delete(AdminService):
 
             except Exception:
                 session.rollback()
-                msg = 'Service could not be deleted, e:`{}`'.format(format_exc())
+                msg = 'ODBService could not be deleted, e:`{}`'.format(format_exc())
                 self.logger.error(msg)
 
                 raise
@@ -620,13 +633,13 @@ class GetSourceInfo(AdminService):
         output_optional = ('service_id', 'server_name', 'source', 'source_path', 'source_hash', 'source_hash_method')
 
     def get_data(self, session):
-        return session.query(Service.id.label('service_id'), Server.name.label('server_name'),
+        return session.query(ODBService.id.label('service_id'), Server.name.label('server_name'),
             DeployedService.source, DeployedService.source_path,
             DeployedService.source_hash, DeployedService.source_hash_method).\
-            filter(Cluster.id==Service.cluster_id).\
+            filter(Cluster.id==ODBService.cluster_id).\
             filter(Cluster.id==self.request.input.cluster_id).\
-            filter(Service.name==self.request.input.name).\
-            filter(Service.id==DeployedService.service_id).\
+            filter(ODBService.name==self.request.input.name).\
+            filter(ODBService.id==DeployedService.service_id).\
             filter(Server.id==DeployedService.server_id).\
             filter(Server.id==self.server.id).\
             one()
@@ -689,7 +702,7 @@ class ServiceInvoker(AdminService):
 
     def handle(self, _internal=('zato', 'pub.zato')):
 
-        # Service name is given in URL path
+        # ODBService name is given in URL path
         service_name = self.request.http.params.service_name
 
         # Are we invoking a Zato built-in service or a user-defined one?
@@ -699,7 +712,7 @@ class ServiceInvoker(AdminService):
         # that our channel can be used for such invocations.
         if is_internal:
             if self.channel.name not in self.server.fs_server_config.misc.service_invoker_allow_internal:
-                self.logger.warning('Service `%s` could not be invoked; channel `%s` not among `%s` (service_invoker_allow_internal)',
+                self.logger.warning('ODBService `%s` could not be invoked; channel `%s` not among `%s` (service_invoker_allow_internal)',
                     service_name, self.channel.name, self.server.fs_server_config.misc.service_invoker_allow_internal)
                 self.response.data_format = 'text/plain'
                 raise BadRequest(self.cid, 'No such service `{}`'.format(service_name))

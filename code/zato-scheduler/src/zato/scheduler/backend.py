@@ -27,8 +27,8 @@ from zato.common.ext.future.utils import iterkeys, itervalues
 # Zato
 from zato.common.api import FILE_TRANSFER, SCHEDULER
 from zato.common.util.api import asbool, make_repr, new_cid, spawn_greenlet
-from zato.common.util.scheduler import add_scheduler_jobs_by_api, add_scheduler_jobs_by_odb, add_startup_jobs_by_api, \
-    add_startup_jobs_by_odb
+from zato.common.util.scheduler import load_scheduler_jobs_by_api, load_scheduler_jobs_by_odb, add_startup_jobs_to_odb_by_api, \
+    add_startup_jobs_to_odb_by_odb
 from zato.scheduler.cleanup.cli import start_cleanup
 
 # ################################################################################################################################
@@ -520,22 +520,22 @@ class Scheduler:
     def _init_jobs_by_odb(self):
 
         cluster_conf = self.config.main.cluster
-        add_startup_jobs_by_odb(cluster_conf.id, self.odb, self.startup_jobs, asbool(cluster_conf.stats_enabled))
+        add_startup_jobs_to_odb_by_odb(cluster_conf.id, self.odb, self.startup_jobs, asbool(cluster_conf.stats_enabled))
 
         # Actually start jobs now, including any added above
         if self._add_scheduler_jobs:
-            add_scheduler_jobs_by_odb(self.api, self.odb, self.config.main.cluster.id, spawn=False)
+            load_scheduler_jobs_by_odb(self.api, self.odb, self.config.main.cluster.id, spawn=False)
 
 # ################################################################################################################################
 
     def _init_jobs_by_api(self):
 
         cluster_conf = self.config.main.cluster
-        add_startup_jobs_by_api(self.api, self.startup_jobs, asbool(cluster_conf.stats_enabled))
+        add_startup_jobs_to_odb_by_api(self.api, self.startup_jobs, asbool(cluster_conf.stats_enabled))
 
         # Actually start jobs now, including any added above
         #if self._add_scheduler_jobs:
-        #    add_scheduler_jobs_by_api(self.api, spawn=False)
+        #    load_scheduler_jobs_by_api(self.api, spawn=False)
 
         # Obtain a list of initial jobs ..
         # response = self.api.invoke_service('zato.scheduler.job.get-list')

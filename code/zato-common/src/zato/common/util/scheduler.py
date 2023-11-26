@@ -25,7 +25,7 @@ from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strdict
+    from zato.common.typing_ import any_, strdict, strdictlist
     from zato.scheduler.api import SchedulerAPI
 
 # ################################################################################################################################
@@ -36,7 +36,7 @@ logger = getLogger('zato_scheduler')
 # ################################################################################################################################
 # ################################################################################################################################
 
-def wait_for_odb_service(session:'any_', cluster_id:'int', service_name:'str') -> 'None':
+def wait_for_odb_service_by_odb(session:'any_', cluster_id:'int', service_name:'str') -> 'None':
 
     # Assume we do not have it
     service = None
@@ -52,10 +52,33 @@ def wait_for_odb_service(session:'any_', cluster_id:'int', service_name:'str') -
         # .. if not found, sleep for a moment.
         if not service:
             sleep(1)
-            logger.info('Waiting for ODB service `%s`', service_name)
+            logger.info('Waiting for ODB service `%s` (ODB)', service_name)
 
     # If we are here, it means that the service was found so we can return it
     return service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def wait_for_odb_service_by_api(api:'SchedulerAPI', service_name:'str') -> 'None':
+
+    # Assume we do not have it
+    is_deployed = None
+
+    while not is_deployed:
+
+        # Try to look it up ..
+        response = api.invoke_service('zato.service.is-deployed', {
+            'name': service_name
+        })
+
+        # .. we can return if we have a response that indicates that the service is deployed ..
+        if response and response.get('is_deployed'):
+            return
+
+        # .. otherwise, we sleep for a moment before the next iteration ..
+        else:
+            sleep(2)
 
 # ################################################################################################################################
 
@@ -73,7 +96,7 @@ def _add_scheduler_job(api:'SchedulerAPI', job_data:'Bunch', spawn:'bool', sourc
 
 # ################################################################################################################################
 
-def add_startup_jobs_by_odb(cluster_id:'int', odb:'any_', jobs:'any_', stats_enabled:'bool') -> 'None':
+def add_startup_jobs_to_odb_by_odb(cluster_id:'int', odb:'any_', jobs:'any_', stats_enabled:'bool') -> 'None':
     """ Uses a direction ODB connection to add initial startup jobs to the ODB.
     """
     with closing(odb.session()) as session:
@@ -102,7 +125,7 @@ def add_startup_jobs_by_odb(cluster_id:'int', odb:'any_', jobs:'any_', stats_ena
                 # It is required to do it because the scheduler may start before servers
                 # in which case services will not be in the ODB yet and we need to wait for them.
                 #
-                service = wait_for_odb_service(session, cluster_id, item['service'])
+                service = wait_for_odb_service_by_odb(session, cluster_id, item['service'])
 
                 cluster = session.query(Cluster).\
                     filter(Cluster.id==cluster_id).\
@@ -137,7 +160,7 @@ def add_startup_jobs_by_odb(cluster_id:'int', odb:'any_', jobs:'any_', stats_ena
 
 # ################################################################################################################################
 
-def add_scheduler_jobs_by_odb(api:'SchedulerAPI', odb:'any_', cluster_id:'int', spawn:'bool'=True) -> 'None':
+def load_scheduler_jobs_by_odb(api:'SchedulerAPI', odb:'any_', cluster_id:'int', spawn:'bool'=True) -> 'None':
     """ Uses ODB connections directly to obtain a list of all jobs that the scheduler should run.
     """
 
@@ -159,23 +182,32 @@ def add_scheduler_jobs_by_odb(api:'SchedulerAPI', odb:'any_', cluster_id:'int', 
         })
 
         # .. and invoke a common function to add it to the scheduler.
-        _add_scheduler_job(api, job_data, spawn, 'add_scheduler_jobs_by_odb')
+        _add_scheduler_job(api, job_data, spawn, 'load_scheduler_jobs_by_odb')
 
 # ################################################################################################################################
 
-def add_startup_jobs_by_api(api:'SchedulerAPI', jobs:'strdict', stats_enabled:'bool') -> 'None':
+def add_startup_jobs_to_odb_by_api(api:'SchedulerAPI', jobs:'strdictlist', stats_enabled:'bool') -> 'None':
     """ Uses server API calls to add initial startup jobs to the ODB.
     """
-    response = api.invoke_service('zzz')
-    print()
-    print(111, response)
-    print()
+
+    # Go through each of the jobs that we are to add ..
+    for job in jobs:
+
+        # .. make sure that the service that it depends on is deployed ..
+        wait_for_odb_service_by_api(api, job['service'])
+
+        # .. now, we can create a new job, ignoring the fact that it may potentially already exist.
+        api.invoke_service
 
 # ################################################################################################################################
 
-def add_scheduler_jobs_by_api(api:'SchedulerAPI', jobs:'strdict') -> 'None':
+def load_scheduler_jobs_by_api(api:'SchedulerAPI', jobs:'strdict') -> 'None':
     """ Uses server API calls to obtain a list of all jobs that the scheduler should run.
     """
+    response = api.invoke_service('zato.scheduler.job.get-list')
+    print()
+    print('ADD-001', response)
+    print()
 
 # ################################################################################################################################
 # ################################################################################################################################

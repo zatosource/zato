@@ -101,16 +101,19 @@ class SchedulerAPI:
         while not response:
 
             try:
+                # .. log what we are about to do ..
+                logger.info(f'Invoking service `{name}` with `{request}`')
+
                 # .. invoke the server ..
                 response = self.broker_client.zato_client.invoke(name, request, timeout=0.5)
 
             except Exception as e:
 
                 # .. if there is still none, wait a bit longer ..
-                logger.info(f'Waiting for response from service `{name} -> {e}')
+                logger.info(f'Waiting for response from service `{name}` -> {e}')
 
                 # .. do wait now ..
-                # sleep(1)
+                sleep(1)
 
         # .. if we are here, we have a response to return.
         return response.data
