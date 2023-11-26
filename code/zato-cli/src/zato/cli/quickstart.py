@@ -378,8 +378,6 @@ class Create(ZatoCommand):
             needs_encrypt=False
         )
 
-        get_scheduler_api_client_for_server_password,
-
         # Make sure we always work with absolute paths
         args_path = os.path.abspath(args.path)
 
