@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,9 +21,6 @@ from crontab import CronTab
 
 # gevent
 from gevent import sleep
-
-# Python 2/3 compatibility
-from zato.common.py23_.past.builtins import basestring
 
 # Zato
 from zato.common.api import SCHEDULER, ZATO_NONE
@@ -48,7 +45,7 @@ _has_debug = logger.isEnabledFor(logging.DEBUG)
 # ################################################################################################################################
 
 def _start_date(job_data):
-    if isinstance(job_data.start_date, basestring):
+    if isinstance(job_data.start_date, str):
         # Remove timezone information as we assume that all times are in UTC
         start_date = job_data.start_date.split('+')
         start_date = start_date[0]
@@ -66,7 +63,7 @@ class SchedulerAPI:
         self.config = config
         self.broker_client = None # type: BrokerClient
         self.config.on_job_executed_cb = self.on_job_executed
-        self.sched = _Scheduler(self.config, self)
+        self.scheduler = _Scheduler(self.config, self)
 
         if run:
             self.serve_forever()
@@ -76,11 +73,11 @@ class SchedulerAPI:
     def serve_forever(self):
         try:
             try:
-                spawn_greenlet(self.sched.run)
+                spawn_greenlet(self.scheduler.run)
             except Exception:
                 logger.warning(format_exc())
 
-            while not self.sched.ready:
+            while not self.scheduler.ready:
                 sleep(0.1)
 
         except Exception:
@@ -161,7 +158,7 @@ class SchedulerAPI:
         job = Job(id, name, job_type, interval, start_time, cb_kwargs=cb_kwargs, max_repeats=max_repeats,
             is_active=is_active, cron_definition=cron_definition, service=service, extra=extra, old_name=old_name)
 
-        func = self.sched.create if is_create else self.sched.edit
+        func = self.scheduler.create if is_create else self.scheduler.edit
         func(job, **kwargs)
 
 # ################################################################################################################################
@@ -243,17 +240,17 @@ class SchedulerAPI:
 
         logger.info('Deleting job %s (old_name:%s)', name, old_name)
 
-        self.sched.unschedule_by_name(name, **kwargs)
+        self.scheduler.unschedule_by_name(name, **kwargs)
 
 # ################################################################################################################################
 
     def execute(self, job_data):
-        self.sched.execute(job_data.name)
+        self.scheduler.execute(job_data.name)
 
 # ################################################################################################################################
 
     def stop(self):
-        self.sched.stop()
+        self.scheduler.stop()
 
 # ################################################################################################################################
 

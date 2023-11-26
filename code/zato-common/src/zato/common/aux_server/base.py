@@ -73,6 +73,33 @@ class AuxServerConfig:
 
 # ################################################################################################################################
 
+    @staticmethod
+    def get_odb(config:'AuxServerConfig') -> 'ODBManager':
+
+        odb = ODBManager()
+        sql_pool_store = PoolStore()
+
+        if config.main.odb.engine != 'sqlite':
+
+            config.main.odb.host = config.main.odb.host
+            config.main.odb.username = config.main.odb.username
+            config.main.odb.pool_size = config.main.odb.pool_size
+
+            odb_password:'str' = config.main.odb.password or ''
+
+            if odb_password and odb_password.startswith('gA'):
+                config.main.odb.password = config.crypto_manager.decrypt(odb_password)
+
+        sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
+
+        odb.pool = sql_pool_store[ZATO_ODB_POOL_NAME].pool
+        odb.init_session(ZATO_ODB_POOL_NAME, config.main.odb, odb.pool, False)
+        odb.pool.ping(odb.fs_sql_config)
+
+        return odb
+
+# ################################################################################################################################
+
     @classmethod
     def from_repo_location(
         class_,         # type: type_[AuxServerConfig]
@@ -80,6 +107,7 @@ class AuxServerConfig:
         repo_location,  # type: str
         conf_file_name, # type: str
         crypto_manager_class, # type: type_[CryptoManager]
+        needs_odb=True, # type: bool
     ) -> 'AuxServerConfig':
 
         # Zato
@@ -104,7 +132,7 @@ class AuxServerConfig:
         else:
             secrets_conf = None
 
-        # Read config in and extend it with ODB-specific information
+        # Read configuration in
         config.main = cast_('Bunch', get_config(
             repo_location,
             conf_file_name,
@@ -112,7 +140,7 @@ class AuxServerConfig:
             secrets_conf=secrets_conf,
             require_exists=True
         ))
-        config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
+
         config.main.crypto.use_tls = as_bool(config.main.crypto.use_tls)
 
         # Make all paths absolute
@@ -124,20 +152,18 @@ class AuxServerConfig:
         # Set up the crypto manager need to access credentials
         config.crypto_manager = crypto_manager
 
-        # ODB connection
-        odb = ODBManager()
-        sql_pool_store = PoolStore()
+        # Optionally, establish an ODB connection
+        has_odb = False
 
-        if config.main.odb.engine != 'sqlite':
+        if needs_odb:
+            if 'odb' in config.main:
+                config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
+                config.odb = class_.get_odb(config)
+                has_odb = True
 
-            config.main.odb.host = config.main.odb.host
-            config.main.odb.username = config.main.odb.username
-            config.main.odb.pool_size = config.main.odb.pool_size
-
-            odb_password = config.main.odb.password or '' # type: str
-
-            if odb_password and odb_password.startswith('gA'):
-                config.main.odb.password = config.crypto_manager.decrypt(odb_password)
+        # We want to have something set, even None, to make sure we do not get AttributeErrors when accessing config.odb
+        if not has_odb:
+            config.odb = None
 
         # Decrypt the password used to invoke servers
         if config.main.get('server'):
@@ -179,14 +205,6 @@ class AuxServerConfig:
                 config.username = username
                 config.password = password
 
-        sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
-
-        odb.pool = sql_pool_store[ZATO_ODB_POOL_NAME].pool
-        odb.init_session(ZATO_ODB_POOL_NAME, config.main.odb, odb.pool, False)
-        odb.pool.ping(odb.fs_sql_config)
-
-        config.odb = odb
-
         return config
 
 # ################################################################################################################################
@@ -202,6 +220,7 @@ class AuxServer:
     conf_file_name: 'str'
     config_class: 'type_[AuxServerConfig]'
     crypto_manager_class: 'type_[CryptoManager]'
+    needs_odb: 'bool' = True
     has_credentials: 'bool' = True
     parent_server_name: 'str'
     parent_server_pid:  'int'
@@ -285,6 +304,7 @@ class AuxServer:
             repo_location,
             class_.conf_file_name,
             class_.crypto_manager_class,
+            class_.needs_odb,
         )
 
         config.parent_server_name = parent_server_name

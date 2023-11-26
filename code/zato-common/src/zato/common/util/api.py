@@ -898,7 +898,7 @@ def wait_for_odb_service(session, cluster_id, service_name):
 
 # ################################################################################################################################
 
-def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
+def add_startup_jobs_by_odb(cluster_id, odb, jobs, stats_enabled):
     """ Adds internal jobs to the ODB. Note that it isn't being added
     directly to the scheduler because we want users to be able to fine-tune the job's
     settings.
@@ -1383,7 +1383,7 @@ class StaticConfig(Bunch):
 
 # ################################################################################################################################
 
-def add_scheduler_jobs(api, odb, cluster_id, spawn=True):
+def add_scheduler_jobs_by_odb(api, odb, cluster_id, spawn=True):
 
     job_list = odb.get_job_list(cluster_id)
 
@@ -1392,7 +1392,7 @@ def add_scheduler_jobs(api, odb, cluster_id, spawn=True):
 
         # Ignore jobs that have been removed
         if name in SCHEDULER.JobsToIgnore:
-            logger.info('Ignoring job `%s (%s)`', name, 'add_scheduler_jobs')
+            logger.info('Ignoring job `%s (%s)`', name, 'add_scheduler_jobs_by_odb')
             continue
 
         job_data = Bunch({
