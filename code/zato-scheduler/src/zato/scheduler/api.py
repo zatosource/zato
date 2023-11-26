@@ -109,13 +109,18 @@ class SchedulerAPI:
 
             except Exception as e:
 
+                logger.info(f'Service invocation error -> `{name}` -> {e}')
+
+            finally:
+
                 # .. if there is still none, wait a bit longer ..
-                logger.info(f'Waiting for response from service `{name}` -> {e}')
+                logger.info(f'Waiting for response from service `{name}`')
 
                 # .. do wait now ..
                 sleep(1)
 
         # .. if we are here, we have a response to return.
+        logger.info(f'Returning response from service {name}')
         return response.data
 
 # ################################################################################################################################
