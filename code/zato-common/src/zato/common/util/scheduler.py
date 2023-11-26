@@ -26,7 +26,7 @@ from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, list_, strdict
+    from zato.common.typing_ import any_, list_
     from zato.scheduler.api import SchedulerAPI
 
 # ################################################################################################################################
@@ -240,6 +240,10 @@ def load_scheduler_jobs_by_api(api:'SchedulerAPI', spawn:'bool') -> 'None':
 
     # .. we have some jobs to schedule ..
     if response:
+
+        # .. log what we are about to add ..
+        items = sorted(elem['name'] for elem in response)
+        logger.info('Loading jobs into scheduler -> %s', items)
 
         # .. go through each of the jobs received ..
         for item in response:
