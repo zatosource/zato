@@ -531,7 +531,7 @@ class Scheduler:
     def _init_jobs_by_api(self):
 
         cluster_conf = self.config.main.cluster
-        add_startup_jobs_by_api(self.startup_jobs, asbool(cluster_conf.stats_enabled))
+        add_startup_jobs_by_api(self.api, self.startup_jobs, asbool(cluster_conf.stats_enabled))
 
         # Actually start jobs now, including any added above
         #if self._add_scheduler_jobs:

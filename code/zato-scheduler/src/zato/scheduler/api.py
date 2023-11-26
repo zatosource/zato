@@ -33,6 +33,7 @@ from zato.scheduler.backend import Interval, Job, Scheduler as _Scheduler
 
 if 0:
     from zato.broker.client import BrokerClient
+    from zato.common.typing_ import strdictnone
     from zato.scheduler.server import Config
 
 # ################################################################################################################################
@@ -85,18 +86,33 @@ class SchedulerAPI:
 
 # ################################################################################################################################
 
-    def invoke_service(self, name:'str', request:'strdict') -> 'strdict':
+    def invoke_service(self, name:'str', request:'strdictnone'=None) -> 'strdict':
 
         # Make sure we have a request to send
         request = request or {}
 
+        # Assume there is no response until we have one
+        response = None
+
         # Enrich the business data ..
         request['cluster_id'] = MISC.Default_Cluster_ID
 
-        # .. invoke the server ..
-        response = self.broker_client.zato_client.invoke(name, request)
+        # .. keep looping until we have a response ..
+        while not response:
 
-        # .. and returns its response to our caller.
+            try:
+                # .. invoke the server ..
+                response = self.broker_client.zato_client.invoke(name, request, timeout=0.5)
+
+            except Exception as e:
+
+                # .. if there is still none, wait a bit longer ..
+                logger.info(f'Waiting for response from service `{name} -> {e}')
+
+                # .. do wait now ..
+                # sleep(1)
+
+        # .. if we are here, we have a response to return.
         return response.data
 
 # ################################################################################################################################
