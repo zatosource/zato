@@ -23,10 +23,9 @@ from crontab import CronTab
 from zato.common.api import scheduler_date_time_format, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG
 from zato.common.exception import ServiceMissingException, ZatoException
-from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
-     Service
+from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob, Service as ODBService
 from zato.common.odb.query import job_by_id, job_by_name, job_list
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO, Service
 
 # ################################################################################################################################
 
@@ -74,14 +73,14 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             raise ZatoException(cid, 'Job `{}` already exists on this cluster'.format(name))
 
     # Is the service's name correct?
-    service = session.query(Service).\
+    service = session.query(ODBService).\
         filter(Cluster.id==cluster_id).\
-        filter(Service.cluster_id==Cluster.id).\
-        filter(Service.name==service_name).\
+        filter(ODBService.cluster_id==Cluster.id).\
+        filter(ODBService.name==service_name).\
         first()
 
     if not service:
-        msg = 'Service `{}` does not exist in this cluster'.format(service_name)
+        msg = 'ODBService `{}` does not exist in this cluster'.format(service_name)
         logger.info(msg)
         raise ServiceMissingException(cid, msg)
 
@@ -394,6 +393,20 @@ class SetActiveStatus(AdminService):
                 self.logger.error('Could not update is_active status, e:`%s`', format_exc())
 
                 raise
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SetAddress(Service):
+
+    name = 'pub.zato.scheduler.set-address'
+    input = 'address'
+    output = 'msg'
+
+    def handle(self):
+        address = (self.request.input.address or '').strip()
+        self.server.set_scheduler_address(address)
+        self.response.payload.msg = f'OK, address set to {address}'
 
 # ################################################################################################################################
 # ################################################################################################################################
