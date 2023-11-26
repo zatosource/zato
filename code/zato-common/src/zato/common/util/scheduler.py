@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from copy import deepcopy
 from datetime import datetime
 from json import dumps
 from logging import getLogger
@@ -25,7 +26,7 @@ from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strdict, strdictlist
+    from zato.common.typing_ import any_, list_, strdict
     from zato.scheduler.api import SchedulerAPI
 
 # ################################################################################################################################
@@ -186,9 +187,21 @@ def load_scheduler_jobs_by_odb(api:'SchedulerAPI', odb:'any_', cluster_id:'int',
 
 # ################################################################################################################################
 
-def add_startup_jobs_to_odb_by_api(api:'SchedulerAPI', jobs:'strdictlist', stats_enabled:'bool') -> 'None':
+def add_startup_jobs_to_odb_by_api(api:'SchedulerAPI', jobs:'list_[Bunch]', stats_enabled:'bool') -> 'None':
     """ Uses server API calls to add initial startup jobs to the ODB.
     """
+
+    # This can be static for all the jobs because the backend will calculate the actual start time itself
+    start_date = '2023-01-02T11:22:33'
+
+    # Jobs that we are creating will be active unless the configuration says otherwise
+    is_active = True
+
+    # All of the jobs that we are adding are interval-based
+    job_type = SCHEDULER.JOB_TYPE.INTERVAL_BASED
+
+    # We are going to ignore jobs that already exist
+    should_ignore_existing = True
 
     # Go through each of the jobs that we are to add ..
     for job in jobs:
@@ -196,18 +209,51 @@ def add_startup_jobs_to_odb_by_api(api:'SchedulerAPI', jobs:'strdictlist', stats
         # .. make sure that the service that it depends on is deployed ..
         wait_for_odb_service_by_api(api, job['service'])
 
+        # .. build a request describing the job to be created by copying its configuration ..
+        request = deepcopy(job)
+
+        # .. fill out the remaining details ..
+
+        if not 'is_active' in job:
+            request.is_active = is_active
+
+        if not 'job_type' in job:
+            request.job_type = job_type
+
+        if not 'start_date' in job:
+            request.start_date = start_date
+
+        if not 'should_ignore_existing' in job:
+            request.should_ignore_existing = should_ignore_existing
+
         # .. now, we can create a new job, ignoring the fact that it may potentially already exist.
-        api.invoke_service
+        api.invoke_service('zato.scheduler.job.create', request)
 
 # ################################################################################################################################
 
-def load_scheduler_jobs_by_api(api:'SchedulerAPI', jobs:'strdict') -> 'None':
+def load_scheduler_jobs_by_api(api:'SchedulerAPI', spawn:'bool') -> 'None':
     """ Uses server API calls to obtain a list of all jobs that the scheduler should run.
     """
+
+    # Get a list of all the jobs we are to run ..
     response = api.invoke_service('zato.scheduler.job.get-list')
-    print()
-    print('ADD-001', response)
-    print()
+
+    # .. we have some jobs to schedule ..
+    if response:
+
+        # .. go through each of the jobs received ..
+        for item in response:
+
+            # .. enrich each of them ..
+            job_data = Bunch(item)
+            job_data.service = job_data.service_name
+
+            # .. and invoke a common function to add it to the scheduler.
+            _add_scheduler_job(api, job_data, spawn, 'load_scheduler_jobs_by_api')
+
+    # .. there is nothing for us to run ..
+    else:
+        logger.info('No jobs were received from the server')
 
 # ################################################################################################################################
 # ################################################################################################################################
