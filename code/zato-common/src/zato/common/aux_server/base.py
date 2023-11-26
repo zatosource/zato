@@ -11,6 +11,7 @@ import os
 from json import dumps
 from logging import getLogger
 from traceback import format_exc
+from uuid import uuid4
 
 # Bunch
 from bunch import Bunch
@@ -58,13 +59,16 @@ class AuxServerConfig:
     odb: 'ODBManager'
     username: 'str' = ''
     password: 'str' = ''
+    env_key_username: 'str' = ''
+    env_key_password: 'str' = ''
+    env_key_auth_required: 'str' = ''
     server_type: 'str'
     callback_func: 'callable_'
     conf_file_name: 'str'
     crypto_manager: 'CryptoManager'
     crypto_manager_class: 'type_[CryptoManager]'
     parent_server_name: 'str'
-    parent_server_pid:  'int'
+    parent_server_pid: 'int'
 
     def __init__(self) -> 'None':
         self.main = Bunch()
@@ -97,6 +101,34 @@ class AuxServerConfig:
         odb.pool.ping(odb.fs_sql_config)
 
         return odb
+
+# ################################################################################################################################
+
+    def set_credentials_from_env(self) -> 'bool':
+
+        # Return if there is no environment variable indicating what our credentials are
+        if not self.env_key_auth_required:
+            return False
+
+        # Return if the variable is set but its boolean value is not True
+        auth_required = os.environ.get(self.env_key_auth_required)
+        auth_required = as_bool(auth_required)
+
+        if not auth_required:
+            return False
+
+        # If we are here, we can read our credentials from environment variables
+        username = os.environ.get(self.env_key_username) or 'env_key_username_missing'
+        password = os.environ.get(self.env_key_password) or 'env_key_password_missing.' + uuid4().hex
+
+        self.username = username
+        self.password = password
+
+        logger.info(f'Set username from env. variable `{self.env_key_username}`')
+        logger.info(f'Set password from env. variable `{self.env_key_password}`')
+
+        # Return True to indicate that we have set the credentials
+        return True
 
 # ################################################################################################################################
 
@@ -163,7 +195,7 @@ class AuxServerConfig:
 
         # We want to have something set, even None, to make sure we do not get AttributeErrors when accessing config.odb
         if not has_odb:
-            config.odb = None
+            config.odb = None # type: ignore
 
         # Decrypt the password used to invoke servers
         if config.main.get('server'):
@@ -172,38 +204,45 @@ class AuxServerConfig:
                 server_password = config.crypto_manager.decrypt(server_password)
                 config.main.server.server_password = server_password
 
-        # Obtain the credentials used to invoke schedulers
-        api_clients = config.main.get('api_clients') or {}
+        # Environment variables have precedence ..
+        has_credentials_from_env = config.set_credentials_from_env()
 
-        # Proceed if any API clients are defined ..
-        if api_clients:
+        # .. if we have not set the credentials in the environment ..
+        # .. we still need to try to set them based on our configuration ..
+        if not has_credentials_from_env:
 
-            # .. this will give us all the keys in this part of the configuration ..
-            api_clients_keys = list(api_clients.keys())
+            # .. otherwise, check the configuration to obtain the credentials used to invoke schedulers
+            api_clients = config.main.get('api_clients') or {}
 
-            # .. out of which we can discard some ..
-            for name in ['auth_required']:
-                if name in api_clients:
-                    api_clients_keys.remove(name)
+            # Proceed if any API clients are defined ..
+            if api_clients:
 
-            # .. if we still have any keys left, we choose the first one to be our API credentials ..
-            if api_clients_keys:
+                # .. this will give us all the keys in this part of the configuration ..
+                api_clients_keys = list(api_clients.keys())
 
-                # .. note that we currently handle only one username ..
-                username = api_clients_keys[0]
+                # .. out of which we can discard some ..
+                for name in ['auth_required']:
+                    if name in api_clients:
+                        api_clients_keys.remove(name)
 
-                # .. decrypt its password ..
-                password = api_clients[username]
-                if is_encrypted(password):
-                    password = config.crypto_manager.decrypt(password)
+                # .. if we still have any keys left, we choose the first one to be our API credentials ..
+                if api_clients_keys:
 
-                # .. make sure both credentials are strings ..
-                username = str(username)
-                password = str(password)
+                    # .. note that we currently handle only one username ..
+                    username = api_clients_keys[0]
 
-                # .. we can set its username ..
-                config.username = username
-                config.password = password
+                    # .. decrypt its password ..
+                    password = api_clients[username]
+                    if is_encrypted(password):
+                        password = config.crypto_manager.decrypt(password)
+
+                    # .. make sure both credentials are strings ..
+                    username = str(username)
+                    password = str(password)
+
+                    # .. we can set its username ..
+                    config.username = username
+                    config.password = password
 
         return config
 

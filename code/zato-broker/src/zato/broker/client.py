@@ -124,27 +124,49 @@ class BrokerClient:
 
     def _invoke_scheduler_from_server(self, msg:'anydict') -> 'any_':
 
-        is_first = True
+        idx = 0
         response = None
         msg_bytes = dumps(msg)
 
         while not response:
 
+            # Increase the loop counter
+            idx += 1
+
             try:
-                response = requests_post(self.scheduler_url, msg_bytes, auth=self.scheduler_auth, verify=False)
+                response = requests_post(
+                    self.scheduler_url,
+                    msg_bytes,
+                    auth=self.scheduler_auth,
+                    verify=False,
+                    timeout=5,
+                )
             except Exception as e:
 
-                # The first time around, wait a bit longer and do not log anything
-                # because the scheduler may be still starting ..
-                if is_first:
-                    sleep(5)
+                # .. log what happened ..
+                logger.warn('Scheduler invocation error -> %s', e)
 
-                # .. otherwise, keep retrying and log what we are doing ..
+            # .. keep retrying or return the response ..
+            finally:
+
+                # .. we can return the response if we have it ..
+                if response:
+                    return response
+
+                # .. otherwise, wait until the scheduler responds ..
                 else:
-                    logger.info('Waiting for scheduler to respond -> %s', e)
-                    sleep(1)
 
-        return response
+                    # .. The first time around, wait a little longer ..
+                    # .. because the scheduler may be only starting now ..
+                    if idx == 1:
+                        logger.info('Waiting for the scheduler to respond (1)')
+                        sleep(5)
+
+                    # .. log what is happening ..
+                    logger.info('Waiting for the scheduler to respond (2)')
+
+                    # .. wait for a moment ..
+                    sleep(3)
 
 # ################################################################################################################################
 
