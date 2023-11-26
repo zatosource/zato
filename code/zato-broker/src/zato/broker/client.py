@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,7 +12,7 @@ from json import loads
 from traceback import format_exc
 
 # gevent
-from gevent import spawn
+from gevent import sleep, spawn
 
 # orjson
 from orjson import dumps
@@ -123,8 +123,27 @@ class BrokerClient:
 # ################################################################################################################################
 
     def _invoke_scheduler_from_server(self, msg:'anydict') -> 'any_':
+
+        is_first = True
+        response = None
         msg_bytes = dumps(msg)
-        response = requests_post(self.scheduler_url, msg_bytes, auth=self.scheduler_auth, verify=False)
+
+        while not response:
+
+            try:
+                response = requests_post(self.scheduler_url, msg_bytes, auth=self.scheduler_auth, verify=False)
+            except Exception as e:
+
+                # The first time around, wait a bit longer and do not log anything
+                # because the scheduler may be still starting ..
+                if is_first:
+                    sleep(5)
+
+                # .. otherwise, keep retrying and log what we are doing ..
+                else:
+                    logger.info('Waiting for scheduler to respond -> %s', e)
+                    sleep(1)
+
         return response
 
 # ################################################################################################################################
@@ -146,7 +165,7 @@ class BrokerClient:
 
         try:
 
-            # Special cases messages that are actually destined to the scheduler, not to servers ..
+            # Special-case messages that are actually destined to the scheduler, not to servers ..
             if from_server and action in to_scheduler_actions:
                 try:
                     response = self._invoke_scheduler_from_server(msg)
