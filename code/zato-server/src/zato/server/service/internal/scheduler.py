@@ -397,16 +397,34 @@ class SetActiveStatus(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SetAddress(Service):
+class SetServerAddress(Service):
+    """ Tells the scheduler what the new address of a server it can invoke is.
+    """
+    name = 'pub.zato.scheduler.set-server-address'
+    input = 'address'
+    output = 'msg'
 
-    name = 'pub.zato.scheduler.set-address'
+    def handle(self):
+        address = (self.request.input.address or '').strip()
+
+        raise NotImplementedError('To be done')
+
+        self.response.payload.msg = f'OK, server address set to {address}'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SetSchedulerAddress(Service):
+    """ Tells the scheduler what the new address of a server it can invoke is.
+    """
+    name = 'pub.zato.scheduler.set-scheduler-address'
     input = 'address'
     output = 'msg'
 
     def handle(self):
         address = (self.request.input.address or '').strip()
         self.server.set_scheduler_address(address)
-        self.response.payload.msg = f'OK, address set to {address}'
+        self.response.payload.msg = f'OK, scheduler address set to {address}'
 
 # ################################################################################################################################
 # ################################################################################################################################
