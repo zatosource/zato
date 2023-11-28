@@ -11,6 +11,7 @@ import os
 
 # Zato
 from zato.cli import common_totp_opts, ManageCommand
+from zato.common.const import ServiceConst
 from zato.common.util.open_ import open_r, open_w
 
 # ################################################################################################################################
@@ -240,7 +241,7 @@ class SetAdminInvokePassword(_WebAdminAuthCommand):
     """ Resets a web-admin user's password that it uses to connect to servers.
     """
     opts = [
-        {'name': '--username', 'help': 'Username to reset the password of', 'default':'admin.invoke'},
+        {'name': '--username', 'help': 'Username to reset the password of', 'default':ServiceConst.API_Admin_Invoke_Username},
         {'name': '--password', 'help': 'Password to set'},
     ]
 

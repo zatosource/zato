@@ -1222,6 +1222,20 @@ class ConfigObj(Section):
                     indent_type=None, default_encoding=None, unrepr=False,
                     write_empty_values=False, _inspec=False)``
         """
+
+        # Zato
+        from zato.common.util.config import get_env_config_ctx, get_env_config_value
+
+        # Extract the details about this file
+        zato_env_config_ctx = get_env_config_ctx(infile)
+
+        # Save it for later use
+        self.zato_env_config_ctx = get_env_config_ctx(infile)
+        self.zato_component = zato_env_config_ctx.component
+        self.zato_config_file_name = zato_env_config_ctx.file_name
+        self.zato_env_variable_missing_suffix = zato_env_config_ctx.missing_suffix
+        self.zato_get_env_config_value = get_env_config_value
+
         self._inspec = _inspec
         self.use_zato = use_zato
         self.zato_crypto_manager = zato_crypto_manager
@@ -1620,6 +1634,7 @@ class ConfigObj(Section):
             if mat is not None:
                 # is a section line
                 (indent, sect_open, sect_name, sect_close, comment) = mat.groups()
+
                 if indent and (self.indent_type is None):
                     self.indent_type = indent
                 cur_depth = sect_open.count('[')
@@ -1676,6 +1691,11 @@ class ConfigObj(Section):
                 # is a keyword value
                 # value will include any inline comment
                 (indent, key, value) = mat.groups()
+
+                _env_value = self.zato_get_env_config_value(self.zato_component, self.zato_config_file_name, sect_name, key)
+
+                if not _env_value.endswith(self.zato_env_variable_missing_suffix):
+                    value = _env_value
 
                 # Handle Zato-specific needs
                 if self.use_zato:

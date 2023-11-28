@@ -109,15 +109,16 @@ if PY3:
 
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, HL7, KVDB, MISC, \
-     SCHEDULER, SECRET_SHADOW, SIMPLE_IO, TLS, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
+     SECRET_SHADOW, SIMPLE_IO, TLS, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
-from zato.common.const import SECRETS
+from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
 from zato.common.exception import ZatoException
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
 from zato.common.json_internal import dumps, loads
-from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
+from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, Server
+from zato.common.util.config import enrich_config_from_environment
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
@@ -195,6 +196,21 @@ TLS_KEY_TYPE = {
     crypto.TYPE_DSA: 'DSA',
     crypto.TYPE_RSA: 'RSA'
 }
+
+# ################################################################################################################################
+
+def is_encrypted(data:'str | bytes') -> 'bool':
+
+    # Zato
+    from zato.common.const import SECRETS
+
+    if isinstance(data, bytes):
+        data = data.decode('utf8')
+    elif not isinstance(data, str):
+        data = str(data)
+
+    result = data.startswith(SECRETS.Encrypted_Indicator)
+    return result
 
 # ################################################################################################################################
 
@@ -367,33 +383,56 @@ def get_user_config_name(name:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _get_config(conf, bunchified, needs_user_config, repo_location=None):
-    # type: (bool, bool, str) -> Bunch
+def _get_config(
+    *,
+    conf, # type: ConfigObj
+    config_name, # type: str
+    bunchified, # type: bool
+    needs_user_config, # type: bool
+    repo_location=None # type: strnone
+) -> 'Bunch | ConfigObj':
 
-    conf = bunchify(conf) if bunchified else conf
+    conf = bunchify(conf) if bunchified else conf # type: ignore
 
     if needs_user_config:
-        conf.user_config_items = {}
+        conf.user_config_items = {} # type: ignore
 
         user_config = conf.get('user_config')
         if user_config:
-            for name, path in user_config.items():
+            for name, path in user_config.items(): # type: ignore
                 path = absolutize(path, repo_location)
                 if not os.path.exists(path):
                     logger.warning('User config not found `%s`, name:`%s`', path, name)
                 else:
                     user_conf = ConfigObj(path)
                     user_conf = bunchify(user_conf) if bunchified else user_conf
-                    conf.user_config_items[name] = user_conf
+                    conf.user_config_items[name] = user_conf # type: ignore
 
-    return conf
+    # At this point, we have a Bunch instance that contains
+    # the contents of the file. Now, we need to enrich it
+    # with values that may be potentially found in the environment.
+    if isinstance(conf, Bunch):
+        conf = enrich_config_from_environment(config_name, conf) # type: ignore
+
+    return conf # type: ignore
 
 # ################################################################################################################################
 
-def get_config(repo_location, config_name, bunchified=True, needs_user_config=True, crypto_manager=None, secrets_conf=None,
-    raise_on_error=False, log_exception=True, require_exists=True, conf_location=None):
+def get_config(
+    repo_location,   # type: str
+    config_name,     # type: str
+    bunchified=True, # type: bool
+    needs_user_config=True, # type: bool
+    crypto_manager=None,    # type: CryptoManager | None
+    secrets_conf=None,      # type: any_
+    raise_on_error=False,   # type: bool
+    log_exception=True,     # type: bool
+    require_exists=True,    # type: bool
+    conf_location=None      # type: strnone
+) -> 'Bunch | ConfigObj':
     """ Returns the configuration object. Will load additional user-defined config files, if any are available.
     """
+
     # Default output to produce
     result = Bunch()
 
@@ -408,7 +447,13 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
 
         logger.info('Getting configuration from `%s`', conf_location)
         conf = ConfigObj(conf_location, zato_crypto_manager=crypto_manager, zato_secrets_conf=secrets_conf)
-        result = _get_config(conf, bunchified, needs_user_config, repo_location)
+        result = _get_config(
+            conf=conf,
+            config_name=config_name,
+            bunchified=bunchified,
+            needs_user_config=needs_user_config,
+            repo_location=repo_location
+        )
     except Exception:
         if log_exception:
             logger.warning('Error while reading %s from %s; e:`%s`', config_name, repo_location, format_exc())
@@ -436,11 +481,11 @@ def get_config_from_string(data):
     """ A simplified version of get_config which creates a config object from string, skipping any user-defined config files.
     """
     buff = StringIO()
-    buff.write(data)
-    buff.seek(0)
+    _ = buff.write(data)
+    _ = buff.seek(0)
 
     conf = ConfigObj(buff)
-    out = _get_config(conf, True, False)
+    out = _get_config(conf=conf, config_name='', bunchified=True, needs_user_config=False)
 
     buff.close()
     return out
@@ -553,6 +598,8 @@ ZIP_EXTENSIONS = ('.zip', '.whl')
 TAR_EXTENSIONS = ('.tar.gz', '.tgz', '.tar')
 ARCHIVE_EXTENSIONS = (ZIP_EXTENSIONS + BZ2_EXTENSIONS + TAR_EXTENSIONS + XZ_EXTENSIONS)
 
+# ################################################################################################################################
+
 def splitext(path):
     """Like os.path.splitext, but take off .tar too"""
     base, ext = os.path.splitext(path)
@@ -560,6 +607,8 @@ def splitext(path):
         ext = base[-4:] + ext
         base = base[:-4]
     return base, ext
+
+# ################################################################################################################################
 
 def is_archive_file(name):
     """Return True if `name` is a considered as an archive file."""
@@ -578,6 +627,7 @@ def is_python_file(name):
             return True
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class _DummyLink:
     """ A dummy class for staying consistent with pip's API in certain places
@@ -586,6 +636,7 @@ class _DummyLink:
     def __init__(self, url):
         self.url = url
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ModuleInfo:
@@ -822,94 +873,6 @@ def get_component_name(prefix='parallel'):
 
 def dotted_getattr(o, path):
     return reduce(getattr, path.split('.'), o)
-
-# ################################################################################################################################
-
-def wait_for_odb_service(session, cluster_id, service_name):
-    # Assume we do not have it
-    service = None
-
-    while not service:
-
-        # Try to look it up ..
-        service = session.query(Service).\
-            filter(Service.name==service_name).\
-            filter(Cluster.id==cluster_id).\
-            first()
-
-        # .. if not found, sleep for a moment.
-        if not service:
-            sleep(1)
-            logger.info('Waiting for ODB service `%s`', service_name)
-
-    # If we are here, it means that the service was found so we can return it
-    return service
-
-# ################################################################################################################################
-
-def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
-    """ Adds internal jobs to the ODB. Note that it isn't being added
-    directly to the scheduler because we want users to be able to fine-tune the job's
-    settings.
-    """
-    with closing(odb.session()) as session:
-        now = datetime.utcnow()
-        for item in jobs:
-
-            if item['name'].startswith('zato.stats'):
-                continue
-
-            try:
-                extra = item.get('extra', '')
-                if isinstance(extra, basestring):
-                    extra = extra.encode('utf-8')
-                else:
-                    if item.get('is_extra_list'):
-                        extra = '\n'.join(extra)
-                    else:
-                        extra = dumps(extra)
-
-                if extra:
-                    if not isinstance(extra, bytes):
-                        extra = extra.encode('utf8')
-
-                #
-                # This will block as long as this service is not available in the ODB.
-                # It is required to do it because the scheduler may start before servers
-                # in which case services will not be in the ODB yet and we need to wait for them.
-                #
-                service = wait_for_odb_service(session, cluster_id, item['service'])
-
-                cluster = session.query(Cluster).\
-                    filter(Cluster.id==cluster_id).\
-                    one()
-
-                existing_one = session.query(Job).\
-                    filter(Job.name==item['name']).\
-                    filter(Job.cluster_id==cluster_id).\
-                    first()
-
-                if existing_one:
-                    continue
-
-                job = Job(None, item['name'], True, 'interval_based', now, cluster=cluster, service=service, extra=extra)
-
-                kwargs = {}
-                for name in('seconds', 'minutes'):
-                    if name in item:
-                        kwargs[name] = item[name]
-
-                ib_job = IntervalBasedJob(None, job, **kwargs)
-
-                session.add(job)
-                session.add(ib_job)
-                session.commit()
-
-            except Exception:
-                logger.warning(format_exc())
-
-            else:
-                logger.info('Initial job added `%s`', job.name)
 
 # ################################################################################################################################
 
@@ -1332,34 +1295,6 @@ class StaticConfig(Bunch):
 
 # ################################################################################################################################
 
-def add_scheduler_jobs(api, odb, cluster_id, spawn=True):
-
-    job_list = odb.get_job_list(cluster_id)
-
-    for(id, name, is_active, job_type, start_date, extra, service_name, _,
-        _, weeks, days, hours, minutes, seconds, repeats, cron_definition) in job_list:
-
-        # Ignore jobs that have been removed
-        if name in SCHEDULER.JobsToIgnore:
-            logger.info('Ignoring job `%s (%s)`', name, 'add_scheduler_jobs')
-            continue
-
-        job_data = Bunch({
-            'id':id, 'name':name, 'is_active':is_active,
-            'job_type':job_type, 'start_date':start_date,
-            'extra':extra, 'service':service_name, 'weeks':weeks,
-            'days':days, 'hours':hours, 'minutes':minutes,
-            'seconds':seconds, 'repeats':repeats,
-            'cron_definition':cron_definition
-        })
-
-        if is_active:
-            api.create_edit('create', job_data, spawn=spawn)
-        else:
-            logger.info('Not adding an inactive job `%s`', job_data)
-
-# ################################################################################################################################
-
 def get_basic_auth_credentials(auth):
 
     if not auth:
@@ -1485,7 +1420,7 @@ def get_server_client_auth(
     """ Returns credentials to authenticate with against Zato's own inocation channels.
     """
     # This is optional on input
-    url_path = url_path or '/zato/admin/invoke'
+    url_path = url_path or ServiceConst.API_Admin_Invoke_Url_Path
 
     session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
 
@@ -1522,7 +1457,7 @@ def get_server_client_auth(
 
             if security:
                 password = security.password.replace(SECRETS.PREFIX, '')
-                if password.startswith(SECRETS.EncryptedMarker):
+                if password.startswith(SECRETS.Encrypted_Indicator):
                     if cm:
                         password = cm.decrypt(password)
                 return (security.username, password)
@@ -1535,6 +1470,7 @@ def get_client_from_server_conf(
     stdin_data=None,     # type: strnone
     *,
     url_path=None,       # type: strnone
+    initial_wait_time=60 # type: int
 ) -> 'ZatoClient':
 
     # Imports go here to avoid circular dependencies
@@ -1551,7 +1487,7 @@ def get_client_from_server_conf(
 
     # .. make sure the server is available ..
     if require_server:
-        wait_for_zato_ping(client.address)
+        wait_for_zato_ping(client.address, initial_wait_time)
 
     # .. return the client to our caller now.
     return client

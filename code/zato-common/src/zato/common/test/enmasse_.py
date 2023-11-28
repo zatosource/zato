@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,7 +14,6 @@ from unittest import TestCase
 
 # Zato
 from zato.common.test.config import TestConfig
-from zato.common.util.cli import get_zato_sh_command
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,16 +57,24 @@ class BaseEnmasseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def invoke_enmasse(self, config_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
+    def invoke_enmasse(self, config_path:'str', require_ok:'bool'=True, missing_wait_time:'int'=1) -> 'RunningCommand':
+
+        # Zato
+        from zato.common.util.cli import get_zato_sh_command
 
         # A shortcut
         command = get_zato_sh_command()
 
         # Invoke enmasse ..
-        out = command('enmasse', TestConfig.server_location,
-            '--import', '--input', config_path, '--replace-odb-objects', '--verbose')
+        out:'RunningCommand' = command('enmasse', TestConfig.server_location,
+            '--import',
+            '--input', config_path,
+            '--replace-odb-objects',
+            '--verbose',
+            '--missing-wait-time', missing_wait_time
+        )
 
-        # .. if told to, make sure there was no error in stdout/stderr ..
+        # .. if told to, make sure there was no error in stdout/3stderr ..
         if require_ok:
             self._assert_command_line_result(out)
 

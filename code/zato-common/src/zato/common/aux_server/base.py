@@ -11,6 +11,7 @@ import os
 from json import dumps
 from logging import getLogger
 from traceback import format_exc
+from uuid import uuid4
 
 # Bunch
 from bunch import Bunch
@@ -21,16 +22,18 @@ from gevent.pywsgi import WSGIServer
 # Zato
 from zato.common.api import IPC as Common_IPC, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
-from zato.common.crypto.api import CryptoManager, is_string_equal
+from zato.common.crypto.api import CryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
-from zato.common.util.api import as_bool, absjoin, get_config, new_cid, set_up_logging
+from zato.common.typing_ import cast_
+from zato.common.util.api import as_bool, absjoin, get_config, is_encrypted, new_cid, set_up_logging
+from zato.common.util.auth import check_basic_auth
 from zato.common.util.json_ import json_loads
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, byteslist, callable_, callnone, intnone, strnone, type_
+    from zato.common.typing_ import any_, anydict, byteslist, callable_, callnone, intnone, strdict, strnone, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,20 +57,78 @@ class AuxServerConfig:
     """ Encapsulates configuration of various server-related layers.
     """
     odb: 'ODBManager'
-    username: 'str'
-    password: 'str'
+    username: 'str' = ''
+    password: 'str' = ''
+    env_key_username: 'str' = ''
+    env_key_password: 'str' = ''
+    env_key_auth_required: 'str' = ''
     server_type: 'str'
     callback_func: 'callable_'
     conf_file_name: 'str'
     crypto_manager: 'CryptoManager'
     crypto_manager_class: 'type_[CryptoManager]'
     parent_server_name: 'str'
-    parent_server_pid:  'int'
+    parent_server_pid: 'int'
 
     def __init__(self) -> 'None':
         self.main = Bunch()
         self.stats_enabled = None
         self.component_dir = 'not-set-component_dir'
+
+# ################################################################################################################################
+
+    @staticmethod
+    def get_odb(config:'AuxServerConfig') -> 'ODBManager':
+
+        odb = ODBManager()
+        sql_pool_store = PoolStore()
+
+        if config.main.odb.engine != 'sqlite':
+
+            config.main.odb.host = config.main.odb.host
+            config.main.odb.username = config.main.odb.username
+            config.main.odb.pool_size = config.main.odb.pool_size
+
+            odb_password:'str' = config.main.odb.password or ''
+
+            if odb_password and odb_password.startswith('gA'):
+                config.main.odb.password = config.crypto_manager.decrypt(odb_password)
+
+        sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
+
+        odb.pool = sql_pool_store[ZATO_ODB_POOL_NAME].pool
+        odb.init_session(ZATO_ODB_POOL_NAME, config.main.odb, odb.pool, False)
+        odb.pool.ping(odb.fs_sql_config)
+
+        return odb
+
+# ################################################################################################################################
+
+    def set_credentials_from_env(self) -> 'bool':
+
+        # Return if there is no environment variable indicating what our credentials are
+        if not self.env_key_auth_required:
+            return False
+
+        # Return if the variable is set but its boolean value is not True
+        auth_required = os.environ.get(self.env_key_auth_required)
+        auth_required = as_bool(auth_required)
+
+        if not auth_required:
+            return False
+
+        # If we are here, we can read our credentials from environment variables
+        username = os.environ.get(self.env_key_username) or 'env_key_username_missing'
+        password = os.environ.get(self.env_key_password) or 'env_key_password_missing.' + uuid4().hex
+
+        self.username = username
+        self.password = password
+
+        logger.info(f'Set username from env. variable `{self.env_key_username}`')
+        logger.info(f'Set password from env. variable `{self.env_key_password}`')
+
+        # Return True to indicate that we have set the credentials
+        return True
 
 # ################################################################################################################################
 
@@ -78,6 +139,7 @@ class AuxServerConfig:
         repo_location,  # type: str
         conf_file_name, # type: str
         crypto_manager_class, # type: type_[CryptoManager]
+        needs_odb=True, # type: bool
     ) -> 'AuxServerConfig':
 
         # Zato
@@ -102,15 +164,15 @@ class AuxServerConfig:
         else:
             secrets_conf = None
 
-        # Read config in and extend it with ODB-specific information
-        config.main = get_config(
+        # Read configuration in
+        config.main = cast_('Bunch', get_config(
             repo_location,
             conf_file_name,
             crypto_manager=crypto_manager,
             secrets_conf=secrets_conf,
             require_exists=True
-        )
-        config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
+        ))
+
         config.main.crypto.use_tls = as_bool(config.main.crypto.use_tls)
 
         # Make all paths absolute
@@ -122,20 +184,18 @@ class AuxServerConfig:
         # Set up the crypto manager need to access credentials
         config.crypto_manager = crypto_manager
 
-        # ODB connection
-        odb = ODBManager()
-        sql_pool_store = PoolStore()
+        # Optionally, establish an ODB connection
+        has_odb = False
 
-        if config.main.odb.engine != 'sqlite':
+        if needs_odb:
+            if 'odb' in config.main:
+                config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
+                config.odb = class_.get_odb(config)
+                has_odb = True
 
-            config.main.odb.host = config.main.odb.host
-            config.main.odb.username = config.main.odb.username
-            config.main.odb.pool_size = config.main.odb.pool_size
-
-            odb_password = config.main.odb.password or '' # type: str
-
-            if odb_password and odb_password.startswith('gA'):
-                config.main.odb.password = config.crypto_manager.decrypt(odb_password)
+        # We want to have something set, even None, to make sure we do not get AttributeErrors when accessing config.odb
+        if not has_odb:
+            config.odb = None # type: ignore
 
         # Decrypt the password used to invoke servers
         if config.main.get('server'):
@@ -144,13 +204,45 @@ class AuxServerConfig:
                 server_password = config.crypto_manager.decrypt(server_password)
                 config.main.server.server_password = server_password
 
-        sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
+        # Environment variables have precedence ..
+        has_credentials_from_env = config.set_credentials_from_env()
 
-        odb.pool = sql_pool_store[ZATO_ODB_POOL_NAME].pool
-        odb.init_session(ZATO_ODB_POOL_NAME, config.main.odb, odb.pool, False)
-        odb.pool.ping(odb.fs_sql_config)
+        # .. if we have not set the credentials in the environment ..
+        # .. we still need to try to set them based on our configuration ..
+        if not has_credentials_from_env:
 
-        config.odb = odb
+            # .. otherwise, check the configuration to obtain the credentials used to invoke schedulers
+            api_clients = config.main.get('api_clients') or {}
+
+            # Proceed if any API clients are defined ..
+            if api_clients:
+
+                # .. this will give us all the keys in this part of the configuration ..
+                api_clients_keys = list(api_clients.keys())
+
+                # .. out of which we can discard some ..
+                for name in ['auth_required']:
+                    if name in api_clients:
+                        api_clients_keys.remove(name)
+
+                # .. if we still have any keys left, we choose the first one to be our API credentials ..
+                if api_clients_keys:
+
+                    # .. note that we currently handle only one username ..
+                    username = api_clients_keys[0]
+
+                    # .. decrypt its password ..
+                    password = api_clients[username]
+                    if is_encrypted(password):
+                        password = config.crypto_manager.decrypt(password)
+
+                    # .. make sure both credentials are strings ..
+                    username = str(username)
+                    password = str(password)
+
+                    # .. we can set its username ..
+                    config.username = username
+                    config.password = password
 
         return config
 
@@ -167,13 +259,17 @@ class AuxServer:
     conf_file_name: 'str'
     config_class: 'type_[AuxServerConfig]'
     crypto_manager_class: 'type_[CryptoManager]'
+    needs_odb: 'bool' = True
     has_credentials: 'bool' = True
     parent_server_name: 'str'
     parent_server_pid:  'int'
 
     def __init__(self, config:'AuxServerConfig') -> 'None':
-        self.config = config
 
+        # Type hints
+        tls_kwargs:'strdict'
+
+        self.config = config
         self.parent_server_name = config.parent_server_name
         self.parent_server_pid = config.parent_server_pid
 
@@ -217,7 +313,7 @@ class AuxServer:
 
     @classmethod
     def start(
-        class_,            # type 'type_[AuxServer]
+        class_,                # type: type_[AuxServer]
         *,
         base_dir=None,         # type: strnone
         bind_host='127.0.0.1', # type: str
@@ -247,16 +343,19 @@ class AuxServer:
             repo_location,
             class_.conf_file_name,
             class_.crypto_manager_class,
+            class_.needs_odb,
         )
 
         config.parent_server_name = parent_server_name
         config.parent_server_pid  = parent_server_pid
 
-        username = username or 'ipc.username.not.set.' + CryptoManager.generate_secret().decode('utf8')
-        password = password or 'ipc.password.not.set.' + CryptoManager.generate_secret().decode('utf8')
+        if not config.username:
+            username = username or 'ipc.username.not.set.' + CryptoManager.generate_secret().decode('utf8')
+            config.username = username
 
-        config.username = username
-        config.password = password
+        if not config.password:
+            password = password or 'ipc.password.not.set.' + CryptoManager.generate_secret().decode('utf8')
+            config.password = password
 
         if callback_func:
             config.callback_func = callback_func
@@ -289,22 +388,21 @@ class AuxServer:
 
 # ################################################################################################################################
 
-    def _check_credentials(self, request:'Bunch') -> 'None':
+    def _check_credentials(self, credentials:'str') -> 'None':
 
-        username = request.get('username') or ''
-        password = request.get('password') or ''
-
-        if not is_string_equal(self.config.username, username):
-            logger.info('Invalid IPC username')
-            raise Exception('Invalid IPC username or password')
-
-        if not is_string_equal(self.config.password, password):
-            logger.info('Invalid IPC password')
-            raise Exception('Invalid IPC username or password')
+        result = check_basic_auth(credentials, self.config.username, self.config.password)
+        if result is not True:
+            logger.info('Credentials error -> %s', result)
+            raise Exception('Invalid credentials')
 
 # ################################################################################################################################
 
-    def handle_api_request(self, data:'bytes') -> 'any_':
+    def should_check_credentials(self) -> 'bool':
+        return True
+
+# ################################################################################################################################
+
+    def handle_api_request(self, data:'bytes', credentials:'str') -> 'any_':
 
         # Convert to a Python dict ..
         request = json_loads(data)
@@ -314,7 +412,8 @@ class AuxServer:
 
         # .. first, check credentials ..
         if self.has_credentials:
-            self._check_credentials(request)
+            if self.should_check_credentials():
+                self._check_credentials(credentials)
 
         # .. look up the action we need to invoke ..
         action = request.get('action') # type: ignore
@@ -350,9 +449,12 @@ class AuxServer:
             # Get the contents of our request ..
             request = env['wsgi.input'].read()
 
+            # .. this is where we expect to find Basic Auth credentials ..
+            credentials = env.get('HTTP_AUTHORIZATION') or ''
+
             # .. if there was any, invoke the business function ..
             if request:
-                response = self.handle_api_request(request)
+                response = self.handle_api_request(request, credentials)
 
             # If we are here, it means that there was no exception
             status_text = Common_IPC.Status_OK
@@ -369,7 +471,7 @@ class AuxServer:
         finally:
 
             # Build our response ..
-            return_data = {
+            return_data:'any_' = {
                 'cid': cid,
                 'status': status_text,
                 'response': response

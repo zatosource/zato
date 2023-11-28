@@ -72,12 +72,12 @@ MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'static')
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash if there is a path component (optional in other cases).
-# Examples: 'http://media.lawrence.com', 'http://example.com/media/'
+# Examples: 'https://media.lawrence.com', 'https://example.com/media/'
 MEDIA_URL = '/static/'
 
 # URL prefix for admin media -- CSS, JavaScript and images. Make sure to use a
 # trailing slash.
-# Examples: 'http://foo.com/media/', '/media/'.
+# Examples: 'https://foo.com/media/', '/media/'.
 ADMIN_MEDIA_PREFIX = '/media/'
 
 CSP_DEFAULT_SRC = ["'none'"]

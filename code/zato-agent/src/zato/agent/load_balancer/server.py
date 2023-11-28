@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -30,7 +30,7 @@ from six import PY2
 # Zato
 from zato.agent.load_balancer.config import backend_template, config_from_string, string_from_config, zato_item_token
 from zato.agent.load_balancer.haproxy_stats import HAProxyStats
-from zato.common.api import MISC, TRACE1, ZATO_OK
+from zato.common.api import HAProxy,  MISC, TRACE1, ZATO_OK
 from zato.common.haproxy import haproxy_stats, validate_haproxy_config
 from zato.common.py23_.spring_ import RequestHandler, SimpleXMLRPCServer, SSLServer
 from zato.common.repo import RepoManager
@@ -94,7 +94,10 @@ class BaseLoadBalancerAgent:
         """ A common method for (re-)starting HAProxy.
         """
         additional_params = additional_params or []
-        command = [self.haproxy_command, '-D', '-f', self.config_path, '-p', self.haproxy_pidfile]
+        command = [
+            self.haproxy_command, '-D', '-m', HAProxy.Default_Memory_Limit,
+            '-f', self.config_path, '-p', self.haproxy_pidfile
+        ]
         command.extend(additional_params)
         timeouting_popen(command, 5.0, timeout_msg, rc_non_zero_msg)
 
