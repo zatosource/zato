@@ -1165,6 +1165,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def set_scheduler_address(self, scheduler_address:'str') -> 'None':
+        self.broker_client.set_scheduler_address(scheduler_address)
+
+# ################################################################################################################################
+
     def init_ipc(self):
 
         # Name of the environment key that points to our password ..
