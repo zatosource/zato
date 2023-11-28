@@ -26,6 +26,7 @@ from gevent import sleep
 from zato.common.api import MISC, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 from zato.common.util.api import new_cid, spawn_greenlet
+from zato.common.util.config import parse_url_address
 from zato.scheduler.backend import Interval, Job, Scheduler as _Scheduler
 
 # ################################################################################################################################
@@ -318,6 +319,13 @@ class SchedulerAPI:
 
     def on_broker_msg_SCHEDULER_EXECUTE(self, msg, *ignored_args):
         self.execute(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SCHEDULER_SET_SERVER_ADDRESS(self, msg, *ignored_args):
+        url = parse_url_address(msg.address, SCHEDULER.Default_Server_Port)
+        self.broker_client.set_zato_client_address(url)
+        logger.info('Set server address to -> %s', url)
 
 # ################################################################################################################################
 # ################################################################################################################################

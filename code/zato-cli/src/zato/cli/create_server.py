@@ -301,6 +301,8 @@ rest_log_ignore=/zato/admin/invoke,
 [os_environ]
 sample_key=sample_value
 
+[command_set_scheduler]
+
 [deploy_internal]
 {deploy_internal}
 
