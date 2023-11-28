@@ -15,7 +15,7 @@ from requests import post as requests_post
 # Zato
 from zato.common.api import IPC as Common_IPC
 from zato.common.broker_message import SERVER_IPC
-from zato.common.util.config import get_server_api_protocol_from_config_item
+from zato.common.util.config import get_url_protocol_from_config_item
 from zato.common.typing_ import dataclass
 
 # ################################################################################################################################
@@ -62,7 +62,7 @@ class IPCClient:
         password: 'str',
     ) -> 'None':
 
-        self.api_protocol = get_server_api_protocol_from_config_item(use_tls)
+        self.api_protocol = get_url_protocol_from_config_item(use_tls)
         self.host = host
         self.port = port
         self.username = username

@@ -23,7 +23,8 @@ from requests.models import Response
 
 # Zato
 from zato.common.broker_message import code_to_name, SCHEDULER
-from zato.common.util.config import get_server_api_protocol_from_config_item
+from zato.common.api import URLInfo
+from zato.common.util.config import get_url_protocol_from_config_item
 from zato.common.util.platform_ import is_non_windows
 
 # ################################################################################################################################
@@ -53,6 +54,7 @@ to_scheduler_actions = {
     SCHEDULER.EDIT.value,
     SCHEDULER.DELETE.value,
     SCHEDULER.EXECUTE.value,
+    SCHEDULER.SET_SERVER_ADDRESS.value,
 }
 
 from_scheduler_actions = {
@@ -114,11 +116,16 @@ class BrokerClient:
         scheduler_use_tls = scheduler_config.get('scheduler_use_tls', False)
 
         # Decide whether to use HTTPS or HTTP
-        api_protocol = get_server_api_protocol_from_config_item(scheduler_use_tls)
+        api_protocol = get_url_protocol_from_config_item(scheduler_use_tls)
 
         # Set a full URL for later use
         scheduler_address = f'{api_protocol}://{scheduler_host}:{scheduler_port}'
         self.set_scheduler_address(scheduler_address)
+
+# ################################################################################################################################
+
+    def set_zato_client_address(self, url:'URLInfo') -> 'None':
+        self.zato_client.set_address(url)
 
 # ################################################################################################################################
 
