@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,6 +12,7 @@ from copy import deepcopy
 # Zato
 from zato.cli import common_odb_opts, is_arg_given, ZatoCommand
 from zato.common.api import SSO
+from zato.common.const import ServiceConst
 
 # ################################################################################################################################
 
@@ -47,9 +48,9 @@ class Create(ZatoCommand):
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to create'})
     opts.append({'name':'--lb-host', 'help':'Load-balancer host', 'default':'127.0.0.1'})
     opts.append({'name':'--lb-port', 'help':'Load-balancer port', 'default':'11223'})
-    opts.append({'name':'--lb-agent_port', 'help':'Load-balancer agent host', 'default':'20151'})
+    opts.append({'name':'--lb-agent_port', 'help':'Load-balancer agent\'s port', 'default':'20151'})
     opts.append({'name':'--secret-key', 'help':'Secret key that servers will use for decryption and decryption'})
-    opts.append({'name':'--admin-invoke-password', 'help':'Password for web-admin to connect to servers with'})
+    opts.append({'name':'--admin-invoke-password', 'help':'Password for config API clients to connect to servers with'})
     opts.append({'name':'--skip-if-exists',
         'help':'Return without raising an error if cluster already exists', 'action':'store_true'})
 
@@ -110,8 +111,8 @@ class Create(ZatoCommand):
             if not admin_invoke_password:
                 admin_invoke_password = self.generate_password()
 
-            admin_invoke_sec = HTTPBasicAuth(None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke',
-                admin_invoke_password, cluster)
+            admin_invoke_sec = HTTPBasicAuth(None, ServiceConst.API_Admin_Invoke_Username, True,
+                ServiceConst.API_Admin_Invoke_Username, 'Zato admin invoke', admin_invoke_password, cluster)
             session.add(admin_invoke_sec)
 
             pubapi_sec = HTTPBasicAuth(None, _pubsub_default.PUBAPI_SECDEF_NAME, True, _pubsub_default.PUBAPI_USERNAME,
@@ -328,7 +329,8 @@ class Create(ZatoCommand):
 
         channel = HTTPSOAP(
             None, MISC.DefaultAdminInvokeChannel, True, True, 'channel', 'plain_http',
-            None, '/zato/admin/invoke', None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
+            None, ServiceConst.API_Admin_Invoke_Url_Path, None, '', None,
+            SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
             security=admin_invoke_sec)
         session.add(channel)
 

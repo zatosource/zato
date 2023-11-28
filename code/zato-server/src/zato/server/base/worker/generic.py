@@ -33,7 +33,7 @@ if 0:
 
 _type_outconn_wsx = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX
 _type_channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
-_secret_prefixes = (SECRETS.EncryptedMarker, SECRETS.PREFIX)
+_secret_prefixes = (SECRETS.Encrypted_Indicator, SECRETS.PREFIX)
 
 # ################################################################################################################################
 # ################################################################################################################################

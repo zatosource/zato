@@ -94,7 +94,7 @@ def known_data_format(data):
 def get_public_wsdl_url(cluster, service_name):
     """ Returns an address under which a service's WSDL is publically available.
     """
-    return 'http://{}:{}/zato/wsdl?service={}&cluster_id={}'.format(cluster.lb_host,
+    return 'https://{}:{}/zato/wsdl?service={}&cluster_id={}'.format(cluster.lb_host,
         cluster.lb_port, service_name, cluster.id)
 
 # ################################################################################################################################

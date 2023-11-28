@@ -161,6 +161,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.logger = logger
         self.host = ''
         self.port = -1
+        self.use_tls = False
         self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
         self.repo_location = ''
@@ -1164,6 +1165,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def set_scheduler_address(self, scheduler_address:'str') -> 'None':
+        self.broker_client.set_scheduler_address(scheduler_address)
+
+# ################################################################################################################################
+
     def init_ipc(self):
 
         # Name of the environment key that points to our password ..
@@ -1179,7 +1185,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         bind_host = self.fs_server_config.main.get('ipc_host') or '0.0.0.0'
 
         # .. this is set to a different value for each process ..
-        bind_port = (self.fs_server_config.main.get('ipc_port_start') or 17050) + self.process_idx
+        bind_port = (self.fs_server_config.main.get('ipc_port_start') or IPC.Default.TCP_Port_Start) + self.process_idx
 
         # .. now, the IPC server can be started ..
         _ = spawn_greenlet(self.ipc_api.start_server,
@@ -1522,7 +1528,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     ) -> 'IPCResponse':
         """ Invokes a service in a worker process by the latter's PID.
         """
-        response = self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid, timeout)
+        response = self.ipc_api.invoke_by_pid(self.use_tls, service, request, self.cluster_name, self.name, target_pid, timeout)
         return response
 
 # ################################################################################################################################
@@ -1637,7 +1643,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def decrypt(self, data:'strbytes', _prefix:'str'=SECRETS.PREFIX, _marker:'str'=SECRETS.EncryptedMarker) -> 'str':
+    def decrypt(self, data:'strbytes', _prefix:'str'=SECRETS.PREFIX, _marker:'str'=SECRETS.Encrypted_Indicator) -> 'str':
         """ Returns data decrypted using server's CryptoManager.
         """
 

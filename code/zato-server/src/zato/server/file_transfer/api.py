@@ -42,7 +42,7 @@ from zato.server.file_transfer.snapshot import FTPSnapshotMaker, LocalSnapshotMa
 if 0:
     from bunch import Bunch
     from requests import Response
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist, list_
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from zato.server.file_transfer.event import FileTransferEvent
@@ -99,7 +99,7 @@ class FileTransferAPI:
         self.keep_running = True
 
         # A list of all observer objects
-        self.observer_list:'BaseObserver' = []
+        self.observer_list:'list_[BaseObserver]' = []
 
         # A mapping of channel_id to an observer object associated with the channel.
         # Note that only non-inotify observers are added here.
@@ -472,7 +472,7 @@ class FileTransferAPI:
 
                         # .. and notify each one.
                         for observer in observer_list: # type: LocalObserver
-                            observer.event_handler.on_created(PathCreatedEvent(src_path), observer)
+                            observer.event_handler.on_created(PathCreatedEvent(src_path, is_dir=False), observer)
 
                     except Exception:
                         logger.warning('Exception in inotify handler `%s`', format_exc())

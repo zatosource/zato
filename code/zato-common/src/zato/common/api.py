@@ -8,12 +8,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from collections import OrderedDict
+from dataclasses import dataclass
 from io import StringIO
 from numbers import Number
 from sys import maxsize
 
 # Bunch
 from bunch import Bunch
+
+# Zato
+from zato.common.defaults import http_plain_server_port
 
 # ################################################################################################################################
 
@@ -133,6 +137,22 @@ engine_display_name = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+class EnvVariable:
+    Key_Prefix = 'Zato_Config'
+    Key_Missing_Suffix = '_Missing'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class EnvConfigCtx:
+    component:'str'
+    file_name:'str'
+    missing_suffix:'str' = EnvVariable.Key_Missing_Suffix
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # All URL types Zato understands.
 class URL_TYPE:
     SOAP       = 'soap' # Used only by outgoing connections
@@ -228,7 +248,7 @@ class SEARCH:
 
     class SOLR:
         class DEFAULTS:
-            ADDRESS = 'http://127.0.0.1:8983/solr'
+            ADDRESS = 'https://127.0.0.1:8983/solr'
             PING_PATH = '/solr/admin/ping'
             TIMEOUT = '10'
             POOL_SIZE = '5'
@@ -526,10 +546,80 @@ class KVDB(Attrs):
 class SCHEDULER:
 
     InitialSleepTime = 0.1
-    DefaultHost = '127.0.0.1'
-    DefaultPort = 31530
     EmbeddedIndicator      = 'zato_embedded'
     EmbeddedIndicatorBytes = EmbeddedIndicator.encode('utf8')
+
+    # This is what a server will invoke
+    DefaultHost = '127.0.0.1'
+    DefaultPort = 31530
+
+    # This is what a scheduler will invoke
+    Default_Server_Host = '127.0.0.1'
+    Default_Server_Port = http_plain_server_port
+
+    # This is what a scheduler will bind to
+    DefaultBindHost = '0.0.0.0'
+    DefaultBindPort = DefaultPort
+
+    # This is the username of an API client that servers
+    # will use when they invoke their scheduler.
+    Default_API_Client_For_Server_Auth_Required = True
+    Default_API_Client_For_Server_Username = 'server_api_client1'
+
+    TLS_Enabled = False
+    TLS_Verify = True
+    TLS_Client_Certs = 'optional'
+
+    TLS_Private_Key_Location  = 'zato-scheduler-priv-key.pem'
+    TLS_Public_Key_Location   = 'zato-scheduler-pub-key.pem'
+    TLS_Cert_Location         = 'zato-scheduler-cert.pem'
+    TLS_CA_Certs_Key_Location = 'zato-scheduler-ca-certs.pem'
+
+    TLS_Version_Default_Linux   = 'TLSv1_3'
+    TLS_Version_Default_Windows = 'TLSv1_2'
+
+    TLS_Ciphers_13 = 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256'
+    TLS_Ciphers_12 = 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:' + \
+                     'ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:'  + \
+                     'DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305'
+
+    class Status:
+        Active = 'Active'
+        Paused = 'Paused'
+
+    class Env:
+
+        # Basic information about where the scheduler can be found
+        Host = 'Zato_Scheduler_Host'
+        Port = 'Zato_Scheduler_Port'
+
+        # Whether the scheduler is active or paused
+        Status = 'Zato_Scheduler_Status'
+
+        Bind_Host = 'Zato_Scheduler_scheduler_conf_bind_host'
+        Bind_Port = 'Zato_Scheduler_Bind_Port'
+        Use_TLS = 'Zato_Scheduler_Use_TLS'
+        TLS_Verify = 'Zato_Scheduler_TLS_Verify'
+        TLS_Client_Certs = 'Zato_Scheduler_TLS_Client_Certs'
+
+        TLS_Private_Key_Location  = 'Zato_Scheduler_TLS_Private_Key_Location'
+        TLS_Public_Key_Location   = 'Zato_Scheduler_TLS_Public_Key_Location'
+        TLS_Cert_Location         = 'Zato_Scheduler_TLS_Cert_Location'
+        TLS_CA_Certs_Key_Location = 'Zato_Scheduler_TLS_CA_Certs_Key_Location'
+
+        TLS_Version = 'Zato_Scheduler_TLS_Version'
+        TLS_Ciphers = 'Zato_Scheduler_TLS_Ciphers'
+        Path_Action_Prefix = 'Zato_Scheduler_Path_Action_'
+
+        # These are used by servers to invoke the scheduler
+        Server_Username = 'Zato_Scheduler_API_Client_For_Server_Username'
+        Server_Password = 'Zato_Scheduler_API_Client_For_Server_Password'
+        Server_Auth_Required = 'Zato_Scheduler_API_Client_For_Server_Auth_Required'
+
+    class ConfigCommand:
+        Pause = 'pause'
+        Resume = 'resume'
+        SetServer = 'set_server'
 
     # These jobs were removed in 3.2 and should be ignored
     JobsToIgnore = {'zato.wsx.cleanup.pub-sub', 'zato.wsx.cleanup'}
@@ -635,6 +725,7 @@ class MISC:
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
     DefaultAdminInvokeChannel = 'admin.invoke.json'
+    Default_Cluster_ID = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1139,6 +1230,7 @@ class IPC:
 
     class Default:
         Timeout = 90
+        TCP_Port_Start = 17050
 
     class Credentials:
         Username = 'zato.server.ipc'
@@ -1975,6 +2067,22 @@ Wrapper_Name_Prefix_List = {
 class Wrapper_Type:
     Keysight_Hawkeye = 'KeysightHawkeye'
     Keysight_Vision  = 'KeysightVision'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HAProxy:
+    Default_Memory_Limit = '4096' # In megabytes = 4 GB
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class URLInfo:
+    address: 'str'
+    host: 'str'
+    port: 'int'
+    use_tls: 'bool'
 
 # ################################################################################################################################
 # ################################################################################################################################

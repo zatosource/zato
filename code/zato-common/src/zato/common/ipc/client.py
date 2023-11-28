@@ -15,6 +15,7 @@ from requests import post as requests_post
 # Zato
 from zato.common.api import IPC as Common_IPC
 from zato.common.broker_message import SERVER_IPC
+from zato.common.util.config import get_url_protocol_from_config_item
 from zato.common.typing_ import dataclass
 
 # ################################################################################################################################
@@ -54,12 +55,14 @@ class IPCClient:
 
     def __init__(
         self,
-        host,     # type: str
-        port,     # type: int
-        username, # type: str
-        password, # type: str
+        use_tls:  'bool',
+        host:     'str',
+        port:     'int',
+        username: 'str',
+        password: 'str',
     ) -> 'None':
 
+        self.api_protocol = get_url_protocol_from_config_item(use_tls)
         self.host = host
         self.port = port
         self.username = username
@@ -82,15 +85,13 @@ class IPCClient:
     ) -> 'IPCResponse':
 
         # This is where we can find the IPC server to invoke ..
-        url = f'http://{self.host}:{self.port}/{url_path}'
+        url = f'{self.api_protocol}://{self.host}:{self.port}/{url_path}'
 
         # .. prepare the full request ..
         dict_data = {
             'source_server_name': source_server_name,
             'source_server_pid':  source_server_pid,
             'action':   SERVER_IPC.INVOKE.value,
-            'username': self.username,
-            'password': self.password,
             'service':  service,
             'data': request,
         }
@@ -125,8 +126,11 @@ class IPCClient:
             # .. now, do append the new item ..
             params[key] = value
 
+        # .. build our credentials ..
+        auth = (self.username, self.password)
+
         # .. invoke the server ..
-        response = requests_post(url, data, params=params)
+        response = requests_post(url, data, params=params, auth=auth)
 
         # .. de-serialize the response ..
         response = loads(response.text)
@@ -163,7 +167,7 @@ def main():
     service = 'pub.zato.ping'
     request = {'Hello': 'World'}
 
-    client = IPCClient(host, port, username, password)
+    client = IPCClient(False, host, port, username, password)
     response = client.invoke(service, request)
 
     logger.info('Response -> %s', response)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,7 +12,7 @@ from json import loads
 from traceback import format_exc
 
 # gevent
-from gevent import spawn
+from gevent import sleep, spawn
 
 # orjson
 from orjson import dumps
@@ -23,6 +23,8 @@ from requests.models import Response
 
 # Zato
 from zato.common.broker_message import code_to_name, SCHEDULER
+from zato.common.api import URLInfo
+from zato.common.util.config import get_url_protocol_from_config_item
 from zato.common.util.platform_ import is_non_windows
 
 # ################################################################################################################################
@@ -30,7 +32,7 @@ from zato.common.util.platform_ import is_non_windows
 
 if 0:
     from zato.client import AnyServiceInvoker
-    from zato.common.typing_ import any_, anydict, anydictnone, optional
+    from zato.common.typing_ import any_, anydict, strdict, strdictnone
     from zato.server.connection.server.rpc.api import ServerRPC
 
     AnyServiceInvoker = AnyServiceInvoker
@@ -52,6 +54,7 @@ to_scheduler_actions = {
     SCHEDULER.EDIT.value,
     SCHEDULER.DELETE.value,
     SCHEDULER.EXECUTE.value,
+    SCHEDULER.SET_SERVER_ADDRESS.value,
 }
 
 from_scheduler_actions = {
@@ -69,28 +72,21 @@ class BrokerClient:
     def __init__(
         self,
         *,
-        scheduler_config: 'anydictnone'                 = None,
-        server_rpc:       'optional[ServerRPC]'         = None,
-        zato_client:      'optional[AnyServiceInvoker]' = None,
+        scheduler_config: 'strdictnone'              = None,
+        server_rpc:       'ServerRPC | None'         = None,
+        zato_client:      'AnyServiceInvoker | None' = None,
         ) -> 'None':
 
         # This is used to invoke services
         self.server_rpc = server_rpc
 
         self.zato_client = zato_client
-        self.scheduler_url = ''
+        self.scheduler_address = ''
+        self.scheduler_auth = None
 
         # We are a server so we will have configuration needed to set up the scheduler's details ..
         if scheduler_config:
-
-            # Introduced after 3.2 was released, hence optional
-            scheduler_use_tls = scheduler_config.get('scheduler_use_tls', True)
-
-            self.scheduler_url = 'http{}://{}:{}/'.format(
-                's' if scheduler_use_tls else '',
-                scheduler_config['scheduler_host'],
-                scheduler_config['scheduler_port'],
-            )
+            self.set_scheduler_config(scheduler_config)
 
         # .. otherwise, we are a scheduler so we have a client to invoke servers with.
         else:
@@ -98,16 +94,96 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def run(self):
-        # type: () -> None
+    def set_scheduler_config(self, scheduler_config:'strdict') -> 'None':
+
+        # Branch-local variables
+        scheduler_host = scheduler_config['scheduler_host']
+        scheduler_port = scheduler_config['scheduler_port']
+
+        if not (scheduler_api_username := scheduler_config.get('scheduler_api_username')):
+            scheduler_api_username = 'scheduler_api_username_missing'
+
+        if not (scheduler_api_password := scheduler_config.get('scheduler_api_password')):
+            scheduler_api_password = 'scheduler_api_password_missing'
+
+        # Make sure both parts are string objects
+        scheduler_api_username = str(scheduler_api_username)
+        scheduler_api_password = str(scheduler_api_password)
+
+        self.scheduler_auth = (scheduler_api_username, scheduler_api_password)
+
+        # Introduced after 3.2 was released, hence optional
+        scheduler_use_tls = scheduler_config.get('scheduler_use_tls', False)
+
+        # Decide whether to use HTTPS or HTTP
+        api_protocol = get_url_protocol_from_config_item(scheduler_use_tls)
+
+        # Set a full URL for later use
+        scheduler_address = f'{api_protocol}://{scheduler_host}:{scheduler_port}'
+        self.set_scheduler_address(scheduler_address)
+
+# ################################################################################################################################
+
+    def set_zato_client_address(self, url:'URLInfo') -> 'None':
+        self.zato_client.set_address(url)
+
+# ################################################################################################################################
+
+    def set_scheduler_address(self, scheduler_address:'str') -> 'None':
+        self.scheduler_address = scheduler_address
+
+# ################################################################################################################################
+
+    def run(self) -> 'None':
         raise NotImplementedError()
 
 # ################################################################################################################################
 
     def _invoke_scheduler_from_server(self, msg:'anydict') -> 'any_':
+
+        idx = 0
+        response = None
         msg_bytes = dumps(msg)
-        response = requests_post(self.scheduler_url, msg_bytes, verify=False)
-        return response
+
+        while not response:
+
+            # Increase the loop counter
+            idx += 1
+
+            try:
+                response = requests_post(
+                    self.scheduler_address,
+                    msg_bytes,
+                    auth=self.scheduler_auth,
+                    verify=False,
+                    timeout=5,
+                )
+            except Exception as e:
+
+                # .. log what happened ..
+                logger.warn('Scheduler invocation error -> %s', e)
+
+            # .. keep retrying or return the response ..
+            finally:
+
+                # .. we can return the response if we have it ..
+                if response:
+                    return response
+
+                # .. otherwise, wait until the scheduler responds ..
+                else:
+
+                    # .. The first time around, wait a little longer ..
+                    # .. because the scheduler may be only starting now ..
+                    if idx == 1:
+                        logger.info('Waiting for the scheduler to respond (1)')
+                        sleep(5)
+
+                    # .. log what is happening ..
+                    logger.info('Waiting for the scheduler to respond (2)')
+
+                    # .. wait for a moment ..
+                    sleep(3)
 
 # ################################################################################################################################
 
@@ -128,13 +204,12 @@ class BrokerClient:
 
         try:
 
-            # Special cases messages that are actually destined to the scheduler, not to servers ..
+            # Special-case messages that are actually destined to the scheduler, not to servers ..
             if from_server and action in to_scheduler_actions:
                 try:
                     response = self._invoke_scheduler_from_server(msg)
                     return response
                 except Exception as e:
-                    logger.warning(format_exc())
                     logger.warning('Invocation error; server -> scheduler -> %s (%d:%r)', e, from_server, action)
                 return
 
@@ -144,7 +219,6 @@ class BrokerClient:
                     response = self._invoke_server_from_scheduler(msg)
                     return response
                 except Exception as e:
-                    logger.warning(format_exc())
                     logger.warning('Invocation error; scheduler -> server -> %s (%d:%r)', e, from_server, action)
                 return
 
@@ -160,7 +234,6 @@ class BrokerClient:
                     self.server_rpc, from_server, action)
 
         except Exception:
-            logger.warning(format_exc())
             logger.warning(format_exc())
 
 # ################################################################################################################################
