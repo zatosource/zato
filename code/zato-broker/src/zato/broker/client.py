@@ -23,7 +23,8 @@ from requests.models import Response
 
 # Zato
 from zato.common.broker_message import code_to_name, SCHEDULER
-from zato.common.util.config import get_server_api_protocol_from_config_item
+from zato.common.api import URLInfo
+from zato.common.util.config import get_url_protocol_from_config_item
 from zato.common.util.platform_ import is_non_windows
 
 # ################################################################################################################################
@@ -31,7 +32,7 @@ from zato.common.util.platform_ import is_non_windows
 
 if 0:
     from zato.client import AnyServiceInvoker
-    from zato.common.typing_ import any_, anydict, anydictnone, optional
+    from zato.common.typing_ import any_, anydict, strdict, strdictnone
     from zato.server.connection.server.rpc.api import ServerRPC
 
     AnyServiceInvoker = AnyServiceInvoker
@@ -53,6 +54,7 @@ to_scheduler_actions = {
     SCHEDULER.EDIT.value,
     SCHEDULER.DELETE.value,
     SCHEDULER.EXECUTE.value,
+    SCHEDULER.SET_SERVER_ADDRESS.value,
 }
 
 from_scheduler_actions = {
@@ -70,45 +72,21 @@ class BrokerClient:
     def __init__(
         self,
         *,
-        scheduler_config: 'anydictnone'                 = None,
-        server_rpc:       'optional[ServerRPC]'         = None,
-        zato_client:      'optional[AnyServiceInvoker]' = None,
+        scheduler_config: 'strdictnone'              = None,
+        server_rpc:       'ServerRPC | None'         = None,
+        zato_client:      'AnyServiceInvoker | None' = None,
         ) -> 'None':
 
         # This is used to invoke services
         self.server_rpc = server_rpc
 
         self.zato_client = zato_client
-        self.scheduler_url = ''
+        self.scheduler_address = ''
         self.scheduler_auth = None
 
         # We are a server so we will have configuration needed to set up the scheduler's details ..
         if scheduler_config:
-
-            # Branch-local variables
-            scheduler_host = scheduler_config['scheduler_host']
-            scheduler_port = scheduler_config['scheduler_port']
-
-            if not (scheduler_api_username := scheduler_config.get('scheduler_api_username')):
-                scheduler_api_username = 'scheduler_api_username_missing'
-
-            if not (scheduler_api_password := scheduler_config.get('scheduler_api_password')):
-                scheduler_api_password = 'scheduler_api_password_missing'
-
-            # Make sure both parts are string objects
-            scheduler_api_username = str(scheduler_api_username)
-            scheduler_api_password = str(scheduler_api_password)
-
-            self.scheduler_auth = (scheduler_api_username, scheduler_api_password)
-
-            # Introduced after 3.2 was released, hence optional
-            scheduler_use_tls = scheduler_config.get('scheduler_use_tls', False)
-
-            # Decide whether to use HTTPS or HTTP
-            api_protocol = get_server_api_protocol_from_config_item(scheduler_use_tls)
-
-            # Build a full URL for later use
-            self.scheduler_url = f'{api_protocol}://{scheduler_host}:{scheduler_port}'
+            self.set_scheduler_config(scheduler_config)
 
         # .. otherwise, we are a scheduler so we have a client to invoke servers with.
         else:
@@ -116,8 +94,47 @@ class BrokerClient:
 
 # ################################################################################################################################
 
-    def run(self):
-        # type: () -> None
+    def set_scheduler_config(self, scheduler_config:'strdict') -> 'None':
+
+        # Branch-local variables
+        scheduler_host = scheduler_config['scheduler_host']
+        scheduler_port = scheduler_config['scheduler_port']
+
+        if not (scheduler_api_username := scheduler_config.get('scheduler_api_username')):
+            scheduler_api_username = 'scheduler_api_username_missing'
+
+        if not (scheduler_api_password := scheduler_config.get('scheduler_api_password')):
+            scheduler_api_password = 'scheduler_api_password_missing'
+
+        # Make sure both parts are string objects
+        scheduler_api_username = str(scheduler_api_username)
+        scheduler_api_password = str(scheduler_api_password)
+
+        self.scheduler_auth = (scheduler_api_username, scheduler_api_password)
+
+        # Introduced after 3.2 was released, hence optional
+        scheduler_use_tls = scheduler_config.get('scheduler_use_tls', False)
+
+        # Decide whether to use HTTPS or HTTP
+        api_protocol = get_url_protocol_from_config_item(scheduler_use_tls)
+
+        # Set a full URL for later use
+        scheduler_address = f'{api_protocol}://{scheduler_host}:{scheduler_port}'
+        self.set_scheduler_address(scheduler_address)
+
+# ################################################################################################################################
+
+    def set_zato_client_address(self, url:'URLInfo') -> 'None':
+        self.zato_client.set_address(url)
+
+# ################################################################################################################################
+
+    def set_scheduler_address(self, scheduler_address:'str') -> 'None':
+        self.scheduler_address = scheduler_address
+
+# ################################################################################################################################
+
+    def run(self) -> 'None':
         raise NotImplementedError()
 
 # ################################################################################################################################
@@ -135,7 +152,7 @@ class BrokerClient:
 
             try:
                 response = requests_post(
-                    self.scheduler_url,
+                    self.scheduler_address,
                     msg_bytes,
                     auth=self.scheduler_auth,
                     verify=False,

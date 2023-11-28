@@ -17,7 +17,7 @@ from zato.common.component_info import format_info, get_info, get_worker_pids
 from zato.common.const import ServiceConst
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.query import server_list
-from zato.common.util.config import get_server_api_protocol_from_config_item
+from zato.common.util.config import get_url_protocol_from_config_item
 from zato.server.service import List, Service
 
 # ################################################################################################################################
@@ -41,7 +41,7 @@ class GetInfo(Service):
 
         # We assume that if the current server uses TLS or not,
         # the same will go for all the other servers in the cluster.
-        api_protocol = get_server_api_protocol_from_config_item(self.server.fs_server_config.crypto.use_tls)
+        api_protocol = get_url_protocol_from_config_item(self.server.fs_server_config.crypto.use_tls)
 
         with closing(self.odb.session()) as session:
             for item in server_list(session, self.server.cluster_id, None, None, False): # type: ignore
