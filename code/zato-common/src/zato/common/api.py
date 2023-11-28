@@ -16,6 +16,9 @@ from sys import maxsize
 # Bunch
 from bunch import Bunch
 
+# Zato
+from zato.common.defaults import http_plain_server_port
+
 # ################################################################################################################################
 
 if 0:
@@ -550,6 +553,10 @@ class SCHEDULER:
     DefaultHost = '127.0.0.1'
     DefaultPort = 31530
 
+    # This is what a scheduler will invoke
+    Default_Server_Host = '127.0.0.1'
+    Default_Server_Port = http_plain_server_port
+
     # This is what a scheduler will bind to
     DefaultBindHost = '0.0.0.0'
     DefaultBindPort = DefaultPort
@@ -576,9 +583,18 @@ class SCHEDULER:
                      'ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:'  + \
                      'DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305'
 
+    class Status:
+        Active = 'Active'
+        Paused = 'Paused'
+
     class Env:
+
+        # Basic information about where the scheduler can be found
         Host = 'Zato_Scheduler_Host'
         Port = 'Zato_Scheduler_Port'
+
+        # Whether the scheduler is active or paused
+        Status = 'Zato_Scheduler_Status'
 
         Bind_Host = 'Zato_Scheduler_scheduler_conf_bind_host'
         Bind_Port = 'Zato_Scheduler_Bind_Port'
@@ -2057,6 +2073,16 @@ class Wrapper_Type:
 
 class HAProxy:
     Default_Memory_Limit = '4096' # In megabytes = 4 GB
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class URLInfo:
+    address: 'str'
+    host: 'str'
+    port: 'int'
+    use_tls: 'bool'
 
 # ################################################################################################################################
 # ################################################################################################################################

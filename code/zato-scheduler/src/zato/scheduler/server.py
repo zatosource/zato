@@ -36,6 +36,11 @@ logger = getLogger(__name__)
 
 class SchedulerServerConfig(AuxServerConfig):
 
+    # Our current status, e.g. active or paused
+    current_status:'str' = SCHEDULER.Status.Active
+
+    # Configuration via environment variables
+    env_key_status   = SCHEDULER.Env.Status
     env_key_username = SCHEDULER.Env.Server_Username
     env_key_password = SCHEDULER.Env.Server_Password
     env_key_auth_required = SCHEDULER.Env.Server_Auth_Required

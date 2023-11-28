@@ -1822,6 +1822,13 @@ class WorkerStore(_WorkerStoreBase):
 
         return self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
 
+# ################################################################################################################################
+
+    def on_broker_msg_SCHEDULER_SET_SCHEDULER_ADDRESS(self, msg:'Bunch', args:'any_'=None) -> 'any_':
+        self.invoke('zato.scheduler.set-scheduler-address-impl', msg)
+
+# ################################################################################################################################
+
     def on_broker_msg_CHANNEL_ZMQ_MESSAGE_RECEIVED(self, msg:'Bunch', args:'any_'=None) -> 'any_':
         return self.on_message_invoke_service(msg, CHANNEL.ZMQ, 'CHANNEL_ZMQ_MESSAGE_RECEIVED', args)
 
