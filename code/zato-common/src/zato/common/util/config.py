@@ -254,11 +254,19 @@ def resolve_value(key, value, decrypt_func=None, _default=object(), _secrets=SEC
 
         # .. a genuine pointer to an environment variable.
         else:
-            env_key = value[1:].strip().upper()
-            value = os.environ.get(env_key, _default)
 
-            # Use a placeholder if the actual environment key is missing
-            if value is _default:
+            # .. we support for exact and upper-case forms ..
+            env_key = value[1:].strip()
+            env_key1 = env_key
+            env_key2 = env_key.upper()
+            env_keys = [env_key1, env_key2]
+
+            for item in env_keys:
+                value = os.environ.get(item, _default)
+                if value is not _default:
+                    break
+            else:
+                # .. use a placeholder if none of the keys matched
                 value = 'Env_Key_Missing_{}'.format(env_key)
 
     # It may be an encrypted value
