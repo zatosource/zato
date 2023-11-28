@@ -22,7 +22,7 @@ from requests import get, post
 from zato.common.exception import ConnectorClosedException
 from zato.common.json_internal import dumps, loads
 from zato.common.util.api import get_free_port
-from zato.common.util.config import get_server_api_protocol_from_config_item
+from zato.common.util.config import get_url_protocol_from_config_item
 from zato.common.util.proc import start_python_process
 
 # ################################################################################################################################
@@ -70,7 +70,7 @@ class SubprocessIPC:
 
     def __init__(self, server:'ParallelServer') -> 'None':
         self.server = server
-        self.api_protocol = get_server_api_protocol_from_config_item(self.server.use_tls)
+        self.api_protocol = get_url_protocol_from_config_item(self.server.use_tls)
         self.ipc_tcp_port:'int | None' = None
 
 # ################################################################################################################################
