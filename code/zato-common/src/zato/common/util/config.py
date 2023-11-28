@@ -384,4 +384,20 @@ def extract_param_placeholders(data:'str') -> 'any_':
             yield group
 
 # ################################################################################################################################
+
+def get_config_object(repo_location:'str', conf_file:'str') -> 'Bunch | ConfigObj':
+
+    # Zato
+    from zato.common.util import get_config
+
+    return get_config(repo_location, conf_file, bunchified=False)
+
+# ################################################################################################################################
+
+def update_config_file(config:'ConfigObj', repo_location:'str', conf_file:'str') -> 'None':
+    conf_path = os.path.join(repo_location, conf_file)
+    with open(conf_path, 'wb') as f:
+        _ = config.write(f)
+
+# ################################################################################################################################
 # ################################################################################################################################

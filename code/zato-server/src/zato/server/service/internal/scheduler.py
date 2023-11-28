@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from traceback import format_exc
+from urllib.parse import urlparse
 
 # ciso8601
 try:
@@ -25,12 +26,21 @@ from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG
 from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob, Service as ODBService
 from zato.common.odb.query import job_by_id, job_by_name, job_list
+from zato.common.util.config import get_config_object, update_config_file
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO, Service
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.ext.configobj_ import ConfigObj
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 _service_name_prefix = 'zato.scheduler.job.'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _create_edit(action, cid, input, payload, logger, session, broker_client, response, should_ignore_existing):
@@ -397,34 +407,102 @@ class SetActiveStatus(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SetServerAddress(Service):
+class _SetAddressBase(Service):
+
+    input = 'address'
+    output = 'msg'
+
+    address_component_type = None
+
+    def _handle(self, address:'str') -> 'None':
+        raise NotImplementedError()
+
+    def handle(self) -> 'None':
+        address = (self.request.input.address or '').strip()
+        self._handle(address)
+        self.response.payload.msg = f'OK, {self.address_component_type} address set to {self.request.input.address}'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SetServerAddress(_SetAddressBase):
     """ Tells the scheduler what the new address of a server it can invoke is.
     """
     name = 'pub.zato.scheduler.set-server-address'
-    input = 'address'
-    output = 'msg'
+    address_component_type = 'server'
 
-    def handle(self):
-        address = (self.request.input.address or '').strip()
-
+    def _handle(self) -> 'None':
         raise NotImplementedError('To be done')
 
-        self.response.payload.msg = f'OK, server address set to {address}'
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SetSchedulerAddressImpl(_SetAddressBase):
+    """ Per server-service that tells the server what the new address of a scheduler it can invoke is.
+    """
+    address_component_type = 'server (impl)'
+
+    def _handle(self, address:'str') -> 'None':
+
+        # Extract the details from the address
+        parsed = urlparse(address)
+
+        scheme = parsed.scheme.lower()
+        use_tls = scheme == 'https'
+
+        # If there is no scheme and netloc, the whole address will be something like '10.151.17.19',
+        # and it will be found under .path actually ..
+        if (not parsed.scheme) and (not parsed.netloc):
+            host_port = parsed.path
+
+        # .. otherwise, the address will be in the network location.
+        else:
+            host_port = parsed.netloc
+
+        # We need to split it because we may have a port
+        host_port = host_port.split(':')
+
+        # It will be a two-element list if there is a port ..
+        if len(host_port) == 2:
+            host, port = host_port
+            port = int(port)
+
+        # .. otherwise, assume the scheduler's default port ..
+        else:
+            host = host_port[0]
+            port = SCHEDULER.DefaultPort
+
+        # First, save the information to disk ..
+        with self.lock():
+
+            # .. extract the stanza that we need ..
+            config:'ConfigObj' = get_config_object(self.server.repo_location, 'server.conf') # type: ignore
+
+            # .. update its contents ..
+            config['scheduler']['scheduler_host'] = host
+            config['scheduler']['scheduler_port'] = port
+            config['scheduler']['scheduler_use_tls'] = use_tls
+
+            # .. we can save it back to disk ..
+            update_config_file(config, self.server.repo_location, 'server.conf')
+
+        # .. now, set the new address in RAM.
+        self.server.set_scheduler_address(address)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SetSchedulerAddress(Service):
-    """ Tells the scheduler what the new address of a server it can invoke is.
+class SetSchedulerAddress(_SetAddressBase):
+    """ Tells all servers what the new address of a scheduler they can invoke is.
     """
     name = 'pub.zato.scheduler.set-scheduler-address'
-    input = 'address'
-    output = 'msg'
+    address_component_type = 'scheduler'
 
-    def handle(self):
-        address = (self.request.input.address or '').strip()
-        self.server.set_scheduler_address(address)
-        self.response.payload.msg = f'OK, scheduler address set to {address}'
+    def _handle(self, address:'str') -> 'None':
+        self.broker_client.publish({
+            'action': SCHEDULER_MSG.SET_SCHEDULER_ADDRESS.value,
+            'address': address,
+        })
 
 # ################################################################################################################################
 # ################################################################################################################################
