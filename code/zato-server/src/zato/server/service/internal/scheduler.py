@@ -479,9 +479,9 @@ class SetSchedulerAddressImpl(_SetAddressBase):
             config:'ConfigObj' = get_config_object(self.server.repo_location, 'server.conf') # type: ignore
 
             # .. update its contents ..
-            config['scheduler']['scheduler_host'] = host
-            config['scheduler']['scheduler_port'] = port
-            config['scheduler']['scheduler_use_tls'] = use_tls
+            config['scheduler']['scheduler_host'] = host # type: ignore
+            config['scheduler']['scheduler_port'] = port # type: ignore
+            config['scheduler']['scheduler_use_tls'] = use_tls # type: ignore
 
             # .. we can save it back to disk ..
             update_config_file(config, self.server.repo_location, 'server.conf')
