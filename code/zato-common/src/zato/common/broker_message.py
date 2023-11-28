@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from inspect import isclass
@@ -77,7 +75,6 @@ class SCHEDULER(Constants):
     JOB_EXECUTED = ValueConstant('')
     SET_JOB_INACTIVE = ValueConstant('')
     DELETE_PUBSUB_SUBSCRIBER = ValueConstant('')
-    SET_SERVER_ADDRESS = ValueConstant('')
     SET_SCHEDULER_ADDRESS = ValueConstant('')
 
 class ZMQ_SOCKET(Constants):
