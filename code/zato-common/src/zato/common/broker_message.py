@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from inspect import isclass
@@ -70,6 +68,8 @@ KEYS = {k:v.replace('/zato','').replace('/',':') for k,v in TOPICS.items()}
 class SCHEDULER(Constants):
     code_start = 100000
 
+    PAUSE = ValueConstant('')
+    RESUME = ValueConstant('')
     CREATE = ValueConstant('')
     EDIT = ValueConstant('')
     DELETE = ValueConstant('')
@@ -77,6 +77,8 @@ class SCHEDULER(Constants):
     JOB_EXECUTED = ValueConstant('')
     SET_JOB_INACTIVE = ValueConstant('')
     DELETE_PUBSUB_SUBSCRIBER = ValueConstant('')
+    SET_SERVER_ADDRESS = ValueConstant('')
+    SET_SCHEDULER_ADDRESS = ValueConstant('')
 
 class ZMQ_SOCKET(Constants):
     code_start = 100200

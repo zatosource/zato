@@ -19,6 +19,7 @@ from time import sleep
 from zato.cli import ManageCommand
 from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
     NotGiven, TLS as COMMON_TLS, Zato_None
+from zato.common.const import ServiceConst
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -28,8 +29,8 @@ if 0:
 
     from logging import Logger
     from zato.client import APIClient
-    from zato.common.typing_ import any_, anylist, dictlist, list_, stranydict, strdict, strdictdict, strstrdict, strlist, \
-         strlistdict, strnone
+    from zato.common.typing_ import any_, anylist, dictlist, list_, stranydict, strdict, strdictnone, strdictdict, \
+        strstrdict, strlist, strlistdict, strnone
 
     APIClient = APIClient
     Logger = Logger
@@ -49,11 +50,11 @@ ZATO_NO_SECURITY = 'zato-no-security'
 Code = namedtuple('Code', ('symbol', 'desc')) # type: ignore
 
 WARNING_ALREADY_EXISTS_IN_ODB = Code('W01', 'already exists in ODB')
-WARNING_MISSING_DEF = Code('W02', 'missing def')
+WARNING_MISSING_DEF = Code('W02', 'missing definition')
 WARNING_MISSING_DEF_INCL_ODB = Code('W04', 'missing def incl. ODB')
-ERROR_ITEM_INCLUDED_MULTIPLE_TIMES = Code('E01', 'item incl multiple')
-ERROR_INCLUDE_COULD_NOT_BE_PARSED = Code('E03', 'incl parsing error')
-ERROR_INVALID_INPUT = Code('E05', 'invalid JSON')
+ERROR_ITEM_INCLUDED_MULTIPLE_TIMES = Code('E01', 'item included multiple')
+ERROR_INCLUDE_COULD_NOT_BE_PARSED = Code('E03', 'include parsing error')
+ERROR_INVALID_INPUT = Code('E05', 'invalid input')
 ERROR_UNKNOWN_ELEM = Code('E06', 'unrecognized import element')
 ERROR_KEYS_MISSING = Code('E08', 'missing keys')
 ERROR_INVALID_SEC_DEF_TYPE = Code('E09', 'invalid sec def type')
@@ -63,11 +64,16 @@ ERROR_SERVICE_MISSING = Code('E12', 'service missing')
 ERROR_MISSING_DEP = Code('E13', 'dependency missing')
 ERROR_COULD_NOT_IMPORT_OBJECT = Code('E13', 'could not import object')
 ERROR_TYPE_MISSING = Code('E04', 'type missing')
+Error_Include_Not_Found = Code('E14', 'include not found')
 
 # ################################################################################################################################
 
 outconn_wsx  = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX
 outconn_ldap = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP
+
+_prefix_generic = 'zato_generic_connection'
+_attr_outconn_wsx = f'{_prefix_generic}_{outconn_wsx}'
+_attr_outconn_ldap = f'{_prefix_generic}_{outconn_ldap}'
 
 # We need to have our own version because type "bearer_token" exists in enmasse only.
 _All_Sec_Def_Types = All_Sec_Def_Types + ['bearer_token']
@@ -83,6 +89,9 @@ class ModuleCtx:
         REST = 'rest'
         Scheduler = 'scheduler'
         Security = 'security'
+
+    # An indicator that this is an include directive
+    Item_Type_Include = 'include'
 
     # Maps enmasse definition types to include types
     Enmasse_Type = cast_('strdict', None)
@@ -102,6 +111,15 @@ class ModuleCtx:
     # Maps enmasse defintions types to their attributes that will be skipped during an export if they are empty
     Enmasse_Attr_List_Skip_If_Empty = cast_('strlistdict', None)
 
+    # Maps enmasse defintions types to their attributes that will be skipped during an export if they are True
+    Enmasse_Attr_List_Skip_If_True = cast_('strlistdict', None)
+
+    # Maps enmasse defintions types to their attributes that will be skipped during an export if they are False
+    Enmasse_Attr_List_Skip_If_False = cast_('strlistdict', None)
+
+    # Maps enmasse defintions types to their attributes that will be skipped during an export if their value matches configuration
+    Enmasse_Attr_List_Skip_If_Value_Matches = cast_('strdictdict', None)
+
     # Maps enmasse defintions types to their attributes that will be turned into multiline strings
     Enmasse_Attr_List_As_Multiline = cast_('strlistdict', None)
 
@@ -113,6 +131,9 @@ class ModuleCtx:
 
     # How to sort attributes of a given object
     Enmasse_Attr_List_Sort_Order = cast_('strlistdict', None)
+
+    # How many seconds to wait for servers to start up
+    Initial_Wait_Time = 60 * 60 * 12 # In seconds = 12 hours
 
     # How many seconds to wait for missing objects
     Missing_Wait_Time = 120
@@ -155,7 +176,7 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'client_secret_field',
         'grant_type',
         'scopes',
-        'extra_fields'
+        'extra_fields',
     ],
 
     # REST connections - Channels
@@ -182,15 +203,6 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'transport',
     ],
 
-    # LDAP outgoing connections
-    f'zato_generic_connection_{outconn_ldap}': [
-        'type_',
-        'name',
-        'username',
-        'auth_type',
-        'server_list',
-    ],
-
     # Scheduled tasks
     'scheduler':  [
         'name',
@@ -206,6 +218,28 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'repeats',
         'extra',
     ],
+
+    # LDAP outgoing connections
+    _attr_outconn_ldap: [
+        'type_',
+        'name',
+        'username',
+        'auth_type',
+        'server_list',
+    ],
+
+    # Outgoing WSX connections
+    _attr_outconn_wsx: [
+        'name',
+        'address',
+        'data_format',
+        'has_auto_reconnect',
+        'on_connect_service_name',
+        'on_message_service_name',
+        'on_close_service_name',
+        'subscription_list',
+    ],
+
 }
 
 # ################################################################################################################################
@@ -222,7 +256,7 @@ ModuleCtx.Enmasse_Attr_List_Exclude = {
     # REST connections - outgoing connections
     'outconn_plain_http': [
         'connection',
-        'transport'
+        'transport',
     ],
 
 }
@@ -251,6 +285,31 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Empty = {
 
     # Security definitions
     'scheduler':  ['weeks', 'days', 'hours', 'minutes', 'seconds', 'cron_definition', 'repeats', 'extra'],
+
+    # Outgoing WSX connections
+    _attr_outconn_wsx:  ['data_format', 'subscription_list'],
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_Skip_If_True = {
+
+    # Outgoing WSX connections
+    _attr_outconn_wsx:  ['has_auto_reconnect'],
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_Skip_If_False = {
+    # No such attributes yet
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches = {
+
+    # E-Mail IMAP
+    'email_imap':  {'get_criteria':'UNSEEN', 'timeout':10},
 }
 
 # ################################################################################################################################
@@ -329,6 +388,18 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
         'repeats',
         'extra',
     ],
+
+    # Outgoing WSX connections
+    f'zato_generic_connection_{outconn_wsx}': [
+        'name',
+        'address',
+        'data_format',
+        'has_auto_reconnect',
+        'on_connect_service_name',
+        'on_message_service_name',
+        'on_close_service_name',
+        'subscription_list',
+    ]
 }
 
 # ################################################################################################################################
@@ -488,13 +559,18 @@ def normalize_service_name(item):
 def test_item(item, cond):
     """ Given a dictionary `cond` containing some conditions to test an item for, return True if those conditions match.
     Currently only supports testing whether a field has a particular value. Returns ``True`` if `cond` is ``None``."""
+
     if cond is not None:
+
         only_if_field = cond.get('only_if_field')
         only_if_value = cond.get('only_if_value')
+
         if not isinstance(only_if_value, (list, tuple)):
             only_if_value = [only_if_value]
+
         if only_if_field and item.get(only_if_field) not in only_if_value:
             return False
+
     return True
 
 # ################################################################################################################################
@@ -752,7 +828,11 @@ HTTP_SOAP_KINDS = (
     ('outconn_soap',        'outgoing',     'soap'),
     ('outconn_plain_http',  'outgoing',     'plain_http')
 )
-HTTP_SOAP_ITEM_TYPES = {tup[0] for tup in HTTP_SOAP_KINDS}
+
+HTTP_SOAP_ITEM_TYPES = {elem[0] for elem in HTTP_SOAP_KINDS}
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class _DummyLink:
     """ Pip requires URLs to have a .url attribute.
@@ -760,18 +840,24 @@ class _DummyLink:
     def __init__(self, url):
         self.url = url
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Notice:
+
     def __init__(self, value_raw, value, code):
         self.value_raw = value_raw
         self.value = value
         self.code = code
 
-# ################################################################################################################################
-
     def __repr__(self):
         return "<{} at {} value_raw:'{}' value:'{}' code:'{}'>".format(
             self.__class__.__name__, hex(id(self)), self.value_raw,
             self.value, self.code)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 
 class Results:
     def __init__(self, warnings=None, errors=None, service=None):
@@ -783,8 +869,6 @@ class Results:
         self.errors = errors or []
 
         self.service_name = service.get_name() if service else None
-
-# ################################################################################################################################
 
     def add_error(self, raw, code, msg, *args):
         if args:
@@ -827,7 +911,7 @@ class InputValidator:
 
 # ################################################################################################################################
 
-    def validate_one(self, item_type, item):
+    def validate_one(self, item_type:'str', item:'strdict') -> 'None':
         if item_type not in SERVICE_BY_NAME:
             raw = (item_type, sorted(SERVICE_BY_NAME))
             self.results.add_error(raw, ERROR_INVALID_KEY, "Invalid key '{}', must be one of '{}'", item_type, sorted(SERVICE_BY_NAME))
@@ -836,14 +920,19 @@ class InputValidator:
         item_dict = dict(item)
         service_info = SERVICE_BY_NAME[item_type]
         required_keys = service_info.get_required_keys()
+
         # OK, the keys are there, but do they all have non-None values?
         for req_key in required_keys:
             if item.get(req_key) is None: # 0 or '' can be correct values
                 raw = (req_key, required_keys, item_dict, item_type)
                 self.results.add_error(raw, ERROR_KEYS_MISSING, "Key '{}' must exist in {}: {}", req_key, item_type, item_dict)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class DependencyScanner:
-    def __init__(self, json, is_import, is_export, ignore_missing=False):
+
+    def __init__(self, json:'strdict', is_import:'bool', is_export:'bool', ignore_missing:'bool'=False) -> 'None':
         self.json = json
         self.is_import = is_import
         self.is_export = is_export
@@ -852,7 +941,18 @@ class DependencyScanner:
 
 # ################################################################################################################################
 
-    def find(self, item_type, fields):
+    def find_sec(self, fields:'strdict') -> 'strdictnone':
+
+        for service in SERVICES:
+            if service.is_security:
+                service_name = _replace_item_type(service.name)
+                item = self.find(service_name, fields)
+                if item is not None:
+                    return item
+
+# ################################################################################################################################
+
+    def find(self, item_type:'str', fields:'strdict') -> 'strdictnone':
 
         if item_type in ['def_sec']:
             return self.find_sec(fields)
@@ -869,23 +969,9 @@ class DependencyScanner:
 
 # ################################################################################################################################
 
-    def find_sec(self, fields):
-        for service in SERVICES:
-            if service.is_security:
-                service_name = _replace_item_type(service.name)
-                item = self.find(service_name, fields)
-                if item is not None:
-                    return item
-
-# ################################################################################################################################
-
-    def scan_item(self, item_type, item, results):
+    def scan_item(self, item_type:'str', item:'Bunch', results:'Results') -> 'None':
         """ Scan the data of a single item for required dependencies, recording any that are missing in self.missing.
         """
-        # type: (str, dict, Results)
-
-        # Python 2/3 compatibility
-        from zato.common.ext.future.utils import iteritems
 
         #
         # Preprocess item type
@@ -895,7 +981,8 @@ class DependencyScanner:
 
         service_info = SERVICE_BY_NAME[item_type] # type: ServiceInfo
 
-        for dep_key, dep_info in iteritems(service_info.object_dependencies):
+        for dep_key, dep_info in service_info.object_dependencies.items():
+
             if not test_item(item, dep_info.get('condition')):
                 continue
 
@@ -903,7 +990,7 @@ class DependencyScanner:
                 continue
 
             # Special-case HTTP connections
-            if item_type == 'http_soap':
+            if item_type == 'http_soap': # type: ignore
                 dep_key = resolve_security_field_name(item)
 
             if dep_key not in item:
@@ -914,17 +1001,19 @@ class DependencyScanner:
 
             if value != dep_info.get('empty_value'):
 
-                dep = self.find(dep_info['dependent_type'], {dep_info['dependent_field']: value})
-                if dep is None:
+                dep_type = dep_info['dependent_type']
+                dep_field = dep_info['dependent_field']
 
-                    key = (dep_info['dependent_type'], value)
+                dep = self.find(dep_type, {dep_field: value})
+
+                if dep is None:
+                    key = (dep_type, value)
                     names = self.missing.setdefault(key, [])
                     names.append(item.name)
 
 # ################################################################################################################################
 
-    def scan(self):
-        # type: () -> Results
+    def scan(self) -> 'Results':
 
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
@@ -1111,74 +1200,32 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _import(self, item_type, attrs, is_edit):
-
-        # Zato
-        from zato.common.util.config import extract_param_placeholders
+    def _import(self, item_type:'str', attrs:'strdict', is_edit:'bool') -> 'None':
 
         # First, resolve values pointing to parameter placeholders and environment variables ..
         for key, orig_value in attrs.items():
 
-            # .. add type hints ..
-            key        = cast_('str', key)
-            orig_value = cast_('any_', orig_value)
-
             # .. preprocess values only if they are strings ..
             if isinstance(orig_value, str):
 
-                # .. assume there will be no placeholders for this value ..
-                has_params = False
-
-                # .. extract any potential placeholders ..
-                params = extract_param_placeholders(orig_value)
-
-                # .. go through each placeholder ..
-                for param in params:
-
-                    # .. indicate that we actually do have a placeholder ..
-                    has_params = True
-
-                    # .. check if it points to an environment variable ..
-                    if zato_enmasse_env2 in param:
-
-                        # .. we are here if we can find an environment variable ..
-                        # .. based on a placeholder parameter, so we now need ..
-                        # .. to extract the value of this variable or use a default one ..
-                        # .. in case the value does not exist ..
-                        env_variable_name = param.replace(zato_enmasse_env2, '')
-                        env_variable_name = env_variable_name[1:-1]
-
-                        # .. let's find this variable or use the default one ..
-                        env_value = os.environ.get(env_variable_name, 'Missing_Value_' + env_variable_name)
-
-                        # .. now, we can insert this variable in the original value ..
-                        orig_value = orig_value.replace(param, env_value)
-
-                # .. if we have at least one placeholder, we can populate the new value already here ..
-                if has_params:
-                    attrs[key] = orig_value
-
-                # .. otherwise, we still need to check if the entire value is not an environment variable ..
+                if orig_value.startswith(zato_enmasse_env1):
+                    _prefix = zato_enmasse_env1
+                elif orig_value.startswith(zato_enmasse_env2):
+                    _prefix = zato_enmasse_env2
                 else:
+                    _prefix = None
 
-                    if orig_value.startswith(zato_enmasse_env1):
-                        _prefix = zato_enmasse_env1
-                    elif orig_value.startswith(zato_enmasse_env2):
-                        _prefix = zato_enmasse_env2
+                if _prefix:
+
+                    value = orig_value.split(_prefix)
+                    value = value[1]
+
+                    if not value:
+                        raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
                     else:
-                        _prefix = None
+                        value = os.environ.get(value)
 
-                    if _prefix:
-
-                        value = orig_value.split(_prefix)
-                        value = value[1]
-
-                        if not value:
-                            raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
-                        else:
-                            value = os.environ.get(value)
-
-                        attrs[key] = value
+                    attrs[key] = value
 
         #
         # Preprocess the data to be imported
@@ -1236,7 +1283,7 @@ class ObjectImporter:
         attrs.is_source_external = True
 
         response = self._import_object(item_type, attrs, is_edit)
-        if response.ok:
+        if response and response.ok:
             if self._needs_change_password(item_type, attrs, is_edit):
                 object_id = response.data['id']
                 response = self._maybe_change_password(object_id, item_type, attrs)
@@ -1477,14 +1524,16 @@ class ObjectImporter:
 
                 item[info['id_field']] = dep_obj.id
 
-        self.logger.info('Invoking %s for %s', service_name, service_info.name)
+        if service_name and service_info.name != 'def_sec':
 
-        response = self.client.invoke(service_name, item)
-        if response.ok:
-            verb = 'Updated' if is_edit else 'Created'
-            self.logger.info('%s object `%s` with %s', verb, item.name, service_name)
+            self.logger.info(f'Invoking {service_name} for {service_info.name}')
+            response = self.client.invoke(service_name, item)
 
-        return response
+            if response.ok:
+                verb = 'Updated' if is_edit else 'Created'
+                self.logger.info('%s object `%s` with %s', verb, item.name, service_name)
+
+            return response
 
 # ################################################################################################################################
 
@@ -1630,7 +1679,7 @@ class ObjectManager:
 # ################################################################################################################################
 
     ignored_names = (
-        'admin.invoke',
+        ServiceConst.API_Admin_Invoke_Username,
         'pubapi',
     )
 
@@ -1703,7 +1752,11 @@ class ObjectManager:
 
 # ################################################################################################################################
 
-    def get_objects_by_type(self, item_type):
+    def get_objects_by_type(self, item_type:'str') -> 'None':
+
+        # Ignore artificial objects
+        if item_type in {'def_sec'}:
+            return
 
         # Bunch
         from bunch import Bunch
@@ -1798,14 +1851,40 @@ class JsonCodec:
 # ################################################################################################################################
 
 class YamlCodec:
-    extension = '.yml'
+    extension = '.yaml'
 
-    def load(self, file_, results):
+    def load(self, file_:'any_', results:'any_') -> 'strdict':
 
-        # yaml
+        # Local imports
         import yaml
+        from zato.common.util.config import extract_param_placeholders
 
-        return yaml.load(file_, yaml.FullLoader)
+        # Read the data as string ..
+        data = file_.read()
+
+        # .. replace named placeholders ..
+        params = extract_param_placeholders(data)
+
+        # .. go through each placeholder ..
+        for param in params:
+
+            # .. check if it points to an environment variable ..
+            if zato_enmasse_env2 in param:
+
+                # .. we are here if we can find an environment variable ..
+                # .. based on a placeholder parameter, so we now need ..
+                # .. to extract the value of this variable or use a default one ..
+                env_variable_name = param.replace(zato_enmasse_env2, '')
+                env_variable_name = env_variable_name[1:-1]
+
+                # .. let's find this variable or use the default one ..
+                env_value = os.environ.get(env_variable_name, 'Missing_Value_' + env_variable_name)
+
+                # .. now, we can insert this variable in the original value ..
+                data = data.replace(param, env_value)
+
+        # .. and return a dict object representing the file.
+        return yaml.load(data, yaml.FullLoader)
 
     def dump(self, file_, object_):
 
@@ -1818,7 +1897,13 @@ class YamlCodec:
 # ################################################################################################################################
 
 class InputParser:
-    def __init__(self, path, logger, codec):
+    def __init__(
+        self,
+        path:'str',
+        logger:'Logger',
+        codec:'YamlCodec | JsonCodec',
+        ignore_missing_includes:'bool',
+    ) -> 'None':
 
         # stdlib
         import os
@@ -1826,68 +1911,89 @@ class InputParser:
         self.path = os.path.abspath(path)
         self.logger = logger
         self.codec = codec
-        self.seen_includes = set()
+        self.ignore_missing_includes = ignore_missing_includes
 
 # ################################################################################################################################
 
-    def _parse_file(self, path:'str', results:'any_') -> 'strdict':
+    def _load_file(self, path:'str') -> 'strdict':
+
         try:
-            with open(path) as fp:
-                return self.codec.load(fp, results) # type: ignore
-        except (IOError, TypeError, ValueError) as e:
-            raw = (path, e)
-            results.add_error(raw, ERROR_INVALID_INPUT, 'Failed to parse {}: {}', path, e)
-            return {}
+            with open(path) as f:
+                data:'strdict' = self.codec.load(f, None) # type: ignore
+        except Exception:
+            data = {}
+
+        return data
 
 # ################################################################################################################################
 
-    def _get_include_path(self, include_path):
+    def _parse_file(self, path:'str', results:'Results') -> 'strdict':
+
+        # First, open the main file ..
+        data:'strdict' = self._load_file(path) or {}
+
+        # .. go through all the files that we potentially need to include ..
+        for item_type, values in deepcopy(data).items():
+
+            for item in values:
+
+                # .. only include files will be taken into account ..
+                if self.is_include(item_type, item):
+
+                    # .. build a full path to the file to be included ..
+                    include_path = self._get_full_path(item)
+
+                    if path == include_path:
+                        raw = (include_path,)
+                        results.add_error(raw, ERROR_INVALID_INPUT, f'Include cannot include itself `{include_path}`', item)
+                        continue
+
+                    if not os.path.exists(include_path):
+                        if not self.ignore_missing_includes:
+                            raw = (include_path,)
+                            results.add_error(raw, Error_Include_Not_Found, f'Include not found `{include_path}`', item)
+                            continue
+
+                    # .. load the actual contents to be included ..
+                    data_to_include = self._parse_file(include_path, results)
+
+                    # .. go through each of the items that the file to be included defines ..
+                    for item_type_to_include, values_to_include in data_to_include.items():
+
+                        # .. make sure we append the new data to what we potentially already have ..
+                        if item_type_to_include in data:
+                            data[item_type_to_include].extend(values_to_include)
+
+                        # .. otherwise, we create a new key for it ..
+                        else:
+                            data[item_type_to_include] = values_to_include
+
+        # .. remove any potential include section from further processing ..
+        _ = data.pop(ModuleCtx.Item_Type_Include, None)
+
+        # .. now, we are ready to return the whole data set to our caller.
+        return data
+
+# ################################################################################################################################
+
+    def _get_full_path(self, include_path:'str') -> 'str':
 
         # stdlib
         import os
 
         curdir = os.path.dirname(self.path)
-        joined = os.path.join(curdir, include_path.replace('file://', ''))
+        joined = os.path.join(curdir, include_path.replace('file://', '')) # type: ignore
+
         return os.path.abspath(joined)
 
 # ################################################################################################################################
 
-    def is_include(self, value):
-
-        # Python 2/3 compatibility
-        from zato.common.py23_.past.builtins import basestring
-
-        return isinstance(value, basestring)
+    def is_include(self, item_type:'str', item:'str | strdict') -> 'bool':
+        return item_type == ModuleCtx.Item_Type_Include and isinstance(item, str)
 
 # ################################################################################################################################
 
-    def load_include(self, item_type, relpath, results):
-        abs_path = self._get_include_path(relpath)
-        if abs_path in self.seen_includes:
-            raw = (abs_path,)
-            results.add_error(raw, ERROR_ITEM_INCLUDED_MULTIPLE_TIMES, '{} included repeatedly', abs_path)
-        self.seen_includes.add(abs_path)
-
-        obj = self._parse_file(abs_path, results)
-        if obj is None:
-            return  # Failure, error was recorded.
-
-        if not isinstance(obj, dict):
-            raw = (abs_path, obj)
-            results.add_error(raw, ERROR_INVALID_INPUT,
-                'Include {} is incorrect: expected a dictionary containing one item, or a fully formed dump file.')
-            return
-
-        if 'name' in obj or 'id' in obj:
-            # Classic raw include.
-            self.parse_item(item_type, obj, results)
-        else:
-            # Fully formed dump input file. This allows an include file to be imported directly, or simply included.
-            self.parse_items(obj, results)
-
-# ################################################################################################################################
-
-    def parse_def_sec(self, item, results):
+    def parse_def_sec(self, item:'strdict', results:'Results') -> 'None':
 
         # Bunch
         from bunch import Bunch
@@ -1896,9 +2002,8 @@ class InputParser:
         sec_type = item.pop('type', None)
         if sec_type is None:
             raw = ('def_sec', item)
-            results.add_error(raw, ERROR_TYPE_MISSING,
-                              "security definition '{}' has no required 'type' key (def_sec)",
-                              item)
+            results.add_error(
+                raw, ERROR_TYPE_MISSING, "security definition '{}' has no required 'type' key (def_sec)", item)
             return
 
         service_names = [elem.name for elem in SERVICES if elem.is_security]
@@ -1911,24 +2016,26 @@ class InputParser:
             return
 
         self.json.setdefault(sec_type, []).append(Bunch(item))
+        self.json.setdefault('def_sec', []).append(Bunch(item))
 
 # ################################################################################################################################
 
-    def parse_item(self, item_type, item, results):
+    def parse_item(self, item_type:'str', item:'str | strdict', results:'Results') -> 'None':
 
         # Bunch
         from bunch import Bunch
 
-        if self.is_include(item):
-            self.load_include(item_type, item, results)
-        elif item_type == 'def_sec':
-            self.parse_def_sec(item, results)
+        if item_type == 'def_sec':
+            self.parse_def_sec(cast_('strdict', item), results)
+
         else:
-            self.json.setdefault(item_type, []).append(Bunch(item))
+            items = self.json.get(item_type) or []
+            _ = items.append(Bunch(cast_('strdict', item)))
+            self.json[item_type] = items
 
 # ################################################################################################################################
 
-    def _maybe_fixup_http_soap(self, original_item_type, item):
+    def _maybe_fixup_http_soap(self, original_item_type:'str', item:'strdict') -> 'str':
         # Preserve old format by merging http-soap subtypes into one.
         for item_type, connection, transport in HTTP_SOAP_KINDS:
             if item_type == original_item_type:
@@ -1939,13 +2046,36 @@ class InputParser:
 
 # ################################################################################################################################
 
-    def parse_items(self, dict_, results):
+    def _is_item_type_recognized(self, item_type:'str') -> 'bool':
+
+        if item_type == ModuleCtx.Item_Type_Include:
+            return True
+
+        elif item_type in ModuleCtx.Enmasse_Type:
+            return True
+
+        elif item_type in ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse:
+            return True
+
+        elif item_type in SERVICE_BY_NAME:
+            return True
+
+        elif item_type in HTTP_SOAP_ITEM_TYPES:
+            return True
+
+        else:
+            return False
+
+# ################################################################################################################################
+
+    def parse_items(self, data:'strdict', results:'Results') -> 'None':
 
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
 
-        for item_type, items in iteritems(dict_):
-            if item_type not in SERVICE_BY_NAME and item_type not in HTTP_SOAP_ITEM_TYPES:
+        for item_type, items in iteritems(data):
+
+            if not self._is_item_type_recognized(item_type):
                 raw = (item_type,)
                 results.add_error(raw, ERROR_UNKNOWN_ELEM, 'Ignoring unknown element type {} in the input.', item_type)
                 continue
@@ -2174,6 +2304,10 @@ class InputParser:
             # .. go through each definition ..
             for item in items:
 
+                # .. this could be an include directive which we can skip here ..
+                if not isinstance(item, dict):
+                    continue
+
                 # .. add type hints ..
                 item = cast_('strdict', item)
 
@@ -2253,10 +2387,12 @@ class Enmasse(ManageCommand):
         {'name':'--format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
         {'name':'--dump-format', 'help':'Same as --format', 'choices':('json', 'yaml'), 'default':'yaml'},
         {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to file', 'action':'store_true'},
-        {'name':'--exit-on-missing-file', 'help':'If input file exists, exit with status code 0', 'action':'store_true'},
+        {'name':'--ignore-missing-includes', 'help':'Ignore include files that do not exist', 'action':'store_true'},
+        {'name':'--exit-on-missing-file', 'help':'If input file does not exist, exit with status code 0', 'action':'store_true'},
         {'name':'--replace', 'help':'Force replacing already server objects during import', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Same as --replace', 'action':'store_true'},
         {'name':'--input', 'help':'Path to input file with objects to import'},
+        {'name':'--initial-wait-time', 'help':'How many seconds to initially wait for a server', 'default':ModuleCtx.Initial_Wait_Time},
         {'name':'--missing-wait-time', 'help':'How many seconds to wait for missing objects', 'default':ModuleCtx.Missing_Wait_Time},
         {'name':'--env-file', 'help':'Path to an .ini file with environment variables'},
         {'name':'--rbac-sleep', 'help':'How many seconds to sleep for after creating an RBAC object', 'default':'1'},
@@ -2285,7 +2421,6 @@ class Enmasse(ManageCommand):
         from zato.cli.check_config import CheckConfig
         from zato.common.util.api import get_client_from_server_conf
         from zato.common.util.env import populate_environment_from_file
-        from zato.common.util.tcp import wait_for_zato_ping
 
         # Local aliases
         input_path:'strnone'  = None
@@ -2305,12 +2440,14 @@ class Enmasse(ManageCommand):
         self.is_import = False
         self.is_export = False
 
+        # Whether we should include files that do not exist
+        self.ignore_missing_includes = getattr(self.args, 'ignore_missing_includes', False)
+
         # Initialize environment variables ..
         env_path = self.normalize_path('env_file', exit_if_missing=False)
         populate_environment_from_file(env_path)
 
-        # .. support both arguments ..
-        self.replace_objects:'bool' = getattr(args, 'replace', False) or getattr(args, 'replace_odb_objects', False)
+        self.replace_objects:'bool' = True
         self.export_odb:'bool' = getattr(args, 'export', False) or getattr(args, 'export_odb', False)
 
         # .. make sure the input file path is correct ..
@@ -2341,11 +2478,13 @@ class Enmasse(ManageCommand):
         #    4b) override whatever is found in ODB with values from JSON (--replace-odb-objects)
         #
 
-        # Get the client object ..
-        self.client = get_client_from_server_conf(self.component_dir)
+        try:
+            initial_wait_time = float(args.initial_wait_time)
+        except Exception:
+            initial_wait_time = ModuleCtx.Initial_Wait_Time
 
-        # .. make sure /zato/ping replies which means the server is started
-        wait_for_zato_ping(self.client.address, 300)
+        # Get the client object, waiting until the server is started ..
+        self.client = get_client_from_server_conf(self.component_dir, initial_wait_time=initial_wait_time)
 
         # .. just to be on the safe side, optionally wait a bit more
         initial_wait_time = os.environ.get('ZATO_ENMASSE_INITIAL_WAIT_TIME')
@@ -2432,12 +2571,14 @@ class Enmasse(ManageCommand):
             self.logger.error('Unrecognized file extension "{}": must be one of {}'.format(ext.lower(), exts))
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
 
-        parser = InputParser(input_path, self.logger, codec_class())
+        parser = InputParser(input_path, self.logger, codec_class(), self.ignore_missing_includes)
         results = parser.parse()
+
         if not results.ok:
-            self.logger.error('JSON parsing failed')
+            self.logger.error('Input parsing failed')
             _ = self.report_warnings_errors([results])
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
+
         self.json = parser.json
 
 # ################################################################################################################################
@@ -2584,6 +2725,15 @@ class Enmasse(ManageCommand):
         # .. as above, for attributes that should be skipped if they are empty ..
         attr_list_skip_if_empty = ModuleCtx.Enmasse_Attr_List_Skip_If_Empty.get(attr_key) or []
 
+        # .. as above, for attributes that should be skipped if their value is True ..
+        attr_list_skip_if_true = ModuleCtx.Enmasse_Attr_List_Skip_If_True.get(attr_key) or []
+
+        # .. as above, for attributes that should be skipped if their value is False ..
+        attr_list_skip_if_false = ModuleCtx.Enmasse_Attr_List_Skip_If_False.get(attr_key) or []
+
+        # .. as above, for attributes that should be skipped if they have a specific value ..
+        attr_list_skip_if_value_matches = ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches.get(attr_key) or {}
+
         # .. to make sure the dictionary does not change during iteration ..
         item_copy = deepcopy(item)
 
@@ -2631,6 +2781,26 @@ class Enmasse(ManageCommand):
                 if value is not NotGiven:
                     if value:
                         item[attr] = value
+
+        # .. optionally, skip True attributes ..
+        for attr in attr_list_skip_if_true:
+            if value := item.pop(attr, NotGiven):
+                if value is not True:
+                    if value:
+                        item[attr] = value
+
+        # .. optionally, skip False attributes ..
+        for attr in attr_list_skip_if_false:
+            if value := item.pop(attr, NotGiven):
+                if value is not False:
+                    if value:
+                        item[attr] = value
+
+        # .. optionally, skip attributes that match configuration ..
+        for pattern_key, pattern_value in attr_list_skip_if_value_matches.items():
+            if value := item.pop(pattern_key, NotGiven): # type: ignore
+                if value != pattern_value:
+                    item[pattern_key] = value
 
         # .. ID's are never returned ..
         _ = item.pop('id', None)
@@ -2700,6 +2870,9 @@ class Enmasse(ManageCommand):
         has_all_types = ModuleCtx.Include_Type.All in include_type
         has_all_names = ModuleCtx.Include_Type.All in include_name
 
+        has_type = not has_all_types
+        has_name = not has_all_names
+
         # Handle security definitions, some of which should never be exported ..
         if item_type == 'def_sec':
 
@@ -2711,15 +2884,28 @@ class Enmasse(ManageCommand):
             elif name.startswith(zato_name_prefix):
                 return False
 
-        # We enter this branch if we are to export only specific types ..
+        # We enter this branch if we are to export specific types ..
         if not has_all_types:
-            out = self._should_write_type_to_output(item_type, item, include_type)
+            out_by_type = self._should_write_type_to_output(item_type, item, include_type)
+        else:
+            out_by_type = False
 
-        # We enter this branch if we are to export only objects of specific names ..
+        # We enter this branch if we are to export objects of specific names ..
         if not has_all_names:
             item_name = item.get('name') or ''
             item_name = item_name.lower()
-            out = self._should_write_name_to_output(item_type, item_name, include_name)
+            out_by_name = self._should_write_name_to_output(item_type, item_name, include_name)
+        else:
+            out_by_name = False
+
+        # We enter here if we have both type and name on input, which means that we need to and-join them ..
+        if has_type and has_name:
+            out = out_by_type and out_by_name
+        else:
+            if has_type:
+                out = out_by_type
+            elif has_name:
+                out = out_by_name
 
         # .. we are ready to return our output
         return out

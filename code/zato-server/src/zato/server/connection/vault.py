@@ -215,7 +215,7 @@ if __name__ == '__main__':
 
     config = Bunch()
     config.name = name
-    config.url = 'http://localhost:49517'
+    config.url = 'https://localhost:49517'
     config.token = client_token
     config.service_name = 'my.service'
     config.tls_verify = True

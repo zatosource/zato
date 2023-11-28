@@ -36,6 +36,15 @@ logger = getLogger(__name__)
 
 class SchedulerServerConfig(AuxServerConfig):
 
+    # Our current status, e.g. active or paused
+    current_status:'str' = SCHEDULER.Status.Active
+
+    # Configuration via environment variables
+    env_key_status   = SCHEDULER.Env.Status
+    env_key_username = SCHEDULER.Env.Server_Username
+    env_key_password = SCHEDULER.Env.Server_Password
+    env_key_auth_required = SCHEDULER.Env.Server_Auth_Required
+
     def __init__(self) -> 'None':
         super().__init__()
 
@@ -57,7 +66,6 @@ class SchedulerServer(AuxServer):
     conf_file_name = 'scheduler.conf'
     config_class = SchedulerServerConfig
     crypto_manager_class = SchedulerCryptoManager
-    has_credentials = False
 
     def __init__(self, config:'AuxServerConfig') -> 'None':
 
@@ -69,6 +77,19 @@ class SchedulerServer(AuxServer):
         # SchedulerAPI
         self.scheduler_api = SchedulerAPI(self.config)
         self.scheduler_api.broker_client = BrokerClient(zato_client=self.zato_client, server_rpc=None, scheduler_config=None)
+
+# ################################################################################################################################
+
+    def should_check_credentials(self) -> 'bool':
+
+        api_clients = self.config.main.get('api_clients')
+        api_clients = api_clients or self.config.main.get('api_users')
+        api_clients = api_clients or {}
+
+        auth_required = api_clients.get('auth_required')
+        auth_required = auth_required or False
+
+        return auth_required
 
 # ################################################################################################################################
 
@@ -100,14 +121,14 @@ class SchedulerServer(AuxServer):
 
         # Fix up configuration so it uses the format that internal utilities expect
         startup_jobs_config = get_config(repo_location, startup_jobs_config_file, needs_user_config=False)
-        for name, job_config in startup_jobs_config.items():
+        for name, job_config in startup_jobs_config.items(): # type: ignore
 
             # Ignore jobs that have been removed
             if name in SCHEDULER.JobsToIgnore:
                 logger.info('Ignoring job `%s (%s)`', name, startup_jobs_config_file)
                 continue
 
-            job_config['name'] = name
+            job_config['name'] = name # type: ignore
             cast_('SchedulerServerConfig', config).startup_jobs.append(job_config)
 
 # ################################################################################################################################
