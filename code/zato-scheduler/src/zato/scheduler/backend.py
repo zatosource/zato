@@ -36,7 +36,7 @@ from zato.scheduler.cleanup.cli import start_cleanup
 
 if 0:
     from zato.common.typing_ import stranydict
-    from zato.scheduler.server import Config, SchedulerAPI
+    from zato.scheduler.server import SchedulerServerConfig, SchedulerAPI
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -330,10 +330,11 @@ class Job:
 
 class Scheduler:
 
-    def __init__(self, config:'Config', api:'SchedulerAPI') -> 'None':
+    def __init__(self, config:'SchedulerServerConfig', api:'SchedulerAPI') -> 'None':
         self.config = config
         self.api = api
         self.on_job_executed_cb = config.on_job_executed_cb
+        self.current_status = config.current_status
         self.startup_jobs = config.startup_jobs
         self.odb = config.odb
         self.jobs = {}
@@ -471,9 +472,20 @@ class Scheduler:
 
 # ################################################################################################################################
 
+    def is_scheduler_active(self) -> 'bool':
+        out = self.current_status == SCHEDULER.Status.Active
+        return out
+
+# ################################################################################################################################
+
     def execute(self, name):
-        """ Executes a job no matter if it's active or not. One-time job are not unscheduled afterwards.
+        """ If the scheduler is active, executes a job no matter if it's active or not. One-time job are not unscheduled afterwards.
         """
+
+        # Do not execute any jobs if we are not active
+        if not self.is_scheduler_active():
+            return
+
         with self.lock:
             for job in itervalues(self.jobs):
                 if job.name == name:
@@ -485,6 +497,10 @@ class Scheduler:
 # ################################################################################################################################
 
     def on_job_executed(self, ctx:'stranydict', unschedule_one_time:'bool'=True) -> 'None':
+
+        # Do not execute any jobs if we are not active
+        if not self.is_scheduler_active():
+            return
 
         # If this is a specal, pub/sub cleanup job, run its underlying command in background ..
         if ctx['name'] == SCHEDULER.PubSubCleanupJob:

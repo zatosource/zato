@@ -576,9 +576,18 @@ class SCHEDULER:
                      'ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:'  + \
                      'DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305'
 
+    class Status:
+        Active = 'Active'
+        Paused = 'Paused'
+
     class Env:
+
+        # Basic information about where the scheduler can be found
         Host = 'Zato_Scheduler_Host'
         Port = 'Zato_Scheduler_Port'
+
+        # Whether the scheduler is active or paused
+        Status = 'Zato_Scheduler_Status'
 
         Bind_Host = 'Zato_Scheduler_scheduler_conf_bind_host'
         Bind_Port = 'Zato_Scheduler_Bind_Port'
