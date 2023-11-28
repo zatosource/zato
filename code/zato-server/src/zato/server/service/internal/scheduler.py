@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from traceback import format_exc
-from urllib.parse import urlparse
 
 # ciso8601
 try:
@@ -22,11 +21,11 @@ from crontab import CronTab
 
 # Zato
 from zato.common.api import scheduler_date_time_format, SCHEDULER, ZATO_NONE
-from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG
+from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob, Service as ODBService
 from zato.common.odb.query import job_by_id, job_by_name, job_list
-from zato.common.util.config import get_config_object, update_config_file
+from zato.common.util.config import get_config_object, parse_url_address, update_config_file
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO, Service
 
 # ################################################################################################################################
@@ -177,7 +176,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
             msg['cron_definition'] = cron_definition
 
-        broker_client.publish(msg, MESSAGE_TYPE.TO_SCHEDULER)
+        broker_client.publish(msg)
 
     except Exception:
         session.rollback()
@@ -341,7 +340,7 @@ class Delete(AdminService):
                 session.commit()
 
                 msg = {'action': SCHEDULER_MSG.DELETE.value, 'name': job.name}
-                self.broker_client.publish(msg, MESSAGE_TYPE.TO_SCHEDULER)
+                self.broker_client.publish(msg)
 
             except Exception:
                 session.rollback()
@@ -370,7 +369,7 @@ class Execute(AdminService):
                     one()
 
                 msg = {'action': SCHEDULER_MSG.EXECUTE.value, 'name': job.name}
-                self.broker_client.publish(msg, MESSAGE_TYPE.TO_SCHEDULER)
+                self.broker_client.publish(msg)
 
             except Exception:
                 self.logger.error('Could not execute the job, e:`%s`', format_exc())
@@ -447,33 +446,8 @@ class SetSchedulerAddressImpl(_SetAddressBase):
 
     def _handle(self, address:'str') -> 'None':
 
-        # Extract the details from the address
-        parsed = urlparse(address)
-
-        scheme = parsed.scheme.lower()
-        use_tls = scheme == 'https'
-
-        # If there is no scheme and netloc, the whole address will be something like '10.151.17.19',
-        # and it will be found under .path actually ..
-        if (not parsed.scheme) and (not parsed.netloc):
-            host_port = parsed.path
-
-        # .. otherwise, the address will be in the network location.
-        else:
-            host_port = parsed.netloc
-
-        # We need to split it because we may have a port
-        host_port = host_port.split(':')
-
-        # It will be a two-element list if there is a port ..
-        if len(host_port) == 2:
-            host, port = host_port
-            port = int(port)
-
-        # .. otherwise, assume the scheduler's default port ..
-        else:
-            host = host_port[0]
-            port = SCHEDULER.DefaultPort
+        # Extract information about the address we are to use ..
+        url = parse_url_address(address, SCHEDULER.DefaultPort)
 
         # First, save the information to disk ..
         with self.lock():
@@ -482,9 +456,9 @@ class SetSchedulerAddressImpl(_SetAddressBase):
             config:'ConfigObj' = get_config_object(self.server.repo_location, 'server.conf') # type: ignore
 
             # .. update its contents ..
-            config['scheduler']['scheduler_host'] = host # type: ignore
-            config['scheduler']['scheduler_port'] = port # type: ignore
-            config['scheduler']['scheduler_use_tls'] = use_tls # type: ignore
+            config['scheduler']['scheduler_host'] = url.host # type: ignore
+            config['scheduler']['scheduler_port'] = url.port # type: ignore
+            config['scheduler']['scheduler_use_tls'] = url.use_tls # type: ignore
 
             # .. we can save it back to disk ..
             update_config_file(config, self.server.repo_location, 'server.conf')
