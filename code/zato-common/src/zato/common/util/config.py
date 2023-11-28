@@ -20,7 +20,7 @@ from bunch import Bunch
 from parse import PARSE_RE as parse_re
 
 # Zato
-from zato.common.api import EnvConfigCtx, EnvVariable, SCHEDULER, Secret_Shadow
+from zato.common.api import EnvConfigCtx, EnvVariable, SCHEDULER, Secret_Shadow, URLInfo
 from zato.common.const import SECRETS
 from zato.common.ext.configobj_ import ConfigObj
 
@@ -38,13 +38,15 @@ if 0:
 logger = getLogger(__name__)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 # Values of these generic attributes may contain query string elements that have to be masked out
 mask_attrs = ['address']
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-def get_server_api_protocol_from_config_item(use_tls:'bool') -> 'str':
+def get_url_protocol_from_config_item(use_tls:'bool') -> 'str':
     return 'https' if use_tls else 'http'
 
 # ################################################################################################################################
@@ -406,6 +408,50 @@ def update_config_file(config:'ConfigObj', repo_location:'str', conf_file:'str')
     conf_path = os.path.join(repo_location, conf_file)
     with open(conf_path, 'wb') as f:
         _ = config.write(f)
+
+# ################################################################################################################################
+
+def parse_url_address(address:'str', default_port:'int') -> 'URLInfo':
+
+    # Our response to produce
+    out = URLInfo()
+
+    # Extract the details from the address
+    parsed = urlparse(address)
+
+    scheme = parsed.scheme.lower()
+    use_tls = scheme == 'https'
+
+    # If there is no scheme and netloc, the whole address will be something like '10.151.17.19',
+    # and it will be found under .path actually ..
+    if (not parsed.scheme) and (not parsed.netloc):
+        host_port = parsed.path
+
+    # .. otherwise, the address will be in the network location.
+    else:
+        host_port = parsed.netloc
+
+    # We need to split it because we may have a port
+    host_port = host_port.split(':')
+
+    # It will be a two-element list if there is a port ..
+    if len(host_port) == 2:
+        host, port = host_port
+        port = int(port)
+
+    # .. otherwise, assume the scheduler's default port ..
+    else:
+        host = host_port[0]
+        port = default_port
+
+    # .. populate the response ..
+    out.address = address
+    out.host = host
+    out.port = port
+    out.use_tls = use_tls
+
+    # .. and return it to our caller.
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

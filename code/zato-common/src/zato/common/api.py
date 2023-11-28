@@ -16,6 +16,9 @@ from sys import maxsize
 # Bunch
 from bunch import Bunch
 
+# Zato
+from zato.common.defaults import http_plain_server_port
+
 # ################################################################################################################################
 
 if 0:
@@ -549,6 +552,10 @@ class SCHEDULER:
     # This is what a server will invoke
     DefaultHost = '127.0.0.1'
     DefaultPort = 31530
+
+    # This is what a scheduler will invoke
+    Default_Server_Host = '127.0.0.1'
+    Default_Server_Port = http_plain_server_port
 
     # This is what a scheduler will bind to
     DefaultBindHost = '0.0.0.0'
@@ -2066,6 +2073,16 @@ class Wrapper_Type:
 
 class HAProxy:
     Default_Memory_Limit = '4096' # In megabytes = 4 GB
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class URLInfo:
+    address: 'str'
+    host: 'str'
+    port: 'int'
+    use_tls: 'bool'
 
 # ################################################################################################################################
 # ################################################################################################################################
