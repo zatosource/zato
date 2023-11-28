@@ -68,6 +68,8 @@ KEYS = {k:v.replace('/zato','').replace('/',':') for k,v in TOPICS.items()}
 class SCHEDULER(Constants):
     code_start = 100000
 
+    PAUSE = ValueConstant('')
+    RESUME = ValueConstant('')
     CREATE = ValueConstant('')
     EDIT = ValueConstant('')
     DELETE = ValueConstant('')
@@ -75,6 +77,7 @@ class SCHEDULER(Constants):
     JOB_EXECUTED = ValueConstant('')
     SET_JOB_INACTIVE = ValueConstant('')
     DELETE_PUBSUB_SUBSCRIBER = ValueConstant('')
+    SET_SERVER_ADDRESS = ValueConstant('')
     SET_SCHEDULER_ADDRESS = ValueConstant('')
 
 class ZMQ_SOCKET(Constants):

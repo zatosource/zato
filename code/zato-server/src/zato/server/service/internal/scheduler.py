@@ -431,8 +431,11 @@ class SetServerAddress(_SetAddressBase):
     name = 'pub.zato.scheduler.set-server-address'
     address_component_type = 'server'
 
-    def _handle(self) -> 'None':
-        raise NotImplementedError('To be done')
+    def _handle(self, address:'str') -> 'None':
+        self.broker_client.publish({
+            'action': SCHEDULER_MSG.SET_SERVER_ADDRESS.value,
+            'address': address
+        })
 
 # ################################################################################################################################
 # ################################################################################################################################
