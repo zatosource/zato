@@ -34,9 +34,17 @@ from zato.common.py23_.past.builtins import basestring
 from zato.common.py23_ import pickle_dumps
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 builtin_ops = [
@@ -117,7 +125,7 @@ class Cache:
 
 # ################################################################################################################################
 
-    def get(self, key, default=default_get, details=False):
+    def get(self, key, default=default_get, details=False) -> 'any_':
         """ Returns a value stored under a given key. If details is True, return metadata about the key as well.
         """
         return self.impl.get(key, default if default != default_get else self.impl.default_get, details)
@@ -993,14 +1001,14 @@ class CacheAPI:
 #
 # ################################################################################################################################
 
-    def _get_cache(self, cache_type, name):
+    def _get_cache(self, cache_type:'str', name:'str') -> 'Cache':
         """ Actually returns a cache. Must be called with self.lock held.
         """
         return self.caches[cache_type][name]
 
 # ################################################################################################################################
 
-    def get_cache(self, cache_type, name):
+    def get_cache(self, cache_type:'str', name:'str') -> 'Cache':
         """ Returns the lower-level cache implementation object by its type and name.
         """
         with self.lock:
