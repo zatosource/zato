@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -19,7 +19,7 @@ def run(playwright: Playwright) -> None:
     page = context.new_page()
 
     # Go to http://localhost:8183/accounts/login/?next=/zato/
-    page.goto("http://localhost:8183/accounts/login/?next=/zato/")
+    _ = page.goto("http://localhost:8183/accounts/login/?next=/zato/")
 
     # Click input[name="username"]
     page.click("input[name=\"username\"]")
