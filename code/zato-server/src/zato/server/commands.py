@@ -30,6 +30,7 @@ from zato.common.util.api import get_zato_command
 # ################################################################################################################################
 
 if 0:
+    from pathlib import Path
     from gevent.subprocess import CompletedProcess
     from zato.common.typing_ import any_
     from zato.server.base.parallel import ParallelServer
@@ -380,7 +381,7 @@ class CommandsFacade:
 
 # ################################################################################################################################
 
-    def run_enmasse_async(self, file_path:'str') -> 'CommandResult':
+    def run_enmasse_async(self, file_path:'str | Path') -> 'CommandResult':
         command = f'enmasse --import --replace --input {file_path} {self.server.base_dir} --verbose'
         result = self.run_zato_cli_async(command, callback=self._on_enmasse_completed)
         return result
