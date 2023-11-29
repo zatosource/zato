@@ -117,9 +117,7 @@
      align-items:center;
 }
  .pure-css-nav > nav ul li a:first-child:nth-last-child(2):after {
-     content:'';
      display:inline-block;
-     width:10px;
      height:5px;
      margin-left:10px;
      opacity:0.50;
