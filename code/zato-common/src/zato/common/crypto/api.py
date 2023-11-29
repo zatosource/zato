@@ -242,14 +242,14 @@ class CryptoManager:
 
 # ################################################################################################################################
 
-    def hash_secret(self, data, name='zato.default'):
+    def hash_secret(self, data:'any_', name:'str'='zato.default') -> 'str':
         """ Hashes input secret using a named configured (e.g. PBKDF2-SHA512, 100k rounds, salt 32 bytes).
         """
         return self.hash_scheme[name].hash(data)
 
 # ################################################################################################################################
 
-    def verify_hash(self, given, expected, name='zato.default'):
+    def verify_hash(self, given:'any_', expected:'any_', name='zato.default') -> 'bool':
         return self.hash_scheme[name].verify(given, expected)
 
 # ################################################################################################################################
