@@ -21,7 +21,6 @@ from zato.common.api import EnvFile, FILE_TRANSFER
 from zato.common.broker_message import ValueConstant, HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.typing_ import cast_, dataclass, from_dict, optional
 from zato.common.util.api import get_config, get_user_config_name
-from zato.common.util.env import populate_environment_from_file
 from zato.common.util.open_ import open_r
 from zato.server.service import Service
 
@@ -289,7 +288,7 @@ class OnUpdateUserConf(_OnUpdate):
 
         # We enter here if this is a file with environment variables ..
         if self._is_env_file(ctx.full_path):
-            populate_environment_from_file(ctx.full_path, use_print=False)
+            self.server.update_environment_variables_from_file(ctx.full_path)
 
         # .. otherwise, this is a file with user configuration.
         else:
