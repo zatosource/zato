@@ -86,12 +86,13 @@ from zato.server.sso import SSOTool
 
 if 0:
 
+    from bunch import Bunch as bunch_
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.ipc.client import IPCResponse
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
-    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, dictlist, stranydict, strbytes, strlist, \
-        strlistnone, strnone
+    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, dictlist, intset, listorstr, strdict, strbytes, \
+        strlist, strlistnone, strnone, strorlist, strset
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.ext.zunicorn.arbiter import Arbiter
@@ -102,7 +103,7 @@ if 0:
     from zato.server.startup_callable import StartupCallableTool
     from zato.sso.api import SSOAPI
 
-    Bunch = Bunch
+    bunch_ = bunch_
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
@@ -166,8 +167,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
         self.repo_location = ''
-        self.user_conf_location = []
-        self.user_conf_location_extra = set()
+        self.user_conf_location:'strlist' = []
+        self.user_conf_location_extra:'strset' = set()
         self.soap11_content_type = ''
         self.soap12_content_type = ''
         self.plain_xml_content_type = ''
@@ -345,7 +346,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 logger.info('Found extra services to deploy: %s', ', '.join(sorted(item.name for item in missing)))
 
                 # (file_name, source_path) -> a list of services it contains
-                modules = {}
+                modules:'strdict' = {}
 
                 # Coalesce all service modules - it is possible that each one has multiple services
                 # so we do want to deploy the same module over for each service found.
@@ -372,7 +373,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
                 # Create a deployment package in ODB out of which all the services will be picked up ..
                 for file_name, values in modules.items():
-                    msg = Bunch()
+                    msg:'bunch_' = Bunch()
                     msg.action = HOT_DEPLOY.CREATE_SERVICE.value
                     msg.msg_type = MESSAGE_TYPE.TO_PARALLEL_ALL
                     msg.package_id = hot_deploy(self, file_name, values['tmp_full_path'], notify=False)
@@ -420,7 +421,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             logger.info('Deploying user-defined services (%s)', self.name)
 
-            user_defined_deployed = self.service_store.import_services_from_anywhere(
+            user_defined_deployed:'anylist' = self.service_store.import_services_from_anywhere(
                 self.service_modules + self.service_sources, self.base_dir).to_process
 
             locally_deployed.extend(user_defined_deployed)
@@ -523,7 +524,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Local variables
         path_patterns = path_patterns or HotDeploy.Default_Patterns
-        path_patterns = path_patterns if isinstance(path_patterns, list) else [path_patterns]
+        path_patterns = path_patterns if isinstance(path_patterns, list) else [path_patterns] # type: ignore
 
         # We have hot-deployment configuration to process ..
         if paths:
@@ -708,7 +709,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.static_config.read_directory(os.path.join(self.static_dir, 'sso', 'email'))
 
         # Key-value DB
-        kvdb_config = get_kvdb_config_for_log(self.fs_server_config.kvdb)
+        kvdb_config:'bunch_' = get_kvdb_config_for_log(self.fs_server_config.kvdb)
         kvdb_logger.info('Worker config `%s`', kvdb_config)
 
         self.kvdb.config = self.fs_server_config.kvdb
@@ -725,7 +726,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.fs_server_config.misc.sftp_genkey_command = 'dropbearkey'
 
         # New in 3.2, may be missing in the config file
-        allow_internal = self.fs_server_config.misc.get('service_invoker_allow_internal', [])
+        allow_internal:'listorstr' = self.fs_server_config.misc.get('service_invoker_allow_internal', [])
         allow_internal = allow_internal if isinstance(allow_internal, list) else [allow_internal]
         self.fs_server_config.misc.service_invoker_allow_internal = allow_internal
 
@@ -807,6 +808,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def read_user_config(self):
 
+        # Type hints
+        dir_name:'str'
+
         # Reads config files from the default directory
         for dir_name in self.user_conf_location:
             self._read_user_config_from_directory(dir_name)
@@ -819,7 +823,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def set_up_user_config_location(self) -> 'strlist':
 
-        user_conf_location = self.pickup_config.get('user_conf', {}).get('pickup_from', '')
+        user_conf_location:'str' = self.pickup_config.get('user_conf', {}).get('pickup_from', '')
         return path_string_list_to_list(self.base_dir, user_conf_location)
 
 # ################################################################################################################################
@@ -923,7 +927,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.set_up_zato_kvdb()
 
         # Find out if we are on a platform that can handle our posix_ipc
-        _skip_platform = self.fs_server_config.misc.get('posix_ipc_skip_platform')
+        _skip_platform:'listorstr' = self.fs_server_config.misc.get('posix_ipc_skip_platform')
         _skip_platform = _skip_platform if isinstance(_skip_platform, list) else [_skip_platform]
         _skip_platform = [elem for elem in _skip_platform if elem]
         self.fs_server_config.misc.posix_ipc_skip_platform = _skip_platform
@@ -944,16 +948,16 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Now try grabbing the basic server's data from the ODB. No point
         # in doing anything else if we can't get past this point.
-        server = self.odb.fetch_server(self.config.odb_data)
+        server:'any_' = self.odb.fetch_server(self.config.odb_data)
 
         if not server:
             raise Exception('Server does not exist in the ODB')
 
         # Set up the server-wide default lock manager
-        odb_data = self.config.odb_data
+        odb_data:'bunch_' = self.config.odb_data
 
         if is_posix:
-            backend_type = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
+            backend_type:'str' = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
         else:
             backend_type = 'zato-pass-through'
 
@@ -989,7 +993,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Configure which HTTP methods can be invoked via REST or SOAP channels
         methods_allowed = self.fs_server_config.http.methods_allowed
-        methods_allowed = methods_allowed if isinstance(methods_allowed, list) else [methods_allowed]
+        methods_allowed:'strorlist' = methods_allowed if isinstance(methods_allowed, list) else [methods_allowed]
         self.http_methods_allowed.extend(methods_allowed)
 
         # As above, as a regular expression to be used in pattern matching
@@ -1064,7 +1068,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.bearer_token_manager = BearerTokenManager(self)
 
         # Cannot be done in __init__ because self.sso_config is not available there yet
-        salt_size = self.sso_config.hash_secret.salt_size
+        salt_size:'int' = self.sso_config.hash_secret.salt_size
         self.crypto_manager.add_hash_scheme('zato.default', self.sso_config.hash_secret.rounds, salt_size)
 
         # Support pre-3.x hot-deployment directories
@@ -1236,7 +1240,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         logger.info(f'Stopping Zato after {self.stop_after}s')
 
         # All the pids that we will stop
-        to_stop = set()
+        to_stop:'intset' = set()
 
         # Details of each process
         details = {}
@@ -1324,7 +1328,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.subproc_current_state.is_sftp_running = True
 
         # Prepare Zato events configuration
-        events_config = self.fs_server_config.get('events') or {} # type: dict
+        events_config = self.fs_server_config.get('events') or {}
 
         # This is optional in server.conf ..
         fs_data_path = events_config.get('fs_data_path') or ''
@@ -1382,10 +1386,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def _get_sso_session(self) -> 'any_':
         """ Returns a session function suitable for SSO operations.
         """
-        pool_name = self.sso_config.sql.name
+        pool_name:'str' = self.sso_config.sql.name
         if pool_name:
             try:
-                pool = self.worker_store.sql_pool_store.get(pool_name)
+                pool:'any_' = self.worker_store.sql_pool_store.get(pool_name)
             except KeyError:
                 pool = None
             if not pool:
@@ -1471,18 +1475,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def get_from_cache(self, cache_type:'str', cache_name:'str', key:'str') -> 'any_':
         """ Returns a value from input cache by key, or None if there is no such key.
         """
-        return self.worker_store.cache_api.get_cache(cache_type, cache_name).get(key)
+        cache = self.worker_store.cache_api.get_cache(cache_type, cache_name)
+        return cache.get(key) # type: ignore
 
 # ################################################################################################################################
 
     def set_in_cache(self, cache_type:'str', cache_name:'str', key:'str', value:'any_') -> 'any_':
         """ Sets a value in cache for input parameters.
         """
-        return self.worker_store.cache_api.get_cache(cache_type, cache_name).set(key, value)
+        cache = self.worker_store.cache_api.get_cache(cache_type, cache_name)
+        return cache.set(key, value) # type: ignore
 
 # ################################################################################################################################
 
-    def _remove_response_root_elem(self, data:'stranydict') -> 'stranydict':
+    def _remove_response_root_elem(self, data:'strdict') -> 'strdict':
         keys = list(data.keys())
         if len(keys) == 1:
             root = keys[0]
@@ -1493,7 +1499,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _remove_response_elem(self, data:'stranydict | anylist') -> 'stranydict | anylist':
+    def _remove_response_elem(self, data:'strdict | anylist') -> 'strdict | anylist':
 
         if isinstance(data, dict):
             data = self._remove_response_root_elem(data)
@@ -1511,7 +1517,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """
 
         # A list of dict responses, one for each PID
-        out = [] # type: dictlist
+        out:'dictlist' = []
 
         try:
             # Get all current PIDs
@@ -1526,7 +1532,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     # If this is an internal service, we want to remove its root-level response element.
                     if service.startswith('zato'):
                         pid_response.data = self._remove_response_elem(pid_response.data)
-                    out.append(pid_response.data)
+                    out.append(cast_('anydict', pid_response.data))
 
         except Exception:
             logger.warning('PID invocation error `%s`', format_exc())
@@ -1576,17 +1582,16 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def on_ipc_invoke_callback(self, msg:'Bunch') -> 'anydict': # type: ignore
+    def on_ipc_invoke_callback(self, msg:'bunch_') -> 'anydict':
 
-        msg = cast_('Bunch', msg)
-        service = msg['service']
-        data    = msg['data']
+        service:'str' = msg['service']
+        data:'any_'   = msg['data']
 
-        response = self.invoke(service, data)
+        response:'any_' = self.invoke(service, data)
         if isinstance(response, dict):
             if 'response' in response:
-                response = response['response']
-        return response
+                response:'any_' = response['response']
+        return response # type: ignore
 
 # ################################################################################################################################
 
@@ -1631,7 +1636,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         topic = self.worker_store.pubsub.topics[subscription.config['topic_id']] # type: ignore
 
         if topic.before_delivery_hook_service_invoker:
-            response = topic.before_delivery_hook_service_invoker(topic, msg)
+            response:'any_' = topic.before_delivery_hook_service_invoker(topic, msg)
             if response['skip_msg']:
                 raise SkipDelivery(msg.pub_msg_id)
 
@@ -1644,8 +1649,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """
         if data:
             data = data.encode('utf8') if isinstance(data, str) else data
-            encrypted = self.crypto_manager.encrypt(data)
-            encrypted = encrypted.decode('utf8')
+            encrypted = self.crypto_manager.encrypt(data, needs_str=True)
             return '{}{}'.format(prefix, encrypted)
 
 # ################################################################################################################################
@@ -1792,7 +1796,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def worker_exit(arbiter:'Arbiter', worker:'GeventWorker') -> 'None':
 
         # Invoke cleanup procedures
-        app = worker.app.zato_wsgi_app # type: ParallelServer
+        app:'ParallelServer' = worker.app.zato_wsgi_app
         app.cleanup_on_stop()
 
 # ################################################################################################################################
@@ -1881,10 +1885,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         return self.worker_store.basic_auth_get_by_id(*args, **kwargs)
 
     def api_worker_store_reconnect_generic(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self.worker_store.reconnect_generic(*args, **kwargs)
+        return self.worker_store.reconnect_generic(*args, **kwargs) # type: ignore
 
     def is_active_outconn_wsx(self, conn_id:'str') -> 'bool':
-        is_active = self.worker_store.is_active_generic_conn(conn_id)
+        is_active:'bool' = self.worker_store.is_active_generic_conn(conn_id)
         return is_active
 
     def is_service_wsx_adapter(self, *args:'any_', **kwargs:'any_') -> 'any_':
