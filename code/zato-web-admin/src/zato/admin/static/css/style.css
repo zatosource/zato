@@ -430,7 +430,7 @@ div.prompt form {
     padding-top: 4px
 }
 
-a {
+a:not(.menu-link) {
     color: #000;
     font-family: arial, helvetica, clean, sans-serif;
     text-decoration: underline;
