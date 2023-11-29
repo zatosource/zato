@@ -52,7 +52,7 @@ if 0:
     from sqlalchemy.orm import Session as SASession
     from zato.common.crypto.api import CryptoManager
     from zato.common.odb.model import Cluster as ClusterModel, Server as ServerModel
-    from zato.common.typing_ import callable_, commondict
+    from zato.common.typing_ import anyset, callable_, commondict
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -598,7 +598,7 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_missing_services(self, server, locally_deployed):
+    def get_missing_services(self, server, locally_deployed) -> 'anyset':
         """ Returns services deployed on the server given on input that are not among locally_deployed.
         """
         missing = set()
