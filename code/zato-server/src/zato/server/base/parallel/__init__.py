@@ -798,7 +798,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             conf = get_config_from_file(user_conf_full_path, file_name)
 
             # Not used at all in this type of configuration
-            _ = conf.pop('user_config_items', None)
+            _:'any_' = conf.pop('user_config_items', None)
 
             self.user_config[user_config_name] = conf
 
@@ -1209,7 +1209,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         bind_port = (self.fs_server_config.main.get('ipc_port_start') or IPC.Default.TCP_Port_Start) + self.process_idx
 
         # .. now, the IPC server can be started ..
-        _ = spawn_greenlet(self.ipc_api.start_server,
+        _:'any_' = spawn_greenlet(self.ipc_api.start_server,
             self.pid,
             self.base_dir,
             bind_host=bind_host,
