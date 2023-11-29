@@ -200,7 +200,8 @@ class Ping(AdminService):
 
     def handle(self):
         self.logger.info('Ping service %s invoked -> %s', self.name, self.request.raw_request)
-        self.response.payload.pong = 'zato'
+        import os
+        self.response.payload.pong = str(sorted(os.environ))
 
     def after_handle(self):
         """ A no-op method because zato.ping can be used in benchmarks and the parent's .before/after_handle
