@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+from copy import deepcopy
 from datetime import datetime, timedelta
 from logging import DEBUG, INFO, WARN
 from pathlib import Path
@@ -56,6 +57,7 @@ from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
     fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, register_diag_handlers, \
     save_ipc_pid_port, spawn_greenlet, StaticConfig
+from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
@@ -224,6 +226,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.audit_pii = audit_pii
         self.has_fg = False
         self.env_file = ''
+        self.env_variables_from_files:'strlist' = []
         self.default_internal_pubsub_endpoint_id = 0
         self.jwt_secret = b''
         self._hash_secret_method = ''
@@ -687,6 +690,19 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
                 # .. and add it to hot-deployment.
                 self.add_pickup_conf_from_local_path(grand_parent_dir, 'EnvFile', parent_dir_name)
+
+# ################################################################################################################################
+
+    def update_environment_variables_from_file(self, file_path:'str') -> 'None':
+
+        # Prepare information about the variables that are to be deleted ..
+        to_delete = deepcopy(self.env_variables_from_files)
+
+        # .. load new variables, deleting the old ones along the way ..
+        new_variables = populate_environment_from_file(file_path, to_delete=to_delete, use_print=False)
+
+        # .. and populate the list for later use.
+        self.env_variables_from_files = new_variables
 
 # ################################################################################################################################
 

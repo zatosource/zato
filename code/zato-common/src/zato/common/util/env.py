@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,7 +9,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 # ################################################################################################################################
 
-def populate_environment_from_file(env_path:'str', use_print:'bool'=True) -> 'None':
+if 0:
+    from zato.common.typing_ import any_, strlist, strlistnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def populate_environment_from_file(env_path:'str', *, to_delete:'strlistnone'=None, use_print:'bool'=True) -> 'strlist':
 
     # stdlib
     import os
@@ -17,6 +23,9 @@ def populate_environment_from_file(env_path:'str', use_print:'bool'=True) -> 'No
 
     # Reusable
     logger = getLogger('zato')
+
+    # Our response to produce
+    out:'strlist' = []
 
     if env_path:
         if not os.path.exists(env_path):
@@ -36,18 +45,42 @@ def populate_environment_from_file(env_path:'str', use_print:'bool'=True) -> 'No
             # Zato
             from zato.common.ext.configobj_ import ConfigObj
 
+            # Local variables
+            to_delete = to_delete or []
+            msg_deleted = 'Deleted env. variable `%s`'
+            msg_imported = 'Imported env. variable `%s` from `%s`'
+
+            # Build a configuration object with new variables to load ..
             env_config = ConfigObj(env_path)
             env = env_config.get('env') or {}
 
-            msg = 'Imported env. variable `%s` from `%s`'
+            # .. delete any previous ones ..
+            for key in to_delete:
+                _:'any_' = os.environ.pop(key, None)
+                logger.info(msg_deleted, key)
 
+            # .. go through everything that is new ..
             for key, value in env.items(): # type: ignore
+
+                # .. make sure values are strings ..
                 if isinstance(value, (int, float)):
                     value = str(value)
+
+                # .. do update the environment ..
                 os.environ[key] = value
+
+                # .. append the key for our caller's benefit ..
+                out.append(key)
+
+                # .. optionally, use print for logging ..
                 if use_print:
-                    print(msg % (key, env_path))
-                logger.info(msg, key, env_path)
+                    print(msg_imported % (key, env_path))
+
+                # .. but use logging too.
+                logger.info(msg_imported, key, env_path)
+
+    # We are ready to return our response now
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

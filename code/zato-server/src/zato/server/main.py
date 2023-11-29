@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -267,7 +267,9 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     # Now, import environment variables and store the variable for later use
     if env_file := options.get('env_file', ''):
-        populate_environment_from_file(env_file)
+        initial_env_variables = populate_environment_from_file(env_file)
+    else:
+        initial_env_variables = []
 
     # For dumping stacktraces
     if is_linux:
@@ -295,7 +297,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     from zato_environment import EnvironmentManager # type: ignore
 
     # .. build the object that we now have access to ..
-    env_manager = EnvironmentManager(env_manager_base_dir, bin_dir) # type: any_
+    env_manager:'any_' = EnvironmentManager(env_manager_base_dir, bin_dir)
 
     # .. and run the initial runtime setup, based on environment variables.
     env_manager.runtime_setup_with_env_variables()
@@ -443,6 +445,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     server.has_fg = options.get('fg') or False
     server.env_file = env_file
+    server.env_variables_from_files[:] = initial_env_variables
     server.deploy_auto_from = options.get('deploy_auto_from') or ''
     server.crypto_manager = crypto_manager
     server.odb_data = server_config.odb
