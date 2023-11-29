@@ -156,6 +156,7 @@ strordictnone = union_[strnone, anydictnone]
 strorfloat    = union_[str, float]
 stroriter     = union_[str, anylist, anytuple]
 strorlist     = listorstr
+strorlistnone = optional[listorstr]
 strset        = set_[str]
 strsetdict    = dict_[str, anyset]
 strstrdict    = dict_[str, str]

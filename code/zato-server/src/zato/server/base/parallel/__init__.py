@@ -33,7 +33,7 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import DATA_FORMAT, default_internal_modules, GENERIC,  HotDeploy, IPC, KVDB as CommonKVDB, \
+from zato.common.api import DATA_FORMAT, default_internal_modules, EnvFile, GENERIC,  HotDeploy, IPC, KVDB as CommonKVDB, \
     RATE_LIMIT, SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
@@ -92,7 +92,7 @@ if 0:
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, dictlist, intset, listorstr, strdict, strbytes, \
-        strlist, strlistnone, strnone, strorlist, strset
+        strlist, strorlistnone, strnone, strorlist, strset
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.ext.zunicorn.arbiter import Arbiter
@@ -517,9 +517,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def add_pickup_conf_from_local_path(self, paths:'str', source:'str', path_patterns:'strlistnone'=None) -> 'None':
+    def add_pickup_conf_from_local_path(self, paths:'str', source:'str', path_patterns:'strorlistnone'=None) -> 'None':
 
-        # Bunch
+        # Bunchz
         from bunch import bunchify
 
         # Local variables
@@ -639,10 +639,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if 'enmasse' in path:
             service = 'zato.pickup.update-enmasse'
 
-        # .. or if it is a file with environment variables ..
-        elif self.env_file in path:
-            service = 'zato.pickup.update-env-file'
-
         # .. or default to the one for user config if it is not ..
         else:
             service= 'zato.pickup.update-user-conf'
@@ -655,6 +651,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             'delete_after_pickup': False,
             'services': service,
         }
+
         self.pickup_config[key_name] = bunchify(pickup_from)
 
 # ################################################################################################################################
@@ -670,7 +667,26 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def add_pickup_conf_for_env_file(self) -> 'None':
-        pass
+
+        # If we have a file with environment variables, we want to listed to the changes to its contents ..
+        if self.env_file:
+
+            # .. but we need to have an absolute path ..
+            if not os.path.isabs(self.env_file):
+                logger.info(f'Env. file is not an absolute path, hot-deployment will not be enabled -> `{self.env_file}')
+                return
+
+            else:
+                # .. extract the directory the file is in ..
+                parent_dir = os.path.dirname(self.env_file)
+                parent_dir = Path(parent_dir)
+                parent_dir_name = parent_dir.name
+
+                # .. and extract its own parent as well because this is needed in the call below ..
+                grand_parent_dir = os.path.dirname(parent_dir)
+
+                # .. and add it to hot-deployment.
+                self.add_pickup_conf_from_local_path(grand_parent_dir, 'EnvFile', parent_dir_name)
 
 # ################################################################################################################################
 
@@ -788,6 +804,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # User-config from ./config/repo/user-config
         for file_name in os.listdir(dir_name):
+
+            # Reject files that actually contain environment variables
+            if file_name == EnvFile.Default:
+                continue
 
             # Reject files with suffixes that we do not recognize
             if not file_name.lower().endswith(suffixes_supported):
