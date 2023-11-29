@@ -265,8 +265,9 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     # Store a pidfile before doing anything else
     store_pidfile(base_dir)
 
-    # Now, import environment variables
-    populate_environment_from_file(options.get('env_file') or '')
+    # Now, import environment variables and store the variable for later use
+    if env_file := options.get('env_file', ''):
+        populate_environment_from_file(env_file)
 
     # For dumping stacktraces
     if is_linux:
@@ -441,6 +442,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
     server.has_fg = options.get('fg') or False
+    server.env_file = env_file
     server.deploy_auto_from = options.get('deploy_auto_from') or ''
     server.crypto_manager = crypto_manager
     server.odb_data = server_config.odb

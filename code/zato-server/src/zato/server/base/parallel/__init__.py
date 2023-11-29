@@ -90,7 +90,8 @@ if 0:
     from zato.common.ipc.client import IPCResponse
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
-    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, dictlist, stranydict, strbytes, strlist, strnone
+    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, dictlist, stranydict, strbytes, strlist, \
+        strlistnone, strnone
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.ext.zunicorn.arbiter import Arbiter
@@ -221,6 +222,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.is_sso_enabled = False
         self.audit_pii = audit_pii
         self.has_fg = False
+        self.env_file = ''
         self.default_internal_pubsub_endpoint_id = 0
         self.jwt_secret = b''
         self._hash_secret_method = ''
@@ -514,13 +516,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def add_pickup_conf_from_local_path(self, paths:'str', source:'str') -> 'None':
+    def add_pickup_conf_from_local_path(self, paths:'str', source:'str', path_patterns:'strlistnone'=None) -> 'None':
 
         # Bunch
         from bunch import bunchify
 
         # Local variables
-        path_patterns = [HotDeploy.User_Conf_Directory, HotDeploy.Enmasse_File_Pattern]
+        path_patterns = path_patterns or HotDeploy.Default_Patterns
+        path_patterns = path_patterns if isinstance(path_patterns, list) else [path_patterns]
 
         # We have hot-deployment configuration to process ..
         if paths:
@@ -635,6 +638,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if 'enmasse' in path:
             service = 'zato.pickup.update-enmasse'
 
+        # .. or if it is a file with environment variables ..
+        elif self.env_file in path:
+            service = 'zato.pickup.update-env-file'
+
         # .. or default to the one for user config if it is not ..
         else:
             service= 'zato.pickup.update-user-conf'
@@ -658,6 +665,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # User configuration
         self.add_user_conf_from_env()
+
+# ################################################################################################################################
+
+    def add_pickup_conf_for_env_file(self) -> 'None':
+        pass
 
 # ################################################################################################################################
 
@@ -731,6 +743,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Look up pickup configuration based on what should be auto-deployed on startup.
         if self.deploy_auto_from:
             self.add_pickup_conf_from_auto_deploy()
+
+        # If we have a file with environment variables on input,
+        # pick up changes to this file too.
+        if self.env_file:
+            self.add_pickup_conf_for_env_file()
 
         # Append additional services that can be invoked through WebSocket gateways.
         self.add_wsx_gateway_service_allowed()
