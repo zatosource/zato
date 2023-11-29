@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 # ################################################################################################################################
 
-def populate_environment_from_file(env_path:'str') -> 'None':
+def populate_environment_from_file(env_path:'str', use_print:'bool'=True) -> 'None':
 
     # stdlib
     import os
@@ -24,8 +24,9 @@ def populate_environment_from_file(env_path:'str') -> 'None':
             # Reusable
             msg = 'No such path (env. variables) -> %s'
 
-            # We need to use print too because logging may not be configured yet ..
-            print(msg % env_path)
+            # Optionally, we need to use print too because logging may not be configured yet ..
+            if use_print:
+                print(msg % env_path)
 
             # .. but use logging nevertheless.
             logger.info(msg, env_path)
@@ -44,7 +45,8 @@ def populate_environment_from_file(env_path:'str') -> 'None':
                 if isinstance(value, (int, float)):
                     value = str(value)
                 os.environ[key] = value
-                print(msg % (key, env_path))
+                if use_print:
+                    print(msg % (key, env_path))
                 logger.info(msg, key, env_path)
 
 # ################################################################################################################################
