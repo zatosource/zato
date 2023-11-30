@@ -52,7 +52,7 @@ vscode_launch_json = """
 
 vscode_settings_json = """
 {
-    "python.pythonPath": "/opt/zato/current/bin/python"
+    "python.defaultInterpreterPath": "/opt/zato/current/bin/python"
 }
 """
 
