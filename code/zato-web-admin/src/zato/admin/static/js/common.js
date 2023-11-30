@@ -676,6 +676,12 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow)
 
     let _remove_multirow = remove_multirow === undefined ? true : remove_multirow;
 
+    var div_id = String.format('#{0}-div', action)
+    var div = $(div_id);
+
+    $(div_id + ' select[id*="service"]').chosen('destroy');
+    $(div_id + ' select[id*="security"]').chosen('destroy');
+
     // Clean up all the multirow elements that were possibly
     // automatically generated for that form.
     if(_remove_multirow) {
@@ -692,8 +698,6 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow)
         $.fn.zato.form.populate(form, instance, name_prefix, id_prefix);
     }
 
-    var div_id = String.format('#{0}-div', action)
-    var div = $(div_id);
     div.prev().text(title); // prev() is a .ui-dialog-titlebar
     div.dialog('open');
 
