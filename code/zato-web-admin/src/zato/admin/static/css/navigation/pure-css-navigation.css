@@ -65,7 +65,7 @@ ul {
 }
 /* Level 2 and beyond */
  .pure-css-nav > nav ul ul {
-    background-color:#d9d9d9;
+    padding-top: 0.51rem;
 }
  .pure-css-nav > nav ul ul li a {
     font-size:0.75rem;
