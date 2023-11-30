@@ -589,7 +589,8 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
 $.fn.zato.data_table.on_change_password_submit = function() {
 
     var form = $('#change_password-form');
-    if(form.data('bValidator').isValid()) {
+    //if(form.data('bValidator').isValid()) {
+    if(true) {
         var _callback = function(data, status) {
             $.fn.zato.data_table.row_updated($('#id_change_password-id').val());
             $.fn.zato.data_table._on_submit_complete(data, status);
@@ -655,6 +656,7 @@ $.fn.zato.data_table.setup_change_password = function() {
         return false;
     });
 
+    /*
     if($.fn.zato.data_table.password_required) {
         $('#id_password1').attr('data-bvalidator', 'required,equalto[id_password2]');
         $('#id_password1').attr('data-bvalidator-msg', 'Both fields are required and need to be equal');
@@ -666,8 +668,10 @@ $.fn.zato.data_table.setup_change_password = function() {
         $('#id_password1').attr('data-bvalidator', 'equalto[id_password2],valempty');
         $('#id_password1').attr('data-bvalidator-msg', 'Fields need to be equal');
     }
+    */
 
-    change_password_form.bValidator();
+
+    // change_password_form.bValidator();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -862,7 +866,7 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
             options['onBeforeElementValidation'] = $.fn.zato.data_table.on_before_element_validation;
         }
 
-        $(form_id).bValidator(options);
+        //$(form_id).bValidator(options);
 
     });
 
