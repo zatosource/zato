@@ -1,8 +1,18 @@
 /* Pure CSS Navigation v1.8 by Adam Culpepper | @adamculpepper https://github.com/adamculpepper/pure-css-navigation */
 /* Customizable styles */
+
+.pure-css-nav {
+   background-color:#363636;
+   border-bottom: 3px solid #aaa;
+}
+
 .pure-css-nav > nav ul li a {
     color:#fff;
     text-shadow: 1px 1px 0 #000;
+}
+
+ul {
+   align-items: center;
 }
 
 /* Level 1 */
@@ -11,17 +21,20 @@
 }
 
 .pure-css-nav > nav ul li.first-level {
-   padding: 0.3rem;
    padding-top: 0.5rem;
    padding-bottom: 0.5rem;
+   padding-right: 0.55rem;
+   padding-left: 0.15rem;
+   text-align: center;
+   align-content: center;
 }
 
 .pure-css-nav > nav ul li.first-level a {
-   font-size: 0.75rem;
+   font-size: 0.7rem;
 }
 
  .pure-css-nav > nav ul li a {
-     font-size:0.8rem;
+     font-size:0.7rem;
 }
 /* Level 2 and beyond */
  .pure-css-nav > nav ul ul {
