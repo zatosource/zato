@@ -9,8 +9,12 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.custom.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.bvalidator-yc.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.getUrlParam.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/underscore-min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/stringformat.js"></script>
+
+    {% comment %} This is used in common.js {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/underscore-min.js"></script>
+
+    {% comment %} This is needed for its Class object {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/mootools/mootools.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -215,6 +219,8 @@
                                         <ul>
                                             <li class="child">
                                                 <a class="menu-link" href="{% url "cloud-confluence" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-confluence">Confluence</a>
+                                            </li>
+                                            <li class="child">
                                                 <a class="menu-link" href="{% url "cloud-jira" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-jira">Jira</a>
                                             </li>
                                         </ul>
