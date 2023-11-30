@@ -21,10 +21,10 @@ ul {
 }
 
 .pure-css-nav > nav ul li.first-level {
-   padding-top: 0.5rem;
-   padding-bottom: 0.5rem;
+   padding-top: 0.58rem;
+   padding-bottom: 0.58rem;
    padding-right: 0.55rem;
-   padding-left: 0.15rem;
+   padding-left: 0.3rem;
    text-align: center;
    align-content: center;
 }
