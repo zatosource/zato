@@ -4,15 +4,24 @@
     color:#fff;
     text-shadow: 1px 1px 0 #000;
 }
- .pure-css-nav > nav > ul > li {
-    margin-right:1px;
-}
+
 /* Level 1 */
  .pure-css-nav > nav ul li {
     background-color:#363636;
 }
+
+.pure-css-nav > nav ul li.first-level {
+   padding: 0.3rem;
+   padding-top: 0.5rem;
+   padding-bottom: 0.5rem;
+}
+
+.pure-css-nav > nav ul li.first-level a {
+   font-size: 0.75rem;
+}
+
  .pure-css-nav > nav ul li a {
-     font-size:1rem;
+     font-size:0.8rem;
 }
 /* Level 2 and beyond */
  .pure-css-nav > nav ul ul {
@@ -20,7 +29,7 @@
 }
  .pure-css-nav > nav ul ul li a {
     font-size:0.75rem;
-    padding:8px 7px;
+    padding:9px 7px;
 }
 /* Hover colors */
  .pure-css-nav > nav ul li:hover,
@@ -76,7 +85,7 @@
 }
  .pure-css-nav > nav ul > li {
     position:relative;
-    filter: drop-shadow(0 0 0.08rem #363636);
+    filter: drop-shadow(0 0 0.06rem #363636);
 }
 
 .pure-css-nav > nav ul > li.child {
