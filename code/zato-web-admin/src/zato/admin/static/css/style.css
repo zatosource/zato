@@ -530,3 +530,7 @@ div.page_prompt a.current {
 #data-table * tr.even:hover {
     background-color: #ff8;
 }
+
+.ui-icon {
+    display: none !important;
+}
