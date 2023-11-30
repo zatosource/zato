@@ -692,9 +692,18 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow)
         $.fn.zato.form.populate(form, instance, name_prefix, id_prefix);
     }
 
-    var div = $(String.format('#{0}-div', action));
+    var div_id = String.format('#{0}-div', action)
+    var div = $(div_id);
     div.prev().text(title); // prev() is a .ui-dialog-titlebar
     div.dialog('open');
+
+    var chosen_options = {
+        "allow_single_deselect": true,
+        "search_contains": true,
+    }
+
+    $(div_id + ' select[id*="service"]').chosen(chosen_options);
+    $(div_id + ' select[id*="security"]').chosen(chosen_options);
 }
 
 $.fn.zato.data_table.edit = function(action, title, id, remove_multirow) {
