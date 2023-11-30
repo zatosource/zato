@@ -6,6 +6,33 @@
    border-bottom: 3px solid #aaa;
 }
 
+div.nav-container {
+   background-color: #363636;
+   height:2rem
+}
+
+nav.menu {
+   background-color:#363636;
+}
+
+nav.menu ul.left {
+   float: left;
+   width: 60%;
+}
+
+nav.menu ul.right {
+   float: right;
+}
+
+li.right {
+   float: right;
+}
+
+nav.menu ul.left,
+nav.menu ul.right {
+   background-color:#363636;
+}
+
 .pure-css-nav > nav ul li a {
     color:#fff;
     text-shadow: 1px 1px 0 #000;
@@ -23,7 +50,7 @@ ul {
 .pure-css-nav > nav ul li.first-level {
    padding-top: 0.58rem;
    padding-bottom: 0.58rem;
-   padding-right: 0.55rem;
+   padding-right: 0.42rem;
    padding-left: 0.3rem;
    text-align: center;
    align-content: center;
@@ -134,7 +161,7 @@ ul {
  .pure-css-nav > nav ul li,
  .pure-css-nav > nav ul li a,
  .pure-css-nav > nav ul li a:first-child:nth-last-child(2):after {
-    transition:all 200ms linear;
+    transition:all 50ms linear;
 }
  .pure-css-nav.mobile-nav {
     transition:all 0.5s linear;
