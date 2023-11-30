@@ -26,7 +26,7 @@
  .pure-css-nav > nav ul li:hover,
  .pure-css-nav > nav ul li li:hover > a:first-child:nth-last-child(2),
  .pure-css-nav > nav > ul > li:hover > a:first-child:nth-last-child(2) {
-    background-color:#464646;
+    background-color:#494949;
 }
 /* Font icon arrow colors */
  .pure-css-nav > nav > ul > li > a:first-child:nth-last-child(2):after {
@@ -76,6 +76,7 @@
 }
  .pure-css-nav > nav ul > li {
     position:relative;
+    filter: drop-shadow(0 0 0.08rem #363636);
 }
 
 .pure-css-nav > nav ul > li.child {
