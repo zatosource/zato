@@ -393,6 +393,10 @@ p.big-notice {
     display: none
 }
 
+select {
+    -webkit-appearance: listbox !important;
+}
+
 .ui-widget {
     box-shadow: 1px 1px 10px #000
 }
