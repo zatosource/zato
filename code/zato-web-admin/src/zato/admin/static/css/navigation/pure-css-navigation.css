@@ -70,7 +70,7 @@ ul {
 }
 /* Level 2 and beyond */
  .pure-css-nav > nav ul ul {
-    padding-top: 0.51rem;
+    padding-top: 0.16rem;
 }
  .pure-css-nav > nav ul ul li a {
     font-size:0.75rem;
