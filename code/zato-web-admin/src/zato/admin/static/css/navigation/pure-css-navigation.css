@@ -58,8 +58,13 @@ ul {
 
 .pure-css-nav > nav ul li.first-level a {
    font-size: 0.7rem;
+   background-color: transparent;
 }
 
+.pure-css-nav > nav ul li.first-level a:hover {
+   font-size: 0.7rem;
+   background-color: transparent;
+}
  .pure-css-nav > nav ul li a {
      font-size:0.7rem;
 }
