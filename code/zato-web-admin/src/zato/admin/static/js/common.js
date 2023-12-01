@@ -611,7 +611,7 @@ $.fn.zato.data_table.change_password = function(id, title, label, _label_lower) 
     var form_id = '#change_password-form';
 
     // Cleanup comes first
-    $.fn.zato.cleanup_form_css_required(form_id);
+    $.fn.zato.cleanup_form_css_attention(form_id);
 
     var _title = title;
     var _label = label;
@@ -648,7 +648,7 @@ $.fn.zato.data_table.setup_change_password = function() {
     var form_id = '#change_password-form';
 
     // Cleanup comes first
-    $.fn.zato.cleanup_form_css_required(form_id);
+    $.fn.zato.cleanup_form_css_attention(form_id);
 
     $('#change_password-div').dialog({
         autoOpen: false,
@@ -691,15 +691,14 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow)
     var form_id = String.format('#{0}-form', action)
 
     // Cleanup comes first
-    $.fn.zato.cleanup_form_css_required(form_id);
+    $.fn.zato.cleanup_form_css_attention(form_id);
 
     let _remove_multirow = remove_multirow === undefined ? true : remove_multirow;
 
     var div_id = String.format('#{0}-div', action)
     var div = $(div_id);
 
-    $(div_id + ' select[id*="service"]').chosen('destroy');
-    $(div_id + ' select[id*="security"]').chosen('destroy');
+    $.fn.zato.cleanup_chosen(div_id);
 
     // Clean up all the multirow elements that were possibly
     // automatically generated for that form.
@@ -1259,6 +1258,8 @@ $.fn.zato.to_json = function(item) {
     return JSON.stringify(item);
 }
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.blink_elem = function(elem) {
     $(elem).fadeTo(300, 0.3, function(){$(this).fadeTo(100, 1.0);});
 }
@@ -1276,13 +1277,22 @@ $.fn.zato.draw_attention_to = function(elem) {
     $.fn.zato.add_css_attention(elem)
 }
 
-$.fn.zato.cleanup_form_css_required = function(form_id) {
+$.fn.zato.cleanup_form_css_attention = function(parent_id) {
 
-    let form = $(form_id);
-    let to_cleanup_patterns = [$.fn.zato.jquery_pattern_required, $.fn.zato.jquery_pattern_equals];
+    let parent = $(parent_id);
+
+    let to_cleanup_patterns = [
+        $.fn.zato.jquery_pattern_required,
+        $.fn.zato.jquery_pattern_equals,
+        "input[name$='weeks']",
+        "input[name$='days']",
+        "input[name$='hours']",
+        "input[name$='minutes']",
+        "input[name$='seconds']",
+    ];
 
     $.each(to_cleanup_patterns, function(idx, pattern) {
-        form.find(pattern).each(function(idx, elem) {
+        parent.find(pattern).each(function(idx, elem) {
 
             $.fn.zato.remove_css_attention(elem);
             $.fn.zato.remove_elem_placeholder(elem);
@@ -1320,7 +1330,10 @@ $.fn.zato.turn_selects_into_chosen = function(parent_id) {
 
 }
 
-$.fn.zato.cleanup_chosen = function(parent) {
+$.fn.zato.cleanup_chosen = function(parent_id) {
+
+    $(parent_id + ' select[id*="service"]').chosen('destroy');
+    $(parent_id + ' select[id*="security"]').chosen('destroy');
 
 }
 
