@@ -538,3 +538,8 @@ div.page_prompt a.current {
 .ui-icon {
     display: none !important;
 }
+
+input[data-zato-validator-required="required"]::placeholder {
+    opacity: 0.64;
+    color: #000;
+  }
