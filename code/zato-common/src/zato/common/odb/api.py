@@ -756,10 +756,8 @@ class ODBManager(SessionWrapper):
                     elif item.sec_type == SEC_DEF_TYPE.TLS_CHANNEL_SEC:
                         result[target].sec_def.value = dict(parse_tls_channel_security_definition(sec_def.value))
 
-                    elif item.sec_type == SEC_DEF_TYPE.XPATH_SEC:
+                    elif item.sec_type == SEC_DEF_TYPE.NTLM:
                         result[target].sec_def.username = sec_def.username
-                        result[target].sec_def.username_expr = sec_def.username_expr
-                        result[target].sec_def.password_expr = sec_def.password_expr
 
                 else:
                     result[target].sec_def = ZATO_NONE
