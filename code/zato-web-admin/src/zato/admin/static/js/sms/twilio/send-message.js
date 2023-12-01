@@ -4,7 +4,7 @@ $(document).ready(function() {
         $.fn.zato.data_table.set_field_required('#' + name);
     });
 
-    $('#send_message_form').bValidator();
+    $('#send_message_form').QQQ-zvalidator();
 
     var _callback = function(data, status, xhr){
         var success = status == 'success';

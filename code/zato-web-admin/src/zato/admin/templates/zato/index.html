@@ -203,12 +203,14 @@
                                             {% if False %}<li class="child"><a class="menu-link" href="{% url "email-smtp" %}?cluster={{ cluster_id|default:"1" }}">Microsoft 365 Notifications</a></li>{% endif %}
                                         </ul>
                                     </li>
+                                    {% if False %}
                                     <li class="child">
                                         <a class="menu-link" href="#">SMS &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "sms-twilio" %}?cluster={{ cluster_id|default:"1" }}">Twilio</a></li>
                                         </ul>
                                     </li>
+                                    {% endif %}
                                 </ul>
                             </li>
                             <li class="first-level">
