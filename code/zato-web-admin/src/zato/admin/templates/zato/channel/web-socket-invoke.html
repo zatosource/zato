@@ -29,10 +29,10 @@
                 <form novalidate id="send_message_form" action="{% url "channel-web-socket-invoke-action" pub_client_id %}?cluster={{ cluster_id }}" method="post">
                 {% csrf_token %}
                     Request:
-                    <textarea style="width:100%; height:250px" id="request_data" name="request_data">Hello from Zato!</textarea>
+                    <textarea style="width:100%; height:90px" id="request_data" name="request_data">Hello from Zato!</textarea>
                     <br/><br/>
                     Response:
-                    <textarea style="width:100%; height:250px" id="response_data" name="response_data"></textarea>
+                    <textarea style="width:100%; height:90px" id="response_data" name="response_data"></textarea>
 
                     <table style="width:100%">
                         <tr>
