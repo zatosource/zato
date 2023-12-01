@@ -1275,6 +1275,33 @@ $.fn.zato.is_form_valid = function(form) {
 
     var form = $(form);
 
+    var tippy_instance = tippy(".ui-dialog-titlebar", {
+        theme: 'light',
+        content: "Hello",
+        showOnCreate: true,
+        hideOnClick: 'true',
+        placement: 'right',
+        delay: [0, 200000],
+        sticky: true,
+        flipOnUpdate: true,
+        inlinePositioning: true,
+        getReferenceClientRect: () => ({
+            width: 100,
+            height: 100,
+            left: 100,
+            right: 200,
+            top: 100,
+            bottom: 200,
+          }),
+        zzzonShown(instance) {
+            $('div[id^="tippy"]').filter(function(idx, elem) {
+                if(elem.style.cssText.includes("0px, 0px")) {
+                    $(elem).remove();
+                }
+            });
+        }
+    });
+
     //$("a[hreflang|='en']" ).css( "border", "3px dotted green" );
     form.find("*[data-zato-validator-required='required'" ).each(function(idx, elem) {
 
@@ -1294,16 +1321,6 @@ $.fn.zato.is_form_valid = function(form) {
                 "border": "2px solid fffcc8 !important",
                 "background-color": "#fffcc8 !important",
             });
-
-            alert(elem_id);
-
-            let tippy_instance = tippy("#" + elem_id, {
-                theme: 'light',
-                content: msg,
-                showOnCreate: true,
-                hideOnClick: 'toggle',
-                delay: [0, 200000],
-              });
 
             /*
             tippy("#" + chosen_elem_id, {
