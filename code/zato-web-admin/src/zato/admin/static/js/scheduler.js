@@ -38,7 +38,8 @@ $.fn.zato.scheduler.data_table.before_submit_hook = function(form) {
             $.fn.zato.draw_attention_to(minutes_field);
             $.fn.zato.draw_attention_to(seconds_field);
 
-            weeks_field.get(0).setCustomValidity("At least one of these fields is required: Weeks, Days, Hours, Minutes or Seconds");
+            let msg = "At least one of these fields is required: Weeks, Days, Hours, Minutes or Seconds"
+            weeks_field.get(0).setCustomValidity(msg);
             form.get(0).reportValidity();
 
             is_valid = false;
@@ -184,20 +185,14 @@ $.fn.zato.scheduler.data_table.on_submit = function(action, job_type) {
 
 $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
 
-    // Remove any potential message displayed previously
-    var id_interval_based_weeks = $('#id_'+ action +'-interval_based-weeks');
-    var validator = id_interval_based_weeks.data('bValidator');
-
-    if(validator) {
-        validator.removeMsg(id_interval_based_weeks);
-    }
+    $.fn.zato.cleanup_chosen("");
+    $.fn.zato.cleanup_form_css_attention(".data-popup");
 
     var title = String.format('{0} {1} job',
         action.capitalize(), $.fn.zato.scheduler.titles[job_type]);
 
     if(action == 'edit') {
 
-        var form = $('#' + action +'-form-'+ job_type);
         var name_prefix = String.format('{0}-{1}-', action, job_type);
         var id_prefix = '#id_' + name_prefix
         var instance = $.fn.zato.data_table.data[id];
@@ -206,9 +201,13 @@ $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
 
     }
 
-    var div = $('#'+ action +'-'+ job_type);
+    var div_id = action +'-'+ job_type;
+    var div = $('#'+ div_id);
+
     div.prev().text(title); // prev() is a .ui-dialog-titlebar
     div.dialog('open');
+
+    $.fn.zato.turn_selects_into_chosen("");
 }
 
 // /////////////////////////////////////////////////////////////////////////////
