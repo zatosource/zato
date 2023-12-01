@@ -720,13 +720,7 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow)
     div.prev().text(title); // prev() is a .ui-dialog-titlebar
     div.dialog('open');
 
-    var chosen_options = {
-        "allow_single_deselect": true,
-        "search_contains": true,
-    }
-
-    $(div_id + ' select[id*="service"]').chosen(chosen_options);
-    $(div_id + ' select[id*="security"]').chosen(chosen_options);
+    $.fn.zato.turn_selects_into_chosen(div_id);
 }
 
 $.fn.zato.data_table.edit = function(action, title, id, remove_multirow) {
@@ -1269,12 +1263,17 @@ $.fn.zato.blink_elem = function(elem) {
     $(elem).fadeTo(300, 0.3, function(){$(this).fadeTo(100, 1.0);});
 }
 
-$.fn.zato.set_css_attention = function(elem) {
+$.fn.zato.add_css_attention = function(elem) {
     $(elem).addClass("zato-validator-attention");
 }
 
 $.fn.zato.remove_css_attention = function(elem) {
     $(elem).removeClass("zato-validator-attention");
+}
+
+$.fn.zato.draw_attention_to = function(elem) {
+    $.fn.zato.blink_elem(elem);
+    $.fn.zato.add_css_attention(elem)
 }
 
 $.fn.zato.cleanup_form_css_required = function(form_id) {
@@ -1309,6 +1308,22 @@ $.fn.zato.remove_elem_placeholder = function(elem) {
     $(elem).attr("placeholder", "");
 }
 
+$.fn.zato.turn_selects_into_chosen = function(parent_id) {
+
+    var chosen_options = {
+        "allow_single_deselect": true,
+        "search_contains": true,
+    }
+
+    $(parent_id + ' select[id*="service"]').chosen(chosen_options);
+    $(parent_id + ' select[id*="security"]').chosen(chosen_options);
+
+}
+
+$.fn.zato.cleanup_chosen = function(parent) {
+
+}
+
 $.fn.zato.is_form_valid = function(form) {
 
     // Local variables
@@ -1327,14 +1342,20 @@ $.fn.zato.is_form_valid = function(form) {
         var elem_equals_attr = elem.attr($.fn.zato.validate_equals_attr);
 
         if(elem_equals_attr) {
+
             should_be_equal_to_id = elem_equals_attr.replace("equals-", "");
             should_be_equal_to = $("#" + should_be_equal_to_id);
+            should_be_equal_to_msg = should_be_equal_to.attr($.fn.zato.validate_equals_msg_attr);
+
             if(should_be_equal_to) {
                 var should_be_equal_to_value = should_be_equal_to.val();
                 if(elem_value != should_be_equal_to_value) {
 
+                    should_be_equal_to.get(0).setCustomValidity(should_be_equal_to_msg);
+                    form.get(0).reportValidity();
+
                     $.fn.zato.blink_elem(elem);
-                    $.fn.zato.set_css_attention(elem);
+                    $.fn.zato.add_css_attention(elem);
 
                     is_valid = false;
                 }
@@ -1360,8 +1381,8 @@ $.fn.zato.is_form_valid = function(form) {
                 $.fn.zato.blink_elem(chosen_elems);
             }
 
-            $.fn.zato.set_css_attention(elem);
-            $.fn.zato.set_css_attention(chosen_elems);
+            $.fn.zato.add_css_attention(elem);
+            $.fn.zato.add_css_attention(chosen_elems);
 
             $.fn.zato.add_elem_placeholder(elem, msg);
 
