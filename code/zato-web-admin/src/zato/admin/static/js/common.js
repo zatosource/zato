@@ -589,7 +589,7 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
 $.fn.zato.data_table.on_change_password_submit = function() {
 
     var form = $('#change_password-form');
-    if(form.data('bValidator').isValid()) {
+    if($.fn.zato.is_form_valid(form)) {
         var _callback = function(data, status) {
             $.fn.zato.data_table.row_updated($('#id_change_password-id').val());
             $.fn.zato.data_table._on_submit_complete(data, status);
@@ -656,6 +656,9 @@ $.fn.zato.data_table.setup_change_password = function() {
     });
 
     if($.fn.zato.data_table.password_required) {
+
+        $('#id_password1').attr('data-zato-validator-required', 'required');
+
         $('#id_password1').attr('data-bvalidator', 'required,equalto[id_password2]');
         $('#id_password1').attr('data-bvalidator-msg', 'Both fields are required and need to be equal');
 
@@ -663,11 +666,16 @@ $.fn.zato.data_table.setup_change_password = function() {
         $('#id_password2').attr('data-bvalidator-msg', 'This is a required field');
     }
     else {
+
+        $('#id_password1').attr('data-zato-validator-required', 'required');
+        $('#id_password2').attr('data-zato-validator-required', 'required');
+
+        $('#id_password1').attr('data-zato-validator-msg', 'This is a required field');
+        $('#id_password2').attr('data-zato-validator-msg', 'This is a required field');
+
         $('#id_password1').attr('data-bvalidator', 'equalto[id_password2],valempty');
         $('#id_password1').attr('data-bvalidator-msg', 'Fields need to be equal');
     }
-
-    change_password_form.bValidator();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -798,8 +806,8 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.set_field_required = function(field_id) {
-    $(field_id).attr('data-bvalidator', 'required');
-    $(field_id).attr('data-bvalidator-msg', 'This is a required field');
+    $(field_id).attr('data-zato-validator-required', 'required');
+    $(field_id).attr('data-zato-validator-msg', 'This is a required field');
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -862,7 +870,7 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
             options['onBeforeElementValidation'] = $.fn.zato.data_table.on_before_element_validation;
         }
 
-        $(form_id).bValidator(options);
+        //$(form_id).bValidator(options);
 
     });
 
@@ -1049,7 +1057,9 @@ $.fn.zato.data_table.on_submit = function(action) {
         }
     }
 
-    return $.fn.zato.data_table._on_submit(form, callback);
+    if($.fn.zato.is_form_valid(form)) {
+        return $.fn.zato.data_table._on_submit(form, callback);
+    }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1254,6 +1264,64 @@ $.fn.zato.slugify = function(text) {
 
 $.fn.zato.to_json = function(item) {
     return JSON.stringify(item);
+}
+
+$.fn.zato.is_form_valid = function(form) {
+
+    /*
+    $(field_id).attr('data-bvalidator', 'required');
+    $(field_id).attr('data-bvalidator-msg', 'This is a required field');
+    */
+
+    var form = $(form);
+
+    //$("a[hreflang|='en']" ).css( "border", "3px dotted green" );
+    form.find("*[data-zato-validator-required='required'" ).each(function(idx, elem) {
+
+        var elem = $(elem)
+        let elem_id = elem.attr("id")
+        let elem_value = elem.val()
+
+        if(!elem_value) {
+
+            let msg = elem.attr("data-zato-validator-msg");
+            let chosen_elem_id = elem_id + "_chosen";
+            let chosen_elems = $("#" + chosen_elem_id + " .chosen-single");
+
+            chosen_elems.css("background-color", "#fffcc8");
+
+            elem.css({
+                "border": "2px solid fffcc8 !important",
+                "background-color": "#fffcc8 !important",
+            });
+
+            alert(elem_id);
+
+            let tippy_instance = tippy("#" + elem_id, {
+                theme: 'light',
+                content: msg,
+                showOnCreate: true,
+                hideOnClick: 'toggle',
+                delay: [0, 200000],
+              });
+
+            /*
+            tippy("#" + chosen_elem_id, {
+                theme: 'light',
+                content: msg,
+                showOnCreate: true,
+                hideOnClick: 'toggle',
+                delay: [0, 200000],
+              });
+              */
+
+            elem.attr("placeholder", msg);
+        }
+    })
+
+    //.css("border", "3px dotted green");
+
+    return false;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
