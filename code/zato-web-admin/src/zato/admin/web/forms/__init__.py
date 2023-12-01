@@ -20,7 +20,7 @@ from zato.common.api import AuditLog, DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, 
 
 # ################################################################################################################################
 
-INITIAL_CHOICES_DICT = {'': 'Select a value'}
+INITIAL_CHOICES_DICT = {'': '----------'}
 INITIAL_CHOICES = list(iteritems(INITIAL_CHOICES_DICT))[0]
 
 # ################################################################################################################################
