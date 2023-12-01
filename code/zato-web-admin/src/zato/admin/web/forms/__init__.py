@@ -100,9 +100,8 @@ def add_sec_tls_ca_cert_id_select(req, form):
     tls_ca_cert_list = get_tls_ca_cert_list(req.zato.client, req.zato.cluster)
 
     form.fields['sec_tls_ca_cert_id'].choices = []
-    form.fields['sec_tls_ca_cert_id'].choices.append(INITIAL_CHOICES)
-    form.fields['sec_tls_ca_cert_id'].choices.append([ZATO_NONE, 'Skip validation'])
     form.fields['sec_tls_ca_cert_id'].choices.append([ZATO_DEFAULT, 'Default bundle'])
+    form.fields['sec_tls_ca_cert_id'].choices.append([ZATO_NONE, 'Skip validation'])
 
     for value, label in tls_ca_cert_list.items():
         form.fields['sec_tls_ca_cert_id'].choices.append([value, label])

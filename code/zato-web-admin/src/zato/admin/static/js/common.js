@@ -871,11 +871,6 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
             form_id = '#create-form';
         }
 
-        var options = {};
-        if($.fn.zato.data_table.on_before_element_validation) {
-            options['onBeforeElementValidation'] = $.fn.zato.data_table.on_before_element_validation;
-        }
-
     });
 
     /* Assign form submition handlers.
