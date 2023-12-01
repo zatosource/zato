@@ -32,18 +32,4 @@
 <body {% if user.is_authenticated %}onload="brython(){% endif %}">
     {% block body %}{% endblock %}
 </body>
-<script>
-    const validation = new window.JustValidate('#change_password-form');
-    validation
-  .addField('#id_password2', [
-    {
-      rule: 'minLength',
-      value: 3,
-    },
-    {
-      rule: 'maxLength',
-      value: 30,
-    },
-  ])
-</script>
 </html>
