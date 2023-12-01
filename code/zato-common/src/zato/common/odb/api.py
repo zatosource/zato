@@ -36,7 +36,7 @@ from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import query
 from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, VaultConnection
+     JWT, NTLM, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, VaultConnection
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
@@ -671,6 +671,7 @@ class ODBManager(SessionWrapper):
                 SEC_DEF_TYPE.APIKEY: APIKeySecurity,
                 SEC_DEF_TYPE.BASIC_AUTH: HTTPBasicAuth,
                 SEC_DEF_TYPE.JWT: JWT,
+                SEC_DEF_TYPE.NTLM: NTLM,
                 SEC_DEF_TYPE.OAUTH: OAuth,
                 SEC_DEF_TYPE.TLS_CHANNEL_SEC: TLSChannelSecurity,
                 SEC_DEF_TYPE.VAULT: VaultConnection,
