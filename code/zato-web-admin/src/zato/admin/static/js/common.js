@@ -455,18 +455,6 @@ $.fn.zato.data_table.cleanup = function(form_id) {
         div_id = parts[0] + parts[1];
     }
     $(div_id).dialog('close');
-
-    let form = $(form_id);
-
-    form.find($.fn.zato.pattern_required).each(function(idx, elem) {
-
-        $.fn.zato.remove_css_required(elem);
-        $.fn.zato.remove_elem_placeholder(elem);
-
-        let chosen_elems = $.fn.zato.get_chosen_elems_by_elem(elem);
-        $.fn.zato.remove_css_required(chosen_elems);
-
-    });
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -619,6 +607,12 @@ $.fn.zato.data_table.on_change_password_submit = function() {
 
 $.fn.zato.data_table.change_password = function(id, title, label, _label_lower) {
 
+    // Local variables
+    var form_id = '#change_password-form';
+
+    // Cleanup comes first
+    $.fn.zato.cleanup_form_css_required(form_id);
+
     var _title = title;
     var _label = label;
     var _label_lower = _label_lower;
@@ -650,7 +644,11 @@ $.fn.zato.data_table.change_password = function(id, title, label, _label_lower) 
 
 $.fn.zato.data_table.setup_change_password = function() {
 
+    // Local variables
     var form_id = '#change_password-form';
+
+    // Cleanup comes first
+    $.fn.zato.cleanup_form_css_required(form_id);
 
     $('#change_password-div').dialog({
         autoOpen: false,
@@ -669,31 +667,31 @@ $.fn.zato.data_table.setup_change_password = function() {
     });
 
     if($.fn.zato.data_table.password_required) {
+        $("#id_password1").attr($.fn.zato.validate_required_attr, "required");
+        $("#id_password2").attr($.fn.zato.validate_required_attr, "required");
 
-        $('#id_password1').attr('data-zato-validator-required', 'required');
-
-        $('#id_password1').attr('data-bvalidator', 'required,equalto[id_password2]');
-        $('#id_password1').attr('data-bvalidator-msg', 'Both fields are required and need to be equal');
-
-        $('#id_password2').attr('data-bvalidator', 'required');
-        $('#id_password2').attr('data-bvalidator-msg', 'This is a required field');
+        $('#id_password1').attr($.fn.zato.validate_required_msg_attr, $.fn.zato.validate_required_msg);
+        $('#id_password2').attr($.fn.zato.validate_required_msg_attr, $.fn.zato.validate_required_msg);
     }
+
     else {
+        $("#id_password1").attr($.fn.zato.validate_equals_attr, "equals-id_password2");
+        $("#id_password1").attr($.fn.zato.validate_equals_msg_attr, "Passwords" + $.fn.zato.validate_equals_msg_suffix);
 
-        $('#id_password1').attr('data-zato-validator-required', 'required');
-        $('#id_password2').attr('data-zato-validator-required', 'required');
-
-        $('#id_password1').attr('data-zato-validator-msg', 'This is a required field');
-        $('#id_password2').attr('data-zato-validator-msg', 'This is a required field');
-
-        $('#id_password1').attr('data-bvalidator', 'equalto[id_password2],valempty');
-        $('#id_password1').attr('data-bvalidator-msg', 'Fields need to be equal');
+        $("#id_password2").attr($.fn.zato.validate_equals_attr, "equals-id_password1");
+        $("#id_password2").attr($.fn.zato.validate_equals_msg_attr, "Passwords" + $.fn.zato.validate_equals_msg_suffix);
     }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow) {
+
+    // Local variables
+    var form_id = String.format('#{0}-form', action)
+
+    // Cleanup comes first
+    $.fn.zato.cleanup_form_css_required(form_id);
 
     let _remove_multirow = remove_multirow === undefined ? true : remove_multirow;
 
@@ -711,7 +709,7 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow)
 
     if(action == 'edit') {
 
-        var form = $(String.format('#{0}-form', action));
+        var form = $(form_id);
         var name_prefix = action + '-';
         var id_prefix = String.format('#id_{0}', name_prefix);
         var instance = $.fn.zato.data_table.data[id];
@@ -819,8 +817,8 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.set_field_required = function(field_id) {
-    $(field_id).attr('data-zato-validator-required', 'required');
-    $(field_id).attr('data-zato-validator-msg', 'This is a required field');
+    $(field_id).attr($.fn.zato.validate_required_attr, 'required');
+    $(field_id).attr($.fn.zato.validate_required_msg_attr, $.fn.zato.validate_required_msg);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -848,11 +846,6 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
 
     // Change password pop-up
     $.fn.zato.data_table.setup_change_password();
-
-    /* Prepare the validators here so that it's all still a valid HTML
-    from the http://users.skynet.be/mgueury/mozilla/ point of view
-    even with bValidator's custom attributes.
-    */
 
     var field_id = '';
     var form_id = '';
@@ -882,8 +875,6 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
         if($.fn.zato.data_table.on_before_element_validation) {
             options['onBeforeElementValidation'] = $.fn.zato.data_table.on_before_element_validation;
         }
-
-        //$(form_id).bValidator(options);
 
     });
 
@@ -1283,12 +1274,29 @@ $.fn.zato.blink_elem = function(elem) {
     $(elem).fadeTo(300, 0.3, function(){$(this).fadeTo(100, 1.0);});
 }
 
-$.fn.zato.set_css_required = function(elem) {
-    $(elem).addClass("zato-validator-required");
+$.fn.zato.set_css_attention = function(elem) {
+    $(elem).addClass("zato-validator-attention");
 }
 
-$.fn.zato.remove_css_required = function(elem) {
-    $(elem).removeClass("zato-validator-required");
+$.fn.zato.remove_css_attention = function(elem) {
+    $(elem).removeClass("zato-validator-attention");
+}
+
+$.fn.zato.cleanup_form_css_required = function(form_id) {
+
+    let form = $(form_id);
+    let to_cleanup_patterns = [$.fn.zato.jquery_pattern_required, $.fn.zato.jquery_pattern_equals];
+
+    $.each(to_cleanup_patterns, function(idx, pattern) {
+        form.find(pattern).each(function(idx, elem) {
+
+            $.fn.zato.remove_css_attention(elem);
+            $.fn.zato.remove_elem_placeholder(elem);
+
+            let chosen_elems = $.fn.zato.get_chosen_elems_by_elem(elem);
+            $.fn.zato.remove_css_attention(chosen_elems);
+        });
+    });
 }
 
 $.fn.zato.get_chosen_elems_by_elem = function(elem) {
@@ -1308,16 +1316,46 @@ $.fn.zato.remove_elem_placeholder = function(elem) {
 
 $.fn.zato.is_form_valid = function(form) {
 
+    // Local variables
     var form = $(form);
 
-    form.find($.fn.zato.pattern_required).each(function(idx, elem) {
+    // Assume the form is valid by default
+    var is_valid = true;
+
+    // Confirm that all the elements required to be equal to other elements indeed are
+
+    // Confirm that all the required elements are provided
+    form.find($.fn.zato.jquery_pattern_equals).each(function(idx, elem) {
+
+        var elem = $(elem)
+        let elem_value = elem.val()
+        var elem_equals_attr = elem.attr($.fn.zato.validate_equals_attr);
+
+        if(elem_equals_attr) {
+            should_be_equal_to_id = elem_equals_attr.replace("equals-", "");
+            should_be_equal_to = $("#" + should_be_equal_to_id);
+            if(should_be_equal_to) {
+                var should_be_equal_to_value = should_be_equal_to.val();
+                if(elem_value != should_be_equal_to_value) {
+
+                    $.fn.zato.blink_elem(elem);
+                    $.fn.zato.set_css_attention(elem);
+
+                    is_valid = false;
+                }
+            }
+        }
+    });
+
+    // Confirm that all the required elements are provided
+    form.find($.fn.zato.jquery_pattern_required).each(function(idx, elem) {
 
         var elem = $(elem)
         let elem_value = elem.val()
 
         if(!elem_value) {
 
-            let msg = elem.attr("data-zato-validator-msg");
+            let msg = elem.attr($.fn.zato.validate_required_msg_attr);
             let chosen_elems = $.fn.zato.get_chosen_elems_by_elem(elem);
 
             if(!chosen_elems.length) {
@@ -1327,15 +1365,18 @@ $.fn.zato.is_form_valid = function(form) {
                 $.fn.zato.blink_elem(chosen_elems);
             }
 
-            $.fn.zato.set_css_required(elem);
-            $.fn.zato.set_css_required(chosen_elems);
+            $.fn.zato.set_css_attention(elem);
+            $.fn.zato.set_css_attention(chosen_elems);
 
             $.fn.zato.add_elem_placeholder(elem, msg);
 
+            // If we are here, it means that the form is not valid
+            is_valid = false;
         }
     })
 
-    return false;
+    // Now, we can return the result to our caller
+    return is_valid;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1345,7 +1386,16 @@ $.fn.zato.empty_table_cell = String.format('<td>{0}</td>', $.fn.zato.empty_value
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.pattern_required = "*[data-zato-validator-required='required'";
+$.fn.zato.validate_required_attr     = "data-zato-validator-required";
+$.fn.zato.validate_required_msg_attr = "data-zato-validator-required-msg";
+$.fn.zato.validate_required_msg      = "This is a required field";
+
+$.fn.zato.validate_equals_attr       = "data-zato-validator-equals";
+$.fn.zato.validate_equals_msg_attr   = "data-zato-validator-equals-msg";
+$.fn.zato.validate_equals_msg_suffix = " need to be the same";
+
+$.fn.zato.jquery_pattern_required = "*[data-zato-validator-required='required'";
+$.fn.zato.jquery_pattern_equals   = "*[data-zato-validator-equals^='equals'";
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
