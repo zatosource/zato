@@ -543,3 +543,8 @@ input[data-zato-validator-required="required"]::placeholder {
     opacity: 0.64;
     color: #000;
   }
+
+.zato-validator-required {
+    border: 2px dotted red !important;
+    background-color: #fffcc8 !important;
+}

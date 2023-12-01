@@ -442,6 +442,7 @@ $.fn.zato.data_table.cleanup = function(form_id) {
 
     /* Clear out the values and close the dialog.
     */
+
     $.fn.zato.data_table.reset_form(form_id);
     var div_id = '';
     var parts = form_id.split('form-');
@@ -454,6 +455,18 @@ $.fn.zato.data_table.cleanup = function(form_id) {
         div_id = parts[0] + parts[1];
     }
     $(div_id).dialog('close');
+
+    let form = $(form_id);
+
+    form.find($.fn.zato.pattern_required).each(function(idx, elem) {
+
+        $.fn.zato.remove_css_required(elem);
+        $.fn.zato.remove_elem_placeholder(elem);
+
+        let chosen_elems = $.fn.zato.get_chosen_elems_by_elem(elem);
+        $.fn.zato.remove_css_required(chosen_elems);
+
+    });
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1266,50 +1279,61 @@ $.fn.zato.to_json = function(item) {
     return JSON.stringify(item);
 }
 
-$.fn.zato.is_form_valid = function(form) {
+$.fn.zato.blink_elem = function(elem) {
+    $(elem).fadeTo(300, 0.3, function(){$(this).fadeTo(100, 1.0);});
+}
 
-    /*
-    $(field_id).attr('data-bvalidator', 'required');
-    $(field_id).attr('data-bvalidator-msg', 'This is a required field');
-    */
+$.fn.zato.set_css_required = function(elem) {
+    $(elem).addClass("zato-validator-required");
+}
+
+$.fn.zato.remove_css_required = function(elem) {
+    $(elem).removeClass("zato-validator-required");
+}
+
+$.fn.zato.get_chosen_elems_by_elem = function(elem) {
+    let elem_id = $(elem).attr("id");
+    let chosen_elem_id = elem_id + "_chosen";
+    let chosen_elems = $("#" + chosen_elem_id + " .chosen-single");
+    return chosen_elems;
+}
+
+$.fn.zato.add_elem_placeholder = function(elem, msg) {
+    $(elem).attr("placeholder", msg);
+}
+
+$.fn.zato.remove_elem_placeholder = function(elem) {
+    $(elem).attr("placeholder", "");
+}
+
+$.fn.zato.is_form_valid = function(form) {
 
     var form = $(form);
 
-    form.find("*[data-zato-validator-required='required'" ).each(function(idx, elem) {
+    form.find($.fn.zato.pattern_required).each(function(idx, elem) {
 
         var elem = $(elem)
-        let elem_id = elem.attr("id")
         let elem_value = elem.val()
 
         if(!elem_value) {
 
             let msg = elem.attr("data-zato-validator-msg");
-            let chosen_elem_id = elem_id + "_chosen";
-            let chosen_elems = $("#" + chosen_elem_id + " .chosen-single");
+            let chosen_elems = $.fn.zato.get_chosen_elems_by_elem(elem);
 
             if(!chosen_elems.length) {
-                elem.fadeTo(300, 0.3, function(){$(this).fadeTo(100, 1.0);});
+                $.fn.zato.blink_elem(elem);
             }
             else {
-                chosen_elems.fadeTo(300, 0.3, function(){$(this).fadeTo(100, 1.0);});
+                $.fn.zato.blink_elem(chosen_elems);
             }
 
+            $.fn.zato.set_css_required(elem);
+            $.fn.zato.set_css_required(chosen_elems);
 
-            elem.css({
-                "border": "2px dotted red",
-                "background-color": "#fffcc8",
-            });
+            $.fn.zato.add_elem_placeholder(elem, msg);
 
-            chosen_elems.css({
-                "border": "2px dotted red",
-                "background-color": "#fffcc8",
-            });
-
-            elem.attr("placeholder", msg);
         }
     })
-
-    //.css("border", "3px dotted green");
 
     return false;
 }
@@ -1318,6 +1342,10 @@ $.fn.zato.is_form_valid = function(form) {
 
 $.fn.zato.empty_value = '<span class="form_hint">---</span>';
 $.fn.zato.empty_table_cell = String.format('<td>{0}</td>', $.fn.zato.empty_value);
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.pattern_required = "*[data-zato-validator-required='required'";
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
