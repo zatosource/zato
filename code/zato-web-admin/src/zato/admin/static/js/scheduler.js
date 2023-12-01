@@ -16,30 +16,33 @@ $.fn.zato.scheduler.data_table.before_submit_hook = function(form) {
     var form = $(form);
     var is_valid = true;
 
-    var weeks_field   = form.find("input[name$='weeks']");
-    var days_field    = form.find("input[name$='days']");
-    var hours_field   = form.find("input[name$='hours']");
-    var minutes_field = form.find("input[name$='minutes']");
-    var seconds_field = form.find("input[name$='seconds']");
+    if(form.attr("id").includes("interval_based")) {
 
-    var weeks   = weeks_field.val();
-    var days    = days_field.val();
-    var hours   = hours_field.val();
-    var minutes = minutes_field.val();
-    var seconds = seconds_field.val();
+        var weeks_field   = form.find("input[name$='weeks']");
+        var days_field    = form.find("input[name$='days']");
+        var hours_field   = form.find("input[name$='hours']");
+        var minutes_field = form.find("input[name$='minutes']");
+        var seconds_field = form.find("input[name$='seconds']");
 
-    if(!(weeks || days || hours || minutes || seconds)) {
+        var weeks   = weeks_field.val();
+        var days    = days_field.val();
+        var hours   = hours_field.val();
+        var minutes = minutes_field.val();
+        var seconds = seconds_field.val();
 
-        $.fn.zato.draw_attention_to(weeks_field);
-        $.fn.zato.draw_attention_to(days_field);
-        $.fn.zato.draw_attention_to(hours_field);
-        $.fn.zato.draw_attention_to(minutes_field);
-        $.fn.zato.draw_attention_to(seconds_field);
+        if(!(weeks || days || hours || minutes || seconds)) {
 
-        weeks_field.get(0).setCustomValidity("At least one of these fields is required: Weeks, Days, Hours, Minutes or Seconds");
-        form.get(0).reportValidity();
+            $.fn.zato.draw_attention_to(weeks_field);
+            $.fn.zato.draw_attention_to(days_field);
+            $.fn.zato.draw_attention_to(hours_field);
+            $.fn.zato.draw_attention_to(minutes_field);
+            $.fn.zato.draw_attention_to(seconds_field);
 
-        is_valid = false;
+            weeks_field.get(0).setCustomValidity("At least one of these fields is required: Weeks, Days, Hours, Minutes or Seconds");
+            form.get(0).reportValidity();
+
+            is_valid = false;
+        }
     }
 
     if(!$.fn.zato.is_form_valid(form)) {
