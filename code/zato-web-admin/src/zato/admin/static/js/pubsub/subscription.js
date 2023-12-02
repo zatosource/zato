@@ -44,7 +44,7 @@ $(document).ready(function() {
     // Maps values from selects to IDs of elements that should be made required
     const required_map = {
         "rest": ["#id_out_http_method", "#id_out_rest_http_soap_id"],
-        "srv":  ["#id_service_id",    "#id_edit-service_id"],
+        "srv":  ["#id_service_id",      "#id_edit-service_id"],
     }
 
     $('#id_endpoint_id').change(function() {
@@ -68,6 +68,7 @@ $(document).ready(function() {
         $.fn.zato.toggle_tr_blocks(true, this.value, true);
         $.fn.zato.make_field_required_on_change(required_map, this.value);
         $.fn.zato.pubsub.set_current_endpoints();
+        $.fn.zato.pubsub.on_endpoint_changed();
     });
 
     // Populate initial endpoints
@@ -146,7 +147,7 @@ $.fn.zato.pubsub.populate_endpoint_topics = function(topic_sub_list) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.populate_endpoint_topics_cb = function(data, status) {
+$.fn.zato.pubsub.populate_endpoint_topics_callback = function(data, status) {
     var success = status == 'success';
     if(success) {
         var topic_sub_list = $.parseJSON(data.responseText);
@@ -166,7 +167,7 @@ $.fn.zato.pubsub.on_endpoint_changed = function() {
     if(endpoint_id) {
         var cluster_id = $('#cluster_id').val();
         var url = String.format('/zato/pubsub/endpoint/topic-sub-list/{0}/cluster/{1}/', endpoint_id, cluster_id);
-        $.fn.zato.post(url, $.fn.zato.pubsub.populate_endpoint_topics_cb, null, null, true);
+        $.fn.zato.post(url, $.fn.zato.pubsub.populate_endpoint_topics_callback, null, null, true);
     }
     else {
         $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
@@ -296,6 +297,7 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 $.fn.zato.pubsub.subscription.create = function() {
     $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
     $.fn.zato.data_table._create_edit('create', 'Create pub/sub subscriptions', null);
+    $.fn.zato.pubsub.on_endpoint_changed();
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
