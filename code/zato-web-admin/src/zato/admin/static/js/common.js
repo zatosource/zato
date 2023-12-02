@@ -294,6 +294,11 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
         id_prefix = '';
     }
 
+    // Remove any previously selected options from this form
+    $("option:selected").each(function() {
+        $(this).removeAttr('selected');
+    });
+
     var name = '';
     var value = '';
     var form_elem_name = null;
@@ -1449,6 +1454,41 @@ $.fn.zato.is_form_valid = function(form) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.toggle_tr_blocks = function(is_create, current_value) {
+
+    if(is_create) {
+        var prefix = "";
+        var suffix = "";
+    }
+    else {
+        var prefix = "edit-";
+        var suffix = "-edit";
+    }
+
+    // Local variables
+    var class_name_main = "zato-toggle"+ suffix;
+    var class_name_visible = "zato-toggle-visible"+ suffix;
+    var class_name_hidden = "zato-toggle-hidden"+ suffix;
+    var class_to_make_visible = "zato-toggle-"+ current_value + suffix;
+
+    // First, hide everything
+    $("." + class_name_main).each(function() {
+        $(this).removeClass(class_name_visible);
+        $(this).addClass(class_name_hidden);
+    });
+
+    // Now, make visible what ought to be enabled
+    $("." + class_to_make_visible).each(function() {
+        let elem = $(this);
+        elem.removeClass(class_name_hidden);
+        elem.addClass(class_name_visible);
+        $.fn.zato.blink_elem(elem);
+    });
+
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.validate_required_attr     = "data-zato-validator-required";
 $.fn.zato.validate_required_msg_attr = "data-zato-validator-required-msg";
 $.fn.zato.validate_required_msg      = "This is a required field";
@@ -1466,14 +1506,5 @@ $.fn.zato.jquery_pattern_equals   = "*[data-zato-validator-equals^='equals'";
 
 $.fn.zato.empty_value = '<span class="form_hint">---</span>';
 $.fn.zato.empty_table_cell = String.format('<td>{0}</td>', $.fn.zato.empty_value);
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-// For Brython
-
-window.zato_select_data_target = null;
-window.zato_select_data_target_items = {};
-window.zato_dyn_form_skip_edit = null;
-window.zato_dyn_form_skip_clear_field = [];
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

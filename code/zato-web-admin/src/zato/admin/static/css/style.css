@@ -539,6 +539,10 @@ div.page_prompt a.current {
     display: none !important;
 }
 
+.chosen-container {
+    min-width:100%;
+}
+
 input[data-zato-validator-required="required"]::placeholder {
     opacity: 0.64;
     color: #000;
@@ -547,4 +551,15 @@ input[data-zato-validator-required="required"]::placeholder {
 .zato-validator-attention {
     border: 2px dotted red !important;
     background-color: #fffcc8 !important;
+}
+
+.zato-toggle-hidden,
+.zato-toggle-hidden-edit {
+    display: none;
+}
+
+.zato-toggle-visible,
+.zato-toggle-visible-edit
+ {
+    visibility: visible;
 }
