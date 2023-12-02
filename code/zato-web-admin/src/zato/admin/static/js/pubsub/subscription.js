@@ -157,6 +157,7 @@ $.fn.zato.pubsub.on_endpoint_changed = function() {
 
 $.fn.zato.pubsub.on_endpoint_type_changed = function() {
 
+    /*
     var validator = $('#create-form').data('bValidator');
     validator.reset();
 
@@ -168,6 +169,7 @@ $.fn.zato.pubsub.on_endpoint_type_changed = function() {
         delivery_method.attr('data-bvalidator', '');
         validator.removeMsg(delivery_method);
     }
+    */
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -210,9 +212,9 @@ $.fn.zato.pubsub.subscription.cleanup_hook = function(form, _unused_prefix) {
 
     $('#multi-select-div').html(blank);
 
-    var disabled_input = $('#multi-select-input');
-    validator.removeMsg(disabled_input);
-    disabled_input.css('background-color', '#e6e6e6');
+    //var disabled_input = $('#multi-select-input');
+    //validator.removeMsg(disabled_input);
+    //disabled_input.css('background-color', '#e6e6e6');
 
     return true;
 }
@@ -288,7 +290,6 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.subscription.create = function() {
-    window.zato_run_dyn_form_handler();
     $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
     $.fn.zato.data_table._create_edit('create', 'Create pub/sub subscriptions', null);
 }

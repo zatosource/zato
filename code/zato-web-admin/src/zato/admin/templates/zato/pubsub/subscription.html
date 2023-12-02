@@ -22,26 +22,6 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript">
-    window.zato_dyn_form_default = 'rest';
-    window.zato_dyn_form_elem_name = 'endpoint_type';
-    window.zato_dyn_form_skip_edit = true;
-    window.zato_dyn_form_skip_clear_field = ['id_out_http_method'];
-    window.zato_dyn_form_rows = {
-        'rest': ['out_rest_http_soap_id', 'out_http_method'],
-        'srv': [],
-    }
-
-    window.zato_select_data_target = 'endpoint_id';
-    window.zato_select_data_target_items = {
-        'endpoint_id': {
-            'rest': {{ select_data_target.rest|safe }},
-            'srv': {{ select_data_target.srv|safe }},
-        }
-    }
-
-    </script>
-
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript">
     $.fn.zato.data_table.get_columns = function() {
         return [
 
@@ -245,44 +225,18 @@
                             </td>
                         </tr>
 
-                        {% comment %} --------- AMQP --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_out_amqp_id" style="display:none">
-                            <td style="vertical-align:middle; width:12%">AMQP conn.</td>
-                            <td>{{ create_form.out_amqp_id }}</td>
-                        </tr>
-                        <tr id="dyn_form_row_id_amqp_details" style="display:none">
-                            <td style="vertical-align:middle; width:12%">AMQP exchange<br/>and routing key</td>
-                            <td>
-                                {{ create_form.amqp_exchange }}
-                                {{ create_form.amqp_routing_key }}
-                            </td>
-                        </tr>
-
-                        {% comment %} --------- Files --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_files_directory_list" style="display:none">
-                            <td style="vertical-align:middle; width:12%">Local directories</td>
-                            <td>{{ create_form.files_directory_list }}</td>
-                        </tr>
-
-                        {% comment %} --------- FTP --------- {% endcomment %}
-                        <tr>
-                        <tr id="dyn_form_row_id_ftp_directory_list" style="display:none">
-                            <td style="vertical-align:middle; width:12%">FTP directories</td>
-                            <td>{{ create_form.ftp_directory_list }}</td>
-                        </tr>
-
-                        {% comment %} --------- REST/SOAP --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_out_http_method" style="display:none">
+                        {% comment %} --------- REST --------- {% endcomment %}
+                        <tr id="dyn_form_row_id_out_http_method" style="dispxlay:none">
                             <td style="vertical-align:middle; width:12%">HTTP method</td>
                             <td>{{ create_form.out_http_method }}</td>
                         </tr>
 
                         {% comment %} --------- REST --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_out_rest_http_soap_id" style="display:none">
+                        <tr id="dyn_form_row_id_out_rest_http_soap_id" style="dixsplay:none">
                             <td style="vertical-align:middle; width:12%">REST conn.</td>
                             <td>{{ create_form.out_rest_http_soap_id }}</td>
                         </tr>
-                        <tr id="dyn_form_row_id_rest_delivery_endpoint" style="display:none">
+                        <tr id="dyn_form_row_id_rest_delivery_endpoint" style="dixsplay:none">
                             <td style="vertical-align:middle; width:12%">REST callback</td>
                             <td>{{ create_form.rest_delivery_endpoint }}</td>
                         </tr>
@@ -291,63 +245,6 @@
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ create_form.service_id }} </td>
                         </tr>
-
-                        {% comment %} --------- SMS - Twilio --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_sms_twilio_from" style="display:none">
-                            <td style="vertical-align:middle">SMS from</td>
-                            <td>{{ create_form.sms_twilio_from }} </td>
-                        </tr>
-                        <tr id="dyn_form_row_id_sms_twilio_to_list" style="display:none">
-                            <td style="vertical-align:middle">SMS to</td>
-                            <td>{{ create_form.sms_twilio_to_list }} </td>
-                        </tr>
-
-                        {% comment %} --------- SMTP --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_out_smtp_id" style="display:none">
-                            <td style="vertical-align:middle">SMTP conn.</td>
-                            <td>
-                                {{ create_form.out_smtp_id }}
-                                |
-                                <label>
-                                HTML? {{ create_form.smtp_is_html }}
-                                </label>
-                            </td>
-                        </tr>
-                        <tr id="dyn_form_row_id_smtp_subject" style="display:none">
-                            <td style="vertical-align:middle">SMTP subject</td>
-                            <td>
-                                {{ create_form.smtp_subject }}
-                            </td>
-                        </tr>
-                        <tr id="dyn_form_row_id_smtp_from" style="display:none">
-                            <td style="vertical-align:middle">SMTP from</td>
-                            <td>
-                                {{ create_form.smtp_from }}
-                            </td>
-                        </tr>
-                        <tr id="dyn_form_row_id_smtp_to_list" style="display:none">
-                            <td style="vertical-align:middle">SMTP to</td>
-                            <td>
-                                {{ create_form.smtp_to_list }}
-                            </td>
-                        </tr>
-                        <tr id="dyn_form_row_id_smtp_body" style="display:none">
-                            <td style="vertical-align:middle">SMTP body</td>
-                            <td>
-                                {{ create_form.smtp_body }}
-                            </td>
-                        </tr>
-
-                        {% comment %} --------- SOAP --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_out_soap_http_soap_id" style="display:none">
-                            <td style="vertical-align:middle; width:12%">SOAP outconn</td>
-                            <td>{{ create_form.out_soap_http_soap_id }}</td>
-                        </tr>
-                        <tr id="dyn_form_row_id_soap_delivery_endpoint" style="display:none">
-                            <td style="vertical-align:middle; width:12%">SOAP callback</td>
-                            <td>{{ create_form.soap_delivery_endpoint }}</td>
-                        </tr>
-
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
