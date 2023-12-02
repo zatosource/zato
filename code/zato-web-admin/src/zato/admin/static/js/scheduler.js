@@ -44,6 +44,13 @@ $.fn.zato.scheduler.data_table.before_submit_hook = function(form) {
 
             is_valid = false;
         }
+        else {
+            $.fn.zato.cleanup_elem_css_attention(weeks_field);
+            $.fn.zato.cleanup_elem_css_attention(days_field);
+            $.fn.zato.cleanup_elem_css_attention(hours_field);
+            $.fn.zato.cleanup_elem_css_attention(minutes_field);
+            $.fn.zato.cleanup_elem_css_attention(seconds_field);
+        }
     }
 
     if(!$.fn.zato.is_form_valid(form)) {
