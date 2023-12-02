@@ -1277,6 +1277,15 @@ $.fn.zato.draw_attention_to = function(elem) {
     $.fn.zato.add_css_attention(elem)
 }
 
+$.fn.zato.cleanup_elem_css_attention = function(elem) {
+
+    $.fn.zato.remove_css_attention(elem);
+    $.fn.zato.remove_elem_placeholder(elem);
+
+    let chosen_elems = $.fn.zato.get_chosen_elems_by_elem(elem);
+    $.fn.zato.remove_css_attention(chosen_elems);
+}
+
 $.fn.zato.cleanup_form_css_attention = function(parent_id) {
 
     let parent = $(parent_id);
@@ -1293,12 +1302,7 @@ $.fn.zato.cleanup_form_css_attention = function(parent_id) {
 
     $.each(to_cleanup_patterns, function(idx, pattern) {
         parent.find(pattern).each(function(idx, elem) {
-
-            $.fn.zato.remove_css_attention(elem);
-            $.fn.zato.remove_elem_placeholder(elem);
-
-            let chosen_elems = $.fn.zato.get_chosen_elems_by_elem(elem);
-            $.fn.zato.remove_css_attention(chosen_elems);
+            $.fn.zato.cleanup_elem_css_attention(elem);
         });
     });
 }
@@ -1345,9 +1349,9 @@ $.fn.zato.is_form_valid = function(form) {
     // Assume the form is valid by default
     var is_valid = true;
 
-    // Confirm that all the elements required to be equal to other elements indeed are
+    $.fn.zato.cleanup_form_css_attention("");
 
-    // Confirm that all the required elements are provided
+    // Confirm that all the elements required to be equal to other elements indeed are
     form.find($.fn.zato.jquery_pattern_equals).each(function(idx, elem) {
 
         var elem = $(elem)
@@ -1401,6 +1405,9 @@ $.fn.zato.is_form_valid = function(form) {
 
             // If we are here, it means that the form is not valid
             is_valid = false;
+        }
+        else {
+            $.fn.zato.cleanup_elem_css_attention(elem);
         }
     })
 
