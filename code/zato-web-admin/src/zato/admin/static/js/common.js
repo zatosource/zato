@@ -1362,9 +1362,16 @@ $.fn.zato.turn_selects_into_chosen = function(parent_id) {
         "search_contains": true,
     }
 
-    $(parent_id + ' select[id*="service"]').chosen(chosen_options);
-    $(parent_id + ' select[id*="security"]').chosen(chosen_options);
+    // If a select has an ID beginning with one of this, it will be turned into a chosen element.
+    var prefix_list = [
+        "service",
+        "security",
+        "id_out_rest_http_soap_id",
+    ]
 
+    $.each(prefix_list, function(ignored, prefix) {
+        $(parent_id + ' select[id*="'+ prefix +'"]').chosen(chosen_options);
+    })
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
