@@ -38,9 +38,8 @@ $.fn.zato.scheduler.data_table.before_submit_hook = function(form) {
             $.fn.zato.draw_attention_to(minutes_field);
             $.fn.zato.draw_attention_to(seconds_field);
 
-            let msg = "At least one of these fields is required: Weeks, Days, Hours, Minutes or Seconds"
-            weeks_field.get(0).setCustomValidity(msg);
-            form.get(0).reportValidity();
+            let msg = "At least one of these fields is required: Weeks, Days, Hours, Minutes or Seconds";
+            $.fn.zato.show_native_tooltip(weeks_field, msg);
 
             is_valid = false;
         }
@@ -200,6 +199,7 @@ $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
         var id_prefix = '#id_' + name_prefix
         var instance = $.fn.zato.data_table.data[id];
 
+        var form = $('#' + action +'-form-'+ job_type);
         $.fn.zato.form.populate(form, instance, name_prefix, id_prefix);
 
     }
