@@ -288,7 +288,7 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.subscription.create = function() {
-    //window.zato_run_dyn_form_handler();
+    window.zato_run_dyn_form_handler();
     $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
     $.fn.zato.data_table._create_edit('create', 'Create pub/sub subscriptions', null);
 }
