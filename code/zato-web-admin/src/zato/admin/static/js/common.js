@@ -1539,7 +1539,7 @@ $.fn.zato.make_field_required_on_change = function(required_map, current_value) 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.set_select_values_on_source_change = function(source_id, target_id, target_items) {
+$.fn.zato.set_select_values_on_source_change = function(source_id, target_id, target_items, needs_blink) {
 
     var target = $("#" + target_id);
     var current_value = $('#' + source_id).val();
@@ -1560,9 +1560,11 @@ $.fn.zato.set_select_values_on_source_change = function(source_id, target_id, ta
     // .. let chosen know that it needs to rebuild its elements ..
     target.trigger('chosen:updated');
 
-    // .. and let the user know that the element changed.
-    let chosen_elems = $.fn.zato.get_chosen_elems_by_elem(target);
-    $.fn.zato.blink_elem(chosen_elems);
+    // .. optionally, let the user know that the element changed.
+    if(needs_blink) {
+        let chosen_elems = $.fn.zato.get_chosen_elems_by_elem(target);
+        $.fn.zato.blink_elem(chosen_elems);
+    };
 };
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

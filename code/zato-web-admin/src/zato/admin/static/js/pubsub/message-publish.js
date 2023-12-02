@@ -36,6 +36,6 @@ $(document).ready(function() {
 
     var form = $('#message-publish-form');
 
-    form.bValidator()
+    //form.bValidator()
     form.submit($.fn.zato.pubsub.message.publish.validate_save);
 })

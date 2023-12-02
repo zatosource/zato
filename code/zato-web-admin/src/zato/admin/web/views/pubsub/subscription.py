@@ -14,6 +14,7 @@ from bunch import Bunch
 
 # Zato
 from zato.admin.web import from_utc_to_user
+from zato.admin.web.forms import Initial_Choices_Dict_Attrs
 from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, slugify
 from zato.common.api import PUBSUB
@@ -51,7 +52,7 @@ class Index(_Index):
 
         return item # type: ignore
 
-    def handle(self):
+    def handle(self): # type: ignore
 
         data_list = Bunch()
         data_list.security_list = []
@@ -62,7 +63,7 @@ class Index(_Index):
         edit_form = None
 
         for endpoint_type in PUBSUB.ENDPOINT_TYPE():
-            select_data_target[endpoint_type] = []
+            select_data_target[endpoint_type] = [Initial_Choices_Dict_Attrs]
 
         if self.req.zato.cluster_id:
 
