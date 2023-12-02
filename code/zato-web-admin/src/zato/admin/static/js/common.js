@@ -755,7 +755,7 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
 
     $.each(form.serializeArray(), function(idx, elem) {
         name = elem.name.replace(prefix, '');
-        html_elem = $('#id_' + prefix + name);
+        html_elem = $('#id_' + prefix + $.fn.zato.slugify(name));
         tag_name = html_elem.prop('tagName');
 
         if(tag_name && html_elem.prop('type') == 'checkbox') {
@@ -1556,7 +1556,6 @@ $.fn.zato.set_select_values_on_source_change = function(source_id, target_id, ta
         option.text(this.name);
         target.append(option);
     });
-
 
     // .. let chosen know that it needs to rebuild its elements ..
     target.trigger('chosen:updated');
