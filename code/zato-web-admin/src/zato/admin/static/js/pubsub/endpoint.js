@@ -24,13 +24,43 @@ $(document).ready(function() {
 
     $("#id_endpoint_type").on("change", function() {
         $.fn.zato.toggle_tr_blocks(true, this.value, true);
+        $.fn.zato.pubsub.endpoint.make_field_required(this.value);
     });
 
     $("#id_edit-endpoint_type").on("change", function() {
         $.fn.zato.toggle_tr_blocks(false, this.value, true);
+        $.fn.zato.pubsub.endpoint.make_field_required(this.value);
     });
 
+    // We show REST by default so these fields are required
+    $.fn.zato.pubsub.endpoint.make_field_required("rest");
 })
+
+$.fn.zato.pubsub.endpoint.make_field_required = function(current_value) {
+
+    // Maps values from selects to IDs of elements that should be made required
+    const required_map = {
+        "rest": ["#id_security_id",   "#id_edit-security_id"],
+        "wsx":  ["#id_ws_channel_id", "#id_edit-ws_channel_id"],
+        "srv":  ["#id_service_id",    "#id_edit-service_id"],
+    }
+
+    // Clean up create fields ..
+    $.fn.zato.data_table.remove_field_required("#id_security_id");
+    $.fn.zato.data_table.remove_field_required("#id_ws_channel_id");
+    $.fn.zato.data_table.remove_field_required("#id_service_id");
+
+    // .. same goes for edit fields ..
+    $.fn.zato.data_table.remove_field_required("#id_edit-security_id");
+    $.fn.zato.data_table.remove_field_required("#id_edit-ws_channel_id");
+    $.fn.zato.data_table.remove_field_required("#id_edit-service_id");
+
+    // .. now, make the input one required.
+    let field_list = required_map[current_value];
+    $.each(field_list, function(ignored, field_id) {
+        $.fn.zato.data_table.set_field_required(field_id);
+    });
+}
 
 $.fn.zato.pubsub.endpoint.clear_forms = function() {
     // Hide everything ..
