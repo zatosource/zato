@@ -104,7 +104,7 @@
                         <td>
                             {% if item.client_html %}
                                 {% if item.is_internal %}<span class="form_hint">{% endif %}
-                                {{ item.client_html|safe }}
+                                    {{ item.client_html|safe }}
                                 {% if item.is_internal %}</span>{% endif %}
                             {% else %}
                                 {% if item.is_internal and item.endpoint_type == "srv" %}
