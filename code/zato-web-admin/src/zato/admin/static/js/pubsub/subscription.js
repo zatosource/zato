@@ -64,12 +64,15 @@ $(document).ready(function() {
     });
 
     $('#id_endpoint_type').change(function() {
-        $.fn.zato.pubsub.on_endpoint_type_changed();
         $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
         $.fn.zato.toggle_tr_blocks(true, this.value, true);
         $.fn.zato.make_field_required_on_change(required_map, this.value);
+        $.fn.zato.set_select_values_on_source_change(
+            window.zato_select_data_source_id,
+            window.zato_select_data_target_id,
+            window.zato_select_data_target_items
+        );
     });
-
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -159,25 +162,6 @@ $.fn.zato.pubsub.on_endpoint_changed = function() {
     else {
         $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
     }
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.pubsub.on_endpoint_type_changed = function() {
-
-    /*
-    var validator = $('#create-form').data('bValidator');
-    validator.reset();
-
-    var endpoint_type = $('#id_endpoint_type').val();
-
-    if(endpoint_type == 'srv') {
-
-        var delivery_method = $('#id_delivery_method');
-        delivery_method.attr('data-bvalidator', '');
-        validator.removeMsg(delivery_method);
-    }
-    */
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
