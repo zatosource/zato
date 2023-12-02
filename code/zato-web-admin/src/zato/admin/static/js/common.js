@@ -1305,7 +1305,7 @@ $.fn.zato.cleanup_form_css_attention = function(parent_id) {
 
 $.fn.zato.get_chosen_elems_by_elem = function(elem) {
     let elem_id = $(elem).attr("id");
-    let chosen_elem_id = elem_id + "_chosen";
+    let chosen_elem_id = elem_id.replaceAll("-", "_") + "_chosen";
     let chosen_elems = $("#" + chosen_elem_id + " .chosen-single");
     return chosen_elems;
 }
