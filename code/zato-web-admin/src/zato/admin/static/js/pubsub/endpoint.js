@@ -51,14 +51,15 @@ $.fn.zato.pubsub.endpoint.clear_forms = function() {
 
 $.fn.zato.pubsub.endpoint.create = function() {
     $.fn.zato.pubsub.endpoint.clear_forms();
-    window.zato_run_dyn_form_handler();
+    //window.zato_run_dyn_form_handler();
     $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub endpoint', null);
 }
 
 $.fn.zato.pubsub.endpoint.edit = function(id) {
     $.fn.zato.pubsub.endpoint.clear_forms();
     var instance = $.fn.zato.data_table.data[id]
-    window.zato_run_dyn_form_handler(instance.endpoint_type);
+    //window.zato_run_dyn_form_handler(instance.endpoint_type);
+    //$.fn.zato.turn_selects_into_chosen("#create-div");
     $.fn.zato.data_table._create_edit('edit', 'Update pub/sub endpoint', id);
 }
 
