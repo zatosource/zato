@@ -226,22 +226,19 @@
                         </tr>
 
                         {% comment %} --------- REST --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_out_http_method" style="dispxlay:none">
+                        <tr id="tr_toggle_out_http_method" class="zato-toggle zato-toggle-rest zato-toggle-visible">
                             <td style="vertical-align:middle; width:12%">HTTP method</td>
                             <td>{{ create_form.out_http_method }}</td>
                         </tr>
 
                         {% comment %} --------- REST --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_out_rest_http_soap_id" style="dixsplay:none">
+                        <tr id="tr_toggle_out_rest_http_soap_id" class="zato-toggle zato-toggle-rest zato-toggle-visible">
                             <td style="vertical-align:middle; width:12%">REST conn.</td>
                             <td>{{ create_form.out_rest_http_soap_id }}</td>
                         </tr>
-                        <tr id="dyn_form_row_id_rest_delivery_endpoint" style="dixsplay:none">
-                            <td style="vertical-align:middle; width:12%">REST callback</td>
-                            <td>{{ create_form.rest_delivery_endpoint }}</td>
-                        </tr>
+
                         {% comment %} --------- Service --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_service_id" style="display:none">
+                        <tr id="tr_toggle_service_id" class="zato-toggle zato-toggle-srv zato-toggle-hidden">
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ create_form.service_id }} </td>
                         </tr>

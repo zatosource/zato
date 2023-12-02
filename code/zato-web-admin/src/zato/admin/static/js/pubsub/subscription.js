@@ -41,6 +41,12 @@ $(document).ready(function() {
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.subscription.before_submit_hook;
     $.fn.zato.data_table.setup_forms(elems_required);
 
+    // Maps values from selects to IDs of elements that should be made required
+    const required_map = {
+        "rest": ["#id_out_http_method", "#id_out_rest_http_soap_id"],
+        "srv":  ["#id_service_id",    "#id_edit-service_id"],
+    }
+
     $('#id_endpoint_id').change(function() {
         $.fn.zato.pubsub.on_endpoint_changed();
     });
@@ -60,6 +66,8 @@ $(document).ready(function() {
     $('#id_endpoint_type').change(function() {
         $.fn.zato.pubsub.on_endpoint_type_changed();
         $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
+        $.fn.zato.toggle_tr_blocks(true, this.value, true);
+        $.fn.zato.make_field_required_on_change(required_map, this.value);
     });
 
 })
