@@ -24,7 +24,7 @@ var elems_required = [
     'delivery_batch_size',
     'delivery_max_retry',
     'wait_sock_err',
-    'wait_non_sock_err'
+    'wait_non_sock_err',
 ];
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -190,6 +190,10 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 
     var form = $(form);
     var is_valid = true;
+    var rest_chosen_pattern = "#id_out_rest_http_soap_id_chosen a";
+
+    // Clear anything potentially left over from the previous run
+    $.fn.zato.remove_css_attention(rest_chosen_pattern);
 
     if(!$.fn.zato.is_form_valid(form)) {
         is_valid = false;
@@ -221,9 +225,9 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
             is_valid = false;
         }
 
-        if(delivery_method == 'notify') {
+        if(delivery_method.val() == 'notify') {
             if(!out_rest_http_soap_id.val()) {
-                $.fn.zato.draw_attention_to(out_rest_http_soap_id);
+                $.fn.zato.draw_attention_to(rest_chosen_pattern);
                 is_valid = false;
             }
         }
