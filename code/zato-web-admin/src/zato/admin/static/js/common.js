@@ -254,7 +254,7 @@ $.fn.zato.post_with_user_message = function(url, on_callback_done) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /* Unlike jQuery's serializeArray, the function below simply returns all the
-   fields, regardless of whether they're disabled, checked or not etc. */
+    fields, regardless of whether they're disabled, checked or not etc. */
 $.fn.zato.form.serialize = function(form) {
 
     var out = {}
@@ -279,8 +279,8 @@ $.fn.zato.form.serialize = function(form) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* Takes a form (ID or a jQuery object), a business object and populates the
-   form with values read from the object. The 'name' and 'id' attributes of the
-   form's fields may use custom prefixes that will be taken into account accordingly.
+    form with values read from the object. The 'name' and 'id' attributes of the
+    form's fields may use custom prefixes that will be taken into account accordingly.
 */
 $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
 
@@ -431,7 +431,7 @@ $.fn.zato.data_table.reset_form = function(form_id) {
     var form = $(form_id);
 
     form.each(function() {
-      this.reset();
+        this.reset();
     });
 
     if(!($.fn.zato.startswith(form_id, '#create'))) {
@@ -1275,7 +1275,8 @@ $.fn.zato.to_json = function(item) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.blink_elem = function(elem) {
-    $(elem).fadeTo(300, 0.3, function(){$(this).fadeTo(100, 1.0);});
+    var elem = $(elem);
+    elem.fadeTo(300, 0.3, function(){$(this).fadeTo(100, 1.0);});
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1536,6 +1537,34 @@ $.fn.zato.make_field_required_on_change = function(required_map, current_value) 
     });
 }
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.set_select_values_on_source_change = function(source_id, target_id, target_items) {
+
+    var target = $("#" + target_id);
+    var current_value = $('#' + source_id).val();
+    var items_for_target = target_items[target_id];
+    var items_for_current_value = items_for_target[current_value];
+
+    // First, remove all the options from the select ..
+    target.find("option").remove();
+
+    // .. now, add the newest ones ..
+    $(items_for_current_value).each(function() {
+        let option = $("<option>");
+        option.attr("value", this.id);
+        option.text(this.name);
+        target.append(option);
+    });
+
+
+    // .. let chosen know that it needs to rebuild its elements ..
+    target.trigger('chosen:updated');
+
+    // .. and let the user know that the element changed.
+    let chosen_elems = $.fn.zato.get_chosen_elems_by_elem(target);
+    $.fn.zato.blink_elem(chosen_elems);
+};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
