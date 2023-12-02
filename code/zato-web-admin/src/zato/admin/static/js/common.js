@@ -1505,6 +1505,32 @@ $.fn.zato.toggle_tr_blocks = function(is_create, current_value, needs_blink) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.make_field_required_on_change = function(required_map, current_value) {
+
+    // All the IDs that we are aware of
+    var all_ids = [];
+
+    $.each(required_map, function(ignored, values) {
+        $.each(values, function(ignored, value) {
+            all_ids.push(value);
+        });
+    });
+
+    // Clean up all the fields first
+    $.each(all_ids, function(ignored, elem_id) {
+        $.fn.zato.data_table.remove_field_required(elem_id);
+    });
+
+    // .. now, make the input one required.
+    let field_list = required_map[current_value];
+    $.each(field_list, function(ignored, field_id) {
+        $.fn.zato.data_table.set_field_required(field_id);
+    });
+}
+
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.validate_required_attr     = "data-zato-validator-required";
 $.fn.zato.validate_required_msg_attr = "data-zato-validator-required-msg";
 $.fn.zato.validate_required_msg      = "This is a required field";
