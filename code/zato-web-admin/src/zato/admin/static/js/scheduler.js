@@ -91,10 +91,6 @@ $(document).ready(function() {
         });
     });
 
-    /* Prepare the validators here so that it's all still a valid HTML
-       even with bValidator's custom attributes.
-    */
-
     var one_time_attrs = ['name', 'start_date', 'service'];
     var interval_based_attrs = ['name', 'start_date', 'service'];
     var cron_style_attrs = ['name', 'start_date', 'cron_definition', 'service'];
