@@ -1367,6 +1367,7 @@ $.fn.zato.turn_selects_into_chosen = function(parent_id) {
         "service",
         "security",
         "id_out_rest_http_soap_id",
+        "endpoint_id",
     ]
 
     $.each(prefix_list, function(ignored, prefix) {
