@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -334,7 +334,7 @@ class SubscribeServiceImpl(_Subscribe):
                     sub_config.unsub_on_wsx_close = ctx.unsub_on_wsx_close
                     sub_config.ext_client_id = ctx.ext_client_id
 
-                    for name in sub_broker_attrs:
+                    for name in sub_broker_attrs: # type: ignore
                         sub_config[name] = getattr(ps_sub, name, None)
 
                     #
@@ -549,7 +549,7 @@ class CreateWSXSubscription(AdminService):
     """ Low-level interface for creating a new pub/sub subscription for current WebSocket connection.
     """
     class SimpleIO:
-        input_optional = 'topic_name', List('topic_name_list'), Bool('wrap_one_msg_in_list'), Int('delivery_batch_size')
+        input_optional:'any_' = 'topic_name', List('topic_name_list'), Bool('wrap_one_msg_in_list'), Int('delivery_batch_size')
         output_optional = 'sub_key', 'current_depth', 'sub_data'
         response_elem = None
         force_empty_keys = True
@@ -624,7 +624,7 @@ class CreateWSXSubscription(AdminService):
         # .. or a list of topics on was given on input.
         else:
             out = []
-            for key, value in responses.items():
+            for key, value in responses.items(): # type: ignore
                 out.append({
                     'topic_name': key,
                     'sub_key': value['sub_key'],
@@ -662,7 +662,7 @@ class UpdateInteractionMetadata(AdminService):
                     'last_interaction_type': req.last_interaction_type,
                     'last_interaction_details': req.last_interaction_details.encode('utf8'),
                     }).\
-                where(cast_('Column', PubSubSubscription.sub_key).in_(req.sub_key))
+                where(cast_('Column', PubSubSubscription.sub_key).in_(req.sub_key)) # type: ignore
             )
 
             # And commit it to the database

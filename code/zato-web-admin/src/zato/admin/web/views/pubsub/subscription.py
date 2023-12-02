@@ -41,7 +41,7 @@ class Index(_Index):
             'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role', 'endpoint_type_name')
         output_repeated = True
 
-    def on_before_append_item(self, item):
+    def on_before_append_item(self, item): # type: ignore
 
         if item.last_seen:
             item.last_seen = from_utc_to_user(item.last_seen+'+00:00', self.req.zato.user_profile)
@@ -49,7 +49,7 @@ class Index(_Index):
         if item.last_deliv_time:
             item.last_deliv_time = from_utc_to_user(item.last_deliv_time+'+00:00', self.req.zato.user_profile)
 
-        return item
+        return item # type: ignore
 
     def handle(self):
 
@@ -66,17 +66,17 @@ class Index(_Index):
 
         if self.req.zato.cluster_id:
 
-            for item in self.items:
-                targets = select_data_target[item.endpoint_type]
+            for item in self.items: # type: ignore
+                targets = select_data_target[item.endpoint_type] # type: ignore
 
                 id_key = 'id'
                 name_key = 'name'
-                endpoint_name = item.endpoint_name
+                endpoint_name = item.endpoint_name # type: ignore
 
                 targets.append({id_key:item.id, name_key:endpoint_name})
 
             # Security definitions
-            data_list.security_list = self.get_sec_def_list('basic_auth').def_items
+            data_list.security_list = self.get_sec_def_list('basic_auth').def_items # type: ignore
 
             # Services
             data_list.service_list = self.req.zato.client.invoke('zato.service.get-list', {
@@ -103,7 +103,7 @@ class Index(_Index):
             'select_data_target': select_data_target,
             'topic_name': topic_name,
             'topic_id': self.input.topic_id,
-        }
+        } # type: ignore
 
 # ################################################################################################################################
 
@@ -122,7 +122,7 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def populate_initial_input_dict(self, initial_input_dict):
+    def populate_initial_input_dict(self, initial_input_dict): # type: ignore
 
         topic_list = []
 
@@ -135,7 +135,7 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def post_process_return_data(self, return_data):
+    def post_process_return_data(self, return_data): # type: ignore
 
         response = self.req.zato.client.invoke('zato.pubsub.endpoint.get-endpoint-summary', {
             'cluster_id': self.req.zato.cluster_id,
@@ -158,7 +158,7 @@ class _CreateEdit(CreateEdit):
 
         return_data.update(response)
 
-    def success_message(self, _ignored_item):
+    def success_message(self, _ignored_item): # type: ignore
         return 'Pub/sub configuration updated successfully'
 
 # ################################################################################################################################
