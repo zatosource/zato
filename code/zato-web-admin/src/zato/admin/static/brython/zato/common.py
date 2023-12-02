@@ -52,6 +52,11 @@ class DynFormHandler(object):
         # Remove any old data
         self.clear()
 
+        func = window['zato_dyn_form_after_clear_func']
+        func('#create-div')
+
+        print(111, func)
+
         # Populate initial forms
         self.switch_to(self.current, '')
 
@@ -180,6 +185,6 @@ def zato_run_dyn_form_handler(dyn_form_default=None):
     handler = DynFormHandler(dyn_form_default)
     handler.run()
 
-window.zato_run_dyn_form_handler = zato_run_dyn_form_handler
+zwindow.zato_run_dyn_form_handler = zato_run_dyn_form_handler
 
 # ################################################################################################################################
