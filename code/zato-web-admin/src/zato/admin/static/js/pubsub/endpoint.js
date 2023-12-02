@@ -23,11 +23,11 @@ $(document).ready(function() {
     $.fn.zato.data_table.setup_forms(['name', 'role']);
 
     $("#id_endpoint_type").on("change", function() {
-        $.fn.zato.toggle_tr_blocks(true, this.value);
+        $.fn.zato.toggle_tr_blocks(true, this.value, true);
     });
 
     $("#id_edit-endpoint_type").on("change", function() {
-        $.fn.zato.toggle_tr_blocks(false, this.value);
+        $.fn.zato.toggle_tr_blocks(false, this.value, true);
     });
 
 })
@@ -49,6 +49,8 @@ $.fn.zato.pubsub.endpoint.create = function() {
 
 $.fn.zato.pubsub.endpoint.edit = function(id) {
     $.fn.zato.pubsub.endpoint.clear_forms();
+    var instance = $.fn.zato.data_table.data[id];
+    $.fn.zato.toggle_tr_blocks(false, instance.endpoint_type, false);
     $.fn.zato.data_table._create_edit('edit', 'Update pub/sub endpoint', id);
 }
 

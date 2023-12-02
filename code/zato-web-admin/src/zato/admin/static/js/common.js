@@ -1454,7 +1454,7 @@ $.fn.zato.is_form_valid = function(form) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.toggle_tr_blocks = function(is_create, current_value) {
+$.fn.zato.toggle_tr_blocks = function(is_create, current_value, needs_blink) {
 
     if(is_create) {
         var prefix = "";
@@ -1482,7 +1482,9 @@ $.fn.zato.toggle_tr_blocks = function(is_create, current_value) {
         let elem = $(this);
         elem.removeClass(class_name_hidden);
         elem.addClass(class_name_visible);
-        $.fn.zato.blink_elem(elem);
+        if(needs_blink) {
+            $.fn.zato.blink_elem(elem);
+        };
     });
 
 }
