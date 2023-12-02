@@ -821,6 +821,13 @@ $.fn.zato.data_table.set_field_required = function(field_id) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.data_table.remove_field_required = function(field_id) {
+    $(field_id).removeAttr($.fn.zato.validate_required_attr);
+    $(field_id).removeAttr($.fn.zato.validate_required_msg_attr, $.fn.zato.validate_required_msg);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.data_table.setup_forms = function(attrs) {
     var actions = ['create', 'edit'];
 
@@ -1280,7 +1287,8 @@ $.fn.zato.add_css_attention = function(elem) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.remove_css_attention = function(elem) {
-    $(elem).removeClass("zato-validator-attention");
+    elem = $(elem);
+    elem.removeClass("zato-validator-attention");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1473,8 +1481,14 @@ $.fn.zato.toggle_tr_blocks = function(is_create, current_value, needs_blink) {
 
     // First, hide everything
     $("." + class_name_main).each(function() {
-        $(this).removeClass(class_name_visible);
-        $(this).addClass(class_name_hidden);
+        let elem = $(this);
+        elem.removeClass(class_name_visible);
+        elem.addClass(class_name_hidden);
+        //$.fn.zato.cleanup_elem_css_attention(elem);
+
+        elem.find("select").each(function(idx, elem) {
+            $.fn.zato.remove_css_attention(elem);
+        });
     });
 
     // Now, make visible what ought to be enabled
