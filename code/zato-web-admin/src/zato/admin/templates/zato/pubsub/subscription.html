@@ -22,6 +22,19 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript">
+
+        window.zato_select_data_source_id = 'id_endpoint_type';
+        window.zato_select_data_target_id = 'id_endpoint_id';
+        window.zato_select_data_target_items = {
+            'id_endpoint_id': {
+                'rest': {{ select_data_target.rest|safe }},
+                'srv': {{ select_data_target.srv|safe }},
+            }
+        }
+
+        </script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript">
     $.fn.zato.data_table.get_columns = function() {
         return [
 
@@ -162,11 +175,31 @@
                             </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle; width:12%">Endpoint</td>
+                            <td class="zato-toggle zato-toggle-rest zato-toggle-srv zato-toggle-visible" style="vertical-align:middle; width:12%">Endpoint</td>
                             <td>
                                 {{ create_form.endpoint_id }}
                             </td>
                         </tr>
+
+                        {% comment %} --------- REST --------- {% endcomment %}
+                        <tr id="tr_toggle_out_rest_http_soap_id" class="zato-toggle zato-toggle-rest zato-toggle-visible">
+                            <td style="vertical-align:middle; width:12%">REST conn.</td>
+                            <td>{{ create_form.out_rest_http_soap_id }}</td>
+                        </tr>
+
+                        {% comment %} --------- REST --------- {% endcomment %}
+                        <tr id="tr_toggle_out_http_method" class="zato-toggle zato-toggle-rest zato-toggle-visible">
+                            <td style="vertical-align:middle; width:12%">HTTP method</td>
+                            <td>{{ create_form.out_http_method }}</td>
+                        </tr>
+
+                        <!--
+                        {% comment %} --------- Service --------- {% endcomment %}
+                        <tr id="tr_toggle_service_id" class="zato-toggle zato-toggle-srv zato-toggle-hidden">
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_form.service_id }} </td>
+                        </tr>
+                        -->
 
                         <tr>
                             <td style="vertical-align:middle; width:12%">Delivery method</td>
@@ -225,23 +258,6 @@
                             </td>
                         </tr>
 
-                        {% comment %} --------- REST --------- {% endcomment %}
-                        <tr id="tr_toggle_out_http_method" class="zato-toggle zato-toggle-rest zato-toggle-visible">
-                            <td style="vertical-align:middle; width:12%">HTTP method</td>
-                            <td>{{ create_form.out_http_method }}</td>
-                        </tr>
-
-                        {% comment %} --------- REST --------- {% endcomment %}
-                        <tr id="tr_toggle_out_rest_http_soap_id" class="zato-toggle zato-toggle-rest zato-toggle-visible">
-                            <td style="vertical-align:middle; width:12%">REST conn.</td>
-                            <td>{{ create_form.out_rest_http_soap_id }}</td>
-                        </tr>
-
-                        {% comment %} --------- Service --------- {% endcomment %}
-                        <tr id="tr_toggle_service_id" class="zato-toggle zato-toggle-srv zato-toggle-hidden">
-                            <td style="vertical-align:middle">Service</td>
-                            <td>{{ create_form.service_id }} </td>
-                        </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
