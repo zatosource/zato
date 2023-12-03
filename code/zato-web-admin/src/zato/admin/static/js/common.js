@@ -1276,7 +1276,9 @@ $.fn.zato.to_json = function(item) {
 
 $.fn.zato.blink_elem = function(elem) {
     var elem = $(elem);
-    elem.fadeTo(300, 0.3, function(){$(this).fadeTo(100, 1.0);});
+    //elem.fadeTo(300, 0.3, function(){$(this).fadeTo(100, 1.0);});
+    elem.removeClass("zato-blinking");
+    elem.addClass("zato-blinking", 1);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1290,6 +1292,7 @@ $.fn.zato.add_css_attention = function(elem) {
 $.fn.zato.remove_css_attention = function(elem) {
     elem = $(elem);
     elem.removeClass("zato-validator-attention");
+    elem.removeClass("zato-blinking");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
