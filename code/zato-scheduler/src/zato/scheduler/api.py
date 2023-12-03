@@ -228,12 +228,20 @@ class SchedulerAPI:
         """ Re-/schedules the execution of an interval-based job.
         """
         start_date = _start_date(job_data)
+
         weeks = job_data.weeks if job_data.get('weeks') else 0
         days = job_data.days if job_data.get('days') else 0
         hours = job_data.hours if job_data.get('hours') else 0
         minutes = job_data.minutes if job_data.get('minutes') else 0
         seconds = job_data.seconds if job_data.get('seconds') else 0
         max_repeats = job_data.repeats if job_data.get('repeats') else None
+
+        weeks = int(weeks)
+        days = int(days)
+        hours = int(hours)
+        minutes = int(minutes)
+        seconds = int(seconds)
+        max_repeats = int(max_repeats) if max_repeats is not None else max_repeats
 
         self.create_edit_job(job_data.id, job_data.name, job_data.get('old_name'), start_date, SCHEDULER.JOB_TYPE.INTERVAL_BASED,
             job_data.service, is_create, max_repeats, days+weeks*7, hours, minutes, seconds, job_data.extra,
