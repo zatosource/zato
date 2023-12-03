@@ -525,7 +525,7 @@ class Client:
     def on_error(self, error:'any_') -> 'None':
         """ Invoked for each unhandled error in the lower-level ws4py library.
         """
-        self.logger.warning('Caught error `%s`', error)
+        self.logger.info('Caught error `%s`', error)
 
 # ################################################################################################################################
 

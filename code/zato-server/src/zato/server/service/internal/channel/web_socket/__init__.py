@@ -259,18 +259,25 @@ class _BaseAPICommand(_BaseCommand):
 
         if server_response:
 
-            # It may be a dict on a successful invocation ..
-            if isinstance(server_response, dict):
-                data = server_response
+            # It can be a string object that we will then use as-is ..
+            if isinstance(server_response, str):
+                response_data = server_response
 
-            # .. otherwise, it may be a ServiceInvocationResult object.
+            # .. otherwise ..
             else:
-                data = server_response.data
 
-            # The actual response may be a dict by default (on success),
-            # or a string representation of a traceback object caught
-            # while invoking another PID.
-            response_data = data.get('response_data') or {}
+                # It may be a dict on a successful invocation ..
+                if isinstance(server_response, dict):
+                    data = server_response
+
+                # .. otherwise, it may be a ServiceInvocationResult object.
+                else:
+                    data = server_response.data
+
+                # The actual response may be a dict by default (on success),
+                # or a string representation of a traceback object caught
+                # while invoking another PID.
+                response_data = data.get('response_data') or {}
 
             # No matter what it is, we can return it now.
             self.response.payload.response_data = response_data

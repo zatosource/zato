@@ -423,7 +423,7 @@ class CACHE:
         MEMCACHED = 'memcached'
 
     class BUILTIN_KV_DATA_TYPE:
-        STR = NameId('String/unicode', 'str')
+        STR = NameId('String', 'str')
         INT = NameId('Integer', 'int')
 
         def __iter__(self):

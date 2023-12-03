@@ -4,12 +4,7 @@ $(document).ready(function() {
         $.fn.zato.data_table.set_field_required('#' + name);
     });
 
-    $('#command_shell_form').bValidator();
-
     var _callback = function(data, status, xhr){
-
-        console.log('QQQ ' + data);
-        console.log('WWW ' + status);
 
         var success = status == 'success';
         var msg = success ? data.msg : data.responseText;

@@ -5,11 +5,12 @@
 
 
 {% block head %}
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.min.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.custom.min.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.bvalidator-yc.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery-3.7.1.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery-ui-1.13.2/jquery-ui.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.getUrlParam.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/hide-show-password.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/stringformat.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/chosen/chosen.jquery.js"></script>
 
     {% comment %} This is used in common.js {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/underscore-min.js"></script>
@@ -20,13 +21,15 @@
     <script nonce="{{ CSP_NONCE }}">
     </script>
 
+    <link rel="stylesheet" media="screen" href="/static/chosen/chosen.css" />
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.custom.css">
     <link rel="stylesheet" media="screen" href="/static/css/formalize.css" />
     <link rel="stylesheet" media="screen" href="/static/css/navigation/pure-css-navigation.css" />
-    <link rel="stylesheet" media="screen" href="/static/css/bvalidator.css" />
 
     {% comment %} Our CSS must come last {% endcomment %}
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+
+    <link rel="stylesheet" media="screen" href="/static/css/hide-show-password.css" />
 
     {% if zato_template_name == "zato/scheduler.html" %}
 
@@ -54,6 +57,26 @@
     {% block "extra_js" %}
     {% endblock %}
 
+    <script nonce="{{ CSP_NONCE }}">
+
+        {% if user.is_authenticated %}
+        // Let users close delete dialogs via the Esc key
+        $(document).ready(function() {
+            $(document).keyup(function(e) {
+                if(e.keyCode === 27 || e.key === "Escape" || e.key === "Esc") {
+                    $("#popup_cancel").click();
+                }
+            });
+        });
+        {% endif %}
+
+        // Let users reveal password fields
+        $(document).ready(function() {
+            $('input[type="password"]').hidePassword(true);
+        });
+
+    </script>
+
 {% endblock %}
 
 {% block body %}
@@ -73,7 +96,7 @@
             <div class="pure-css-nav">
                 <nav class="menu">
                     <div class="nav-container">
-                        <ul class="first-level left"">
+                        <ul class="first-level left">
                             <li class="first-level"><a class="menu-link" href="{% url "cluster" %}">Clusters</a></li>
                             <li class="first-level" >
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">Services &darr;</a>
@@ -203,12 +226,14 @@
                                             {% if False %}<li class="child"><a class="menu-link" href="{% url "email-smtp" %}?cluster={{ cluster_id|default:"1" }}">Microsoft 365 Notifications</a></li>{% endif %}
                                         </ul>
                                     </li>
+                                    {% if False %}
                                     <li class="child">
                                         <a class="menu-link" href="#">SMS &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "sms-twilio" %}?cluster={{ cluster_id|default:"1" }}">Twilio</a></li>
                                         </ul>
                                     </li>
+                                    {% endif %}
                                 </ul>
                             </li>
                             <li class="first-level">

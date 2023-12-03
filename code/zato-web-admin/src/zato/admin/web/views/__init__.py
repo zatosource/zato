@@ -164,7 +164,7 @@ def method_allowed(*methods_allowed):
             req = args[1] if len(args) > 1 else args[0]
             if req.method not in methods_allowed:
                 msg = 'Method `{}` is not allowed here `{}`, methods allowed:`{}`'.format(
-                    req.method, view.func_name, methods_allowed)
+                    req.method, view, methods_allowed)
                 logger.error(msg)
                 raise Exception(msg)
             return view(*args, **kwargs)
