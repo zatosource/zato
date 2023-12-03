@@ -125,7 +125,7 @@
                 <td class='inline_header' style="width:80px">Msg ID</td>
                 <td style="width:120px">{% if action == "publish" %}<span class='form_hint'>---</span>{% else %}{{ msg_id }}{% endif %}</td>
 
-                <td class='inline_header' style="width:90px">Expiration <span class="form_hint">(in ms)</span></td>
+                <td class='inline_header' style="width:90px">Expiration <span class="form_hint">(in s)</span></td>
                 <td style="width:170px">
                     {% if object_type == "topic" %}
                         {{ form.expiration }}
