@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import os
 from contextlib import closing
 from io import StringIO
 from operator import attrgetter
@@ -27,7 +28,7 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.typing_ import cast_, dict_, optional
-from zato.common.util.api import spawn_greenlet, wait_for_dict_key, wait_for_dict_key_by_get_func
+from zato.common.util.api import as_bool, spawn_greenlet, wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.core.endpoint import EndpointAPI
 from zato.server.pubsub.core.trigger import NotifyPubSubTasksTrigger
@@ -1029,22 +1030,35 @@ class PubSub:
 
         else:
 
+            sub_key:'str' = config['sub_key']
+            sk_server = SubKeyServer(config)
+            self.sub_key_servers[sub_key] = sk_server
+
             config['endpoint_id'] = sub.endpoint_id
             config['endpoint_name'] = self.endpoint_api.get_by_id(sub.endpoint_id)
-            self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
             endpoint_type = config['endpoint_type']
 
             config['wsx'] = int(endpoint_type == _endpoint_type.WEB_SOCKETS.id)
             config['srv'] = int(endpoint_type == _endpoint_type.SERVICE.id)
 
-            sks_table = self.format_sk_servers()
-            msg = 'Set sk_server{}for sub_key `%(sub_key)s` (wsx/srv:%(wsx)s/%(srv)s) - `%(server_name)s:%(server_pid)s`, ' + \
-                'current sk_servers:\n{}'
-            msg = msg.format(' ' if config['server_pid'] else ' (no PID) ', sks_table)
+            server_pid:'str' = config['server_pid']
+            server_name:'str' = config['server_name']
+            is_wsx:'str' = config['wsx']
+            is_service:'str' = config['srv']
+            pid_info:'str' = ' ' if config['server_pid'] else ' (no PID) '
 
-            logger.info(msg, config)
-            logger_zato.info(msg, config)
+            # This is basic information that we always log ..
+            msg  = f'Set sk_server{pid_info}for sub_key `{sub_key}` (w/s:{is_wsx}/{is_service}) - {server_name}:{server_pid}'
+            msg += f', len-sks:{len(self.sub_key_servers)}'
+
+            # .. optionally, we log the full connection table too ..
+            if as_bool(os.environ.get(PUBSUB.Env.Log_Table)):
+                sks_table = self.format_sk_servers()
+                msg += f', current sk_servers:\n{sks_table}'
+
+            logger.info(msg)
+            logger_zato.info(msg)
 
 # ################################################################################################################################
 
