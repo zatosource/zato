@@ -167,7 +167,7 @@ $.fn.zato.stats.top_n.on_custom_date = function() {
     var custom_date_form_id = '#form-custom_date'
     var custom_date_form = $(custom_date_form_id);
 
-    if(custom_date_form.data('bValidator').isValid()) {
+    if(custom_date_form.data('QQQ-zvalidator').isValid()) {
         $.fn.zato.stats.top_n.shift('right', '', 'custom');
         $.fn.zato.data_table.cleanup(custom_date_form_id);
         return true;
@@ -178,8 +178,8 @@ $.fn.zato.stats.top_n.setup_forms = function() {
 
     $.each(['start', 'stop'], function(ignored, suffix) {
         var field_id = String.format('#custom-user_{0}', suffix)
-        $(field_id).attr('data-bvalidator', 'required');
-        $(field_id).attr('data-bvalidator-msg', 'This is a required field');
+        $(field_id).attr('data-QQQ-zvalidator', 'required');
+        $(field_id).attr('data-QQQ-zvalidator-msg', 'This is a required field');
 
         $(field_id).datetimepicker(
             {
@@ -201,7 +201,7 @@ $.fn.zato.stats.top_n.setup_forms = function() {
         }
     });
 
-    custom_date_form.bValidator();
+    custom_date_form.QQQ-zvalidator();
 
     $('#custom_date').dialog({
         autoOpen: false,
