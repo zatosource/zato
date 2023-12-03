@@ -7,9 +7,10 @@
 {% block head %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery-3.7.1.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery-ui-1.13.2/jquery-ui.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/chosen/chosen.jquery.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.getUrlParam.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/hide-show-password.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/stringformat.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/chosen/chosen.jquery.js"></script>
 
     {% comment %} This is used in common.js {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/underscore-min.js"></script>
@@ -27,6 +28,8 @@
 
     {% comment %} Our CSS must come last {% endcomment %}
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+
+    <link rel="stylesheet" media="screen" href="/static/css/hide-show-password.css" />
 
     {% if zato_template_name == "zato/scheduler.html" %}
 
@@ -54,13 +57,24 @@
     {% block "extra_js" %}
     {% endblock %}
 
-    <script>
+    <script nonce="{{ CSP_NONCE }}">
+
+        {% if user.is_authenticated %}
         // Let users close delete dialogs via the Esc key
-        $(document).keyup(function(e) {
-            if(e.keyCode === 27 || e.key === "Escape" || e.key === "Esc") {
-                $("#popup_cancel").click();
-            }
+        $(document).ready(function() {
+            $(document).keyup(function(e) {
+                if(e.keyCode === 27 || e.key === "Escape" || e.key === "Esc") {
+                    $("#popup_cancel").click();
+                }
+            });
         });
+        {% endif %}
+
+        // Let users reveal password fields
+        $(document).ready(function() {
+            $('input[type="password"]').hidePassword(true);
+        });
+
     </script>
 
 {% endblock %}
