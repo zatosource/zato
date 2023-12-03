@@ -5,8 +5,8 @@ $(document).ready(function() {
         var id = 'id_' + suffix;
         var jq_id = '#' + id;
 
-        $(jq_id).attr('data-bvalidator', 'required');
-        $(jq_id).attr('data-bvalidator-msg', 'This is a required field');
+        $(jq_id).attr('data-QQQ-zvalidator', 'required');
+        $(jq_id).attr('data-QQQ-zvalidator-msg', 'This is a required field');
 
         $(jq_id).datetimepicker(
             {
@@ -18,7 +18,6 @@ $(document).ready(function() {
 
     })
 
-    $('#maintenance_form').bValidator();
+    $('#maintenance_form').QQQ-zvalidator();
 
 });
-

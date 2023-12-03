@@ -41,17 +41,17 @@ def get_client_html(item, security_id, cluster_id, style='', separator=''):
     if item.is_internal:
         return 'Internal'
 
-    elif item.ws_channel_id:
+    elif item.endpoint_type == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id:
         path_name = 'channel-web-socket'
         name = item.ws_channel_name
         protocol = 'WebSockets'
 
-    elif security_id:
+    elif item.endpoint_type == PUBSUB.ENDPOINT_TYPE.REST.id:
         path_name = 'security-basic-auth'
         name = item.sec_name
         protocol = 'REST'
 
-    elif getattr(item, 'service_id', None):
+    elif item.endpoint_type == PUBSUB.ENDPOINT_TYPE.SERVICE.id:
         path_name = 'service'
         name = item.service_name
         protocol = 'Service'
@@ -81,7 +81,7 @@ def get_endpoint_html(item, cluster_id, endpoint_name_attr='endpoint_name'):
     name = getattr(item, endpoint_name_attr, None) or item[endpoint_name_attr]
 
     path = django_url_reverse('pubsub-endpoint')
-    endpoint = '<span style="font-size:smaller"><a href="{}?cluster={}&amp;query={}">{}</a>'.format(
+    endpoint = '<span style="font-size:smaller"><a href="{}?cluster={}&amp;query={}">{}</a></span>'.format(
         path, cluster_id, name, name)
 
     return endpoint
