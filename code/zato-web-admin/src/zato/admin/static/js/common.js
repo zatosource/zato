@@ -1585,6 +1585,62 @@ $.fn.zato.jquery_pattern_required = "*[data-zato-validator-required='required'";
 $.fn.zato.jquery_pattern_equals   = "*[data-zato-validator-equals^='equals'";
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
+
+    var is_valid = true;
+    var form = $(form);
+    var is_edit = form.attr('id').includes('edit');
+    var prefix = is_edit ? 'edit-' : '';
+
+    // Clear anything potentially left over from the previous run
+    var rest_chosen_pattern = "#id_" + prefix.replace("-", "_") + "out_rest_http_soap_id_chosen a";
+    $.fn.zato.remove_css_attention(rest_chosen_pattern);
+
+    if(!$.fn.zato.is_form_valid(form)) {
+        is_valid = false;
+    }
+    var endpoint_type = $('#id_' + prefix + 'endpoint_type').val();
+
+    var server_id       = $('#id_' + prefix + 'server_id');
+    var delivery_method = $('#id_' + prefix + 'delivery_method');
+    var out_http_method = $('#id_' + prefix + 'out_http_method');
+    var out_rest_http_soap_id = $('#id_' + prefix + 'out_rest_http_soap_id');
+
+    if(endpoint_type == 'rest') {
+
+        if(!server_id.val()) {
+            $.fn.zato.draw_attention_to(server_id);
+            is_valid = false;
+        }
+
+        if(!delivery_method.val()) {
+            $.fn.zato.draw_attention_to(delivery_method);
+            is_valid = false;
+        }
+
+        if(!out_http_method.val()) {
+            $.fn.zato.draw_attention_to(out_http_method);
+            is_valid = false;
+        }
+
+        if(delivery_method.val() == 'notify') {
+            if(!out_rest_http_soap_id.val()) {
+                $.fn.zato.draw_attention_to(rest_chosen_pattern);
+                is_valid = false;
+            }
+        }
+    }
+
+    var disabled_input = $('#multi-select-input');
+    if(disabled_input && disabled_input.length) {
+        $.fn.zato.draw_attention_to(disabled_input);
+        is_valid = false;
+    }
+    return is_valid;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
