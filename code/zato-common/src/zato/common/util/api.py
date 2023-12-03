@@ -1907,24 +1907,51 @@ def wait_for_predicate(
     # Use an explicit loop index for reporting
     loop_idx = 1
 
-    logger.debug('Entering wait-for-predicate -> %s -> %s', log_msg_details, is_fulfilled)
+    # After that many seconds, we are going to start logging the fact that we are still waiting.
+    # In this way, we do not need to log information about all the predicates that finish quickly.
+    log_after_seconds = 10
 
+    # Perhaps we can already return and we enter this branch if we cannot ..
     if not is_fulfilled:
+
+        # For later use
         start = datetime.utcnow()
+
+        # The time at which we will start to log details
+        log_after  = start + timedelta(seconds=log_after_seconds)
+
+        # We will wait for the predicate until this time
         wait_until = start + timedelta(seconds=timeout)
 
-        if needs_log and log_msg_details:
+        # Optionally, we may already have something to log
+        if (datetime.utcnow() > log_after) and needs_log and log_msg_details:
             logger.info('Waiting for %s (#%s -> %ss)', log_msg_details, loop_idx, interval)
 
+        # Keep looping until the predicate is fulfilled ..
         while not is_fulfilled:
+
+            # .. sleep for a moment ..
             gevent_sleep(interval)
-            if needs_log and log_msg_details:
-                logger.info('Waiting for %s (#%s -> %ss)', log_msg_details, loop_idx, interval)
-            is_fulfilled = predicate_func(*args, **kwargs)
-            if datetime.utcnow() > wait_until:
+
+            # .. for later use ..
+            now = datetime.utcnow()
+
+            # .. return if we have run out of time ..
+            if now > wait_until:
                 break
+
+            # .. optionally, log the current state ..
+            if (now > log_after) and needs_log and log_msg_details:
+                logger.info('Waiting for %s (#%s -> %ss)', log_msg_details, loop_idx, interval)
+
+            # .. otherwise, check if we have the predicate fulfilled already ..
+            is_fulfilled = predicate_func(*args, **kwargs)
+
+            # .. keep looping ..
             loop_idx += 1
 
+    # .. at this point, the predicate is fulfilled or we have run out of time ..
+    # .. but, in either case, we can return the result to our caller.
     return is_fulfilled
 
 # ################################################################################################################################
