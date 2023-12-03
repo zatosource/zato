@@ -537,10 +537,18 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
         name = instance.name;
     }
 
+    // Let users close the dialog via the Esc key
+    $(document).keyup(function(e) {
+        if(e.key === "Escape") {
+            $("#popup_cancel").click();
+            $(document).unbind("keyup", null);
+        }
+    });
+
     console.log('Instance to delete: ' + instance);
 
     var _callback = function(data, status) {
-        var success = status == 'success';
+        var success = (status == 'success' || status == 'parsererror');
 
         if(success) {
             if(_remove_tr) {
@@ -557,6 +565,9 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
             msg = data.responseText;
         }
         $.fn.zato.user_message(success, msg);
+
+        // Unbind the Escape key that we added above
+        $(document).unbind("keyup", null);
     }
 
     var callback = function(ok) {
