@@ -565,7 +565,7 @@ input[data-zato-validator-required="required"]::placeholder {
 }
 
 .zato-blinking {
-    animation: blink 0.5s linear 2;
+    animation: blink 0.5s linear 1;
 }
 
 @keyframes blink {
