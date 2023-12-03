@@ -54,6 +54,15 @@
     {% block "extra_js" %}
     {% endblock %}
 
+    <script>
+        // Let users close delete dialogs via the Esc key
+        $(document).keyup(function(e) {
+            if(e.keyCode === 27 || e.key === "Escape" || e.key === "Esc") {
+                $("#popup_cancel").click();
+            }
+        });
+    </script>
+
 {% endblock %}
 
 {% block body %}
