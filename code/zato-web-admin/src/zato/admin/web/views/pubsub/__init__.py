@@ -81,7 +81,7 @@ def get_endpoint_html(item, cluster_id, endpoint_name_attr='endpoint_name'):
     name = getattr(item, endpoint_name_attr, None) or item[endpoint_name_attr]
 
     path = django_url_reverse('pubsub-endpoint')
-    endpoint = '<span style="font-size:smaller"><a href="{}?cluster={}&amp;query={}">{}</a>'.format(
+    endpoint = '<span style="font-size:smaller"><a href="{}?cluster={}&amp;query={}">{}</a></span>'.format(
         path, cluster_id, name, name)
 
     return endpoint
