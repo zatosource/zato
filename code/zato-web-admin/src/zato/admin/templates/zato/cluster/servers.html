@@ -87,16 +87,24 @@
                         <td>{{ item.lb_state|default:'(unknown)' }}</td>
                         <td>{{ item.lb_address|default:'(unknown)' }}</td>
                         <td>
-                            {% if item.in_lb %}
-                                <a href="javascript:$.fn.zato.cluster.servers.add_remove_lb('remove', '{{ item.id }}', '{{ cluster.id }}')">Remove from LB</a>
-                            {% else %}
-                                <a href="javascript:$.fn.zato.cluster.servers.add_remove_lb('add', '{{ item.id }}', '{{ cluster.id }}')">Add to LB</a>
+                            {% if False %}
+                                {% if item.in_lb %}
+                                    <a href="javascript:$.fn.zato.cluster.servers.add_remove_lb('remove', '{{ item.id }}', '{{ cluster.id }}')">Remove from LB</a>
+                                {% else %}
+                                    <a href="javascript:$.fn.zato.cluster.servers.add_remove_lb('add', '{{ item.id }}', '{{ cluster.id }}')">Add to LB</a>
+                                {% endif %}
                             {% endif %}
                         </td>
-                        <td><a href="javascript:$.fn.zato.cluster.servers.edit('{{ item.id }}')">Edit</a></td>
                         <td>
-                            {% if item.may_be_deleted %}
-                                <a href="javascript:$.fn.zato.cluster.servers.delete_('{{ item.id }}')">Delete</a>
+                            {% if False %}
+                                <a href="javascript:$.fn.zato.cluster.servers.edit('{{ item.id }}')">Edit</a>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if False %}
+                                {% if item.may_be_deleted %}
+                                    <a href="javascript:$.fn.zato.cluster.servers.delete_('{{ item.id }}')">Delete</a>
+                                {% endif %}
                             {% endif %}
                         </td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>

@@ -43,17 +43,6 @@ $.fn.zato.data_table.after_populate = function() {
     });
 }
 
-$.fn.zato.data_table.on_before_element_validation = function(elem) {
-    if(elem.attr('id').endsWith('sec_tls_ca_cert_id')) {
-        var form = elem.closest('form');
-        var host = $(form.find("input[id$='host']")[0]);
-        var is_https = host.val().startsWith('https');
-        if(!is_https) {
-            return false;
-        }
-    }
-}
-
 $.fn.zato.http_soap.create = function(object_type) {
     $.fn.zato.data_table._create_edit('create', 'Create a new ' + object_type, null);
 }

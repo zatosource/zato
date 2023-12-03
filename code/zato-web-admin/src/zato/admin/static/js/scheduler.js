@@ -12,26 +12,51 @@ $.fn.zato.data_table.Job = new Class({
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.data_table.before_submit_hook = function(form) {
+
     var form = $(form);
+    var is_valid = true;
 
-    var weeks_field = form.find("input[name$='weeks']");
-    var weeks_field_id = weeks_field.attr('id');
+    if(form.attr("id").includes("interval_based")) {
 
-    var weeks   = weeks_field.val();
-    var days    = form.find("input[name$='days']").val();
-    var hours   = form.find("input[name$='hours']").val();
-    var minutes = form.find("input[name$='minutes']").val();
-    var seconds = form.find("input[name$='seconds']").val();
+        var weeks_field   = form.find("input[name$='weeks']");
+        var days_field    = form.find("input[name$='days']");
+        var hours_field   = form.find("input[name$='hours']");
+        var minutes_field = form.find("input[name$='minutes']");
+        var seconds_field = form.find("input[name$='seconds']");
 
-    if(!(weeks || days || hours || minutes || seconds)) {
-        weeks_field.bValidator();
-        var elements = $('#id_create-interval_based-weeks, #id_edit-interval_based-weeks');
-        var msg = 'At least one of these fields is required: Weeks, Days, Hours, Minutes or Seconds';
-        weeks_field.data('bValidator').showMsg(elements, msg);
-        return false
+        var weeks   = weeks_field.val();
+        var days    = days_field.val();
+        var hours   = hours_field.val();
+        var minutes = minutes_field.val();
+        var seconds = seconds_field.val();
+
+        if(!(weeks || days || hours || minutes || seconds)) {
+
+            $.fn.zato.draw_attention_to(weeks_field);
+            $.fn.zato.draw_attention_to(days_field);
+            $.fn.zato.draw_attention_to(hours_field);
+            $.fn.zato.draw_attention_to(minutes_field);
+            $.fn.zato.draw_attention_to(seconds_field);
+
+            let msg = "At least one of these fields is required: Weeks, Days, Hours, Minutes or Seconds";
+            $.fn.zato.show_native_tooltip(weeks_field, msg);
+
+            is_valid = false;
+        }
+        else {
+            $.fn.zato.cleanup_elem_css_attention(weeks_field);
+            $.fn.zato.cleanup_elem_css_attention(days_field);
+            $.fn.zato.cleanup_elem_css_attention(hours_field);
+            $.fn.zato.cleanup_elem_css_attention(minutes_field);
+            $.fn.zato.cleanup_elem_css_attention(seconds_field);
+        }
     }
 
-    return true;
+    if(!$.fn.zato.is_form_valid(form)) {
+        is_valid = false;
+    }
+
+    return is_valid;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -72,10 +97,6 @@ $(document).ready(function() {
         });
     });
 
-    /* Prepare the validators here so that it's all still a valid HTML
-       even with bValidator's custom attributes.
-    */
-
     var one_time_attrs = ['name', 'start_date', 'service'];
     var interval_based_attrs = ['name', 'start_date', 'service'];
     var cron_style_attrs = ['name', 'start_date', 'cron_definition', 'service'];
@@ -93,11 +114,8 @@ $(document).ready(function() {
             var attrs = job_types_dict[job_type];
             $.each(attrs, function(ignored, attr) {
                 field_id = String.format('#id_{0}-{1}-{2}', action, job_type, attr)
-                $(field_id).attr('data-bvalidator', 'required');
-                $(field_id).attr('data-bvalidator-msg', 'This is a required field');
+                $.fn.zato.data_table.set_field_required(field_id);
             });
-            var form_id = String.format('#{0}-form-{1}', action, job_type)
-            $(form_id).bValidator();
         });
     });
 
@@ -169,31 +187,30 @@ $.fn.zato.scheduler.data_table.on_submit = function(action, job_type) {
 
 $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
 
-    // Remove any potential message displayed previously
-    var id_interval_based_weeks = $('#id_'+ action +'-interval_based-weeks');
-    var validator = id_interval_based_weeks.data('bValidator');
-
-    if(validator) {
-        validator.removeMsg(id_interval_based_weeks);
-    }
+    $.fn.zato.cleanup_chosen("");
+    $.fn.zato.cleanup_form_css_attention(".data-popup");
 
     var title = String.format('{0} {1} job',
         action.capitalize(), $.fn.zato.scheduler.titles[job_type]);
 
     if(action == 'edit') {
 
-        var form = $('#' + action +'-form-'+ job_type);
         var name_prefix = String.format('{0}-{1}-', action, job_type);
         var id_prefix = '#id_' + name_prefix
         var instance = $.fn.zato.data_table.data[id];
 
+        var form = $('#' + action +'-form-'+ job_type);
         $.fn.zato.form.populate(form, instance, name_prefix, id_prefix);
 
     }
 
-    var div = $('#'+ action +'-'+ job_type);
+    var div_id = action +'-'+ job_type;
+    var div = $('#'+ div_id);
+
     div.prev().text(title); // prev() is a .ui-dialog-titlebar
     div.dialog('open');
+
+    $.fn.zato.turn_selects_into_chosen("");
 }
 
 // /////////////////////////////////////////////////////////////////////////////

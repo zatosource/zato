@@ -904,7 +904,7 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def get_pubsub_tool_by_sub_key(self, sub_key:'str') -> 'PubSubTool':
+    def get_pubsub_tool_by_sub_key(self, sub_key:'str') -> 'PubSubTool | None':
         with self.lock:
             return self._get_pubsub_tool_by_sub_key(sub_key)
 
@@ -1044,8 +1044,8 @@ class PubSub:
 
             server_pid:'str' = config['server_pid']
             server_name:'str' = config['server_name']
-            is_wsx:'str' = config['wsx']
-            is_service:'str' = config['srv']
+            is_wsx:'int' = config['wsx']
+            is_service:'int' = config['srv']
             pid_info:'str' = ' ' if config['server_pid'] else ' (no PID) '
 
             # This is basic information that we always log ..
@@ -1098,11 +1098,12 @@ class PubSub:
 
             _ = self.sub_key_servers.pop(sub_key, None)
 
-            sks_table = self.format_sk_servers(sub_pattern_matched=sub_pattern_matched)
-            msg_sks = 'Current sk_servers after deletion of `%s`:\n%s'
+            if as_bool(os.environ.get(PUBSUB.Env.Log_Table)):
+                sks_table = self.format_sk_servers(sub_pattern_matched=sub_pattern_matched)
+                msg_sks = 'Current sk_servers after deletion of `%s`:\n%s'
 
-            logger.info(msg_sks, sub_key, sks_table)
-            logger_zato.info(msg_sks, sub_key, sks_table)
+                logger.info(msg_sks, sub_key, sks_table)
+                logger_zato.info(msg_sks, sub_key, sks_table)
 
         else:
             logger.info('Could not find sub_key `%s` while deleting sub_key server, current `%s` `%s`',
