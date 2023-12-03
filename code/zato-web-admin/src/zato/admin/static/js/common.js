@@ -1371,6 +1371,7 @@ $.fn.zato.turn_selects_into_chosen = function(parent_id) {
         "service",
         "security",
         "id_out_rest_http_soap_id",
+        "id_edit-out_rest_http_soap_id",
         "endpoint_id",
     ]
 
