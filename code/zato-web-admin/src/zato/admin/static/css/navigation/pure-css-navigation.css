@@ -110,7 +110,7 @@ ul {
      list-style:none;
 }
  .pure-css-nav > nav li:hover {
-    cursor:pointer;
+    cursor:inherit;
 }
  .pure-css-nav > nav a {
     text-decoration:none;
