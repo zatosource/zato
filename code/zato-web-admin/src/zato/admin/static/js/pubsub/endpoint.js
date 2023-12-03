@@ -20,24 +20,28 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubEndpoint;
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.endpoint.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.endpoint.before_submit_hook;
     $.fn.zato.data_table.setup_forms(['name', 'role']);
+
+    // Maps values from selects to IDs of elements that should be made required
+    const required_map = {
+        "rest": ["#id_security_id",   "#id_edit-security_id"],
+        "wsx":  ["#id_ws_channel_id", "#id_edit-ws_channel_id"],
+        "srv":  ["#id_service_id",    "#id_edit-service_id"],
+    }
+
+    $("#id_endpoint_type").on("change", function() {
+        $.fn.zato.toggle_tr_blocks(true, this.value, true);
+        $.fn.zato.make_field_required_on_change(required_map, this.value);
+    });
+
+    $("#id_edit-endpoint_type").on("change", function() {
+        $.fn.zato.toggle_tr_blocks(false, this.value, true);
+        $.fn.zato.make_field_required_on_change(required_map, this.value);
+    });
+
+    // We show REST by default so these fields are required
+    $.fn.zato.make_field_required_on_change(required_map, "rest");
 })
-
-$.fn.zato.pubsub.endpoint.before_submit_hook = function(form) {
-    var form = $(form);
-    var is_edit = form.attr('id').includes('edit');
-    var prefix = is_edit ? 'edit-' : '';
-    var security_id = $('#id_' + prefix + 'security_id');
-    var ws_channel_id = $('#id_' + prefix + 'ws_channel_id');
-
-    if(security_id.val() && ws_channel_id.val()) {
-        form.data('bValidator').showMsg(ws_channel_id, 'Cannot provide both client credentials and WebSockets channel');
-    }
-    else {
-        return true;
-    }
-}
 
 $.fn.zato.pubsub.endpoint.clear_forms = function() {
     // Hide everything ..
@@ -51,14 +55,13 @@ $.fn.zato.pubsub.endpoint.clear_forms = function() {
 
 $.fn.zato.pubsub.endpoint.create = function() {
     $.fn.zato.pubsub.endpoint.clear_forms();
-    window.zato_run_dyn_form_handler();
     $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub endpoint', null);
 }
 
 $.fn.zato.pubsub.endpoint.edit = function(id) {
     $.fn.zato.pubsub.endpoint.clear_forms();
-    var instance = $.fn.zato.data_table.data[id]
-    window.zato_run_dyn_form_handler(instance.endpoint_type);
+    var instance = $.fn.zato.data_table.data[id];
+    $.fn.zato.toggle_tr_blocks(false, instance.endpoint_type, false);
     $.fn.zato.data_table._create_edit('edit', 'Update pub/sub endpoint', id);
 }
 

@@ -24,7 +24,7 @@ var elems_required = [
     'delivery_batch_size',
     'delivery_max_retry',
     'wait_sock_err',
-    'wait_non_sock_err'
+    'wait_non_sock_err',
 ];
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -36,33 +36,43 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.subscription.data_table.new_row;
     $.fn.zato.data_table.new_row_func_update_in_place = true;
     $.fn.zato.data_table.add_row_hook = $.fn.zato.pubsub.subscription.add_row_hook;
-    $.fn.zato.data_table.parse();
     $.fn.zato.data_table.before_populate_hook = $.fn.zato.pubsub.subscription.cleanup_hook;
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.subscription.before_submit_hook;
+    $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(elems_required);
+
+    // Maps values from selects to IDs of elements that should be made required
+    const required_map = {
+        "rest": ["#id_out_http_method", "#id_out_rest_http_soap_id"],
+        "srv":  ["#id_service_id",      "#id_edit-service_id"],
+    }
 
     $('#id_endpoint_id').change(function() {
         $.fn.zato.pubsub.on_endpoint_changed();
     });
 
-    $('#id_delivery_method').change(function() {
-        $.fn.zato.pubsub.on_delivery_method_changed();
-    });
-
-    $('#id_out_rest_http_soap_id').change(function() {
-        $.fn.zato.pubsub.on_rest_soap_outconn_changed('id_out_rest_http_soap_id');
-    });
-
-    $('#id_out_soap_http_soap_id').change(function() {
-        $.fn.zato.pubsub.on_rest_soap_outconn_changed('id_out_soap_http_soap_id');
-    });
-
     $('#id_endpoint_type').change(function() {
-        $.fn.zato.pubsub.on_endpoint_type_changed();
         $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
+        $.fn.zato.toggle_tr_blocks(true, this.value, true);
+        $.fn.zato.make_field_required_on_change(required_map, this.value);
+        $.fn.zato.pubsub.set_current_endpoints(true);
+        $.fn.zato.pubsub.on_endpoint_changed();
     });
 
+    // Populate initial endpoints
+    $.fn.zato.pubsub.set_current_endpoints(false);
 })
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.set_current_endpoints = function(needs_blink) {
+    $.fn.zato.set_select_values_on_source_change(
+        window.zato_select_data_source_id,
+        window.zato_select_data_target_id,
+        window.zato_select_data_target_items,
+        needs_blink,
+    )
+}
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -126,12 +136,15 @@ $.fn.zato.pubsub.populate_endpoint_topics = function(topic_sub_list) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.populate_endpoint_topics_cb = function(data, status) {
+$.fn.zato.pubsub.populate_endpoint_topics_callback = function(data, status) {
     var success = status == 'success';
     if(success) {
         var topic_sub_list = $.parseJSON(data.responseText);
         if(topic_sub_list.length) {
             $.fn.zato.pubsub.populate_endpoint_topics(topic_sub_list);
+        }
+        else {
+            $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
         }
     }
     else {
@@ -146,50 +159,10 @@ $.fn.zato.pubsub.on_endpoint_changed = function() {
     if(endpoint_id) {
         var cluster_id = $('#cluster_id').val();
         var url = String.format('/zato/pubsub/endpoint/topic-sub-list/{0}/cluster/{1}/', endpoint_id, cluster_id);
-        $.fn.zato.post(url, $.fn.zato.pubsub.populate_endpoint_topics_cb, null, null, true);
+        $.fn.zato.post(url, $.fn.zato.pubsub.populate_endpoint_topics_callback, null, null, true);
     }
     else {
         $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
-    }
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.pubsub.on_endpoint_type_changed = function() {
-
-    var validator = $('#create-form').data('bValidator');
-    validator.reset();
-
-    var endpoint_type = $('#id_endpoint_type').val();
-
-    if(endpoint_type == 'srv') {
-
-        var delivery_method = $('#id_delivery_method');
-        delivery_method.attr('data-bvalidator', '');
-        validator.removeMsg(delivery_method);
-    }
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.pubsub.on_delivery_method_changed = function() {
-    var delivery_method = $('#id_delivery_method').val();
-    if(delivery_method != 'notify') {
-        var form = $('#create-form');
-        var outconn_id = $('#id_out_soap_http_soap_id');
-        form.data('bValidator').removeMsg(outconn_id);
-        outconn_id.css('background-color', 'default');
-    }
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.pubsub.on_rest_soap_outconn_changed = function(field_id) {
-    var field = $('#' + field_id);
-    if(field.val()) {
-        var form = $('#create-form');
-        form.data('bValidator').removeMsg(field);
-        field.css('background-color', 'default');
     }
 }
 
@@ -205,92 +178,20 @@ $.fn.zato.pubsub.subscription.add_row_hook = function(instance, elem_name, html_
 
 $.fn.zato.pubsub.subscription.cleanup_hook = function(form, _unused_prefix) {
 
-    var validator = form.data('bValidator');
     var blank = '<input class="multi-select-input" id="multi-select-input" disabled="disabled"></input>';
-
     $('#multi-select-div').html(blank);
 
-    var disabled_input = $('#multi-select-input');
-    validator.removeMsg(disabled_input);
-    disabled_input.css('background-color', '#e6e6e6');
-
     return true;
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
-    var form = $(form);
-
-    var is_edit = form.attr('id').includes('edit');
-    var prefix = is_edit ? 'edit-' : '';
-    var endpoint_type = $('#id_' + prefix + 'endpoint_type').val();
-
-    var server_id       = $('#id_' + prefix + 'server_id');
-    var delivery_method = $('#id_' + prefix + 'delivery_method');
-    var out_http_method = $('#id_' + prefix + 'out_http_method');
-
-    var out_rest_http_soap_id = $('#id_' + prefix + 'out_rest_http_soap_id');
-    var out_soap_http_soap_id = $('#id_' + prefix + 'out_soap_http_soap_id');
-    var rest_delivery_endpoint = $('#id_' + prefix + 'rest_delivery_endpoint');
-
-    if(endpoint_type == 'rest' || endpoint_type == 'soap') {
-
-        if(!server_id.val()) {
-            server_id.css('background-color', '#ffffae');
-            form.data('bValidator').showMsg(server_id, 'This is a required field');
-            return false;
-        }
-
-        if(!delivery_method.val()) {
-            form.data('bValidator').showMsg(server_id, 'This is a required field');
-            return false;
-        }
-
-        if(!out_http_method.val()) {
-            form.data('bValidator').showMsg(out_http_method, 'This is a required field');
-            return false;
-        }
-
-    }
-
-    if(endpoint_type == 'rest') {
-        if(delivery_method == 'notify') {
-            if(!out_rest_http_soap_id.val() && !rest_delivery_endpoint.val()) {
-                form.data('bValidator').showMsg(out_rest_http_soap_id,
-                    'This is a required field');
-                return false;
-            }
-        }
-    }
-
-    if(endpoint_type == 'soap') {
-        if(delivery_method == 'notify') {
-            if(!out_soap_http_soap_id.val() && !soap_delivery_endpoint.val()) {
-                form.data('bValidator').showMsg(out_soap_http_soap_id,
-                    'This is a required field');
-                return false;
-            }
-        }
-    }
-
-    var disabled_input = $('#multi-select-input');
-    if(disabled_input.length) {
-        disabled_input.css('background-color', '#fbffb0');
-        form.data('bValidator').showMsg(disabled_input, 'No topics are available<br/>for the endpoint to subscribe to');
-        return false;
-    }
-
-    return true;
-
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.subscription.create = function() {
-    window.zato_run_dyn_form_handler();
     $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
     $.fn.zato.data_table._create_edit('create', 'Create pub/sub subscriptions', null);
+    $("#id_endpoint_id").val($("#id_endpoint_id option:first").val());
+    $.fn.zato.pubsub.on_endpoint_changed();
+    $.fn.zato.pubsub.set_current_endpoints(false);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

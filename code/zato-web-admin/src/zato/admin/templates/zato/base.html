@@ -22,14 +22,10 @@
     <link rel="manifest" href="/static/favicon/manifest.json">
     <meta name="msapplication-TileImage" content="/static/favicon/ms-icon-144x144.png">
 
-    {% if user.is_authenticated %}
-        <script nonce="{{ CSP_NONCE }}" src="/static/brython/dist/brython.js"></script>
-        <script nonce="{{ CSP_NONCE }}" src="/static/brython/dist/brython_stdlib.js"></script>
-    {% endif %}
 
     {% block head %}{% endblock %}
 </head>
-<body {% if user.is_authenticated %}onload="brython(){% endif %}">
+<body>
     {% block body %}{% endblock %}
 </body>
 </html>
