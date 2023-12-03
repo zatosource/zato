@@ -7,6 +7,14 @@ $.fn.zato.pubsub.message.publish.on_validate_save = function(e) {
 $.fn.zato.pubsub.message.publish.validate_save = function(e) {
 
     var form = $('#message-publish-form');
+
+    var is_valid_native = true; //form.get(0).reportValidity();
+    var is_valid_chosen = $.fn.zato.is_form_valid(form);
+
+    if(!is_valid_native || !is_valid_chosen) {
+        return false
+    }
+
     var data = form.serialize();
     $.fn.zato.post('/zato/pubsub/message/publish-action/',
         $.fn.zato.pubsub.message.publish.on_validate_save, data);
@@ -15,27 +23,8 @@ $.fn.zato.pubsub.message.publish.validate_save = function(e) {
 }
 
 $(document).ready(function() {
-
-    $('#id_topic_name').attr('data-bvalidator', 'required');
-    $('#id_topic_name').attr('data-bvalidator-msg', 'This is a required field');
-
-    $('#id_publisher_id').attr('data-bvalidator', 'required');
-    $('#id_publisher_id').attr('data-bvalidator-msg', 'This is a required field');
-
-    $('#data-textarea').attr('data-bvalidator', 'required');
-    $('#data-textarea').attr('data-bvalidator-msg', 'This is a required field');
-
-    $('#id_priority').attr('data-bvalidator', 'digit,between[1:9],required');
-    $('#id_priority').attr('data-bvalidator-msg', 'Must be a valid priority');
-
-    $('#id_expiration').attr('data-bvalidator', 'digit');
-    $('#id_expiration').attr('data-bvalidator-msg', 'Must be an integer');
-
-    $('#data-textarea').attr('data-bvalidator', 'required');
-    $('#data-textarea').attr('data-bvalidator-msg', 'This is a required field');
-
     var form = $('#message-publish-form');
-
-    //form.bValidator()
+    $.fn.zato.data_table.set_field_required("#id_priority");
+    $.fn.zato.data_table.set_field_required("#id_expiration");
     form.submit($.fn.zato.pubsub.message.publish.validate_save);
 })
