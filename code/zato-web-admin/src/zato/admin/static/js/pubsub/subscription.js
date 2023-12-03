@@ -236,7 +236,6 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
     var disabled_input = $('#multi-select-input');
     if(disabled_input.length) {
         $.fn.zato.draw_attention_to(disabled_input);
-        disabled_input.css('background-color', '#fbffb0');
         is_valid = false;
     }
     return is_valid;
