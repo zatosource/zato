@@ -515,6 +515,15 @@ class CommandStore:
         self.add_opts(pubsub_create_topic, pubsub_topic_mod.CreateTopic.opts)
 
         #
+        # pubsub create-topics
+        #
+
+        pubsub_create_topics = pubsub_subs.add_parser('create-topics',
+            description=pubsub_topic_mod.CreateTopics.__doc__, parents=[base_parser])
+        pubsub_create_topics.set_defaults(command='pubsub_create_topics')
+        self.add_opts(pubsub_create_topics, pubsub_topic_mod.CreateTopics.opts)
+
+        #
         # pubsub delete-endpoint
         #
 
