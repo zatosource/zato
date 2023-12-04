@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.cli import ServerAwareCommand
 from zato.common.api import GENERIC
+from zato.common.test.config import TestConfig
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -16,7 +17,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from argparse import Namespace
-    from zato.common.typing_ import anydict, anylist
+    from zato.common.typing_ import anydict, anylist, strdict
     Namespace = Namespace
 
 # ################################################################################################################################
@@ -140,7 +141,7 @@ class GetTopics(ServerAwareCommand):
                 elem = cast_('anydict', elem)
 
                 # Delete the opaque attributes container
-                elem.pop(_opaque_attr, '')
+                _ = elem.pop(_opaque_attr, '')
 
                 # Make sure we return only the requested keys. Note that we build a new dictionary
                 # because we want to preserve the order of DefaultConfigKeys. Also note that if all keys
@@ -234,6 +235,8 @@ class CreateTopics(ServerAwareCommand):
     """
     opts = [
         {'name':'--input', 'help':'Path to a file with the list of topics to be created', 'required':False},
+        {'name':'--count', 'help':'How many topics to create', 'required':False},
+        {'name':'--prefix', 'help':'Prefix that each of the topics to be created will have', 'required':False},
         {'name':'--path',  'help':'Path to a Zato server', 'required':False},
     ]
 
@@ -241,10 +244,31 @@ class CreateTopics(ServerAwareCommand):
 
     def execute(self, args:'Namespace'):
 
+        # Local variables
+        count = 1000
+        prefix = TestConfig.pubsub_topic_name_unique_auto_create
+
         # Our service to invoke
         service = 'topics1.create-topics'
 
-        request = {}
+        # Read the parameters from the command line or fall back on the defaults
+        count = int(getattr(args, 'count') or count)
+        prefix = getattr(args, 'prefix') or prefix
+
+        # Find out to how many digits we should fill tha names
+        digits = len(str(count))
+
+        # The list to create
+        name_list = []
+
+        for idx, _ in enumerate(range(count), 1):
+            idx = str(idx).zfill(digits)
+            topic_name = f'{prefix}{idx}'
+            name_list.append(topic_name)
+
+        request:'strdict' = {
+            'name_list': name_list
+        }
 
         # Invoke the service and log the response it produced
         self._invoke_service_and_log_response(service, request)
@@ -292,3 +316,49 @@ if __name__ == '__main__':
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+'''
+# -*- coding: utf-8 -*-
+
+# stdlib
+from dataclasses import dataclass
+
+# Zato
+from zato.common.typing_ import dictlist, strlist
+from zato.server.service import Model, Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class CreateTopicRequest(Model):
+    name_list: strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class CreateTopicResponse(Model):
+    topics_created: dictlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CreateTopics(Service):
+    name = 'topics1.create-topics'
+
+    class SimpleIO:
+        input = CreateTopicRequest
+        output = CreateTopicResponse
+
+    def handle(self):
+
+        # Local variables
+        input:'CreateTopicRequest' = self.request.input
+
+        # Log what we are about to do
+        self.logger.info('Creating topics -> %s', input)
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''
