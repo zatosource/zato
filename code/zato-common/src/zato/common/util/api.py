@@ -1456,10 +1456,13 @@ def get_server_client_auth(
                 first()
 
             if security:
-                password = security.password.replace(SECRETS.PREFIX, '')
-                if password.startswith(SECRETS.Encrypted_Indicator):
-                    if cm:
-                        password = cm.decrypt(password)
+                if password:= security.password:
+                    password = security.password.replace(SECRETS.PREFIX, '')
+                    if password.startswith(SECRETS.Encrypted_Indicator):
+                        if cm:
+                            password = cm.decrypt(password)
+                else:
+                    password = ''
                 return (security.username, password)
 
 # ################################################################################################################################
