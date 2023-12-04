@@ -124,7 +124,8 @@ class IPCClient:
                 value = value[:30]
 
             # .. now, do append the new item ..
-            params[key] = value
+            if False:
+                params[key] = value
 
         # .. build our credentials ..
         auth = (self.username, self.password)
