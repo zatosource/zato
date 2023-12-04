@@ -822,6 +822,12 @@ class BaseZatoTestCase(TestCase):
         return self.run_zato_cli_command(*args, **kwargs, load_json=True)
 
 # ################################################################################################################################
+
+    def delete_pubsub_topics_by_pattern(self, pattern:'str') -> 'any_':
+        cli_params = ['pubsub', 'delete-topics', '--pattern', pattern]
+        return self.run_zato_cli_json_command(cli_params)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class CommandLineTestCase(BaseZatoTestCase):

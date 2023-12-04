@@ -192,7 +192,7 @@ class DeleteTopics(ServerAwareCommand):
         {'name':'--id-list',  'help':'A list of topic IDs to delete', 'required':False},
         {'name':'--name',     'help':'An exact name of a topic to delete', 'required':False},
         {'name':'--name-list','help':'List of topics to delete', 'required':False},
-        {'name':'--pattern',  'help':'All topics with names matching this pattern will be deleted', 'required':False},
+        {'name':'--pattern',  'help':'All topics with names that contain this pattern', 'required':False},
         {'name':'--path',     'help':'Path to a Zato server', 'required':False},
     ]
 
