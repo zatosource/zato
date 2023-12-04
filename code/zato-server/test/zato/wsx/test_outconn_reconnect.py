@@ -170,9 +170,8 @@ class WSXOutconnReconnectTestCase(BaseEnmasseTestCase):
             self.fail('Caught an exception -> {}'.format(format_exc()))
 
         finally:
-            # self._delete_channel(test_suffix)
-            # self._delete_outconn(test_suffix)
-            pass
+            self._delete_channel(test_suffix)
+            self._delete_outconn(test_suffix)
 
 # ################################################################################################################################
 # ################################################################################################################################
