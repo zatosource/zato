@@ -10,21 +10,42 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import inspect
 import json
 import os
+import platform
 from subprocess import PIPE, run as subprocess_run
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # Cannot use built in __file__ because we are execfile'd
 _file = inspect.currentframe().f_code.co_filename
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # Prepare all the directories needed
 curdir = os.path.dirname(os.path.abspath(_file))
 release_info_dir = os.path.join(curdir, 'release-info')
 git_repo_dir = os.path.abspath(os.path.join(release_info_dir, '..'))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 #
 # This is Zato version information
 #
 release = open(os.path.join(release_info_dir, 'release.json')).read()
 release = json.loads(release)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+platform_system = platform.system().lower()
+
+is_windows = 'windows' in platform_system
+is_linux   = 'linux'   in platform_system # noqa: E272
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 #
 # This is last git commit ID.
@@ -33,7 +54,7 @@ release = json.loads(release)
 # the latter may result in spurious pip errors, such as:
 # "error in zato-agent setup command: Distribution contains no modules or packages for namespace package 'zato'"
 #
-git_command_date = ['git', 'log', '-1', "--pretty=%cd", "--date=format:%Y.%m.%d"]
+git_command_date = ['git', 'log', '-1', '--pretty=%cd', '--date=format:%Y.%m.%d']
 git_command_revision = ['git', 'rev-parse', '--short', 'HEAD']
 
 try:
@@ -49,11 +70,21 @@ try:
     revision = revision.strip()
 
 except Exception as e:
-    version = '3.2-nogit'
+
+    if is_windows:
+        suffix = 'windows'
+    elif is_linux:
+        suffix = 'linux'
+    else:
+        suffix = platform_system
+
+    version = f'3.2-nogit-{suffix}'
 else:
+
     major = release['major']
     minor = release['minor']
-    version = '{}.{}.{}+rev.{}'.format(major, minor, date, revision)
+
+    version = f'{major}.{minor}.{date}+rev.{revision}'
 
 # ################################################################################################################################
 # ################################################################################################################################
