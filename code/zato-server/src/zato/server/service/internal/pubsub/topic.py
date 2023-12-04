@@ -280,7 +280,6 @@ class DeleteTopics(Service):
                 self.invoke(Delete.get_name(), {
                     'id': topic_id
                 })
-                pass
             except Exception as e:
                 self.logger.warn('Exception while deleting topic `%s` -> `%s`', topic_id, e)
             else:
