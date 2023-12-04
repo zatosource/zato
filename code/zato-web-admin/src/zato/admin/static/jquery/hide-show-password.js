@@ -444,7 +444,7 @@
           content: 'Hide',
           attr: {
             'aria-pressed': 'true',
-            title: 'Hide Password'
+            title: 'Hide value'
           }
         }
       },
@@ -457,7 +457,7 @@
           content: 'Show',
           attr: {
             'aria-pressed': 'false',
-            title: 'Show Password'
+            title: 'Show value in clear text'
           }
         }
       }
