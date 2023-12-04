@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -246,7 +246,7 @@ class CreateTopics(ServerAwareCommand):
 
         # Local variables
         count = 1000
-        prefix = TestConfig.pubsub_topic_name_unique_auto_create
+        prefix = TestConfig.pubsub_topic_name_perf_auto_create
 
         # Our service to invoke
         service = 'topics1.create-topics'
@@ -324,8 +324,21 @@ if __name__ == '__main__':
 from dataclasses import dataclass
 
 # Zato
+from zato.common.api import PUBSUB
+from zato.common.odb.model import PubSubTopic
 from zato.common.typing_ import dictlist, strlist
 from zato.server.service import Model, Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_ps_default = PUBSUB.DEFAULT
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+TopicTable = PubSubTopic.__table__
+TopicInsert = TopicTable.insert
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -358,6 +371,44 @@ class CreateTopics(Service):
 
         # Log what we are about to do
         self.logger.info('Creating topics -> %s', input)
+
+        # .. build a list of dictionaries, each of which will represent a topic to be created ..
+        topic_list = []
+
+        for name in input.name_list:
+            request = {
+                'name': name,
+                'has_gd': True,
+                'is_active': True,
+                'is_api_sub_allowed': True,
+                'cluster_id': 1,
+                'task_sync_interval': _ps_default.TASK_SYNC_INTERVAL,
+                'task_delivery_interval': _ps_default.TASK_DELIVERY_INTERVAL,
+                'depth_check_freq': _ps_default.DEPTH_CHECK_FREQ,
+                'max_depth_gd': _ps_default.TOPIC_MAX_DEPTH_GD,
+                'max_depth_non_gd': _ps_default.TOPIC_MAX_DEPTH_NON_GD,
+                'pub_buffer_size_gd': _ps_default.PUB_BUFFER_SIZE_GD,
+            }
+            #topic_list.append(topic)
+
+            self.invoke('zato.pubsub.topic.create', request)
+
+        """
+        # .. get a new SQL session ..
+        with closing(self.odb.session()) as session:
+
+            # .. run the SQL insert statement ..
+            result = session.execute(
+                TopicInsert().values(topic_list)
+            )
+
+            print()
+            print(111, dir(result))
+            print()
+
+            # .. now, we can commit the state to the database.
+            session.commit()
+        """
 
 # ################################################################################################################################
 # ################################################################################################################################
