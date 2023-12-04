@@ -325,6 +325,7 @@ from dataclasses import dataclass
 
 # Zato
 from zato.common.api import PUBSUB
+from zato.common.exception import BadRequest
 from zato.common.odb.model import PubSubTopic
 from zato.common.typing_ import dictlist, strlist
 from zato.server.service import Model, Service
@@ -370,12 +371,12 @@ class CreateTopics(Service):
         input:'CreateTopicRequest' = self.request.input
 
         # Log what we are about to do
-        self.logger.info('Creating topics -> %s', input)
+        self.logger.info('Creating topics -> len=%s', len(input.name_list))
 
-        # .. build a list of dictionaries, each of which will represent a topic to be created ..
-        topic_list = []
-
+        # .. go through each name we are given on input ..
         for name in input.name_list:
+
+            # .. fill out all the details ..
             request = {
                 'name': name,
                 'has_gd': True,
@@ -389,26 +390,16 @@ class CreateTopics(Service):
                 'max_depth_non_gd': _ps_default.TOPIC_MAX_DEPTH_NON_GD,
                 'pub_buffer_size_gd': _ps_default.PUB_BUFFER_SIZE_GD,
             }
-            #topic_list.append(topic)
 
-            self.invoke('zato.pubsub.topic.create', request)
+            # .. create a topic now ..
+            try:
+                _ = self.invoke('zato.pubsub.topic.create', request)
+            except BadRequest as e:
+                # .. ignore topics that already exist ..
+                self.logger.info('Ignoring -> %s', e)
 
-        """
-        # .. get a new SQL session ..
-        with closing(self.odb.session()) as session:
-
-            # .. run the SQL insert statement ..
-            result = session.execute(
-                TopicInsert().values(topic_list)
-            )
-
-            print()
-            print(111, dir(result))
-            print()
-
-            # .. now, we can commit the state to the database.
-            session.commit()
-        """
+        # .. finally, store information in logs that we are done.
+        self.logger.info('Topic created')
 
 # ################################################################################################################################
 # ################################################################################################################################
