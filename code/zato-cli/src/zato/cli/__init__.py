@@ -164,6 +164,7 @@ command_imports = (
     ('pubsub_cleanup', 'zato.cli.pubsub.cleanup.Cleanup'),
     ('pubsub_create_endpoint', 'zato.cli.pubsub.endpoint.CreateEndpoint'),
     ('pubsub_create_topic', 'zato.cli.pubsub.topic.CreateTopic'),
+    ('pubsub_create_topics', 'zato.cli.pubsub.topic.CreateTopics'),
     ('pubsub_delete_endpoint', 'zato.cli.pubsub.endpoint.DeleteEndpoint'),
     ('pubsub_delete_topic', 'zato.cli.pubsub.topic.DeleteTopics'),
     ('pubsub_delete_topics', 'zato.cli.pubsub.topic.DeleteTopics'),
