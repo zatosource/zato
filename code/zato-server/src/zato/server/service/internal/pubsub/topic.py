@@ -288,7 +288,7 @@ class DeleteTopics(Service):
                 topics_deleted.append(topic_id)
 
                 # .. sleep for a while in case to make sure there is no sudden surge of deletions ..
-                sleep(0.05)
+                sleep(0.01)
 
         # Go through each of the IDs given on input and return it on output too
         # as long as we actually did delete such a topic.

@@ -438,8 +438,6 @@ class CreateEditMeta(AdminServiceMeta):
                             has_integrity_error = True
 
                 except Exception:
-                    msg = 'Could not {} the object, e:`%s`'.format(verb)
-                    logger.error(msg, format_exc())
                     session.rollback()
                     raise
                 else:
