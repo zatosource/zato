@@ -229,6 +229,29 @@ class DeleteTopics(ServerAwareCommand):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class CreateTopics(ServerAwareCommand):
+    """ Creates multiple topics based on an input file.
+    """
+    opts = [
+        {'name':'--input', 'help':'Path to a file with the list of topics to be created', 'required':False},
+        {'name':'--path',  'help':'Path to a Zato server', 'required':False},
+    ]
+
+# ################################################################################################################################
+
+    def execute(self, args:'Namespace'):
+
+        # Our service to invoke
+        service = 'topics1.create-topics'
+
+        request = {}
+
+        # Invoke the service and log the response it produced
+        self._invoke_service_and_log_response(service, request)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
 
     # stdlib
