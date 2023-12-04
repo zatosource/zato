@@ -29,6 +29,14 @@ if 0:
 
 class PubAPITestCase(BasePubSubRestTestCase):
 
+# ################################################################################################################################
+
+    def tearDown(self) -> 'None':
+        super().tearDown()
+        _ = self.delete_pubsub_topics_by_pattern(TestConfig.pubsub_topic_name_unique_auto_create)
+
+# ################################################################################################################################
+
     def test_self_subscribe(self):
 
         # In this test, we check subscriptions to shared topics
@@ -97,7 +105,7 @@ class PubAPITestCase(BasePubSubRestTestCase):
 
     def test_full_path_subscribe_after_publication(self):
 
-        prefix = '/zato/demo/unique.'
+        prefix = TestConfig.pubsub_topic_name_unique_auto_create
         topic_name = prefix + datetime.utcnow().isoformat()
 
         # Command to invoke ..
