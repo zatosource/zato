@@ -33,18 +33,27 @@ release = json.loads(release)
 # the latter may result in spurious pip errors, such as:
 # "error in zato-agent setup command: Distribution contains no modules or packages for namespace package 'zato'"
 #
-git_command = ['git', 'rev-parse', '--short', 'HEAD']
+git_command_date = ['git', 'log', '-1', "--pretty=%cd", "--date=format:%Y.%m.%d"]
+git_command_revision = ['git', 'rev-parse', '--short', 'HEAD']
 
 try:
-    process = subprocess_run(git_command, stdout=PIPE, check=True)
 
-    revision = process.stdout
+    process_date = subprocess_run(git_command_date, stdout=PIPE, check=True)
+    date = process_date.stdout
+    date = date.decode('utf8')
+    date = date.strip()
+
+    process_revision = subprocess_run(git_command_revision, stdout=PIPE, check=True)
+    revision = process_revision.stdout
     revision = revision.decode('utf8')
     revision = revision.strip()
+
 except Exception as e:
     version = '3.2-nogit'
 else:
-    version = '{}.{}+rev.{}'.format(release['major'], release['minor'], revision)
+    major = release['major']
+    minor = release['minor']
+    version = '{}.{}.{}+rev.{}'.format(major, minor, date, revision)
 
 # ################################################################################################################################
 # ################################################################################################################################
