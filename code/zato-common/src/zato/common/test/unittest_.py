@@ -91,7 +91,7 @@ class BasePubSubRestTestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def setUp(self) -> None:
+    def setUp(self) -> 'None':
         super().setUp()
         if self.should_init_rest_client:
             self.rest_client.init(username=username, sec_name=sec_name)

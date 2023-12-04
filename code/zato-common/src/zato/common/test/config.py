@@ -23,6 +23,9 @@ class TestConfig:
     # This topic has only one subscriber
     pubsub_topic_name_unique = '/zato/demo/unique'
 
+    # Tests will create topics with this pattern - note the trailing dot.
+    pubsub_topic_name_unique_auto_create = '/zato/demo/unique.'
+
     default_stdout = b'(None)\n'
 
     current_app = 'CRM'
