@@ -20,9 +20,8 @@ from zato.common.typing_ import cast_
 
 if 0:
     from sqlalchemy import Column
-    from sqlalchemy.sql.selectable import Select
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anylist, intlist, strlist
+    from zato.common.typing_ import anylist, intlist, strlist
     Column = Column
 
 # ################################################################################################################################
@@ -106,50 +105,5 @@ def get_topic_sub_count_list(session:'SASession', cluster_id:'int', topic_id_lis
         group_by('topic_id')
 
     return session.execute(q).fetchall()
-
-# ################################################################################################################################
-
-def _get_topic_list_by_condition(condition:'any_') -> 'Select':
-    """ Returns topics matching the input condition.
-    """
-    q = select([
-        TopicTable.c.id,
-        TopicTable.c.name,
-        ]).\
-        where(
-            condition
-        )
-
-    return q
-
-# ################################################################################################################################
-
-def get_topic_list_by_id_list(session:'SASession', topic_id_list:'intlist') -> 'anylist':
-    """ Returns topics matching the input list of IDs.
-    """
-    condition = TopicTable.c.id.in_(topic_id_list)
-    query = _get_topic_list_by_condition(condition)
-
-    return session.execute(query).fetchall()
-
-# ################################################################################################################################
-
-def get_topic_list_by_name_list(session:'SASession', topic_name_list:'strlist') -> 'anylist':
-    """ Returns topics matching the input list of names.
-    """
-    condition = TopicTable.c.name.in_(topic_name_list)
-    query = _get_topic_list_by_condition(condition)
-
-    return session.execute(query).fetchall()
-
-# ################################################################################################################################
-
-def get_topic_list_by_name_pattern(session:'SASession', pattern:'str') -> 'anylist':
-    """ Returns topics matching the input list of names.
-    """
-    condition = TopicTable.c.name.contains(pattern)
-    query = _get_topic_list_by_condition(condition)
-
-    return session.execute(query).fetchall()
 
 # ################################################################################################################################
