@@ -1179,6 +1179,12 @@ class RATE_LIMIT:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ObjectType:
+    PubSub_Topic = 'pubsub-topic'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ODOO:
 
     class CLIENT_TYPE:
@@ -2115,6 +2121,7 @@ default_internal_modules = {
     'zato.server.service.internal.channel.web_socket.subscription': True,
     'zato.server.service.internal.channel.zmq': True,
     'zato.server.service.internal.cloud.aws.s3': True,
+    'zato.server.service.internal.common': True,
     'zato.server.service.internal.connector.amqp_': True,
     'zato.server.service.internal.crypto': True,
     'zato.server.service.internal.definition.amqp_': True,
