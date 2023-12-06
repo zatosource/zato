@@ -28,8 +28,7 @@ from zato.server.service import Model, Service
 
 if 0:
     from bunch import Bunch
-    from zato.common.odb.model.base import Base as BaseTable
-    from zato.common.typing_ import anylist, strlist
+    from zato.common.typing_ import strlist
     Bunch = Bunch
     strlist = strlist
 
