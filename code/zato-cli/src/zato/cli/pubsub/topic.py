@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli import ServerAwareCommand
-from zato.common.api import GENERIC
+from zato.common.api import GENERIC, ObjectType
 from zato.common.test.config import TestConfig
 from zato.common.typing_ import cast_
 
@@ -205,21 +205,18 @@ class DeleteTopics(ServerAwareCommand):
         import sys
 
         # This will be built based on the option provided by user
-        request = {}
+        request = {
+            'object_type': 'pubsub-topic'
+        }
 
         options = ['--id', '--id-list', '--name', '--name-list', '--pattern']
         for name in options:
             arg_attr = name.replace('--', '')
             arg_attr = arg_attr.replace('-', '_')
-            print('AAA', name, arg_attr)
             value = getattr(args, arg_attr, None)
             if value:
                 request[arg_attr] = value
                 break
-
-        print()
-        print(111, args)
-        print()
 
         if not request:
             options = ', '.join(options)
@@ -227,7 +224,7 @@ class DeleteTopics(ServerAwareCommand):
             sys.exit(self.SYS_ERROR.PARAMETER_MISSING)
 
         # Our service to invoke
-        service = 'zato.pubsub.topic.delete-topics'
+        service = 'zato.common.delete-objects'
 
         # Invoke the service and log the response it produced
         self._invoke_service_and_log_response(service, request)

@@ -8,16 +8,18 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from copy import deepcopy
 from dataclasses import dataclass
 
 # gevent
 from gevent import sleep
 
 # Zato
+from zato.common.api import ObjectType
 from zato.common.odb.model.base import Base as BaseTable
 from zato.common.odb.query.common import get_object_list_by_id_list, get_object_list_by_name_list, \
     get_object_list_by_name_contains
-from zato.common.typing_ import any_, anylist, callable_, intlistnone, intnone, strlistnone, strnone
+from zato.common.typing_ import any_, anylist, callable_, intlistnone, intnone, strdict, strlistnone, strnone, type_
 from zato.server.connection.http_soap import BadRequest
 from zato.server.service import Model, Service
 
@@ -26,6 +28,7 @@ from zato.server.service import Model, Service
 
 if 0:
     from bunch import Bunch
+    from zato.common.odb.model.base import Base as BaseTable
     from zato.common.typing_ import anylist, strlist
     Bunch = Bunch
     strlist = strlist
@@ -41,13 +44,21 @@ class BaseDeleteObjectsRequest(Model):
     name_list: strlistnone
     pattern: strnone
 
+@dataclass(init=False)
+class BaseDeleteObjectsResponse(Model):
+    objects_matched: anylist
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=False)
 class DeleteObjectsImplRequest(BaseDeleteObjectsRequest):
-    delete_class_: Service
-    object_class_: BaseTable
+    table: BaseTable
+    delete_class: type_[Service]
+
+@dataclass(init=False)
+class DeleteObjectsImplResponse(BaseDeleteObjectsResponse):
+    pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,12 +67,9 @@ class DeleteObjectsImplRequest(BaseDeleteObjectsRequest):
 class DeleteObjectsRequest(BaseDeleteObjectsRequest):
     object_type: str
 
-# ################################################################################################################################
-# ################################################################################################################################
-
 @dataclass(init=False)
-class DeleteObjectsImplResponse(Model):
-    objects_deleted: anylist
+class DeleteObjectsResponse(BaseDeleteObjectsResponse):
+    pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,17 +80,17 @@ class DeleteObjectsImpl(Service):
         input = DeleteObjectsImplRequest
         output = DeleteObjectsImplResponse
 
-    def _get_object_data(self, query:'any_', where:'any_') -> 'anylist':
+    def _get_object_data(self, query:'any_', table:'BaseTable', where:'any_') -> 'anylist':
 
         with closing(self.odb.session()) as session:
-            object_data = query(session, where)
+            object_data = query(session, table, where)
 
         object_data = [dict(elem) for elem in object_data]
         return object_data
 
 # ################################################################################################################################
 
-    def _delete_object_list(self, object_id_list:'anylist') -> 'anylist':
+    def _delete_object_list(self, table:'BaseTable', object_id_list:'anylist') -> 'anylist':
 
         # Make sure we have a list of integers on input
         object_id_list = [int(elem) for elem in object_id_list]
@@ -90,20 +98,20 @@ class DeleteObjectsImpl(Service):
         # We want to return a list of their IDs along with names so that the API users can easily understand what was deleted
         # which means that we need to construct the list upfront as otherwise, once we delete an object,
         # such information will be no longer available.
-        object_data = self._get_object_data(get_object_list_by_id_list, object_id_list)
+        object_data = self._get_object_data(get_object_list_by_id_list, table, object_id_list)
 
         # Our response to produce
         out:'anylist' = []
 
         # A list of object IDs that we were able to delete
-        objects_deleted = []
+        objects_matched = []
 
         # Go through each of the input object IDs ..
         for object_id in object_id_list:
 
             # .. invoke the service that will delete the object ..
             try:
-                self.invoke(self.request.input.delete_class_.get_name(), {
+                self.invoke(self.request.input.delete_class.get_name(), {
                     'id': object_id
                 })
             except Exception as e:
@@ -111,7 +119,7 @@ class DeleteObjectsImpl(Service):
             else:
                 # If we are here, it means that the object was deleted
                 # in which case we add its ID for later use ..
-                objects_deleted.append(object_id)
+                objects_matched.append(object_id)
 
                 # .. sleep for a while in case to make sure there is no sudden surge of deletions ..
                 sleep(0.01)
@@ -119,7 +127,7 @@ class DeleteObjectsImpl(Service):
         # Go through each of the IDs given on input and return it on output too
         # as long as we actually did delete such an object.
         for elem in object_data:
-            if elem['id'] in objects_deleted:
+            if elem['id'] in objects_matched:
                 out.append(elem)
 
         # Return the response to our caller
@@ -127,8 +135,8 @@ class DeleteObjectsImpl(Service):
 
 # ################################################################################################################################
 
-    def _get_object_id_list(self, query:'any_', where:'any_') -> 'anylist':
-        object_data = self._get_object_data(query, where)
+    def _get_object_id_list(self, query:'any_', table:'BaseTable', where:'any_') -> 'anylist':
+        object_data = self._get_object_data(query, table, where)
         out = [elem['id'] for elem in object_data]
         return out
 
@@ -158,30 +166,30 @@ class DeleteObjectsImpl(Service):
         elif input.name:
             query:'callable_' = get_object_list_by_name_list
             where = [input.name]
-            object_id_list = self._get_object_id_list(query, where)
+            object_id_list = self._get_object_id_list(query, input.table, where)
 
         # It is a list of names - look up objects matching them now
         elif input.name_list:
             query:'callable_' = get_object_list_by_name_list
             where = input.name_list if isinstance(input.name_list, list) else [input.name_list] # type: ignore
-            object_id_list = self._get_object_id_list(query, where)
+            object_id_list = self._get_object_id_list(query, input.table, where)
 
         # This is a list of patterns but not necessarily full object names as above
         elif input.pattern:
             query:'callable_' = get_object_list_by_name_contains
             where = input.pattern
-            object_id_list = self._get_object_id_list(query, where)
+            object_id_list = self._get_object_id_list(query, input.table, where)
 
         else:
             raise BadRequest(self.cid, 'No deletion criteria were given on input')
 
         # No matter how we arrived at this result, we have a list of object IDs
         # and we can delete each of them now ..
-        objects_deleted = self._delete_object_list(object_id_list)
+        objects_matched = self._delete_object_list(input.table, object_id_list)
 
         # .. now, we can produce a response for our caller ..
         response = DeleteObjectsImplResponse()
-        response.objects_deleted = objects_deleted
+        response.objects_matched = objects_matched
 
         # .. and return it on output
         self.response.payload = response
@@ -189,6 +197,57 @@ class DeleteObjectsImpl(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class DeleteObjects(Service):
+
+    class SimpleIO:
+        input = DeleteObjectsRequest
+        output = DeleteObjectsResponse
+
+    def handle(self) -> 'None':
+
+        # Zato
+        from zato.common.odb.model import PubSubTopic
+        from zato.server.service.internal.pubsub.topic import Delete as DeleteTopic
+
+        # Add type hints
+        input:'DeleteObjectsRequest' = self.request.input
+
+        # Maps incoming string names of objects to their actual ODB classes
+        odb_map:'strdict' = {
+            ObjectType.PubSub_Topic: PubSubTopic.__table__,
+        }
+
+        # Maps incoming string names of objects to services that actually delete them
+        service_map = {
+            ObjectType.PubSub_Topic: DeleteTopic,
+        }
+
+        # Get a class that represents the input object ..
+        table = odb_map[input.object_type]
+
+        # .. get a class that represents the service that actually handles input ..
+        delete_class = service_map[input.object_type]
+
+        # .. clone our input to form the basis of the request that the implementation will receive ..
+        request:'strdict' = deepcopy(input.to_dict())
+
+        # .. remove elements that the implementation does not need .
+        _ = request.pop('object_type', None)
+
+        # .. prepare extra parameters that the implementation expects ..
+        extra = {
+            'table':  table,
+            'delete_class':  delete_class,
+        }
+
+        # .. build a request for the implementation service ..
+        request_impl:'DeleteObjectsImplRequest' = DeleteObjectsImplRequest.from_dict(request, extra)
+
+        # .. invoke the implementation service now ..
+        result = self.invoke(DeleteObjectsImpl, request_impl)
+
+        # .. and return the result to our caller.
+        self.response.payload = result
 
 # ################################################################################################################################
 # ################################################################################################################################

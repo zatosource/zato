@@ -28,20 +28,23 @@ from dateutil.parser import parse as dt_parse
 # orjson
 from orjson import dumps
 
+# SQLAlchemy
+from sqlalchemy.sql.schema import Table
+
 # typing-utils
 from typing_utils import issubtype
 
 # Zato
 from zato.common.api import ZatoNotGiven
 from zato.common.marshal_.model import BaseModel
-from zato.common.typing_ import cast_, date_, datetime_, datetimez, extract_from_union, isotimestamp, is_union
+from zato.common.typing_ import cast_, date_, datetime_, datetimez, extract_from_union, isotimestamp, is_union, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from dataclasses import Field
-    from zato.common.typing_ import any_, anydict, anylist, boolnone, dictnone, intnone, optional, tuplist, type_
+    from zato.common.typing_ import any_, anydict, anylist, boolnone, dictnone, intnone, optional, tuplist
     from zato.server.base.parallel import ParallelServer
     from zato.server.service import Service
 
@@ -63,6 +66,14 @@ def is_list(field_type:'Field', is_class:'bool') -> 'bool':
         type_to_check = field_type.__args__[0] # type: ignore
     else:
         type_to_check = field_type
+
+    # This will exist if input is, for instance abc = type_[Service]
+    # Again, this is the only reliable way to check it.
+    is_type = 'typing.Type' in str(type_to_check)
+
+    # If it is a type object, we know it cannot be a list so we can return here.
+    if is_type:
+        return False
 
     is_list_base_class_instance = isinstance(type_to_check, _ListBaseClass)
     is_list_sub_type = issubtype(type_to_check, list) # type: ignore
@@ -340,8 +351,11 @@ class FieldCtx:
             elif isinstance(self.dict_ctx.current_dict, Model): # type: ignore
                 value = getattr(self.dict_ctx.current_dict, self.name, ZatoNotGiven)
 
+        # We do not handle SQLAlchemy Table objects
+        is_table = isinstance(value, Table)
+
         # If this field has a value, we can try to parse it into a specific type ..
-        if value and (value != ZatoNotGiven):
+        if (not is_table) and value and (value != ZatoNotGiven):
 
             try:
                 # .. as an integer ..
