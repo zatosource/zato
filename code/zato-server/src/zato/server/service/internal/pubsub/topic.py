@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,14 +21,12 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubTopic
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
-from zato.common.odb.query.common import get_topic_list_by_id_list, get_topic_list_by_name_list, get_topic_list_by_name_pattern
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_gd_depth_topic_list,  get_topic_sub_count_list, \
     get_topics_by_sub_keys
 from zato.common.typing_ import anylist, cast_, intlistnone, intnone, strlistnone, strnone
 from zato.common.util.api import ensure_pubsub_hook_is_valid
 from zato.common.util.pubsub import get_last_pub_metadata
 from zato.common.util.time_ import datetime_from_ms
-from zato.server.connection.http_soap import BadRequest
 from zato.server.service import AsIs, Bool, Int, List, Model, Opaque, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.internal.pubsub.search import NonGDSearchService
@@ -40,7 +38,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 if 0:
     from bunch import Bunch
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anylist, anydict, anytuple, intstrdict, stranydict, strlist
+    from zato.common.typing_ import any_, anylist, anydict, anytuple, stranydict, strlist
     Bunch = Bunch
     strlist = strlist
 
@@ -237,129 +235,6 @@ class Edit(AdminService):
 @add_metaclass(DeleteMeta)
 class Delete(AdminService):
     pass
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class DeleteTopics(Service):
-
-    class SimpleIO:
-        input = DeleteTopicRequest
-        output = DeleteTopicResponse
-
-    def _get_topic_data(self, query:'any_', condition:'any_') -> 'anylist':
-
-        with closing(self.odb.session()) as session:
-            topic_data = query(session, condition)
-
-        topic_data = [dict(elem) for elem in topic_data]
-        return topic_data
-
-# ################################################################################################################################
-
-    def _delete_topic_list(self, topic_id_list:'anylist') -> 'anylist':
-
-        # Make sure we have a list of integers on input
-        topic_id_list = [int(elem) for elem in topic_id_list]
-
-        # We want to return a list of their IDs along with names so that the API users can easily understand what was deleted
-        # which means that we need to construct the list upfront as otherwise, once we delete a topic,
-        # such information will be no longer available.
-        topic_data = self._get_topic_data(get_topic_list_by_id_list, topic_id_list)
-
-        # Our response to produce
-        out:'anylist' = []
-
-        # A list of topic IDs that we were able to delete
-        topics_deleted = []
-
-        # Go through each of the input topic IDs ..
-        for topic_id in topic_id_list:
-
-            # .. invoke the service that will delete the topic ..
-            try:
-                self.invoke(Delete.get_name(), {
-                    'id': topic_id
-                })
-            except Exception as e:
-                self.logger.warn('Exception while deleting topic `%s` -> `%s`', topic_id, e)
-            else:
-                # If we are here, it means that the topic was deleted
-                # in which case we add its ID for later use ..
-                topics_deleted.append(topic_id)
-
-                # .. sleep for a while in case to make sure there is no sudden surge of deletions ..
-                sleep(0.01)
-
-        # Go through each of the IDs given on input and return it on output too
-        # as long as we actually did delete such a topic.
-        for elem in topic_data:
-            if elem['id'] in topics_deleted:
-                out.append(elem)
-
-        # Return the response to our caller
-        return out
-
-# ################################################################################################################################
-
-    def _get_topic_id_list(self, query:'any_', condition:'any_') -> 'anylist':
-        topic_data = self._get_topic_data(query, condition)
-        out = [elem['id'] for elem in topic_data]
-        return out
-
-# ################################################################################################################################
-
-    def handle(self) -> 'None':
-
-        # Type checks
-        topic_id_list:'anylist'
-
-        # Local aliases
-        input = self.request.input # type: DeleteTopicRequest
-
-        # We can be given several types of input elements in the incoming request
-        # and we always need to build a list of IDs out of them, unless we already
-        # have a list of IDs on input.
-
-        # This is a list - use it as-is
-        if input.id_list:
-            topic_id_list = input.id_list
-
-        # It is an individual topic ID - we can turn it into a list as-is
-        elif input.id:
-            topic_id_list = [input.id]
-
-        # It is an individual topic name - turn it into a list look it up in the database
-        elif input.name:
-            query = get_topic_list_by_name_list
-            condition = [input.name]
-            topic_id_list = self._get_topic_id_list(query, condition)
-
-        # It is a list of names - look up topics matching them now
-        elif input.name_list:
-            query = get_topic_list_by_name_list
-            condition = input.name_list
-            topic_id_list = self._get_topic_id_list(query, condition)
-
-        # This is a list of patterns but not necessarily full topic names as above
-        elif input.pattern:
-            query = get_topic_list_by_name_pattern
-            condition = input.pattern
-            topic_id_list = self._get_topic_id_list(query, condition)
-
-        else:
-            raise BadRequest(self.cid, 'No deletion criteria were given on input')
-
-        # No matter how we arrived at this result, we have a list of topic IDs
-        # and we can delete each of them now ..
-        topics_deleted = self._delete_topic_list(topic_id_list)
-
-        # .. now, we can produce a response for our caller ..
-        response = DeleteTopicResponse()
-        response.topics_deleted = topics_deleted
-
-        # .. and return it on output
-        self.response.payload = response
 
 # ################################################################################################################################
 # ################################################################################################################################
