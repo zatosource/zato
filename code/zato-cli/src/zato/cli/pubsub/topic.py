@@ -216,8 +216,8 @@ class CreateTopics(ServerAwareCommand):
         service = 'topics1.create-topics'
 
         # Read the parameters from the command line or fall back on the defaults
-        count = int(getattr(args, 'count') or count)
-        prefix = getattr(args, 'prefix') or prefix
+        count = int(args.count or count)
+        prefix = args.prefix or prefix
 
         # Find out to how many digits we should fill tha names
         digits = len(str(count))
@@ -281,7 +281,7 @@ if __name__ == '__main__':
 # ################################################################################################################################
 # ################################################################################################################################
 
-'''
+"""
 # -*- coding: utf-8 -*-
 
 # stdlib
@@ -367,4 +367,4 @@ class CreateTopics(Service):
 
 # ################################################################################################################################
 # ################################################################################################################################
-'''
+"""
