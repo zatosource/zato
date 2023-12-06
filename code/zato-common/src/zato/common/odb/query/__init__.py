@@ -993,7 +993,7 @@ def _pubsub_topic(session, cluster_id):
         order_by(PubSubTopic.name)
 
 @bunch_maker
-def pubsub_topic(session, cluster_id, topic_id=None, topic_name=None):
+def pubsub_topic(session, cluster_id, topic_id=None, topic_name=None) -> 'PubSubTopic':
     """ A pub/sub topic.
     """
     q = _pubsub_topic(session, cluster_id)
