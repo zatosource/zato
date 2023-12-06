@@ -210,15 +210,20 @@ class DeleteTopics(ServerAwareCommand):
         options = ['--id', '--id-list', '--name', '--name-list', '--pattern']
         for name in options:
             arg_attr = name.replace('--', '')
-            arg_attr = arg_attr.replace('-', '-s')
+            arg_attr = arg_attr.replace('-', '_')
+            print('AAA', name, arg_attr)
             value = getattr(args, arg_attr, None)
             if value:
                 request[arg_attr] = value
                 break
 
+        print()
+        print(111, args)
+        print()
+
         if not request:
             options = ', '.join(options)
-            self.logger.warn(f'Input missing. One of the following is expected: {options}')
+            self.logger.warn(f'Missing input. One of the following is expected: {options}')
             sys.exit(self.SYS_ERROR.PARAMETER_MISSING)
 
         # Our service to invoke
