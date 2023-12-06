@@ -198,7 +198,6 @@ class CreateTopics(ServerAwareCommand):
     """ Creates multiple topics based on an input file.
     """
     opts = [
-        {'name':'--input', 'help':'Path to a file with the list of topics to be created', 'required':False},
         {'name':'--count', 'help':'How many topics to create', 'required':False},
         {'name':'--prefix', 'help':'Prefix that each of the topics to be created will have', 'required':False},
         {'name':'--path',  'help':'Path to a Zato server', 'required':False},
