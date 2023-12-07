@@ -8,8 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli import ServerAwareCommand
-from zato.cli.common import DeleteCommon
-from zato.common.api import GENERIC, ObjectType
+from zato.cli.common import CreateCommon, DeleteCommon
+from zato.common.api import GENERIC, CommonObject
 from zato.common.test.config import TestConfig
 from zato.common.typing_ import cast_
 
@@ -189,52 +189,16 @@ class GetTopics(ServerAwareCommand):
 class DeleteTopics(DeleteCommon):
     """ Deletes topic by input criteria.
     """
-    object_type = ObjectType.PubSub_Topic
+    object_type = CommonObject.PubSub_Topic
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CreateTopics(ServerAwareCommand):
+class CreateTopics(CreateCommon):
     """ Creates multiple topics based on an input file.
     """
-    opts = [
-        {'name':'--count', 'help':'How many topics to create', 'required':False},
-        {'name':'--prefix', 'help':'Prefix that each of the topics to be created will have', 'required':False},
-        {'name':'--path',  'help':'Path to a Zato server', 'required':False},
-    ]
-
-# ################################################################################################################################
-
-    def execute(self, args:'Namespace'):
-
-        # Local variables
-        count = 1000
-        prefix = TestConfig.pubsub_topic_name_perf_auto_create
-
-        # Our service to invoke
-        service = 'topics1.create-topics'
-
-        # Read the parameters from the command line or fall back on the defaults
-        count = int(args.count or count)
-        prefix = args.prefix or prefix
-
-        # Find out to how many digits we should fill tha names
-        digits = len(str(count))
-
-        # The list to create
-        name_list = []
-
-        for idx, _ in enumerate(range(count), 1):
-            idx = str(idx).zfill(digits)
-            topic_name = f'{prefix}{idx}'
-            name_list.append(topic_name)
-
-        request:'strdict' = {
-            'name_list': name_list
-        }
-
-        # Invoke the service and log the response it produced
-        self._invoke_service_and_log_response(service, request)
+    object_type = CommonObject.PubSub_Topic
+    prefix = TestConfig.pubsub_topic_name_perf_auto_create
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -279,91 +243,3 @@ if __name__ == '__main__':
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-"""
-# -*- coding: utf-8 -*-
-
-# stdlib
-from dataclasses import dataclass
-
-# Zato
-from zato.common.api import PUBSUB
-from zato.common.exception import BadRequest
-from zato.common.odb.model import PubSubTopic
-from zato.common.typing_ import dictlist, strlist
-from zato.server.service import Model, Service
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-_ps_default = PUBSUB.DEFAULT
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-TopicTable = PubSubTopic.__table__
-TopicInsert = TopicTable.insert
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False)
-class CreateTopicRequest(Model):
-    name_list: strlist
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False)
-class CreateTopicResponse(Model):
-    topics_created: dictlist
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class CreateTopics(Service):
-    name = 'topics1.create-topics'
-
-    class SimpleIO:
-        input = CreateTopicRequest
-        output = CreateTopicResponse
-
-    def handle(self):
-
-        # Local variables
-        input:'CreateTopicRequest' = self.request.input
-
-        # Log what we are about to do
-        self.logger.info('Creating topics -> len=%s', len(input.name_list))
-
-        # .. go through each name we are given on input ..
-        for name in input.name_list:
-
-            # .. fill out all the details ..
-            request = {
-                'name': name,
-                'has_gd': True,
-                'is_active': True,
-                'is_api_sub_allowed': True,
-                'cluster_id': 1,
-                'task_sync_interval': _ps_default.TASK_SYNC_INTERVAL,
-                'task_delivery_interval': _ps_default.TASK_DELIVERY_INTERVAL,
-                'depth_check_freq': _ps_default.DEPTH_CHECK_FREQ,
-                'max_depth_gd': _ps_default.TOPIC_MAX_DEPTH_GD,
-                'max_depth_non_gd': _ps_default.TOPIC_MAX_DEPTH_NON_GD,
-                'pub_buffer_size_gd': _ps_default.PUB_BUFFER_SIZE_GD,
-            }
-
-            # .. create a topic now ..
-            try:
-                _ = self.invoke('zato.pubsub.topic.create', request)
-            except BadRequest as e:
-                # .. ignore topics that already exist ..
-                self.logger.info('Ignoring -> %s', e)
-
-        # .. finally, store information in logs that we are done.
-        self.logger.info('Topic created')
-
-# ################################################################################################################################
-# ################################################################################################################################
-"""
