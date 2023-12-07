@@ -14,7 +14,6 @@ from dataclasses import dataclass
 # gevent
 from gevent import sleep
 
-
 # Zato
 from zato.common.api import CommonObject
 from zato.common.odb.model.base import Base as BaseTable
