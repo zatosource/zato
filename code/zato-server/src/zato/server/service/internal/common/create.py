@@ -1,252 +1,85 @@
 # -*- coding: utf-8 -*-
 
-"""
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
-
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
-"""
-
 # stdlib
-from contextlib import closing
-from copy import deepcopy
 from dataclasses import dataclass
 
-# gevent
-from gevent import sleep
-
 # Zato
-from zato.common.api import CommonObject
-from zato.common.odb.model.base import Base as BaseTable
-from zato.common.odb.query.common import get_object_list_by_id_list, get_object_list_by_name_list, \
-    get_object_list_by_name_contains
-from zato.common.typing_ import any_, anylist, callable_, intlistnone, intnone, strdict, strlistnone, strnone, type_
-from zato.server.connection.http_soap import BadRequest
+from zato.common.api import PUBSUB
+from zato.common.exception import BadRequest
+from zato.common.odb.model import PubSubTopic
+from zato.common.typing_ import dictlist, strlist
 from zato.server.service import Model, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from bunch import Bunch
-    from zato.common.typing_ import strlist
-    Bunch = Bunch
-    strlist = strlist
+_ps_default = PUBSUB.DEFAULT
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+TopicTable = PubSubTopic.__table__
+TopicInsert = TopicTable.insert
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=False)
-class BaseDeleteObjectsRequest(Model):
-    id: intnone
-    id_list: intlistnone
-    name: strnone
-    name_list: strlistnone
-    pattern: strnone
-
-@dataclass(init=False)
-class BaseDeleteObjectsResponse(Model):
-    objects_matched: anylist
+class CreateTopicRequest(Model):
+    name_list: strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=False)
-class DeleteObjectsImplRequest(BaseDeleteObjectsRequest):
-    table: BaseTable
-    delete_class: type_[Service]
-
-@dataclass(init=False)
-class DeleteObjectsImplResponse(BaseDeleteObjectsResponse):
-    pass
+class CreateTopicResponse(Model):
+    topics_created: dictlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
-class DeleteObjectsRequest(BaseDeleteObjectsRequest):
-    object_type: str
-
-@dataclass(init=False)
-class DeleteObjectsResponse(BaseDeleteObjectsResponse):
-    pass
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class DeleteObjectsImpl(Service):
+class CreateTopics(Service):
+    name = 'topics1.create-topics'
 
     class SimpleIO:
-        input = DeleteObjectsImplRequest
-        output = DeleteObjectsImplResponse
+        input = CreateTopicRequest
+        output = CreateTopicResponse
 
-    def _get_object_data(self, query:'any_', table:'BaseTable', where:'any_') -> 'anylist':
+    def handle(self):
 
-        with closing(self.odb.session()) as session:
-            object_data = query(session, table, where)
+        # Local variables
+        input:'CreateTopicRequest' = self.request.input
 
-        object_data = [dict(elem) for elem in object_data]
-        return object_data
+        # Log what we are about to do
+        self.logger.info('Creating topics -> len=%s', len(input.name_list))
 
-# ################################################################################################################################
+        # .. go through each name we are given on input ..
+        for name in input.name_list:
 
-    def _delete_object_list(self, table:'BaseTable', object_id_list:'anylist') -> 'anylist':
+            # .. fill out all the details ..
+            request = {
+                'name': name,
+                'has_gd': True,
+                'is_active': True,
+                'is_api_sub_allowed': True,
+                'cluster_id': 1,
+                'task_sync_interval': _ps_default.TASK_SYNC_INTERVAL,
+                'task_delivery_interval': _ps_default.TASK_DELIVERY_INTERVAL,
+                'depth_check_freq': _ps_default.DEPTH_CHECK_FREQ,
+                'max_depth_gd': _ps_default.TOPIC_MAX_DEPTH_GD,
+                'max_depth_non_gd': _ps_default.TOPIC_MAX_DEPTH_NON_GD,
+                'pub_buffer_size_gd': _ps_default.PUB_BUFFER_SIZE_GD,
+            }
 
-        # Make sure we have a list of integers on input
-        object_id_list = [int(elem) for elem in object_id_list]
-
-        # We want to return a list of their IDs along with names so that the API users can easily understand what was deleted
-        # which means that we need to construct the list upfront as otherwise, once we delete an object,
-        # such information will be no longer available.
-        object_data = self._get_object_data(get_object_list_by_id_list, table, object_id_list)
-
-        # Our response to produce
-        out:'anylist' = []
-
-        # A list of object IDs that we were able to delete
-        objects_matched = []
-
-        # Go through each of the input object IDs ..
-        for object_id in object_id_list:
-
-            # .. invoke the service that will delete the object ..
+            # .. create a topic now ..
             try:
-                self.invoke(self.request.input.delete_class.get_name(), {
-                    'id': object_id
-                })
-            except Exception as e:
-                self.logger.warn('Exception while deleting object `%s` -> `%s`', object_id, e)
-            else:
-                # If we are here, it means that the object was deleted
-                # in which case we add its ID for later use ..
-                objects_matched.append(object_id)
+                _ = self.invoke('zato.pubsub.topic.create', request)
+            except BadRequest as e:
+                # .. ignore topics that already exist ..
+                self.logger.info('Ignoring -> %s', e)
 
-                # .. sleep for a while in case to make sure there is no sudden surge of deletions ..
-                sleep(0.01)
-
-        # Go through each of the IDs given on input and return it on output too
-        # as long as we actually did delete such an object.
-        for elem in object_data:
-            if elem['id'] in objects_matched:
-                out.append(elem)
-
-        # Return the response to our caller
-        return out
-
-# ################################################################################################################################
-
-    def _get_object_id_list(self, query:'any_', table:'BaseTable', where:'any_') -> 'anylist':
-        object_data = self._get_object_data(query, table, where)
-        out = [elem['id'] for elem in object_data]
-        return out
-
-# ################################################################################################################################
-
-    def handle(self) -> 'None':
-
-        # Type checks
-        object_id_list:'anylist'
-
-        # Local aliases
-        input = self.request.input # type: DeleteObjectsImplRequest
-
-        # We can be given several types of input elements in the incoming request
-        # and we always need to build a list of IDs out of them, unless we already
-        # have a list of IDs on input.
-
-        # This is a list - use it as-is
-        if input.id_list:
-            object_id_list = input.id_list
-
-        # It is an individual object ID - we can turn it into a list as-is
-        elif input.id:
-            object_id_list = [input.id]
-
-        # It is an individual object name - turn it into a list look it up in the database
-        elif input.name:
-            query:'callable_' = get_object_list_by_name_list
-            where = [input.name]
-            object_id_list = self._get_object_id_list(query, input.table, where)
-
-        # It is a list of names - look up objects matching them now
-        elif input.name_list:
-            query:'callable_' = get_object_list_by_name_list
-            where = input.name_list if isinstance(input.name_list, list) else [input.name_list] # type: ignore
-            object_id_list = self._get_object_id_list(query, input.table, where)
-
-        # This is a list of patterns but not necessarily full object names as above
-        elif input.pattern:
-            query:'callable_' = get_object_list_by_name_contains
-            where = input.pattern
-            object_id_list = self._get_object_id_list(query, input.table, where)
-
-        else:
-            raise BadRequest(self.cid, 'No deletion criteria were given on input')
-
-        # No matter how we arrived at this result, we have a list of object IDs
-        # and we can delete each of them now ..
-        objects_matched = self._delete_object_list(input.table, object_id_list)
-
-        # .. now, we can produce a response for our caller ..
-        response = DeleteObjectsImplResponse()
-        response.objects_matched = objects_matched
-
-        # .. and return it on output
-        self.response.payload = response
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class DeleteObjects(Service):
-
-    class SimpleIO:
-        input = DeleteObjectsRequest
-        output = DeleteObjectsResponse
-
-    def handle(self) -> 'None':
-
-        # Zato
-        from zato.common.odb.model import PubSubTopic
-        from zato.server.service.internal.pubsub.topic import Delete as DeleteTopic
-
-        # Add type hints
-        input:'DeleteObjectsRequest' = self.request.input
-
-        # Maps incoming string names of objects to their actual ODB classes
-        odb_map:'strdict' = {
-            CommonObject.PubSub_Topic: PubSubTopic.__table__,
-        }
-
-        # Maps incoming string names of objects to services that actually delete them
-        service_map = {
-            CommonObject.PubSub_Topic: DeleteTopic,
-        }
-
-        # Get a class that represents the input object ..
-        table = odb_map[input.object_type]
-
-        # .. get a class that represents the service that actually handles input ..
-        delete_class = service_map[input.object_type]
-
-        # .. clone our input to form the basis of the request that the implementation will receive ..
-        request:'strdict' = deepcopy(input.to_dict())
-
-        # .. remove elements that the implementation does not need .
-        _ = request.pop('object_type', None)
-
-        # .. prepare extra parameters that the implementation expects ..
-        extra = {
-            'table':  table,
-            'delete_class':  delete_class,
-        }
-
-        # .. build a request for the implementation service ..
-        request_impl:'DeleteObjectsImplRequest' = DeleteObjectsImplRequest.from_dict(request, extra)
-
-        # .. invoke the implementation service now ..
-        result = self.invoke(DeleteObjectsImpl, request_impl)
-
-        # .. and return the result to our caller.
-        self.response.payload = result
+        # .. finally, store information in logs that we are done.
+        self.logger.info('Topic created')
 
 # ################################################################################################################################
 # ################################################################################################################################
