@@ -51,7 +51,8 @@ def update_globals(config, base_dir='.', needs_crypto=True):
             k = k.replace('DATABASE_', '', 1)
             if k == 'PASSWORD' and config['db_type'] != 'sqlite':
                 v = cm.decrypt(v)
-            default[k] = str(v)
+            v = str(v) if k != 'OPTIONS' else v
+            default[k] = v
         else:
             if k == 'ADMIN_INVOKE_PASSWORD' and needs_crypto:
                 v = cm.decrypt(v)
