@@ -34,7 +34,7 @@ config_template = """{{
   "DATABASE_PASSWORD": "{DATABASE_PASSWORD}",
   "DATABASE_HOST": "{DATABASE_HOST}",
   "DATABASE_PORT": "{DATABASE_PORT}",
-  "DATABASE_OPTIONS": {"timeout": 30},
+  "DATABASE_OPTIONS": {{"timeout": 30}},
 
   "TIME_ZONE": "America/New_York",
   "LANGUAGE_CODE": "en-us",
