@@ -20,7 +20,7 @@ from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, 
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_gd_depth_topic_list,  get_topic_sub_count_list, \
     get_topics_by_sub_keys
-from zato.common.typing_ import cast_, intlistnone, intnone, strlistnone, strnone
+from zato.common.typing_ import anylist, cast_, intlistnone, intnone, strlistnone, strnone
 from zato.common.util.api import ensure_pubsub_hook_is_valid
 from zato.common.util.pubsub import get_last_pub_metadata
 from zato.common.util.time_ import datetime_from_ms
@@ -35,7 +35,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 if 0:
     from bunch import Bunch
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anylist, anydict, anytuple, stranydict, strlist
+    from zato.common.typing_ import any_, anydict, anytuple, stranydict, strlist
     Bunch = Bunch
     strlist = strlist
 
