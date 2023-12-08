@@ -78,6 +78,14 @@ class CreateObjects(Service):
         # Our response to produce
         out:'strdict' = {}
 
+        if len(response) == 1:
+            keys = list(response)
+            response_wrapper = keys[0]
+            if response_wrapper.startswith('zato'):
+                response = response[response_wrapper]
+
+        out.update(response)
+
         return out
 
 # ################################################################################################################################
