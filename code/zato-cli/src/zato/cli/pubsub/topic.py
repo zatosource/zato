@@ -18,7 +18,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from argparse import Namespace
-    from zato.common.typing_ import anydict, anylist, strdict
+    from zato.common.typing_ import anydict, anylist
     Namespace = Namespace
 
 # ################################################################################################################################

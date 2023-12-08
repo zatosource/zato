@@ -2126,6 +2126,8 @@ default_internal_modules = {
     'zato.server.service.internal.channel.zmq': True,
     'zato.server.service.internal.cloud.aws.s3': True,
     'zato.server.service.internal.common': True,
+    'zato.server.service.internal.common.create': True,
+    'zato.server.service.internal.common.delete': True,
     'zato.server.service.internal.connector.amqp_': True,
     'zato.server.service.internal.crypto': True,
     'zato.server.service.internal.definition.amqp_': True,

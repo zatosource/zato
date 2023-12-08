@@ -97,7 +97,7 @@ class CreateCommon(ServerAwareCommand):
 
         # Read the parameters from the command line or fall back on the defaults
         count = int(args.count or count)
-        prefix = args.prefix or prefix
+        prefix = args.prefix or self.prefix
 
         # Find out to how many digits we should fill tha names
         digits = len(str(count))
@@ -111,6 +111,7 @@ class CreateCommon(ServerAwareCommand):
             name_list.append(topic_name)
 
         request:'strdict' = {
+            'object_type': self.object_type,
             'name_list': name_list
         }
 

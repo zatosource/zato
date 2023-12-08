@@ -45,7 +45,7 @@ class BaseDeleteObjectsRequest(Model):
 
 @dataclass(init=False)
 class BaseDeleteObjectsResponse(Model):
-    objects_matched: anylist
+    objects: anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,7 +103,7 @@ class DeleteObjectsImpl(Service):
         out:'anylist' = []
 
         # A list of object IDs that we were able to delete
-        objects_matched = []
+        objects = []
 
         # Go through each of the input object IDs ..
         for object_id in object_id_list:
@@ -118,7 +118,7 @@ class DeleteObjectsImpl(Service):
             else:
                 # If we are here, it means that the object was deleted
                 # in which case we add its ID for later use ..
-                objects_matched.append(object_id)
+                objects.append(object_id)
 
                 # .. sleep for a while in case to make sure there is no sudden surge of deletions ..
                 sleep(0.01)
@@ -126,7 +126,7 @@ class DeleteObjectsImpl(Service):
         # Go through each of the IDs given on input and return it on output too
         # as long as we actually did delete such an object.
         for elem in object_data:
-            if elem['id'] in objects_matched:
+            if elem['id'] in objects:
                 out.append(elem)
 
         # Return the response to our caller
@@ -184,11 +184,11 @@ class DeleteObjectsImpl(Service):
 
         # No matter how we arrived at this result, we have a list of object IDs
         # and we can delete each of them now ..
-        objects_matched = self._delete_object_list(input.table, object_id_list)
+        objects = self._delete_object_list(input.table, object_id_list)
 
         # .. now, we can produce a response for our caller ..
         response = DeleteObjectsImplResponse()
-        response.objects_matched = objects_matched
+        response.objects = objects
 
         # .. and return it on output
         self.response.payload = response
@@ -197,6 +197,8 @@ class DeleteObjectsImpl(Service):
 # ################################################################################################################################
 
 class DeleteObjects(Service):
+
+    name = 'zato.common.delete-objects'
 
     class SimpleIO:
         input = DeleteObjectsRequest
