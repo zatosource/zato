@@ -152,7 +152,7 @@ if 'DATABASES' in globals():
     db_data = DATABASES['default']
     db_data['ENGINE'] = 'django.db.backends.' + django_sqlalchemy_engine[db_type]
 
-    for name in('ENGINE', 'NAME', 'USER', 'PASSWORD', 'HOST', 'PORT'):
+    for name in('ENGINE', 'NAME', 'USER', 'PASSWORD', 'HOST', 'PORT', 'OPTIONS'):
         globals()['DATABASE_{}'.format(name)] = DATABASES['default'][name]
 
     db_data['db_type'] = db_type
