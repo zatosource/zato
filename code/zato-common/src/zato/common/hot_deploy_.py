@@ -26,6 +26,10 @@ class HotDeployProject:
 # ################################################################################################################################
 # ################################################################################################################################
 
+#
+# These are default patterns that can be extended in runtime
+# via the HotDeploy.Env.Pickup_Patterns environment variable.
+#
 pickup_order_patterns = [
 
     '  common*/**',
