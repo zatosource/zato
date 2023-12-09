@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from traceback import format_exc
@@ -22,6 +20,7 @@ from zato.common.json_rpc import ErrorCtx, Forbidden, InternalError, ItemRespons
      RateLimitReached as JSONRPCRateLimitReached, RequestContext
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.odb.model import HTTPSOAP
+from zato.common.simpleio_ import drop_sio_elems
 from zato.common.rate_limiting.common import AddressNotAllowed, RateLimitReached
 from zato.server.service import Boolean, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -97,7 +96,7 @@ class _CreateEdit(AdminService):
 
     class SimpleIO(_BaseSimpleIO):
         input_required = 'cluster_id', 'name', 'is_active', 'url_path', 'security_id', List('service_whitelist')
-        input_optional = attrs_opt
+        input_optional = drop_sio_elems(attrs_opt, 'service_whitelist')
         output_required = 'id', 'name'
         skip_empty_keys = True
         response_elem = None
