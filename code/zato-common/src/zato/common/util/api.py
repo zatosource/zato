@@ -2133,3 +2133,12 @@ def load_ipc_pid_port(cluster_name:'str', server_name:'str', pid:'int') -> 'int'
     return out
 
 # ################################################################################################################################
+
+def make_list_from_string_list(value:'str', separator:'str') -> 'strlist':
+
+    value = value.split(separator) # type: ignore
+    value = [elem.strip() for elem in value if elem] # type: ignore
+
+    return value
+
+# ################################################################################################################################
