@@ -929,13 +929,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             # .. now, we need to have the correct file available ..
             path = ['~', 'env', 'details', 'all-zato-env-details.json']
-            path = os.path.join(path)
+            path = os.path.join(*path)
             path = os.path.expanduser(path)
 
             if os.path.exists(path):
                 with open(path) as f:
                     data = f.read()
-                self.logger.info(f'Environment details:\n{d}')
+                self.logger.info(f'Environment details:\n{data}')
 
 # ################################################################################################################################
 
