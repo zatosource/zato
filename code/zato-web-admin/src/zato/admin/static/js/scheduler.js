@@ -298,7 +298,7 @@ $.fn.zato.scheduler.create = function(job_type) {
 $.fn.zato.scheduler.execute = function(id) {
 
     var callback = function(data, status) {
-        var success = status == 'success';
+        var success = (status == 'success' || status == 'parsererror');
         if(success) {
             msg = 'OK, request submitted';
         }
