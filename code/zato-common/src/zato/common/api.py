@@ -1797,6 +1797,9 @@ class HotDeploy:
     Enmasse_File_Pattern = 'enmasse'
     Default_Patterns = [User_Conf_Directory, Enmasse_File_Pattern]
 
+    class Env:
+        Pickup_Patterns = 'Zato_Hot_Deploy_Pickup_Patterns'
+
 # ################################################################################################################################
 # ################################################################################################################################
 

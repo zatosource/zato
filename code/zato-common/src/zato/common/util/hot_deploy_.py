@@ -7,12 +7,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from logging import getLogger
 from pathlib import Path
 
 # Zato
 from zato.common.api import HotDeploy
 from zato.common.hot_deploy_ import HotDeployProject, pickup_order_patterns
 from zato.common.typing_ import cast_
+from zato.common.util.env import get_list_from_environment
 from zato.common.util.file_system import resolve_path
 
 # ################################################################################################################################
@@ -20,6 +22,11 @@ from zato.common.util.file_system import resolve_path
 
 if 0:
     from zato.common.typing_ import iterator_, list_, pathlist, strdictdict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,8 +62,16 @@ def get_project_info(
         # .. this is what will be added to sys.path by a starting server ..
         project.sys_path_entry = item
 
+        # .. make use of the default patterns ..
+        patterns = pickup_order_patterns[:]
+
+        # .. append any extra patterns found in the environment  ..
+        if extra_patterns := get_list_from_environment(HotDeploy.Env.Pickup_Patterns, ','):
+            logger.info('Found extra hot-deployment patterns via %s -> %s', HotDeploy.Env.Pickup_Patterns, extra_patterns)
+            patterns.extend(extra_patterns)
+
         # .. look up all the directories to pick up from ..
-        for pattern in pickup_order_patterns:
+        for pattern in patterns:
 
             # .. remove any potential whitespace ..
             pattern = pattern.strip()
