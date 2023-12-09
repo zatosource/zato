@@ -34,8 +34,9 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import DATA_FORMAT, default_internal_modules, EnvFile, GENERIC,  HotDeploy, IPC, KVDB as CommonKVDB, \
-    RATE_LIMIT, SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
+from zato.common.api import DATA_FORMAT, default_internal_modules, EnvFile, EnvVariable,  GENERIC,  HotDeploy, IPC, \
+    KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, \
+        ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
 from zato.common.bearer_token import BearerTokenManager
@@ -921,6 +922,23 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def log_environment_details(self):
+
+        # First, we need to have the correct variable set ..
+        if asbool(os.environ.get(EnvVariable.Log_Env_Details)):
+
+            # .. now, we need to have the correct file available ..
+            path = ['~', 'env', 'details', 'all-zato-env-details.json']
+            path = os.path.join(*path)
+            path = os.path.expanduser(path)
+
+            if os.path.exists(path):
+                with open(path) as f:
+                    data = f.read()
+                self.logger.info(f'Environment details:\n{data}')
+
+# ################################################################################################################################
+
     @staticmethod
     def start_server(parallel_server:'ParallelServer', zato_deployment_key:'str'='') -> 'None':
 
@@ -1222,6 +1240,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if self.is_starting_first:
             if self.deploy_auto_from:
                 self.handle_enmasse_auto_from()
+
+        # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
+        self.log_environment_details()
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
 
