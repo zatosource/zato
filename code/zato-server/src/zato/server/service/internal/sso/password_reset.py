@@ -14,9 +14,8 @@ from traceback import format_exc
 # Zato
 from zato.common.util.api import spawn_greenlet
 from zato.common.odb.model import SSOUser as UserModel
-from zato.common.simpleio_ import drop_sio_elems
-from zato.server.service import Service
-from zato.server.service.internal.sso import BaseRESTService, BaseSIO
+from zato.server.service import List, Service
+from zato.server.service.internal.sso import BaseRESTService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,7 +43,7 @@ class PasswordReset(BaseRESTService):
         input_optional = 'current_app', 'credential', 'token', 'reset_key', 'password'
 
         output_required = 'status', 'cid'
-        output_optional = tuple(drop_sio_elems(BaseSIO.output_optional, 'status', 'cid')) + ('reset_key',)
+        output_optional = ('reset_key', List('sub_status'))
 
         # Do not wrap elements in a top-level root element
         response_elem = None
