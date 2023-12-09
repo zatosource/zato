@@ -83,4 +83,23 @@ def populate_environment_from_file(env_path:'str', *, to_delete:'strlistnone'=No
     return out
 
 # ################################################################################################################################
+
+def get_list_from_environment(key:'str', separator:'str') -> 'strlist':
+
+    # stdlib
+    import os
+
+    # Zato
+    from zato.common.util.api import make_list_from_string_list
+
+    # Our value to produce
+    out = []
+
+    if value := os.environ.get(key):
+        value = make_list_from_string_list(value, separator)
+        out.extend(value)
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
