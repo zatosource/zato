@@ -55,8 +55,8 @@ from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
-    fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, register_diag_handlers, \
-    save_ipc_pid_port, spawn_greenlet, StaticConfig
+    fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid, \
+    register_diag_handlers, save_ipc_pid_port, spawn_greenlet, StaticConfig
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
@@ -430,9 +430,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             locally_deployed.extend(user_defined_deployed)
             len_user_defined_deployed = len(user_defined_deployed)
 
-            suffix = ' ' if len_user_defined_deployed == 1 else 's '
+            suffix = '' if len_user_defined_deployed == 1 else 's'
 
+            # This will be always logged ..
             logger.info('Deployed %d user-defined service%s (%s)', len_user_defined_deployed, suffix, self.name)
+
+            # .. whereas details are optional.
+            if asbool(os.environ.get('Zato_Log_User_Services_Deployed', False)):
+                for item in sorted(elem.name for elem in user_defined_deployed):
+                    logger.info('Deployed user service: %s', item)
 
             return set(locally_deployed)
 
@@ -537,8 +543,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             logger.info(msg)
 
             # .. support multiple entries ..
-            paths = paths.split(':') # type: ignore
-            paths = [elem.strip() for elem in paths if elem] # type: ignore
+            paths = make_list_from_string_list(paths, ':')
 
             # .. add  the actual configuration ..
             for path in paths:
