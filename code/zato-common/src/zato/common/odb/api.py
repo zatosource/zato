@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,7 +18,7 @@ from time import time
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import NullPool
@@ -829,8 +829,14 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def add_deployed_services(self, session, data):
-        # type: (list[dict]) -> None
-        session.execute(DeployedServiceInsert().values(data))
+
+        try:
+            session.execute(DeployedServiceInsert().values(data))
+        except OperationalError as e:
+            if 'duplicate key value violates unique constraint' in str(e):
+                pass
+            else:
+                raise
 
 # ################################################################################################################################
 
