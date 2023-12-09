@@ -706,8 +706,9 @@ class _GetEndpointSummaryBase(AdminService):
         input_required = ('cluster_id',)
         input_optional = ('topic_id',)
         output_required = ('id', 'endpoint_name', 'endpoint_type', 'subscription_count', 'is_active', 'is_internal')
-        output_optional = ('security_id', 'sec_type', 'sec_name', 'ws_channel_id', 'ws_channel_name',
-            'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role', 'endpoint_type_name') + common_sub_data
+        output_optional = ['security_id', 'sec_type', 'sec_name', 'ws_channel_id', 'ws_channel_name',
+            'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role', 'endpoint_type_name'] + \
+                drop_sio_elems(common_sub_data, 'endpoint_name', 'endpoint_type', 'is_internal')
 
 # ################################################################################################################################
 # ################################################################################################################################
