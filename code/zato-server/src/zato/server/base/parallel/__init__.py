@@ -937,6 +937,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     data = f.read()
                 self.logger.info(f'Environment details:\n{data}')
 
+        else:
+            for key, value in sorted(os.environ.items()):
+                logger.info('OS key=%r value=%r', key, value)
+
 # ################################################################################################################################
 
     @staticmethod
