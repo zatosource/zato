@@ -544,7 +544,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             logger.info(msg)
 
             # .. support multiple entries ..
-            paths = make_list_from_string_list(paths, ':')
+            paths = make_list_from_string_list(paths, ':') # type: ignore
 
             # .. add  the actual configuration ..
             for path in paths:
