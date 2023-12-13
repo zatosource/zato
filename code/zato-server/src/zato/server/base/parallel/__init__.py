@@ -925,17 +925,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def log_environment_details(self):
 
         # First, we need to have the correct variable set ..
-        if asbool(os.environ.get(EnvVariable.Log_Env_Details)):
+        if log_details := os.environ.get(EnvVariable.Log_Env_Details):
 
-            # .. now, we need to have the correct file available ..
-            path = ['~', 'env', 'details', 'all-zato-env-details.json']
-            path = os.path.join(*path)
-            path = os.path.expanduser(path)
+            # .. now, make sure it is set to True ..
+            if asbool(log_details):
 
-            if os.path.exists(path):
-                with open(path) as f:
-                    data = f.read()
-                self.logger.info(f'Environment details:\n{data}')
+                # .. now, we need to have the correct file available ..
+                path = ['~', 'env', 'details', 'all-zato-env-details.json']
+                path = os.path.join(*path)
+                path = os.path.expanduser(path)
+
+                if os.path.exists(path):
+                    with open(path) as f:
+                        data = f.read()
+                    self.logger.info(f'Environment details:\n{data}')
 
 # ################################################################################################################################
 
