@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -19,7 +19,9 @@ from zato.server.connection.queue import Wrapper
 # ################################################################################################################################
 
 if 0:
+    from bunch import Bunch
     from zato.common.typing_ import stranydict
+    from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,7 +48,7 @@ class _SalesforceClient:
 class CloudSalesforceWrapper(Wrapper):
     """ Wraps a queue of connections to Salesforce.
     """
-    def __init__(self, config:'stranydict', server) -> 'None':
+    def __init__(self, config:'Bunch', server:'ParallelServer') -> 'None':
         config['auth_url'] = config['address']
         super(CloudSalesforceWrapper, self).__init__(config, 'Salesforce', server)
 
@@ -56,7 +58,7 @@ class CloudSalesforceWrapper(Wrapper):
 
         try:
             conn = _SalesforceClient(self.config)
-            self.client.put_client(conn)
+            _ = self.client.put_client(conn)
         except Exception:
             logger.warning('Caught an exception while adding a Salesforce client (%s); e:`%s`',
                 self.config['name'], format_exc())
