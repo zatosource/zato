@@ -22,7 +22,11 @@ from sh import RunningCommand
 # Zato
 from zato.common.test import rand_string, rand_unicode
 from zato.common.test.config import TestConfig
-from zato.common.test.enmasse_ import BaseEnmasseTestCase
+from zato.common.test.enmasse_.base import BaseEnmasseTestCase
+from zato.common.test.enmasse_._template_complex_01 import template_complex_01
+from zato.common.test.enmasse_._template_complex_02 import template_complex_02
+from zato.common.test.enmasse_._template_simple_01 import template_simple_01
+from zato.common.test.enmasse_._template_simple_02 import template_simple_02
 from zato.common.util.open_ import open_w
 
 # ################################################################################################################################
@@ -34,188 +38,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-template1 = """
-
-channel_plain_http:
-  - connection: channel
-    is_active: true
-    is_internal: false
-    merge_url_params_req: true
-    name: /test/enmasse1/{test_suffix}
-    params_pri: channel -params-over-msg
-    sec_def: zato-no-security
-    service_name: pub.zato.ping
-    transport: plain_http
-    url_path: /test/enmasse1/{test_suffix}
-  - connection: channel
-    is_active: true
-    is_internal: false
-    merge_url_params_req: true
-    name: /test/enmasse2/{test_suffix}
-    params_pri: channel-params-over-msg
-    sec_def: zato-no-security
-    service: pub.zato.ping
-    service_name: pub.zato.ping
-    transport: plain_http
-    url_path: /test/enmasse2/{test_suffix}
-
-zato_generic_connection:
-    - address: ws://localhost:12345
-      cache_expiry: 0
-      has_auto_reconnect: true
-      is_active: true
-      is_channel: true
-      is_internal: false
-      is_outconn: false
-      is_zato: true
-      name: test.enmasse.{test_suffix}
-      on_connect_service_name: pub.zato.ping
-      on_message_service_name: pub.zato.ping
-      pool_size: 1
-      sec_use_rbac: false
-      security_def: ZATO_NONE
-      subscription_list:
-      type_: outconn-wsx
-      # These are taken from generic.connection.py -> extra_secret_keys
-      oauth2_access_token: null
-      consumer_key: null
-      consumer_secret: null
-
-def_sec:
-  - name: "Test Basic Auth {test_suffix}"
-    is_active: true
-    type: basic_auth
-    username: "MyUser {test_suffix}"
-    password: "MyPassword"
-    realm: "My Realm"
-
-email_smtp:
-  - name: {smtp_config.name}
-    host: {smtp_config.host}
-    is_active: true
-    is_debug: false
-    mode: starttls
-    port: 587
-    timeout: 300
-    username: {smtp_config.username}
-    password: {smtp_config.password}
-    ping_address: {smtp_config.ping_address}
-
-web_socket:
-    - address: "ws://0.0.0.0:10203/api/{test_suffix}"
-      data_format: "json"
-      id: 1
-      is_active: true
-      is_audit_log_received_active: false
-      is_audit_log_sent_active: false
-      is_internal: false
-      max_bytes_per_message_received: null
-      max_bytes_per_message_sent: null
-      max_len_messages_received: null
-      max_len_messages_sent: null
-      name: "wsx.enmasse.{test_suffix}"
-      new_token_wait_time: 5
-      opaque1: '{{"max_bytes_per_message_sent":null,"max_bytes_per_message_received":null,"ping_interval":30,"extra_properties":null,"is_audit_log_received_active":false,"max_len_messages_received":null,"pings_missed_threshold":2,"max_len_messages_sent":null,"security":null,"is_audit_log_sent_active":false,"service_name":"pub.zato.ping"}}'
-      ping_interval: 30
-      pings_missed_threshold: 2
-      sec_def: "zato-no-security"
-      sec_type: null
-      security_id: null
-      service: "pub.zato.ping"
-      service_name: "pub.zato.ping"
-      token_ttl: 3600
-"""
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-template_simple_01 = """
-
-security:
-  - name: Test Basic Auth Simple
-    username: "MyUser {test_suffix}"
-    password: "MyPassword"
-    type: basic_auth
-    realm: "My Realm"
-
-  - name: Test Basic Auth Simple.2
-    username: "MyUser {test_suffix}.2"
-    type: basic_auth
-    realm: "My Realm"
-
-channel_rest:
-
-  - name: name: /test/enmasse1/simple/{test_suffix}
-    service: pub.zato.ping
-    url_path: /test/enmasse1/simple/{test_suffix}
-
-outgoing_rest:
-
-  - name: Outgoing Rest Enmasse {test_suffix}
-    host: https://example.com
-    url_path: /enmasse/simple/{test_suffix}
-
-  - name: Outgoing Rest Enmasse {test_suffix}.2
-    host: https://example.com
-    url_path: /enmasse/simple/{test_suffix}.2
-    data_format: form
-
-outgoing_ldap:
-
-  - name: Enmasse LDAP {test_suffix}
-    username: 'CN=example.ldap,OU=example01,OU=Example,OU=Groups,DC=example,DC=corp'
-    auth_type: NTLM
-    server_list: 127.0.0.1:389
-    password: {test_suffix}
-"""
-
-template_simple_02 = """
-security:
-
-  - name: 'Test.Unittest.Test Basic.{test_suffix}'
-    username: 'Test.Unittest.Basic.{test_suffix}'
-    type: basic_auth
-    realm: 'My Realm'
-
-  - name: Test.Unittest.APIKey.{test_suffix}
-    username: Test.Unittest.APIKey.{test_suffix}
-    type: apikey
-
-  - name: Test.Unittest.NTLM.{test_suffix}
-    username: domain\\Test.Unittest.NTLM.{test_suffix}
-    type: ntlm
-
-  - name: Test.Unittest.BearerToken.{test_suffix}
-    username: Test.Unittest.BearerToken.{test_suffix}
-    type: bearer_token
-    auth_endpoint: https://example.com
-    client_id_field: client_id
-    client_secret_field: client_secret
-    grant_type: client_credentials
-    extra_fields:
-      - audience=https://example.com
-
-pubsub_endpoint:
-
-  - name: 'Test.Unittest.My Endpoint.{test_suffix}'
-    endpoint_type: rest
-    security_name: 'Test.Unittest.Test Basic.{test_suffix}'
-    topic_patterns: |-
-      pub=/*
-      sub=/*
-
-pubsub_topic:
-
-  - name: /topic/01.{test_suffix}
-  - name: /topic/02.{test_suffix}
-"""
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class EnmasseTestCase(BaseEnmasseTestCase):
-
-# ################################################################################################################################
 
     def get_smtp_config(self) -> 'Bunch':
         out = Bunch()
@@ -292,8 +115,13 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
 # ################################################################################################################################
 
-    def test_enmasse_ok(self) -> 'None':
-        self._test_enmasse_ok(template1)
+    def test_enmasse_complex_ok_01(self) -> 'None':
+        self._test_enmasse_ok(template_complex_01)
+
+# ################################################################################################################################
+
+    def test_enmasse_complex_ok_02(self) -> 'None':
+        self._test_enmasse_ok(template_complex_02)
 
 # ################################################################################################################################
 
@@ -322,7 +150,7 @@ class EnmasseTestCase(BaseEnmasseTestCase):
         smtp_config = self.get_smtp_config()
 
         # Note that we replace pub.zato.ping with a service that certainly does not exist
-        data = template1.replace('pub.zato.ping', 'zato-enmasse-service-does-not-exit')
+        data = template_complex_01.replace('pub.zato.ping', 'zato-enmasse-service-does-not-exit')
         data = data.format(test_suffix=test_suffix, smtp_config=smtp_config)
 
         f = open_w(config_path)
