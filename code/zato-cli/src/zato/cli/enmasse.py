@@ -127,6 +127,9 @@ class ModuleCtx:
     # Maps enmasse defintions types to their attributes that will be turned into multiline strings
     Enmasse_Attr_List_As_Multiline = cast_('strlistdict', None)
 
+    # Maps enmasse types to default values of their attributes
+    Enmasse_Attr_List_Default_By_Type = cast_('strdictdict', None)
+
     # Maps pre-3.2 item types to the 3.2+ ones
     Enmasse_Item_Type_Name_Map = cast_('strdict', None)
 
@@ -373,6 +376,13 @@ ModuleCtx.Enmasse_Attr_List_As_Multiline = {
     # Security definitions
     'scheduler':  ['extra'],
     'pubsub_endpoint':  ['topic_patterns'],
+}
+
+ModuleCtx.Enmasse_Attr_List_Default_By_Type = {
+
+    'pubsub_endpoint':  {
+        'is_internal':False
+    },
 }
 
 # ################################################################################################################################
@@ -2404,6 +2414,9 @@ class InputParser:
                                     # .. if we are here, we know we can swap the names ..
                                     item[old_name] = item.pop(new_name)
 
+            # .. for attributes that should be populated if they do not exist ..
+            attr_list_default_by_type = ModuleCtx.Enmasse_Attr_List_Default_By_Type.get(def_type) or {}
+
             # .. go through each definition ..
             for item in items:
 
@@ -2417,6 +2430,11 @@ class InputParser:
                 # .. everything is active unless it is configured not to be ..
                 if not 'is_active' in item:
                     item['is_active'] = True
+
+                # .. add default attributes if they do not exist ..
+                for default_key, default_value in attr_list_default_by_type.items():
+                    if default_key not in item:
+                        item[default_key] = default_value
 
                 # .. populate REST connections ..
                 if def_type in {'channel_rest', 'outgoing_rest'}:
