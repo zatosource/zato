@@ -512,21 +512,28 @@ class Create(_Subscribe):
 class DeleteAll(AdminService):
     """ Deletes all pub/sub subscriptions of a given endpoint.
     """
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'endpoint_id')
+    class SimpleIO(AdminService.SimpleIO):
+        input = '-cluster_id', '-endpoint_id', '-endpoint_name'
 
     def handle(self) -> 'None':
+
+        cluster_id = self.request.input.cluster_id or self.server.cluster_id
+
+        if not (endpoint_id := self.request.input.endpoint_id):
+            endpoint = self.pubsub.get_endpoint_by_name(self.request.input.endpoint_name)
+            endpoint_id = endpoint.id
+
         with closing(self.odb.session()) as session:
 
             # Get all subscriptions for that endpoint ..
             items = pubsub_subscription_list_by_endpoint_id_no_search(
-                session, self.request.input.cluster_id, self.request.input.endpoint_id)
+                session, cluster_id, endpoint_id)
 
             # Build a list of sub_keys that this endpoint was using and delete them all in one go.
             sub_key_list = [item.sub_key for item in items]
             if sub_key_list:
                 self.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
-                    'cluster_id': self.request.input.cluster_id,
+                    'cluster_id': cluster_id,
                     'sub_key_list': sub_key_list,
                 })
 
