@@ -1264,7 +1264,8 @@ class ObjectImporter:
         #
         # Preprocess item type
         #
-        item_type = _replace_item_type(True, item_type)
+        if item_type == 'oauth':
+            item_type = 'bearer_token'
 
         list_ = self.json.get(item_type, [])
         item = find_first(list_, lambda item: item.name == name) # type: ignore
