@@ -18,7 +18,7 @@ from time import sleep
 # Zato
 from zato.cli import ManageCommand
 from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
-    NotGiven, TLS as COMMON_TLS, Zato_None
+    NotGiven, PUBSUB as Common_PubSub, TLS as COMMON_TLS, Zato_None
 from zato.common.const import ServiceConst
 from zato.common.typing_ import cast_
 
@@ -77,6 +77,8 @@ _attr_outconn_ldap = f'{_prefix_generic}_{outconn_ldap}'
 
 # We need to have our own version because type "bearer_token" exists in enmasse only.
 _All_Sec_Def_Types = All_Sec_Def_Types + ['bearer_token']
+
+_pubsub_default = Common_PubSub.DEFAULT
 
 # ################################################################################################################################
 
@@ -378,11 +380,35 @@ ModuleCtx.Enmasse_Attr_List_As_Multiline = {
     'pubsub_endpoint':  ['topic_patterns'],
 }
 
+# ################################################################################################################################
+
 ModuleCtx.Enmasse_Attr_List_Default_By_Type = {
 
     'pubsub_endpoint':  {
-        'is_internal':False
+        'is_internal': False,
+        'role': Common_PubSub.ROLE.PUBLISHER_SUBSCRIBER.id,
     },
+
+    'pubsub_topic':  {
+        'has_gd': False,
+        'is_api_sub_allowed': True,
+        'max_depth_gd': _pubsub_default.TOPIC_MAX_DEPTH_GD,
+        'max_depth_non_gd': _pubsub_default.TOPIC_MAX_DEPTH_NON_GD,
+        'depth_check_freq': _pubsub_default.DEPTH_CHECK_FREQ,
+        'pub_buffer_size_gd': _pubsub_default.PUB_BUFFER_SIZE_GD,
+        'task_sync_interval': _pubsub_default.TASK_SYNC_INTERVAL,
+        'task_delivery_interval': _pubsub_default.TASK_DELIVERY_INTERVAL,
+    },
+
+    'channel_rest': {
+        'security_name': ZATO_NO_SECURITY,
+        'merge_url_params_req': True,
+    },
+
+    'outgoing_rest': {
+        'security_name': ZATO_NO_SECURITY,
+        'merge_url_params_req': True,
+    }
 }
 
 # ################################################################################################################################
@@ -2435,17 +2461,6 @@ class InputParser:
                 for default_key, default_value in attr_list_default_by_type.items():
                     if default_key not in item:
                         item[default_key] = default_value
-
-                # .. populate REST connections ..
-                if def_type in {'channel_rest', 'outgoing_rest'}:
-
-                    # .. there is no explicit security definition set ..
-                    if not 'security_name' in item:
-                        item['security_name'] = ZATO_NO_SECURITY
-
-                    # .. path parameters should be merged to requests by default ..
-                    if not 'merge_url_params_req' in item:
-                        item['merge_url_params_req'] = True
 
                 # .. populate attributes based on environment variables ..
                 for env_key_data in env_config:
