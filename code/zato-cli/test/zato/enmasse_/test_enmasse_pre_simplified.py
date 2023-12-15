@@ -129,7 +129,7 @@ web_socket:
 # ################################################################################################################################
 # ################################################################################################################################
 
-template2 = """
+template_simple_01 = """
 
 security:
   - name: Test Basic Auth Simple
@@ -167,6 +167,47 @@ outgoing_ldap:
     auth_type: NTLM
     server_list: 127.0.0.1:389
     password: {test_suffix}
+"""
+
+template_simple_02 = """
+security:
+
+  - name: 'Test.Unittest.Test Basic.{test_suffix}'
+    username: 'Test.Unittest.Basic.{test_suffix}'
+    type: basic_auth
+    realm: 'My Realm'
+
+  - name: Test.Unittest.APIKey.{test_suffix}
+    username: Test.Unittest.APIKey.{test_suffix}
+    type: apikey
+
+  - name: Test.Unittest.NTLM.{test_suffix}
+    username: domain\\Test.Unittest.NTLM.{test_suffix}
+    type: ntlm
+
+  - name: Test.Unittest.BearerToken.{test_suffix}
+    username: Test.Unittest.BearerToken.{test_suffix}
+    type: bearer_token
+    auth_endpoint: https://example.com
+    client_id_field: client_id
+    client_secret_field: client_secret
+    grant_type: client_credentials
+    extra_fields:
+      - audience=https://example.com
+
+pubsub_endpoint:
+
+  - name: 'Test.Unittest.My Endpoint.{test_suffix}'
+    endpoint_type: rest
+    security_name: 'Test.Unittest.Test Basic.{test_suffix}'
+    topic_patterns: |-
+      pub=/*
+      sub=/*
+
+pubsub_topic:
+
+  - name: /topic/01.{test_suffix}
+  - name: /topic/02.{test_suffix}
 """
 
 # ################################################################################################################################
@@ -225,7 +266,7 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
         smtp_config = self.get_smtp_config()
 
-        data = template1.format(test_suffix=test_suffix, smtp_config=smtp_config)
+        data = template.format(test_suffix=test_suffix, smtp_config=smtp_config)
 
         f = open_w(config_path)
         _ = f.write(data)
@@ -256,8 +297,13 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
 # ################################################################################################################################
 
-    def test_enmasse_simple_ok(self) -> 'None':
-        self._test_enmasse_ok(template2)
+    def test_enmasse_simple_ok_01(self) -> 'None':
+        self._test_enmasse_ok(template_simple_01)
+
+# ################################################################################################################################
+
+    def test_enmasse_simple_ok_02(self) -> 'None':
+        self._test_enmasse_ok(template_simple_02)
 
 # ################################################################################################################################
 

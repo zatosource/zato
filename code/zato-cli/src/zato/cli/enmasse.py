@@ -1465,7 +1465,8 @@ class ObjectImporter:
                     connection = item.get('connection')
                     transport = item.get('transport')
 
-                    existing = find_first(self.object_mgr.objects.http_soap, lambda item: connection == item.connection and transport == item.transport and name == item.name) # type: ignore
+                    existing = find_first(self.object_mgr.objects.http_soap,
+                        lambda item: connection == item.connection and transport == item.transport and name == item.name) # type: ignore
                     if existing is not None:
                         self.add_warning(results, item_type, item, existing)
 
@@ -1637,16 +1638,21 @@ class ObjectImporter:
             if field_name in _security_fields:
                 field_name = resolve_security_field_name(item)
 
-            if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
-                dep_obj:'any_' = self.object_mgr.find(info['dependent_type'], {
-                    info['dependent_field']: item[field_name]
-                })
+            id_field = info['id_field']
+            dependent_type = info['dependent_type']
+            dependent_field = info['dependent_field']
 
-                item[info['id_field']] = dep_obj.id
+            if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
+
+                field_value = item[field_name]
+                criteria = {dependent_field: field_value}
+
+                dep_obj:'any_' = self.object_mgr.find(dependent_type, criteria)
+                item[id_field] = dep_obj.id
 
         if service_name and service_info.name != 'def_sec':
 
-            self.logger.info(f'Invoking {service_name} for {service_info.name}')
+            self.logger.info(f'Invoking -> import -> {service_name} for {service_info.name} ({def_type})')
             response = self.client.invoke(service_name, item)
 
             if response.ok:
@@ -1692,14 +1698,16 @@ class ObjectManager:
 
 # ################################################################################################################################
 
-    def find(self, item_type, fields): # type: ignore
+    def find(self, item_type, fields, *, check_sec=True): # type: ignore
 
-        if item_type == 'def_sec':
-            return self.find_sec(fields)
+        if check_sec:
+            if item_type == 'def_sec' or item_type in _All_Sec_Def_Types:
+                return self.find_sec(fields)
 
         # This probably isn't necessary any more:
         item_type = item_type.replace('-', '_')
         objects_by_type = self.objects.get(item_type, ())
+
         return find_first(objects_by_type, lambda item: dict_match(item, fields)) # type: ignore
 
 # ################################################################################################################################
@@ -1709,7 +1717,7 @@ class ObjectManager:
         """
         for service in SERVICES:
             if service.is_security:
-                item = self.find(service.name, fields)
+                item = self.find(service.name, fields, check_sec=False)
                 if item is not None:
                     return item
 
@@ -1816,7 +1824,7 @@ class ObjectManager:
         if item_type != 'rbac_role_permission':
             if name in self.ignored_names:
                 return True
-            elif 'zato' in name:
+            elif 'zato' in name and (not 'unittest' in name):
                 if is_sec_def:
                     return False
                 else:
@@ -1897,7 +1905,7 @@ class ObjectManager:
             self.logger.info('Type `%s` has no `get-list` service (%s)', service_info, item_type)
             return
 
-        self.logger.debug('Invoking %s for %s', service_name, service_info.name)
+        self.logger.debug('Invoking -> getter -> %s for %s (%s)', service_name, service_info.name, item_type)
         response = self.client.invoke(service_name, {
             'cluster_id': self.client.cluster_id
         })
@@ -1907,7 +1915,6 @@ class ObjectManager:
             return
 
         self.objects[service_info.name] = []
-
         data = self.get_data_from_response_data(response.data)
 
         # A flag indicating if this service is related to security definitions
@@ -1933,17 +1940,17 @@ class ObjectManager:
 
     def _refresh_objects(self):
 
+        # stdlib
+        from operator import attrgetter
+
         # Bunch
         from bunch import Bunch
 
-        # Python 2/3 compatibility
-        from zato.common.ext.future.utils import iteritems
-
         self.objects = Bunch()
-        for service_info in SERVICES:
+        for service_info in sorted(SERVICES, key=attrgetter('name')):
             self.get_objects_by_type(service_info.name)
 
-        for item_type, items in iteritems(self.objects):
+        for item_type, items in self.objects.items():
             for item in items:
                 self.fix_up_odb_object(item_type, item)
 
