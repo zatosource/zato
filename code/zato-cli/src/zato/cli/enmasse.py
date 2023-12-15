@@ -2443,7 +2443,7 @@ class InputParser:
                             if new_name_value := item.get(new_name, NotGiven):
 
                                 # .. we enter here if the old name exists ..
-                                if new_name_value:
+                                if new_name_value is not NotGiven:
 
                                     # .. if we are here, we know we can swap the names ..
                                     item[old_name] = item.pop(new_name)
