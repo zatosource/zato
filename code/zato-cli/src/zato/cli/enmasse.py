@@ -509,7 +509,7 @@ def _replace_item_type(is_import:'bool', item_type:'str') -> 'str':
 
 # ################################################################################################################################
 
-def find_first(it, pred):
+def find_first(it, pred): # type: ignore
     """Given any iterable, return the first element `elem` from it matching `pred(elem)`"""
     for obj in it:
         if pred(obj):
@@ -517,7 +517,7 @@ def find_first(it, pred):
 
 # ################################################################################################################################
 
-def dict_match(haystack, needle):
+def dict_match(haystack, needle): # type: ignore
     """Return True if all the keys from `needle` appear in `haystack` with the same value.
     """
 
@@ -536,7 +536,7 @@ IGNORE_PREFIXES = {
 
 # ################################################################################################################################
 
-def populate_services_from_apispec(client, logger):
+def populate_services_from_apispec(client, logger): # type: ignore
     """ Request a list of services from the APISpec service, and merge the results into SERVICES_BY_PREFIX,
     creating new ServiceInfo instances to represent previously unknown services as appropriate.
     """
@@ -610,7 +610,7 @@ SHORTNAME_BY_PREFIX = [
 
 # ################################################################################################################################
 
-def make_service_name(prefix):
+def make_service_name(prefix): # type: ignore
 
     # stdlib
     import re
@@ -628,7 +628,7 @@ def make_service_name(prefix):
 
 # ################################################################################################################################
 
-def normalize_service_name(item):
+def normalize_service_name(item): # type: ignore
     """ Given an item originating from the API or from an import file, if the item contains either the 'service'
     or 'service_name' keys, ensure the other key is set. Either the dict contains neither key, or both keys set
     to the same value."""
@@ -638,7 +638,7 @@ def normalize_service_name(item):
 
 # ################################################################################################################################
 
-def test_item(item, cond):
+def test_item(item, cond): # type: ignore
     """ Given a dictionary `cond` containing some conditions to test an item for, return True if those conditions match.
     Currently only supports testing whether a field has a particular value. Returns ``True`` if `cond` is ``None``."""
 
@@ -676,7 +676,7 @@ def resolve_security_field_name(item:'strdict') -> 'str':
 # ################################################################################################################################
 
 class ServiceInfo:
-    def __init__(self, prefix=None, name=None, object_dependencies=None, service_dependencies=None, export_filter=None):
+    def __init__(self, prefix=None, name=None, object_dependencies=None, service_dependencies=None, export_filter=None): # type: ignore
         assert name or prefix
 
         # Short service name as appears in export data.
@@ -705,19 +705,19 @@ class ServiceInfo:
 # ################################################################################################################################
 
     @property
-    def is_security(self):
+    def is_security(self): # type: ignore
         """ If True, indicates the service is source of authentication credentials for use in another service.
         """
         return self.prefix and self.prefix.startswith('zato.security.')
 
 # ################################################################################################################################
 
-    def get_service_name(self, method):
+    def get_service_name(self, method): # type: ignore
         return self.methods.get(method, {}).get('name')
 
 # ################################################################################################################################
 
-    def get_required_keys(self):
+    def get_required_keys(self): # type: ignore
         """ Return the set of keys required to create a new instance.
         """
         method_sig = self.methods.get('create')
@@ -916,10 +916,10 @@ HTTP_SOAP_ITEM_TYPES = {elem[0] for elem in HTTP_SOAP_KINDS}
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _DummyLink:
+class _DummyLink: # type: ignore
     """ Pip requires URLs to have a .url attribute.
     """
-    def __init__(self, url):
+    def __init__(self, url): # type: ignore
         self.url = url
 
 # ################################################################################################################################
@@ -927,7 +927,7 @@ class _DummyLink:
 
 class Notice:
 
-    def __init__(self, value_raw, value, code):
+    def __init__(self, value_raw, value, code): # type: ignore
         self.value_raw = value_raw
         self.value = value
         self.code = code
@@ -942,7 +942,7 @@ class Notice:
 
 
 class Results:
-    def __init__(self, warnings=None, errors=None, service=None):
+    def __init__(self, warnings=None, errors=None, service=None): # type: ignore
 
         # List of Warning instances
         self.warnings = warnings or []
@@ -952,14 +952,14 @@ class Results:
 
         self.service_name = service.get_name() if service else None
 
-    def add_error(self, raw, code, msg, *args):
+    def add_error(self, raw, code, msg, *args): # type: ignore
         if args:
             msg = msg.format(*args)
         _= self.errors.append(Notice(raw, msg, code))
 
 # ################################################################################################################################
 
-    def add_warning(self, raw, code, msg, *args):
+    def add_warning(self, raw, code, msg, *args): # type: ignore
         if args:
             msg = msg.format(*args)
         _= self.warnings.append(Notice(raw, msg, code))
@@ -970,8 +970,11 @@ class Results:
     def ok(self):
         return not (self.warnings or self.errors)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class InputValidator:
-    def __init__(self, json):
+    def __init__(self, json): # type: ignore
         #: Validation result.
         self.results = Results()
         #: Input JSON to validate.
@@ -1138,7 +1141,7 @@ class ObjectImporter:
         from bunch import bunchify
 
         # Zato client.
-        self.client = client
+        self.client:'any_' = client
 
         self.logger = logger
 
@@ -1161,7 +1164,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def validate_service_required(self, item_type, item):
+    def validate_service_required(self, item_type, item): # type: ignore
 
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
@@ -1200,7 +1203,7 @@ class ObjectImporter:
             return scan_results
 
         for warning in scan_results.warnings:
-            missing_type, missing_name, dep_names, existing = warning.value_raw
+            missing_type, missing_name, dep_names, existing = warning.value_raw # type: ignore
             if not self.object_mgr.find(missing_type, {'name': missing_name}):
                 raw = (missing_type, missing_name)
                 results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB, "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
@@ -1220,7 +1223,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def remove_from_import_list(self, item_type, name):
+    def remove_from_import_list(self, item_type, name): # type: ignore
 
         #
         # Preprocess item type
@@ -1228,7 +1231,7 @@ class ObjectImporter:
         item_type = _replace_item_type(True, item_type)
 
         list_ = self.json.get(item_type, [])
-        item = find_first(list_, lambda item: item.name == name)
+        item = find_first(list_, lambda item: item.name == name) # type: ignore
         if item:
             _= list_.remove(item)
         else:
@@ -1236,7 +1239,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def should_skip_item(self, item_type, attrs, is_edit):
+    def should_skip_item(self, item_type, attrs, is_edit): # type: ignore
 
         # Plain HTTP channels cannot create JSON-RPC ones
         if item_type == 'http_soap' and attrs.name.startswith('json.rpc.channel'):
@@ -1252,8 +1255,9 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _set_generic_connection_secret(self, name, type_, secret):
-        response = self.client.invoke('zato.generic.connection.change-password', {
+    def _set_generic_connection_secret(self, name, type_, secret): # type: ignore
+
+        response:'any_' = self.client.invoke('zato.generic.connection.change-password', {
             'name': name,
             'type_': type_,
             'password1': secret,
@@ -1267,7 +1271,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _needs_change_password(self, item_type, attrs, is_edit):
+    def _needs_change_password(self, item_type, attrs, is_edit): # type: ignore
 
         # By default, assume that we do need to change a given password.
         out = True
@@ -1282,7 +1286,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _import(self, item_type:'str', attrs:'strdict', is_edit:'bool') -> 'None':
+    def _import(self, item_type:'str', attrs:'any_', is_edit:'bool') -> 'None':
 
         # First, resolve values pointing to parameter placeholders and environment variables ..
         for key, orig_value in attrs.items():
@@ -1376,7 +1380,7 @@ class ObjectImporter:
             self.results.add_error(raw, ERROR_COULD_NOT_IMPORT_OBJECT,
                 "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'",
                     is_edit, attrs.name, attrs_dict, item_type, response.details)
-            return self.results
+            return self.results # type: ignore
 
         # It's been just imported so we don't want to create it in next steps
         # (this in fact would result in an error as the object already exists).
@@ -1394,7 +1398,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def add_warning(self, results, item_type, value_dict, item):
+    def add_warning(self, results, item_type, value_dict, item): # type: ignore
         raw = (item_type, value_dict)
         results.add_warning(
             raw, WARNING_ALREADY_EXISTS_IN_ODB, '{} already exists in ODB {} ({})', dict(value_dict), dict(item), item_type)
@@ -1424,10 +1428,7 @@ class ObjectImporter:
                     connection = item.get('connection')
                     transport = item.get('transport')
 
-                    existing = find_first(self.object_mgr.objects.http_soap,
-                        lambda item: connection == item.connection and \
-                                     transport == item.transport and \
-                                     name == item.name)
+                    existing = find_first(self.object_mgr.objects.http_soap, lambda item: connection == item.connection and transport == item.transport and name == item.name) # type: ignore
                     if existing is not None:
                         self.add_warning(results, item_type, item, existing)
 
@@ -1440,7 +1441,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def may_be_dependency(self, item_type):
+    def may_be_dependency(self, item_type): # type: ignore
         """ Returns True if input item_type may be possibly a dependency, for instance,
         a security definition may be potentially a dependency of channels or a web socket
         object may be a dependency of pub/sub endpoints.
@@ -1449,7 +1450,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def import_objects(self, already_existing) -> 'Results':
+    def import_objects(self, already_existing) -> 'Results': # type: ignore
 
         # stdlib
         from time import sleep
@@ -1559,13 +1560,13 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _swap_service_name(self, required, attrs, first, second):
+    def _swap_service_name(self, required, attrs, first, second): # type: ignore
         if first in required and second in attrs:
             attrs[first] = attrs[second]
 
 # ################################################################################################################################
 
-    def _import_object(self, def_type, item, is_edit):
+    def _import_object(self, def_type, item, is_edit): # type: ignore
 
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
@@ -1588,7 +1589,7 @@ class ObjectImporter:
             if def_type == 'http_soap':
                 lookup_config['connection'] = item.connection
                 lookup_config['transport'] = item.transport
-            odb_item = self.object_mgr.find(def_type, lookup_config)
+            odb_item:'any_' = self.object_mgr.find(def_type, lookup_config)
             item.id = odb_item.id
 
         for field_name, info in iteritems(service_info.object_dependencies):
@@ -1600,7 +1601,7 @@ class ObjectImporter:
                 field_name = resolve_security_field_name(item)
 
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
-                dep_obj = self.object_mgr.find(info['dependent_type'], {
+                dep_obj:'any_' = self.object_mgr.find(info['dependent_type'], {
                     info['dependent_field']: item[field_name]
                 })
 
@@ -1619,7 +1620,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _maybe_change_password(self, object_id, item_type, attrs):
+    def _maybe_change_password(self, object_id, item_type, attrs): # type: ignore
 
         # stdlib
         from time import sleep
@@ -1648,13 +1649,13 @@ class ObjectImporter:
         return response
 
 class ObjectManager:
-    def __init__(self, client, logger):
-        self.client = client # type: APIClient
+    def __init__(self, client, logger): # type: ignore
+        self.client = client # type: any_
         self.logger = logger # type: Logger
 
 # ################################################################################################################################
 
-    def find(self, item_type, fields):
+    def find(self, item_type, fields): # type: ignore
 
         if item_type == 'def_sec':
             return self.find_sec(fields)
@@ -1662,11 +1663,11 @@ class ObjectManager:
         # This probably isn't necessary any more:
         item_type = item_type.replace('-', '_')
         objects_by_type = self.objects.get(item_type, ())
-        return find_first(objects_by_type, lambda item: dict_match(item, fields))
+        return find_first(objects_by_type, lambda item: dict_match(item, fields)) # type: ignore
 
 # ################################################################################################################################
 
-    def find_sec(self, fields):
+    def find_sec(self, fields): # type: ignore
         """ Find any security definition with the given name.
         """
         for service in SERVICES:
@@ -1688,8 +1689,8 @@ class ObjectManager:
         # Bunch
         from bunch import Bunch
 
-        response = self.client.invoke('zato.service.get-list', {
-            'cluster_id': self.client.cluster_id,
+        response:'any_' = self.client.invoke('zato.service.get-list', {
+            'cluster_id': self.client.cluster_id, # type: ignore
             'name_filter': '*'
         })
 
@@ -1705,7 +1706,7 @@ class ObjectManager:
 
 # ################################################################################################################################
 
-    def fix_up_odb_object(self, item_type, item):
+    def fix_up_odb_object(self, item_type, item): # type: ignore
         """ For each ODB object, ensure fields that specify a dependency have their associated name field updated
         to match the dependent object. Otherwise, ensure the field is set to the corresponding empty value
         (either None or ZATO_NO_SECURITY).
@@ -1765,7 +1766,7 @@ class ObjectManager:
         'pubapi',
     )
 
-    def is_ignored_name(self, item_type, item, is_sec_def):
+    def is_ignored_name(self, item_type, item, is_sec_def): # type: ignore
         if 'name' not in item:
             return False
 
@@ -1786,7 +1787,7 @@ class ObjectManager:
 
 # ################################################################################################################################
 
-    def delete(self, item_type, item):
+    def delete(self, item_type, item): # type: ignore
         service_info = SERVICE_BY_NAME[item_type]
 
         service_name = service_info.get_service_name('delete')
@@ -1819,7 +1820,7 @@ class ObjectManager:
 
 # ################################################################################################################################
 
-    def get_data_from_response_data(self, response_data):
+    def get_data_from_response_data(self, response_data): # type: ignore
 
         # Generic connections' GetList includes metadata in responses so we need to dig into actual data
         if '_meta' in response_data:
@@ -1848,7 +1849,7 @@ class ObjectManager:
 
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
-        from zato.common.py23_.past.builtins import basestring
+        from zato.common.py23_.past.builtins import basestring # type: ignore
 
         service_info = SERVICE_BY_NAME[item_type]
 
@@ -1915,14 +1916,14 @@ class ObjectManager:
 class JsonCodec:
     extension = '.json'
 
-    def load(self, file_, results):
+    def load(self, file_, results): # type: ignore
 
         # Zato
         from zato.common.json_internal import loads
 
         return loads(file_.read())
 
-    def dump(self, file_, object_):
+    def dump(self, file_, object_): # type: ignore
 
         # Zato
         from zato.common.json_internal import dumps
@@ -1968,7 +1969,7 @@ class YamlCodec:
         # .. and return a dict object representing the file.
         return yaml.load(data, yaml.FullLoader)
 
-    def dump(self, file_, object_):
+    def dump(self, file_, object_): # type: ignore
 
         # pyaml
         import pyaml
@@ -2459,7 +2460,7 @@ class InputParser:
         self.json = {}
 
         # .. extract a basic dict ..
-        data = self._parse_file(cast_('str', self.path), results)
+        data = self._parse_file(cast_('str', self.path), results) # type: ignore
 
         # .. pre-process its contents ..
         data = self._pre_process_input(data)
@@ -2547,7 +2548,7 @@ class Enmasse(ManageCommand):
 
         # Initialize environment variables ..
         env_path = self.normalize_path('env_file', exit_if_missing=False)
-        populate_environment_from_file(env_path)
+        _ = populate_environment_from_file(env_path)
 
         self.replace_objects:'bool' = True
         self.export_odb:'bool' = getattr(args, 'export', False) or getattr(args, 'export_odb', False)
@@ -2586,7 +2587,7 @@ class Enmasse(ManageCommand):
             initial_wait_time = ModuleCtx.Initial_Wait_Time
 
         # Get the client object, waiting until the server is started ..
-        self.client = get_client_from_server_conf(self.component_dir, initial_wait_time=initial_wait_time)
+        self.client = get_client_from_server_conf(self.component_dir, initial_wait_time=initial_wait_time) # type: ignore
 
         # .. just to be on the safe side, optionally wait a bit more
         initial_wait_time = os.environ.get('ZATO_ENMASSE_INITIAL_WAIT_TIME')
@@ -2661,7 +2662,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def load_input(self, input_path):
+    def load_input(self, input_path): # type: ignore
 
         # stdlib
         import sys
@@ -3177,7 +3178,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def get_warnings_errors(self, items):
+    def get_warnings_errors(self, items): # type: ignore
         warn_idx = 1
         error_idx = 1
         warn_err = {}
@@ -3199,7 +3200,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def report_warnings_errors(self, items):
+    def report_warnings_errors(self, items): # type: ignore
 
         # stdlib
         import logging
@@ -3217,7 +3218,7 @@ class Enmasse(ManageCommand):
                 level = logging.WARN
 
             prefix = '{} warning{} and {} error{} found:\n'.format(warn_no, warn_plural, error_no, error_plural)
-            self.logger.log(level, prefix + table.draw())
+            self.logger.log(level, prefix + table.draw()) # type: ignore
 
         else:
             # A signal that we found no warnings nor errors
@@ -3225,7 +3226,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def get_table(self, out):
+    def get_table(self, out): # type: ignore
 
         # texttable
         import texttable
@@ -3313,7 +3314,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def export_local_odb(self, needs_local=True):
+    def export_local_odb(self, needs_local=True): # type: ignore
         self.object_mgr.refresh()
         self.logger.info('ODB objects read')
 
@@ -3400,7 +3401,7 @@ class Enmasse(ManageCommand):
         self.object_mgr.refresh()
 
         # .. build an object that will import the definitions ..
-        importer = ObjectImporter(self.client, self.logger, self.object_mgr, self.json,
+        importer = ObjectImporter(self.client, self.logger, self.object_mgr, self.json,  # type: ignore
             self.is_import, self.is_export, ignore_missing=self.args.ignore_missing_defs, args=self.args)
 
         # .. find channels and jobs that require services that do not exist ..
