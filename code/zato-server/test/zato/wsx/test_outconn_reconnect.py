@@ -19,7 +19,7 @@ from gevent import sleep
 # Zato
 from zato.common.test import rand_string, rand_unicode
 from zato.common.test.config import TestConfig
-from zato.common.test.enmasse_ import BaseEnmasseTestCase
+from zato.common.test.enmasse_.base import BaseEnmasseTestCase
 from zato.common.util.cli import get_zato_sh_command
 from zato.common.util.open_ import open_w
 
