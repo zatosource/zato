@@ -87,7 +87,7 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
 
         return self._handle(OutgoingOdoo, _auth, OUTGOING.ODOO_CHANGE_PASSWORD.value,
-            publish_instance_attrs=['host', 'protocol', 'port', 'database', 'user', 'password', 'pool_size'])
+            publish_instance_attrs=['host', 'protocol', 'port', 'database', 'user', 'password', 'pool_size', 'is_active'])
 
 # ################################################################################################################################
 
