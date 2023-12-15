@@ -130,6 +130,9 @@ class ModuleCtx:
     # As above, in the reverse direction
     Enmasse_Item_Type_Name_Map_Reverse = cast_('strdict', None)
 
+    # As above, in the reverse direction, but only for specific types
+    Enmasse_Item_Type_Name_Map_Reverse_By_Type = cast_('strdict', None)
+
     # How to sort attributes of a given object
     Enmasse_Attr_List_Sort_Order = cast_('strlistdict', None)
 
@@ -376,6 +379,12 @@ for key, value in ModuleCtx.Enmasse_Item_Type_Name_Map.items():
 
 # ################################################################################################################################
 
+ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse_By_Type = {
+    'pubsub_endpoint':  [{'security_name':'sec_name'}],
+}
+
+# ################################################################################################################################
+
 ModuleCtx.Enmasse_Attr_List_Sort_Order = {
 
     # REST connections - Channels
@@ -437,7 +446,22 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
         'on_message_service_name',
         'on_close_service_name',
         'subscription_list',
-    ]
+    ],
+
+    # Pub/sub - Endpoints
+    'pubsub_endpoint':  [
+        'name',
+        'endpoint_type',
+        'security_name',
+        'topic_patterns',
+    ],
+
+    # Pub/sub - Topics
+    'pubsub_topic':  [
+        'name',
+        'has_gd',
+        'hook_service_name',
+    ],
 }
 
 # ################################################################################################################################
@@ -1697,7 +1721,7 @@ class ObjectManager:
 
             dep = self.find(info['dependent_type'], {'id': dep_id})
 
-            if (dep_id != 'ZATO_SEC_USE_RBAC') and (field_name != 'sec_def' and dep is None):
+            if (dep_id != 'ZATO_SEC_USE_RBAC') and (field_name != 'sec_name' and dep is None):
                 if not dep:
                     msg = 'Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, item:`{}`'
                     raise Exception(msg.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
@@ -2336,6 +2360,30 @@ class InputParser:
         # Add values for attributes that are optional ..
         for def_type, items in data.items():
 
+            # .. replace new names with old ones but only for specific types ..
+            if item_type_name_map_reverse_by_type := ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse_By_Type.get(def_type):
+
+                # .. go through each time that will potentially have the old name ..
+                for item in items:
+
+                    # .. go through each of the names to be replaced ..
+                    for name_dict in item_type_name_map_reverse_by_type:
+
+                        for new_name, old_name  in name_dict.items():
+
+                            print()
+                            print(111, name_dict)
+                            print()
+
+                            # .. check if the old name is given on input ..
+                            if new_name_value := item.get(new_name, NotGiven):
+
+                                # .. we enter here if the old name exists ..
+                                if new_name_value:
+
+                                    # .. if we are here, we know we can swap the names ..
+                                    item[old_name] = item.pop(new_name)
+
             # .. go through each definition ..
             for item in items:
 
@@ -2788,24 +2836,9 @@ class Enmasse(ManageCommand):
 
         # .. optionally, rename selected attributes ..
         for old_name, new_name in attr_list_rename.items():
-            if 'My Endpoint' in str(item):
-                print()
-                print(111, item)
-                print(222, old_name)
-                print(333, new_name)
-                print()
             if value := item.pop(old_name, NotGiven):
-                if 'My Endpoint' in str(item):
-                    print()
-                    print(444, value)
-                    print()
                 if value is not NotGiven:
                     item[new_name] = value
-                    if 'My Endpoint' in str(item):
-                        print()
-                        print(555, item)
-                        print(666, item[new_name])
-                        print()
 
         # .. optionally, turn selected attributes into lists ..
         for attr in attr_list_as_list:
@@ -2861,11 +2894,6 @@ class Enmasse(ManageCommand):
         # .. the is_active flag is never returned if it is of it default value, which is True ..
         if item.get('is_active') is True:
             _ = item.pop('is_active', None)
-
-        if 'My Endpoint' in str(item):
-            print()
-            print('AAA-1', item)
-            print()
 
         # .. names of security definitions attached to an object are also skipped if they are the default ones ..
         if item.get('security_name') in ('', None):
