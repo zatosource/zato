@@ -86,6 +86,7 @@ class ModuleCtx:
         All  = 'all'
         LDAP = 'ldap'
         SQL  = 'sql'
+        PubSub = 'pubsub'
         REST = 'rest'
         Scheduler = 'scheduler'
         Security = 'security'
@@ -159,6 +160,12 @@ ModuleCtx.Enmasse_Type = {
 
     # Scheduler
     'scheduler':ModuleCtx.Include_Type.Scheduler,
+
+    # Pub/sub
+    'pubsub_topic':ModuleCtx.Include_Type.PubSub,
+    'pubsub_endpoint':ModuleCtx.Include_Type.PubSub,
+    'pubsub_sub':ModuleCtx.Include_Type.PubSub,
+    'pubsub_subscription':ModuleCtx.Include_Type.PubSub,
 }
 
 # ################################################################################################################################
@@ -240,6 +247,21 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'subscription_list',
     ],
 
+    # Pub/sub - Endpoints
+    'pubsub_endpoint':  [
+        'name',
+        'endpoint_type',
+        'topic_patterns',
+        'sec_name',
+    ],
+
+    # Pub/sub - Topics
+    'pubsub_topic':  [
+        'name',
+        'has_gd',
+        'hook_service_name',
+    ],
+
 }
 
 # ################################################################################################################################
@@ -268,7 +290,13 @@ ModuleCtx.Enmasse_Attr_List_Rename = {
     # Security definitions
     'def_sec':  {
         'auth_server_url':'auth_endpoint'
+    },
+
+    # Pub/sub endpoints
+    'pubsub_endpoint':  {
+        'sec_name':'security_name'
     }
+
 }
 
 # ################################################################################################################################
@@ -288,6 +316,12 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Empty = {
 
     # Outgoing WSX connections
     _attr_outconn_wsx:  ['data_format', 'subscription_list'],
+
+    # Pub/sub - Topics
+    'pubsub_topic':  [
+        'hook_service_name',
+    ],
+
 }
 
 # ################################################################################################################################
@@ -301,7 +335,11 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_True = {
 # ################################################################################################################################
 
 ModuleCtx.Enmasse_Attr_List_Skip_If_False = {
-    # No such attributes yet
+
+    # Pub/sub - Topics
+    'pubsub_topic':  [
+        'has_gd',
+    ],
 }
 
 # ################################################################################################################################
@@ -696,7 +734,7 @@ SERVICES = [
                 },
                 'id_field': 'ws_channel_id',
             },
-            'sec_def': {
+            'sec_name': {
                 'dependent_type': 'basic_auth',
                 'dependent_field': 'name',
                 'empty_value': ZATO_NO_SECURITY,
@@ -957,10 +995,6 @@ class DependencyScanner:
         if item_type in ['def_sec']:
             return self.find_sec(fields)
 
-        elif item_type in _All_Sec_Def_Types:
-            if self.is_export:
-                item_type = 'def_sec'
-
         items = self.json.get(item_type, ())
 
         for item in items:
@@ -1033,6 +1067,7 @@ class DependencyScanner:
             for (missing_type, missing_name), dep_names in sorted(iteritems(self.missing)):
                 existing = sorted(item.name for item in self.json.get(missing_type, []))
                 raw = (missing_type, missing_name, dep_names, existing)
+
                 results.add_warning(
                     raw, WARNING_MISSING_DEF, "'{}' is needed by '{}' but was not among '{}'",
                         missing_name, sorted(dep_names), existing)
@@ -2753,9 +2788,24 @@ class Enmasse(ManageCommand):
 
         # .. optionally, rename selected attributes ..
         for old_name, new_name in attr_list_rename.items():
+            if 'My Endpoint' in str(item):
+                print()
+                print(111, item)
+                print(222, old_name)
+                print(333, new_name)
+                print()
             if value := item.pop(old_name, NotGiven):
+                if 'My Endpoint' in str(item):
+                    print()
+                    print(444, value)
+                    print()
                 if value is not NotGiven:
                     item[new_name] = value
+                    if 'My Endpoint' in str(item):
+                        print()
+                        print(555, item)
+                        print(666, item[new_name])
+                        print()
 
         # .. optionally, turn selected attributes into lists ..
         for attr in attr_list_as_list:
@@ -2809,16 +2859,21 @@ class Enmasse(ManageCommand):
         _ = item.pop('service_id', None)
 
         # .. the is_active flag is never returned if it is of it default value, which is True ..
-        if item_copy.get('is_active') is True:
+        if item.get('is_active') is True:
             _ = item.pop('is_active', None)
 
+        if 'My Endpoint' in str(item):
+            print()
+            print('AAA-1', item)
+            print()
+
         # .. names of security definitions attached to an object are also skipped if they are the default ones ..
-        if item_copy.get('security_name') in ('', None):
+        if item.get('security_name') in ('', None):
             _ = item.pop('security_name', None)
 
         # .. the data format of REST objects defaults to JSON which is why we do not return it, unless it is different ..
         if item_type in {'channel_plain_http', 'outconn_plain_http', 'zato_generic_rest_wrapper'}:
-            if item_copy.get('data_format') == Data_Format.JSON:
+            if item.get('data_format') == Data_Format.JSON:
                 _ = item.pop('data_format', None)
 
         return item
