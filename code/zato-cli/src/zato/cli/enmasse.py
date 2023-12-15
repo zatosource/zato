@@ -106,6 +106,9 @@ class ModuleCtx:
     # Maps enmasse defintions types to their attributes that need to be renamed during an export
     Enmasse_Attr_List_Rename = cast_('strdictdict', None)
 
+    # Maps enmasse values that need to be renamed during an export
+    Enmasse_Attr_List_Value_Rename = cast_('strdictdict', None)
+
     # Maps enmasse defintions types to their attributes that need to be converted to a list during an export
     Enmasse_Attr_List_As_List = cast_('strlistdict', None)
 
@@ -304,6 +307,16 @@ ModuleCtx.Enmasse_Attr_List_Rename = {
 
 # ################################################################################################################################
 
+ModuleCtx.Enmasse_Attr_List_Value_Rename = {
+
+    # Security definitions
+    'def_sec':  {
+        'type': [{'oauth':'bearer_token'}]
+    },
+
+}
+# ################################################################################################################################
+
 ModuleCtx.Enmasse_Attr_List_As_List = {
 
     # Security definitions
@@ -359,6 +372,7 @@ ModuleCtx.Enmasse_Attr_List_As_Multiline = {
 
     # Security definitions
     'scheduler':  ['extra'],
+    'pubsub_endpoint':  ['topic_patterns'],
 }
 
 # ################################################################################################################################
@@ -477,15 +491,21 @@ class EnvKeyData:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _replace_item_type(item_type:'str') -> 'str':
+def _replace_item_type(is_import:'bool', item_type:'str') -> 'str':
 
     # Certain item types need to be replaced because they exist only in enmasse
-    if item_type == 'bearer_token':
-        return 'oauth'
-    elif item_type == 'oauth':
-        return 'bearer_token'
+
+    if is_import:
+        if item_type == 'bearer_token':
+            return 'oauth'
+        else:
+            return item_type
+
     else:
-        return item_type
+        if item_type == 'oauth':
+            return 'bearer_token'
+        else:
+            return item_type
 
 # ################################################################################################################################
 
@@ -1007,7 +1027,7 @@ class DependencyScanner:
 
         for service in SERVICES:
             if service.is_security:
-                service_name = _replace_item_type(service.name)
+                service_name = _replace_item_type(False, service.name)
                 item = self.find(service_name, fields)
                 if item is not None:
                     return item
@@ -1082,7 +1102,7 @@ class DependencyScanner:
             #
             # Preprocess item type
             #
-            item_type = _replace_item_type(item_type)
+            item_type = _replace_item_type(True, item_type)
 
             for item in items:
                 self.scan_item(item_type, item, results)
@@ -1097,6 +1117,9 @@ class DependencyScanner:
                         missing_name, sorted(dep_names), existing)
 
         return results
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class ObjectImporter:
     def __init__(
@@ -1188,7 +1211,7 @@ class ObjectImporter:
             #
             # Preprocess item type
             #
-            item_type = _replace_item_type(item_type)
+            item_type = _replace_item_type(True, item_type)
 
             for item in items:
                 self.validate_service_required(item_type, item)
@@ -1202,7 +1225,7 @@ class ObjectImporter:
         #
         # Preprocess item type
         #
-        item_type = _replace_item_type(item_type)
+        item_type = _replace_item_type(True, item_type)
 
         list_ = self.json.get(item_type, [])
         item = find_first(list_, lambda item: item.name == name)
@@ -1389,7 +1412,7 @@ class ObjectImporter:
             #
             # Preprocess item type
             #
-            item_type = _replace_item_type(item_type)
+            item_type = _replace_item_type(True, item_type)
 
             for item in items:
                 name = item.get('name')
@@ -1497,7 +1520,7 @@ class ObjectImporter:
             #
             # Preprocess item type
             #
-            item_type = _replace_item_type(item_type)
+            item_type = _replace_item_type(True, item_type)
 
             if self.may_be_dependency(item_type):
                 if item_type == 'rbac_role':
@@ -2371,10 +2394,6 @@ class InputParser:
 
                         for new_name, old_name  in name_dict.items():
 
-                            print()
-                            print(111, name_dict)
-                            print()
-
                             # .. check if the old name is given on input ..
                             if new_name_value := item.get(new_name, NotGiven):
 
@@ -2799,6 +2818,9 @@ class Enmasse(ManageCommand):
         # .. as above, for attributes that need to be renamed ..
         attr_list_rename  = ModuleCtx.Enmasse_Attr_List_Rename.get(attr_key) or {}
 
+        # .. as above, for values that need to be renamed ..
+        attr_list_value_rename  = ModuleCtx.Enmasse_Attr_List_Value_Rename.get(attr_key) or {}
+
         # .. as above, for attributes that need to be turned into a list ..
         attr_list_as_list = ModuleCtx.Enmasse_Attr_List_As_List.get(attr_key) or []
 
@@ -2839,6 +2861,15 @@ class Enmasse(ManageCommand):
             if value := item.pop(old_name, NotGiven):
                 if value is not NotGiven:
                     item[new_name] = value
+
+        # .. optionally, rename selected values ..
+        for attr_name, value_map_list in attr_list_value_rename.items():
+            for value_map in value_map_list:
+                if value := item.get(attr_name, NotGiven):
+                    if value is not NotGiven:
+                        if value in value_map:
+                            new_value = value_map[value]
+                            item[attr_name] = new_value
 
         # .. optionally, turn selected attributes into lists ..
         for attr in attr_list_as_list:
