@@ -65,7 +65,7 @@ def_sec:
     realm: "My Realm"
 
 email_smtp:
-  - name: {smtp_config.name}
+  - name: test.email.smtp.complex-01.{smtp_config.name}.{test_suffix}
     host: {smtp_config.host}
     is_active: true
     is_debug: false
