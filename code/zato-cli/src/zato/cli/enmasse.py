@@ -838,6 +838,7 @@ SERVICES = [
             'service': {}
         },
     ),
+
     ServiceInfo(
         name='pubsub_endpoint',
         prefix='zato.pubsub.endpoint',
@@ -863,6 +864,18 @@ SERVICES = [
             }
         },
     ),
+
+    ServiceInfo(
+        name='pubsub_subscription',
+        prefix='zato.pubsub.subscription',
+        object_dependencies={
+            'endpoint_name': {
+                'dependent_type': 'pubsub_endpoint',
+                'dependent_field': 'name',
+            },
+        },
+    ),
+
     ServiceInfo(
         name='channel_jms_wmq',
         prefix='zato.channel.jms-wmq',
