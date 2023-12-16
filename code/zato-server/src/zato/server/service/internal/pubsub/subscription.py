@@ -25,7 +25,7 @@ from zato.common.odb.query.pubsub.queue import get_queue_depth_by_sub_key
 from zato.common.odb.query.pubsub.subscribe import add_subscription, add_wsx_subscription, has_subscription, \
      move_messages_to_sub_queue
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id_no_search, \
-    pubsub_subscription_list_by_endpoint_id_list_no_search
+    pubsub_subscription_list_by_endpoint_id_list_no_search, pubsub_subscription_list_no_search
 from zato.common.pubsub import new_sub_key
 from zato.common.simpleio_ import drop_sio_elems
 from zato.common.typing_ import cast_
@@ -455,10 +455,30 @@ class SubscribeSrv(SubscribeService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetByEndpoint(Service):
+class GetList(Service):
     """ Returns all topics that an endpoint is subscribed to.
     """
     input:'any_' = '-cluster_id', '-endpoint_id', AsIs('-endpoint_id_list'), '-endpoint_name', AsIs('-sql_session')
+
+# ################################################################################################################################
+
+    def _get_all_items(self, sql_session:'any_', cluster_id:'int') -> 'strlist':
+
+        # Our response to produce
+        out:'strlist' = []
+
+        # .. get all subscriptions for that endpoint ..
+        items = pubsub_subscription_list_no_search(sql_session, cluster_id)
+
+        # .. go through everything found ..
+        for item in items:
+
+            # .. append it for later use ..
+            out.append(item.topic_name)
+
+        return out
+
+# ################################################################################################################################
 
     def _get_items_by_endpoint_id(self, sql_session:'any_', cluster_id:'int', endpoint_id:'int') -> 'strlist':
 
@@ -514,12 +534,12 @@ class GetByEndpoint(Service):
         endpoint_id_list = self.request.input.endpoint_id_list
 
         # .. we can be invoked by endpoint ID, a list of IDs or with a name ..
-        if (endpoint_id or endpoint_id_list):
+        if endpoint_id or endpoint_id_list:
 
             # Explicitly do nothing here
             pass
 
-        else:
+        elif endpoint_name:
             endpoint = self.pubsub.get_endpoint_by_name(endpoint_name)
             endpoint_id = endpoint.id
 
@@ -536,8 +556,12 @@ class GetByEndpoint(Service):
                 items = self._get_items_by_endpoint_id(sql_session, cluster_id, endpoint_id)
 
             # .. or for a list of endpoints
-            else:
+            elif endpoint_id_list:
                 items = self._get_items_by_endpoint_id_list(sql_session, cluster_id, endpoint_id_list)
+
+            # .. or for all of endpoints ..
+            else:
+                items = self._get_all_items(sql_session, cluster_id)
 
             # .. populate it for later use ..
             out[:] = items
