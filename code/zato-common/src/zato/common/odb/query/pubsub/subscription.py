@@ -176,6 +176,16 @@ def pubsub_subscription_list_by_endpoint_id_list_no_search(
 
 # ################################################################################################################################
 
+def pubsub_subscription_list_no_search(
+    session,    # type: SASession
+    cluster_id, # type: int
+) -> 'any_':
+    """ A list of all pub/sub subscriptions in existence, without a search results wrapper.
+    """
+    return _pubsub_subscription(session, cluster_id)
+
+# ################################################################################################################################
+
 @query_wrapper
 def pubsub_endpoint_summary_list(
     session,    # type: SASession
