@@ -42,7 +42,7 @@ from zato.server.service.internal.pubsub import common_sub_data
 
 if 0:
     from sqlalchemy import Column
-    from zato.common.typing_ import any_, boolnone, dictlist, intlist, intnone, optional, strlist, strnone
+    from zato.common.typing_ import any_, boolnone, dictlist, intlist, intnone, optional
     from zato.common.model.wsx import WSXConnectorConfig
     Column = Column
     WSXConnectorConfig = WSXConnectorConfig
@@ -462,10 +462,10 @@ class GetList(Service):
 
 # ################################################################################################################################
 
-    def _get_all_items(self, sql_session:'any_', cluster_id:'int') -> 'strlist':
+    def _get_all_items(self, sql_session:'any_', cluster_id:'int') -> 'dictlist':
 
         # Our response to produce
-        out:'strlist' = []
+        out:'dictlist' = []
 
         # .. get all subscriptions for that endpoint ..
         items = pubsub_subscription_list_no_search(sql_session, cluster_id)
@@ -474,16 +474,16 @@ class GetList(Service):
         for item in items:
 
             # .. append it for later use ..
-            out.append(item.topic_name)
+            out.append({'name':item.topic_name})
 
         return out
 
 # ################################################################################################################################
 
-    def _get_items_by_endpoint_id(self, sql_session:'any_', cluster_id:'int', endpoint_id:'int') -> 'strlist':
+    def _get_items_by_endpoint_id(self, sql_session:'any_', cluster_id:'int', endpoint_id:'int') -> 'dictlist':
 
         # Our response to produce
-        out:'strlist' = []
+        out:'dictlist' = []
 
         # .. get all subscriptions for that endpoint ..
         items = pubsub_subscription_list_by_endpoint_id_no_search(sql_session, cluster_id, endpoint_id)
@@ -492,7 +492,7 @@ class GetList(Service):
         for item in items:
 
             # .. append it for later use ..
-            out.append(item.topic_name)
+            out.append({'name':item.topic_name})
 
         return out
 
@@ -513,7 +513,7 @@ class GetList(Service):
             out.append({
                 'endpoint_id': item.endpoint_id,
                 'endpoint_name': item.endpoint_name,
-                'topic_name': item.topic_name,
+                'name': item.topic_name,
             })
 
         return out
