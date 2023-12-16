@@ -42,7 +42,7 @@ from zato.server.service.internal.pubsub import common_sub_data
 
 if 0:
     from sqlalchemy import Column
-    from zato.common.typing_ import any_, boolnone, dictlist, intlist, intnone, optional
+    from zato.common.typing_ import any_, boolnone, dictlist, intlist, intnone, optional, strnone
     from zato.common.model.wsx import WSXConnectorConfig
     Column = Column
     WSXConnectorConfig = WSXConnectorConfig
