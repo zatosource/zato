@@ -160,7 +160,7 @@ def response_hook(self:'Service', input:'Bunch', instance:'any_', attrs:'any_', 
         for item in response:
             for topic_dict in topic_response:
                 if item['id'] == topic_dict['endpoint_id']:
-                    topic_name = topic_dict['topic_name']
+                    topic_name = topic_dict['name']
                     item['topic_list'].append(topic_name)
 
 # ################################################################################################################################
