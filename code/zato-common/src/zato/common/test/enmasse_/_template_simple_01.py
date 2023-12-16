@@ -25,7 +25,7 @@ security:
 
 channel_rest:
 
-  - name: name: /test/enmasse1/simple/{test_suffix}
+  - name: /test/enmasse1/simple/{test_suffix}
     service: pub.zato.ping
     url_path: /test/enmasse1/simple/{test_suffix}
 
