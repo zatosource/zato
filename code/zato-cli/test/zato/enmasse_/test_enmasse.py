@@ -98,8 +98,6 @@ class EnmasseTestCase(BaseEnmasseTestCase):
         _ = f.write(data)
         f.close()
 
-        print(data)
-
         try:
             # Invoke enmasse to create objects ..
             _ = self.invoke_enmasse(config_path)
@@ -120,22 +118,22 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_enmasse_complex_ok_01(self) -> 'None':
+    def test_enmasse_complex_ok_01(self) -> 'None':
         self._test_enmasse_ok(template_complex_01)
 
 # ################################################################################################################################
 
-    def xtest_enmasse_complex_ok_02(self) -> 'None':
+    def test_enmasse_complex_ok_02(self) -> 'None':
         self._test_enmasse_ok(template_complex_02)
 
 # ################################################################################################################################
 
-    def xtest_enmasse_complex_ok_03(self) -> 'None':
+    def test_enmasse_complex_ok_03(self) -> 'None':
         self._test_enmasse_ok(template_complex_03)
 
 # ################################################################################################################################
 
-    def xtest_enmasse_complex_ok_04(self) -> 'None':
+    def test_enmasse_complex_ok_04(self) -> 'None':
         self._test_enmasse_ok(template_complex_04)
 
 # ################################################################################################################################
@@ -145,7 +143,7 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_enmasse_simple_ok_01(self) -> 'None':
+    def test_enmasse_simple_ok_01(self) -> 'None':
         self._test_enmasse_ok(template_simple_01)
 
 # ################################################################################################################################

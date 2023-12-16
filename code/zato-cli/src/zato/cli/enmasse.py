@@ -2297,7 +2297,7 @@ class InputParser:
 
 # ################################################################################################################################
 
-    def _pre_process_input(self, data:'strdict') -> 'strdict':
+    def _pre_process_input_before_import(self, data:'strdict') -> 'strdict':
 
         # Get all environment variables that we may potentially use ..
         env = deepcopy(os.environ)
@@ -2452,6 +2452,12 @@ class InputParser:
                     # .. finally, we can append it for later use ..
                     _ = data['zato_generic_connection'].append(value)
 
+        # Remove IDs from all the generic connections ..
+        for item_type, items in data.items():
+            if item_type == 'zato_generic_connection':
+                for item in items:
+                    _ = item.pop('id', None)
+
         # Add values for attributes that are optional ..
         for def_type, items in data.items():
 
@@ -2531,7 +2537,7 @@ class InputParser:
         data = self._parse_file(cast_('str', self.path), results) # type: ignore
 
         # .. pre-process its contents ..
-        data = self._pre_process_input(data)
+        data = self._pre_process_input_before_import(data)
 
         if not results.ok:
             return results
