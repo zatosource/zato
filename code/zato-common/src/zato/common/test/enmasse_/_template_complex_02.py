@@ -11,6 +11,38 @@ Licensed under LGPLv3 see LICENSE.txt for terms and conditions.
 
 template_complex_02 = """
 
+zato_cache_builtin:
+
+  - cache_id: 1
+    cache_type: "builtin"
+    current_size: 11
+    extend_expiry_on_get: true
+    extend_expiry_on_set: true
+    id: 1
+    is_active: true
+    is_default: true
+    max_item_size: 10000
+    max_size: 10000
+    name: "test.complex-01.from-json.001.{test_suffix}"
+    opaque: null
+    persistent_storage: "sql"
+    sync_method: "in-background"
+
+  - cache_id: 1
+    cache_type: "builtin"
+    current_size: 11
+    extend_expiry_on_get: true
+    extend_expiry_on_set: true
+    id: 1
+    is_active: true
+    is_default: true
+    max_item_size: 10000
+    max_size: 10000
+    name: "test.complex-01.from-json.002.{test_suffix}"
+    opaque: "{{}}"
+    persistent_storage: "no-persistent-storage",
+    sync_method: "in-background"
+
 scheduler:
 
   - name: test.complex-02.demo.{test_suffix}
@@ -80,7 +112,7 @@ channel_plain_http:
     security_name: null
     serialization_type: "string"
     service: "pub.zato.ping"
-    "service_id: 707
+    service_id: 707
     service_name: "pub.zato.ping"
     service_whitelist: [
         ""
