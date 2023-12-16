@@ -2032,7 +2032,8 @@ class YamlCodec:
                 data = data.replace(param, env_value)
 
         # .. and return a dict object representing the file.
-        return yaml.load(data, yaml.FullLoader)
+        out = yaml.load(data, yaml.FullLoader)
+        return out
 
     def dump(self, file_, object_): # type: ignore
 
@@ -2068,8 +2069,13 @@ class InputParser:
         try:
             with open(path) as f:
                 data:'strdict' = self.codec.load(f, None) # type: ignore
-        except Exception:
-            data = {}
+        except Exception as e:
+            from yaml.error import YAMLError
+            if isinstance(e, YAMLError):
+                raise
+            else:
+                self.logger.info('Caught an exception -> %s', e)
+                data = {}
 
         return data
 
