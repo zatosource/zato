@@ -1846,7 +1846,7 @@ class ObjectManager:
         if name.startswith('zato.wsx.cleanup'):
             return False
 
-        if item_type != 'rbac_role_permission':
+        if item_type not in {'pubsub_subscription', 'rbac_role_permission'}:
             if name in self.ignored_names:
                 return True
             elif 'zato' in name and (not 'unittest' in name):
@@ -1945,16 +1945,22 @@ class ObjectManager:
         # A flag indicating if this service is related to security definitions
         is_sec_def = 'zato.security' in service_name
 
-        print()
-        print(444, data)
-        print()
-
         for item in map(Bunch, data):
 
-            if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)): # type: ignore
-                continue
 
-            if self.is_ignored_name(item_type, item, is_sec_def):
+            if 'pubsub' in item_type:
+                print()
+                print(111, item)
+                print()
+
+                print()
+                print('SSS-01', service_info.export_filter)
+                print()
+
+            #if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)): # type: ignore
+            #    continue
+
+            if 0 and self.is_ignored_name(item_type, item, is_sec_def):
                 continue
 
             # Passwords are always exported in an encrypted form so we need to decrypt them ourselves
@@ -3052,7 +3058,7 @@ class Enmasse(ManageCommand):
     ) -> 'bool':
 
         # Local aliases
-        name:'str' = item['name']
+        name:'str' = item.get('name') or ''
 
         zato_name_prefix = (
             'zato.',
