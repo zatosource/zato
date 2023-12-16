@@ -11,7 +11,7 @@ from sqlalchemy import func
 
 # Zato
 from zato.common.api import PUBSUB
-from zato.common.odb.model import Cluster, PubSubTopic, PubSubEndpoint, PubSubSubscription
+from zato.common.odb.model import Cluster, HTTPSOAP, PubSubTopic, PubSubEndpoint, PubSubSubscription, Server
 from zato.common.odb.query import query_wrapper
 
 # ################################################################################################################################
@@ -94,8 +94,12 @@ def _pubsub_subscription(
         PubSubEndpoint.name.label('endpoint_name'),
         PubSubEndpoint.endpoint_type,
         PubSubEndpoint.service_id,
+        Server.name.label('server_name'),
+        HTTPSOAP.name.label('rest_connection'),
         ).\
         outerjoin(PubSubTopic, PubSubTopic.id==PubSubSubscription.topic_id).\
+        outerjoin(Server, PubSubSubscription.server_id==Server.id).\
+        outerjoin(HTTPSOAP, PubSubSubscription.out_http_soap_id==HTTPSOAP.id).\
         filter(PubSubEndpoint.id==PubSubSubscription.endpoint_id).\
         filter(Cluster.id==PubSubSubscription.cluster_id).\
         filter(Cluster.id==cluster_id).\

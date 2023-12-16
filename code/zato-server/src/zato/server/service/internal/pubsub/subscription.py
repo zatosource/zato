@@ -474,7 +474,14 @@ class GetList(Service):
         for item in items:
 
             # .. append it for later use ..
-            out.append({'name':item.topic_name})
+            out.append({
+                'endpoint_name': item.endpoint_name,
+                'topic_name': item.topic_name,
+                'delivery_server': item.server_name,
+                'delivery_method': item.delivery_method,
+                'rest_connection': item.rest_connection,
+                'rest_method': item.out_http_method,
+            })
 
         return out
 
@@ -492,7 +499,7 @@ class GetList(Service):
         for item in items:
 
             # .. append it for later use ..
-            out.append({'name':item.topic_name})
+            out.append({'topic_name':item.topic_name})
 
         return out
 
@@ -513,7 +520,7 @@ class GetList(Service):
             out.append({
                 'endpoint_id': item.endpoint_id,
                 'endpoint_name': item.endpoint_name,
-                'name': item.topic_name,
+                'topic_name': item.topic_name,
             })
 
         return out
