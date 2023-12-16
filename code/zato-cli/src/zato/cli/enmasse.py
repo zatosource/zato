@@ -50,7 +50,7 @@ ZATO_NO_SECURITY = 'zato-no-security'
 Code = namedtuple('Code', ('symbol', 'desc')) # type: ignore
 
 WARNING_ALREADY_EXISTS_IN_ODB = Code('W01', 'already exists in ODB')
-WARNING_MISSING_DEF = Code('W02', 'missing definition')
+WARNING_MISSING_DEF = Code('W02', 'definition missing')
 WARNING_MISSING_DEF_INCL_ODB = Code('W04', 'missing def incl. ODB')
 ERROR_ITEM_INCLUDED_MULTIPLE_TIMES = Code('E01', 'item included multiple')
 ERROR_INCLUDE_COULD_NOT_BE_PARSED = Code('E03', 'include parsing error')
@@ -526,6 +526,7 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
 
     # Pub/sub - Subscription
     'pubsub_subscription':  [
+        'name',
         'endpoint_name',
         'delivery_method',
         'rest_connection',
@@ -873,6 +874,10 @@ SERVICES = [
                 'dependent_type': 'pubsub_endpoint',
                 'dependent_field': 'name',
             },
+            'rest_connection': {
+                'dependent_type': 'http_soap',
+                'dependent_field': 'name',
+            },
         },
     ),
 
@@ -1176,7 +1181,11 @@ class DependencyScanner:
                 if dep is None:
                     key = (dep_type, value)
                     names:'any_' = self.missing.setdefault(key, [])
-                    names.append(item.name)
+                    name = item.get('name')
+                    if name:
+                        names.append(name)
+                    else:
+                        names.append(item_type)
 
 # ################################################################################################################################
 
@@ -1369,6 +1378,9 @@ class ObjectImporter:
             out = False
 
         if item_type == 'zato_generic_connection' and attrs.get('type_') == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX:
+            out = False
+
+        if item_type == 'pubsub_subscription':
             out = False
 
         return out
@@ -1690,11 +1702,12 @@ class ObjectImporter:
             if field_name in _security_fields:
                 field_name = resolve_security_field_name(item)
 
-            id_field:'any_' = info['id_field']
             dependent_type:'any_' = info['dependent_type']
             dependent_field:'any_' = info['dependent_field']
 
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
+
+                id_field:'any_' = info['id_field']
 
                 if field_name in _security_keys:
                     field_value = try_keys(item, _security_keys)
@@ -3213,13 +3226,16 @@ class Enmasse(ManageCommand):
             subs_by_key_dict.topic_list.append(sub.topic_name)
 
         # .. now, we can discard the keys and we will be left with subscriptions alone ..
-        for sub_info in subs_by_key.values():
+        for idx, sub_info in enumerate(subs_by_key.values(), 1):
 
             # .. return topics sorted alphabetically ..
             sub_info.topic_list.sort()
 
             # .. make sure we are returning a dict ..
             sub_info = sub_info.toDict()
+
+            # .. each subscription needs a name ..
+            sub_info['name'] = 'Subscription.' + str(idx).zfill(9)
 
             # .. append it for our caller ..
             out.append(sub_info)
