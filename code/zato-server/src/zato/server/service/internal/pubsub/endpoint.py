@@ -144,7 +144,7 @@ def response_hook(self:'Service', input:'Bunch', instance:'any_', attrs:'any_', 
             endpoint_id_list.append(item.id)
 
         # .. we have all the IDs now and we can check their topics ..
-        topic_service = 'zato.pubsub.subscription.get-by-endpoint'
+        topic_service = 'zato.pubsub.subscription.get-list'
         topic_response = self.invoke(topic_service, endpoint_id_list=endpoint_id_list)
 
         # .. top-level response that we are returning ..
@@ -288,7 +288,7 @@ class Get(AdminService):
             # .. get a list of topics this endpoint is subscribed to ..
             request = {'cluster_id':cluster_id, 'endpoint_id':endpoint_id, 'sql_session':session}
 
-            topic_service = 'zato.pubsub.subscription.get-by-endpoint'
+            topic_service = 'zato.pubsub.subscription.get-list'
             topic_list = self.invoke(topic_service, request)
             self.response.payload.topic_list = topic_list
 
