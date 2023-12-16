@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,7 +21,7 @@ if 0:
     from sqlalchemy.sql.selectable import Select
     from sqlalchemy.orm.query import Query
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, intlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -161,6 +161,18 @@ def pubsub_subscription_list_by_endpoint_id_no_search(
     """
     return _pubsub_subscription(session, cluster_id).\
         filter(PubSubSubscription.endpoint_id==endpoint_id)
+
+# ################################################################################################################################
+
+def pubsub_subscription_list_by_endpoint_id_list_no_search(
+    session,    # type: SASession
+    cluster_id, # type: int
+    endpoint_id_list # type: intlist
+) -> 'any_':
+    """ A list of all pub/sub subscriptions for a list of endpoints without a search results wrapper.
+    """
+    return _pubsub_subscription(session, cluster_id).\
+        filter(PubSubSubscription.endpoint_id.in_(endpoint_id_list))
 
 # ################################################################################################################################
 
