@@ -572,6 +572,16 @@ IGNORE_PREFIXES = {
 
 # ################################################################################################################################
 
+def try_keys(item:'strdict', keys:'strlist') -> 'any_':
+    for key in keys:
+        if value := item.get(key, NotGiven):
+            if value is not NotGiven:
+                return value
+    else:
+        raise Exception(f'Keys were not found -> {keys} -> {item}')
+
+# ################################################################################################################################
+
 def populate_services_from_apispec(client, logger): # type: ignore
     """ Request a list of services from the APISpec service, and merge the results into SERVICES_BY_PREFIX,
     creating new ServiceInfo instances to represent previously unknown services as appropriate.
@@ -695,6 +705,9 @@ def test_item(item, cond): # type: ignore
 
 # Note that the order of items in this list matters
 _security_fields = ['security', 'sec_def', 'security_name']
+
+# All keys under which a security name can be found
+_security_keys = ['security_name', 'sec_name', 'sec_def']
 
 # ################################################################################################################################
 
@@ -1644,11 +1657,19 @@ class ObjectImporter:
 
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
 
-                field_value = item[field_name]
-                criteria = {dependent_field: field_value}
+                if field_name in _security_keys:
+                    field_value = try_keys(item, _security_keys)
+                else:
+                    field_value =  item[field_name]
 
-                dep_obj:'any_' = self.object_mgr.find(dependent_type, criteria)
-                item[id_field] = dep_obj.id
+
+                # Ignore explicit indicators of the absence of a security definition
+                if field_value != ZATO_NO_SECURITY:
+
+                    criteria = {dependent_field: field_value}
+
+                    dep_obj:'any_' = self.object_mgr.find(dependent_type, criteria)
+                    item[id_field] = dep_obj.id
 
         if service_name and service_info.name != 'def_sec':
 
