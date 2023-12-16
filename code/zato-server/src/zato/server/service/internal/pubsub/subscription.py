@@ -24,7 +24,8 @@ from zato.common.odb.model import PubSubSubscription
 from zato.common.odb.query.pubsub.queue import get_queue_depth_by_sub_key
 from zato.common.odb.query.pubsub.subscribe import add_subscription, add_wsx_subscription, has_subscription, \
      move_messages_to_sub_queue
-from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id_no_search
+from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id_no_search, \
+    pubsub_subscription_list_by_endpoint_id_list_no_search
 from zato.common.pubsub import new_sub_key
 from zato.common.simpleio_ import drop_sio_elems
 from zato.common.typing_ import cast_
@@ -33,7 +34,7 @@ from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
 from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub
 from zato.server.pubsub.model import Topic
-from zato.server.service import Bool, Int, List, Opaque
+from zato.server.service import AsIs, Bool, Int, List, Opaque, Service
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.pubsub import common_sub_data
 
@@ -41,7 +42,7 @@ from zato.server.service.internal.pubsub import common_sub_data
 
 if 0:
     from sqlalchemy import Column
-    from zato.common.typing_ import any_, boolnone, intnone, optional, strnone
+    from zato.common.typing_ import any_, boolnone, dictlist, intlist, intnone, optional, strlist, strnone
     from zato.common.model.wsx import WSXConnectorConfig
     Column = Column
     WSXConnectorConfig = WSXConnectorConfig
@@ -59,7 +60,7 @@ WebSocket = WebSocket
 
 # ################################################################################################################################
 
-sub_broker_attrs = get_sa_model_columns(PubSubSubscription)
+sub_broker_attrs:'any_' = get_sa_model_columns(PubSubSubscription)
 
 sub_impl_input_optional = list(common_sub_data)
 sub_impl_input_optional.remove('is_internal')
@@ -452,6 +453,107 @@ class SubscribeSrv(SubscribeService):
     pass
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class GetByEndpoint(Service):
+    """ Returns all topics that an endpoint is subscribed to.
+    """
+    input:'any_' = '-cluster_id', '-endpoint_id', AsIs('-endpoint_id_list'), '-endpoint_name', AsIs('-sql_session')
+
+    def _get_items_by_endpoint_id(self, sql_session:'any_', cluster_id:'int', endpoint_id:'int') -> 'strlist':
+
+        # Our response to produce
+        out:'strlist' = []
+
+        # .. get all subscriptions for that endpoint ..
+        items = pubsub_subscription_list_by_endpoint_id_no_search(sql_session, cluster_id, endpoint_id)
+
+        # .. go through everything found ..
+        for item in items:
+
+            # .. append it for later use ..
+            out.append(item.topic_name)
+
+        return out
+
+# ################################################################################################################################
+
+    def _get_items_by_endpoint_id_list(self, sql_session:'any_', cluster_id:'int', endpoint_id_list:'intlist') -> 'dictlist':
+
+        # Our response to produce
+        out:'dictlist' = []
+
+        # .. get all subscriptions for that endpoint ..
+        items = pubsub_subscription_list_by_endpoint_id_list_no_search(sql_session, cluster_id, endpoint_id_list)
+
+        # .. go through everything found ..
+        for item in items:
+
+            # .. append it for later use ..
+            out.append({
+                'endpoint_id': item.endpoint_id,
+                'endpoint_name': item.endpoint_name,
+                'topic_name': item.topic_name,
+            })
+
+        return out
+
+# ################################################################################################################################
+
+    def handle(self) -> 'None':
+
+        # Our response to produce
+        out = []
+
+        # Local variables ..
+        sql_session = self.request.input.sql_session
+        cluster_id = self.request.input.cluster_id or self.server.cluster_id
+
+        endpoint_id = self.request.input.endpoint_id
+        endpoint_name = self.request.input.endpoint_name
+        endpoint_id_list = self.request.input.endpoint_id_list
+
+        # .. we can be invoked by endpoint ID, a list of IDs or with a name ..
+        if (endpoint_id or endpoint_id_list):
+
+            # Explicitly do nothing here
+            pass
+
+        else:
+            endpoint = self.pubsub.get_endpoint_by_name(endpoint_name)
+            endpoint_id = endpoint.id
+
+        # .. connect to the database or reuse a connection we received on input ..
+        if sql_session:
+            is_new_sql_session = False
+        else:
+            is_new_sql_session = True
+            sql_session = self.odb.session()
+
+        try:
+            # .. get all subscriptions for that endpoint ..
+            if endpoint_id:
+                items = self._get_items_by_endpoint_id(sql_session, cluster_id, endpoint_id)
+
+            # .. or for a list of endpoints
+            else:
+                items = self._get_items_by_endpoint_id_list(sql_session, cluster_id, endpoint_id_list)
+
+            # .. populate it for later use ..
+            out[:] = items
+
+        except Exception:
+            raise
+
+        finally:
+            if is_new_sql_session:
+                _ = sql_session.close()
+
+        # .. and return everything to our caller.
+        self.response.payload = out
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Create(_Subscribe):
     """ Creates a new pub/sub subscription by invoking a subscription service specific to input endpoint_type.
@@ -646,7 +748,8 @@ class UpdateInteractionMetadata(AdminService):
     """ Updates last interaction metadata for input sub keys.
     """
     class SimpleIO:
-        input_required = List('sub_key'), Opaque('last_interaction_time'), 'last_interaction_type', 'last_interaction_details'
+        input_required:'any_' = List('sub_key'), Opaque('last_interaction_time'), 'last_interaction_type', \
+            'last_interaction_details'
 
     def handle(self) -> 'None':
 

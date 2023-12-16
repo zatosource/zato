@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from copy import deepcopy
+from json import loads
 
 # SQLAlchemy
 from sqlalchemy import delete
@@ -44,7 +45,7 @@ if 0:
     from bunch import Bunch
     from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import anylist, strdict
+    from zato.common.typing_ import any_, anylist, strdict
     from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvocationResult
     from zato.server.pubsub.model import subnone
     from zato.server.service import Service
@@ -126,6 +127,41 @@ def instance_hook(self:'Service', input:'strdict', instance:'PubSubEndpoint', at
     instance.last_pub_time = instance.last_pub_time or None
     instance.last_sub_time = instance.last_sub_time or None
     instance.last_deliv_time = instance.last_deliv_time or None
+
+# ################################################################################################################################
+
+def response_hook(self:'Service', input:'Bunch', instance:'any_', attrs:'any_', hook_type:'str'):
+
+    if hook_type == 'get_list':
+
+        # We are going to check topics for each of these endpoint IDs ..
+        endpoint_id_list = []
+
+        # .. go through every endpoint found ..
+        for item in self.response.payload:
+
+            # .. append its ID for later use ..
+            endpoint_id_list.append(item.id)
+
+        # .. we have all the IDs now and we can check their topics ..
+        topic_service = 'zato.pubsub.subscription.get-by-endpoint'
+        topic_response = self.invoke(topic_service, endpoint_id_list=endpoint_id_list)
+
+        # .. top-level response that we are returning ..
+        response = self.response.payload.getvalue()
+        response = loads(response)
+        response = response['zato_pubsub_endpoint_get_list_response']
+
+        # .. first, add the required key to all the endpoints ..
+        for item in response:
+            item['topic_list'] = []
+
+        # .. now, go through the items once more and populate topics for each endpoint ..
+        for item in response:
+            for topic_dict in topic_response:
+                if item['id'] == topic_dict['endpoint_id']:
+                    topic_name = topic_dict['topic_name']
+                    item['topic_list'].append(topic_name)
 
 # ################################################################################################################################
 
@@ -235,11 +271,26 @@ class Get(AdminService):
         output_required = ('id', 'name', 'is_active', 'is_internal', 'role', 'endpoint_type')
         output_optional = ('tags', 'topic_patterns', 'pub_tag_patterns', 'message_tag_patterns',
             'security_id', 'ws_channel_id', 'sec_type', 'sec_name', 'ws_channel_name', 'sub_key',
-            'service_id', 'service_name')
+            'service_id', 'service_name', AsIs('topic_list'))
 
     def handle(self):
+
+        # Local variables
+        cluster_id = self.request.input.cluster_id
+        endpoint_id = self.request.input.id
+
+        # Connect to the database ..
         with closing(self.odb.session()) as session:
+
+            # .. get basic information about this endpoint ..
             self.response.payload = pubsub_endpoint(session, self.request.input.cluster_id, self.request.input.id)
+
+            # .. get a list of topics this endpoint is subscribed to ..
+            request = {'cluster_id':cluster_id, 'endpoint_id':endpoint_id, 'sql_session':session}
+
+            topic_service = 'zato.pubsub.subscription.get-by-endpoint'
+            topic_list = self.invoke(topic_service, request)
+            self.response.payload.topic_list = topic_list
 
 # ################################################################################################################################
 # ################################################################################################################################
