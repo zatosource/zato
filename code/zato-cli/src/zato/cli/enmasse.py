@@ -611,6 +611,7 @@ def populate_services_from_apispec(client, logger): # type: ignore
     # Services belonging here may not have all the CRUD methods and it is expected that they do not
     allow_incomplete_methods = [
         'zato.outgoing.redis',
+        'zato.pubsub.subscription',
         'zato.security',
         'zato.security.rbac.client-role'
     ]
@@ -1944,6 +1945,10 @@ class ObjectManager:
         # A flag indicating if this service is related to security definitions
         is_sec_def = 'zato.security' in service_name
 
+        print()
+        print(444, data)
+        print()
+
         for item in map(Bunch, data):
 
             if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)): # type: ignore
@@ -1972,6 +1977,7 @@ class ObjectManager:
 
         self.objects = Bunch()
         for service_info in sorted(SERVICES, key=attrgetter('name')):
+
             self.get_objects_by_type(service_info.name)
 
         for item_type, items in self.objects.items(): # type: ignore
