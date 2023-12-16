@@ -126,6 +126,9 @@ class ModuleCtx:
     # Maps enmasse defintions types to their attributes that will be skipped during an export if their value matches configuration
     Enmasse_Attr_List_Skip_If_Value_Matches = cast_('strdictdict', None)
 
+    # Maps enmasse defintions types to their attributes that will be skipped during an export if other values matche configuration
+    Enmasse_Attr_List_Skip_If_Other_Value_Matches = cast_('strdictdict', None)
+
     # Maps enmasse defintions types to their attributes that will be turned into multiline strings
     Enmasse_Attr_List_As_Multiline = cast_('strlistdict', None)
 
@@ -373,6 +376,14 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches = {
 
 # ################################################################################################################################
 
+ModuleCtx.Enmasse_Attr_List_Skip_If_Other_Value_Matches = {
+
+    # Pub/sub subscriptions
+    'pubsub_subscription':  {'criteria':[{'delivery_method':'pull'}], 'attrs':['rest_method', 'rest_connection']},
+}
+
+# ################################################################################################################################
+
 ModuleCtx.Enmasse_Attr_List_As_Multiline = {
 
     # Security definitions
@@ -512,6 +523,17 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
         'has_gd',
         'hook_service_name',
     ],
+
+    # Pub/sub - Subscription
+    'pubsub_subscription':  [
+        'endpoint_name',
+        'delivery_method',
+        'rest_connection',
+        'rest_method',
+        'delivery_server',
+        'topic_list',
+    ],
+
 }
 
 # ################################################################################################################################
@@ -2919,6 +2941,9 @@ class Enmasse(ManageCommand):
         # .. as above, for attributes that should be skipped if they have a specific value ..
         attr_list_skip_if_value_matches = ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches.get(attr_key) or {}
 
+        # .. as above, for attributes that should be skipped if other values match ..
+        attr_list_skip_if_other_value_matches = ModuleCtx.Enmasse_Attr_List_Skip_If_Other_Value_Matches.get(attr_key) or {}
+
         # .. to make sure the dictionary does not change during iteration ..
         item_copy = deepcopy(item)
 
@@ -2995,6 +3020,20 @@ class Enmasse(ManageCommand):
             if value := item.pop(pattern_key, NotGiven): # type: ignore
                 if value != pattern_value:
                     item[pattern_key] = value
+
+        # .. optionally, skip attributes if other attributes have a specific value ..
+        if attr_list_skip_if_other_value_matches:
+
+            criteria = attr_list_skip_if_other_value_matches['criteria']
+            attrs_to_skip = attr_list_skip_if_other_value_matches['attrs']
+
+            for criterion in criteria:
+                for criterion_key, criterion_value in criterion.items():
+                    item_value = item.get(criterion_key, NotGiven)
+                    if item_value is not NotGiven:
+                        if item_value == criterion_value:
+                            for attr in attrs_to_skip:
+                                _ = item.pop(attr)
 
         # .. ID's are never returned ..
         _ = item.pop('id', None)
@@ -3162,6 +3201,9 @@ class Enmasse(ManageCommand):
 
         # .. now, we can discard the keys and we will be left with subscriptions alone ..
         for sub_info in subs_by_key.values():
+
+            # .. return topics sorted alphabetically ..
+            sub_info.topic_list.sort()
 
             # .. make sure we are returning a dict ..
             sub_info = sub_info.toDict()
