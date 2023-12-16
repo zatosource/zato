@@ -29,7 +29,7 @@ if 0:
 
     from logging import Logger
     from zato.client import APIClient
-    from zato.common.typing_ import any_, anylist, dictlist, list_, stranydict, strdict, strdictnone, strdictdict, \
+    from zato.common.typing_ import any_, anydict, anylist, dictlist, list_, stranydict, strdict, strdictnone, strdictdict, \
         strstrdict, strlist, strlistdict, strnone
 
     APIClient = APIClient
@@ -1947,16 +1947,6 @@ class ObjectManager:
 
         for item in map(Bunch, data):
 
-
-            if 'pubsub' in item_type:
-                print()
-                print(111, item)
-                print()
-
-                print()
-                print('SSS-01', service_info.export_filter)
-                print()
-
             #if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)): # type: ignore
             #    continue
 
@@ -3057,11 +3047,18 @@ class Enmasse(ManageCommand):
         include_name, # type: strlist
     ) -> 'bool':
 
+        # Type hints
+        name:'str'
+
         # Local aliases
-        name:'str' = item.get('name') or ''
+        if item_type == 'pubsub_subscription':
+            name = item['endpoint_name']
+        else:
+            name = item['name']
 
         zato_name_prefix = (
             'zato.',
+            '/zato',
             'pub.zato',
             'zato.pubsub',
             'ide_publisher',
@@ -3077,15 +3074,16 @@ class Enmasse(ManageCommand):
         has_type = not has_all_types
         has_name = not has_all_names
 
-        # Handle security definitions, some of which should never be exported ..
+        # Certain internal objects should never be exported ..
         if item_type == 'def_sec':
 
             # .. do not write RBAC definitions ..
             if 'rbac' in item['type']:
                 return False
 
-            # .. do not write internal definitions ..
-            elif name.startswith(zato_name_prefix):
+        # .. do nto write internal definitions ..
+        for prefix in zato_name_prefix:
+            if name.startswith(prefix):
                 return False
 
         # We enter this branch if we are to export specific types ..
@@ -3112,6 +3110,66 @@ class Enmasse(ManageCommand):
                 out = out_by_name
 
         # .. we are ready to return our output
+        return out
+
+# ################################################################################################################################
+
+    def _rewrite_pubsub_subscriptions(self, subs:'dictlist') -> 'dictlist':
+
+        # Bunch
+        from bunch import Bunch, bunchify
+
+        # Our response to produce
+        out:'dictlist' = []
+
+        # Local variables
+        subs_by_key:'anydict' = {}
+
+        #
+        # We are going to group subscriptions by these keys
+        #
+        # - Endpoint name
+        # - Delivery method
+        # - REST method
+        # - REST connection
+        # - Delivery server
+        #
+
+        for sub in subs:
+
+            # .. for dot attribute access ..
+            sub = Bunch(sub)
+
+            # .. build a composite key to later add topics to it ..
+            key:'any_' = (sub.endpoint_name, sub.delivery_method, sub.rest_method, sub.rest_connection, sub.delivery_server)
+
+            # .. add the key if it does not already exist ..
+            if key not in subs_by_key:
+                subs_by_key[key] = bunchify({
+                    'endpoint_name': sub.endpoint_name,
+                    'delivery_method': sub.delivery_method,
+                    'rest_method': sub.rest_method,
+                    'rest_connection': sub.rest_connection,
+                    'delivery_server': sub.delivery_server,
+                    'topic_list': []
+                })
+
+            # .. at this point, we know we have a list for this key so we can access it ..
+            subs_by_key_dict = subs_by_key[key]
+
+            # .. and append the current topic to what we are building for the caller ..
+            subs_by_key_dict.topic_list.append(sub.topic_name)
+
+        # .. now, we can discard the keys and we will be left with subscriptions alone ..
+        for sub_info in subs_by_key.values():
+
+            # .. make sure we are returning a dict ..
+            sub_info = sub_info.toDict()
+
+            # .. append it for our caller ..
+            out.append(sub_info)
+
+        # .. now, we can return the result
         return out
 
 # ################################################################################################################################
@@ -3155,6 +3213,10 @@ class Enmasse(ManageCommand):
                     dict(item, type=service_info.name)
                     for item in output.pop(service_info.name, [])
                 )
+
+        # .. rewrite pub/sub subscriptions in a way that is easier to handle ..
+        if subs := output.get('pubsub_subscription'):
+            output['pubsub_subscription'] = self._rewrite_pubsub_subscriptions(subs)
 
         # .. go through everything that we collected in earlier steps in the process ..
         for item_type, items in iteritems(output): # type: ignore
@@ -3216,6 +3278,7 @@ class Enmasse(ManageCommand):
             'outgoing_ldap': [],
             'outgoing_wsx': [],
         }
+
         for old_name, value_list in to_write.items():
             value_list = cast_('anylist', value_list)
             if old_name == 'zato_generic_connection':
