@@ -546,10 +546,11 @@ def _replace_item_type(is_import:'bool', item_type:'str') -> 'str':
 # ################################################################################################################################
 
 def find_first(it, pred): # type: ignore
-    """Given any iterable, return the first element `elem` from it matching `pred(elem)`"""
-    for obj in it:
+    """ Given any iterable, return the first element `elem` from it matching `pred(elem)`.
+    """
+    for obj in it: # type: ignore
         if pred(obj):
-            return obj
+            return obj # type: ignore
 
 # ################################################################################################################################
 
@@ -560,7 +561,7 @@ def dict_match(haystack, needle): # type: ignore
     # Python 2/3 compatibility
     from zato.common.ext.future.utils import iteritems
 
-    return all(haystack.get(key) == value for key, value in iteritems(needle))
+    return all(haystack.get(key) == value for key, value in iteritems(needle)) # type: ignore
 
 # ################################################################################################################################
 
@@ -590,7 +591,7 @@ def populate_services_from_apispec(client, logger): # type: ignore
     # Python 2/3 compatibility
     from zato.common.ext.future.utils import iteritems
 
-    response = client.invoke('zato.apispec.get-api-spec', {
+    response:'any_' = client.invoke('zato.apispec.get-api-spec', {
         'return_internal': True,
         'include': '*',
         'needs_sphinx': False
@@ -602,9 +603,9 @@ def populate_services_from_apispec(client, logger): # type: ignore
 
     by_prefix = {}  # { "zato.apispec": {"get-api-spec": { .. } } }
 
-    for service in response.data:
-        prefix, _, name = service['name'].rpartition('.')
-        methods = by_prefix.setdefault(prefix, {})
+    for service in response.data: # type: ignore
+        prefix, _, name = service['name'].rpartition('.') # type: ignore
+        methods = by_prefix.setdefault(prefix, {}) # type: ignore
         methods[name] = service
 
     # Services belonging here may not have all the CRUD methods and it is expected that they do not
@@ -614,7 +615,7 @@ def populate_services_from_apispec(client, logger): # type: ignore
         'zato.security.rbac.client-role'
     ]
 
-    for prefix, methods in iteritems(by_prefix):
+    for prefix, methods in iteritems(by_prefix): # type: ignore
 
         # Ignore prefixes lacking 'get-list', 'create' and 'edit' methods.
         if not all(n in methods for n in ('get-list', 'create', 'edit')):
@@ -690,8 +691,8 @@ def test_item(item, cond): # type: ignore
 
     if cond is not None:
 
-        only_if_field = cond.get('only_if_field')
-        only_if_value = cond.get('only_if_value')
+        only_if_field:'any_' = cond.get('only_if_field')
+        only_if_value:'any_' = cond.get('only_if_value')
 
         if not isinstance(only_if_value, (list, tuple)):
             only_if_value = [only_if_value]
@@ -757,23 +758,23 @@ class ServiceInfo:
     def is_security(self): # type: ignore
         """ If True, indicates the service is source of authentication credentials for use in another service.
         """
-        return self.prefix and self.prefix.startswith('zato.security.')
+        return self.prefix and self.prefix.startswith('zato.security.') # type: ignore
 
 # ################################################################################################################################
 
     def get_service_name(self, method): # type: ignore
-        return self.methods.get(method, {}).get('name')
+        return self.methods.get(method, {}).get('name') # type: ignore
 
 # ################################################################################################################################
 
     def get_required_keys(self): # type: ignore
         """ Return the set of keys required to create a new instance.
         """
-        method_sig = self.methods.get('create')
+        method_sig:'any_' = self.methods.get('create')
         if method_sig is None:
-            return set()
+            return set() # type: ignore
 
-        input_required = method_sig.get('input_required', [])
+        input_required:'any_' = method_sig.get('input_required', [])
         required = {elem['name'] for elem in input_required}
         required.discard('cluster_id')
         return required
@@ -1003,15 +1004,15 @@ class Results:
 
     def add_error(self, raw, code, msg, *args): # type: ignore
         if args:
-            msg = msg.format(*args)
-        _= self.errors.append(Notice(raw, msg, code))
+            msg:'any_' = msg.format(*args)
+        _:'any_' = self.errors.append(Notice(raw, msg, code))
 
 # ################################################################################################################################
 
     def add_warning(self, raw, code, msg, *args): # type: ignore
         if args:
-            msg = msg.format(*args)
-        _= self.warnings.append(Notice(raw, msg, code))
+            msg:'any_' = msg.format(*args)
+        _:'any_'= self.warnings.append(Notice(raw, msg, code))
 
 # ################################################################################################################################
 
@@ -1037,8 +1038,8 @@ class InputValidator:
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
 
-        for item_type, items in iteritems(self.json):
-            for item in items:
+        for item_type, items in iteritems(self.json): # type: ignore
+            for item in items: # type: ignore
                 self.validate_one(item_type, item)
 
         return self.results
@@ -1053,7 +1054,7 @@ class InputValidator:
 
         item_dict = dict(item)
         service_info = SERVICE_BY_NAME[item_type]
-        required_keys = service_info.get_required_keys()
+        required_keys:'any_' = service_info.get_required_keys()
 
         # OK, the keys are there, but do they all have non-None values?
         for req_key in required_keys:
@@ -1111,7 +1112,7 @@ class DependencyScanner:
 
         service_info = SERVICE_BY_NAME[item_type] # type: ServiceInfo
 
-        for dep_key, dep_info in service_info.object_dependencies.items():
+        for dep_key, dep_info in service_info.object_dependencies.items(): # type: ignore
 
             if not test_item(item, dep_info.get('condition')):
                 continue
@@ -1127,18 +1128,18 @@ class DependencyScanner:
                 results.add_error(
                     (dep_key, dep_info), ERROR_MISSING_DEP, '{} lacks required `{}` field: {}', item_type, dep_key, item)
 
-            value = item.get(dep_key)
+            value:'any_' = item.get(dep_key)
 
             if value != dep_info.get('empty_value'):
 
-                dep_type = dep_info['dependent_type']
-                dep_field = dep_info['dependent_field']
+                dep_type:'any_' = dep_info['dependent_type']
+                dep_field:'any_' = dep_info['dependent_field']
 
                 dep = self.find(dep_type, {dep_field: value})
 
                 if dep is None:
                     key = (dep_type, value)
-                    names = self.missing.setdefault(key, [])
+                    names:'any_' = self.missing.setdefault(key, [])
                     names.append(item.name)
 
 # ################################################################################################################################
@@ -1160,9 +1161,9 @@ class DependencyScanner:
                 self.scan_item(item_type, item, results)
 
         if not self.ignore_missing:
-            for (missing_type, missing_name), dep_names in sorted(iteritems(self.missing)):
+            for (missing_type, missing_name), dep_names in sorted(iteritems(self.missing)): # type: ignore
                 existing = sorted(item.name for item in self.json.get(missing_type, []))
-                raw = (missing_type, missing_name, dep_names, existing)
+                raw:'any_' = (missing_type, missing_name, dep_names, existing)
 
                 results.add_warning(
                     raw, WARNING_MISSING_DEF, "'{}' is needed by '{}' but was not among '{}'",
@@ -1219,18 +1220,20 @@ class ObjectImporter:
         from zato.common.ext.future.utils import iteritems
 
         service_info = SERVICE_BY_NAME[item_type]
-        item_dict = dict(item)
+        item_dict:'any_' = dict(item)
 
-        for dep_field, dep_info in iteritems(service_info.service_dependencies):
+        for dep_field, dep_info in iteritems(service_info.service_dependencies): # type: ignore
             if not test_item(item, dep_info.get('condition')):
                 continue
 
-            service_name = item.get(dep_field)
-            raw = (service_name, item_dict, item_type)
+            service_name:'any_' = item.get(dep_field)
+            raw:'any_' = (service_name, item_dict, item_type)
             if not service_name:
-                self.results.add_error(raw, ERROR_SERVICE_NAME_MISSING, 'No {} service key defined type {}: {}', dep_field, item_type, item_dict)
+                self.results.add_error(raw, ERROR_SERVICE_NAME_MISSING,
+                    'No {} service key defined type {}: {}', dep_field, item_type, item_dict)
             elif service_name not in self.object_mgr.services:
-                self.results.add_error(raw, ERROR_SERVICE_MISSING, 'Service `{}` from `{}` missing in ODB ({})', service_name, item_dict, item_type)
+                self.results.add_error(raw, ERROR_SERVICE_MISSING,
+                    'Service `{}` from `{}` missing in ODB ({})', service_name, item_dict, item_type)
 
 # ################################################################################################################################
 
@@ -1251,21 +1254,21 @@ class ObjectImporter:
         if not scan_results.ok:
             return scan_results
 
-        for warning in scan_results.warnings:
+        for warning in scan_results.warnings: # type: ignore
             missing_type, missing_name, dep_names, existing = warning.value_raw # type: ignore
             if not self.object_mgr.find(missing_type, {'name': missing_name}):
-                raw = (missing_type, missing_name)
+                raw:'any_' = (missing_type, missing_name)
                 results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB, "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
                                     missing_name, missing_type, dep_names)
 
-        for item_type, items in iteritems(self.json):
+        for item_type, items in iteritems(self.json): # type: ignore
 
             #
             # Preprocess item type
             #
             item_type = _replace_item_type(True, item_type)
 
-            for item in items:
+            for item in items: # type: ignore
                 self.validate_service_required(item_type, item)
 
         return results
@@ -1280,10 +1283,10 @@ class ObjectImporter:
         if item_type == 'oauth':
             item_type = 'bearer_token'
 
-        list_ = self.json.get(item_type, [])
+        list_:'any_' = self.json.get(item_type, [])
         item = find_first(list_, lambda item: item.name == name) # type: ignore
         if item:
-            _= list_.remove(item)
+            _:'any_' = list_.remove(item)
         else:
             raise KeyError('Tried to remove missing %r named %r' % (item_type, name))
 
@@ -1449,7 +1452,7 @@ class ObjectImporter:
 # ################################################################################################################################
 
     def add_warning(self, results, item_type, value_dict, item): # type: ignore
-        raw = (item_type, value_dict)
+        raw:'any_' = (item_type, value_dict)
         results.add_warning(
             raw, WARNING_ALREADY_EXISTS_IN_ODB, '{} already exists in ODB {} ({})', dict(value_dict), dict(item), item_type)
 
@@ -1461,24 +1464,24 @@ class ObjectImporter:
         from zato.common.ext.future.utils import iteritems
 
         results = Results()
-        for item_type, items in iteritems(self.json):
+        for item_type, items in iteritems(self.json): # type: ignore
 
             #
             # Preprocess item type
             #
             item_type = _replace_item_type(True, item_type)
 
-            for item in items:
-                name = item.get('name')
+            for item in items: # type: ignore
+                name:'any_' = item.get('name')
                 if not name:
-                    raw = (item_type, item)
+                    raw:'any_' = (item_type, item)
                     results.add_error(raw, ERROR_KEYS_MISSING, '{} has no `name` key ({})', dict(item), item_type)
 
                 if item_type == 'http_soap':
-                    connection = item.get('connection')
-                    transport = item.get('transport')
+                    connection:'any_' = item.get('connection')
+                    transport:'any_' = item.get('transport')
 
-                    existing = find_first(self.object_mgr.objects.http_soap,
+                    existing:'any_' = find_first(self.object_mgr.objects.http_soap,
                         lambda item: connection == item.connection and transport == item.transport and name == item.name) # type: ignore
                     if existing is not None:
                         self.add_warning(results, item_type, item, existing)
@@ -1497,7 +1500,7 @@ class ObjectImporter:
         a security definition may be potentially a dependency of channels or a web socket
         object may be a dependency of pub/sub endpoints.
         """
-        return SERVICE_BY_NAME[item_type].is_security or 'def' in item_type or item_type == 'web_socket'
+        return SERVICE_BY_NAME[item_type].is_security or 'def' in item_type or item_type == 'web_socket' # type: ignore
 
 # ################################################################################################################################
 
@@ -1528,8 +1531,8 @@ class ObjectImporter:
         # Update already existing objects first, definitions before any object that may depend on them ..
         #
 
-        for w in already_existing.warnings:
-            item_type, _ = w.value_raw
+        for w in already_existing.warnings: # type: ignore
+            item_type, _ = w.value_raw # type: ignore
 
             if 'def' in item_type:
                 existing = existing_defs
@@ -1546,7 +1549,7 @@ class ObjectImporter:
         #
         # .. actually invoke the updates now ..
         #
-        existing_combined = existing_defs + existing_rbac_role + existing_rbac_role_permission + \
+        existing_combined:'any_' = existing_defs + existing_rbac_role + existing_rbac_role_permission + \
             existing_rbac_client_role + existing_other
 
         for w in existing_combined:
@@ -1567,7 +1570,7 @@ class ObjectImporter:
         #
         # Create new objects, again, definitions come first ..
         #
-        for item_type, items in iteritems(self.json):
+        for item_type, items in iteritems(self.json): # type: ignore
 
             #
             # Preprocess item type
@@ -1590,7 +1593,7 @@ class ObjectImporter:
         #
         # .. actually create the objects now.
         #
-        new_combined = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
+        new_combined:'any_' = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
 
         for elem in new_combined:
             for item_type, attr_list in iteritems(elem):
@@ -1625,25 +1628,25 @@ class ObjectImporter:
         service_info = SERVICE_BY_NAME[def_type]
 
         if is_edit:
-            service_name = service_info.get_service_name('edit')
+            service_name:'any_' = service_info.get_service_name('edit')
         else:
-            service_name = service_info.get_service_name('create')
+            service_name:'any_' = service_info.get_service_name('create')
 
         # service and service_name are interchangeable
-        required = service_info.get_required_keys()
+        required:'any_' = service_info.get_required_keys()
         self._swap_service_name(required, item, 'service', 'service_name')
         self._swap_service_name(required, item, 'service_name', 'service')
 
         # Fetch an item from a cache of ODB object and assign its ID to item so that the Edit service knows what to update.
         if is_edit:
-            lookup_config = {'name': item.name}
+            lookup_config:'any_' = {'name': item.name}
             if def_type == 'http_soap':
                 lookup_config['connection'] = item.connection
                 lookup_config['transport'] = item.transport
             odb_item:'any_' = self.object_mgr.find(def_type, lookup_config)
             item.id = odb_item.id
 
-        for field_name, info in iteritems(service_info.object_dependencies):
+        for field_name, info in iteritems(service_info.object_dependencies): # type: ignore
 
             if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
                 continue
@@ -1651,22 +1654,22 @@ class ObjectImporter:
             if field_name in _security_fields:
                 field_name = resolve_security_field_name(item)
 
-            id_field = info['id_field']
-            dependent_type = info['dependent_type']
-            dependent_field = info['dependent_field']
+            id_field:'any_' = info['id_field']
+            dependent_type:'any_' = info['dependent_type']
+            dependent_field:'any_' = info['dependent_field']
 
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
 
                 if field_name in _security_keys:
                     field_value = try_keys(item, _security_keys)
                 else:
-                    field_value =  item[field_name]
+                    field_value:'any_' =  item[field_name]
 
 
                 # Ignore explicit indicators of the absence of a security definition
                 if field_value != ZATO_NO_SECURITY:
 
-                    criteria = {dependent_field: field_value}
+                    criteria:'any_' = {dependent_field: field_value}
 
                     dep_obj:'any_' = self.object_mgr.find(dependent_type, criteria)
                     item[id_field] = dep_obj.id
@@ -1690,7 +1693,7 @@ class ObjectImporter:
         from time import sleep
 
         service_info = SERVICE_BY_NAME[item_type]
-        service_name = service_info.get_service_name('change-password')
+        service_name:'any_' = service_info.get_service_name('change-password')
         if service_name is None or 'password' not in attrs:
             return None
 
@@ -1726,8 +1729,8 @@ class ObjectManager:
                 return self.find_sec(fields)
 
         # This probably isn't necessary any more:
-        item_type = item_type.replace('-', '_')
-        objects_by_type = self.objects.get(item_type, ())
+        item_type:'any_' = item_type.replace('-', '_')
+        objects_by_type:'any_' = self.objects.get(item_type, ())
 
         return find_first(objects_by_type, lambda item: dict_match(item, fields)) # type: ignore
 
@@ -1738,7 +1741,7 @@ class ObjectManager:
         """
         for service in SERVICES:
             if service.is_security:
-                item = self.find(service.name, fields, check_sec=False)
+                item:'any_' = self.find(service.name, fields, check_sec=False)
                 if item is not None:
                     return item
 
@@ -1792,7 +1795,7 @@ class ObjectManager:
             elif item_type == 'json_rpc' and item['security_id'] is None:
                 item['security_id'] = 'ZATO_NONE'
 
-        for field_name, info in iteritems(service_info.object_dependencies):
+        for field_name, info in iteritems(service_info.object_dependencies): # type: ignore
 
             if 'id_field' not in info:
                 continue
@@ -1803,7 +1806,7 @@ class ObjectManager:
                 item[info['id_field']] = None
                 continue
 
-            dep_id = item.get(info['id_field'])
+            dep_id:'any_' = item.get(info['id_field'])
 
             if dep_id is None:
                 item[field_name] = info.get('empty_value')
@@ -1823,7 +1826,7 @@ class ObjectManager:
                 if not item['security_id']:
                     item['security_id'] = 'ZATO_NONE'
 
-        return item
+        return item # type: ignore
 
 # ################################################################################################################################
 
@@ -1836,7 +1839,7 @@ class ObjectManager:
         if 'name' not in item:
             return False
 
-        name = item.name.lower()
+        name:'any_' = item.name.lower()
 
         # Special-case scheduler jobs that can be overridden by users
         if name.startswith('zato.wsx.cleanup'):
@@ -1856,7 +1859,7 @@ class ObjectManager:
     def delete(self, item_type, item): # type: ignore
         service_info = SERVICE_BY_NAME[item_type]
 
-        service_name = service_info.get_service_name('delete')
+        service_name:'any_' = service_info.get_service_name('delete')
         if service_name is None:
             self.logger.error('Prefix {} has no delete service'.format(item_type))
             return
@@ -1878,8 +1881,8 @@ class ObjectManager:
         from zato.common.ext.future.utils import iteritems
 
         count = 0
-        for item_type, items in iteritems(self.objects):
-            for item in items:
+        for item_type, items in iteritems(self.objects): # type: ignore
+            for item in items: # type: ignore
                 self.delete(item_type, item)
                 count += 1
         return count
@@ -1890,12 +1893,12 @@ class ObjectManager:
 
         # Generic connections' GetList includes metadata in responses so we need to dig into actual data
         if '_meta' in response_data:
-            keys = list(response_data)
+            keys:'any_' = list(response_data)
             keys.remove('_meta')
-            response_key = keys[0]
-            data = response_data[response_key]
+            response_key:'any_' = keys[0]
+            data:'any_' = response_data[response_key]
         else:
-            data = response_data
+            data:'any_' = response_data
 
         return data
 
@@ -1920,7 +1923,7 @@ class ObjectManager:
         service_info = SERVICE_BY_NAME[item_type]
 
         # Temporarily preserve function of the old enmasse.
-        service_name = service_info.get_service_name('get-list')
+        service_name:'any_' = service_info.get_service_name('get-list')
 
         if service_name is None:
             self.logger.info('Type `%s` has no `get-list` service (%s)', service_info, item_type)
@@ -1943,14 +1946,14 @@ class ObjectManager:
 
         for item in map(Bunch, data):
 
-            if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)):
+            if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)): # type: ignore
                 continue
 
             if self.is_ignored_name(item_type, item, is_sec_def):
                 continue
 
             # Passwords are always exported in an encrypted form so we need to decrypt them ourselves
-            for key, value in iteritems(item):
+            for key, value in iteritems(item): # type: ignore
                 if isinstance(value, basestring):
                     if value.startswith(SECRETS.PREFIX):
                         item[key] = None # Enmasse does not export secrets such as passwords or other auth information
@@ -1971,8 +1974,8 @@ class ObjectManager:
         for service_info in sorted(SERVICES, key=attrgetter('name')):
             self.get_objects_by_type(service_info.name)
 
-        for item_type, items in self.objects.items():
-            for item in items:
+        for item_type, items in self.objects.items(): # type: ignore
+            for item in items: # type: ignore
                 self.fix_up_odb_object(item_type, item)
 
 # ################################################################################################################################
@@ -2183,8 +2186,8 @@ class InputParser:
             self.parse_def_sec(cast_('strdict', item), results)
 
         else:
-            items = self.json.get(item_type) or []
-            _ = items.append(Bunch(cast_('strdict', item)))
+            items:'any_' = self.json.get(item_type) or []
+            _:'any_' = items.append(Bunch(cast_('strdict', item)))
             self.json[item_type] = items
 
 # ################################################################################################################################
@@ -3197,7 +3200,7 @@ class Enmasse(ManageCommand):
                 to_write[new_name] = value
 
         # .. now, replace generic connection types which are more involved ..
-        new_names = {
+        new_names:'any_' = {
             'outgoing_ldap': [],
             'outgoing_wsx': [],
         }
@@ -3257,20 +3260,20 @@ class Enmasse(ManageCommand):
         error_idx = 1
         warn_err = {}
 
-        for item in items:
+        for item in items: # type: ignore
 
-            for warning in item.warnings:
+            for warning in item.warnings: # type: ignore
                 warn_err['warn{:04}/{} {}'.format(warn_idx, warning.code.symbol, warning.code.desc)] = warning.value
                 warn_idx += 1
 
-            for error in item.errors:
+            for error in item.errors: # type: ignore
                 warn_err['err{:04}/{} {}'.format(error_idx, error.code.symbol, error.code.desc)] = error.value
                 error_idx += 1
 
         warn_no = warn_idx-1
         error_no = error_idx-1
 
-        return warn_err, warn_no, error_no
+        return warn_err, warn_no, error_no # type: ignore
 
 # ################################################################################################################################
 
@@ -3338,28 +3341,28 @@ class Enmasse(ManageCommand):
         results = Results()
         merged = copy.deepcopy(self.object_mgr.objects)
 
-        for json_key, json_elems in iteritems(self.json):
+        for json_key, json_elems in iteritems(self.json): # type: ignore
             if 'http' in json_key or 'soap' in json_key:
                 odb_key = 'http_soap'
             else:
-                odb_key = json_key
+                odb_key:'any_' = json_key
 
             if odb_key not in merged:
-                sorted_merged = sorted(merged)
-                raw = (json_key, odb_key, sorted_merged)
+                sorted_merged:'any_' = sorted(merged)
+                raw:'any_' = (json_key, odb_key, sorted_merged)
                 results.add_error(raw, ERROR_INVALID_KEY, "JSON key '{}' not one of '{}'", odb_key, sorted_merged)
             else:
-                for json_elem in json_elems:
+                for json_elem in json_elems: # type: ignore
                     if 'http' in json_key or 'soap' in json_key:
                         connection, transport = json_key.split('_', 1)
                         connection = 'outgoing' if connection == 'outconn' else connection
 
-                        for odb_elem in merged.http_soap:
+                        for odb_elem in merged.http_soap: # type: ignore
                             if odb_elem.get('transport') == transport and odb_elem.get('connection') == connection:
                                 if odb_elem.name == json_elem.name:
                                     merged.http_soap.remove(odb_elem)
                     else:
-                        for odb_elem in merged[odb_key]:
+                        for odb_elem in merged[odb_key]: # type: ignore
                             if odb_elem.name == json_elem.name:
                                 merged[odb_key].remove(odb_elem)
                     merged[odb_key].append(json_elem)
@@ -3384,7 +3387,7 @@ class Enmasse(ManageCommand):
             self.logger.error('Required elements missing')
             return [results]
 
-        return []
+        return [] # type: ignore
 
 # ################################################################################################################################
 
