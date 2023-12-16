@@ -246,6 +246,35 @@ class SubscribeServiceImpl(_Subscribe):
         for k, v in self.request.input.items():
             setattr(ctx, k, v)
 
+        # If there is no server_id on input, check if we have it name.
+        # If we do not have a name either, we use our own server as the delivery one.
+        if not (server_id := self.request.input.server_id):
+
+            # .. no server_id on input, perhaps we have a name ..
+            if server_name := self.request.input.server_id:
+
+                # .. get a list of all servers we are aware of ..
+                servers = self.invoke('zato.server.get-list', cluster_id=self.server.cluster_id)
+
+                # .. skip root elements ..
+                if 'zato_server_get_list_response' in servers:
+                    servers = servers['zato_server_get_list_response']
+
+                # .. find our server in the list ..
+                for server in servers:
+                    if server['name'] == server_name:
+                        server_id = server['id']
+                        break
+                else:
+                    raise Exception('Server not found -> {server_name}')
+
+            # .. no name, let's use our own server.
+            else:
+                server_id = self.server.id
+
+        # .. if we are here, it means that we have server_id obtained in one way or another.
+        ctx.server_id = server_id
+
         # Now we can compute endpoint ID
         ctx.set_endpoint_id()
 
