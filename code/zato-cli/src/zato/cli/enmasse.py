@@ -442,6 +442,7 @@ for key, value in ModuleCtx.Enmasse_Item_Type_Name_Map.items():
 
 ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse_By_Type = {
     'pubsub_endpoint':  [{'security_name':'sec_name'}],
+    'pubsub_subscription':  [{'topic_list':'topic_list_json'}],
 }
 
 # ################################################################################################################################
@@ -1988,26 +1989,27 @@ class ObjectManager:
             return
 
         self.objects[service_info.name] = []
-        data = self.get_data_from_response_data(response.data)
+        if response.has_data:
+            data = self.get_data_from_response_data(response.data)
 
-        # A flag indicating if this service is related to security definitions
-        is_sec_def = 'zato.security' in service_name
+            # A flag indicating if this service is related to security definitions
+            is_sec_def = 'zato.security' in service_name
 
-        for item in map(Bunch, data):
+            for item in map(Bunch, data):
 
-            #if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)): # type: ignore
-            #    continue
+                #if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)): # type: ignore
+                #    continue
 
-            if 0 and self.is_ignored_name(item_type, item, is_sec_def):
-                continue
+                if 0 and self.is_ignored_name(item_type, item, is_sec_def):
+                    continue
 
-            # Passwords are always exported in an encrypted form so we need to decrypt them ourselves
-            for key, value in iteritems(item): # type: ignore
-                if isinstance(value, basestring):
-                    if value.startswith(SECRETS.PREFIX):
-                        item[key] = None # Enmasse does not export secrets such as passwords or other auth information
+                # Passwords are always exported in an encrypted form so we need to decrypt them ourselves
+                for key, value in iteritems(item): # type: ignore
+                    if isinstance(value, basestring):
+                        if value.startswith(SECRETS.PREFIX):
+                            item[key] = None # Enmasse does not export secrets such as passwords or other auth information
 
-            self.objects[service_info.name].append(item)
+                self.objects[service_info.name].append(item)
 
 # ################################################################################################################################
 
