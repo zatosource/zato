@@ -1217,14 +1217,19 @@ class DependencyScanner:
 
                     # Do not report internal objects that have not been exported
                     if has_name_zato_prefix(name):
-                        return
+                        continue
 
-                    names:'any_' = self.missing.setdefault(key, [])
+                    # Same here
+                    if 0 and has_name_zato_prefix(value):
+                        continue
 
                     if name:
-                        names.append(name)
+                        missing_item = name
                     else:
-                        names.append([item_type, key])
+                        missing_item = [item_type, key]
+
+                    missing_items:'any_' = self.missing.setdefault(key, [])
+                    missing_items.append(missing_item)
 
 # ################################################################################################################################
 
