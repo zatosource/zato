@@ -45,7 +45,7 @@ if 0:
     from bunch import Bunch
     from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, anylist, strdict
+    from zato.common.typing_ import any_, anylist, intnone, strdict
     from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvocationResult
     from zato.server.pubsub.model import subnone
     from zato.server.service import Service
@@ -67,6 +67,7 @@ broker_message = PUBSUB
 broker_message_prefix = 'ENDPOINT_'
 list_func = pubsub_endpoint_list
 skip_input_params = ['sub_key', 'is_sub_allowed']
+input_optional_extra = ['service_name']
 output_optional_extra = ['service_name', 'ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key', 'endpoint_type_name']
 delete_require_instance = False
 
@@ -113,13 +114,32 @@ class _GetEndpointQueueMessagesSIO(GetListAdminSIO):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_service_id_from_input(self:'Service', input:'strdict') -> 'intnone':
+
+        # If we have a service name on input, we need to turn it into its ID ..
+        if service_name := input.get('service_name'):
+            service_id = self.server.service_store.get_service_id_by_name(service_name)
+
+        # .. otherwise, we use a service ID as it is.
+        else:
+            service_id = self.request.input.get('service_id')
+
+        return service_id
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def instance_hook(self:'Service', input:'strdict', instance:'PubSubEndpoint', attrs:'strdict') -> 'None':
 
     if attrs['is_delete']:
         return
 
+    # This can be given as ID or name and we need to extract the correct value here
+    service_id = _get_service_id_from_input(self, input)
+    instance.service_id = service_id
+
     # Don't use empty string with integer attributes, set them to None (NULL) instead
-    if cast_('str', instance.service_id) == '':
+    if cast_('str', service_id) == '':
         instance.service_id = None
 
     # SQLite will not accept empty strings, must be None
@@ -194,15 +214,17 @@ class Create(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('name', 'role', 'is_active', 'is_internal', 'endpoint_type')
-        input_optional = ('cluster_id', 'topic_patterns', 'security_id', 'service_id', 'ws_channel_id')
+        input_optional = ('cluster_id', 'topic_patterns', 'security_id', 'service_id', 'service_name', 'ws_channel_id')
         output_required = (AsIs('id'), 'name')
         request_elem = 'zato_pubsub_endpoint_create_request'
         response_elem = 'zato_pubsub_endpoint_create_response'
         default_value = None
 
     def handle(self):
+
         input = self.request.input
         cluster_id = input.get('cluster_id') or self.server.cluster_id
+        service_id = _get_service_id_from_input(self, self.request.input)
 
         # Services have a fixed role and patterns ..
         if input.endpoint_type == COMMON_PUBSUB.ENDPOINT_TYPE.SERVICE.id:
@@ -236,7 +258,7 @@ class Create(AdminService):
             endpoint.role = input.role
             endpoint.topic_patterns = input.topic_patterns
             endpoint.security_id = input.get('security_id')
-            endpoint.service_id = input.get('service_id')
+            endpoint.service_id = service_id
             endpoint.ws_channel_id = input.get('ws_channel_id')
 
             session.add(endpoint)
@@ -248,6 +270,8 @@ class Create(AdminService):
 
             self.response.payload.id = endpoint.id
             self.response.payload.name = self.request.input.name
+
+        _ = self.pubsub.wait_for_endpoint(input.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
