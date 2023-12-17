@@ -1587,13 +1587,29 @@ class ObjectImporter:
         a security definition may be potentially a dependency of channels or a web socket
         object may be a dependency of pub/sub endpoints.
         """
-        return SERVICE_BY_NAME[item_type].is_security or 'def' in item_type or item_type == 'web_socket' # type: ignore
+        service_by_name = SERVICE_BY_NAME[item_type]
+
+        if service_by_name.is_security:
+            return True
+
+        elif 'def' in item_type:
+            return True
+
+        elif item_type in {'web_socket', 'pubsub_endpoint', 'http_soap'}:
+            return True
+
+        else:
+            print()
+            print(111, item_type)
+            print()
+            return False
 
 # ################################################################################################################################
 
     def import_objects(self, already_existing) -> 'Results': # type: ignore
 
         # stdlib
+        from collections import OrderedDict
         from time import sleep
 
         # Python 2/3 compatibility
@@ -1657,6 +1673,13 @@ class ObjectImporter:
         #
         # Create new objects, again, definitions come first ..
         #
+
+        # Use an ordered dict to iterate over the data with dependencies first
+        self_json = deepcopy(self.json)
+        self_json_ordered = OrderedDict()
+
+        self_json_ordered['security'] = self_json.get('security', [])
+
         for item_type, items in iteritems(self.json): # type: ignore
 
             #
@@ -1665,6 +1688,7 @@ class ObjectImporter:
             item_type = _replace_item_type(True, item_type)
 
             if self.may_be_dependency(item_type):
+
                 if item_type == 'rbac_role':
                     append_to = new_rbac_role
                 elif item_type == 'rbac_role_permission':
@@ -1675,6 +1699,7 @@ class ObjectImporter:
                     append_to = new_defs
             else:
                 append_to = new_other
+
             append_to.append({item_type: items})
 
         #
@@ -3211,7 +3236,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def _rewrite_pubsub_subscriptions(self, subs:'dictlist') -> 'dictlist':
+    def _rewrite_pubsub_subscriptions_during_export(self, subs:'dictlist') -> 'dictlist':
 
         # Bunch
         from bunch import Bunch, bunchify
@@ -3320,7 +3345,7 @@ class Enmasse(ManageCommand):
 
         # .. rewrite pub/sub subscriptions in a way that is easier to handle ..
         if subs := output.get('pubsub_subscription'):
-            output['pubsub_subscription'] = self._rewrite_pubsub_subscriptions(subs)
+            output['pubsub_subscription'] = self._rewrite_pubsub_subscriptions_during_export(subs)
 
         # .. go through everything that we collected in earlier steps in the process ..
         for item_type, items in iteritems(output): # type: ignore
