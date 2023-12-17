@@ -15,7 +15,7 @@ pubsub_endpoint:
 
   - name: 'Test.Enmasse.Simple-06.Demo Endpoint'
     endpoint_type: service
-    service_name: 'pub.helpers.raw-request-logger'
+    service_name: 'pub.helpers.input-logger'
     topic_patterns: |-
       pub=/*
       sub=/*
