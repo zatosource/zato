@@ -461,7 +461,11 @@ ModuleCtx.Enmasse_Attr_List_Default_By_Type = {
     'pubsub_endpoint':  {
         'is_internal': False,
         'role': Common_PubSub.ROLE.PUBLISHER_SUBSCRIBER.id,
-        'security_name': ZATO_NO_SECURITY,
+
+        # Note that it is not security_name because it has been already re-mapped to sec_name
+        # by the time this check is taking place.
+        'sec_name': ZATO_NO_SECURITY,
+
     },
 
     'pubsub_topic':  {
