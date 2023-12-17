@@ -80,6 +80,28 @@ _All_Sec_Def_Types = All_Sec_Def_Types + ['bearer_token']
 
 _pubsub_default = Common_PubSub.DEFAULT
 
+
+zato_name_prefix = (
+    'admin.',
+    'admin.invoke',
+    'ide_publisher',
+    'pub.zato',
+    'pubsub.demo',
+    'pubsub.test',
+    'zato.',
+    '/zato',
+    'zato.pubsub',
+)
+
+
+# ################################################################################################################################
+
+def has_name_zato_prefix(name:'str') -> 'bool':
+        for prefix in zato_name_prefix:
+            if name.startswith(prefix):
+                return True
+        return False
+
 # ################################################################################################################################
 
 class ModuleCtx:
@@ -372,6 +394,9 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches = {
 
     # E-Mail IMAP
     'email_imap':  {'get_criteria':'UNSEEN', 'timeout':10},
+
+    # Pub/sub - Subscriptions
+    'pubsub_subscription':  {'delivery_server':'server1'},
 }
 
 # ################################################################################################################################
@@ -534,6 +559,7 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
     'pubsub_subscription':  [
         'name',
         'endpoint_name',
+        'endpoint_type',
         'delivery_method',
         'rest_connection',
         'rest_method',
@@ -1185,13 +1211,20 @@ class DependencyScanner:
                 dep = self.find(dep_type, {dep_field: value})
 
                 if dep is None:
+
                     key = (dep_type, value)
+                    name = item.get('name') or ''
+
+                    # Do not report internal objects that have not been exported
+                    if has_name_zato_prefix(name):
+                        return
+
                     names:'any_' = self.missing.setdefault(key, [])
-                    name = item.get('name')
+
                     if name:
                         names.append(name)
                     else:
-                        names.append(item_type)
+                        names.append([item_type, key])
 
 # ################################################################################################################################
 
@@ -1891,6 +1924,7 @@ class ObjectManager:
     )
 
     def is_ignored_name(self, item_type, item, is_sec_def): # type: ignore
+
         if 'name' not in item:
             return False
 
@@ -1901,8 +1935,10 @@ class ObjectManager:
             return False
 
         if item_type not in {'pubsub_subscription', 'rbac_role_permission'}:
+
             if name in self.ignored_names:
                 return True
+
             elif 'zato' in name and (not 'unittest' in name):
                 if is_sec_def:
                     return False
@@ -3126,14 +3162,6 @@ class Enmasse(ManageCommand):
         else:
             name = item['name']
 
-        zato_name_prefix = (
-            'zato.',
-            '/zato',
-            'pub.zato',
-            'zato.pubsub',
-            'ide_publisher',
-        )
-
         # By default, assume this item should be written to ouput unless we contradict it below ..
         out:'bool' = True
 
@@ -3151,10 +3179,9 @@ class Enmasse(ManageCommand):
             if 'rbac' in item['type']:
                 return False
 
-        # .. do nto write internal definitions ..
-        for prefix in zato_name_prefix:
-            if name.startswith(prefix):
-                return False
+        # .. do not write internal definitions ..
+        if has_name_zato_prefix(name):
+            return False
 
         # We enter this branch if we are to export specific types ..
         if not has_all_types:
@@ -3217,6 +3244,7 @@ class Enmasse(ManageCommand):
             if key not in subs_by_key:
                 subs_by_key[key] = bunchify({
                     'endpoint_name': sub.endpoint_name,
+                    'endpoint_type': sub.endpoint_type,
                     'delivery_method': sub.delivery_method,
                     'rest_method': sub.rest_method,
                     'rest_connection': sub.rest_connection,
