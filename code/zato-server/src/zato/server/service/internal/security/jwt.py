@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -33,6 +31,13 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 from zato.common.py23_.past.builtins import unicode
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class GetList(AdminService):
     """ Returns the list of JWT definitions available.
@@ -53,6 +58,7 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(AdminService):
@@ -114,6 +120,10 @@ class Create(AdminService):
             self.response.payload.id = item.id
             self.response.payload.name = item.name
 
+        # Make sure the object has been created
+        _:'any_' = self.server.worker_store.wait_for_jwt(input.name)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(AdminService):
@@ -168,6 +178,7 @@ class Edit(AdminService):
                 self.response.payload.name = item.name
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a JWT definition.
@@ -184,6 +195,7 @@ class ChangePassword(ChangePasswordBase):
 
         return self._handle(JWT, _auth, SECURITY.JWT_CHANGE_PASSWORD.value)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Delete(AdminService):
@@ -213,6 +225,7 @@ class Delete(AdminService):
                 self.request.input.name = auth.name
                 self.broker_client.publish(self.request.input)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class LogIn(Service):
@@ -257,6 +270,7 @@ class LogIn(Service):
             self._raise_unathorized()
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class LogOut(Service):
     """ Logs a user out of an existing JWT token.
@@ -282,4 +296,5 @@ class LogOut(Service):
             self.response.status_code = BAD_REQUEST
             self.response.payload.result = 'Token could not be deleted'
 
+# ################################################################################################################################
 # ################################################################################################################################
