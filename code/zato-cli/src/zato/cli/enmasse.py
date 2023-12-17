@@ -97,10 +97,10 @@ zato_name_prefix = (
 # ################################################################################################################################
 
 def has_name_zato_prefix(name:'str') -> 'bool':
-        for prefix in zato_name_prefix:
-            if name.startswith(prefix):
-                return True
-        return False
+    for prefix in zato_name_prefix:
+        if name.startswith(prefix):
+            return True
+    return False
 
 # ################################################################################################################################
 
@@ -1855,7 +1855,7 @@ class ObjectImporter:
                 if field_name in _security_keys:
                     field_value = try_keys(item, _security_keys)
                 else:
-                    field_value:'any_' =  item[field_name]
+                    field_value:'any_' = item[field_name]
 
                 # Ignore explicit indicators of the absence of a security definition
                 if field_value != ZATO_NO_SECURITY:
