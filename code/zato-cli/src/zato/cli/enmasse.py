@@ -1790,11 +1790,14 @@ class ObjectImporter:
                 else:
                     field_value:'any_' =  item[field_name]
 
-
                 # Ignore explicit indicators of the absence of a security definition
                 if field_value != ZATO_NO_SECURITY:
 
                     criteria:'any_' = {dependent_field: field_value}
+
+                    print()
+                    print(111, criteria)
+                    print()
 
                     dep_obj:'any_' = self.object_mgr.find(dependent_type, criteria)
                     item[id_field] = dep_obj.id
