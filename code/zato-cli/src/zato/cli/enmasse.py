@@ -1599,9 +1599,6 @@ class ObjectImporter:
             return True
 
         else:
-            print()
-            print(111, item_type)
-            print()
             return False
 
 # ################################################################################################################################
@@ -1678,9 +1675,24 @@ class ObjectImporter:
         self_json = deepcopy(self.json)
         self_json_ordered = OrderedDict()
 
-        self_json_ordered['security'] = self_json.get('security', [])
+        # All the potential dependencies will be handled in this specific order
+        dep_order = [
+            'def_sec',
+            'http_soap',
+            'pubsub_topic',
+            'pubsub_endpoint',
+        ]
 
-        for item_type, items in iteritems(self.json): # type: ignore
+        # Do populate the dependencies first ..
+        for dep_name in dep_order:
+            self_json_ordered[dep_name] = self_json.get(dep_name, [])
+
+        # .. now, populate everything that is not a dependency.
+        for key, value in self_json.items():
+            if key not in dep_order:
+                self_json_ordered[key] = value
+
+        for item_type, items in iteritems(self_json_ordered): # type: ignore
 
             #
             # Preprocess item type
