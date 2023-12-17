@@ -411,6 +411,11 @@ ModuleCtx.Enmasse_Attr_List_Default_By_Type = {
         'task_delivery_interval': _pubsub_default.TASK_DELIVERY_INTERVAL,
     },
 
+    'pubsub_subscription':  {
+        'should_ignore_if_sub_exists': True,
+        'should_delete_all': True,
+    },
+
     'channel_rest': {
         'security_name': ZATO_NO_SECURITY,
         'merge_url_params_req': True,
@@ -1989,6 +1994,7 @@ class ObjectManager:
             return
 
         self.objects[service_info.name] = []
+
         if response.has_data:
             data = self.get_data_from_response_data(response.data)
 
@@ -1997,7 +2003,7 @@ class ObjectManager:
 
             for item in map(Bunch, data):
 
-                if 0 and self.is_ignored_name(item_type, item, is_sec_def):
+                if self.is_ignored_name(item_type, item, is_sec_def):
                     continue
 
                 # Passwords are always exported in an encrypted form so we need to decrypt them ourselves
