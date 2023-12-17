@@ -66,7 +66,7 @@ class CommonSubData:
         'server_name', 'out_http_method', 'out_http_method', DateTime('creation_time'), DateTime('last_interaction_time'),
         'last_interaction_type', 'last_interaction_details', Int('total_depth'), Int('current_depth_gd'),
         Int('current_depth_non_gd'), 'sub_key', 'has_gd', 'is_staging_enabled', 'sub_id', 'name', AsIs('ws_ext_client_id'),
-        AsIs('ext_client_id'), 'topic_id') # type: anytuple
+        AsIs('ext_client_id'), 'topic_id', 'should_ignore_if_sub_exists', 'should_delete_all') # type: anytuple
     amqp = ('out_amqp_id', 'amqp_exchange', 'amqp_routing_key')
     files = ('files_directory_list',)
     ftp = ('ftp_directory_list',)
