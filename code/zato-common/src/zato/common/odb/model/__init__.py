@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -419,7 +419,7 @@ class AWSSecurity(SecurityBase):
 # ################################################################################################################################
 
 class OpenStackSecurity(SecurityBase):
-    """ Stores OpenStack credentials (no longer used, to be removed).
+    """ Stores OpenStack credentials.
     """
     __tablename__ = 'sec_openstack'
     __mapper_args__ = {'polymorphic_identity': 'openstack'}

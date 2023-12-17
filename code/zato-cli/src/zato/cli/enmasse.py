@@ -1213,7 +1213,7 @@ class DependencyScanner:
                 if dep is None:
 
                     key = (dep_type, value)
-                    name = item.get('name') or ''
+                    name:'str' = item.get('name') or ''
 
                     # Do not report internal objects that have not been exported
                     if has_name_zato_prefix(name):
@@ -1673,12 +1673,25 @@ class ObjectImporter:
 
         # Use an ordered dict to iterate over the data with dependencies first
         self_json = deepcopy(self.json)
-        self_json_ordered = OrderedDict()
+        self_json_ordered:'any_' = OrderedDict()
 
         # All the potential dependencies will be handled in this specific order
         dep_order = [
             'def_sec',
+            'basic_auth',
+            'apikey',
+            'ntlm',
+            'oauth',
+            'jwt',
+            'aws',
+            'tls_key_cert',
+            'tls_channel_sec',
+            # 'wss',
+            # 'openstack',
+            # 'xpath_sec',
+            # 'vault_conn_sec',
             'http_soap',
+            'web_socket',
             'pubsub_topic',
             'pubsub_endpoint',
         ]
@@ -1794,11 +1807,6 @@ class ObjectImporter:
                 if field_value != ZATO_NO_SECURITY:
 
                     criteria:'any_' = {dependent_field: field_value}
-
-                    print()
-                    print(111, criteria)
-                    print()
-
                     dep_obj:'any_' = self.object_mgr.find(dependent_type, criteria)
                     item[id_field] = dep_obj.id
 
