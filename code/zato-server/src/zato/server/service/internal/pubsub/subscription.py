@@ -511,6 +511,7 @@ class GetList(Service):
             # .. append it for later use ..
             out.append({
                 'endpoint_name': item.endpoint_name,
+                'endpoint_type': item.endpoint_type,
                 'topic_name': item.topic_name,
                 'delivery_server': item.server_name,
                 'delivery_method': item.delivery_method,
@@ -681,7 +682,7 @@ class Create(_Subscribe):
                 int(self.request.raw_request.get('ws_channel_id') or 0),
                 int(self.request.raw_request.get('sql_ws_client_id') or 0),
                 int(self.request.raw_request.get('security_id') or 0),
-                endpoint_id,
+                int(endpoint_id),
             ]
 
             for topic_name in topic_list:
