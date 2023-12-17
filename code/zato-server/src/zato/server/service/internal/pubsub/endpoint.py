@@ -130,9 +130,12 @@ def instance_hook(self:'Service', input:'strdict', instance:'PubSubEndpoint', at
 
 # ################################################################################################################################
 
-def response_hook(self:'Service', input:'Bunch', instance:'any_', attrs:'any_', hook_type:'str'):
+def response_hook(self:'Service', input:'Bunch', instance:'any_', attrs:'any_', service_type:'str'):
 
-    if hook_type == 'get_list':
+    if service_type == 'create_edit':
+        _ = self.pubsub.wait_for_endpoint(input['name'])
+
+    elif service_type == 'get_list':
 
         # We are going to check topics for each of these endpoint IDs ..
         endpoint_id_list = []
