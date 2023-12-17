@@ -659,6 +659,23 @@ class Create(_Subscribe):
                 endpoint = self.pubsub.get_endpoint_by_name(endpoint_name)
                 endpoint_id = endpoint.id
 
+            # Optionally, delete all the subscriptions for that endpoint
+            # before any news ones (potentially the same ones) will be created.
+            # This is a flag that enmasse may pass on.
+            if self.request.raw_request.get('should_delete_all'):
+                _ = self.invoke(DeleteAll, endpoint_id=endpoint_id)
+
+            # If we have a REST connection by its name, we need to turn it into an ID
+            if rest_connection := self.request.raw_request.get('rest_connection'):
+                rest_connection_item = self.server.worker_store.get_outconn_rest(rest_connection)
+                if rest_connection_item:
+                    rest_connection_item = rest_connection_item['config']
+                    out_rest_http_soap_id = rest_connection_item['id']
+                    self.request.raw_request['out_rest_http_soap_id'] = out_rest_http_soap_id
+                else:
+                    msg = f'REST outgoing connection not found -> {rest_connection}'
+                    raise Exception(msg)
+
             # For all topics given on input, check it upfront if caller may subscribe to all of them
             check_input = [
                 int(self.request.raw_request.get('ws_channel_id') or 0),

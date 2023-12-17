@@ -71,7 +71,7 @@ class CommonSubData:
     files = ('files_directory_list',)
     ftp = ('ftp_directory_list',)
     pubapi = ('security_id',)
-    rest = ('out_http_soap_id', 'out_rest_http_soap_id', 'rest_delivery_endpoint')
+    rest = ('out_http_soap_id', 'out_rest_http_soap_id', 'rest_connection', 'rest_delivery_endpoint')
     service = ('service_id',)
     sms_twilio = ('sms_twilio_from', 'sms_twilio_to_list')
     smtp = (Bool('smtp_is_html'), 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body') # type: anytuple
