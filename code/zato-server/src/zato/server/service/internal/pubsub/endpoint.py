@@ -289,9 +289,18 @@ class Create(AdminService):
                     msg = f'Service {service_name} is already assigned to endpoint {endpoint.name}'
                     raise Conflict(self.cid, msg)
 
-            # Security definitions cannot be assigned to more than one security_id
+            # Security definitions cannot be assigned to more than one endpoint
             if security_id:
-                zzz
+                try:
+                    endpoint_id = self.pubsub.get_endpoint_id_by_sec_id(security_id)
+                except KeyError:
+                    pass
+                else:
+                    endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
+                    security = self.server.worker_store.basic_auth_get_by_id(security_id)
+                    security_name:'str' = security['name']
+                    msg = f'Security definition {security_name} is already assigned to endpoint {endpoint.name}'
+                    raise Conflict(self.cid, msg)
 
             endpoint = PubSubEndpoint()
             endpoint.cluster_id = cluster_id # type: ignore
