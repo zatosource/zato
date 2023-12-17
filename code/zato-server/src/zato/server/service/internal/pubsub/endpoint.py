@@ -121,6 +121,7 @@ def _get_security_id_from_input(self:'Service', input:'strdict') -> 'intnone':
 
     # If we have a security name on input, we need to turn it into its ID ..
     if security_name := input.get('security_name'):
+        security_name = security_name.strip()
         security = self.server.worker_store.basic_auth_get(security_name)
         security_id:'int' = security['id']
 
@@ -137,7 +138,11 @@ def _get_service_id_from_input(self:'Service', input:'strdict') -> 'intnone':
 
     # If we have a service name on input, we need to turn it into its ID ..
     if service_name := input.get('service_name'):
-        service_id = self.server.service_store.get_service_id_by_name(service_name)
+        try:
+            service_name = service_name.strip()
+            service_id = self.server.service_store.get_service_id_by_name(service_name)
+        except KeyError:
+            return
 
     # .. otherwise, we use a service ID as it is.
     else:
@@ -252,6 +257,11 @@ class Create(AdminService):
         cluster_id = input.get('cluster_id') or self.server.cluster_id
         security_id = _get_security_id_from_input(self, self.request.input)
         service_id = _get_service_id_from_input(self, self.request.input)
+
+        # If we had a name of a service on input but there is no ID for it, it means that that the name was invalid.
+        if service_name := input.get('service_name'):
+            if not service_id:
+                raise BadRequest(self.cid, f'No such service -> {service_name}')
 
         # Services have a fixed role and patterns ..
         if input.endpoint_type == COMMON_PUBSUB.ENDPOINT_TYPE.SERVICE.id:
