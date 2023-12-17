@@ -356,6 +356,10 @@ ModuleCtx.Enmasse_Attr_List_Value_Rename = {
         'endpoint_type': [{'srv':'service'}]
     },
 
+    # Pub/sub subscriptions
+    'pubsub_subscription':  {
+        'endpoint_type': [{'srv':'service'}]
+    },
 }
 
 # ################################################################################################################################
@@ -370,6 +374,10 @@ ModuleCtx.Enmasse_Attr_List_Value_Rename_Reverse = {
         'endpoint_type': [{'service':'srv'}]
     },
 
+    # Pub/sub subscriptions
+    'pubsub_subscription':  {
+        'endpoint_type': [{'service':'srv'}]
+    },
 }
 
 # ################################################################################################################################
@@ -941,6 +949,10 @@ SERVICES = [
             'rest_connection': {
                 'dependent_type': 'http_soap',
                 'dependent_field': 'name',
+                'condition': {
+                    'only_if_field': 'endpoint_type',
+                    'only_if_value': ['soap', 'rest'],
+                },
             },
         },
     ),
