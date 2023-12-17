@@ -21,7 +21,7 @@ class CreateForm(forms.Form):
 
     id = forms.CharField(widget=forms.HiddenInput())
     sub_key = forms.CharField(widget=forms.HiddenInput())
-    server_id = forms.ChoiceField(widget=forms.Select())
+    server_id = forms.ChoiceField(widget=forms.Select(), required=False)
     endpoint_type = forms.ChoiceField(widget=forms.Select())
     endpoint_id = forms.ChoiceField(widget=forms.Select())
 

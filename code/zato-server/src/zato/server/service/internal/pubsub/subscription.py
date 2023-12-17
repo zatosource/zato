@@ -24,7 +24,8 @@ from zato.common.odb.model import PubSubSubscription
 from zato.common.odb.query.pubsub.queue import get_queue_depth_by_sub_key
 from zato.common.odb.query.pubsub.subscribe import add_subscription, add_wsx_subscription, has_subscription, \
      move_messages_to_sub_queue
-from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id_no_search
+from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id_no_search, \
+    pubsub_subscription_list_by_endpoint_id_list_no_search, pubsub_subscription_list_no_search
 from zato.common.pubsub import new_sub_key
 from zato.common.simpleio_ import drop_sio_elems
 from zato.common.typing_ import cast_
@@ -33,7 +34,7 @@ from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
 from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub
 from zato.server.pubsub.model import Topic
-from zato.server.service import Bool, Int, List, Opaque
+from zato.server.service import AsIs, Bool, Int, List, Opaque, Service
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.pubsub import common_sub_data
 
@@ -41,7 +42,7 @@ from zato.server.service.internal.pubsub import common_sub_data
 
 if 0:
     from sqlalchemy import Column
-    from zato.common.typing_ import any_, boolnone, intnone, optional, strnone
+    from zato.common.typing_ import any_, boolnone, dictlist, intlist, intnone, optional, strnone
     from zato.common.model.wsx import WSXConnectorConfig
     Column = Column
     WSXConnectorConfig = WSXConnectorConfig
@@ -59,7 +60,7 @@ WebSocket = WebSocket
 
 # ################################################################################################################################
 
-sub_broker_attrs = get_sa_model_columns(PubSubSubscription)
+sub_broker_attrs:'any_' = get_sa_model_columns(PubSubSubscription)
 
 sub_impl_input_optional = list(common_sub_data)
 sub_impl_input_optional.remove('is_internal')
@@ -194,7 +195,7 @@ class _Subscribe(AdminService):
         ws_channel_id:'intnone',
         sql_ws_client_id:'intnone',
         security_id:'intnone',
-        endpoint_id:'intnone'
+        endpoint_id:'intnone',
     ) -> 'str':
         pubsub = self.server.worker_store.pubsub
 
@@ -245,6 +246,35 @@ class SubscribeServiceImpl(_Subscribe):
         for k, v in self.request.input.items():
             setattr(ctx, k, v)
 
+        # If there is no server_id on input, check if we have it name.
+        # If we do not have a name either, we use our own server as the delivery one.
+        if not (server_id := self.request.input.server_id):
+
+            # .. no server_id on input, perhaps we have a name ..
+            if server_name := self.request.input.server_id:
+
+                # .. get a list of all servers we are aware of ..
+                servers = self.invoke('zato.server.get-list', cluster_id=self.server.cluster_id)
+
+                # .. skip root elements ..
+                if 'zato_server_get_list_response' in servers:
+                    servers = servers['zato_server_get_list_response']
+
+                # .. find our server in the list ..
+                for server in servers:
+                    if server['name'] == server_name:
+                        server_id = server['id']
+                        break
+                else:
+                    raise Exception('Server not found -> {server_name}')
+
+            # .. no name, let's use our own server.
+            else:
+                server_id = self.server.id
+
+        # .. if we are here, it means that we have server_id obtained in one way or another.
+        ctx.server_id = server_id
+
         # Now we can compute endpoint ID
         ctx.set_endpoint_id()
 
@@ -286,6 +316,7 @@ class SubscribeServiceImpl(_Subscribe):
     def _subscribe_impl(self, ctx:'SubCtx') -> 'None':
         """ Invoked by subclasses to subscribe callers using input pub/sub config context.
         """
+
         with self.lock('zato.pubsub.subscribe.%s' % (ctx.topic_name), timeout=90):
 
             # Is it a WebSockets client?
@@ -311,11 +342,16 @@ class SubscribeServiceImpl(_Subscribe):
             with closing(self.odb.session()) as session:
                 with session.no_autoflush:
 
-                    # Non-WebSocket clients cannot subscribe to the same topic multiple times
+                    # Non-WebSocket clients cannot subscribe to the same topic multiple times,
+                    # unless should_ignore_if_sub_exists is set to True (e.g. enmasse does it).
                     if not is_wsx:
                         if has_subscription(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id):
-                            raise PubSubSubscriptionExists(self.cid, 'Endpoint `{}` is already subscribed to topic `{}`'.format(
-                                endpoint.name, ctx.topic.name))
+                            if self.request.input.should_ignore_if_sub_exists:
+                                # We do not raise an exception but we do not continue either.
+                                return
+                            else:
+                                msg = f'Endpoint `{endpoint.name}` is already subscribed to topic `{ctx.topic.name}`'
+                                raise PubSubSubscriptionExists(self.cid, msg)
 
                     ctx.creation_time = now = utcnow_as_ms()
                     sub_key = new_sub_key(self.endpoint_type, ctx.ext_client_id)
@@ -452,6 +488,139 @@ class SubscribeSrv(SubscribeService):
     pass
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class GetList(Service):
+    """ Returns all topics that an endpoint is subscribed to.
+    """
+    input:'any_' = '-cluster_id', '-endpoint_id', AsIs('-endpoint_id_list'), '-endpoint_name', AsIs('-sql_session')
+
+# ################################################################################################################################
+
+    def _get_all_items(self, sql_session:'any_', cluster_id:'int') -> 'dictlist':
+
+        # Our response to produce
+        out:'dictlist' = []
+
+        # .. get all subscriptions for that endpoint ..
+        items = pubsub_subscription_list_no_search(sql_session, cluster_id)
+
+        # .. go through everything found ..
+        for item in items:
+
+            # .. append it for later use ..
+            out.append({
+                'endpoint_name': item.endpoint_name,
+                'endpoint_type': item.endpoint_type,
+                'topic_name': item.topic_name,
+                'delivery_server': item.server_name,
+                'delivery_method': item.delivery_method,
+                'rest_connection': item.rest_connection,
+                'rest_method': item.out_http_method,
+            })
+
+        return out
+
+# ################################################################################################################################
+
+    def _get_items_by_endpoint_id(self, sql_session:'any_', cluster_id:'int', endpoint_id:'int') -> 'dictlist':
+
+        # Our response to produce
+        out:'dictlist' = []
+
+        # .. get all subscriptions for that endpoint ..
+        items = pubsub_subscription_list_by_endpoint_id_no_search(sql_session, cluster_id, endpoint_id)
+
+        # .. go through everything found ..
+        for item in items:
+
+            # .. append it for later use ..
+            out.append({'topic_name':item.topic_name})
+
+        return out
+
+# ################################################################################################################################
+
+    def _get_items_by_endpoint_id_list(self, sql_session:'any_', cluster_id:'int', endpoint_id_list:'intlist') -> 'dictlist':
+
+        # Our response to produce
+        out:'dictlist' = []
+
+        # .. get all subscriptions for that endpoint ..
+        items = pubsub_subscription_list_by_endpoint_id_list_no_search(sql_session, cluster_id, endpoint_id_list)
+
+        # .. go through everything found ..
+        for item in items:
+
+            # .. append it for later use ..
+            out.append({
+                'endpoint_id': item.endpoint_id,
+                'endpoint_name': item.endpoint_name,
+                'topic_name': item.topic_name,
+            })
+
+        return out
+
+# ################################################################################################################################
+
+    def handle(self) -> 'None':
+
+        # Our response to produce
+        out = []
+
+        # Local variables ..
+        sql_session = self.request.input.sql_session
+        cluster_id = self.request.input.cluster_id or self.server.cluster_id
+
+        endpoint_id = self.request.input.endpoint_id
+        endpoint_name = self.request.input.endpoint_name
+        endpoint_id_list = self.request.input.endpoint_id_list
+
+        # .. we can be invoked by endpoint ID, a list of IDs or with a name ..
+        if endpoint_id or endpoint_id_list:
+
+            # Explicitly do nothing here
+            pass
+
+        elif endpoint_name:
+            endpoint = self.pubsub.get_endpoint_by_name(endpoint_name)
+            endpoint_id = endpoint.id
+
+        # .. connect to the database or reuse a connection we received on input ..
+        if sql_session:
+            is_new_sql_session = False
+        else:
+            is_new_sql_session = True
+            sql_session = self.odb.session()
+
+        try:
+            # .. get all subscriptions for that endpoint ..
+            if endpoint_id:
+                items = self._get_items_by_endpoint_id(sql_session, cluster_id, endpoint_id)
+
+            # .. or for a list of endpoints
+            elif endpoint_id_list:
+                items = self._get_items_by_endpoint_id_list(sql_session, cluster_id, endpoint_id_list)
+
+            # .. or for all of endpoints ..
+            else:
+                items = self._get_all_items(sql_session, cluster_id)
+
+            # .. populate it for later use ..
+            out[:] = items
+
+        except Exception:
+            raise
+
+        finally:
+            if is_new_sql_session:
+                _ = sql_session.close()
+
+        # .. and return everything to our caller.
+        self.response.payload = out
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Create(_Subscribe):
     """ Creates a new pub/sub subscription by invoking a subscription service specific to input endpoint_type.
@@ -471,7 +640,6 @@ class Create(_Subscribe):
             topic_name = [topic_name]
 
         if not(topic_list_text or topic_list_json or topic_name):
-            # raise BadRequest(self.cid, 'No topics to subscribe to were given on input')
             return
         else:
             if topic_list_text:
@@ -481,13 +649,42 @@ class Create(_Subscribe):
             else:
                 topic_list = topic_name
 
+            # Try to use an endpoint by its ID ..
+            if not (endpoint_id := self.request.raw_request.get('endpoint_id') or 0):
+
+                # .. we have no endpoint ID so we will try endpoint name ..
+                if not (endpoint_name := self.request.raw_request.get('endpoint_name')):
+                    raise Exception(f'Either endpoint_id or endpoint_name should be given on input to {self.name}')
+
+                # .. if we are here, we have an endpoint by its name and we turn it into an ID now ..
+                endpoint = self.pubsub.get_endpoint_by_name(endpoint_name)
+                endpoint_id = endpoint.id
+
+            # Optionally, delete all the subscriptions for that endpoint
+            # before any news ones (potentially the same ones) will be created.
+            # This is a flag that enmasse may pass on.
+            if self.request.raw_request.get('should_delete_all'):
+                _ = self.invoke(DeleteAll, endpoint_id=endpoint_id)
+
+            # If we have a REST connection by its name, we need to turn it into an ID
+            if rest_connection := self.request.raw_request.get('rest_connection'):
+                rest_connection_item = self.server.worker_store.get_outconn_rest(rest_connection)
+                if rest_connection_item:
+                    rest_connection_item = rest_connection_item['config']
+                    out_rest_http_soap_id = rest_connection_item['id']
+                    self.request.raw_request['out_rest_http_soap_id'] = out_rest_http_soap_id
+                else:
+                    msg = f'REST outgoing connection not found -> {rest_connection}'
+                    raise Exception(msg)
+
             # For all topics given on input, check it upfront if caller may subscribe to all of them
             check_input = [
                 int(self.request.raw_request.get('ws_channel_id') or 0),
                 int(self.request.raw_request.get('sql_ws_client_id') or 0),
                 int(self.request.raw_request.get('security_id') or 0),
-                int(self.request.raw_request.get('endpoint_id') or 0),
+                int(endpoint_id),
             ]
+
             for topic_name in topic_list:
                 try:
                     # Assignment to sub_pattern_matched will need to be changed once
@@ -501,6 +698,10 @@ class Create(_Subscribe):
             sub_service = 'zato.pubsub.subscription.subscribe-{}'.format(self.request.raw_request['endpoint_type'])
             sub_request = self.request.raw_request
 
+            # Append the endpoint ID, either because we earlier received it on input,
+            # or because we had to obtain it via endpoint_name.
+            sub_request['endpoint_id'] = endpoint_id
+
             # Invoke subscription for each topic given on input. At this point we know we can subscribe to all of them.
             for topic_name in topic_list:
                 sub_request['topic_name'] = topic_name
@@ -512,21 +713,28 @@ class Create(_Subscribe):
 class DeleteAll(AdminService):
     """ Deletes all pub/sub subscriptions of a given endpoint.
     """
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'endpoint_id')
+    class SimpleIO(AdminService.SimpleIO):
+        input = '-cluster_id', '-endpoint_id', '-endpoint_name'
 
     def handle(self) -> 'None':
+
+        cluster_id = self.request.input.cluster_id or self.server.cluster_id
+
+        if not (endpoint_id := self.request.input.endpoint_id):
+            endpoint = self.pubsub.get_endpoint_by_name(self.request.input.endpoint_name)
+            endpoint_id = endpoint.id
+
         with closing(self.odb.session()) as session:
 
             # Get all subscriptions for that endpoint ..
             items = pubsub_subscription_list_by_endpoint_id_no_search(
-                session, self.request.input.cluster_id, self.request.input.endpoint_id)
+                session, cluster_id, endpoint_id)
 
             # Build a list of sub_keys that this endpoint was using and delete them all in one go.
             sub_key_list = [item.sub_key for item in items]
             if sub_key_list:
                 self.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
-                    'cluster_id': self.request.input.cluster_id,
+                    'cluster_id': cluster_id,
                     'sub_key_list': sub_key_list,
                 })
 
@@ -639,7 +847,8 @@ class UpdateInteractionMetadata(AdminService):
     """ Updates last interaction metadata for input sub keys.
     """
     class SimpleIO:
-        input_required = List('sub_key'), Opaque('last_interaction_time'), 'last_interaction_type', 'last_interaction_details'
+        input_required:'any_' = List('sub_key'), Opaque('last_interaction_time'), 'last_interaction_type', \
+            'last_interaction_details'
 
     def handle(self) -> 'None':
 

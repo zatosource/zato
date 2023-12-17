@@ -173,6 +173,7 @@ class Endpoint(ToDictBase):
         self.role = config['role']
         self.is_active = config['is_active']
         self.is_internal = config['is_internal']
+        self.service_id = config['service_id']
 
         self.topic_patterns = config.get('topic_patterns', '')
 
