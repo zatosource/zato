@@ -316,6 +316,7 @@ class SubscribeServiceImpl(_Subscribe):
     def _subscribe_impl(self, ctx:'SubCtx') -> 'None':
         """ Invoked by subclasses to subscribe callers using input pub/sub config context.
         """
+
         with self.lock('zato.pubsub.subscribe.%s' % (ctx.topic_name), timeout=90):
 
             # Is it a WebSockets client?
@@ -341,11 +342,16 @@ class SubscribeServiceImpl(_Subscribe):
             with closing(self.odb.session()) as session:
                 with session.no_autoflush:
 
-                    # Non-WebSocket clients cannot subscribe to the same topic multiple times
+                    # Non-WebSocket clients cannot subscribe to the same topic multiple times,
+                    # unless should_ignore_if_sub_exists is set to True (e.g. enmasse does it).
                     if not is_wsx:
                         if has_subscription(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id):
-                            raise PubSubSubscriptionExists(self.cid, 'Endpoint `{}` is already subscribed to topic `{}`'.format(
-                                endpoint.name, ctx.topic.name))
+                            if self.request.input.should_ignore_if_sub_exists:
+                                # We do not raise an exception but we do not continue either.
+                                return
+                            else:
+                                msg = f'Endpoint `{endpoint.name}` is already subscribed to topic `{ctx.topic.name}`'
+                                raise PubSubSubscriptionExists(self.cid, msg)
 
                     ctx.creation_time = now = utcnow_as_ms()
                     sub_key = new_sub_key(self.endpoint_type, ctx.ext_client_id)
