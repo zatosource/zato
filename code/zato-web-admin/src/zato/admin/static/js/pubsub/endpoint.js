@@ -39,8 +39,6 @@ $(document).ready(function() {
         $.fn.zato.make_field_required_on_change(required_map, this.value);
     });
 
-    // We show REST by default so these fields are required
-    $.fn.zato.make_field_required_on_change(required_map, "rest");
 })
 
 $.fn.zato.pubsub.endpoint.clear_forms = function() {

@@ -18,7 +18,6 @@ $.fn.zato.data_table.PubSubEndpoint = new Class({
 
 var elems_required = [
     'endpoint_id',
-    'server_id',
     'active_status',
     'delivery_method',
     'delivery_batch_size',

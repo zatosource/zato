@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,7 +11,7 @@ from sqlalchemy import func
 
 # Zato
 from zato.common.api import PUBSUB
-from zato.common.odb.model import Cluster, PubSubTopic, PubSubEndpoint, PubSubSubscription
+from zato.common.odb.model import Cluster, HTTPSOAP, PubSubTopic, PubSubEndpoint, PubSubSubscription, Server
 from zato.common.odb.query import query_wrapper
 
 # ################################################################################################################################
@@ -21,7 +21,7 @@ if 0:
     from sqlalchemy.sql.selectable import Select
     from sqlalchemy.orm.query import Query
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, intlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,8 +94,12 @@ def _pubsub_subscription(
         PubSubEndpoint.name.label('endpoint_name'),
         PubSubEndpoint.endpoint_type,
         PubSubEndpoint.service_id,
+        Server.name.label('server_name'),
+        HTTPSOAP.name.label('rest_connection'),
         ).\
         outerjoin(PubSubTopic, PubSubTopic.id==PubSubSubscription.topic_id).\
+        outerjoin(Server, PubSubSubscription.server_id==Server.id).\
+        outerjoin(HTTPSOAP, PubSubSubscription.out_http_soap_id==HTTPSOAP.id).\
         filter(PubSubEndpoint.id==PubSubSubscription.endpoint_id).\
         filter(Cluster.id==PubSubSubscription.cluster_id).\
         filter(Cluster.id==cluster_id).\
@@ -161,6 +165,28 @@ def pubsub_subscription_list_by_endpoint_id_no_search(
     """
     return _pubsub_subscription(session, cluster_id).\
         filter(PubSubSubscription.endpoint_id==endpoint_id)
+
+# ################################################################################################################################
+
+def pubsub_subscription_list_by_endpoint_id_list_no_search(
+    session,    # type: SASession
+    cluster_id, # type: int
+    endpoint_id_list # type: intlist
+) -> 'any_':
+    """ A list of all pub/sub subscriptions for a list of endpoints without a search results wrapper.
+    """
+    return _pubsub_subscription(session, cluster_id).\
+        filter(PubSubSubscription.endpoint_id.in_(endpoint_id_list))
+
+# ################################################################################################################################
+
+def pubsub_subscription_list_no_search(
+    session,    # type: SASession
+    cluster_id, # type: int
+) -> 'any_':
+    """ A list of all pub/sub subscriptions in existence, without a search results wrapper.
+    """
+    return _pubsub_subscription(session, cluster_id)
 
 # ################################################################################################################################
 

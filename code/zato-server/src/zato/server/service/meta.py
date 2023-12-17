@@ -188,13 +188,14 @@ def update_attrs(cls, name, attrs):
     attrs.skip_if_missing = getattr(mod, 'skip_if_missing', False)
     attrs._meta_session = None
 
+    attrs.is_get_list = False
     attrs.is_create = False
     attrs.is_edit = False
     attrs.is_create_edit = False
     attrs.is_delete = False
 
     if name == 'GetList':
-        # get_sio sorts out what is required and what is optional.
+        attrs.is_get_list = True
         attrs.output_required = attrs.model
         attrs.output_optional = attrs.model
     else:
