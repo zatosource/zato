@@ -1997,9 +1997,6 @@ class ObjectManager:
 
             for item in map(Bunch, data):
 
-                #if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)): # type: ignore
-                #    continue
-
                 if 0 and self.is_ignored_name(item_type, item, is_sec_def):
                     continue
 
