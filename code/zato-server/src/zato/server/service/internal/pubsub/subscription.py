@@ -195,7 +195,7 @@ class _Subscribe(AdminService):
         ws_channel_id:'intnone',
         sql_ws_client_id:'intnone',
         security_id:'intnone',
-        endpoint_id:'intnone'
+        endpoint_id:'intnone',
     ) -> 'str':
         pubsub = self.server.worker_store.pubsub
 
@@ -633,7 +633,6 @@ class Create(_Subscribe):
             topic_name = [topic_name]
 
         if not(topic_list_text or topic_list_json or topic_name):
-            # raise BadRequest(self.cid, 'No topics to subscribe to were given on input')
             return
         else:
             if topic_list_text:
@@ -643,13 +642,25 @@ class Create(_Subscribe):
             else:
                 topic_list = topic_name
 
+            # Try to use an endpoint by its ID ..
+            if not (endpoint_id := self.request.raw_request.get('endpoint_id') or 0):
+
+                # .. we have no endpoint ID so we will try endpoint name ..
+                if not (endpoint_name := self.request.raw_request.get('endpoint_name')):
+                    raise Exception(f'Either endpoint_id or endpoint_name should be given on input to {self.name}')
+
+                # .. if we are here, we have an endpoint by its name and we turn it into an ID now ..
+                endpoint = self.pubsub.get_endpoint_by_name(endpoint_name)
+                endpoint_id = endpoint.id
+
             # For all topics given on input, check it upfront if caller may subscribe to all of them
             check_input = [
                 int(self.request.raw_request.get('ws_channel_id') or 0),
                 int(self.request.raw_request.get('sql_ws_client_id') or 0),
                 int(self.request.raw_request.get('security_id') or 0),
-                int(self.request.raw_request.get('endpoint_id') or 0),
+                endpoint_id,
             ]
+
             for topic_name in topic_list:
                 try:
                     # Assignment to sub_pattern_matched will need to be changed once
@@ -662,6 +673,10 @@ class Create(_Subscribe):
 
             sub_service = 'zato.pubsub.subscription.subscribe-{}'.format(self.request.raw_request['endpoint_type'])
             sub_request = self.request.raw_request
+
+            # Append the endpoint ID, either because we earlier received it on input,
+            # or because we had to obtain it via endpoint_name.
+            sub_request['endpoint_id'] = endpoint_id
 
             # Invoke subscription for each topic given on input. At this point we know we can subscribe to all of them.
             for topic_name in topic_list:
