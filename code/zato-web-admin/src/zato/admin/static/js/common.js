@@ -1609,11 +1609,6 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 
     if(endpoint_type == 'rest') {
 
-        if(!server_id.val()) {
-            $.fn.zato.draw_attention_to(server_id);
-            is_valid = false;
-        }
-
         if(!delivery_method.val()) {
             $.fn.zato.draw_attention_to(delivery_method);
             is_valid = false;

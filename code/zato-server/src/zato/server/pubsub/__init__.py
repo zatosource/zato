@@ -501,6 +501,11 @@ class PubSub:
 
 # ################################################################################################################################
 
+    def wait_for_endpoint(self, endpoint_name:'str', timeout:'int'=600) -> 'bool':
+        return wait_for_dict_key_by_get_func(self.endpoint_api.get_by_name, endpoint_name, timeout, interval=0.5)
+
+# ################################################################################################################################
+
     def get_endpoint_impl_getter(self, endpoint_type:'str') -> 'callable_':
         with self.lock:
             return self.endpoint_api.get_impl_getter(endpoint_type)

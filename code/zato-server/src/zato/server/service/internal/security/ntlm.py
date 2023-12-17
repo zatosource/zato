@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -19,6 +17,15 @@ from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, NTLM
 from zato.common.odb.query import ntlm_list
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class GetList(AdminService):
     """ Returns a list of NTLM definitions available.
@@ -37,6 +44,9 @@ class GetList(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Create(AdminService):
     """ Creates a new NTLM definition.
@@ -83,6 +93,12 @@ class Create(AdminService):
 
             self.response.payload.id = auth.id
             self.response.payload.name = auth.name
+
+        # Make sure the object has been created
+        _:'any_' = self.server.worker_store.wait_for_ntlm(input.name)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Edit(AdminService):
     """ Updates an NTLM definition.
@@ -131,6 +147,9 @@ class Edit(AdminService):
                 self.response.payload.id = definition.id
                 self.response.payload.name = definition.name
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an NTLM definition.
     """
@@ -145,6 +164,9 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
 
         return self._handle(NTLM, _auth, SECURITY.NTLM_CHANGE_PASSWORD.value)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Delete(AdminService):
     """ Deletes an NTLM definition.
@@ -173,3 +195,6 @@ class Delete(AdminService):
                 self.request.input.action = SECURITY.NTLM_DELETE.value
                 self.request.input.name = auth.name
                 self.broker_client.publish(self.request.input)
+
+# ################################################################################################################################
+# ################################################################################################################################

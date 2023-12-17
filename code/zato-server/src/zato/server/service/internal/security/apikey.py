@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -22,6 +20,15 @@ from zato.common.rate_limiting import DefinitionParser
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class GetList(AdminService):
     """ Returns a list of API keys available.
@@ -41,6 +48,9 @@ class GetList(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Create(AdminService):
     """ Creates a new API key.
@@ -92,8 +102,14 @@ class Create(AdminService):
                 input.sec_type = SEC_DEF_TYPE.APIKEY
                 self.broker_client.publish(input)
 
-            self.response.payload.id = auth.id
-            self.response.payload.name = auth.name
+                self.response.payload.id = auth.id
+                self.response.payload.name = auth.name
+
+        # Make sure the object has been created
+        _:'any_' = self.server.worker_store.wait_for_apikey(input.name)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Edit(AdminService):
     """ Updates an API key.
@@ -150,6 +166,9 @@ class Edit(AdminService):
                 self.response.payload.id = definition.id
                 self.response.payload.name = definition.name
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an API key.
     """
@@ -164,6 +183,9 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
 
         return self._handle(APIKeySecurity, _auth, SECURITY.APIKEY_CHANGE_PASSWORD.value)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Delete(AdminService):
     """ Deletes an API key.
@@ -191,3 +213,6 @@ class Delete(AdminService):
                 self.request.input.action = SECURITY.APIKEY_DELETE.value
                 self.request.input.name = auth.name
                 self.broker_client.publish(self.request.input)
+
+# ################################################################################################################################
+# ################################################################################################################################
