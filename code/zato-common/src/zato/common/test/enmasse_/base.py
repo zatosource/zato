@@ -69,7 +69,7 @@ class BaseEnmasseTestCase(TestCase):
         out:'RunningCommand' = command('enmasse', TestConfig.server_location,
             '--import',
             '--input', config_path,
-            '--replace-odb-objects',
+            '--replace',
             '--verbose',
             '--missing-wait-time', missing_wait_time
         )
