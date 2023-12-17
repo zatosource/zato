@@ -133,6 +133,9 @@ class ModuleCtx:
     # Maps enmasse values that need to be renamed during an export
     Enmasse_Attr_List_Value_Rename = cast_('strdictdict', None)
 
+    # Maps enmasse values that need to be renamed during an import
+    Enmasse_Attr_List_Value_Rename_Reverse = cast_('strdictdict', None)
+
     # Maps enmasse defintions types to their attributes that need to be converted to a list during an export
     Enmasse_Attr_List_As_List = cast_('strlistdict', None)
 
@@ -287,6 +290,7 @@ ModuleCtx.Enmasse_Attr_List_Include = {
     'pubsub_endpoint':  [
         'name',
         'endpoint_type',
+        'service_name',
         'topic_patterns',
         'sec_name',
     ],
@@ -337,6 +341,9 @@ ModuleCtx.Enmasse_Attr_List_Rename = {
 
 # ################################################################################################################################
 
+#
+# This is used during export
+#
 ModuleCtx.Enmasse_Attr_List_Value_Rename = {
 
     # Security definitions
@@ -344,7 +351,27 @@ ModuleCtx.Enmasse_Attr_List_Value_Rename = {
         'type': [{'oauth':'bearer_token'}]
     },
 
+    # Pub/sub endpoints
+    'pubsub_endpoint':  {
+        'endpoint_type': [{'srv':'service'}]
+    },
+
 }
+
+# ################################################################################################################################
+
+#
+# This is used during import
+#
+ModuleCtx.Enmasse_Attr_List_Value_Rename_Reverse = {
+
+    # Pub/sub endpoints
+    'pubsub_endpoint':  {
+        'endpoint_type': [{'service':'srv'}]
+    },
+
+}
+
 # ################################################################################################################################
 
 ModuleCtx.Enmasse_Attr_List_As_List = {
@@ -395,6 +422,9 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches = {
     # E-Mail IMAP
     'email_imap':  {'get_criteria':'UNSEEN', 'timeout':10},
 
+    # Pub/sub - Endpoints
+    'pubsub_endpoint':  {'security_name':ZATO_NO_SECURITY},
+
     # Pub/sub - Subscriptions
     'pubsub_subscription':  {'delivery_server':'server1'},
 }
@@ -423,6 +453,7 @@ ModuleCtx.Enmasse_Attr_List_Default_By_Type = {
     'pubsub_endpoint':  {
         'is_internal': False,
         'role': Common_PubSub.ROLE.PUBLISHER_SUBSCRIBER.id,
+        'security_name': ZATO_NO_SECURITY,
     },
 
     'pubsub_topic':  {
@@ -545,6 +576,7 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
         'name',
         'endpoint_type',
         'security_name',
+        'service_name',
         'topic_patterns',
     ],
 
@@ -1514,6 +1546,7 @@ class ObjectImporter:
         attrs.is_source_external = True
 
         response = self._import_object(item_type, attrs, is_edit)
+
         if response and response.ok:
             if self._needs_change_password(item_type, attrs, is_edit):
                 object_id = response.data['id']
@@ -1706,7 +1739,7 @@ class ObjectImporter:
             self_json_ordered[dep_name] = self_json.get(dep_name, [])
 
         # .. now, populate everything that is not a dependency.
-        for key, value in self_json.items():
+        for key, value in self_json.items(): # type: ignore
             if key not in dep_order:
                 self_json_ordered[key] = value
 
@@ -2599,13 +2632,28 @@ class InputParser:
                     # .. finally, we can append it for later use ..
                     _ = data['zato_generic_connection'].append(value)
 
-        # Remove IDs from all the generic connections ..
+        # Preprocess all items ..
         for item_type, items in data.items():
+
+            # Remove IDs from all the generic connections ..
             if item_type == 'zato_generic_connection':
                 for item in items:
                     _ = item.pop('id', None)
 
-        # Add values for attributes that are optional ..
+            # For values that need to be renamed ..
+            attr_list_value_rename_reverse  = ModuleCtx.Enmasse_Attr_List_Value_Rename_Reverse.get(item_type) or {}
+
+            # .. optionally, rename selected values ..
+            for attr_name, value_map_list in attr_list_value_rename_reverse.items():
+                for value_map in value_map_list:
+                    for item in items:
+                        if value := item.get(attr_name, NotGiven):
+                            if value is not NotGiven:
+                                if value in value_map:
+                                    new_value = value_map[value]
+                                    item[attr_name] = new_value
+
+        # .. add values for attributes that are optional ..
         for def_type, items in data.items():
 
             # .. replace new names with old ones but only for specific types ..
@@ -3024,7 +3072,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def _preprocess_item_attrs(
+    def _preprocess_item_attrs_during_export(
         self,
         attr_key,  # type: str
         item_type, # type: str
@@ -3301,6 +3349,7 @@ class Enmasse(ManageCommand):
                     'delivery_method': sub.delivery_method,
                     'rest_method': sub.rest_method,
                     'rest_connection': sub.rest_connection,
+                    'service_name': sub.service_name,
                     'delivery_server': sub.delivery_server,
                     'topic_list': []
                 })
@@ -3408,7 +3457,7 @@ class Enmasse(ManageCommand):
                     attr_key = item_type
 
                 # .. this will rename or remove any attributes from this item that we do not need ..
-                item = self._preprocess_item_attrs(attr_key, item_type, item)
+                item = self._preprocess_item_attrs_during_export(attr_key, item_type, item)
 
                 # .. sort the attributes in the order we want them to appear in the outpur file ..
                 item = self._sort_item_attrs(attr_key, item)
