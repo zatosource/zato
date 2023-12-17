@@ -1220,7 +1220,7 @@ class DependencyScanner:
                         continue
 
                     # Same here
-                    if 0 and has_name_zato_prefix(value):
+                    if has_name_zato_prefix(value):
                         continue
 
                     if name:
