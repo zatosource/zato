@@ -200,7 +200,7 @@ class EnmasseTestCase(BaseEnmasseTestCase):
         f.close()
 
         # Invoke enmasse to create objects (which will block for missing_wait_time seconds) ..
-        _ = self.invoke_enmasse(config_path, require_ok=False)
+        _ = self.invoke_enmasse(config_path, require_ok=False, missing_wait_time=missing_wait_time)
 
         # .. now, make sure that we actually had to wait that many seconds ..
         now = datetime.utcnow()
