@@ -114,17 +114,36 @@ class _GetEndpointQueueMessagesSIO(GetListAdminSIO):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_security_id_from_input(self:'Service', input:'strdict') -> 'intnone':
+
+    if input.get('security_name') == 'zato-no-security':
+        return
+
+    # If we have a security name on input, we need to turn it into its ID ..
+    if security_name := input.get('security_name'):
+        security = self.server.worker_store.basic_auth_get(security_name)
+        security_id:'int' = security['id']
+
+    # .. otherwise, we use a service ID as it is.
+    else:
+        security_id = self.request.input.get('security_id')
+
+    return security_id
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _get_service_id_from_input(self:'Service', input:'strdict') -> 'intnone':
 
-        # If we have a service name on input, we need to turn it into its ID ..
-        if service_name := input.get('service_name'):
-            service_id = self.server.service_store.get_service_id_by_name(service_name)
+    # If we have a service name on input, we need to turn it into its ID ..
+    if service_name := input.get('service_name'):
+        service_id = self.server.service_store.get_service_id_by_name(service_name)
 
-        # .. otherwise, we use a service ID as it is.
-        else:
-            service_id = self.request.input.get('service_id')
+    # .. otherwise, we use a service ID as it is.
+    else:
+        service_id = self.request.input.get('service_id')
 
-        return service_id
+    return service_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -134,13 +153,19 @@ def instance_hook(self:'Service', input:'strdict', instance:'PubSubEndpoint', at
     if attrs['is_delete']:
         return
 
-    # This can be given as ID or name and we need to extract the correct value here
+    # These can be given as ID or name and we need to extract the correct values here
     service_id = _get_service_id_from_input(self, input)
+    security_id = _get_security_id_from_input(self, input)
+
     instance.service_id = service_id
+    instance.security_id = security_id
 
     # Don't use empty string with integer attributes, set them to None (NULL) instead
     if cast_('str', service_id) == '':
         instance.service_id = None
+
+    if cast_('str', security_id) == '':
+        instance.security_id = None
 
     # SQLite will not accept empty strings, must be None
     instance.last_seen = instance.last_seen or None
@@ -214,7 +239,8 @@ class Create(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('name', 'role', 'is_active', 'is_internal', 'endpoint_type')
-        input_optional = ('cluster_id', 'topic_patterns', 'security_id', 'service_id', 'service_name', 'ws_channel_id')
+        input_optional = ('cluster_id', 'topic_patterns', 'security_id', 'security_name', 'service_id', 'service_name', \
+            'ws_channel_id')
         output_required = (AsIs('id'), 'name')
         request_elem = 'zato_pubsub_endpoint_create_request'
         response_elem = 'zato_pubsub_endpoint_create_response'
@@ -224,6 +250,7 @@ class Create(AdminService):
 
         input = self.request.input
         cluster_id = input.get('cluster_id') or self.server.cluster_id
+        security_id = _get_security_id_from_input(self, self.request.input)
         service_id = _get_service_id_from_input(self, self.request.input)
 
         # Services have a fixed role and patterns ..
@@ -246,8 +273,25 @@ class Create(AdminService):
                 filter(PubSubEndpoint.name==input.name).\
                 first()
 
+            # Names must be unique
             if existing_one:
                 raise Conflict(self.cid, 'Endpoint `{}` already exists'.format(input.name))
+
+            # Services cannot be assigned to more than one endpoint
+            if service_id:
+                try:
+                    endpoint_id = self.pubsub.get_endpoint_id_by_service_id(service_id)
+                except KeyError:
+                    pass
+                else:
+                    endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
+                    service_name = self.server.service_store.get_service_name_by_id(service_id)
+                    msg = f'Service {service_name} is already assigned to endpoint {endpoint.name}'
+                    raise Conflict(self.cid, msg)
+
+            # Security definitions cannot be assigned to more than one security_id
+            if security_id:
+                zzz
 
             endpoint = PubSubEndpoint()
             endpoint.cluster_id = cluster_id # type: ignore
@@ -257,7 +301,7 @@ class Create(AdminService):
             endpoint.endpoint_type = input.endpoint_type
             endpoint.role = input.role
             endpoint.topic_patterns = input.topic_patterns
-            endpoint.security_id = input.get('security_id')
+            endpoint.security_id = security_id
             endpoint.service_id = service_id
             endpoint.ws_channel_id = input.get('ws_channel_id')
 
