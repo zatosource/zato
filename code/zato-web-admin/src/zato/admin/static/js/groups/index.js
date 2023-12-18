@@ -71,7 +71,7 @@ $.fn.zato.groups.data_table.new_row = function(item, data, include_tr) {
 
 $.fn.zato.groups.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Deleted group `{0}` deleted',
+        'Deleted group `{0}`',
         'Are you sure you want to delete group `{0}`?',
         true);
 }
