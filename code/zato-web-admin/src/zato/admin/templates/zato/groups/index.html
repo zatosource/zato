@@ -50,7 +50,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Groups : 111-`{{ group_type_name_title }}`-222</h2>
+<h2 class="zato">Groups : {{ group_type_name_title }}</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -96,7 +96,7 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.members_html }}</td>
-                        <td><a href="javascript:$.fn.zato.groups.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="{% url "groups" "zato-org" "organizations" %}?cluster={{ cluster_id|default:"1" }}">Edit</a></td>
 
                         {% comment %} 2 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.groups.delete_('{{ item.id }}')">Delete</a></td>
