@@ -19,7 +19,6 @@ from django.http import HttpResponse, HttpResponseServerError
 # Zato
 from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, slugify
-from zato.common.api import ZATO_NONE
 from zato.common.json_internal import dumps
 from zato.common.model.groups import GroupObject
 
@@ -44,6 +43,10 @@ class Index(_Index):
 
     def get_initial_input(self):
         return {'group_type': self.input.group_type} # type: ignore
+
+    def handle_return_data(self, return_data):
+        return_data['group_type_name_title'] = 'API Credentials'
+        return return_data
 
     def handle(self):
 
