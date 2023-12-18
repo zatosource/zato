@@ -39,6 +39,7 @@ from zato.admin.web.views.definition import kafka as def_kafka
 from zato.admin.web.views.definition import jms_wmq as def_wmq
 from zato.admin.web.views.email import imap as email_imap
 from zato.admin.web.views.email import smtp as email_smtp
+from zato.admin.web.views import groups
 from zato.admin.web.views.notif import sql as notif_sql
 from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
@@ -1666,6 +1667,29 @@ urlpatterns += [
         login_required(keysight_vision.ping), name='vendors-keysight-vision-ping'),
     url(r'^zato/vendors/keysight/vision/change-password/$',
         login_required(keysight_vision.change_password), name='vendors-keysight-vision-change-password'),
+    ]
+
+# ################################################################################################################################
+# ################################################################################################################################
+# #
+# #   Groups
+# #
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Groups
+    url(r'^zato/groups/cluster/group/(?P<group_type>.*)/(?P<type_name_slug>.*)$',
+        login_required(groups.Index()), name=groups.Index.url_name),
+    url(r'^zato/groups/create/$',
+        login_required(groups.Create()), name=groups.Create.url_name),
+    url(r'^zato/groups/edit/$',
+        login_required(groups.Edit()), name=groups.Edit.url_name),
+    url(r'^zato/groups/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(groups.Delete()), name=groups.Delete.url_name),
+    url(r'^zato/groups/view/(?P<cluster_id>.*)/group/(?P<group_type>.*)/(?P<type_name_slug>.*)/(?P<group_id>.*)/(?P<name_slug>.*)$', # type: ignore
+        login_required(groups.view), name='groups-view'),
     ]
 
 # ################################################################################################################################
