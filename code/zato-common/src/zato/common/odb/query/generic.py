@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from logging import getLogger
@@ -15,10 +13,17 @@ from logging import getLogger
 from sqlalchemy import and_, exists, insert, update
 
 # Zato
-from zato.common.api import GENERIC, FILE_TRANSFER
+from zato.common.api import GENERIC, Groups, FILE_TRANSFER
 from zato.common.odb.model import GenericConn as ModelGenericConn, GenericObject as ModelGenericObject
 from zato.common.odb.query import query_wrapper
 from zato.common.util.sql import get_dict_with_opaque
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from sqlalchemy.orm import Session as SASession
+    from zato.common.typing_ import any_, anylist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,15 +46,13 @@ class GenericObjectWrapper:
     subtype = None
     model_class = ModelGenericObject
 
-    def __init__(self, session, cluster_id):
-        # type: (object, int)
+    def __init__(self, session:'SASession', cluster_id:'int') -> 'None':
         self.session = session
         self.cluster_id = cluster_id
 
 # ################################################################################################################################
 
-    def _build_get_where_query(self, name):
-        # type: (str) -> object
+    def _build_get_where_query(self, name:'str') -> 'any_':
         return and_(
             self.model_class.name==name,
             self.model_class.type_==self.type_,
@@ -58,8 +61,8 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def get(self, name):
-        # type: (str) -> object
+    def get(self, name:'str') -> 'any_':
+
         item = self.session.query(self.model_class).\
             filter(self.model_class.name==name).\
             filter(self.model_class.type_==self.type_).\
@@ -70,17 +73,39 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def exists(self, name):
+    def get_list(self, sub_type:'str'='') -> 'anylist':
+
+        out = []
+
+        items = self.session.query(self.model_class).\
+            filter(self.model_class.type_==self.type_).\
+            filter(self.model_class.cluster_id==self.cluster_id)
+
+        if sub_type:
+            items = items.filter(self.model_class.subtype==sub_type)
+
+        items = items.all()
+
+        for item in items:
+            item = get_dict_with_opaque(item)
+            out.append(item)
+
+        return out
+
+# ################################################################################################################################
+
+    def exists(self, , name:'str') -> 'bool':
         """ Returns a boolean flag indicating whether the input name is already stored in the ODB. False otherwise.
         """
         where_query = self._build_get_where_query(name)
         exists_query = exists().where(where_query)
+
         return self.session.query(exists_query).\
             scalar()
 
 # ################################################################################################################################
 
-    def create(self, name, opaque):
+    def create(self, name:'str', opaque:'str') -> 'any_':
         """ Creates a new row for input data.
         """
         return insert(self.model_class).values(**{
@@ -93,11 +118,9 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def update(self, name, opaque):
+    def update(self, name:'str', opaque:'str') -> 'any_':
         """ Updates an already existing object.
         """
-        # type: (str, str) -> object
-
         return update(ModelGenericObjectTable).\
             values({
                 _generic_attr_name: opaque,
@@ -110,11 +133,9 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def store(self, name, opaque):
+    def store(self, name:'str', opaque:'str') -> 'None':
         """ Inserts new data or updates an already existing row matching the input.
         """
-        # type: (str, str)
-
         already_exists = self.exists(name)
         query = self.update(name, opaque) if already_exists else self.create(name, opaque)
 
@@ -136,8 +157,14 @@ class SFTPFileTransferWrapper(FileTransferWrapper):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class GroupsWrapper(GenericObjectWrapper):
+    type = Groups.Type.Group_Parent
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @query_wrapper
-def connection_list(session, cluster_id, type_=None, needs_columns=False):
+def connection_list(session, cluster_id:'int', type_:'strnone'=None, needs_columns:'bool'=False) -> 'any_':
     """ A list of generic connections by their type.
     """
     q = session.query(ModelGenericConn).\
