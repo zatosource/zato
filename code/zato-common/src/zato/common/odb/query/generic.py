@@ -11,7 +11,7 @@ from datetime import datetime
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import and_, exists, insert, update
+from sqlalchemy import and_, delete, exists, insert, update
 
 # Zato
 from zato.common.api import GENERIC, FILE_TRANSFER, NotGiven
@@ -165,6 +165,14 @@ class GenericObjectWrapper:
             where(and_filter)
 
         # .. and return it to our caller.
+        return query
+
+# ################################################################################################################################
+
+    def delete(self, id:'int') -> 'any_':
+        """ Creates a new row for input data.
+        """
+        query = delete(ModelGenericObjectTable).where(ModelGenericObjectTable.c.id==id)
         return query
 
 # ################################################################################################################################
