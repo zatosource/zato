@@ -31,10 +31,10 @@
             // ------ 1 ------ //
             'name',
             '_members',
-            '_edit',
+            '_members_visit',
 
             // ------ 2 ------ //
-            '_members_visit',
+            '_edit',
             '_delete',
             'id',
 
@@ -95,10 +95,10 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.members_html|default:"---" }}</td>
-                        <td><a href="javascript:$.fn.zato.groups.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="{% url "groups-members" item.type item.id %}?cluster={{ cluster_id|default:"1" }}">Go to members</a></td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td><a href="{% url "groups-members" item.type item.id %}?cluster={{ cluster_id|default:"1" }}">Go to members</a></td>
+                        <td><a href="javascript:$.fn.zato.groups.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.groups.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
