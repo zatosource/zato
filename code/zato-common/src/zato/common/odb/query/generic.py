@@ -14,9 +14,10 @@ from logging import getLogger
 from sqlalchemy import and_, exists, insert, update
 
 # Zato
-from zato.common.api import GENERIC, FILE_TRANSFER
+from zato.common.api import GENERIC, FILE_TRANSFER, NotGiven
 from zato.common.odb.model import GenericConn as ModelGenericConn, GenericObject as ModelGenericObject
 from zato.common.odb.query import query_wrapper
+from zato.common.typing_ import cast_
 from zato.common.util.sql import get_dict_with_opaque
 
 # ################################################################################################################################
@@ -24,7 +25,7 @@ from zato.common.util.sql import get_dict_with_opaque
 
 if 0:
     from sqlalchemy.orm import Session as SASession
-    from zato.common.typing_ import any_, anylist, strdict, strnone, type_
+    from zato.common.typing_ import any_, dictlist, strdict, strnone, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,7 +36,7 @@ logger = getLogger('zato')
 # ################################################################################################################################
 
 _generic_attr_name = GENERIC.ATTR_NAME
-ModelGenericObjectTable = ModelGenericObject.__table__
+ModelGenericObjectTable:'any_' = ModelGenericObject.__table__
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,13 +76,13 @@ class GenericObjectWrapper:
             filter(self.model_class.cluster_id==self.cluster_id).\
             first()
 
-        return get_dict_with_opaque(item) if item else None
+        return cast_('any_', get_dict_with_opaque(item) if item else None)
 
 # ################################################################################################################################
 
-    def get_list(self) -> 'anylist':
+    def get_list(self) -> 'dictlist':
 
-        out = []
+        out:'dictlist' = []
 
         items = self.session.query(self.model_class).\
             filter(self.model_class.type_==self.type_).\
@@ -93,7 +94,7 @@ class GenericObjectWrapper:
         items = items.all()
 
         for item in items:
-            item = get_dict_with_opaque(item)
+            item:'strdict' = get_dict_with_opaque(item)
             item = self.build_list_item_from_sql_row(item)
             out.append(item)
 
@@ -107,8 +108,8 @@ class GenericObjectWrapper:
         where_query = self._build_get_where_query(name)
         exists_query = exists().where(where_query)
 
-        return self.session.query(exists_query).\
-            scalar()
+        return cast_('bool', self.session.query(exists_query).\
+            scalar())
 
 # ################################################################################################################################
 
@@ -128,18 +129,43 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def update(self, name:'str', opaque:'str') -> 'any_':
+    def update(self, name:'str', opaque:'any_'=NotGiven, *, generic_object_id:'int'=False) -> 'any_':
         """ Updates an already existing object.
         """
-        return update(ModelGenericObjectTable).\
-            values({
-                _generic_attr_name: opaque,
-            }).\
-            where(and_(
-                ModelGenericObjectTable.c.name==name,
-                ModelGenericObjectTable.c.type_==self.type_,
-                ModelGenericObjectTable.c.cluster_id==self.cluster_id,
-            ))
+        # Name will be always updated ..
+        values = {
+            'name': name
+        }
+
+        # .. whereas opaque attributes are optional ..
+        if opaque is not NotGiven:
+            values[_generic_attr_name] = opaque
+
+        # .. build a basic filter for the query ..
+        and_filter:'any_' = (
+            ModelGenericObjectTable.c.type_==self.type_,
+            ModelGenericObjectTable.c.cluster_id==self.cluster_id,
+        )
+
+        # .. if we have an ID on input, we update by its value ..
+        # .. which will let us do a rename  ..
+        if generic_object_id:
+            and_filter = and_filter + (ModelGenericObjectTable.c.id==generic_object_id,)
+
+        # .. otherwise, match by name ..
+        else:
+            and_filter = and_filter + (ModelGenericObjectTable.c.name==name,)
+
+        # .. turn the tuple of parameters into an actual filter ..
+        and_filter = and_(*and_filter)
+
+        # .. build a query that will update the object ..
+        query = update(ModelGenericObjectTable).\
+            values(values).\
+            where(and_filter)
+
+        # .. and return it to our caller.
+        return query
 
 # ################################################################################################################################
 
@@ -171,11 +197,12 @@ class GroupsWrapper(GenericObjectWrapper):
 
     def build_list_item_from_sql_row(self, row: 'strdict') -> 'strdict':
 
-        out = {}
+        out:'strdict' = {}
 
         out['name'] = row['name']
         out['type'] = row['subtype']
         out['id'] = row['group_id']
+        out['generic_object_id'] = row['id']
 
         return out
 
