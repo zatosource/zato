@@ -91,6 +91,7 @@ class GenericObjectWrapper:
         if self.subtype:
             items = items.filter(self.model_class.subtype==self.subtype)
 
+        items = items.order_by(self.model_class.name)
         items = items.all()
 
         for item in items:
