@@ -9,15 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
-from json import dumps
-
-# Faker
-from faker.utils.text import slugify
 
 # Zato
 from zato.common.api import Groups
 from zato.common.odb.query.generic import GroupsWrapper
-from zato.server.service import AsIs, Service
+from zato.server.service import Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,9 +35,6 @@ class GroupsManager:
 
     def create(self, group_type:'str', group_name:'str') -> 'str':
 
-        # A slag of the name becomes the group's ID ..
-        group_id = slugify(group_name)
-
         # .. work in a new SQL transaction ..
         with closing(self.server.odb.session()) as session:
 
@@ -50,33 +43,61 @@ class GroupsManager:
             wrapper.type_ = Groups.Type.Group_Parent
             wrapper.subtype = group_type
 
-            # .. build a request that represents the group ..
-            data = {
-                'group_id': group_id,
-            }
-            data = dumps(data)
-
             # .. do create the group now ..
-            insert = wrapper.create(group_name, data)
+            insert = wrapper.create(group_name, '')
 
             # .. commit the changes ..
             session.execute(insert)
             session.commit()
 
+            # .. get the newly added group now ..
+            group = wrapper.get(group_name)
+
         # .. and return its ID to our caller.
-        return group_id
+        return group['id']
 
 # ################################################################################################################################
 
-    def delete(self, group_type:'str', group_id:'str') -> 'None':
-        raise NotImplementedError()
+    def edit(self, group_id:'int', group_type:'str', group_name:'str') -> 'None':
+
+        # Work in a new SQL transaction ..
+        with closing(self.server.odb.session()) as session:
+
+            # .. build and object that will wrap access to the SQL database ..
+            wrapper = GroupsWrapper(session, self.cluster_id)
+            wrapper.type_ = Groups.Type.Group_Parent
+            wrapper.subtype = group_type
+
+            # .. do edit the group's name (but not its opaque attributes) ..
+            update = wrapper.update(group_name, id=group_id)
+
+            # .. and commit the changes now.
+            session.execute(update)
+            session.commit()
+
+# ################################################################################################################################
+
+    def delete(self, group_id:'int') -> 'None':
+
+        # Work in a new SQL transaction ..
+        with closing(self.server.odb.session()) as session:
+
+            # .. build and object that will wrap access to the SQL database ..
+            wrapper = GroupsWrapper(session, self.cluster_id)
+
+            # .. do delete the group ..
+            delete = wrapper.delete(group_id)
+
+            # .. commit the changes now.
+            session.execute(delete)
+            session.commit()
 
 # ################################################################################################################################
 
     def get_list(self, group_type:'str') -> 'anylist':
 
         # Our reponse to produce
-        out = []
+        out:'anylist' = []
 
         # Work in a new SQL transaction ..
         with closing(self.server.odb.session()) as session:
@@ -102,7 +123,7 @@ class GetList(Service):
     """ Returns all groups matching the input criteria.
     """
     name = 'dev.groups.get-list'
-    input:'any_' = AsIs('group_type')
+    input:'any_' = 'group_type'
 
     def handle(self):
         groups_manager = GroupsManager(self.server)
@@ -118,13 +139,55 @@ class Create(Service):
     name = 'dev.groups.create'
 
     input:'any_' = 'group_type', 'name'
-    output:'any_' = AsIs('id'), 'name'
+    output:'any_' = 'id', 'name'
 
     def handle(self):
+
         groups_manager = GroupsManager(self.server)
-        group_id = groups_manager.create(self.request.input.group_type, self.request.input.name)
-        self.response.payload.id = group_id
+        id = groups_manager.create(self.request.input.group_type, self.request.input.name)
+
+        self.response.payload.id = id
         self.response.payload.name = self.request.input.name
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Edit(Service):
+    """ Updates an existing group.
+    """
+    name = 'dev.groups.edit'
+
+    input:'any_' = 'id', 'group_type', 'name'
+    output:'any_' = 'id', 'name'
+
+    def handle(self):
+
+        # Local variables
+        input = self.request.input
+
+        groups_manager = GroupsManager(self.server)
+        groups_manager.edit(input.id, input.group_type, input.name)
+
+        self.response.payload.id = self.request.input.id
+        self.response.payload.name = self.request.input.name
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Delete(Service):
+    """ Deletes an existing group.
+    """
+    name = 'dev.groups.delete'
+
+    input:'any_' = 'id'
+
+    def handle(self):
+
+        # Local variables
+        input = self.request.input
+
+        groups_manager = GroupsManager(self.server)
+        groups_manager.delete(input.id)
 
 # ################################################################################################################################
 # ################################################################################################################################
