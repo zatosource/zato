@@ -1680,7 +1680,7 @@ urlpatterns += [
 urlpatterns += [
 
     # Groups
-    url(r'^zato/groups/cluster/group/(?P<group_type>.*)/(?P<group_sub_type>.*)(?P<type_name_slug>.*)/$',
+    url(r'^zato/groups/cluster/group/(?P<group_type>.*)/$',
         login_required(groups.Index()), name=groups.Index.url_name),
     url(r'^zato/groups/create/$',
         login_required(groups.Create()), name=groups.Create.url_name),
@@ -1688,7 +1688,7 @@ urlpatterns += [
         login_required(groups.Edit()), name=groups.Edit.url_name),
     url(r'^zato/groups/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(groups.Delete()), name=groups.Delete.url_name),
-    url(r'^zato/groups/view/(?P<cluster_id>.*)/group/(?P<group_type>.*)/(?P<group_sub_type>.*)/(?P<type_name_slug>.*)/(?P<group_id>.*)/(?P<name_slug>.*)/$', # type: ignore
+    url(r'^zato/groups/view/(?P<cluster_id>.*)/group/(?P<group_type>.*)/(?P<group_id>.*)/$', # type: ignore
         login_required(groups.view), name='groups-view'),
     ]
 

@@ -10,18 +10,23 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from traceback import format_exc
 
-# Bunch
-from bunch import Bunch
-
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
 from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, slugify
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.common.api import Groups
 from zato.common.json_internal import dumps
 from zato.common.model.groups import GroupObject
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import strdict
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
@@ -38,18 +43,22 @@ class Index(_Index):
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = 'group_type'
+        input_required = ('group_type',)
+        output_required = ('type', 'name', 'id')
         output_repeated = True
 
-    def get_initial_input(self):
-        return {'group_type': self.input.group_type} # type: ignore
+    def get_initial_input(self) -> 'strdict':
+        return {
+            'cluster_id': self.cluster_id,
+            'group_type': self.input.group_type
+        }
 
-    def handle_return_data(self, return_data):
+    def handle_return_data(self, return_data:'strdict') -> 'strdict':
+        return_data['group_type'] = Groups.Type.API_Credentials
         return_data['group_type_name_title'] = 'API Credentials'
         return return_data
 
     def handle(self):
-
         return {
             'create_form': CreateForm(self.req),
             'edit_form': EditForm(self.req, prefix='edit'),
@@ -65,7 +74,7 @@ class _CreateEdit(CreateEdit):
         input_required = 'group_type', 'name'
         output_required = 'id', 'name'
 
-    def success_message(self, item):
+    def success_message(self, item:'str') -> 'str':
         return 'Successfully {} group `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################

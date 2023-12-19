@@ -337,8 +337,8 @@
                             <li class="first-level">
                                 <a class="menu-link" href="#">Groups &darr;</a>
                                 <ul>
-                                    <li class="child"><a class="menu-link" href="{% url "groups" "zato-group" "zato-org" "organizations" %}?cluster={{ cluster_id|default:"1" }}">Organizations</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "groups" "zato-group" "zato-api-creds" "api-credentials" %}?cluster={{ cluster_id|default:"1" }}">API Credentials</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "groups" "zato-org" %}?cluster={{ cluster_id|default:"1" }}">Organizations</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "groups" "zato-api-creds" %}?cluster={{ cluster_id|default:"1" }}">API Credentials</a></li>
                                 </ul>
                             </li>
 
