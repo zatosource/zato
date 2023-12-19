@@ -44,7 +44,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('group_type',)
-        output_required = ('type', 'name', 'id')
+        output_required = ('type', 'name', 'id', 'generic_object_id')
         output_repeated = True
 
     def get_initial_input(self) -> 'strdict':
@@ -56,6 +56,12 @@ class Index(_Index):
     def handle_return_data(self, return_data:'strdict') -> 'strdict':
         return_data['group_type'] = Groups.Type.API_Credentials
         return_data['group_type_name_title'] = 'API Credentials'
+
+        for item in return_data['items']:
+            print()
+            print(111, item.generic_object_id)
+            print()
+
         return return_data
 
     def handle(self):
@@ -72,6 +78,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'group_type', 'name'
+        input_optional = 'id', 'generic_object_id'
         output_required = 'id', 'name'
 
     def success_message(self, item:'str') -> 'str':

@@ -34,13 +34,14 @@
             '_edit',
 
             // ------ 2 ------ //
+            '_members_visit',
             '_delete',
             'id',
-            'is_active',
 
             // ------ 3 ------ //
             'group_type',
-
+            'is_active',
+            'generic_object_id',
         ]
     }
     </script>
@@ -77,10 +78,12 @@
 
                         {% comment %} 2 {% endcomment %}
                         <th>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 3 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -94,21 +97,23 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.members_html|default:"---" }}</td>
-                        <td><a href="{% url "groups" item.type %}?cluster={{ cluster_id|default:"1" }}">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.groups.edit('{{ item.id }}')">Edit</a></td>
 
                         {% comment %} 2 {% endcomment %}
+                        <td><a href="{% url "groups-members" item.type item.id %}?cluster={{ cluster_id|default:"1" }}">Go to members</a></td>
                         <td><a href="javascript:$.fn.zato.groups.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
-                        <td class='ignore'>{{ item.is_active }}</td>
 
                         {% comment %} 3 {% endcomment %}
                         <td class='ignore'>{{ item.type }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.generic_object_id }}</td>
 
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='7'>No results</td>
+                        <td colspan='9'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -137,6 +142,7 @@
                             </td>
                         </tr>
                     </table>
+                    <input type="hidden" id="generic_object_id" name="generic_object_id" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="group_type" name="group_type" value="{{ group_type }}" />
                 </form>
@@ -162,6 +168,7 @@
                             </td>
                         </tr>
                     </table>
+                    <input type="hidden" id="id_edit-generic_object_id" name="edit-generic_object_id" value="" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-group_type" name="group_type" value="{{ group_type }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
