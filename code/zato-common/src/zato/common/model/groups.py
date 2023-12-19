@@ -18,13 +18,14 @@ if 0:
 class GroupObject:
     def __init__(self):
         self._config_attrs = []
-        self.id = ''           # type: str
-        self.is_active = True  # type: bool
-        self.type = ''         # type: str
-        self.name = ''         # type: str
-        self.name_slug = ''    # type: str
-        self.is_active = False # type: bool
-        self.members = []      # type: strlist
+        self.id = ''               # type: str
+        self.is_active = True      # type: bool
+        self.type = ''             # type: str
+        self.name = ''             # type: str
+        self.name_slug = ''        # type: str
+        self.is_active = False     # type: bool
+        self.members = []          # type: strlist
+        self.generic_object_id = 0 # type: int
 
 # ################################################################################################################################
 # ################################################################################################################################
