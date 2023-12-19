@@ -129,7 +129,7 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def update(self, name:'str', opaque:'any_'=NotGiven, *, generic_object_id:'int'=False) -> 'any_':
+    def update(self, name:'str', opaque:'any_'=NotGiven, *, id:'int'=False) -> 'any_':
         """ Updates an already existing object.
         """
         # Name will be always updated ..
@@ -149,8 +149,8 @@ class GenericObjectWrapper:
 
         # .. if we have an ID on input, we update by its value ..
         # .. which will let us do a rename  ..
-        if generic_object_id:
-            and_filter = and_filter + (ModelGenericObjectTable.c.id==generic_object_id,)
+        if id:
+            and_filter = and_filter + (ModelGenericObjectTable.c.id==id,)
 
         # .. otherwise, match by name ..
         else:
@@ -201,8 +201,7 @@ class GroupsWrapper(GenericObjectWrapper):
 
         out['name'] = row['name']
         out['type'] = row['subtype']
-        out['id'] = row['group_id']
-        out['generic_object_id'] = row['id']
+        out['id'] = row['id']
 
         return out
 

@@ -43,8 +43,6 @@ $.fn.zato.groups.data_table.new_row = function(item, data, include_tr) {
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
-    let is_active = item.is_active == true;
-
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
 

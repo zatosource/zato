@@ -41,7 +41,6 @@
             // ------ 3 ------ //
             'group_type',
             'is_active',
-            'generic_object_id',
         ]
     }
     </script>
@@ -84,7 +83,6 @@
                         {% comment %} 3 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -107,7 +105,6 @@
                         {% comment %} 3 {% endcomment %}
                         <td class='ignore'>{{ item.type }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.generic_object_id }}</td>
 
                     </tr>
                 {% endfor %}
@@ -142,7 +139,6 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="generic_object_id" name="generic_object_id" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="group_type" name="group_type" value="{{ group_type }}" />
                 </form>
@@ -168,7 +164,6 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="id_edit-generic_object_id" name="edit-generic_object_id" value="" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-group_type" name="group_type" value="{{ group_type }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
