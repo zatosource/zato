@@ -494,7 +494,7 @@ class Index(_BaseView):
         """
         names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
 
-        for msg_item in item_list:
+        for msg_item in (item_list or []):
 
             item = self.output_class()
             for name in sorted(names):

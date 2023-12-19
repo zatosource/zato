@@ -7,13 +7,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from datetime import datetime
 from logging import getLogger
 
 # SQLAlchemy
 from sqlalchemy import and_, exists, insert, update
 
 # Zato
-from zato.common.api import GENERIC, Groups, FILE_TRANSFER
+from zato.common.api import GENERIC, FILE_TRANSFER
 from zato.common.odb.model import GenericConn as ModelGenericConn, GenericObject as ModelGenericObject
 from zato.common.odb.query import query_wrapper
 from zato.common.util.sql import get_dict_with_opaque
@@ -23,7 +24,7 @@ from zato.common.util.sql import get_dict_with_opaque
 
 if 0:
     from sqlalchemy.orm import Session as SASession
-    from zato.common.typing_ import any_, anylist, strnone
+    from zato.common.typing_ import any_, anylist, strdict, strnone, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,13 +43,18 @@ ModelGenericObjectTable = ModelGenericObject.__table__
 class GenericObjectWrapper:
     """ Wraps access to generic objects.
     """
-    type_ = None
-    subtype = None
-    model_class = ModelGenericObject
+    type_:'strnone' = None
+    subtype:'strnone' = None
+    model_class:'type_[ModelGenericObject]' = ModelGenericObject
 
     def __init__(self, session:'SASession', cluster_id:'int') -> 'None':
         self.session = session
         self.cluster_id = cluster_id
+
+# ################################################################################################################################
+
+    def build_list_item_from_sql_row(self, row:'strdict') -> 'strdict':
+        return row
 
 # ################################################################################################################################
 
@@ -73,7 +79,7 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def get_list(self, sub_type:'str'='') -> 'anylist':
+    def get_list(self) -> 'anylist':
 
         out = []
 
@@ -81,20 +87,21 @@ class GenericObjectWrapper:
             filter(self.model_class.type_==self.type_).\
             filter(self.model_class.cluster_id==self.cluster_id)
 
-        if sub_type:
-            items = items.filter(self.model_class.subtype==sub_type)
+        if self.subtype:
+            items = items.filter(self.model_class.subtype==self.subtype)
 
         items = items.all()
 
         for item in items:
             item = get_dict_with_opaque(item)
+            item = self.build_list_item_from_sql_row(item)
             out.append(item)
 
         return out
 
 # ################################################################################################################################
 
-    def exists(self, , name:'str') -> 'bool':
+    def exists(self, name:'str') -> 'bool':
         """ Returns a boolean flag indicating whether the input name is already stored in the ODB. False otherwise.
         """
         where_query = self._build_get_where_query(name)
@@ -108,13 +115,16 @@ class GenericObjectWrapper:
     def create(self, name:'str', opaque:'str') -> 'any_':
         """ Creates a new row for input data.
         """
-        return insert(self.model_class).values(**{
+        result = insert(self.model_class).values(**{
             'name': name,
             'type_': self.type_,
             'subtype': self.subtype,
             'cluster_id': self.cluster_id,
+            'creation_time': datetime.utcnow(),
+            'last_modified': datetime.utcnow(),
             _generic_attr_name: opaque,
         })
+        return result
 
 # ################################################################################################################################
 
@@ -158,13 +168,22 @@ class SFTPFileTransferWrapper(FileTransferWrapper):
 # ################################################################################################################################
 
 class GroupsWrapper(GenericObjectWrapper):
-    type = Groups.Type.Group_Parent
+
+    def build_list_item_from_sql_row(self, row: 'strdict') -> 'strdict':
+
+        out = {}
+
+        out['name'] = row['name']
+        out['type'] = row['subtype']
+        out['id'] = row['group_id']
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @query_wrapper
-def connection_list(session, cluster_id:'int', type_:'strnone'=None, needs_columns:'bool'=False) -> 'any_':
+def connection_list(session:'SASession', cluster_id:'int', type_:'strnone'=None, needs_columns:'bool'=False) -> 'any_':
     """ A list of generic connections by their type.
     """
     q = session.query(ModelGenericConn).\
