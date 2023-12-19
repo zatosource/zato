@@ -10,8 +10,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from ftplib import FTP_PORT
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_false, ForeignKey, Index, Integer, LargeBinary, \
-     Numeric, Sequence, SmallInteger, String, Text, true as sa_true, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_false, ForeignKey, func, Index, Integer, \
+    LargeBinary, Numeric, Sequence, SmallInteger, String, Text, true as sa_true, UniqueConstraint
 from sqlalchemy.orm import backref, relationship
 
 # Zato
@@ -2708,8 +2708,8 @@ class GenericObject(Base):
     category_id = Column(Text(191), nullable=True)
     subcategory_id = Column(Text(191), nullable=True)
 
-    creation_time = Column(DateTime, nullable=False)
-    last_modified = Column(DateTime, nullable=False)
+    creation_time = Column(DateTime, nullable=False, server_default=func.utc_timestamp())
+    last_modified = Column(DateTime, nullable=False, server_default=func.utc_timestamp())
 
     category_name = Column(Text(191), nullable=True)
     subcategory_name = Column(Text(191), nullable=True)
