@@ -152,7 +152,7 @@ class ModuleCtx:
     Enmasse_Attr_List_Skip_If_Value_Matches = cast_('strdictdict', None)
 
     # Maps enmasse defintions types to their attributes that will be skipped during an export if other values matche configuration
-    Enmasse_Attr_List_Skip_If_Other_Value_Matches = cast_('strdictdict', None)
+    Enmasse_Attr_List_Skip_If_Other_Value_Matches = cast_('strdict', None)
 
     # Maps enmasse defintions types to their attributes that will be turned into multiline strings
     Enmasse_Attr_List_As_Multiline = cast_('strlistdict', None)
@@ -403,6 +403,13 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Empty = {
         'hook_service_name',
     ],
 
+    # Pub/sub - Subscriptions
+    'pubsub_subscription':  [
+        'rest_connection',
+        'service',
+        'service_name',
+    ],
+
 }
 
 # ################################################################################################################################
@@ -442,7 +449,10 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches = {
 ModuleCtx.Enmasse_Attr_List_Skip_If_Other_Value_Matches = {
 
     # Pub/sub subscriptions
-    'pubsub_subscription':  {'criteria':[{'delivery_method':'pull'}], 'attrs':['rest_method', 'rest_connection']},
+    'pubsub_subscription':  [
+        {'criteria':[{'delivery_method':'pull'}], 'attrs':['rest_method', 'rest_connection']},
+        {'criteria':[{'endpoint_type':'service'}], 'attrs':['rest_method', 'rest_connection']},
+    ],
 }
 
 # ################################################################################################################################
@@ -3208,16 +3218,18 @@ class Enmasse(ManageCommand):
         # .. optionally, skip attributes if other attributes have a specific value ..
         if attr_list_skip_if_other_value_matches:
 
-            criteria = attr_list_skip_if_other_value_matches['criteria']
-            attrs_to_skip = attr_list_skip_if_other_value_matches['attrs']
+            for config_dict in attr_list_skip_if_other_value_matches:
 
-            for criterion in criteria:
-                for criterion_key, criterion_value in criterion.items():
-                    item_value = item.get(criterion_key, NotGiven)
-                    if item_value is not NotGiven:
-                        if item_value == criterion_value:
-                            for attr in attrs_to_skip:
-                                _ = item.pop(attr)
+                criteria = config_dict['criteria']
+                attrs_to_skip = config_dict['attrs']
+
+                for criterion in criteria:
+                    for criterion_key, criterion_value in criterion.items():
+                        item_value = item.get(criterion_key, NotGiven)
+                        if item_value is not NotGiven:
+                            if item_value == criterion_value:
+                                for attr in attrs_to_skip:
+                                    _ = item.pop(attr, None)
 
         # .. ID's are never returned ..
         _ = item.pop('id', None)
@@ -3360,13 +3372,13 @@ class Enmasse(ManageCommand):
             # .. add the key if it does not already exist ..
             if key not in subs_by_key:
                 subs_by_key[key] = bunchify({
-                    'endpoint_name': sub.endpoint_name,
-                    'endpoint_type': sub.endpoint_type,
-                    'delivery_method': sub.delivery_method,
-                    'rest_method': sub.rest_method,
-                    'rest_connection': sub.rest_connection,
-                    'service_name': sub.service_name,
-                    'delivery_server': sub.delivery_server,
+                    'endpoint_name': sub.get('endpoint_name'),
+                    'endpoint_type': sub.get('endpoint_type'),
+                    'delivery_method': sub.get('delivery_method'),
+                    'rest_method': sub.get('rest_method'),
+                    'rest_connection': sub.get('rest_connection'),
+                    'service_name': sub.get('service_name'),
+                    'delivery_server': sub.get('delivery_server'),
                     'topic_list': []
                 })
 
