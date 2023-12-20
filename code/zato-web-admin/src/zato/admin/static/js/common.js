@@ -957,7 +957,7 @@ $.fn.zato.data_table.multirow.add_row = function(row_id, elem_id, is_add) {
 
     // Find all divs for such an element ID along with the last one in the list
     let existing = $(`div[id^="div_${elem_id}"]`);
-    let existing_size = existing.size();
+    let existing_size = existing.length;
     let last = existing[existing_size-1];
 
     if(is_add) {

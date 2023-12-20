@@ -33,11 +33,12 @@
         <div class="column-wrapper">
             <div class="column-header left">
                 <select>
+                    <option>------</option>
                     <option>Basic Auth</option>
                     <option>API keys</option>
-                    <input type="text" />
-                    <input type="submit" />
                 </select>
+                <input type="text" name="query" style="width:50%" class="required" placeholder="Enter search terms" required="" id="id_query">
+                <input type="submit"  style="vertical-align:top" value="Show definitions" />
             </div>
             <div class="column-body left">
                 <div id="listing-left" class="listing">
@@ -75,9 +76,11 @@
                 <option>Group 1</option>
                 <option>Group 2</option>
             </select>
-            <a href="#">Create a new group</a>
-            |
-            <a href="#">Clear group</a>
+            <div style="float: right; font-size: 0.8rem; padding-top: 0.1rem; padding-right: 0.5rem;">
+                <a href="#">Create a new group</a>
+                |
+                <a href="#">Clear group</a>
+            </div>
         </div>
         <div class="column-body right">
             <div id="listing-right" class="listing">
@@ -125,6 +128,7 @@ $('#listing-left').sortable({
     fallbackTolerance: 3,
     invertSwap: true,
     // handle: '.handle',
+    // emptyInsertThreshold: 1,
     onEnd: $.fn.zato.on_sortable_end,
     group: {
         name: "shared",
@@ -140,6 +144,7 @@ $('#listing-right').sortable({
     fallbackTolerance: 3,
     invertSwap: true,
     // handle: '.handle',
+    // emptyInsertThreshold: 1,
     onEnd: $.fn.zato.on_sortable_end,
     group: {
         name: "shared",
