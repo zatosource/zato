@@ -12,6 +12,7 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
+from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
@@ -105,17 +106,35 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def view(req, group_id, name_slug):
+def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
 
+    '''
     try:
-        response = req.zato.client.invoke('dev.groups.get-topic-sub-list', {
-            'cluster_id': cluster_id,
-            'endpoint_id': endpoint_id,
-            'topic_filter_by': req.GET.get('topic_filter_by'),
-        })
     except Exception:
         return HttpResponseServerError(format_exc())
     else:
-        return HttpResponse(dumps(response.data.response.topic_sub_list), content_type='application/javascript')
+        return HttpResponse(dumps(response.data), content_type='application/javascript')
+    '''
+
+    # Local variables
+    template_name = 'zato/groups/members.html'
+
+    # Obtain an initial list of members for this group ..
+    response = req.zato.client.invoke('dev.groups.get-member-list', {
+        'group_type': group_type,
+        'group_id': group_id,
+    })
+
+    # .. extract the business data ..
+    member_list = response.data
+
+    # .. build the return data for the template ..
+    return_data = {
+        'cluster_id': req.zato.cluster_id,
+        'member_list': member_list,
+    }
+
+    # .. and return everything to our caller.
+    return TemplateResponse(req, template_name, return_data)
 
 # ################################################################################################################################

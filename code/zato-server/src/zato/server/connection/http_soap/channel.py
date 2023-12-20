@@ -766,7 +766,8 @@ class RequestHandler:
         if self._needs_admin_response(service_instance):
             if data_format in {ModuleCtx.SIO_JSON, ModuleCtx.SIO_FORM_DATA}:
                 zato_env = {'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}}
-                if response.payload and (not isinstance(response.payload, str)):
+                is_not_str = not isinstance(response.payload, str)
+                if is_not_str and response.payload:
                     payload = response.payload.getvalue(False)
                     payload.update(zato_env)
                 else:
