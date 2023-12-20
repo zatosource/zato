@@ -17,6 +17,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/sortable/jquery-sortable.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/groups/members.js"></script>
 
 {% endblock %}
 
@@ -42,30 +43,9 @@
             </div>
             <div class="column-body left">
                 <div id="listing-left" class="listing">
-                    <div id="1" class="list-group-item left">BA: #1</div>
-                    <div id="2" class="list-group-item left">AK: #2</div>
-                    <div id="3" class="list-group-item left">AK: #3</div>
-                    <div id="1" class="list-group-item left">BA: #1</div>
-                    <div id="2" class="list-group-item left">AK: #2</div>
-                    <div id="3" class="list-group-item left">AK: #3</div>
-                    <div id="1" class="list-group-item left">BA: #1</div>
-                    <div id="2" class="list-group-item left">AK: #2</div>
-                    <div id="3" class="list-group-item left">AK: #3</div>
-                    <div id="1" class="list-group-item left">BA: #1</div>
-                    <div id="2" class="list-group-item left">AK: #2</div>
-                    <div id="3" class="list-group-item left">AK: #3</div>
-                    <div id="1" class="list-group-item left">BA: #1</div>
-                    <div id="2" class="list-group-item left">AK: #2</div>
-                    <div id="3" class="list-group-item left">AK: #3</div>
-                    <div id="1" class="list-group-item left">BA: #1</div>
-                    <div id="2" class="list-group-item left">AK: #2</div>
-                    <div id="3" class="list-group-item left">AK: #3</div>
-                    <div id="1" class="list-group-item left">BA: #1</div>
-                    <div id="2" class="list-group-item left">AK: #2</div>
-                    <div id="3" class="list-group-item left">AK: #3</div>
-                    <div id="1" class="list-group-item left">BA: #1</div>
-                    <div id="2" class="list-group-item left">AK: #2</div>
-                    <div id="3" class="list-group-item left">AK: #3</div>
+                    {% for item in security_list %}
+                        <div id="item.id" class="list-group-item left">{{ item.name }}</div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -73,7 +53,7 @@
     <div class="right-column">
         <div class="column-header right">
             <select>
-                <option>Group 1</option>
+                <option>Airlines</option>
                 <option>Group 2</option>
             </select>
             <div style="float: right; font-size: 0.8rem; padding-top: 0.1rem; padding-right: 0.5rem;">
@@ -84,40 +64,14 @@
         </div>
         <div class="column-body right">
             <div id="listing-right" class="listing">
-                <div id="4" class="list-group-item right">Item a</div>
-                <div id="5" class="list-group-item right">Item b</div>
-                <div id="6" class="list-group-item right">Item c</div>
+                <div id="5" class="list-group-item right">Item A</div>
+                <div id="4" class="list-group-item right">Item B</div>
             </div>
         </div>
     </div>
 </div>
 
 <script type="text/javascript">
-
-$.fn.zato.on_sortable_end = function(e) {
-
-    // We only need to handle when wrappers are different
-    if(e.from.id != e.to.id) {
-
-        //alert(e.item.id + " " + e.from.id + " " + e.to.id);
-
-        var item = $("#" + e.item.id);
-
-        var to_remove;
-        var to_add;
-
-        if(e.from.id == "listing-left") {
-            to_remove = "left";
-            to_add = "right";
-        }
-        else if(e.from.id == "listing-right") {
-            to_remove = "right";
-            to_add = "left";
-        }
-
-        $("#"+ e.to.id + "> .list-group-item").removeClass(to_remove).addClass(to_add);
-    }
-}
 
 $('#listing-left').sortable({
     swapThreshold: 1,

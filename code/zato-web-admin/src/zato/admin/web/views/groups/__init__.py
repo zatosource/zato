@@ -8,24 +8,22 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from traceback import format_exc
 
 # Django
-from django.http import HttpResponse, HttpResponseServerError
+from django.http import HttpResponse
 from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.api import Groups
-from zato.common.json_internal import dumps
 from zato.common.model.groups import GroupObject
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strdict
+    from zato.common.typing_ import any_, anylist, strdict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -105,6 +103,43 @@ class Delete(_Delete):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_member_list(req:'any_', group_type:'str', group_id:'int') -> 'anylist':
+
+    # Obtain an initial list of members for this group ..
+    response = req.zato.client.invoke('dev.groups.get-member-list', {
+        'group_type': group_type,
+        'group_id': group_id,
+    })
+
+    # .. extract the business data ..
+    out = response.data
+
+    # .. and return it to our caller.
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_security_list(req:'any_', sec_type:'strnone'=None) -> 'anylist':
+
+    # Obtain an initial list of members for this group ..
+    response = req.zato.client.invoke('zato.security.get-list', {
+        'sec_type': sec_type,
+    })
+
+    # .. extract the business data ..
+    out = response.data
+
+    print()
+    print(111, out)
+    print()
+
+    # .. and return it to our caller.
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('GET')
 def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
 
@@ -119,19 +154,17 @@ def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
     # Local variables
     template_name = 'zato/groups/members.html'
 
-    # Obtain an initial list of members for this group ..
-    response = req.zato.client.invoke('dev.groups.get-member-list', {
-        'group_type': group_type,
-        'group_id': group_id,
-    })
+    # Obtain an initial list of members for this group
+    member_list = get_member_list(req, group_type, group_id)
 
-    # .. extract the business data ..
-    member_list = response.data
+    # Obtain an initial list of security definitions
+    security_list = get_security_list(req)
 
     # .. build the return data for the template ..
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'member_list': member_list,
+        'security_list': security_list,
     }
 
     # .. and return everything to our caller.
