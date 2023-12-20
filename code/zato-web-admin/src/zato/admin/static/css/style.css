@@ -484,6 +484,98 @@ a.hint {
     text-align: center
 }
 
+#markup.columns {
+    display: flex;
+    width: 100%;
+}
+
+body {
+    counter-reset: left-column-counter;
+    counter-reset: right-column-counter;
+}
+
+.left-column {
+    background-color: #fff;
+    flex-grow: 1;
+}
+
+.right-column {
+    background-color: #fff;
+    flex-grow: 1;
+    overflow: scroll;
+}
+
+.column-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 80vh;
+    align-items:stretch;
+    align-content:stretch;
+}
+
+.column-header {
+    text-align: left;
+    padding-left: 0.7rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    background-color: #eee;
+}
+
+.column-header.left {
+    border-right: 1px solid #bbb
+}
+
+.column-header.right {
+    border-lefxt: 1px solid #bbb
+}
+
+.column-body {
+    overflow: scroll;
+    overflow-x: hidden
+}
+
+.column-body.right {
+}
+
+.list-group-item {
+    border: 1px solid #aaa;
+    background-color: #f6f6f6;
+    margin: 0.3rem;
+    padding: 1rem;
+    text-align: left;
+    font-size: 0.9rem;
+    font-family: monospace;
+
+}
+
+.list-group-item.left {
+    counter-increment: left-column-counter;
+}
+
+.list-group-item.right {
+    counter-increment: right-column-counter;
+}
+
+.list-group-item.left::before {
+    content: counter(left-column-counter) ". ";
+}
+
+.list-group-item.right::before {
+    content: counter(right-column-counter) ". ";
+}
+
+.list-group-item.selected {
+    background-color: yellow;
+}
+
+.listing {
+    min-height: 80vh;
+}
+
+.handle {
+    cursor: move;
+}
+
 th.ignore,
 td.ignore,
 div.ignore {

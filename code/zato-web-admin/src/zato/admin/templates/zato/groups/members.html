@@ -1,0 +1,129 @@
+
+{% extends "zato/index.html" %}
+
+{% block html_title %}Group members{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.form.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/sortable/Sortable.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/sortable/jquery-sortable.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+
+{% endblock %}
+
+{% block "content" %}
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<h2 class="zato">Group members</span></h2>
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<div id="markup" class="columns">
+    <div class="left-column">
+        <div class="column-wrapper">
+            <div class="column-header left">
+                <select>
+                    <option>Basic Auth</option>
+                    <option>API keys</option>
+                    <input type="text" />
+                    <input type="submit" />
+                </select>
+            </div>
+            <div class="column-body left">
+                <div id="listing-left" class="listing">
+                    <div id="1" class="list-group-item left">BA: #1</div>
+                    <div id="2" class="list-group-item left">AK: #2</div>
+                    <div id="3" class="list-group-item left">AK: #3</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="right-column">
+        <div class="column-header right">
+            <select>
+                <option>Group 1</option>
+                <option>Group 2</option>
+            </select>
+            <a href="#">Create a new group</a>
+        </div>
+        <div class="column-body right">
+            <div id="listing-right" class="listing">
+                <div id="4" class="list-group-item right">Item a</div>
+                <div id="5" class="list-group-item right">Item b</div>
+                <div id="6" class="list-group-item right">Item c</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+
+$.fn.zato.on_sortable_end = function(e) {
+
+    // We only need to handle when wrappers are different
+    if(e.from.id != e.to.id) {
+
+        //alert(e.item.id + " " + e.from.id + " " + e.to.id);
+
+        var item = $("#" + e.item.id);
+
+        var to_remove;
+        var to_add;
+
+        if(e.from.id == "listing-left") {
+            to_remove = "left";
+            to_add = "right";
+        }
+        else if(e.from.id == "listing-right") {
+            to_remove = "right";
+            to_add = "left";
+        }
+
+        item.removeClass(to_remove).addClass(to_add);
+    }
+}
+
+$('#listing-left').sortable({
+    swapThreshold: 1,
+    sort: false,
+    animation: 150,
+    multiDrag: true,
+    selectedClass: 'selected',
+    fallbackTolerance: 3,
+    invertSwap: true,
+    // handle: '.handle',
+    onEnd: $.fn.zato.on_sortable_end,
+    group: {
+        name: "shared",
+    }
+});
+
+$('#listing-right').sortable({
+    swapThreshold: 1,
+    sort: false,
+    animation: 150,
+    multiDrag: true,
+    selectedClass: 'selected',
+    fallbackTolerance: 3,
+    invertSwap: true,
+    // handle: '.handle',
+    onEnd: $.fn.zato.on_sortable_end,
+    group: {
+        name: "shared",
+    }
+});
+
+</script>
+
+
+{% endblock %}
