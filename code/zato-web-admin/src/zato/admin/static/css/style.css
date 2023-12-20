@@ -497,19 +497,19 @@ body {
 .left-column {
     background-color: #fff;
     flex-grow: 1;
+    max-width: 50%;
 }
 
 .right-column {
     background-color: #fff;
     flex-grow: 1;
-    overflow: scroll;
+    xoverflow: scroll;
 }
 
 .column-wrapper {
     display: flex;
     flex-direction: column;
-    height: 80vh;
-    align-items:stretch;
+    height: 100%;
     align-content:stretch;
 }
 
@@ -530,8 +530,12 @@ body {
 }
 
 .column-body {
-    overflow: scroll;
-    overflow-x: hidden
+    xoverflow: scroll;
+    xoverflow-x: hidden
+}
+
+.column-body.left {
+    border-right: 1px solid #bbb
 }
 
 .column-body.right {
@@ -543,7 +547,7 @@ body {
     margin: 0.3rem;
     padding: 1rem;
     text-align: left;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-family: monospace;
 
 }
