@@ -44,6 +44,27 @@
                     <div id="1" class="list-group-item left">BA: #1</div>
                     <div id="2" class="list-group-item left">AK: #2</div>
                     <div id="3" class="list-group-item left">AK: #3</div>
+                    <div id="1" class="list-group-item left">BA: #1</div>
+                    <div id="2" class="list-group-item left">AK: #2</div>
+                    <div id="3" class="list-group-item left">AK: #3</div>
+                    <div id="1" class="list-group-item left">BA: #1</div>
+                    <div id="2" class="list-group-item left">AK: #2</div>
+                    <div id="3" class="list-group-item left">AK: #3</div>
+                    <div id="1" class="list-group-item left">BA: #1</div>
+                    <div id="2" class="list-group-item left">AK: #2</div>
+                    <div id="3" class="list-group-item left">AK: #3</div>
+                    <div id="1" class="list-group-item left">BA: #1</div>
+                    <div id="2" class="list-group-item left">AK: #2</div>
+                    <div id="3" class="list-group-item left">AK: #3</div>
+                    <div id="1" class="list-group-item left">BA: #1</div>
+                    <div id="2" class="list-group-item left">AK: #2</div>
+                    <div id="3" class="list-group-item left">AK: #3</div>
+                    <div id="1" class="list-group-item left">BA: #1</div>
+                    <div id="2" class="list-group-item left">AK: #2</div>
+                    <div id="3" class="list-group-item left">AK: #3</div>
+                    <div id="1" class="list-group-item left">BA: #1</div>
+                    <div id="2" class="list-group-item left">AK: #2</div>
+                    <div id="3" class="list-group-item left">AK: #3</div>
                 </div>
             </div>
         </div>
@@ -55,6 +76,8 @@
                 <option>Group 2</option>
             </select>
             <a href="#">Create a new group</a>
+            |
+            <a href="#">Clear group</a>
         </div>
         <div class="column-body right">
             <div id="listing-right" class="listing">
@@ -89,7 +112,7 @@ $.fn.zato.on_sortable_end = function(e) {
             to_add = "left";
         }
 
-        item.removeClass(to_remove).addClass(to_add);
+        $("#"+ e.to.id + "> .list-group-item").removeClass(to_remove).addClass(to_add);
     }
 }
 
