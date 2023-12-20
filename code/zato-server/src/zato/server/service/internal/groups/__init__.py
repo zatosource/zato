@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from json import dumps
 
 # Zato
 from zato.common.api import Groups
@@ -117,6 +118,30 @@ class GroupsManager:
         return out
 
 # ################################################################################################################################
+
+    def get_member_list(self, group_type:'str', group_id:'int') -> 'anylist':
+
+        # Our reponse to produce
+        out:'anylist' = []
+
+        # Work in a new SQL transaction ..
+        with closing(self.server.odb.session()) as session:
+
+            # .. build and object that will wrap access to the SQL database ..
+            wrapper = GroupsWrapper(session, self.cluster_id)
+            wrapper.type_ = Groups.Type.Group_Parent
+            wrapper.subtype = group_type
+
+            # .. get all the results ..
+            results = [] # wrapper.get_list()
+
+            # .. populate our response ..
+            out[:] = results
+
+        # .. and return the output to our caller.
+        return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetList(Service):
@@ -188,6 +213,24 @@ class Delete(Service):
 
         groups_manager = GroupsManager(self.server)
         groups_manager.delete(input.id)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetMemberList(Service):
+    """ Returns current members of a group..
+    """
+    name = 'dev.groups.get-member-list'
+    input:'any_' = 'group_type', 'group_id'
+
+    def handle(self):
+
+        # Local variables
+        input = self.request.input
+
+        groups_manager = GroupsManager(self.server)
+        member_list = groups_manager.get_member_list(input.group_type, input.group_id)
+        self.response.payload = dumps(member_list)
 
 # ################################################################################################################################
 # ################################################################################################################################
