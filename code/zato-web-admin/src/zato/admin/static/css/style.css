@@ -498,12 +498,16 @@ body {
     background-color: #fff;
     flex-grow: 1;
     max-width: 50%;
+    max-height: 88vh;
+    overflow: scroll;
 }
 
 .right-column {
     background-color: #fff;
     flex-grow: 1;
-    xoverflow: scroll;
+    max-width: 50%;
+    max-height: 88vh;
+    overflow: scroll;
 }
 
 .column-wrapper {
@@ -522,6 +526,7 @@ body {
 }
 
 .column-header.left {
+    padding-left: 0.3rem;
     border-right: 1px solid #bbb
 }
 
@@ -569,7 +574,7 @@ body {
 }
 
 .list-group-item.selected {
-    background-color: yellow;
+    background-color: #f1f178;
 }
 
 .listing {
