@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from json import dumps
 from operator import attrgetter
 
 # Django
@@ -17,7 +18,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.api import Groups, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME
+from zato.common.api import Groups, SEC_DEF_TYPE_NAME
 from zato.common.model.groups import GroupObject
 
 # ################################################################################################################################
@@ -124,7 +125,7 @@ def get_member_list(req:'any_', group_type:'str', group_id:'int') -> 'anylist':
 def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None) -> 'anylist':
 
     # Our response to produce
-    out = []
+    out:'anylist' = []
 
     # Handle optional parameters
     sec_type = sec_type or ['apikey', 'basic_auth']
@@ -146,7 +147,7 @@ def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None) -> 'anylis
             continue
         else:
             sec_type = item['sec_type']
-            sec_type_name = SEC_DEF_TYPE_NAME[sec_type]
+            sec_type_name = SEC_DEF_TYPE_NAME[sec_type] # type: ignore
             item['sec_type_name'] = sec_type_name
             out.append(item)
 
@@ -160,15 +161,17 @@ def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None) -> 'anylis
 # ################################################################################################################################
 
 @method_allowed('GET')
-def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
+def get_security_list(req:'any_', sec_type:'str') -> 'HttpResponse':
 
-    '''
-    try:
-    except Exception:
-        return HttpResponseServerError(format_exc())
-    else:
-        return HttpResponse(dumps(response.data), content_type='application/javascript')
-    '''
+    sec_list = _get_security_list(req, sec_type)
+    data = dumps(sec_list)
+    return HttpResponse(data, content_type='application/javascript')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
 
     # Local variables
     template_name = 'zato/groups/members.html'
