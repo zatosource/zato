@@ -547,7 +547,7 @@ body {
     font-family: monospace;
     display: flex;
     align-items: center;
-
+    transition: background-color 0.06s ease;
 }
 
 .list-group-item .sec-type {
@@ -557,9 +557,16 @@ body {
     background-color: #ddd;
     padding: 0.3rem;
     margin-left: 0.4rem;
-    margin-right: 0.5rem;
+    margin-right: 0.1rem;
     min-width: 5rem;
     text-align: center;
+}
+
+.list-group-item a {
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+    padding-top: 0.18rem;
+    padding-bottom: 0.2rem;
 }
 
 .list-group-item .handle {
@@ -597,6 +604,7 @@ body {
     background-color: #e3e3e3;
     border-bottom: 1px solid #999;
     border-right: 1px solid #999;
+    transition: background-color 0.3s ease;
 }
 
 .list-group-item.selected a {
@@ -611,16 +619,18 @@ body {
     background-color: #c9c9c9;
 }
 
-.list-group-item.left.selected::before {
+.list-group-item.left.selected::before,
+.list-group-item.right.selected::before
+{
     font-weight: 600;
 }
 
 .list-group-item.left.selected::before {
-    content: "⮕ " counter(left-column-counter) ". ";
+    content: counter(left-column-counter) ". ";
 }
 
 .list-group-item.right.selected::before {
-    content: "⮕ " counter(right-column-counter) ". ";
+    content: counter(right-column-counter) ". ";
 }
 
 .listing {
