@@ -87,9 +87,14 @@ class _SearchWrapper:
             filter_op = and_ if config.get('filter_op') == 'and' else or_
             filters = []
 
-            for filter_by in config.get('filter_by', []):
-                for criterion in config.get('query', []):
-                    filters.append(filter_by.contains(criterion))
+            if query := config.get('query', []):
+                query = query if isinstance(query, (list, tuple)) else [query]
+
+            if filter_by := config.get('filter_by', []):
+                filter_by = filter_by if isinstance(filter_by, (list, tuple)) else [filter_by]
+                for column in filter_by:
+                    for criterion in query:
+                        filters.append(column.contains(criterion))
 
             q = q.filter(filter_op(*filters))
 

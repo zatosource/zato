@@ -122,7 +122,7 @@ def get_member_list(req:'any_', group_type:'str', group_id:'int') -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None) -> 'anylist':
+def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None, query:'strnone'=None) -> 'anylist':
 
     # Our response to produce
     out:'anylist' = []
@@ -133,6 +133,8 @@ def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None) -> 'anylis
     # Obtain an initial list of members for this group ..
     response = req.zato.client.invoke('zato.security.get-list', {
         'sec_type': sec_type,
+        'query': query,
+        'paginate': False,
     })
 
     # .. extract the business data ..
@@ -160,10 +162,13 @@ def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None) -> 'anylis
 # ################################################################################################################################
 # ################################################################################################################################
 
-@method_allowed('GET')
-def get_security_list(req:'any_', sec_type:'str') -> 'HttpResponse':
+@method_allowed('POST')
+def get_security_list(req:'any_') -> 'HttpResponse':
 
-    sec_list = _get_security_list(req, sec_type)
+    sec_type = req.GET.get('sec_type')
+    query = req.GET.get('query')
+
+    sec_list = _get_security_list(req, sec_type, query)
     data = dumps(sec_list)
     return HttpResponse(data, content_type='application/javascript')
 
