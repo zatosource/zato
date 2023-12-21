@@ -539,8 +539,8 @@ body {
     border-right: 1px solid #ccc;
     background-color: #f6f6f6;
     margin: 0.3rem;
-    padding-top: 0.2rem;
-    padding-bottom: 0.2rem;
+    padding-top: 0.05rem;
+    padding-bottom: 0.05rem;
     padding-left: 0.4rem;
     text-align: left;
     font-size: 0.76rem !important;
@@ -603,8 +603,8 @@ body {
     background-color: #ff9;
     padding-left: 0.6rem;
     padding-right: 0.6rem;
-    padding-top: 0.25rem;
-    padding-bottom: 0.25rem;
+    padding-top: 0.18rem;
+    padding-bottom: 0.2rem;
 }
 
 .list-group-item.selected .sec-type {
