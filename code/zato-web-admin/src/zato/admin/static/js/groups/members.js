@@ -22,11 +22,14 @@ $.fn.zato.groups.members.populate_security_list = function(security_list) {
 
     // First, we always remove any items already displayed
     $(".list-group-item.left").remove();
+    $("#listing-left-empty").remove();
 
-    // We go here if we have anything to show ..
+    // Reusable
+    var listing_left = $("#listing-left");
+
+    // We go here if we have something to show ..
     if(security_list.length) {
 
-        var listing_left = $("#listing-left");
         $.fn.zato.toggle_visible_hidden("#listing-left-empty", false);
 
         $.each(security_list, function(idx, elem) {
@@ -81,12 +84,16 @@ $.fn.zato.groups.members.populate_security_list = function(security_list) {
 
         })
     }
-    // .. otherwise, we indicate that there are no results
+    // .. we go here if we have no results to show
     else {
-        $.fn.zato.toggle_visible_hidden("#listing-left-empty", true);
-    };
 
-    //alert(security_list);
+        let div_empty = $("<div/>");
+
+        div_empty.attr("id", "listing-left-empty");
+        div_empty.text("No results");
+
+        listing_left.append(div_empty);
+    };
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
