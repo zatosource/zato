@@ -18,28 +18,62 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.groups.members.add_listing_empty = function(side, text) {
+    var listing_left = $("#listing-" + side);
+
+    let div_empty = $("<div/>");
+
+    div_empty.attr("id", "listing-"+ side +"-empty");
+    div_empty.text(text);
+
+    listing_left.append(div_empty);
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.members.remove_listing_empty = function(side) {
+    $("#listing-"+ side +"-empty").remove();
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.members.add_listing_left_empty = function() {
+
+    $.fn.zato.groups.members.add_listing_empty("left", "No results");
+}
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.members.add_listing_right_empty = function() {
+
+    $.fn.zato.groups.members.add_listing_empty("right", "No members");
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.members.remove_listing_left_empty = function() {
+    $.fn.zato.groups.members.remove_listing_empty("left");
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.members.remove_listing_right_empty = function() {
+    $.fn.zato.groups.members.remove_listing_empty("right");
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.groups.members.populate_security_list = function(security_list) {
 
     // First, we always remove any items already displayed
     $(".list-group-item.left").remove();
-    $("#listing-left-empty").remove();
-
-    // Reusable
-    var listing_left = $("#listing-left");
 
     // We go here if we have something to show ..
     if(security_list.length) {
 
+        var listing_left = $("#listing-left");
         $.fn.zato.toggle_visible_hidden("#listing-left-empty", false);
 
         $.each(security_list, function(idx, elem) {
-            /*
-            <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item left">
-                <div class="sec-type">{{ item.sec_type_name }}</div>
-                <div class="sec-name"><a href="#">{{ item.name }}</a></div>
-                <div class="handle"></div>
-            </div>
-            */
 
             //
             // Root item div elem
@@ -84,15 +118,9 @@ $.fn.zato.groups.members.populate_security_list = function(security_list) {
 
         })
     }
-    // .. we go here if we have no results to show
+    // .. we go here if we have no results to show.
     else {
-
-        let div_empty = $("<div/>");
-
-        div_empty.attr("id", "listing-left-empty");
-        div_empty.text("No results");
-
-        listing_left.append(div_empty);
+        $.fn.zato.groups.members.add_listing_left_empty();
     };
 }
 
@@ -132,13 +160,11 @@ $.fn.zato.groups.add_sortable = function(elem_id) {
         fallbackTolerance: 3,
         invertSwap: true,
         handle: ".list-group-item .handle",
-        // emptyInsertThreshold: 1,
         onEnd: $.fn.zato.groups.on_sortable_end,
         group: {
             name: "shared",
         }
     });
-
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -148,23 +174,28 @@ $.fn.zato.groups.on_sortable_end = function(e) {
     // We only need to handle when wrappers are different
     if(e.from.id != e.to.id) {
 
-        //alert(e.item.id + " " + e.from.id + " " + e.to.id);
-
-        var item = $("#" + e.item.id);
-
         var to_remove;
         var to_add;
+        var add_listing_empty_func;
 
         if(e.from.id == "listing-left") {
             to_remove = "left";
             to_add = "right";
+            add_listing_empty_func = $.fn.zato.groups.members.add_listing_left_empty;
+            $.fn.zato.groups.members.remove_listing_right_empty();
         }
         else if(e.from.id == "listing-right") {
             to_remove = "right";
             to_add = "left";
+            add_listing_empty_func = $.fn.zato.groups.members.add_listing_right_empty;
+            $.fn.zato.groups.members.remove_listing_left_empty();
         }
-
         $("#"+ e.to.id + "> .list-group-item").removeClass(to_remove).addClass(to_add);
+
+        let len_elems = $(".list-group-item." + to_remove).length;
+        if(len_elems == 0) {
+            add_listing_empty_func();
+        }
     }
 }
 
