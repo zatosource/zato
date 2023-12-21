@@ -17,7 +17,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.api import Groups
+from zato.common.api import Groups, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME
 from zato.common.model.groups import GroupObject
 
 # ################################################################################################################################
@@ -123,6 +123,10 @@ def get_member_list(req:'any_', group_type:'str', group_id:'int') -> 'anylist':
 
 def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None) -> 'anylist':
 
+    # Our response to produce
+    out = []
+
+    # Handle optional parameters
     sec_type = sec_type or ['apikey', 'basic_auth']
 
     # Obtain an initial list of members for this group ..
@@ -131,7 +135,20 @@ def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None) -> 'anylis
     })
 
     # .. extract the business data ..
-    out = response.data
+    data = response.data
+
+    # .. preprocess all the items received ..
+    for item in data:
+        name = item['name']
+        if name in {'pubsub', 'ide_publisher', 'pubapi'}:
+            continue
+        elif 'zato.' in name:
+            continue
+        else:
+            sec_type = item['sec_type']
+            sec_type_name = SEC_DEF_TYPE_NAME[sec_type]
+            item['sec_type_name'] = sec_type_name
+            out.append(item)
 
     # .. sort it in a human-readable way ..
     out.sort(key=attrgetter('sec_type', 'name'))

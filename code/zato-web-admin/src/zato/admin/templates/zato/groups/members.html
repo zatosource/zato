@@ -45,8 +45,10 @@
                 <div id="listing-left" class="listing">
                     {% for item in security_list %}
                         <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item left">
-                            <span class="sec-type">{{ item.sec_type|replace_in_string:"_, -" }}</span>
-                            <span class="sec-name">{{ item.name }}</span>
+                            <div class="sec-type">{{ item.sec_type_name }}</div>
+                            <div class="sec-name"><a href="#">{{ item.name }}</a></div>
+                            <div class="sec-username">{% if False %}{{ item.username }}{% endif %}</div>
+                            <div class="handle"></div>
                         </div>
                     {% endfor %}
                 </div>
@@ -60,55 +62,26 @@
                 <option>Group 2</option>
             </select>
             <div style="float: right; font-size: 0.8rem; padding-top: 0.1rem; padding-right: 0.5rem;">
-                <a href="#">Create a new group</a>
-                |
                 <a href="#">Clear group</a>
             </div>
         </div>
         <div class="column-body right">
             <div id="listing-right" class="listing">
-                <div id="5" class="list-group-item right">A</div>
-                <div id="4" class="list-group-item right">B</div>
+                <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item left">
+                    <div class="sec-type">api key{{ item.sec_type|replace_in_string:"_, -" }}</div>
+                    <div class="sec-name"><a href="#">#1</a></div>
+                    <div class="sec-username">{% if False %}{{ item.username }}{% endif %}</div>
+                    <div class="handle"></div>
+                </div>
+                <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item left">
+                    <div class="sec-type">basic auth{{ item.sec_type|replace_in_string:"_, -" }}</div>
+                    <div class="sec-name"><a href="#">#2</a></div>
+                    <div class="sec-username">{% if False %}{{ item.username }}{% endif %}</div>
+                    <div class="handle"></div>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
-<script type="text/javascript">
-
-$('#listing-left').sortable({
-    swapThreshold: 1,
-    sort: false,
-    animation: 150,
-    multiDrag: true,
-    selectedClass: 'selected',
-    fallbackTolerance: 3,
-    invertSwap: true,
-    // handle: '.handle',
-    // emptyInsertThreshold: 1,
-    onEnd: $.fn.zato.on_sortable_end,
-    group: {
-        name: "shared",
-    }
-});
-
-$('#listing-right').sortable({
-    swapThreshold: 1,
-    sort: false,
-    animation: 150,
-    multiDrag: true,
-    selectedClass: 'selected',
-    fallbackTolerance: 3,
-    invertSwap: true,
-    // handle: '.handle',
-    // emptyInsertThreshold: 1,
-    onEnd: $.fn.zato.on_sortable_end,
-    group: {
-        name: "shared",
-    }
-});
-
-</script>
-
 
 {% endblock %}

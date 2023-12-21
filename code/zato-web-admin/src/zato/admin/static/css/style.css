@@ -530,10 +530,6 @@ body {
     border-right: 1px solid #bbb
 }
 
-.column-header.right {
-    border-lefxt: 1px solid #bbb
-}
-
 .column-body.left {
     border-right: 1px solid #bbb
 }
@@ -543,24 +539,39 @@ body {
     border-right: 1px solid #bbb;
     background-color: #f6f6f6;
     margin: 0.3rem;
-    padding: 1rem;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+    padding-left: 0.4rem;
     text-align: left;
     font-size: 0.76rem !important;
     font-family: monospace;
+    display: flex;
+    align-items: center;
 
 }
 
 .list-group-item .sec-type {
     text-transform: uppercase;
-    font-size: 0.63rem;
+    font-size: 0.56rem;
     letter-spacing: 0.05rem;
     background-color: #ddd;
     padding: 0.3rem;
+    margin-left: 0.4rem;
+    margin-right: 0.5rem;
     min-width: 5rem;
-    display: inline-block;
     text-align: center;
 }
 
+.list-group-item .handle {
+    flex: 1;
+}
+
+.list-group-item .handle:after {
+    content: '\2807';
+    font-size: 1.2rem;
+    float: right;
+    color: #666;
+}
 
 .list-group-item.left {
     counter-increment: left-column-counter;
