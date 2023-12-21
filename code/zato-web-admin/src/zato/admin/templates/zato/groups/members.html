@@ -45,7 +45,6 @@
             </div>
             <div class="column-body left">
                 <div id="listing-left" class="listing">
-                    <div id="listing-left-empty" class="{% if security_list %}hidden{% endif %}">No results</div>
                     {% for item in security_list %}
                         <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item left">
                             <div class="sec-type">{{ item.sec_type_name }}</div>
