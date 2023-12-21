@@ -45,11 +45,11 @@
             </div>
             <div class="column-body left">
                 <div id="listing-left" class="listing">
+                    <div id="listing-left-empty" class="{% if security_list %}hidden{% endif %}">No results</div>
                     {% for item in security_list %}
                         <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item left">
                             <div class="sec-type">{{ item.sec_type_name }}</div>
                             <div class="sec-name"><a href="#">{{ item.name }}</a></div>
-                            <div class="sec-username">{% if False %}{{ item.username }}{% endif %}</div>
                             <div class="handle"></div>
                         </div>
                     {% endfor %}
@@ -63,19 +63,21 @@
                 <option>Group 1</option>
                 <option>Group 2</option>
             </select>
-            <div style="float: right; font-size: 0.8rem; padding-top: 0.1rem; padding-right: 0.5rem;">
-                <a href="#">Clear group</a>
+            <div style="float: right; font-size: 0.78rem; padding-top: 0.1rem; padding-right: 0.5rem;">
+                <span class="form_hint" style="font-size:0.78rem; color: #888;">Remove selected</span>
+                |
+                <a href="#">Remove all</a>
             </div>
         </div>
         <div class="column-body right">
             <div id="listing-right" class="listing">
-                <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item left">
+                <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item right">
                     <div class="sec-type">api key{{ item.sec_type|replace_in_string:"_, -" }}</div>
                     <div class="sec-name"><a href="#">#1</a></div>
                     <div class="sec-username">{% if False %}{{ item.username }}{% endif %}</div>
                     <div class="handle"></div>
                 </div>
-                <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item left">
+                <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item right">
                     <div class="sec-type">basic auth{{ item.sec_type|replace_in_string:"_, -" }}</div>
                     <div class="sec-name"><a href="#">#2</a></div>
                     <div class="sec-username">{% if False %}{{ item.username }}{% endif %}</div>

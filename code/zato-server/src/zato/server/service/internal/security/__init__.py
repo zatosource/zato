@@ -13,6 +13,7 @@ from contextlib import closing
 from zato.common.api import SEC_DEF_TYPE
 from zato.common.const import ServiceConst
 from zato.common.odb import query
+from zato.common.odb.model import SecurityBase
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, GetListAdminSIO
 
@@ -96,7 +97,15 @@ class GetList(AdminService):
                 else:
                     args = session, _cluster_id, False
 
-                for definition in func(*args):
+                # By default, we have nothing to filter by ..
+                kwargs = {}
+
+                # .. unless there is a query on input ..
+                if query_criteria := self.request.input.get('query'):
+                    kwargs['filter_by'] = SecurityBase.name
+                    kwargs['query'] = query_criteria
+
+                for definition in func(*args, **kwargs):
 
                     if definition.name.startswith('zato') or definition.name in _internal:
                         if not needs_internal:

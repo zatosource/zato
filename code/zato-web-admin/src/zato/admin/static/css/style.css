@@ -534,6 +534,20 @@ body {
     border-right: 1px solid #bbb
 }
 
+.listing {
+    min-height: 80vh;
+}
+
+#listing-left-empty,
+#listing-right-empty
+{
+    padding-top: 1rem;
+}
+
+.handle {
+    cursor: move;
+}
+
 .list-group-item {
     border-bottom: 1px solid #ccc;
     border-right: 1px solid #ccc;
@@ -547,7 +561,7 @@ body {
     font-family: monospace;
     display: flex;
     align-items: center;
-    transition: background-color 0.06s ease;
+    transition: background-color 0.05s ease;
 }
 
 .list-group-item .sec-type {
@@ -631,14 +645,6 @@ body {
 
 .list-group-item.right.selected::before {
     content: counter(right-column-counter) ". ";
-}
-
-.listing {
-    min-height: 80vh;
-}
-
-.handle {
-    cursor: move;
 }
 
 th.ignore,
