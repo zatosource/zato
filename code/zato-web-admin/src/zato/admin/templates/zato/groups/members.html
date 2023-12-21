@@ -33,13 +33,15 @@
     <div class="left-column">
         <div class="column-wrapper">
             <div class="column-header left">
-                <select>
-                    <option>------</option>
-                    <option>Basic Auth</option>
-                    <option>API keys</option>
-                </select>
-                <input type="text" name="query" style="width:50%" class="required" placeholder="Enter search terms" required="" id="id_query">
-                <input type="submit"  style="vertical-align:top" value="Show definitions" />
+                <form id="search-form" action="#">
+                    <select id="search-form-sec-type">
+                        <option value="">------</option>
+                        <option value="basic_auth">Basic Auth</option>
+                        <option value="apikey">API keys</option>
+                    </select>
+                    <input type="text" name="query" style="width:50%" placeholder="Enter search terms" id="search-form-query">
+                    <input type="submit"  style="vertical-align:top" value="Show definitions" />
+                </form>
             </div>
             <div class="column-body left">
                 <div id="listing-left" class="listing">

@@ -4,6 +4,17 @@
 $(document).ready(function() {
     $.fn.zato.groups.add_sortable("listing-left");
     $.fn.zato.groups.add_sortable("listing-right");
+
+    $("#search-form").on("submit", function(e) {
+
+        let sec_type = $("#search-form-sec-type").val()
+        let query = $("#search-form-query").val()
+
+        alert(sec_type + " " + query);
+
+        e.preventDefault();
+    });
+
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
