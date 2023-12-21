@@ -51,6 +51,7 @@ $.fn.zato.groups.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', '0');
     row += String.format('<td>{0}</td>', String.format("<a href='/zato/groups/members/{0}/{1}/?cluster=1'>Go to members</a>", item.group_type, item.id));
 
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.groups.clone('{0}')\">Clone</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.groups.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.groups.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);

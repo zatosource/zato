@@ -534,28 +534,33 @@ body {
     border-lefxt: 1px solid #bbb
 }
 
-.column-body {
-    xoverflow: scroll;
-    xoverflow-x: hidden
-}
-
 .column-body.left {
     border-right: 1px solid #bbb
 }
 
-.column-body.right {
-}
-
 .list-group-item {
-    border: 1px solid #aaa;
+    border-bottom: 1px solid #bbb;
+    border-right: 1px solid #bbb;
     background-color: #f6f6f6;
     margin: 0.3rem;
     padding: 1rem;
     text-align: left;
-    font-size: 0.85rem;
+    font-size: 0.76rem !important;
     font-family: monospace;
 
 }
+
+.list-group-item .sec-type {
+    text-transform: uppercase;
+    font-size: 0.63rem;
+    letter-spacing: 0.05rem;
+    background-color: #ddd;
+    padding: 0.3rem;
+    min-width: 5rem;
+    display: inline-block;
+    text-align: center;
+}
+
 
 .list-group-item.left {
     counter-increment: left-column-counter;

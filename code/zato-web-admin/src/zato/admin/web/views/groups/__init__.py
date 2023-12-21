@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from operator import attrgetter
 
 # Django
 from django.http import HttpResponse
@@ -23,7 +24,7 @@ from zato.common.model.groups import GroupObject
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, strdict, strnone
+    from zato.common.typing_ import any_, anylist, strdict, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -120,7 +121,9 @@ def get_member_list(req:'any_', group_type:'str', group_id:'int') -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_security_list(req:'any_', sec_type:'strnone'=None) -> 'anylist':
+def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None) -> 'anylist':
+
+    sec_type = sec_type or ['apikey', 'basic_auth']
 
     # Obtain an initial list of members for this group ..
     response = req.zato.client.invoke('zato.security.get-list', {
@@ -130,9 +133,8 @@ def get_security_list(req:'any_', sec_type:'strnone'=None) -> 'anylist':
     # .. extract the business data ..
     out = response.data
 
-    print()
-    print(111, out)
-    print()
+    # .. sort it in a human-readable way ..
+    out.sort(key=attrgetter('sec_type', 'name'))
 
     # .. and return it to our caller.
     return out
@@ -158,7 +160,7 @@ def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
     member_list = get_member_list(req, group_type, group_id)
 
     # Obtain an initial list of security definitions
-    security_list = get_security_list(req)
+    security_list = _get_security_list(req)
 
     # .. build the return data for the template ..
     return_data = {
