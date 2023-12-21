@@ -1,5 +1,5 @@
-
 {% extends "zato/index.html" %}
+{% load extras %}
 
 {% block html_title %}Group members{% endblock %}
 
@@ -44,7 +44,10 @@
             <div class="column-body left">
                 <div id="listing-left" class="listing">
                     {% for item in security_list %}
-                        <div id="item.id" class="list-group-item left">{{ item.name }}</div>
+                        <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item left">
+                            <span class="sec-type">{{ item.sec_type|replace_in_string:"_, -" }}</span>
+                            <span class="sec-name">{{ item.name }}</span>
+                        </div>
                     {% endfor %}
                 </div>
             </div>
@@ -53,7 +56,7 @@
     <div class="right-column">
         <div class="column-header right">
             <select>
-                <option>Airlines</option>
+                <option>Group 1</option>
                 <option>Group 2</option>
             </select>
             <div style="float: right; font-size: 0.8rem; padding-top: 0.1rem; padding-right: 0.5rem;">
@@ -64,8 +67,8 @@
         </div>
         <div class="column-body right">
             <div id="listing-right" class="listing">
-                <div id="5" class="list-group-item right">Item A</div>
-                <div id="4" class="list-group-item right">Item B</div>
+                <div id="5" class="list-group-item right">A</div>
+                <div id="4" class="list-group-item right">B</div>
             </div>
         </div>
     </div>
