@@ -2,6 +2,8 @@
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
+    $.fn.zato.groups.add_sortable("listing-left");
+    $.fn.zato.groups.add_sortable("listing-right");
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -14,7 +16,7 @@ $.fn.zato.groups.create = function() {
 
 $.fn.zato.groups.add_sortable = function(elem_id) {
 
-    $('#listing-left').sortable({
+    $("#" + elem_id).sortable({
         swapThreshold: 1,
         sort: false,
         animation: 150,
@@ -22,13 +24,14 @@ $.fn.zato.groups.add_sortable = function(elem_id) {
         selectedClass: 'selected',
         fallbackTolerance: 3,
         invertSwap: true,
-        // handle: '.handle',
+        handle: '.list-group-item .handle',
         // emptyInsertThreshold: 1,
         onEnd: $.fn.zato.groups.on_sortable_end,
         group: {
             name: "shared",
         }
     });
+
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
