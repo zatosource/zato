@@ -58,14 +58,18 @@
     </div>
     <div class="right-column">
         <div class="column-header right">
-            <select>
-                <option>Group 1</option>
-                <option>Group 2</option>
-            </select>
-            <div style="float: right; font-size: 0.78rem; padding-top: 0.1rem; padding-right: 0.5rem;">
-                <span class="form_hint" style="font-size:0.78rem; color: #888;">Remove selected</span>
+            <form id="groups-form" action="#">
+                <select id="groups-form-group-id">
+                    <option value="group-1">Group 1</option>
+                    <option value="group-2">Group 2</option>
+                </select>
+            </form>
+            <div id="column-header-right-menu">
+                {% if False %}
+                <span class="disabled">Remove selected</span>
                 |
                 <a href="#">Remove all</a>
+                {% endif %}
             </div>
         </div>
         <div class="column-body right">

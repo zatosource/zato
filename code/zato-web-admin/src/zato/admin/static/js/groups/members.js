@@ -14,7 +14,20 @@ $(document).ready(function() {
         e.preventDefault();
     });
 
+    $("#groups-form").on("change", function(e) {
+
+        let group_id = $("#groups-form-group-id").val()
+        $.fn.zato.groups.members.on_groups_form_changed(group_id)
+        e.preventDefault();
+    });
+
 })
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.members.on_groups_form_changed = function(group_id) {
+    alert(group_id);
+}
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
