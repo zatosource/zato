@@ -541,7 +541,8 @@ body {
 #listing-left-empty,
 #listing-right-empty
 {
-    padding-top: 1rem;
+    margin-top: 1rem;
+    font-size: 0.91rem !important;
 }
 
 .handle {
@@ -581,6 +582,7 @@ body {
     padding-right: 0.6rem;
     padding-top: 0.18rem;
     padding-bottom: 0.2rem;
+    display: inline-block;
 }
 
 .list-group-item .handle {
