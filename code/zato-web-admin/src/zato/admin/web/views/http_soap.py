@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -19,10 +17,10 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
-from zato.admin.web.views import get_http_channel_security_id, get_security_id_from_select, get_tls_ca_cert_list, \
-     id_only_service, method_allowed, parse_response_data, SecurityList
+from zato.admin.web.views import get_http_channel_security_id, get_security_id_from_select, get_security_name_link, \
+     get_tls_ca_cert_list, id_only_service, method_allowed, parse_response_data, SecurityList
 from zato.common.api import AuditLog, CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
-     generic_attrs, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, \
+     generic_attrs, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
@@ -61,7 +59,7 @@ _rest_security_type_supported = {
 _max_len_messages = AuditLog.Default.max_len_messages
 _max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message
 
-def _get_edit_create_message(params, prefix=''):
+def _get_edit_create_message(params, prefix=''): # type: ignore
     """ A bunch of attributes that can be used by both 'edit' and 'create' actions
     for channels and outgoing connections.
     """
@@ -129,7 +127,7 @@ def _get_edit_create_message(params, prefix=''):
 
     return message
 
-def _edit_create_response(req, id, verb, transport, connection, name):
+def _edit_create_response(req, id, verb, transport, connection, name): # type: ignore
 
     return_data = {
         'id': id,
@@ -157,7 +155,7 @@ def _edit_create_response(req, id, verb, transport, connection, name):
     return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 @method_allowed('GET')
-def index(req):
+def index(req): # type: ignore
     connection = req.GET.get('connection')
     transport = req.GET.get('transport')
     query = req.GET.get('query', '')
@@ -219,11 +217,7 @@ def index(req):
 
             _security_name = item.security_name
             if _security_name:
-                sec_type_name = SEC_DEF_TYPE_NAME[item.sec_type]
-                sec_type_as_link = item.sec_type.replace('_', '-')
-                security_href = f'/zato/security/{sec_type_as_link}/?cluster={req.zato.cluster_id}&amp;query={_security_name}'
-                security_link = f'<a href="{security_href}">{_security_name}</a>'
-                security_name = f'{sec_type_name}<br/>{security_link}'
+                security_name = get_security_name_link(req, item.sec_type, _security_name)
             else:
                 if item.sec_use_rbac:
                     security_name = DELEGATED_TO_RBAC
@@ -285,7 +279,7 @@ def index(req):
     return TemplateResponse(req, 'zato/http_soap/index.html', return_data)
 
 @method_allowed('POST')
-def create(req):
+def create(req): # type: ignore
     try:
         response = req.zato.client.invoke('zato.http-soap.create', _get_edit_create_message(req.POST))
         if response.has_data:
@@ -299,7 +293,7 @@ def create(req):
         return HttpResponseServerError(msg)
 
 @method_allowed('POST')
-def edit(req):
+def edit(req): # type: ignore
     try:
         edit_create_request = _get_edit_create_message(req.POST, 'edit-')
         response = req.zato.client.invoke('zato.http-soap.edit', edit_create_request)
@@ -314,12 +308,12 @@ def edit(req):
         return HttpResponseServerError(msg)
 
 @method_allowed('POST')
-def delete(req, id, cluster_id):
-    id_only_service(req, 'zato.http-soap.delete', id, 'Object could not be deleted, e:`{}`')
+def delete(req, id, cluster_id): # type: ignore
+    _ = id_only_service(req, 'zato.http-soap.delete', id, 'Object could not be deleted, e:`{}`')
     return HttpResponse()
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
+def ping(req, id, cluster_id): # type: ignore
     response = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:`{}`')
 
     if isinstance(response, HttpResponseServerError):
@@ -331,7 +325,7 @@ def ping(req, id, cluster_id):
             return HttpResponseServerError(response.data.info)
 
 @method_allowed('POST')
-def reload_wsdl(req, id, cluster_id):
+def reload_wsdl(req, id, cluster_id): # type: ignore
     ret = id_only_service(req, 'zato.http-soap.reload-wsdl', id, 'WSDL could not be reloaded, e:`{}`')
     if isinstance(ret, HttpResponseServerError):
         return ret
