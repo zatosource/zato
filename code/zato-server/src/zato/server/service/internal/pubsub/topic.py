@@ -105,7 +105,10 @@ def _add_limits(item:'any_') -> 'None':
 
 def response_hook(self:'Service', input:'anydict', instance:'PubSubTopic', attrs:'anydict', service_type:'str') -> 'None':
 
-    if service_type == 'get_list':
+    if service_type == 'create_edit':
+        _ = self.pubsub.wait_for_topic(input['name'])
+
+    elif service_type == 'get_list':
 
         # Limit-related fields were introduced post-3.2 release which is why they may not exist
         for item in self.response.payload:
