@@ -83,21 +83,27 @@ class CreateCommon(ServerAwareCommand):
     opts = [
         {'name':'--count', 'help':'How many objects to create', 'required':False},
         {'name':'--prefix', 'help':'Prefix that each of the topics to be created will have', 'required':False},
-        {'name':'--path',  'help':'Path to a Zato server', 'required':False},
+        {'name':'--path', 'help':'Path to a Zato server', 'required':False},
+        {'name':'--subs-per-topic',
+            'help':'How many subscriptions to create per each topic', 'required':False, 'default':3},
+        {'name':'--messages-per-sub',
+            'help':'How many messages to publish per each subscription', 'required':False, 'default':10},
+        {'name':'--msg-size',
+            'help':'How big, in kilobytes, each published message should be', 'required':False, 'default':3},
     ]
 
 # ################################################################################################################################
 
-    def execute(self, args:'Namespace'):
+    def execute(self, args:'Namespace') -> 'strdict':
 
         # Local variables
-        count = 1000
+        default_count = 1000
 
         # Our service to invoke
         service = 'zato.common.create-objects'
 
         # Read the parameters from the command line or fall back on the defaults
-        count = int(args.count or count)
+        count = int(args.count or default_count)
         prefix = args.prefix or self.prefix
 
         # Find out to how many digits we should fill tha names
@@ -118,6 +124,8 @@ class CreateCommon(ServerAwareCommand):
 
         # Invoke the service and log the response it produced
         self._invoke_service_and_log_response(service, request)
+
+        return request
 
 # ################################################################################################################################
 # ################################################################################################################################
