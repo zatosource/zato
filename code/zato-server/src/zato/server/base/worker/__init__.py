@@ -50,7 +50,8 @@ from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      fs_safe_name, import_module_from_path, new_cid, parse_extra_into_dict, parse_tls_channel_security_definition, \
-     start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source, wait_for_dict_key
+     start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source, wait_for_dict_key, \
+     wait_for_dict_key_by_get_func
 from zato.common.util.file_system import resolve_path
 from zato.common.util.pubsub import is_service_subscription
 from zato.cy.reqresp.payload import SimpleIOPayload
@@ -1357,6 +1358,9 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
+    def wait_for_apikey(self, name:'str', timeout:'int'=600) -> 'bool':
+        return wait_for_dict_key_by_get_func(self.apikey_get, name, timeout, interval=0.5)
+
     def apikey_get(self, name:'str') -> 'bunch_':
         """ Returns the configuration of the API key of the given name.
         """
@@ -1389,6 +1393,9 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
+    def wait_for_aws(self, name:'str', timeout:'int'=600) -> 'bool':
+        return wait_for_dict_key_by_get_func(self.aws_get, name, timeout, interval=0.5)
+
     def aws_get(self, name:'str') -> 'bunch_':
         """ Returns the configuration of the AWS security definition
         of the given name.
@@ -1420,6 +1427,9 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
+    def wait_for_ntlm(self, name:'str', timeout:'int'=600) -> 'bool':
+        return wait_for_dict_key_by_get_func(self.ntlm_get, name, timeout, interval=0.5)
+
     def ntlm_get(self, name:'str') -> 'bunch_':
         """ Returns the configuration of the NTLM security definition
         of the given name.
@@ -1450,6 +1460,9 @@ class WorkerStore(_WorkerStoreBase):
                 self._visit_wrapper_change_password)
 
 # ################################################################################################################################
+
+    def wait_for_basic_auth(self, name:'str', timeout:'int'=600) -> 'bool':
+        return wait_for_dict_key_by_get_func(self.basic_auth_get, name, timeout, interval=0.5)
 
     def basic_auth_get(self, name:'str') -> 'bunch_':
         """ Returns the configuration of the HTTP Basic Auth security definition of the given name.
@@ -1504,6 +1517,9 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
+    def wait_for_jwt(self, name:'str', timeout:'int'=600) -> 'bool':
+        return wait_for_dict_key_by_get_func(self.jwt_get, name, timeout, interval=0.5)
+
     def jwt_get(self, name:'str') -> 'bunch_':
         """ Returns the configuration of the JWT security definition of the given name.
         """
@@ -1545,6 +1561,9 @@ class WorkerStore(_WorkerStoreBase):
         return self.generic_conn_api[COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER][name]
 
 # ################################################################################################################################
+
+    def wait_for_oauth(self, name:'str', timeout:'int'=600) -> 'bool':
+        return wait_for_dict_key_by_get_func(self.oauth_get, name, timeout, interval=0.5)
 
     def oauth_get(self, name:'str') -> 'bunch_':
         """ Returns the configuration of the OAuth security definition
@@ -1681,6 +1700,9 @@ class WorkerStore(_WorkerStoreBase):
         dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_DELETE.value, msg)
 
 # ################################################################################################################################
+
+    def wait_for_wss(self, name:'str', timeout:'int'=600) -> 'bool':
+        return wait_for_dict_key_by_get_func(self.wss_get, name, timeout, interval=0.5)
 
     def wss_get(self, name:'str') -> 'bunch_':
         """ Returns the configuration of the WSS definition of the given name.

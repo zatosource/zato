@@ -18,7 +18,7 @@ from time import sleep
 # Zato
 from zato.cli import ManageCommand
 from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
-    NotGiven, TLS as COMMON_TLS, Zato_None
+    NotGiven, PUBSUB as Common_PubSub, TLS as COMMON_TLS, Zato_None
 from zato.common.const import ServiceConst
 from zato.common.typing_ import cast_
 
@@ -29,7 +29,7 @@ if 0:
 
     from logging import Logger
     from zato.client import APIClient
-    from zato.common.typing_ import any_, anylist, dictlist, list_, stranydict, strdict, strdictnone, strdictdict, \
+    from zato.common.typing_ import any_, anydict, anylist, dictlist, list_, stranydict, strdict, strdictnone, strdictdict, \
         strstrdict, strlist, strlistdict, strnone
 
     APIClient = APIClient
@@ -50,7 +50,7 @@ ZATO_NO_SECURITY = 'zato-no-security'
 Code = namedtuple('Code', ('symbol', 'desc')) # type: ignore
 
 WARNING_ALREADY_EXISTS_IN_ODB = Code('W01', 'already exists in ODB')
-WARNING_MISSING_DEF = Code('W02', 'missing definition')
+WARNING_MISSING_DEF = Code('W02', 'definition missing')
 WARNING_MISSING_DEF_INCL_ODB = Code('W04', 'missing def incl. ODB')
 ERROR_ITEM_INCLUDED_MULTIPLE_TIMES = Code('E01', 'item included multiple')
 ERROR_INCLUDE_COULD_NOT_BE_PARSED = Code('E03', 'include parsing error')
@@ -78,6 +78,30 @@ _attr_outconn_ldap = f'{_prefix_generic}_{outconn_ldap}'
 # We need to have our own version because type "bearer_token" exists in enmasse only.
 _All_Sec_Def_Types = All_Sec_Def_Types + ['bearer_token']
 
+_pubsub_default = Common_PubSub.DEFAULT
+
+
+zato_name_prefix = (
+    'admin.',
+    'admin.invoke',
+    'ide_publisher',
+    'pub.zato',
+    'pubsub.demo',
+    'pubsub.test',
+    'zato.',
+    '/zato',
+    'zato.pubsub',
+)
+
+
+# ################################################################################################################################
+
+def has_name_zato_prefix(name:'str') -> 'bool':
+    for prefix in zato_name_prefix:
+        if name.startswith(prefix):
+            return True
+    return False
+
 # ################################################################################################################################
 
 class ModuleCtx:
@@ -86,6 +110,7 @@ class ModuleCtx:
         All  = 'all'
         LDAP = 'ldap'
         SQL  = 'sql'
+        PubSub = 'pubsub'
         REST = 'rest'
         Scheduler = 'scheduler'
         Security = 'security'
@@ -105,6 +130,12 @@ class ModuleCtx:
     # Maps enmasse defintions types to their attributes that need to be renamed during an export
     Enmasse_Attr_List_Rename = cast_('strdictdict', None)
 
+    # Maps enmasse values that need to be renamed during an export
+    Enmasse_Attr_List_Value_Rename = cast_('strdictdict', None)
+
+    # Maps enmasse values that need to be renamed during an import
+    Enmasse_Attr_List_Value_Rename_Reverse = cast_('strdictdict', None)
+
     # Maps enmasse defintions types to their attributes that need to be converted to a list during an export
     Enmasse_Attr_List_As_List = cast_('strlistdict', None)
 
@@ -120,14 +151,23 @@ class ModuleCtx:
     # Maps enmasse defintions types to their attributes that will be skipped during an export if their value matches configuration
     Enmasse_Attr_List_Skip_If_Value_Matches = cast_('strdictdict', None)
 
+    # Maps enmasse defintions types to their attributes that will be skipped during an export if other values matche configuration
+    Enmasse_Attr_List_Skip_If_Other_Value_Matches = cast_('strdict', None)
+
     # Maps enmasse defintions types to their attributes that will be turned into multiline strings
     Enmasse_Attr_List_As_Multiline = cast_('strlistdict', None)
+
+    # Maps enmasse types to default values of their attributes
+    Enmasse_Attr_List_Default_By_Type = cast_('strdictdict', None)
 
     # Maps pre-3.2 item types to the 3.2+ ones
     Enmasse_Item_Type_Name_Map = cast_('strdict', None)
 
     # As above, in the reverse direction
     Enmasse_Item_Type_Name_Map_Reverse = cast_('strdict', None)
+
+    # As above, in the reverse direction, but only for specific types
+    Enmasse_Item_Type_Name_Map_Reverse_By_Type = cast_('strdict', None)
 
     # How to sort attributes of a given object
     Enmasse_Attr_List_Sort_Order = cast_('strlistdict', None)
@@ -159,6 +199,12 @@ ModuleCtx.Enmasse_Type = {
 
     # Scheduler
     'scheduler':ModuleCtx.Include_Type.Scheduler,
+
+    # Pub/sub
+    'pubsub_topic':ModuleCtx.Include_Type.PubSub,
+    'pubsub_endpoint':ModuleCtx.Include_Type.PubSub,
+    'pubsub_sub':ModuleCtx.Include_Type.PubSub,
+    'pubsub_subscription':ModuleCtx.Include_Type.PubSub,
 }
 
 # ################################################################################################################################
@@ -240,6 +286,22 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'subscription_list',
     ],
 
+    # Pub/sub - Endpoints
+    'pubsub_endpoint':  [
+        'name',
+        'endpoint_type',
+        'service_name',
+        'topic_patterns',
+        'sec_name',
+    ],
+
+    # Pub/sub - Topics
+    'pubsub_topic':  [
+        'name',
+        'has_gd',
+        'hook_service_name',
+    ],
+
 }
 
 # ################################################################################################################################
@@ -268,7 +330,54 @@ ModuleCtx.Enmasse_Attr_List_Rename = {
     # Security definitions
     'def_sec':  {
         'auth_server_url':'auth_endpoint'
+    },
+
+    # Pub/sub endpoints
+    'pubsub_endpoint':  {
+        'sec_name':'security_name'
     }
+
+}
+
+# ################################################################################################################################
+
+#
+# This is used during export
+#
+ModuleCtx.Enmasse_Attr_List_Value_Rename = {
+
+    # Security definitions
+    'def_sec':  {
+        'type': [{'oauth':'bearer_token'}]
+    },
+
+    # Pub/sub endpoints
+    'pubsub_endpoint':  {
+        'endpoint_type': [{'srv':'service'}]
+    },
+
+    # Pub/sub subscriptions
+    'pubsub_subscription':  {
+        'endpoint_type': [{'srv':'service'}]
+    },
+}
+
+# ################################################################################################################################
+
+#
+# This is used during import
+#
+ModuleCtx.Enmasse_Attr_List_Value_Rename_Reverse = {
+
+    # Pub/sub endpoints
+    'pubsub_endpoint':  {
+        'endpoint_type': [{'service':'srv'}]
+    },
+
+    # Pub/sub subscriptions
+    'pubsub_subscription':  {
+        'endpoint_type': [{'service':'srv'}]
+    },
 }
 
 # ################################################################################################################################
@@ -288,6 +397,19 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Empty = {
 
     # Outgoing WSX connections
     _attr_outconn_wsx:  ['data_format', 'subscription_list'],
+
+    # Pub/sub - Topics
+    'pubsub_topic':  [
+        'hook_service_name',
+    ],
+
+    # Pub/sub - Subscriptions
+    'pubsub_subscription':  [
+        'rest_connection',
+        'service',
+        'service_name',
+    ],
+
 }
 
 # ################################################################################################################################
@@ -301,7 +423,11 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_True = {
 # ################################################################################################################################
 
 ModuleCtx.Enmasse_Attr_List_Skip_If_False = {
-    # No such attributes yet
+
+    # Pub/sub - Topics
+    'pubsub_topic':  [
+        'has_gd',
+    ],
 }
 
 # ################################################################################################################################
@@ -310,6 +436,23 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches = {
 
     # E-Mail IMAP
     'email_imap':  {'get_criteria':'UNSEEN', 'timeout':10},
+
+    # Pub/sub - Endpoints
+    'pubsub_endpoint':  {'security_name':ZATO_NO_SECURITY},
+
+    # Pub/sub - Subscriptions
+    'pubsub_subscription':  {'delivery_server':'server1'},
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_Skip_If_Other_Value_Matches = {
+
+    # Pub/sub subscriptions
+    'pubsub_subscription':  [
+        {'criteria':[{'delivery_method':'pull'}], 'attrs':['rest_method', 'rest_connection']},
+        {'criteria':[{'endpoint_type':'service'}], 'attrs':['rest_method', 'rest_connection']},
+    ],
 }
 
 # ################################################################################################################################
@@ -318,6 +461,48 @@ ModuleCtx.Enmasse_Attr_List_As_Multiline = {
 
     # Security definitions
     'scheduler':  ['extra'],
+    'pubsub_endpoint':  ['topic_patterns'],
+}
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Attr_List_Default_By_Type = {
+
+    'pubsub_endpoint':  {
+        'is_internal': False,
+        'role': Common_PubSub.ROLE.PUBLISHER_SUBSCRIBER.id,
+
+        # Note that it is not security_name because it has been already re-mapped to sec_name
+        # by the time this check is taking place.
+        'sec_name': ZATO_NO_SECURITY,
+
+    },
+
+    'pubsub_topic':  {
+        'has_gd': False,
+        'is_api_sub_allowed': True,
+        'max_depth_gd': _pubsub_default.TOPIC_MAX_DEPTH_GD,
+        'max_depth_non_gd': _pubsub_default.TOPIC_MAX_DEPTH_NON_GD,
+        'depth_check_freq': _pubsub_default.DEPTH_CHECK_FREQ,
+        'pub_buffer_size_gd': _pubsub_default.PUB_BUFFER_SIZE_GD,
+        'task_sync_interval': _pubsub_default.TASK_SYNC_INTERVAL,
+        'task_delivery_interval': _pubsub_default.TASK_DELIVERY_INTERVAL,
+    },
+
+    'pubsub_subscription':  {
+        'should_ignore_if_sub_exists': True,
+        'should_delete_all': True,
+    },
+
+    'channel_rest': {
+        'security_name': ZATO_NO_SECURITY,
+        'merge_url_params_req': True,
+    },
+
+    'outgoing_rest': {
+        'security_name': ZATO_NO_SECURITY,
+        'merge_url_params_req': True,
+    }
 }
 
 # ################################################################################################################################
@@ -335,6 +520,13 @@ ModuleCtx.Enmasse_Item_Type_Name_Map = {
 ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse = {}
 for key, value in ModuleCtx.Enmasse_Item_Type_Name_Map.items():
     ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse[value] = key
+
+# ################################################################################################################################
+
+ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse_By_Type = {
+    'pubsub_endpoint':  [{'security_name':'sec_name'}],
+    'pubsub_subscription':  [{'topic_list':'topic_list_json'}],
+}
 
 # ################################################################################################################################
 
@@ -399,7 +591,36 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
         'on_message_service_name',
         'on_close_service_name',
         'subscription_list',
-    ]
+    ],
+
+    # Pub/sub - Endpoints
+    'pubsub_endpoint':  [
+        'name',
+        'endpoint_type',
+        'security_name',
+        'service_name',
+        'topic_patterns',
+    ],
+
+    # Pub/sub - Topics
+    'pubsub_topic':  [
+        'name',
+        'has_gd',
+        'hook_service_name',
+    ],
+
+    # Pub/sub - Subscription
+    'pubsub_subscription':  [
+        'name',
+        'endpoint_name',
+        'endpoint_type',
+        'delivery_method',
+        'rest_connection',
+        'rest_method',
+        'delivery_server',
+        'topic_list',
+    ],
+
 }
 
 # ################################################################################################################################
@@ -415,34 +636,41 @@ class EnvKeyData:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _replace_item_type(item_type:'str') -> 'str':
+def _replace_item_type(is_import:'bool', item_type:'str') -> 'str':
 
     # Certain item types need to be replaced because they exist only in enmasse
-    if item_type == 'bearer_token':
-        return 'oauth'
-    elif item_type == 'oauth':
-        return 'bearer_token'
+
+    if is_import:
+        if item_type == 'bearer_token':
+            return 'oauth'
+        else:
+            return item_type
+
     else:
-        return item_type
+        if item_type == 'oauth':
+            return 'bearer_token'
+        else:
+            return item_type
 
 # ################################################################################################################################
 
-def find_first(it, pred):
-    """Given any iterable, return the first element `elem` from it matching `pred(elem)`"""
-    for obj in it:
+def find_first(it, pred): # type: ignore
+    """ Given any iterable, return the first element `elem` from it matching `pred(elem)`.
+    """
+    for obj in it: # type: ignore
         if pred(obj):
-            return obj
+            return obj # type: ignore
 
 # ################################################################################################################################
 
-def dict_match(haystack, needle):
+def dict_match(haystack, needle): # type: ignore
     """Return True if all the keys from `needle` appear in `haystack` with the same value.
     """
 
     # Python 2/3 compatibility
     from zato.common.ext.future.utils import iteritems
 
-    return all(haystack.get(key) == value for key, value in iteritems(needle))
+    return all(haystack.get(key) == value for key, value in iteritems(needle)) # type: ignore
 
 # ################################################################################################################################
 
@@ -454,7 +682,17 @@ IGNORE_PREFIXES = {
 
 # ################################################################################################################################
 
-def populate_services_from_apispec(client, logger):
+def try_keys(item:'strdict', keys:'strlist') -> 'any_':
+    for key in keys:
+        if value := item.get(key, NotGiven):
+            if value is not NotGiven:
+                return value
+    else:
+        raise Exception(f'Keys were not found -> {keys} -> {item}')
+
+# ################################################################################################################################
+
+def populate_services_from_apispec(client, logger): # type: ignore
     """ Request a list of services from the APISpec service, and merge the results into SERVICES_BY_PREFIX,
     creating new ServiceInfo instances to represent previously unknown services as appropriate.
     """
@@ -462,7 +700,7 @@ def populate_services_from_apispec(client, logger):
     # Python 2/3 compatibility
     from zato.common.ext.future.utils import iteritems
 
-    response = client.invoke('zato.apispec.get-api-spec', {
+    response:'any_' = client.invoke('zato.apispec.get-api-spec', {
         'return_internal': True,
         'include': '*',
         'needs_sphinx': False
@@ -474,19 +712,20 @@ def populate_services_from_apispec(client, logger):
 
     by_prefix = {}  # { "zato.apispec": {"get-api-spec": { .. } } }
 
-    for service in response.data:
-        prefix, _, name = service['name'].rpartition('.')
-        methods = by_prefix.setdefault(prefix, {})
+    for service in response.data: # type: ignore
+        prefix, _, name = service['name'].rpartition('.') # type: ignore
+        methods = by_prefix.setdefault(prefix, {}) # type: ignore
         methods[name] = service
 
     # Services belonging here may not have all the CRUD methods and it is expected that they do not
     allow_incomplete_methods = [
         'zato.outgoing.redis',
+        'zato.pubsub.subscription',
         'zato.security',
         'zato.security.rbac.client-role'
     ]
 
-    for prefix, methods in iteritems(by_prefix):
+    for prefix, methods in iteritems(by_prefix): # type: ignore
 
         # Ignore prefixes lacking 'get-list', 'create' and 'edit' methods.
         if not all(n in methods for n in ('get-list', 'create', 'edit')):
@@ -528,7 +767,7 @@ SHORTNAME_BY_PREFIX = [
 
 # ################################################################################################################################
 
-def make_service_name(prefix):
+def make_service_name(prefix): # type: ignore
 
     # stdlib
     import re
@@ -546,7 +785,7 @@ def make_service_name(prefix):
 
 # ################################################################################################################################
 
-def normalize_service_name(item):
+def normalize_service_name(item): # type: ignore
     """ Given an item originating from the API or from an import file, if the item contains either the 'service'
     or 'service_name' keys, ensure the other key is set. Either the dict contains neither key, or both keys set
     to the same value."""
@@ -556,14 +795,14 @@ def normalize_service_name(item):
 
 # ################################################################################################################################
 
-def test_item(item, cond):
+def test_item(item, cond): # type: ignore
     """ Given a dictionary `cond` containing some conditions to test an item for, return True if those conditions match.
     Currently only supports testing whether a field has a particular value. Returns ``True`` if `cond` is ``None``."""
 
     if cond is not None:
 
-        only_if_field = cond.get('only_if_field')
-        only_if_value = cond.get('only_if_value')
+        only_if_field:'any_' = cond.get('only_if_field')
+        only_if_value:'any_' = cond.get('only_if_value')
 
         if not isinstance(only_if_value, (list, tuple)):
             only_if_value = [only_if_value]
@@ -577,6 +816,9 @@ def test_item(item, cond):
 
 # Note that the order of items in this list matters
 _security_fields = ['security', 'sec_def', 'security_name']
+
+# All keys under which a security name can be found
+_security_keys = ['security_name', 'sec_name', 'sec_def']
 
 # ################################################################################################################################
 
@@ -594,7 +836,7 @@ def resolve_security_field_name(item:'strdict') -> 'str':
 # ################################################################################################################################
 
 class ServiceInfo:
-    def __init__(self, prefix=None, name=None, object_dependencies=None, service_dependencies=None, export_filter=None):
+    def __init__(self, prefix=None, name=None, object_dependencies=None, service_dependencies=None, export_filter=None): # type: ignore
         assert name or prefix
 
         # Short service name as appears in export data.
@@ -623,26 +865,26 @@ class ServiceInfo:
 # ################################################################################################################################
 
     @property
-    def is_security(self):
+    def is_security(self): # type: ignore
         """ If True, indicates the service is source of authentication credentials for use in another service.
         """
-        return self.prefix and self.prefix.startswith('zato.security.')
+        return self.prefix and self.prefix.startswith('zato.security.') # type: ignore
 
 # ################################################################################################################################
 
-    def get_service_name(self, method):
-        return self.methods.get(method, {}).get('name')
+    def get_service_name(self, method): # type: ignore
+        return self.methods.get(method, {}).get('name') # type: ignore
 
 # ################################################################################################################################
 
-    def get_required_keys(self):
+    def get_required_keys(self): # type: ignore
         """ Return the set of keys required to create a new instance.
         """
-        method_sig = self.methods.get('create')
+        method_sig:'any_' = self.methods.get('create')
         if method_sig is None:
-            return set()
+            return set() # type: ignore
 
-        input_required = method_sig.get('input_required', [])
+        input_required:'any_' = method_sig.get('input_required', [])
         required = {elem['name'] for elem in input_required}
         required.discard('cluster_id')
         return required
@@ -683,6 +925,7 @@ SERVICES = [
             'service': {}
         },
     ),
+
     ServiceInfo(
         name='pubsub_endpoint',
         prefix='zato.pubsub.endpoint',
@@ -696,7 +939,7 @@ SERVICES = [
                 },
                 'id_field': 'ws_channel_id',
             },
-            'sec_def': {
+            'sec_name': {
                 'dependent_type': 'basic_auth',
                 'dependent_field': 'name',
                 'empty_value': ZATO_NO_SECURITY,
@@ -708,6 +951,26 @@ SERVICES = [
             }
         },
     ),
+
+    ServiceInfo(
+        name='pubsub_subscription',
+        prefix='zato.pubsub.subscription',
+        object_dependencies={
+            'endpoint_name': {
+                'dependent_type': 'pubsub_endpoint',
+                'dependent_field': 'name',
+            },
+            'rest_connection': {
+                'dependent_type': 'http_soap',
+                'dependent_field': 'name',
+                'condition': {
+                    'only_if_field': 'endpoint_type',
+                    'only_if_value': ['soap', 'rest'],
+                },
+            },
+        },
+    ),
+
     ServiceInfo(
         name='channel_jms_wmq',
         prefix='zato.channel.jms-wmq',
@@ -834,10 +1097,10 @@ HTTP_SOAP_ITEM_TYPES = {elem[0] for elem in HTTP_SOAP_KINDS}
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _DummyLink:
+class _DummyLink: # type: ignore
     """ Pip requires URLs to have a .url attribute.
     """
-    def __init__(self, url):
+    def __init__(self, url): # type: ignore
         self.url = url
 
 # ################################################################################################################################
@@ -845,7 +1108,7 @@ class _DummyLink:
 
 class Notice:
 
-    def __init__(self, value_raw, value, code):
+    def __init__(self, value_raw, value, code): # type: ignore
         self.value_raw = value_raw
         self.value = value
         self.code = code
@@ -860,7 +1123,7 @@ class Notice:
 
 
 class Results:
-    def __init__(self, warnings=None, errors=None, service=None):
+    def __init__(self, warnings=None, errors=None, service=None): # type: ignore
 
         # List of Warning instances
         self.warnings = warnings or []
@@ -870,17 +1133,17 @@ class Results:
 
         self.service_name = service.get_name() if service else None
 
-    def add_error(self, raw, code, msg, *args):
+    def add_error(self, raw, code, msg, *args): # type: ignore
         if args:
-            msg = msg.format(*args)
-        _= self.errors.append(Notice(raw, msg, code))
+            msg:'any_' = msg.format(*args)
+        _:'any_' = self.errors.append(Notice(raw, msg, code))
 
 # ################################################################################################################################
 
-    def add_warning(self, raw, code, msg, *args):
+    def add_warning(self, raw, code, msg, *args): # type: ignore
         if args:
-            msg = msg.format(*args)
-        _= self.warnings.append(Notice(raw, msg, code))
+            msg:'any_' = msg.format(*args)
+        _:'any_'= self.warnings.append(Notice(raw, msg, code))
 
 # ################################################################################################################################
 
@@ -888,8 +1151,11 @@ class Results:
     def ok(self):
         return not (self.warnings or self.errors)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class InputValidator:
-    def __init__(self, json):
+    def __init__(self, json): # type: ignore
         #: Validation result.
         self.results = Results()
         #: Input JSON to validate.
@@ -903,8 +1169,8 @@ class InputValidator:
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
 
-        for item_type, items in iteritems(self.json):
-            for item in items:
+        for item_type, items in iteritems(self.json): # type: ignore
+            for item in items: # type: ignore
                 self.validate_one(item_type, item)
 
         return self.results
@@ -919,7 +1185,7 @@ class InputValidator:
 
         item_dict = dict(item)
         service_info = SERVICE_BY_NAME[item_type]
-        required_keys = service_info.get_required_keys()
+        required_keys:'any_' = service_info.get_required_keys()
 
         # OK, the keys are there, but do they all have non-None values?
         for req_key in required_keys:
@@ -945,7 +1211,7 @@ class DependencyScanner:
 
         for service in SERVICES:
             if service.is_security:
-                service_name = _replace_item_type(service.name)
+                service_name = _replace_item_type(False, service.name)
                 item = self.find(service_name, fields)
                 if item is not None:
                     return item
@@ -956,10 +1222,6 @@ class DependencyScanner:
 
         if item_type in ['def_sec']:
             return self.find_sec(fields)
-
-        elif item_type in _All_Sec_Def_Types:
-            if self.is_export:
-                item_type = 'def_sec'
 
         items = self.json.get(item_type, ())
 
@@ -981,7 +1243,7 @@ class DependencyScanner:
 
         service_info = SERVICE_BY_NAME[item_type] # type: ServiceInfo
 
-        for dep_key, dep_info in service_info.object_dependencies.items():
+        for dep_key, dep_info in service_info.object_dependencies.items(): # type: ignore
 
             if not test_item(item, dep_info.get('condition')):
                 continue
@@ -997,19 +1259,35 @@ class DependencyScanner:
                 results.add_error(
                     (dep_key, dep_info), ERROR_MISSING_DEP, '{} lacks required `{}` field: {}', item_type, dep_key, item)
 
-            value = item.get(dep_key)
+            value:'any_' = item.get(dep_key)
 
             if value != dep_info.get('empty_value'):
 
-                dep_type = dep_info['dependent_type']
-                dep_field = dep_info['dependent_field']
+                dep_type:'any_' = dep_info['dependent_type']
+                dep_field:'any_' = dep_info['dependent_field']
 
                 dep = self.find(dep_type, {dep_field: value})
 
                 if dep is None:
+
                     key = (dep_type, value)
-                    names = self.missing.setdefault(key, [])
-                    names.append(item.name)
+                    name:'str' = item.get('name') or ''
+
+                    # Do not report internal objects that have not been exported
+                    if has_name_zato_prefix(name):
+                        continue
+
+                    # Same here
+                    if has_name_zato_prefix(value):
+                        continue
+
+                    if name:
+                        missing_item = name
+                    else:
+                        missing_item = [item_type, key]
+
+                    missing_items:'any_' = self.missing.setdefault(key, [])
+                    missing_items.append(missing_item)
 
 # ################################################################################################################################
 
@@ -1024,20 +1302,24 @@ class DependencyScanner:
             #
             # Preprocess item type
             #
-            item_type = _replace_item_type(item_type)
+            item_type = _replace_item_type(True, item_type)
 
             for item in items:
                 self.scan_item(item_type, item, results)
 
         if not self.ignore_missing:
-            for (missing_type, missing_name), dep_names in sorted(iteritems(self.missing)):
+            for (missing_type, missing_name), dep_names in sorted(iteritems(self.missing)): # type: ignore
                 existing = sorted(item.name for item in self.json.get(missing_type, []))
-                raw = (missing_type, missing_name, dep_names, existing)
+                raw:'any_' = (missing_type, missing_name, dep_names, existing)
+
                 results.add_warning(
                     raw, WARNING_MISSING_DEF, "'{}' is needed by '{}' but was not among '{}'",
                         missing_name, sorted(dep_names), existing)
 
         return results
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class ObjectImporter:
     def __init__(
@@ -1056,7 +1338,7 @@ class ObjectImporter:
         from bunch import bunchify
 
         # Zato client.
-        self.client = client
+        self.client:'any_' = client
 
         self.logger = logger
 
@@ -1079,24 +1361,26 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def validate_service_required(self, item_type, item):
+    def validate_service_required(self, item_type, item): # type: ignore
 
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
 
         service_info = SERVICE_BY_NAME[item_type]
-        item_dict = dict(item)
+        item_dict:'any_' = dict(item)
 
-        for dep_field, dep_info in iteritems(service_info.service_dependencies):
+        for dep_field, dep_info in iteritems(service_info.service_dependencies): # type: ignore
             if not test_item(item, dep_info.get('condition')):
                 continue
 
-            service_name = item.get(dep_field)
-            raw = (service_name, item_dict, item_type)
+            service_name:'any_' = item.get(dep_field)
+            raw:'any_' = (service_name, item_dict, item_type)
             if not service_name:
-                self.results.add_error(raw, ERROR_SERVICE_NAME_MISSING, 'No {} service key defined type {}: {}', dep_field, item_type, item_dict)
+                self.results.add_error(raw, ERROR_SERVICE_NAME_MISSING,
+                    'No {} service key defined type {}: {}', dep_field, item_type, item_dict)
             elif service_name not in self.object_mgr.services:
-                self.results.add_error(raw, ERROR_SERVICE_MISSING, 'Service `{}` from `{}` missing in ODB ({})', service_name, item_dict, item_type)
+                self.results.add_error(raw, ERROR_SERVICE_MISSING,
+                    'Service `{}` from `{}` missing in ODB ({})', service_name, item_dict, item_type)
 
 # ################################################################################################################################
 
@@ -1117,44 +1401,45 @@ class ObjectImporter:
         if not scan_results.ok:
             return scan_results
 
-        for warning in scan_results.warnings:
-            missing_type, missing_name, dep_names, existing = warning.value_raw
+        for warning in scan_results.warnings: # type: ignore
+            missing_type, missing_name, dep_names, existing = warning.value_raw # type: ignore
             if not self.object_mgr.find(missing_type, {'name': missing_name}):
-                raw = (missing_type, missing_name)
+                raw:'any_' = (missing_type, missing_name)
                 results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB, "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
                                     missing_name, missing_type, dep_names)
 
-        for item_type, items in iteritems(self.json):
+        for item_type, items in iteritems(self.json): # type: ignore
 
             #
             # Preprocess item type
             #
-            item_type = _replace_item_type(item_type)
+            item_type = _replace_item_type(True, item_type)
 
-            for item in items:
+            for item in items: # type: ignore
                 self.validate_service_required(item_type, item)
 
         return results
 
 # ################################################################################################################################
 
-    def remove_from_import_list(self, item_type, name):
+    def remove_from_import_list(self, item_type, name): # type: ignore
 
         #
         # Preprocess item type
         #
-        item_type = _replace_item_type(item_type)
+        if item_type == 'oauth':
+            item_type = 'bearer_token'
 
-        list_ = self.json.get(item_type, [])
-        item = find_first(list_, lambda item: item.name == name)
+        list_:'any_' = self.json.get(item_type, [])
+        item = find_first(list_, lambda item: item.name == name) # type: ignore
         if item:
-            _= list_.remove(item)
+            _:'any_' = list_.remove(item)
         else:
             raise KeyError('Tried to remove missing %r named %r' % (item_type, name))
 
 # ################################################################################################################################
 
-    def should_skip_item(self, item_type, attrs, is_edit):
+    def should_skip_item(self, item_type, attrs, is_edit): # type: ignore
 
         # Plain HTTP channels cannot create JSON-RPC ones
         if item_type == 'http_soap' and attrs.name.startswith('json.rpc.channel'):
@@ -1170,8 +1455,9 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _set_generic_connection_secret(self, name, type_, secret):
-        response = self.client.invoke('zato.generic.connection.change-password', {
+    def _set_generic_connection_secret(self, name, type_, secret): # type: ignore
+
+        response:'any_' = self.client.invoke('zato.generic.connection.change-password', {
             'name': name,
             'type_': type_,
             'password1': secret,
@@ -1185,7 +1471,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _needs_change_password(self, item_type, attrs, is_edit):
+    def _needs_change_password(self, item_type, attrs, is_edit): # type: ignore
 
         # By default, assume that we do need to change a given password.
         out = True
@@ -1196,11 +1482,14 @@ class ObjectImporter:
         if item_type == 'zato_generic_connection' and attrs.get('type_') == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX:
             out = False
 
+        if item_type == 'pubsub_subscription':
+            out = False
+
         return out
 
 # ################################################################################################################################
 
-    def _import(self, item_type:'str', attrs:'strdict', is_edit:'bool') -> 'None':
+    def _import(self, item_type:'str', attrs:'any_', is_edit:'bool') -> 'None':
 
         # First, resolve values pointing to parameter placeholders and environment variables ..
         for key, orig_value in attrs.items():
@@ -1283,6 +1572,7 @@ class ObjectImporter:
         attrs.is_source_external = True
 
         response = self._import_object(item_type, attrs, is_edit)
+
         if response and response.ok:
             if self._needs_change_password(item_type, attrs, is_edit):
                 object_id = response.data['id']
@@ -1294,7 +1584,7 @@ class ObjectImporter:
             self.results.add_error(raw, ERROR_COULD_NOT_IMPORT_OBJECT,
                 "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'",
                     is_edit, attrs.name, attrs_dict, item_type, response.details)
-            return self.results
+            return self.results # type: ignore
 
         # It's been just imported so we don't want to create it in next steps
         # (this in fact would result in an error as the object already exists).
@@ -1312,8 +1602,8 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def add_warning(self, results, item_type, value_dict, item):
-        raw = (item_type, value_dict)
+    def add_warning(self, results, item_type, value_dict, item): # type: ignore
+        raw:'any_' = (item_type, value_dict)
         results.add_warning(
             raw, WARNING_ALREADY_EXISTS_IN_ODB, '{} already exists in ODB {} ({})', dict(value_dict), dict(item), item_type)
 
@@ -1325,27 +1615,25 @@ class ObjectImporter:
         from zato.common.ext.future.utils import iteritems
 
         results = Results()
-        for item_type, items in iteritems(self.json):
+        for item_type, items in iteritems(self.json): # type: ignore
 
             #
             # Preprocess item type
             #
-            item_type = _replace_item_type(item_type)
+            item_type = _replace_item_type(True, item_type)
 
-            for item in items:
-                name = item.get('name')
+            for item in items: # type: ignore
+                name:'any_' = item.get('name')
                 if not name:
-                    raw = (item_type, item)
+                    raw:'any_' = (item_type, item)
                     results.add_error(raw, ERROR_KEYS_MISSING, '{} has no `name` key ({})', dict(item), item_type)
 
                 if item_type == 'http_soap':
-                    connection = item.get('connection')
-                    transport = item.get('transport')
+                    connection:'any_' = item.get('connection')
+                    transport:'any_' = item.get('transport')
 
-                    existing = find_first(self.object_mgr.objects.http_soap,
-                        lambda item: connection == item.connection and \
-                                     transport == item.transport and \
-                                     name == item.name)
+                    existing:'any_' = find_first(self.object_mgr.objects.http_soap,
+                        lambda item: connection == item.connection and transport == item.transport and name == item.name) # type: ignore
                     if existing is not None:
                         self.add_warning(results, item_type, item, existing)
 
@@ -1358,18 +1646,31 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def may_be_dependency(self, item_type):
+    def may_be_dependency(self, item_type): # type: ignore
         """ Returns True if input item_type may be possibly a dependency, for instance,
         a security definition may be potentially a dependency of channels or a web socket
         object may be a dependency of pub/sub endpoints.
         """
-        return SERVICE_BY_NAME[item_type].is_security or 'def' in item_type or item_type == 'web_socket'
+        service_by_name = SERVICE_BY_NAME[item_type]
+
+        if service_by_name.is_security:
+            return True
+
+        elif 'def' in item_type:
+            return True
+
+        elif item_type in {'web_socket', 'pubsub_endpoint', 'http_soap'}:
+            return True
+
+        else:
+            return False
 
 # ################################################################################################################################
 
-    def import_objects(self, already_existing) -> 'Results':
+    def import_objects(self, already_existing) -> 'Results': # type: ignore
 
         # stdlib
+        from collections import OrderedDict
         from time import sleep
 
         # Python 2/3 compatibility
@@ -1394,8 +1695,8 @@ class ObjectImporter:
         # Update already existing objects first, definitions before any object that may depend on them ..
         #
 
-        for w in already_existing.warnings:
-            item_type, _ = w.value_raw
+        for w in already_existing.warnings: # type: ignore
+            item_type, _ = w.value_raw # type: ignore
 
             if 'def' in item_type:
                 existing = existing_defs
@@ -1412,7 +1713,7 @@ class ObjectImporter:
         #
         # .. actually invoke the updates now ..
         #
-        existing_combined = existing_defs + existing_rbac_role + existing_rbac_role_permission + \
+        existing_combined:'any_' = existing_defs + existing_rbac_role + existing_rbac_role_permission + \
             existing_rbac_client_role + existing_other
 
         for w in existing_combined:
@@ -1433,14 +1734,50 @@ class ObjectImporter:
         #
         # Create new objects, again, definitions come first ..
         #
-        for item_type, items in iteritems(self.json):
+
+        # Use an ordered dict to iterate over the data with dependencies first
+        self_json = deepcopy(self.json)
+        self_json_ordered:'any_' = OrderedDict()
+
+        # All the potential dependencies will be handled in this specific order
+        dep_order = [
+            'def_sec',
+            'basic_auth',
+            'apikey',
+            'ntlm',
+            'oauth',
+            'jwt',
+            'aws',
+            'tls_key_cert',
+            'tls_channel_sec',
+            # 'wss',
+            # 'openstack',
+            # 'xpath_sec',
+            # 'vault_conn_sec',
+            'http_soap',
+            'web_socket',
+            'pubsub_topic',
+            'pubsub_endpoint',
+        ]
+
+        # Do populate the dependencies first ..
+        for dep_name in dep_order:
+            self_json_ordered[dep_name] = self_json.get(dep_name, [])
+
+        # .. now, populate everything that is not a dependency.
+        for key, value in self_json.items(): # type: ignore
+            if key not in dep_order:
+                self_json_ordered[key] = value
+
+        for item_type, items in iteritems(self_json_ordered): # type: ignore
 
             #
             # Preprocess item type
             #
-            item_type = _replace_item_type(item_type)
+            item_type = _replace_item_type(True, item_type)
 
             if self.may_be_dependency(item_type):
+
                 if item_type == 'rbac_role':
                     append_to = new_rbac_role
                 elif item_type == 'rbac_role_permission':
@@ -1451,12 +1788,13 @@ class ObjectImporter:
                     append_to = new_defs
             else:
                 append_to = new_other
+
             append_to.append({item_type: items})
 
         #
         # .. actually create the objects now.
         #
-        new_combined = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
+        new_combined:'any_' = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
 
         for elem in new_combined:
             for item_type, attr_list in iteritems(elem):
@@ -1477,13 +1815,13 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _swap_service_name(self, required, attrs, first, second):
+    def _swap_service_name(self, required, attrs, first, second): # type: ignore
         if first in required and second in attrs:
             attrs[first] = attrs[second]
 
 # ################################################################################################################################
 
-    def _import_object(self, def_type, item, is_edit):
+    def _import_object(self, def_type, item, is_edit): # type: ignore
 
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
@@ -1491,25 +1829,25 @@ class ObjectImporter:
         service_info = SERVICE_BY_NAME[def_type]
 
         if is_edit:
-            service_name = service_info.get_service_name('edit')
+            service_name:'any_' = service_info.get_service_name('edit')
         else:
-            service_name = service_info.get_service_name('create')
+            service_name:'any_' = service_info.get_service_name('create')
 
         # service and service_name are interchangeable
-        required = service_info.get_required_keys()
+        required:'any_' = service_info.get_required_keys()
         self._swap_service_name(required, item, 'service', 'service_name')
         self._swap_service_name(required, item, 'service_name', 'service')
 
         # Fetch an item from a cache of ODB object and assign its ID to item so that the Edit service knows what to update.
         if is_edit:
-            lookup_config = {'name': item.name}
+            lookup_config:'any_' = {'name': item.name}
             if def_type == 'http_soap':
                 lookup_config['connection'] = item.connection
                 lookup_config['transport'] = item.transport
-            odb_item = self.object_mgr.find(def_type, lookup_config)
+            odb_item:'any_' = self.object_mgr.find(def_type, lookup_config)
             item.id = odb_item.id
 
-        for field_name, info in iteritems(service_info.object_dependencies):
+        for field_name, info in iteritems(service_info.object_dependencies): # type: ignore
 
             if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
                 continue
@@ -1517,16 +1855,28 @@ class ObjectImporter:
             if field_name in _security_fields:
                 field_name = resolve_security_field_name(item)
 
-            if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
-                dep_obj = self.object_mgr.find(info['dependent_type'], {
-                    info['dependent_field']: item[field_name]
-                })
+            dependent_type:'any_' = info['dependent_type']
+            dependent_field:'any_' = info['dependent_field']
 
-                item[info['id_field']] = dep_obj.id
+            if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
+
+                id_field:'any_' = info['id_field']
+
+                if field_name in _security_keys:
+                    field_value = try_keys(item, _security_keys)
+                else:
+                    field_value:'any_' = item[field_name]
+
+                # Ignore explicit indicators of the absence of a security definition
+                if field_value != ZATO_NO_SECURITY:
+
+                    criteria:'any_' = {dependent_field: field_value}
+                    dep_obj:'any_' = self.object_mgr.find(dependent_type, criteria)
+                    item[id_field] = dep_obj.id
 
         if service_name and service_info.name != 'def_sec':
 
-            self.logger.info(f'Invoking {service_name} for {service_info.name}')
+            self.logger.info(f'Invoking -> import -> {service_name} for {service_info.name} ({def_type})')
             response = self.client.invoke(service_name, item)
 
             if response.ok:
@@ -1537,13 +1887,13 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _maybe_change_password(self, object_id, item_type, attrs):
+    def _maybe_change_password(self, object_id, item_type, attrs): # type: ignore
 
         # stdlib
         from time import sleep
 
         service_info = SERVICE_BY_NAME[item_type]
-        service_name = service_info.get_service_name('change-password')
+        service_name:'any_' = service_info.get_service_name('change-password')
         if service_name is None or 'password' not in attrs:
             return None
 
@@ -1566,30 +1916,32 @@ class ObjectImporter:
         return response
 
 class ObjectManager:
-    def __init__(self, client, logger):
-        self.client = client # type: APIClient
+    def __init__(self, client, logger): # type: ignore
+        self.client = client # type: any_
         self.logger = logger # type: Logger
 
 # ################################################################################################################################
 
-    def find(self, item_type, fields):
+    def find(self, item_type, fields, *, check_sec=True): # type: ignore
 
-        if item_type == 'def_sec':
-            return self.find_sec(fields)
+        if check_sec:
+            if item_type == 'def_sec' or item_type in _All_Sec_Def_Types:
+                return self.find_sec(fields)
 
         # This probably isn't necessary any more:
-        item_type = item_type.replace('-', '_')
-        objects_by_type = self.objects.get(item_type, ())
-        return find_first(objects_by_type, lambda item: dict_match(item, fields))
+        item_type:'any_' = item_type.replace('-', '_')
+        objects_by_type:'any_' = self.objects.get(item_type, ())
+
+        return find_first(objects_by_type, lambda item: dict_match(item, fields)) # type: ignore
 
 # ################################################################################################################################
 
-    def find_sec(self, fields):
+    def find_sec(self, fields): # type: ignore
         """ Find any security definition with the given name.
         """
         for service in SERVICES:
             if service.is_security:
-                item = self.find(service.name, fields)
+                item:'any_' = self.find(service.name, fields, check_sec=False)
                 if item is not None:
                     return item
 
@@ -1606,8 +1958,8 @@ class ObjectManager:
         # Bunch
         from bunch import Bunch
 
-        response = self.client.invoke('zato.service.get-list', {
-            'cluster_id': self.client.cluster_id,
+        response:'any_' = self.client.invoke('zato.service.get-list', {
+            'cluster_id': self.client.cluster_id, # type: ignore
             'name_filter': '*'
         })
 
@@ -1623,7 +1975,7 @@ class ObjectManager:
 
 # ################################################################################################################################
 
-    def fix_up_odb_object(self, item_type, item):
+    def fix_up_odb_object(self, item_type, item): # type: ignore
         """ For each ODB object, ensure fields that specify a dependency have their associated name field updated
         to match the dependent object. Otherwise, ensure the field is set to the corresponding empty value
         (either None or ZATO_NO_SECURITY).
@@ -1643,7 +1995,7 @@ class ObjectManager:
             elif item_type == 'json_rpc' and item['security_id'] is None:
                 item['security_id'] = 'ZATO_NONE'
 
-        for field_name, info in iteritems(service_info.object_dependencies):
+        for field_name, info in iteritems(service_info.object_dependencies): # type: ignore
 
             if 'id_field' not in info:
                 continue
@@ -1654,7 +2006,7 @@ class ObjectManager:
                 item[info['id_field']] = None
                 continue
 
-            dep_id = item.get(info['id_field'])
+            dep_id:'any_' = item.get(info['id_field'])
 
             if dep_id is None:
                 item[field_name] = info.get('empty_value')
@@ -1662,7 +2014,7 @@ class ObjectManager:
 
             dep = self.find(info['dependent_type'], {'id': dep_id})
 
-            if (dep_id != 'ZATO_SEC_USE_RBAC') and (field_name != 'sec_def' and dep is None):
+            if (dep_id != 'ZATO_SEC_USE_RBAC') and (field_name != 'sec_name' and dep is None):
                 if not dep:
                     msg = 'Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, item:`{}`'
                     raise Exception(msg.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
@@ -1674,7 +2026,7 @@ class ObjectManager:
                 if not item['security_id']:
                     item['security_id'] = 'ZATO_NONE'
 
-        return item
+        return item # type: ignore
 
 # ################################################################################################################################
 
@@ -1683,20 +2035,23 @@ class ObjectManager:
         'pubapi',
     )
 
-    def is_ignored_name(self, item_type, item, is_sec_def):
+    def is_ignored_name(self, item_type, item, is_sec_def): # type: ignore
+
         if 'name' not in item:
             return False
 
-        name = item.name.lower()
+        name:'any_' = item.name.lower()
 
         # Special-case scheduler jobs that can be overridden by users
         if name.startswith('zato.wsx.cleanup'):
             return False
 
-        if item_type != 'rbac_role_permission':
+        if item_type not in {'pubsub_subscription', 'rbac_role_permission'}:
+
             if name in self.ignored_names:
                 return True
-            elif 'zato' in name:
+
+            elif 'zato' in name and (not 'unittest' in name):
                 if is_sec_def:
                     return False
                 else:
@@ -1704,10 +2059,10 @@ class ObjectManager:
 
 # ################################################################################################################################
 
-    def delete(self, item_type, item):
+    def delete(self, item_type, item): # type: ignore
         service_info = SERVICE_BY_NAME[item_type]
 
-        service_name = service_info.get_service_name('delete')
+        service_name:'any_' = service_info.get_service_name('delete')
         if service_name is None:
             self.logger.error('Prefix {} has no delete service'.format(item_type))
             return
@@ -1729,24 +2084,24 @@ class ObjectManager:
         from zato.common.ext.future.utils import iteritems
 
         count = 0
-        for item_type, items in iteritems(self.objects):
-            for item in items:
+        for item_type, items in iteritems(self.objects): # type: ignore
+            for item in items: # type: ignore
                 self.delete(item_type, item)
                 count += 1
         return count
 
 # ################################################################################################################################
 
-    def get_data_from_response_data(self, response_data):
+    def get_data_from_response_data(self, response_data): # type: ignore
 
         # Generic connections' GetList includes metadata in responses so we need to dig into actual data
         if '_meta' in response_data:
-            keys = list(response_data)
+            keys:'any_' = list(response_data)
             keys.remove('_meta')
-            response_key = keys[0]
-            data = response_data[response_key]
+            response_key:'any_' = keys[0]
+            data:'any_' = response_data[response_key]
         else:
-            data = response_data
+            data:'any_' = response_data
 
         return data
 
@@ -1766,18 +2121,18 @@ class ObjectManager:
 
         # Python 2/3 compatibility
         from zato.common.ext.future.utils import iteritems
-        from zato.common.py23_.past.builtins import basestring
+        from zato.common.py23_.past.builtins import basestring # type: ignore
 
         service_info = SERVICE_BY_NAME[item_type]
 
         # Temporarily preserve function of the old enmasse.
-        service_name = service_info.get_service_name('get-list')
+        service_name:'any_' = service_info.get_service_name('get-list')
 
         if service_name is None:
             self.logger.info('Type `%s` has no `get-list` service (%s)', service_info, item_type)
             return
 
-        self.logger.debug('Invoking %s for %s', service_name, service_info.name)
+        self.logger.debug('Invoking -> getter -> %s for %s (%s)', service_name, service_info.name, item_type)
         response = self.client.invoke(service_name, {
             'cluster_id': self.client.cluster_id
         })
@@ -1788,43 +2143,42 @@ class ObjectManager:
 
         self.objects[service_info.name] = []
 
-        data = self.get_data_from_response_data(response.data)
+        if response.has_data:
+            data = self.get_data_from_response_data(response.data)
 
-        # A flag indicating if this service is related to security definitions
-        is_sec_def = 'zato.security' in service_name
+            # A flag indicating if this service is related to security definitions
+            is_sec_def = 'zato.security' in service_name
 
-        for item in map(Bunch, data):
+            for item in map(Bunch, data):
 
-            if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)):
-                continue
+                if self.is_ignored_name(item_type, item, is_sec_def):
+                    continue
 
-            if self.is_ignored_name(item_type, item, is_sec_def):
-                continue
+                # Passwords are always exported in an encrypted form so we need to decrypt them ourselves
+                for key, value in iteritems(item): # type: ignore
+                    if isinstance(value, basestring):
+                        if value.startswith(SECRETS.PREFIX):
+                            item[key] = None # Enmasse does not export secrets such as passwords or other auth information
 
-            # Passwords are always exported in an encrypted form so we need to decrypt them ourselves
-            for key, value in iteritems(item):
-                if isinstance(value, basestring):
-                    if value.startswith(SECRETS.PREFIX):
-                        item[key] = None # Enmasse does not export secrets such as passwords or other auth information
-
-            self.objects[service_info.name].append(item)
+                self.objects[service_info.name].append(item)
 
 # ################################################################################################################################
 
     def _refresh_objects(self):
 
+        # stdlib
+        from operator import attrgetter
+
         # Bunch
         from bunch import Bunch
 
-        # Python 2/3 compatibility
-        from zato.common.ext.future.utils import iteritems
-
         self.objects = Bunch()
-        for service_info in SERVICES:
+        for service_info in sorted(SERVICES, key=attrgetter('name')):
+
             self.get_objects_by_type(service_info.name)
 
-        for item_type, items in iteritems(self.objects):
-            for item in items:
+        for item_type, items in self.objects.items(): # type: ignore
+            for item in items: # type: ignore
                 self.fix_up_odb_object(item_type, item)
 
 # ################################################################################################################################
@@ -1833,14 +2187,14 @@ class ObjectManager:
 class JsonCodec:
     extension = '.json'
 
-    def load(self, file_, results):
+    def load(self, file_, results): # type: ignore
 
         # Zato
         from zato.common.json_internal import loads
 
         return loads(file_.read())
 
-    def dump(self, file_, object_):
+    def dump(self, file_, object_): # type: ignore
 
         # Zato
         from zato.common.json_internal import dumps
@@ -1884,9 +2238,10 @@ class YamlCodec:
                 data = data.replace(param, env_value)
 
         # .. and return a dict object representing the file.
-        return yaml.load(data, yaml.FullLoader)
+        out = yaml.load(data, yaml.FullLoader)
+        return out
 
-    def dump(self, file_, object_):
+    def dump(self, file_, object_): # type: ignore
 
         # pyaml
         import pyaml
@@ -1920,8 +2275,13 @@ class InputParser:
         try:
             with open(path) as f:
                 data:'strdict' = self.codec.load(f, None) # type: ignore
-        except Exception:
-            data = {}
+        except Exception as e:
+            from yaml.error import YAMLError
+            if isinstance(e, YAMLError):
+                raise
+            else:
+                self.logger.info('Caught an exception -> %s', e)
+                data = {}
 
         return data
 
@@ -2029,8 +2389,8 @@ class InputParser:
             self.parse_def_sec(cast_('strdict', item), results)
 
         else:
-            items = self.json.get(item_type) or []
-            _ = items.append(Bunch(cast_('strdict', item)))
+            items:'any_' = self.json.get(item_type) or []
+            _:'any_' = items.append(Bunch(cast_('strdict', item)))
             self.json[item_type] = items
 
 # ################################################################################################################################
@@ -2143,7 +2503,7 @@ class InputParser:
 
 # ################################################################################################################################
 
-    def _pre_process_input(self, data:'strdict') -> 'strdict':
+    def _pre_process_input_before_import(self, data:'strdict') -> 'strdict':
 
         # Get all environment variables that we may potentially use ..
         env = deepcopy(os.environ)
@@ -2298,8 +2658,52 @@ class InputParser:
                     # .. finally, we can append it for later use ..
                     _ = data['zato_generic_connection'].append(value)
 
-        # Add values for attributes that are optional ..
+        # Preprocess all items ..
+        for item_type, items in data.items():
+
+            # Remove IDs from all the generic connections ..
+            if item_type == 'zato_generic_connection':
+                for item in items:
+                    _ = item.pop('id', None)
+
+            # For values that need to be renamed ..
+            attr_list_value_rename_reverse  = ModuleCtx.Enmasse_Attr_List_Value_Rename_Reverse.get(item_type) or {}
+
+            # .. optionally, rename selected values ..
+            for attr_name, value_map_list in attr_list_value_rename_reverse.items():
+                for value_map in value_map_list:
+                    for item in items:
+                        if value := item.get(attr_name, NotGiven):
+                            if value is not NotGiven:
+                                if value in value_map:
+                                    new_value = value_map[value]
+                                    item[attr_name] = new_value
+
+        # .. add values for attributes that are optional ..
         for def_type, items in data.items():
+
+            # .. replace new names with old ones but only for specific types ..
+            if item_type_name_map_reverse_by_type := ModuleCtx.Enmasse_Item_Type_Name_Map_Reverse_By_Type.get(def_type):
+
+                # .. go through each time that will potentially have the old name ..
+                for item in items:
+
+                    # .. go through each of the names to be replaced ..
+                    for name_dict in item_type_name_map_reverse_by_type:
+
+                        for new_name, old_name  in name_dict.items():
+
+                            # .. check if the old name is given on input ..
+                            if new_name_value := item.get(new_name, NotGiven):
+
+                                # .. we enter here if the old name exists ..
+                                if new_name_value is not NotGiven:
+
+                                    # .. if we are here, we know we can swap the names ..
+                                    item[old_name] = item.pop(new_name)
+
+            # .. for attributes that should be populated if they do not exist ..
+            attr_list_default_by_type = ModuleCtx.Enmasse_Attr_List_Default_By_Type.get(def_type) or {}
 
             # .. go through each definition ..
             for item in items:
@@ -2315,16 +2719,10 @@ class InputParser:
                 if not 'is_active' in item:
                     item['is_active'] = True
 
-                # .. populate REST connections ..
-                if def_type in {'channel_rest', 'outgoing_rest'}:
-
-                    # .. there is no explicit security definition set ..
-                    if not 'security_name' in item:
-                        item['security_name'] = ZATO_NO_SECURITY
-
-                    # .. path parameters should be merged to requests by default ..
-                    if not 'merge_url_params_req' in item:
-                        item['merge_url_params_req'] = True
+                # .. add default attributes if they do not exist ..
+                for default_key, default_value in attr_list_default_by_type.items():
+                    if default_key not in item:
+                        item[default_key] = default_value
 
                 # .. populate attributes based on environment variables ..
                 for env_key_data in env_config:
@@ -2357,10 +2755,10 @@ class InputParser:
         self.json = {}
 
         # .. extract a basic dict ..
-        data = self._parse_file(cast_('str', self.path), results)
+        data = self._parse_file(cast_('str', self.path), results) # type: ignore
 
         # .. pre-process its contents ..
-        data = self._pre_process_input(data)
+        data = self._pre_process_input_before_import(data)
 
         if not results.ok:
             return results
@@ -2445,7 +2843,7 @@ class Enmasse(ManageCommand):
 
         # Initialize environment variables ..
         env_path = self.normalize_path('env_file', exit_if_missing=False)
-        populate_environment_from_file(env_path)
+        _ = populate_environment_from_file(env_path)
 
         self.replace_objects:'bool' = True
         self.export_odb:'bool' = getattr(args, 'export', False) or getattr(args, 'export_odb', False)
@@ -2484,7 +2882,7 @@ class Enmasse(ManageCommand):
             initial_wait_time = ModuleCtx.Initial_Wait_Time
 
         # Get the client object, waiting until the server is started ..
-        self.client = get_client_from_server_conf(self.component_dir, initial_wait_time=initial_wait_time)
+        self.client = get_client_from_server_conf(self.component_dir, initial_wait_time=initial_wait_time) # type: ignore
 
         # .. just to be on the safe side, optionally wait a bit more
         initial_wait_time = os.environ.get('ZATO_ENMASSE_INITIAL_WAIT_TIME')
@@ -2559,7 +2957,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def load_input(self, input_path):
+    def load_input(self, input_path): # type: ignore
 
         # stdlib
         import sys
@@ -2700,7 +3098,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def _preprocess_item_attrs(
+    def _preprocess_item_attrs_during_export(
         self,
         attr_key,  # type: str
         item_type, # type: str
@@ -2715,6 +3113,9 @@ class Enmasse(ManageCommand):
 
         # .. as above, for attributes that need to be renamed ..
         attr_list_rename  = ModuleCtx.Enmasse_Attr_List_Rename.get(attr_key) or {}
+
+        # .. as above, for values that need to be renamed ..
+        attr_list_value_rename  = ModuleCtx.Enmasse_Attr_List_Value_Rename.get(attr_key) or {}
 
         # .. as above, for attributes that need to be turned into a list ..
         attr_list_as_list = ModuleCtx.Enmasse_Attr_List_As_List.get(attr_key) or []
@@ -2733,6 +3134,9 @@ class Enmasse(ManageCommand):
 
         # .. as above, for attributes that should be skipped if they have a specific value ..
         attr_list_skip_if_value_matches = ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches.get(attr_key) or {}
+
+        # .. as above, for attributes that should be skipped if other values match ..
+        attr_list_skip_if_other_value_matches = ModuleCtx.Enmasse_Attr_List_Skip_If_Other_Value_Matches.get(attr_key) or {}
 
         # .. to make sure the dictionary does not change during iteration ..
         item_copy = deepcopy(item)
@@ -2756,6 +3160,15 @@ class Enmasse(ManageCommand):
             if value := item.pop(old_name, NotGiven):
                 if value is not NotGiven:
                     item[new_name] = value
+
+        # .. optionally, rename selected values ..
+        for attr_name, value_map_list in attr_list_value_rename.items():
+            for value_map in value_map_list:
+                if value := item.get(attr_name, NotGiven):
+                    if value is not NotGiven:
+                        if value in value_map:
+                            new_value = value_map[value]
+                            item[attr_name] = new_value
 
         # .. optionally, turn selected attributes into lists ..
         for attr in attr_list_as_list:
@@ -2802,6 +3215,22 @@ class Enmasse(ManageCommand):
                 if value != pattern_value:
                     item[pattern_key] = value
 
+        # .. optionally, skip attributes if other attributes have a specific value ..
+        if attr_list_skip_if_other_value_matches:
+
+            for config_dict in attr_list_skip_if_other_value_matches:
+
+                criteria = config_dict['criteria']
+                attrs_to_skip = config_dict['attrs']
+
+                for criterion in criteria:
+                    for criterion_key, criterion_value in criterion.items():
+                        item_value = item.get(criterion_key, NotGiven)
+                        if item_value is not NotGiven:
+                            if item_value == criterion_value:
+                                for attr in attrs_to_skip:
+                                    _ = item.pop(attr, None)
+
         # .. ID's are never returned ..
         _ = item.pop('id', None)
 
@@ -2809,16 +3238,16 @@ class Enmasse(ManageCommand):
         _ = item.pop('service_id', None)
 
         # .. the is_active flag is never returned if it is of it default value, which is True ..
-        if item_copy.get('is_active') is True:
+        if item.get('is_active') is True:
             _ = item.pop('is_active', None)
 
         # .. names of security definitions attached to an object are also skipped if they are the default ones ..
-        if item_copy.get('security_name') in ('', None):
+        if item.get('security_name') in ('', None):
             _ = item.pop('security_name', None)
 
         # .. the data format of REST objects defaults to JSON which is why we do not return it, unless it is different ..
         if item_type in {'channel_plain_http', 'outconn_plain_http', 'zato_generic_rest_wrapper'}:
-            if item_copy.get('data_format') == Data_Format.JSON:
+            if item.get('data_format') == Data_Format.JSON:
                 _ = item.pop('data_format', None)
 
         return item
@@ -2853,15 +3282,14 @@ class Enmasse(ManageCommand):
         include_name, # type: strlist
     ) -> 'bool':
 
-        # Local aliases
-        name:'str' = item['name']
+        # Type hints
+        name:'str'
 
-        zato_name_prefix = (
-            'zato.',
-            'pub.zato',
-            'zato.pubsub',
-            'ide_publisher',
-        )
+        # Local aliases
+        if item_type == 'pubsub_subscription':
+            name = item['endpoint_name']
+        else:
+            name = item['name']
 
         # By default, assume this item should be written to ouput unless we contradict it below ..
         out:'bool' = True
@@ -2873,16 +3301,16 @@ class Enmasse(ManageCommand):
         has_type = not has_all_types
         has_name = not has_all_names
 
-        # Handle security definitions, some of which should never be exported ..
+        # Certain internal objects should never be exported ..
         if item_type == 'def_sec':
 
             # .. do not write RBAC definitions ..
             if 'rbac' in item['type']:
                 return False
 
-            # .. do not write internal definitions ..
-            elif name.startswith(zato_name_prefix):
-                return False
+        # .. do not write internal definitions ..
+        if has_name_zato_prefix(name):
+            return False
 
         # We enter this branch if we are to export specific types ..
         if not has_all_types:
@@ -2908,6 +3336,74 @@ class Enmasse(ManageCommand):
                 out = out_by_name
 
         # .. we are ready to return our output
+        return out
+
+# ################################################################################################################################
+
+    def _rewrite_pubsub_subscriptions_during_export(self, subs:'dictlist') -> 'dictlist':
+
+        # Bunch
+        from bunch import Bunch, bunchify
+
+        # Our response to produce
+        out:'dictlist' = []
+
+        # Local variables
+        subs_by_key:'anydict' = {}
+
+        #
+        # We are going to group subscriptions by these keys
+        #
+        # - Endpoint name
+        # - Delivery method
+        # - REST method
+        # - REST connection
+        # - Delivery server
+        #
+
+        for sub in subs:
+
+            # .. for dot attribute access ..
+            sub = Bunch(sub)
+
+            # .. build a composite key to later add topics to it ..
+            key:'any_' = (sub.endpoint_name, sub.delivery_method, sub.rest_method, sub.rest_connection, sub.delivery_server)
+
+            # .. add the key if it does not already exist ..
+            if key not in subs_by_key:
+                subs_by_key[key] = bunchify({
+                    'endpoint_name': sub.get('endpoint_name'),
+                    'endpoint_type': sub.get('endpoint_type'),
+                    'delivery_method': sub.get('delivery_method'),
+                    'rest_method': sub.get('rest_method'),
+                    'rest_connection': sub.get('rest_connection'),
+                    'service_name': sub.get('service_name'),
+                    'delivery_server': sub.get('delivery_server'),
+                    'topic_list': []
+                })
+
+            # .. at this point, we know we have a list for this key so we can access it ..
+            subs_by_key_dict = subs_by_key[key]
+
+            # .. and append the current topic to what we are building for the caller ..
+            subs_by_key_dict.topic_list.append(sub.topic_name)
+
+        # .. now, we can discard the keys and we will be left with subscriptions alone ..
+        for idx, sub_info in enumerate(subs_by_key.values(), 1):
+
+            # .. return topics sorted alphabetically ..
+            sub_info.topic_list.sort()
+
+            # .. make sure we are returning a dict ..
+            sub_info = sub_info.toDict()
+
+            # .. each subscription needs a name ..
+            sub_info['name'] = 'Subscription.' + str(idx).zfill(9)
+
+            # .. append it for our caller ..
+            out.append(sub_info)
+
+        # .. now, we can return the result
         return out
 
 # ################################################################################################################################
@@ -2952,6 +3448,10 @@ class Enmasse(ManageCommand):
                     for item in output.pop(service_info.name, [])
                 )
 
+        # .. rewrite pub/sub subscriptions in a way that is easier to handle ..
+        if subs := output.get('pubsub_subscription'):
+            output['pubsub_subscription'] = self._rewrite_pubsub_subscriptions_during_export(subs)
+
         # .. go through everything that we collected in earlier steps in the process ..
         for item_type, items in iteritems(output): # type: ignore
 
@@ -2985,7 +3485,7 @@ class Enmasse(ManageCommand):
                     attr_key = item_type
 
                 # .. this will rename or remove any attributes from this item that we do not need ..
-                item = self._preprocess_item_attrs(attr_key, item_type, item)
+                item = self._preprocess_item_attrs_during_export(attr_key, item_type, item)
 
                 # .. sort the attributes in the order we want them to appear in the outpur file ..
                 item = self._sort_item_attrs(attr_key, item)
@@ -3008,10 +3508,11 @@ class Enmasse(ManageCommand):
                 to_write[new_name] = value
 
         # .. now, replace generic connection types which are more involved ..
-        new_names = {
+        new_names:'any_' = {
             'outgoing_ldap': [],
             'outgoing_wsx': [],
         }
+
         for old_name, value_list in to_write.items():
             value_list = cast_('anylist', value_list)
             if old_name == 'zato_generic_connection':
@@ -3063,29 +3564,29 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def get_warnings_errors(self, items):
+    def get_warnings_errors(self, items): # type: ignore
         warn_idx = 1
         error_idx = 1
         warn_err = {}
 
-        for item in items:
+        for item in items: # type: ignore
 
-            for warning in item.warnings:
+            for warning in item.warnings: # type: ignore
                 warn_err['warn{:04}/{} {}'.format(warn_idx, warning.code.symbol, warning.code.desc)] = warning.value
                 warn_idx += 1
 
-            for error in item.errors:
+            for error in item.errors: # type: ignore
                 warn_err['err{:04}/{} {}'.format(error_idx, error.code.symbol, error.code.desc)] = error.value
                 error_idx += 1
 
         warn_no = warn_idx-1
         error_no = error_idx-1
 
-        return warn_err, warn_no, error_no
+        return warn_err, warn_no, error_no # type: ignore
 
 # ################################################################################################################################
 
-    def report_warnings_errors(self, items):
+    def report_warnings_errors(self, items): # type: ignore
 
         # stdlib
         import logging
@@ -3103,7 +3604,7 @@ class Enmasse(ManageCommand):
                 level = logging.WARN
 
             prefix = '{} warning{} and {} error{} found:\n'.format(warn_no, warn_plural, error_no, error_plural)
-            self.logger.log(level, prefix + table.draw())
+            self.logger.log(level, prefix + table.draw()) # type: ignore
 
         else:
             # A signal that we found no warnings nor errors
@@ -3111,7 +3612,7 @@ class Enmasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def get_table(self, out):
+    def get_table(self, out): # type: ignore
 
         # texttable
         import texttable
@@ -3149,28 +3650,28 @@ class Enmasse(ManageCommand):
         results = Results()
         merged = copy.deepcopy(self.object_mgr.objects)
 
-        for json_key, json_elems in iteritems(self.json):
+        for json_key, json_elems in iteritems(self.json): # type: ignore
             if 'http' in json_key or 'soap' in json_key:
                 odb_key = 'http_soap'
             else:
-                odb_key = json_key
+                odb_key:'any_' = json_key
 
             if odb_key not in merged:
-                sorted_merged = sorted(merged)
-                raw = (json_key, odb_key, sorted_merged)
+                sorted_merged:'any_' = sorted(merged)
+                raw:'any_' = (json_key, odb_key, sorted_merged)
                 results.add_error(raw, ERROR_INVALID_KEY, "JSON key '{}' not one of '{}'", odb_key, sorted_merged)
             else:
-                for json_elem in json_elems:
+                for json_elem in json_elems: # type: ignore
                     if 'http' in json_key or 'soap' in json_key:
                         connection, transport = json_key.split('_', 1)
                         connection = 'outgoing' if connection == 'outconn' else connection
 
-                        for odb_elem in merged.http_soap:
+                        for odb_elem in merged.http_soap: # type: ignore
                             if odb_elem.get('transport') == transport and odb_elem.get('connection') == connection:
                                 if odb_elem.name == json_elem.name:
                                     merged.http_soap.remove(odb_elem)
                     else:
-                        for odb_elem in merged[odb_key]:
+                        for odb_elem in merged[odb_key]: # type: ignore
                             if odb_elem.name == json_elem.name:
                                 merged[odb_key].remove(odb_elem)
                     merged[odb_key].append(json_elem)
@@ -3195,11 +3696,11 @@ class Enmasse(ManageCommand):
             self.logger.error('Required elements missing')
             return [results]
 
-        return []
+        return [] # type: ignore
 
 # ################################################################################################################################
 
-    def export_local_odb(self, needs_local=True):
+    def export_local_odb(self, needs_local=True): # type: ignore
         self.object_mgr.refresh()
         self.logger.info('ODB objects read')
 
@@ -3286,7 +3787,7 @@ class Enmasse(ManageCommand):
         self.object_mgr.refresh()
 
         # .. build an object that will import the definitions ..
-        importer = ObjectImporter(self.client, self.logger, self.object_mgr, self.json,
+        importer = ObjectImporter(self.client, self.logger, self.object_mgr, self.json,  # type: ignore
             self.is_import, self.is_export, ignore_missing=self.args.ignore_missing_defs, args=self.args)
 
         # .. find channels and jobs that require services that do not exist ..
