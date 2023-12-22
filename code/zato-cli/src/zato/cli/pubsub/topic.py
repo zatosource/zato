@@ -201,7 +201,17 @@ class CreateTopics(CreateCommon):
     prefix = TestConfig.pubsub_topic_name_perf_auto_create
 
     def execute(self, args:'Namespace') -> 'None':
-        request = super().execute(args)
+
+        create_topics_result = super().execute(args)
+
+        topic_list = get_topics(create_topics_result)
+
+        for topic in topic_list:
+            sub_endpoints = create_endpoints(endpoints_per_topic)
+            pub_endpoints = create_endpoints(endpoints_per_topic)
+            create_subscribers(sub_endpoints, topic)
+            create_publishers(pub_endpoints, topic)
+            publish_messages(pub_endpoints, topic)
 
         print()
         print(111, request)
