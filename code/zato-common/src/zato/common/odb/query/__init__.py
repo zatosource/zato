@@ -82,10 +82,8 @@ class _SearchWrapper:
             q = q.filter(where)
         else:
 
-            # If there are multiple filters, they are by default OR-joined
-            # to ease in look ups over more than one column.
-            filter_op = and_ if config.get('filter_op') == 'and' else or_
-            filters = []
+            or_filters = []
+            and_filters = []
 
             if query := config.get('query', []):
                 query = query if isinstance(query, (list, tuple)) else [query]
@@ -94,9 +92,10 @@ class _SearchWrapper:
                 filter_by = filter_by if isinstance(filter_by, (list, tuple)) else [filter_by]
                 for column in filter_by:
                     for criterion in query:
-                        filters.append(column.contains(criterion))
+                        and_filter = and_(*[column.contains(criterion)]) # type: ignore
+                        or_filters.append(and_filter)
 
-            q = q.filter(filter_op(*filters))
+            q = q.filter(or_(*or_filters))
 
         # Total number of results
         total_q = q.statement.with_only_columns([func.count()]).order_by(None)
