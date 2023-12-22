@@ -22,6 +22,7 @@ from zato.common.api import CommonObject
 from zato.common.odb.model.base import Base as BaseTable
 from zato.common.odb.query.common import get_object_list_by_id_list, get_object_list_by_name_list, \
     get_object_list_by_name_contains
+from zato.common.test.config import TestConfig
 from zato.common.typing_ import any_, anylist, callable_, intlistnone, intnone, strdict, strlistnone, strnone, type_
 from zato.server.connection.http_soap import BadRequest
 from zato.server.service import Model, Service
@@ -422,6 +423,8 @@ class DeleteMany(Service):
                 'Test Basic Auth',
                 'Test.Complex',
                 'test.wsx',
+                TestConfig.pubsub_topic_name_perf_auto_create,
+                TestConfig.pubsub_topic_name_unique_auto_create,
             ]
 
         with closing(self.odb.session()) as session:
