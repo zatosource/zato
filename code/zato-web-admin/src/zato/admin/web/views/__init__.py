@@ -920,3 +920,17 @@ def invoke_action_handler(req, service_name:'str', send_attrs:'any_') -> 'any_':
         return HttpResponseServerError(msg)
 
 # ################################################################################################################################
+
+def get_security_name_link(req, sec_type, sec_name, *, needs_type=True):
+
+    sec_type_name = SEC_DEF_TYPE_NAME[sec_type]
+    sec_type_as_link = sec_type.replace('_', '-')
+    security_href = f'/zato/security/{sec_type_as_link}/?cluster={req.zato.cluster_id}&amp;query={sec_name}'
+    security_link = f'<a href="{security_href}">{sec_name}</a>'
+    if needs_type:
+        sec_name = f'{sec_type_name}<br/>{security_link}'
+    else:
+        sec_name = security_link
+    return sec_name
+
+# ################################################################################################################################
