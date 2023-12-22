@@ -92,11 +92,14 @@ class _SearchWrapper:
                 len_filter_by = len(filter_by)
                 for column in filter_by:
                     for criterion in query:
-                        and_filter = and_(*[column.contains(criterion)]) # type: ignore
+                        expression = column.contains(criterion)
+                        if criterion.startswith('-'):
+                            expression = not_(expression)
+                        and_filter = and_(*[expression]) # type: ignore
                         filters.append(and_filter)
 
                 # We need to use "or" if we filter by more then one column
-                # so that each of them has a chance to match.
+                # to let the filters match all of them independently.
                 if len_filter_by > 1:
                     combine_criteria_using = or_
                 else:
