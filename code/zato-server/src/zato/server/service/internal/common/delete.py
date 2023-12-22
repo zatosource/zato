@@ -14,6 +14,9 @@ from dataclasses import dataclass
 # gevent
 from gevent import sleep
 
+# SQLAlchemy
+from sqlalchemy import delete
+
 # Zato
 from zato.common.api import CommonObject
 from zato.common.odb.model.base import Base as BaseTable
@@ -254,40 +257,150 @@ class DeleteObjects(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class DeleteAll(Service):
+class DeleteMany(Service):
 
-    name = 'zato.common.delete-all'
+    name = 'pub.zato.common.delete-many'
     input = '-name'
 
 # ################################################################################################################################
 
+    def _delete(self, session:'SASession', tables:'any_', pattern:'strlist') -> 'None':
+
+        if not pattern:
+            raise Exception('No pattersn were given on input')
+
+        for table, columns in tables.items():
+            for column in columns: # type: ignore
+                for elem in pattern:
+                    filter = column.contains(elem) # type: ignore
+                    delete_query = delete(table).where(filter)
+                    session.execute(delete_query)
+                    session.commit()
+
+# ################################################################################################################################
+
     def _delete_rest(self, session:'SASession', pattern:'strlist') -> 'None':
-        pass
+
+        # Zato
+        from zato.common.odb.model import HTTPSOAP
+
+        tables:'any_' = {
+            HTTPSOAP.__table__: [HTTPSOAP.name],
+        }
+
+        self._delete(session, tables, pattern)
 
 # ################################################################################################################################
 
     def _delete_security(self, session:'SASession', pattern:'strlist') -> 'None':
-        pass
+
+        # Zato
+        from zato.common.odb.model import SecurityBase
+
+        tables:'any_' = {
+            SecurityBase.__table__: [SecurityBase.name],
+        }
+
+        self._delete(session, tables, pattern)
 
 # ################################################################################################################################
 
     def _delete_pubsub(self, session:'SASession', pattern:'strlist') -> 'None':
-        pass
+
+        # Zato
+        from zato.common.odb.model import PubSubEndpoint, PubSubTopic
+
+        tables:'any_' = {
+            PubSubEndpoint.__table__: [PubSubEndpoint.name],
+            PubSubTopic.__table__: [PubSubTopic.name],
+        }
+
+        self._delete(session, tables, pattern)
 
 # ################################################################################################################################
 
     def _delete_sql(self, session:'SASession', pattern:'strlist') -> 'None':
-        pass
+
+        # Zato
+        from zato.common.odb.model import SQLConnectionPool
+
+        tables:'any_' = {
+            SQLConnectionPool.__table__: [SQLConnectionPool.name],
+        }
+
+        self._delete(session, tables, pattern)
 
 # ################################################################################################################################
 
     def _delete_wsx(self, session:'SASession', pattern:'strlist') -> 'None':
-        pass
+
+        # Zato
+        from zato.common.odb.model import ChannelWebSocket
+
+        tables:'any_' = {
+            ChannelWebSocket.__table__: [ChannelWebSocket.name],
+        }
+
+        self._delete(session, tables, pattern)
+
+# ################################################################################################################################
+
+    def _delete_scheduler(self, session:'SASession', pattern:'strlist') -> 'None':
+
+        # Zato
+        from zato.common.odb.model import Job
+
+        tables:'any_' = {
+            Job.__table__: [Job.name],
+        }
+
+        self._delete(session, tables, pattern)
+
+# ################################################################################################################################
+
+    def _delete_generic(self, session:'SASession', pattern:'strlist') -> 'None':
+
+        # Zato
+        from zato.common.odb.model import GenericConn, GenericConnDef, GenericObject
+
+        tables:'any_' = {
+            GenericConn.__table__: [GenericConn.name],
+            GenericConnDef.__table__: [GenericConnDef.name],
+            GenericObject.__table__: [GenericObject.name],
+        }
+
+        self._delete(session, tables, pattern)
 
 # ################################################################################################################################
 
     def _delete_misc(self, session:'SASession', pattern:'strlist') -> 'None':
-        pass
+
+        # Zato
+        from zato.common.odb.model import Cache, ChannelAMQP, ChannelWMQ, ConnDefAMQP, ConnDefWMQ, IMAP, OutgoingAMQP, \
+            OutgoingFTP, OutgoingOdoo, OutgoingSAP, OutgoingWMQ, RBACClientRole, RBACPermission, RBACRole, TLSCACert, \
+                Service, SMTP
+
+        tables:'any_' = {
+            Cache.__table__: [Cache.name],
+            ChannelAMQP.__table__: [ChannelAMQP.name],
+            ChannelWMQ.__table__: [ChannelWMQ.name],
+            ConnDefAMQP.__table__: [ConnDefAMQP.name],
+            ConnDefWMQ.__table__: [ConnDefWMQ.name],
+            IMAP.__table__: [IMAP.name],
+            OutgoingAMQP.__table__: [OutgoingAMQP.name],
+            OutgoingFTP.__table__: [OutgoingFTP.name],
+            OutgoingOdoo.__table__: [OutgoingOdoo.name],
+            OutgoingSAP.__table__: [OutgoingSAP.name],
+            OutgoingWMQ.__table__: [OutgoingWMQ.name],
+            RBACClientRole.__table__: [RBACClientRole.name],
+            RBACPermission.__table__: [RBACPermission.name],
+            RBACRole.__table__: [RBACRole.name],
+            TLSCACert.__table__: [TLSCACert.name],
+            Service.__table__: [Service.name],
+            SMTP.__table__: [SMTP.name],
+        }
+
+        self._delete(session, tables, pattern)
 
 # ################################################################################################################################
 
@@ -297,17 +410,32 @@ class DeleteAll(Service):
         name = self.request.input.get('name') or ''
         name = [elem.strip() for elem in name.split()]
 
+        if not name:
+            name = [
+                '.abc-123-',
+                '.complex-',
+                'Enmasse',
+                'enmasse',
+                'enmasse1',
+                '/test/api/complex',
+                '/test/complex',
+                'Test Basic Auth',
+                'Test.Complex',
+                'test.wsx',
+            ]
+
         with closing(self.odb.session()) as session:
+
             self._delete_rest(session, name)
             self._delete_security(session, name)
             self._delete_pubsub(session, name)
             self._delete_sql(session, name)
             self._delete_wsx(session, name)
+            self._delete_scheduler(session, name)
+            self._delete_generic(session, name)
             self._delete_misc(session, name)
 
-        # Zato
-        from zato.common.odb.model import PubSubTopic
-        from zato.server.service.internal.pubsub.topic import Delete as DeleteTopic
+            session.commit()
 
 # ################################################################################################################################
 # ################################################################################################################################
