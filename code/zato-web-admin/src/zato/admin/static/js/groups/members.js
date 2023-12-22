@@ -66,12 +66,12 @@ $.fn.zato.groups.members.populate_security_list = function(security_list) {
 
     // First, we always remove any items already displayed
     $(".list-group-item.left").remove();
+    $.fn.zato.groups.members.remove_listing_left_empty();
 
     // We go here if we have something to show ..
     if(security_list.length) {
 
         var listing_left = $("#listing-left");
-        $.fn.zato.toggle_visible_hidden("#listing-left-empty", false);
 
         $.each(security_list, function(idx, elem) {
 
