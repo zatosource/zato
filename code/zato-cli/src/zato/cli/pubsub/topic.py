@@ -200,6 +200,14 @@ class CreateTopics(CreateCommon):
     object_type = CommonObject.PubSub_Topic
     prefix = TestConfig.pubsub_topic_name_perf_auto_create
 
+    def execute(self, args:'Namespace') -> 'None':
+        request = super().execute(args)
+
+        print()
+        print(111, request)
+        print(222, args)
+        print()
+
 # ################################################################################################################################
 # ################################################################################################################################
 
