@@ -15,6 +15,7 @@ from zato.common.api import CommonObject
 
 if 0:
     from argparse import Namespace
+    from zato.common.typing_ import strdict
     Namespace = Namespace
 
 # ################################################################################################################################
