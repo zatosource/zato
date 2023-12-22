@@ -48,7 +48,7 @@
                     {% for item in security_list %}
                         <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item left">
                             <div class="sec-type">{{ item.sec_type_name }}</div>
-                            <div class="sec-name"><a href="#">{{ item.name }}</a></div>
+                            <div class="sec-name">{{ item.security_name|safe }}</a></div>
                             <div class="handle"></div>
                         </div>
                     {% endfor %}
