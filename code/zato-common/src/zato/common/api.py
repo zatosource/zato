@@ -1185,6 +1185,7 @@ class CommonObject:
     Prefix_Invalid = 'prefix-invalid'
 
     Invalid = 'invalid-invalid'
+    PubSub_Endpoint = 'pubsub-endpoint'
     PubSub_Topic = 'pubsub-topic'
 
 # ################################################################################################################################
