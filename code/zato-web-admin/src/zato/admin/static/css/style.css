@@ -347,6 +347,11 @@ span.like-a {
     color: #333
 }
 
+.disabled {
+    font-size:0.78rem;
+    color: #888;
+}
+
 .attention {
     background-color: #f7f089
 }
@@ -647,6 +652,13 @@ body {
 
 .list-group-item.right.selected::before {
     content: counter(right-column-counter) ". ";
+}
+
+#column-header-right-menu {
+    float: right;
+    font-size: 0.78rem;
+    padding-top: 0.1rem;
+    padding-right: 0.5rem;
 }
 
 th.ignore,
