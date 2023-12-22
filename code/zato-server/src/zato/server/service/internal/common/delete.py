@@ -28,6 +28,7 @@ from zato.server.service import Model, Service
 
 if 0:
     from bunch import Bunch
+    from sqlalchemy.orm import Session as SASession
     from zato.common.typing_ import strlist
     Bunch = Bunch
     strlist = strlist
@@ -249,6 +250,64 @@ class DeleteObjects(Service):
 
         # .. and return the result to our caller.
         self.response.payload = result
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DeleteAll(Service):
+
+    name = 'zato.common.delete-all'
+    input = '-name'
+
+# ################################################################################################################################
+
+    def _delete_rest(self, session:'SASession', pattern:'strlist') -> 'None':
+        pass
+
+# ################################################################################################################################
+
+    def _delete_security(self, session:'SASession', pattern:'strlist') -> 'None':
+        pass
+
+# ################################################################################################################################
+
+    def _delete_pubsub(self, session:'SASession', pattern:'strlist') -> 'None':
+        pass
+
+# ################################################################################################################################
+
+    def _delete_sql(self, session:'SASession', pattern:'strlist') -> 'None':
+        pass
+
+# ################################################################################################################################
+
+    def _delete_wsx(self, session:'SASession', pattern:'strlist') -> 'None':
+        pass
+
+# ################################################################################################################################
+
+    def _delete_misc(self, session:'SASession', pattern:'strlist') -> 'None':
+        pass
+
+# ################################################################################################################################
+
+    def handle(self) -> 'None':
+
+        # Local variables
+        name = self.request.input.get('name') or ''
+        name = [elem.strip() for elem in name.split()]
+
+        with closing(self.odb.session()) as session:
+            self._delete_rest(session, name)
+            self._delete_security(session, name)
+            self._delete_pubsub(session, name)
+            self._delete_sql(session, name)
+            self._delete_wsx(session, name)
+            self._delete_misc(session, name)
+
+        # Zato
+        from zato.common.odb.model import PubSubTopic
+        from zato.server.service.internal.pubsub.topic import Delete as DeleteTopic
 
 # ################################################################################################################################
 # ################################################################################################################################
