@@ -287,7 +287,10 @@ class CreateTestTopics(CreateCommon):
 
         for topic in topic_list:
 
+            pub_security_list = self._create_security(args.endpoints_per_topic, topic, 'pub')
             sub_security_list = self._create_security(args.endpoints_per_topic, topic, 'sub')
+
+            pub_endpoints = self._create_endpoints(pub_security_list, topic, 'pub', pub_allowed='/*')
             sub_endpoints = self._create_endpoints(sub_security_list, topic, 'sub', sub_allowed='/*')
 
             '''
