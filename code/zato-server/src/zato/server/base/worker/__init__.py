@@ -1462,12 +1462,17 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def wait_for_basic_auth(self, name:'str', timeout:'int'=600) -> 'bool':
-        return wait_for_dict_key_by_get_func(self.basic_auth_get, name, timeout, interval=0.5)
+        return wait_for_dict_key_by_get_func(self._basic_auth_get, name, timeout, interval=0.5)
+
+    def _basic_auth_get(self, name:'str') -> 'bunch_':
+        """ Implements self.basic_auth_get.
+        """
+        return self.request_dispatcher.url_data.basic_auth_get(name)
 
     def basic_auth_get(self, name:'str') -> 'bunch_':
         """ Returns the configuration of the HTTP Basic Auth security definition of the given name.
         """
-        return self.request_dispatcher.url_data.basic_auth_get(name)
+        return self._basic_auth_get(name)
 
     def basic_auth_get_by_id(self, def_id:'int') -> 'bunch_':
         """ Same as basic_auth_get but by definition ID.

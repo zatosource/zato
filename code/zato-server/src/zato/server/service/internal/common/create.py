@@ -6,26 +6,13 @@ from dataclasses import dataclass
 # Zato
 from zato.common.api import CommonObject, PUBSUB
 from zato.common.exception import BadRequest
-from zato.common.odb.model import PubSubTopic
-from zato.common.typing_ import anylist, intlistnone, intnone, strlistnone, strnone
+from zato.common.typing_ import any_, anylist, intlistnone, intnone, strdict, strlistnone, strnone
 from zato.server.service import Model, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from zato.common.typing_ import strdict
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 _ps_default = PUBSUB.DEFAULT
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-TopicTable = PubSubTopic.__table__
-TopicInsert = TopicTable.insert
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,6 +25,7 @@ class CreateObjectsRequest(Model):
     name: strnone
     name_list: strlistnone
     pattern: strnone
+    initial_data: any_
 
 @dataclass(init=False)
 class CreateObjectsResponse(Model):
@@ -54,7 +42,20 @@ class CreateObjects(Service):
 
 # ################################################################################################################################
 
-    def _get_basic_pubsub_topic(self) -> 'strdict':
+    def _get_basic_pubsub_endpoint(self, name:'str', initial_data:'strdict') -> 'strdict':
+
+        request = {
+            'role': PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id,
+            'is_active': True,
+            'is_internal': False,
+            'endpoint_type': PUBSUB.ENDPOINT_TYPE.REST.id
+        }
+
+        return request
+
+# ################################################################################################################################
+
+    def _get_basic_pubsub_topic(self, name:'str', initial_data:'strdict') -> 'strdict':
 
         request = {
             'has_gd': True,
@@ -67,6 +68,18 @@ class CreateObjects(Service):
             'max_depth_gd': _ps_default.TOPIC_MAX_DEPTH_GD,
             'max_depth_non_gd': _ps_default.TOPIC_MAX_DEPTH_NON_GD,
             'pub_buffer_size_gd': _ps_default.PUB_BUFFER_SIZE_GD,
+        }
+
+        return request
+
+# ################################################################################################################################
+
+    def _get_basic_security_basic_auth(self, name:'str', initial_data:'strdict') -> 'strdict':
+
+        request = {
+            'is_active': True,
+            'username': 'zato-test-' + name,
+            'realm': 'Zato.Test',
         }
 
         return request
@@ -93,7 +106,9 @@ class CreateObjects(Service):
     def handle(self):
 
         # Zato
+        from zato.server.service.internal.pubsub.endpoint import Create as CreateEndpoint
         from zato.server.service.internal.pubsub.topic import Create as CreateTopic
+        from zato.server.service.internal.security.basic_auth import Create as SecBasicAuthCreate
 
         # Local variables
         input:'CreateObjectsRequest' = self.request.input
@@ -106,12 +121,16 @@ class CreateObjects(Service):
 
         # Maps incoming string names of objects to services that actually delete them
         service_map = {
+            CommonObject.PubSub_Endpoint: CreateEndpoint,
             CommonObject.PubSub_Topic: CreateTopic,
+            CommonObject.Security_Basic_Auth: SecBasicAuthCreate,
         }
 
         # Maps incoming string names of objects to functions that prepare basic create requests
         request_func_map = {
+            CommonObject.PubSub_Endpoint: self._get_basic_pubsub_endpoint,
             CommonObject.PubSub_Topic: self._get_basic_pubsub_topic,
+            CommonObject.Security_Basic_Auth: self._get_basic_security_basic_auth,
         }
 
         # Get the service that will create the object
@@ -128,10 +147,15 @@ class CreateObjects(Service):
 
             # .. get a request with basic details ..
             request_func = request_func_map[input.object_type]
-            request = request_func()
+            request = request_func(name, input.initial_data)
 
             # .. add the name from input ..
             request['name'] = name
+
+            # .. populate the request with initial data ..
+            if input.initial_data:
+                for key, value in input.initial_data.items():
+                    request[key] = value
 
             # .. create an object now ..
             try:
