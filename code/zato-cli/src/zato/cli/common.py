@@ -15,7 +15,7 @@ from zato.common.api import CommonObject, NotGiven
 
 if 0:
     from argparse import Namespace
-    from zato.common.typing_ import strdict
+    from zato.common.typing_ import strdict, strdictnone, strlist, strnone
     Namespace = Namespace
 
 # ################################################################################################################################
@@ -103,7 +103,8 @@ class CreateCommon(ServerAwareCommand):
         name_list:'strlist',
         *,
         args:'Namespace | None'=None,
-        needs_stdout:'bool'=True
+        needs_stdout:'bool'=True,
+        initial_data:'strdictnone'=None,
     ) -> 'strdict':
 
         # stdlib
@@ -111,10 +112,11 @@ class CreateCommon(ServerAwareCommand):
 
         request:'strdict' = {
             'object_type': object_type,
-            'name_list': name_list
+            'name_list': name_list,
+            'initial_data': initial_data,
         }
 
-        if args_needs_stdout := args.needs_stdout:
+        if args and (args_needs_stdout := args.needs_stdout):
             args_needs_stdout = as_bool(args_needs_stdout)
             needs_stdout = args_needs_stdout
 
@@ -130,11 +132,13 @@ class CreateCommon(ServerAwareCommand):
         name_list:'strlist',
         *,
         args:'Namespace | None'=None,
-        needs_stdout:'bool'=True
+        needs_stdout:'bool'=True,
+        initial_data:'strdictnone'=None,
     ) -> 'strdict':
 
         service = 'zato.common.create-objects'
-        response = self.invoke_common(service, object_type, name_list, args=args, needs_stdout=needs_stdout)
+        response = self.invoke_common(
+            service, object_type, name_list, args=args, needs_stdout=needs_stdout, initial_data=initial_data)
         return response
 
 # ################################################################################################################################
