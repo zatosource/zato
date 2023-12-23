@@ -408,11 +408,11 @@ class DeleteMany(Service):
     def handle(self) -> 'None':
 
         # Local variables
-        name = self.request.input.get('name') or ''
-        name = [elem.strip() for elem in name.split()]
+        name = self.request.input.get('name') or ''    # type: ignore
+        name = [elem.strip() for elem in name.split()] # type: ignore
 
         if not name:
-            name = [
+            name:'strlist' = [
                 '.abc-123-',
                 '.complex-',
                 'Enmasse',
@@ -423,6 +423,7 @@ class DeleteMany(Service):
                 'Test Basic Auth',
                 'Test.Complex',
                 'test.wsx',
+                'zato-test',
                 TestConfig.pubsub_topic_name_perf_auto_create,
                 TestConfig.pubsub_topic_name_unique_auto_create,
             ]
