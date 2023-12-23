@@ -18,7 +18,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from argparse import Namespace
-    from zato.common.typing_ import anydict, anylist
+    from zato.common.typing_ import anydict, anylist, strlist
     Namespace = Namespace
 
 # ################################################################################################################################
@@ -200,11 +200,26 @@ class CreateTopics(CreateCommon):
     object_type = CommonObject.PubSub_Topic
     prefix = TestConfig.pubsub_topic_name_perf_auto_create
 
+# ################################################################################################################################
+
+    def _get_topics(self, data:'strdict') -> 'strlist':
+        out = []
+
+        print()
+        print(333, data)
+        print()
+
+        zzz
+
+# ################################################################################################################################
+
     def execute(self, args:'Namespace') -> 'None':
 
+        # This call to our parent will create the topics ..
         create_topics_result = super().execute(args)
 
-        topic_list = get_topics(create_topics_result)
+        # .. now, we can extract their names ..
+        topic_list = self._get_topics(create_topics_result)
 
         for topic in topic_list:
             sub_endpoints = create_endpoints(endpoints_per_topic)
