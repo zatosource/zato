@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli import ServerAwareCommand
-from zato.common.api import CommonObject
+from zato.common.api import CommonObject, NotGiven
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,13 +84,58 @@ class CreateCommon(ServerAwareCommand):
         {'name':'--count', 'help':'How many objects to create', 'required':False},
         {'name':'--prefix', 'help':'Prefix that each of the topics to be created will have', 'required':False},
         {'name':'--path', 'help':'Path to a Zato server', 'required':False},
-        {'name':'--subs-per-topic',
-            'help':'How many subscriptions to create per each topic', 'required':False, 'default':3},
+        {'name':'--endpoints-per-topic',
+            'help':'How many endpoints to create per each topic', 'required':False, 'default':3, 'type':int},
         {'name':'--messages-per-sub',
-            'help':'How many messages to publish per each subscription', 'required':False, 'default':10},
+            'help':'How many messages to publish per each subscription', 'required':False, 'default':10, 'type':int},
         {'name':'--msg-size',
-            'help':'How big, in kilobytes, each published message should be', 'required':False, 'default':3},
+            'help':'How big, in kilobytes, each published message should be', 'required':False, 'default':3, 'type':int},
+        {'name':'--needs-stdout',
+            'help':'Whether to log default messages to stdout', 'required':False, 'default':NotGiven},
     ]
+
+# ################################################################################################################################
+
+    def invoke_common(
+        self,
+        service:'str',
+        object_type: 'strnone',
+        name_list:'strlist',
+        *,
+        args:'Namespace | None'=None,
+        needs_stdout:'bool'=True
+    ) -> 'strdict':
+
+        # stdlib
+        from zato.common.util import as_bool
+
+        request:'strdict' = {
+            'object_type': object_type,
+            'name_list': name_list
+        }
+
+        if args_needs_stdout := args.needs_stdout:
+            args_needs_stdout = as_bool(args_needs_stdout)
+            needs_stdout = args_needs_stdout
+
+        # Invoke the service and log the response it produced
+        response = self._invoke_service_and_log_response(service, request, needs_stdout=needs_stdout)
+
+        return response
+
+# ################################################################################################################################
+
+    def invoke_common_create(self,
+        object_type: 'strnone',
+        name_list:'strlist',
+        *,
+        args:'Namespace | None'=None,
+        needs_stdout:'bool'=True
+    ) -> 'strdict':
+
+        service = 'zato.common.create-objects'
+        response = self.invoke_common(service, object_type, name_list, args=args, needs_stdout=needs_stdout)
+        return response
 
 # ################################################################################################################################
 
@@ -98,9 +143,6 @@ class CreateCommon(ServerAwareCommand):
 
         # Local variables
         default_count = 1000
-
-        # Our service to invoke
-        service = 'zato.common.create-objects'
 
         # Read the parameters from the command line or fall back on the defaults
         count = int(args.count or default_count)
@@ -117,15 +159,10 @@ class CreateCommon(ServerAwareCommand):
             topic_name = f'{prefix}{idx}'
             name_list.append(topic_name)
 
-        request:'strdict' = {
-            'object_type': self.object_type,
-            'name_list': name_list
-        }
+        # Invoke the service
+        response = self.invoke_common_create(self.object_type, name_list, args=args)
 
-        # Invoke the service and log the response it produced
-        self._invoke_service_and_log_response(service, request)
-
-        return request
+        return response
 
 # ################################################################################################################################
 # ################################################################################################################################
