@@ -213,17 +213,57 @@ class CreateTestTopics(CreateCommon):
         # .. and return them to our caller.
         return name_list
 
+
+# ################################################################################################################################
+
+    def _create_security(
+        self,
+        count:'int',
+        prefix:'str',
+        endpoint_type:'str',
+    ) -> 'strlist':
+
+        # A list of endpoints to create ..
+        name_list:'strlist' = []
+
+        # .. generate their names ..
+        for idx in range(count):
+            sec_name = f'zato-test-security-{prefix}/sec/{endpoint_type}/{idx:04}'
+            name_list.append(sec_name)
+
+        # .. do create the endpoints now ..
+        _ = self.invoke_common_create(CommonObject.Security_Basic_Auth, name_list)
+        return name_list
+
 # ################################################################################################################################
 
     def _create_endpoints(
         self,
-        count:'int',
+        security_list: 'strlist',
         prefix:'str',
+        endpoint_type:'str',
         *,
         pub_allowed:'str'='',
         sub_allowed:'str'=''
     ) -> 'strlist':
-        pass
+
+        # A list of endpoints to create ..
+        name_list:'strlist' = []
+
+        # .. generate their names ..
+        '''
+        for idx in range(count):
+            sec_name = f'zato-test-endpoint/{prefix}/{endpoint_type}/{idx:04}'
+            name_list.append(sec_name)
+        '''
+
+        for sec_name in security_list:
+            name = 'zato-endpoint-' + sec_name
+            name_list.append(name)
+            initial_data = {'security_name': sec_name}
+            _ = self.invoke_common_create(CommonObject.PubSub_Endpoint, [name], initial_data=initial_data)
+
+        return name_list
 
 # ################################################################################################################################
 
@@ -238,7 +278,8 @@ class CreateTestTopics(CreateCommon):
 
         for topic in topic_list:
 
-            sub_endpoints = create_endpoints(endpoints_per_topic, topic)
+            sub_security_list = self._create_security(args.endpoints_per_topic, topic, 'sub')
+            sub_endpoints = self._create_endpoints(sub_security_list, topic, 'sub')
 
             '''
             pub_endpoints = create_endpoints(endpoints_per_topic)
