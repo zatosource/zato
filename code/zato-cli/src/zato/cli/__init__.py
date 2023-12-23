@@ -164,7 +164,7 @@ command_imports = (
     ('pubsub_cleanup', 'zato.cli.pubsub.cleanup.Cleanup'),
     ('pubsub_create_endpoint', 'zato.cli.pubsub.endpoint.CreateEndpoint'),
     ('pubsub_create_topic', 'zato.cli.pubsub.topic.CreateTopic'),
-    ('pubsub_create_topics', 'zato.cli.pubsub.topic.CreateTopics'),
+    ('pubsub_create_test_topics', 'zato.cli.pubsub.topic.CreateTestTopics'),
     ('pubsub_delete_endpoint', 'zato.cli.pubsub.endpoint.DeleteEndpoint'),
     ('pubsub_delete_topic', 'zato.cli.pubsub.topic.DeleteTopics'),
     ('pubsub_delete_topics', 'zato.cli.pubsub.topic.DeleteTopics'),
@@ -308,6 +308,15 @@ class ZatoCommand:
         # because subprocesses will not be able to do it once we read it all in in the parent
         # one, so we read it here and give other processes explicitly on input, if they need it.
         self.stdin_data = read_stdin_data()
+
+# ################################################################################################################################
+
+    def exit(self, exit_code:'int'=0) -> 'None':
+
+        # stdlib
+        import sys
+
+        _ = sys.exit(exit_code)
 
 # ################################################################################################################################
 
@@ -1061,13 +1070,16 @@ class ServerAwareCommand(ZatoCommand):
         request:'anydict',
         hook_func:'callnone'=None,
         needs_stdout:'bool'=True
-    ) -> 'None':
+    ) -> 'any_':
 
         # Invoke the service first ..
         data = self._invoke_service(service, request, hook_func)
 
-        # .. and log its output now.
+        # .. log its output ..
         self._log_response(data, needs_stdout)
+
+        # .. and return the output to our caller.
+        return data
 
 # ################################################################################################################################
 # ################################################################################################################################

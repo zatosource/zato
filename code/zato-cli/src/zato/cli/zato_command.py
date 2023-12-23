@@ -518,10 +518,10 @@ class CommandStore:
         # pubsub create-topics
         #
 
-        pubsub_create_topics = pubsub_subs.add_parser('create-topics',
-            description=pubsub_topic_mod.CreateTopics.__doc__, parents=[base_parser])
-        pubsub_create_topics.set_defaults(command='pubsub_create_topics')
-        self.add_opts(pubsub_create_topics, pubsub_topic_mod.CreateTopics.opts)
+        pubsub_create_test_topics = pubsub_subs.add_parser('create-test-topics',
+            description=pubsub_topic_mod.CreateTestTopics.__doc__, parents=[base_parser])
+        pubsub_create_test_topics.set_defaults(command='pubsub_create_test_topics')
+        self.add_opts(pubsub_create_test_topics, pubsub_topic_mod.CreateTestTopics.opts)
 
         #
         # pubsub delete-endpoint

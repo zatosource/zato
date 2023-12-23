@@ -18,7 +18,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from argparse import Namespace
-    from zato.common.typing_ import anydict, anylist, strlist
+    from zato.common.typing_ import anydict, anylist, strdict, strlist
     Namespace = Namespace
 
 # ################################################################################################################################
@@ -194,8 +194,8 @@ class DeleteTopics(DeleteCommon):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CreateTopics(CreateCommon):
-    """ Creates multiple topics based on an input file.
+class CreateTestTopics(CreateCommon):
+    """ Creates multiple test topics.
     """
     object_type = CommonObject.PubSub_Topic
     prefix = TestConfig.pubsub_topic_name_perf_auto_create
@@ -203,13 +203,27 @@ class CreateTopics(CreateCommon):
 # ################################################################################################################################
 
     def _get_topics(self, data:'strdict') -> 'strlist':
-        out = []
 
-        print()
-        print(333, data)
-        print()
+        # Extract the objects returned ..
+        objects = data['objects']
 
-        zzz
+        # .. build a sorted list of names to be returned ..
+        name_list = sorted(elem['name'] for elem in objects)
+
+        # .. and return them to our caller.
+        return name_list
+
+# ################################################################################################################################
+
+    def _create_endpoints(
+        self,
+        count:'int',
+        prefix:'str',
+        *,
+        pub_allowed:'str'='',
+        sub_allowed:'str'=''
+    ) -> 'strlist':
+        pass
 
 # ################################################################################################################################
 
@@ -221,17 +235,17 @@ class CreateTopics(CreateCommon):
         # .. now, we can extract their names ..
         topic_list = self._get_topics(create_topics_result)
 
+
         for topic in topic_list:
-            sub_endpoints = create_endpoints(endpoints_per_topic)
+
+            sub_endpoints = create_endpoints(endpoints_per_topic, topic)
+
+            '''
             pub_endpoints = create_endpoints(endpoints_per_topic)
             create_subscribers(sub_endpoints, topic)
             create_publishers(pub_endpoints, topic)
             publish_messages(pub_endpoints, topic)
-
-        print()
-        print(111, request)
-        print(222, args)
-        print()
+            '''
 
 # ################################################################################################################################
 # ################################################################################################################################
