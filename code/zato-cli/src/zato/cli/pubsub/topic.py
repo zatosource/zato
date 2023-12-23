@@ -257,10 +257,19 @@ class CreateTestTopics(CreateCommon):
             name_list.append(sec_name)
         '''
 
+        topic_patterns  = ''
+        if pub_allowed:
+            topic_patterns += f'pub={pub_allowed}\n'
+        if sub_allowed:
+            topic_patterns += f'sub={sub_allowed}'
+
         for sec_name in security_list:
             name = 'zato-endpoint-' + sec_name
             name_list.append(name)
-            initial_data = {'security_name': sec_name}
+            initial_data = {
+                'security_name': sec_name,
+                'topic_patterns': topic_patterns,
+            }
             _ = self.invoke_common_create(CommonObject.PubSub_Endpoint, [name], initial_data=initial_data)
 
         return name_list
@@ -279,7 +288,7 @@ class CreateTestTopics(CreateCommon):
         for topic in topic_list:
 
             sub_security_list = self._create_security(args.endpoints_per_topic, topic, 'sub')
-            sub_endpoints = self._create_endpoints(sub_security_list, topic, 'sub')
+            sub_endpoints = self._create_endpoints(sub_security_list, topic, 'sub', sub_allowed='/*')
 
             '''
             pub_endpoints = create_endpoints(endpoints_per_topic)
