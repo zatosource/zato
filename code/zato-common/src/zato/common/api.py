@@ -1186,6 +1186,7 @@ class CommonObject:
 
     Invalid = 'invalid-invalid'
     PubSub_Endpoint = 'pubsub-endpoint'
+    PubSub_Subscription = 'pubsub-subscription'
     PubSub_Topic = 'pubsub-topic'
     Security_Basic_Auth = 'security-basic-auth'
 

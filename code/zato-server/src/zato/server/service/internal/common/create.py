@@ -55,6 +55,18 @@ class CreateObjects(Service):
 
 # ################################################################################################################################
 
+    def _get_basic_pubsub_subscription(self, name:'str', initial_data:'strdict') -> 'strdict':
+
+        request = {
+            'is_active': True,
+            'is_internal': False,
+            'endpoint_type': PUBSUB.ENDPOINT_TYPE.REST.id,
+        }
+
+        return request
+
+# ################################################################################################################################
+
     def _get_basic_pubsub_topic(self, name:'str', initial_data:'strdict') -> 'strdict':
 
         request = {
@@ -107,6 +119,7 @@ class CreateObjects(Service):
 
         # Zato
         from zato.server.service.internal.pubsub.endpoint import Create as CreateEndpoint
+        from zato.server.service.internal.pubsub.subscription import Create as CreateSubscription
         from zato.server.service.internal.pubsub.topic import Create as CreateTopic
         from zato.server.service.internal.security.basic_auth import Create as SecBasicAuthCreate
 
@@ -122,6 +135,7 @@ class CreateObjects(Service):
         # Maps incoming string names of objects to services that actually delete them
         service_map = {
             CommonObject.PubSub_Endpoint: CreateEndpoint,
+            CommonObject.PubSub_Subscription: CreateSubscription,
             CommonObject.PubSub_Topic: CreateTopic,
             CommonObject.Security_Basic_Auth: SecBasicAuthCreate,
         }
@@ -129,6 +143,7 @@ class CreateObjects(Service):
         # Maps incoming string names of objects to functions that prepare basic create requests
         request_func_map = {
             CommonObject.PubSub_Endpoint: self._get_basic_pubsub_endpoint,
+            CommonObject.PubSub_Subscription: self._get_basic_pubsub_subscription,
             CommonObject.PubSub_Topic: self._get_basic_pubsub_topic,
             CommonObject.Security_Basic_Auth: self._get_basic_security_basic_auth,
         }
@@ -142,8 +157,13 @@ class CreateObjects(Service):
         # Log what we are about to do
         self.logger.info('Creating topics -> len=%s', len(input.name_list))
 
+        if input.object_type in {CommonObject.PubSub_Subscription}:
+            name_list = ['']
+        else:
+            name_list = input.name_list
+
         # .. go through each name we are given on input ..
-        for name in input.name_list:
+        for name in name_list:
 
             # .. get a request with basic details ..
             request_func = request_func_map[input.object_type]
