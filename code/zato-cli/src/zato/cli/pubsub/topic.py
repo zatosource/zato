@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.cli import ServerAwareCommand
 from zato.cli.common import CreateCommon, DeleteCommon
-from zato.common.api import GENERIC, CommonObject
+from zato.common.api import GENERIC, CommonObject, PUBSUB as Common_PubSub
 from zato.common.test.config import TestConfig
 from zato.common.typing_ import cast_
 
@@ -272,19 +272,34 @@ class CreateTestTopics(CreateCommon):
         # Should all subscriptions for this endpoint be deleted before creating this one
         should_delete_all = False
 
-        print()
-        print(111, sub_name_list)
-        print()
-
         for endpoint_name in sub_name_list:
 
             initial_data = {
                 'topic_name': topic,
                 'endpoint_name': endpoint_name,
+                'delivery_method': Common_PubSub.DELIVERY_METHOD.PULL.id,
                 'should_delete_all': should_delete_all,
             }
 
             _ = self.invoke_common_create(CommonObject.PubSub_Subscription, [], initial_data=initial_data)
+
+# ################################################################################################################################
+
+    def _publish_messages(self, pub_name_list:'strlist', topic:'str', messages_per_pub:'int') -> 'None':
+
+        for msg_idx in range(1, messages_per_pub+1):
+
+            for publisher_endpoint_name in pub_name_list:
+
+                data = f'{publisher_endpoint_name}-msg-{msg_idx}\n' * 200
+
+                initial_data = {
+                    'topic_name': topic,
+                    'endpoint_name': publisher_endpoint_name,
+                    'data': data,
+                    'has_gd': True,
+                }
+                _ = self.invoke_common_create(CommonObject.PubSub_Publish, [], initial_data=initial_data)
 
 # ################################################################################################################################
 
@@ -305,8 +320,7 @@ class CreateTestTopics(CreateCommon):
             sub_name_list = self._create_endpoints(sub_sec_name_list, sub_allowed='/*')
 
             self._create_subscriptions(sub_name_list, topic)
-
-            # publish_messages(pub_endpoints, topic)
+            self._publish_messages(pub_name_list, topic, args.messages_per_pub)
 
 # ################################################################################################################################
 # ################################################################################################################################
