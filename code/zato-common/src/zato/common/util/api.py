@@ -1962,7 +1962,7 @@ def wait_for_predicate(
 def wait_for_dict_key_by_get_func(
     get_key_func, # type: callable_
     key,          # type: any_
-    timeout=30,   # type: int
+    timeout=9999,# type: int
     interval=0.01 # type: float
 ) -> 'any_':
 
@@ -1983,7 +1983,7 @@ def wait_for_dict_key_by_get_func(
 def wait_for_dict_key(
     _dict,        # type: anydict
     key,          # type: any_
-    timeout=30,   # type: int
+    timeout=9999, # type: int
     interval=0.01 # type: float
 ) -> 'any_':
 
@@ -1998,7 +1998,7 @@ def wait_for_dict_key(
 
 # ################################################################################################################################
 
-def wait_for_file(full_path:'str', timeout:'int'=30, interval:'float'=0.01) -> 'any_':
+def wait_for_file(full_path:'str', timeout:'int'=9999, interval:'float'=0.01) -> 'any_':
 
     def _predicate_wait_for_file(*_ignored_args, **_ignored_kwargs) -> 'any_':
 
