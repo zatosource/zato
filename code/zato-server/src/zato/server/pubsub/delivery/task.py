@@ -15,7 +15,7 @@ from traceback import format_exc, format_exception
 from typing import Iterable as iterable_
 
 # gevent
-from gevent import sleep
+from gevent import sleep, spawn
 from gevent.lock import RLock
 from gevent.thread import getcurrent
 
@@ -24,7 +24,6 @@ from zato.common.api import PUBSUB
 from zato.common.exception import RuntimeInvocationError
 from zato.common.odb.api import SQLRow
 from zato.common.typing_ import cast_, list_
-from zato.common.util.api import spawn_greenlet
 from zato.common.util.time_ import utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
 
@@ -144,7 +143,7 @@ class DeliveryTask:
         else:
             self.wrap_in_list = True
 
-        _ = spawn_greenlet(self.run) # noqa: F841
+        _ = spawn(self.run) # type: ignore
 
 # ################################################################################################################################
 
@@ -516,7 +515,6 @@ class DeliveryTask:
         """
 
         # Fill out Python-level metadata first
-        zzz
         _current_greenlet = cast_('any_', getcurrent())
         _greenlet_name = _current_greenlet.name
         _greenlet_name = cast_('str', _greenlet_name)
