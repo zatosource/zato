@@ -981,6 +981,9 @@ class WorkerStore(_WorkerStoreBase):
         service_pubsub_tool = PubSubTool(self.pubsub, self.server, PUBSUB.ENDPOINT_TYPE.SERVICE.id, True)
         self.pubsub.service_pubsub_tool = service_pubsub_tool
 
+        for value in self.worker_config.pubsub_topic.values():
+            self.pubsub.create_topic_object(bunchify(value['config']))
+
         for value in self.worker_config.pubsub_endpoint.values():
             self.pubsub.create_endpoint(bunchify(value['config']))
 
@@ -994,9 +997,6 @@ class WorkerStore(_WorkerStoreBase):
             # Special-case delivery of messages to services
             if is_service_subscription(config):
                 self.pubsub.set_config_for_service_subscription(config['sub_key'])
-
-        for value in self.worker_config.pubsub_topic.values():
-            self.pubsub.create_topic_object(bunchify(value['config']))
 
         self.pubsub.set_endpoint_impl_getter(PUBSUB.ENDPOINT_TYPE.REST.id, self.worker_config.out_plain_http.get_by_id)
 

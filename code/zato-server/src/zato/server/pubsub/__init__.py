@@ -535,7 +535,12 @@ class PubSub:
 
     def get_topic_by_name(self, topic_name:'str') -> 'Topic':
         with self.lock:
-            return self.topic_api.get_topic_by_name(topic_name)
+            return self.get_topic_by_name_no_lock(topic_name)
+
+# ################################################################################################################################
+
+    def get_topic_by_name_no_lock(self, topic_name:'str') -> 'Topic':
+        return self.topic_api.get_topic_by_name(topic_name)
 
 # ################################################################################################################################
 
@@ -783,7 +788,7 @@ class PubSub:
 # ################################################################################################################################
 
     def wait_for_topic(self, topic_name:'str', timeout:'int'=600) -> 'bool':
-        return wait_for_dict_key_by_get_func(self.topic_api.get_topic_by_name, topic_name, timeout, interval=0.5)
+        return wait_for_dict_key_by_get_func(self.topic_api.get_topic_by_name, topic_name, timeout, interval=0.01)
 
 # ################################################################################################################################
 
