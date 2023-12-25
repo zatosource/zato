@@ -57,7 +57,7 @@ class CreateDeliveryTask(AdminService):
         pubsub_tool = PubSubTool(self.pubsub, self.server, config['endpoint_type'])
 
         # Makes this sub_key known to pubsub but only if this is not a service subscription
-        # because subscriptions of this sort are handed by the worker store directly in init_pubsub.
+        # because subscriptions of this sort are handled by the worker store directly in init_pubsub.
         if not is_service_subscription(config):
             pubsub_tool.add_sub_key(config['sub_key'])
 
@@ -85,7 +85,7 @@ class DeliverMessage(AdminService):
     to a given endpoint.
     """
     class SimpleIO(AdminSIO):
-        input_required = (Opaque('msg'), Opaque('subscription'))
+        input_required:'any_' = (Opaque('msg'), Opaque('subscription'))
 
 # ################################################################################################################################
 
@@ -104,10 +104,11 @@ class DeliverMessage(AdminService):
 
         # A list of messages is given on input so we need to serialize each of them individually
         if isinstance(msg, list):
-            out = []
-            for elem in msg:
+            out:'any_' = []
+            for elem in msg: # type: ignore
                 out.append(elem.serialized if elem.serialized else elem.to_external_dict())
             return out
+
         # A single message was given on input
         else:
             return msg.serialized if msg.serialized else msg.to_external_dict()
@@ -153,11 +154,11 @@ class DeliverMessage(AdminService):
     ) -> 'None':
 
         # Ultimately we should use impl_getter to get the outconn
-        for value in self.server.worker_store.worker_config.out_amqp.values():
+        for value in self.server.worker_store.worker_config.out_amqp.values(): # type: ignore
             if value['config']['id'] == sub.config['out_amqp_id']:
 
                 data = self._get_data_from_message(msg)
-                name = value['config']['name']
+                name:'str' = value['config']['name']
                 kwargs = {}
 
                 if sub.config['amqp_exchange']:
@@ -195,7 +196,7 @@ class DeliverMessage(AdminService):
         # We do not know upfront which case it will be so this needs to be extracted upfront.
         # Each message will be destinated for the same service so we can extract the target service's name
         # from the first message in list, assuming it is in a list at all.
-        zato_ctx = msg[0].zato_ctx if is_list else msg.zato_ctx
+        zato_ctx:'any_' = msg[0].zato_ctx if is_list else msg.zato_ctx
 
         #
         # Case 1) is where we can find the service name immediately.
@@ -229,7 +230,7 @@ class GetServerPIDForSubKey(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('sub_key',)
-        output_optional = (Int('server_pid'),)
+        output_optional:'any_' = (Int('server_pid'),)
 
 # ################################################################################################################################
 
