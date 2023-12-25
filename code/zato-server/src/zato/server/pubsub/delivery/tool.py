@@ -425,10 +425,10 @@ class PubSubTool:
             gd_msg = GDMessage(sub_key, topic_name, msg.get_value())
             delivery_list = self.delivery_lists[sub_key]
             delivery_list.add(gd_msg)
-            logger.info('Adding a GD message `%s` to delivery_list=%s (%s)', gd_msg.pub_msg_id, hex(id(delivery_list)), sub_key)
+            # logger.info('Adding a GD message `%s` to delivery_list=%s (%s)', gd_msg.pub_msg_id, hex(id(delivery_list)), sub_key)
             count += 1
 
-        logger.info('Pushing %d GD message{}to task:%s; msg_ids:%s'.format(' ' if count==1 else 's '), count, sub_key, msg_ids)
+        # logger.info('Pushing %d GD message{}to task:%s; msg_ids:%s'.format(' ' if count==1 else 's '), count, sub_key, msg_ids)
 
 # ################################################################################################################################
 
@@ -482,8 +482,8 @@ class PubSubTool:
                     for idx, group in enumerate(groups, 1):
                         group = cast_('strlist', group)
                         group_msg_ids = [elem for elem in group if elem] # type: strlist
-                        logger.info('Enqueuing group %d/%d (gs:%d) (%s, %s -> %s) `%s`',
-                            idx, len_groups, _group_size, sub_key, topic_name, endpoint_name, group_msg_ids)
+                        # logger.info('Enqueuing group %d/%d (gs:%d) (%s, %s -> %s) `%s`',
+                        #    idx, len_groups, _group_size, sub_key, topic_name, endpoint_name, group_msg_ids)
 
                         msg_list = self.pubsub.get_sql_messages_by_msg_id_list(session, sub_key, pub_time_max, group_msg_ids)
                         self._enqueue_gd_messages_by_sub_key(sub_key, msg_list)
