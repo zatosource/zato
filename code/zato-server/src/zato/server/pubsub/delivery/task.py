@@ -516,6 +516,7 @@ class DeliveryTask:
         """
 
         # Fill out Python-level metadata first
+        zzz
         _current_greenlet = cast_('any_', getcurrent())
         _greenlet_name = _current_greenlet.name
         _greenlet_name = cast_('str', _greenlet_name)

@@ -487,7 +487,7 @@ class PubSub:
                     sk_list.append(sub.sub_key)
 
             # .. delete all references to the sub_keys found ..
-            for sub_key in sk_list:
+            for sub_key in sk_list: # type: ignore
 
                 # .. first, stop the delivery tasks ..
                 _ = self._delete_subscription_by_sub_key(sub_key, ignore_missing=True)
