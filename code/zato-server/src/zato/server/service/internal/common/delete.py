@@ -422,6 +422,7 @@ class DeleteMany(Service):
                 '/test/complex',
                 'Test Basic Auth',
                 'Test.Complex',
+                '-test-cli-',
                 'test.wsx',
                 'zato-test',
                 TestConfig.pubsub_topic_name_perf_auto_create,
