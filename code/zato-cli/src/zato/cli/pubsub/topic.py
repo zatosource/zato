@@ -227,7 +227,7 @@ class CreateTestTopics(CreateCommon):
 
         # .. generate their names ..
         for idx in range(count):
-            sec_name = f'zato-test-security-{prefix}/sec/{endpoint_type}/{idx:04}'
+            sec_name = f'security-test-cli-{prefix}/sec/{endpoint_type}/{idx:04}'
             sec_name_list.append(sec_name)
 
         # .. do create the endpoints now ..
@@ -255,7 +255,7 @@ class CreateTestTopics(CreateCommon):
             topic_patterns += f'sub={sub_allowed}'
 
         for sec_name in security_list:
-            name = 'zato-endpoint-' + sec_name
+            name = 'endpoint-test-cli-' + sec_name
             endpoint_name_list.append(name)
             initial_data = {
                 'security_name': sec_name,
