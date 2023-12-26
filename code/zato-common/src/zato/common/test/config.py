@@ -27,7 +27,7 @@ class TestConfig:
     pubsub_topic_name_unique_auto_create = '/zato/demo/unique.'
 
     # Tests will also create topics with alsothis pattern - note the trailing dot.
-    pubsub_topic_name_perf_auto_create = '/zato/perf.'
+    pubsub_topic_name_perf_auto_create = '/test-perf.'
 
     default_stdout = b'(None)\n'
 

@@ -80,7 +80,6 @@ _All_Sec_Def_Types = All_Sec_Def_Types + ['bearer_token']
 
 _pubsub_default = Common_PubSub.DEFAULT
 
-
 zato_name_prefix = (
     'admin.',
     'admin.invoke',
@@ -795,20 +794,24 @@ def normalize_service_name(item): # type: ignore
 
 # ################################################################################################################################
 
-def test_item(item, cond): # type: ignore
+def test_item(item, condition): # type: ignore
     """ Given a dictionary `cond` containing some conditions to test an item for, return True if those conditions match.
     Currently only supports testing whether a field has a particular value. Returns ``True`` if `cond` is ``None``."""
 
-    if cond is not None:
+    if condition is not None:
 
-        only_if_field:'any_' = cond.get('only_if_field')
-        only_if_value:'any_' = cond.get('only_if_value')
+        condition = condition if isinstance(condition, list) else [condition] # type: ignore
 
-        if not isinstance(only_if_value, (list, tuple)):
-            only_if_value = [only_if_value]
+        for condition_config in condition: # type: ignore
 
-        if only_if_field and item.get(only_if_field) not in only_if_value:
-            return False
+            only_if_field:'any_' = condition_config.get('only_if_field')
+            only_if_value:'any_' = condition_config.get('only_if_value')
+
+            if not isinstance(only_if_value, (list, tuple)):
+                only_if_value = [only_if_value]
+
+            if only_if_field and item.get(only_if_field) not in only_if_value:
+                return False
 
     return True
 
@@ -963,10 +966,16 @@ SERVICES = [
             'rest_connection': {
                 'dependent_type': 'http_soap',
                 'dependent_field': 'name',
-                'condition': {
+                'condition': [
+                {
                     'only_if_field': 'endpoint_type',
                     'only_if_value': ['soap', 'rest'],
                 },
+                {
+                    'only_if_field': 'delivery_method',
+                    'only_if_value': ['push'],
+                }
+                ],
             },
         },
     ),
@@ -1293,11 +1302,8 @@ class DependencyScanner:
 
     def scan(self) -> 'Results':
 
-        # Python 2/3 compatibility
-        from zato.common.ext.future.utils import iteritems
-
         results = Results()
-        for item_type, items in iteritems(self.json):
+        for item_type, items in self.json.items():
 
             #
             # Preprocess item type
@@ -1308,7 +1314,7 @@ class DependencyScanner:
                 self.scan_item(item_type, item, results)
 
         if not self.ignore_missing:
-            for (missing_type, missing_name), dep_names in sorted(iteritems(self.missing)): # type: ignore
+            for (missing_type, missing_name), dep_names in sorted(self.missing.items()): # type: ignore
                 existing = sorted(item.name for item in self.json.get(missing_type, []))
                 raw:'any_' = (missing_type, missing_name, dep_names, existing)
 
@@ -1386,9 +1392,6 @@ class ObjectImporter:
 
     def validate_import_data(self):
 
-        # Python 2/3 compatibility
-        from zato.common.ext.future.utils import iteritems
-
         results = Results()
         dep_scanner = DependencyScanner(
             self.json,
@@ -1408,7 +1411,7 @@ class ObjectImporter:
                 results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB, "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
                                     missing_name, missing_type, dep_names)
 
-        for item_type, items in iteritems(self.json): # type: ignore
+        for item_type, items in self.json.items(): # type: ignore
 
             #
             # Preprocess item type
