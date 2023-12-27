@@ -1680,15 +1680,26 @@ class ObjectImporter:
 
     def _import_pubsub_objects(self, data:'strlistdict') -> 'None':
 
+        # Local variables
+        service_name = 'dev.zato.pubsub.import-objects'
+
+        # Resolve all values first ..
         for item_type, values in data.items():
             for idx, value in enumerate(values):
                 value = dict(value)
                 value = self._resolve_attrs(item_type, value)
                 values[idx] = value
 
-        print()
-        print(111, data)
-        print()
+        # .. details of how many objects we are importing ..
+        len_imports = {
+            'topics': len(data['pubsub_topic']),
+            'endpoints': len(data['pubsub_endpoint']),
+            'subs': len(data['pubsub_subscription']),
+        }
+
+        # .. log what we are about to do ..
+        self.logger.info(f'Invoking -> import pub/sub -> {service_name} -> {len_imports}')
+        _ = self.client.invoke(service_name, data)
 
 # ################################################################################################################################
 
