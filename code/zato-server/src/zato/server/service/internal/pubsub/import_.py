@@ -16,8 +16,8 @@ from sqlalchemy import insert
 
 # Zato
 from zato.common.api import Sec_Def_Type
-from zato.common.odb.model import PubSubEndpoint, PubSubSubscription, PubSubTopic, SecurityBase
-from zato.common.odb.query.common import get_object_list, get_object_list_by_columns
+from zato.common.odb.model import HTTPBasicAuth, PubSubEndpoint, PubSubSubscription, PubSubTopic, SecurityBase
+from zato.common.odb.query.common import get_object_list, get_object_list_by_columns, get_object_list_by_name_list
 from zato.common.typing_ import dictlist
 from zato.server.service import Model, Service
 
@@ -31,10 +31,13 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+HTTPBasicAuthTable:'any_' = HTTPBasicAuth.__table__
 SecurityBaseTable:'any_' = SecurityBase.__table__
 PubSubEndpointTable:'any_' = PubSubEndpoint.__table__
 PubSubSubscriptionTable:'any_' = PubSubSubscription.__table__
 PubSubTopicTable:'any_' = PubSubTopic.__table__
+
+HTTPBasicAuthInsert = HTTPBasicAuthTable.insert
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,8 +90,7 @@ class ImportObjects(Service):
                 sec_info = self._handle_basic_auth_input(input.basic_auth, sec_list)
 
                 if sec_info.to_add:
-                    sec_insert = self.create_objects(SecurityBase, sec_info.to_add)
-                    session.execute(sec_insert)
+                    self.create_basic_auth(session, sec_info.to_add)
 
                 if sec_info.to_update:
                     self.update_objects(session, SecurityBase, sec_info.to_update)
@@ -98,6 +100,8 @@ class ImportObjects(Service):
 
                 if sec_info.to_update:
                     self.logger.info('Basic Auth updated: %s', len(sec_info.to_update))
+
+                session.commit()
 
             # Rebuild it now because we may have added some above
             sec_list = self._get_sec_list(session)
@@ -176,6 +180,33 @@ class ImportObjects(Service):
 
         # .. now, we can return the response to our caller.
         return out
+
+# ################################################################################################################################
+
+    def create_basic_auth(self, session:'SASession', values:'dictlist') -> 'None':
+
+        # First, insert rows in the base table ..
+        sec_base_insert = insert(SecurityBase).values(values)
+        session.execute(sec_base_insert)
+        session.commit()
+
+        # .. now, get all of their IDs ..
+        name_list:'any_' = [item['name'] for item in values]
+        newly_added = get_object_list_by_name_list(session, SecurityBaseTable, name_list)
+
+        to_add_basic_auth = []
+        for item in values:
+            for newly_added_item in newly_added:
+                if item['name'] == newly_added_item['name']:
+                    to_add_item = {
+                        'id': newly_added_item['id'],
+                        'realm': 'Basic Auth'
+                    }
+                    to_add_basic_auth.append(to_add_item)
+                    break
+
+        session.execute(HTTPBasicAuthInsert().values(to_add_basic_auth))
+        session.commit()
 
 # ################################################################################################################################
 
