@@ -1837,7 +1837,7 @@ class ObjectImporter:
         new_combined:'any_' = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
 
         # A container for pub/sub objects to be handled separately
-        pubsub_objects = {
+        pubsub_objects:'strlistdict' = {
             'pubsub_endpoint': [],
             'pubsub_topic': [],
             'pubsub_subscription': [],
