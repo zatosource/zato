@@ -8,20 +8,39 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from contextlib import closing
 from dataclasses import dataclass
 
+# SQLAlchemy
+from sqlalchemy import and_, delete, exists, insert, update
+
 # Zato
+from zato.common.odb.model import PubSubEndpoint, PubSubSubscription, PubSubTopic, SecurityBase
+from zato.common.odb.query.common import get_object_list, get_object_list_by_columns
 from zato.common.typing_ import dictlist
 from zato.server.service import Model, Service
 
-# Zato
-from zato.server.service import Service
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.common.typing_ import any_, dictlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+SecurityBaseTable:'any_' = SecurityBase.__table__
+PubSubEndpointTable:'any_' = PubSubEndpoint.__table__
+PubSubSubscriptionTable:'any_' = PubSubSubscription.__table__
+PubSubTopicTable:'any_' = PubSubTopic.__table__
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=False)
 class PubSubContainer(Model):
+
     pubsub_topic: 'dictlist | None'
     pubsub_endpoint: 'dictlist | None'
     pubsub_subscription: 'dictlist | None'
@@ -38,8 +57,8 @@ class PubSubContainer(Model):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetList(Service):
-    """ Returns all groups matching the input criteria.
+class ImportObjects(Service):
+    """ Imports multiple pub/sub objects en masse.
     """
     name = 'dev.zato.pubsub.import-objects'
 
@@ -50,17 +69,89 @@ class GetList(Service):
         input = PubSubContainer.from_dict(data)
 
         # Data that already exists
-        existing = self._get_existing_data()
+        with closing(self.odb.session()) as session:
+
+            # All security definitions that currently exist
+            sec_list = self._get_sec_list(session)
+
+            # All pub/sub objects that currently exist
+            existing = self._get_existing_data(session)
+
+        # Make sure we always have lists of dicts
+        input_topics = input.pubsub_topic or []
+        existing_topics = existing.pubsub_topic or []
+
+        input_endpoints = input.pubsub_endpoint or []
+        existing_endpoints = existing.pubsub_endpoint or []
+
+        new_topics = self._find_new_items(input_topics, existing_topics)
+        new_endpoints = self._find_new_items(input_endpoints, existing_endpoints)
 
 # ################################################################################################################################
 
-    def _get_existing_data(self) -> 'PubSubContainer'
+    def _find_new_items(self, incoming:'dictlist', existing:'dictlist') -> 'dictlist':
+
+        # Our response to produce
+        out:'dictlist' = []
+
+        # Go through each item that we potentially need to create and see if there is a match
+        for new_item in incoming:
+            for existing_item in existing:
+                if new_item['name'] == existing_item['name']:
+                    break
+            # .. if we are here, it means that there was no match, which means that this item truly is new ..
+            else:
+                out.append(new_item)
+
+        # .. now, we can return the response to our caller.
+        return out
+
+# ################################################################################################################################
+
+    def _get_sec_list(self, session:'SASession') -> 'dictlist':
+
+        out = get_object_list(session, SecurityBaseTable)
+        return out
+
+# ################################################################################################################################
+
+    def _get_existing_topics(self, session:'SASession') -> 'dictlist':
+
+        topics = get_object_list(session, PubSubTopicTable)
+        return topics
+
+# ################################################################################################################################
+
+    def _get_existing_endpoints(self, session:'SASession') -> 'dictlist':
+
+        topics = get_object_list(session, PubSubEndpointTable)
+        return topics
+
+# ################################################################################################################################
+
+    def _get_existing_subscriptions(self, session:'SASession') -> 'dictlist':
+
+        columns = [PubSubSubscriptionTable.c.topic_id, PubSubSubscriptionTable.c.endpoint_id]
+        subscriptions = get_object_list_by_columns(session, columns)
+        return subscriptions
+
+# ################################################################################################################################
+
+    def _get_existing_data(self, session:'SASession') -> 'PubSubContainer':
 
         # Our response to produce
         out = PubSubContainer()
         out.pubsub_topic = []
         out.pubsub_endpoint = []
         out.pubsub_subscription = []
+
+        existing_topics = self._get_existing_topics(session)
+        existing_endpoints = self._get_existing_endpoints(session)
+        existing_subscriptions = self._get_existing_endpoints(session)
+
+        out.pubsub_topic.extend(existing_topics)
+        out.pubsub_endpoint.extend(existing_endpoints)
+        out.pubsub_subscription.extend(existing_subscriptions)
 
         return out
 
