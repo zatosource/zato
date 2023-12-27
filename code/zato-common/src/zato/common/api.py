@@ -73,6 +73,7 @@ ZATO_NONE = 'ZATO_NONE'
 ZATO_DEFAULT = 'ZATO_DEFAULT'
 ZATO_SEC_USE_RBAC = 'ZATO_SEC_USE_RBAC'
 Zato_None = ZATO_NONE
+Zato_No_Security = 'zato-no-security'
 
 DELEGATED_TO_RBAC = 'Delegated to RBAC'
 
