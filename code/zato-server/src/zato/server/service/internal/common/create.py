@@ -20,6 +20,7 @@ _ps_default = PUBSUB.DEFAULT
 @dataclass(init=False)
 class DataItem(Model):
     name: str
+    object_type: str
     initial_data: any_
 
 @dataclass(init=False)
@@ -159,6 +160,7 @@ class CreateObjects(Service):
 
                 # .. populate its fields ..
                 data.name = name
+                data.object_type = input.object_type
                 data.initial_data = input.initial_data
 
                 # .. append it for later use ..
@@ -225,15 +227,15 @@ class CreateObjects(Service):
         for data in input.object_list:
 
             # .. get a request with basic details ..
-            request_func = request_func_map[input.object_type]
-            request = request_func(data.name, input.initial_data)
+            request_func = request_func_map[data.object_type]
+            request = request_func(data.name, data.initial_data)
 
             # .. add the name from input ..
             request['name'] = data.name
 
             # .. populate the request with initial data ..
-            if input.initial_data:
-                for key, value in input.initial_data.items():
+            if data.initial_data:
+                for key, value in data.initial_data.items():
                     request[key] = value
 
             # .. create an object now ..
