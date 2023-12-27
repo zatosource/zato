@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from copy import deepcopy
 from dataclasses import dataclass
 
 # SQLAlchemy
@@ -90,7 +91,7 @@ class ImportObjects(Service):
                 sec_info = self._handle_basic_auth_input(input.basic_auth, sec_list)
 
                 if sec_info.to_add:
-                    self.create_basic_auth(session, sec_info.to_add)
+                    self.create_basic_auth(session, sec_info.to_add, input.basic_auth)
 
                 if sec_info.to_update:
                     self.update_objects(session, SecurityBase, sec_info.to_update)
@@ -160,7 +161,7 @@ class ImportObjects(Service):
         out.to_update = []
 
         # Go through each item that we potentially need to create and see if there is a match
-        for new_item in incoming:
+        for new_item in deepcopy(incoming):
             for existing_item in existing:
                 if existing_item['sec_type'] == Sec_Def_Type.BASIC_AUTH:
                     if new_item['name'] == existing_item['name']:
@@ -183,7 +184,16 @@ class ImportObjects(Service):
 
 # ################################################################################################################################
 
-    def create_basic_auth(self, session:'SASession', values:'dictlist') -> 'None':
+    def _get_basic_auth_realm_by_sec_name(self, incoming:'dictlist', name:'str') -> 'str':
+        for item in incoming:
+            if item['name'] == name:
+                return item['realm']
+        else:
+            raise Exception(f'Security definition not found (realm) -> {name}')
+
+# ################################################################################################################################
+
+    def create_basic_auth(self, session:'SASession', values:'dictlist', incoming:'dictlist') -> 'None':
 
         # First, insert rows in the base table ..
         sec_base_insert = insert(SecurityBase).values(values)
@@ -198,9 +208,10 @@ class ImportObjects(Service):
         for item in values:
             for newly_added_item in newly_added:
                 if item['name'] == newly_added_item['name']:
+                    realm = self._get_basic_auth_realm_by_sec_name(incoming, item['name'])
                     to_add_item = {
                         'id': newly_added_item['id'],
-                        'realm': 'Basic Auth'
+                        'realm': realm,
                     }
                     to_add_basic_auth.append(to_add_item)
                     break
