@@ -45,14 +45,14 @@ class PubSubContainer(Model):
     pubsub_endpoint: 'dictlist | None'
     pubsub_subscription: 'dictlist | None'
 
-    def has_topic(self, name:'str') -> 'bool':
-        pass
+# ################################################################################################################################
+# ################################################################################################################################
 
-    def has_endpoint(self, name:'str') -> 'bool':
-        pass
+@dataclass(init=False)
+class ItemsInfo(Model):
 
-    def has_subscription(self, topic_name:'str', endpoint_name:'str') -> 'bool':
-        pass
+    to_add: 'dictlist'
+    to_update: 'dictlist'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,7 +63,8 @@ class ImportObjects(Service):
     name = 'dev.zato.pubsub.import-objects'
 
     def handle(self):
-        data = test_data #  self.request.raw_request
+        data = test_data
+        # data = self.request.raw_request
 
         # Data that we received on input
         input = PubSubContainer.from_dict(data)
@@ -77,31 +78,86 @@ class ImportObjects(Service):
             # All pub/sub objects that currently exist
             existing = self._get_existing_data(session)
 
-        # Make sure we always have lists of dicts
-        input_topics = input.pubsub_topic or []
-        existing_topics = existing.pubsub_topic or []
+            # Make sure we always have lists of dicts
+            input_topics = input.pubsub_topic or []
+            existing_topics = existing.pubsub_topic or []
 
-        input_endpoints = input.pubsub_endpoint or []
-        existing_endpoints = existing.pubsub_endpoint or []
+            input_endpoints = input.pubsub_endpoint or []
+            existing_endpoints = existing.pubsub_endpoint or []
 
-        new_topics = self._find_new_items(input_topics, existing_topics)
-        new_endpoints = self._find_new_items(input_endpoints, existing_endpoints)
+            topics_info = self._find_items(input_topics, existing_topics)
+
+            if topics_info.to_add:
+                topics_insert = self.create_objects(PubSubTopicTable, topics_info.to_add)
+                session.execute(topics_insert)
+
+            self.logger.info('Topics created: %s', len(topics_info.to_add))
+            self.logger.info('Topics updated: %s', len(topics_info.to_update))
+
+            endpoints_info = self._find_items(input_endpoints, existing_endpoints)
+            self._enrich_endpoints(endpoints_info.to_add, sec_list)
+            self._enrich_endpoints(endpoints_info.to_update, sec_list)
+
+            if endpoints_info.to_add:
+                endpoints_insert = self.create_objects(PubSubEndpointTable, endpoints_info.to_add)
+                session.execute(endpoints_insert)
+
+            self.logger.info('Endpoints created: %s', len(endpoints_info.to_add))
+            self.logger.info('Endpoints updated: %s', len(endpoints_info.to_update))
+
+            session.commit()
 
 # ################################################################################################################################
 
-    def _find_new_items(self, incoming:'dictlist', existing:'dictlist') -> 'dictlist':
+    def _enrich_endpoints(self, endpoints:'dictlist', sec_list:'dictlist') -> 'None':
+
+        for item in endpoints:
+
+            service = item.pop('service', None)
+            service_name = item.pop('service_name', None)
+            service_name = service or service_name
+
+            if service_name:
+                service_id = self.server.service_store.get_service_id_by_name(service_name)
+                item['service_id'] = service_id
+
+            if sec_name := item.pop('sec_name', None):
+                for sec_item in sec_list:
+                    if sec_name == sec_item['name']:
+                        security_id = sec_item['id']
+                        item['security_id'] = security_id
+                        break
+                else:
+                    raise Exception(f'Security definition not found -> {sec_name}')
+
+# ################################################################################################################################
+
+    def create_objects(self, table:'any_', values:'dictlist') -> 'any_':
+        """ Creates a new row for input data.
+        """
+        result = insert(table).values(values)
+        return result
+
+# ################################################################################################################################
+
+    def _find_items(self, incoming:'dictlist', existing:'dictlist') -> 'ItemsInfo':
 
         # Our response to produce
-        out:'dictlist' = []
+        out = ItemsInfo()
+        out.to_add = []
+        out.to_update = []
 
         # Go through each item that we potentially need to create and see if there is a match
         for new_item in incoming:
             for existing_item in existing:
                 if new_item['name'] == existing_item['name']:
+                    out.to_update.append(new_item)
                     break
+
             # .. if we are here, it means that there was no match, which means that this item truly is new ..
             else:
-                out.append(new_item)
+                new_item['cluster_id'] = self.server.cluster_id
+                out.to_add.append(new_item)
 
         # .. now, we can return the response to our caller.
         return out
@@ -161,22 +217,22 @@ class ImportObjects(Service):
 test_data = {
     'pubsub_endpoint': [
         {
-            'name': 'endpoint-test-cli-security-test-cli-/test-perf.1/sec/pub/0000',
+            'name': 'endpoint-test-cli-security-test-cli-/test-perf.01/sec/pub/0000',
             'endpoint_type': 'rest',
             'service_name': None,
             'topic_patterns': 'pub=/*',
-            'sec_name': 'security-test-cli-/test-perf.1/sec/pub/0000',
+            'sec_name': 'security-test-cli-/test-perf.01/sec/pub/0000',
             'is_active': True,
             'is_internal': False,
             'role': 'pub-sub',
             'service': None
         },
         {
-            'name': 'endpoint-test-cli-security-test-cli-/test-perf.1/sec/sub/0000',
+            'name': 'endpoint-test-cli-security-test-cli-/test-perf.01/sec/sub/0000',
             'endpoint_type': 'rest',
             'service_name': None,
             'topic_patterns': 'sub=/*',
-            'sec_name': 'security-test-cli-/test-perf.1/sec/sub/0000',
+            'sec_name': 'security-test-cli-/test-perf.01/sec/sub/0000',
             'is_active': True,
             'is_internal': False,
             'role': 'pub-sub',
@@ -185,7 +241,7 @@ test_data = {
     ],
     'pubsub_topic': [
         {
-            'name': '/test-perf.1',
+            'name': '/test-perf.01',
             'has_gd': True,
             'is_active': True,
             'is_api_sub_allowed': True,
@@ -200,10 +256,10 @@ test_data = {
     'pubsub_subscription': [
         {
             'name': 'Subscription.000000001',
-            'endpoint_name': 'endpoint-test-cli-security-test-cli-/test-perf.1/sec/sub/0000',
+            'endpoint_name': 'endpoint-test-cli-security-test-cli-/test-perf.01/sec/sub/0000',
             'endpoint_type': 'rest',
             'delivery_method': 'pull',
-            'topic_list_json': ['/test-perf.1'],
+            'topic_list_json': ['/test-perf.01'],
             'is_active': True,
             'should_ignore_if_sub_exists': True,
             'should_delete_all': True
