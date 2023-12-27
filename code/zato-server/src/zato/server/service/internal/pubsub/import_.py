@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from sqlalchemy import insert
 
 # Zato
-from zato.common.api import Sec_Def_Type, Zato_No_Security
+from zato.common.api import GENERIC, Sec_Def_Type, Zato_No_Security
 from zato.common.odb.model import HTTPBasicAuth, PubSubEndpoint, PubSubSubscription, PubSubTopic, SecurityBase
 from zato.common.odb.query.common import get_object_list, get_object_list_by_columns, get_object_list_by_name_list
 from zato.common.typing_ import dictlist
@@ -245,6 +245,8 @@ class ImportObjects(Service):
                     out.to_update.append(new_item)
                     break
             else:
+                new_item['cluster_id'] = self.server.cluster_id
+                new_item[GENERIC.ATTR_NAME] = None
                 out.to_add.append(new_item)
 
         # .. now, we can return the response to our caller.
