@@ -1777,7 +1777,7 @@ class ObjectImporter:
 
         # Extract and load Basic Auth definitions as a whole, before any other updates (edit)
         basic_auth_edit = self._extract_basic_auth(existing_combined, is_edit=True)
-        # self._import_basic_auth(basic_auth_edit, is_edit=True)
+        self._import_basic_auth(basic_auth_edit, is_edit=True)
 
         for w in existing_combined:
 
@@ -1878,12 +1878,6 @@ class ObjectImporter:
         basic_auth_create = self._extract_basic_auth(new_combined, is_edit=False)
         self._import_basic_auth(basic_auth_create, is_edit=False)
 
-        print()
-        print(111, basic_auth_create)
-        print()
-
-        zzz
-
         for elem in new_combined:
             for item_type, attr_list in iteritems(elem):
                 for attrs in attr_list:
@@ -1924,11 +1918,6 @@ class ObjectImporter:
             for item in data:
                 value_raw = item.value_raw
                 item_type, attrs = value_raw
-
-                print()
-                print(222, attrs)
-                print()
-
                 if item_type == Sec_Def_Type.BASIC_AUTH:
                     attrs = dict(attrs)
                     out.append(attrs)
