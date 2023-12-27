@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from sqlalchemy import insert
 
 # Zato
-from zato.common.api import Sec_Def_Type
+from zato.common.api import Sec_Def_Type, Zato_No_Security
 from zato.common.odb.model import HTTPBasicAuth, PubSubEndpoint, PubSubSubscription, PubSubTopic, SecurityBase
 from zato.common.odb.query.common import get_object_list, get_object_list_by_columns, get_object_list_by_name_list
 from zato.common.typing_ import dictlist
@@ -70,13 +70,17 @@ class ImportObjects(Service):
 
     def handle(self):
 
-        self.logger.info('*' * 60)
-
         # data = test_data
         data = self.request.raw_request
 
         # Data that we received on input
         input:'ObjectContainer' = ObjectContainer.from_dict(data)
+
+        has_input:'any_' = input.basic_auth or input.pubsub_topic or input.pubsub_endpoint or input.pubsub_subscription
+        if not has_input:
+            return
+
+        self.logger.info('*' * 60)
 
         # Data that already exists
         with closing(self.odb.session()) as session:
@@ -240,7 +244,8 @@ class ImportObjects(Service):
                         item['security_id'] = security_id
                         break
                 else:
-                    raise Exception(f'Security definition not found -> {sec_name}')
+                    if sec_name != Zato_No_Security:
+                        raise Exception(f'Security definition not found -> {sec_name}')
 
 # ################################################################################################################################
 
