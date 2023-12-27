@@ -6,7 +6,7 @@ from dataclasses import dataclass
 # Zato
 from zato.common.api import CommonObject, PUBSUB
 from zato.common.exception import BadRequest
-from zato.common.typing_ import any_, anylist, intlistnone, intnone, strdict, strlistnone, strnone
+from zato.common.typing_ import any_, anylist, anylistnone, intlistnone, intnone, strdict, strlistnone, strnone
 from zato.server.service import Model, Service
 
 # ################################################################################################################################
@@ -18,12 +18,18 @@ _ps_default = PUBSUB.DEFAULT
 # ################################################################################################################################
 
 @dataclass(init=False)
+class DataItem(Model):
+    name: str
+    initial_data: any_
+
+@dataclass(init=False)
 class CreateObjectsRequest(Model):
     object_type: str
     id: intnone
     id_list: intlistnone
     name: strnone
     name_list: strlistnone
+    object_list: anylistnone
     pattern: strnone
     initial_data: any_
 
@@ -122,6 +128,50 @@ class CreateObjects(Service):
 
 # ################################################################################################################################
 
+    def _turn_names_into_objects_list(self, input:'CreateObjectsRequest') -> 'CreateObjectsRequest':
+
+        # Requests of these types will not have any names on input ..
+        no_name_requests = {
+            CommonObject.PubSub_Publish,
+            CommonObject.PubSub_Subscription,
+        }
+
+        # .. populate empty names per the above ..
+        if input.object_type in no_name_requests:
+            input.name_list = ['']
+
+        # .. or build a list of names out of what we have on input ..
+        else:
+            input.name_list = input.name_list or []
+
+        # .. at this point, we know that we have a list of names ..
+        # .. so we can turn them into objects, unless we already have objects on input ..
+        if not input.object_list:
+
+            # .. a list for us to populate ..
+            object_list = []
+
+            # .. go through each input name ..
+            for name in input.name_list:
+
+                # .. turn it into an object ..
+                data = DataItem()
+
+                # .. populate its fields ..
+                data.name = name
+                data.initial_data = input.initial_data
+
+                # .. append it for later use ..
+                object_list.append(data)
+
+            # .. assign the object list to what we are to return ..
+            input.object_list = object_list
+
+        # .. finally, we can return everything to our caller.
+        return input
+
+# ################################################################################################################################
+
     def handle(self):
 
         # Zato
@@ -161,32 +211,25 @@ class CreateObjects(Service):
         # Get the service that will create the object
         service = service_map[input.object_type]
 
-        # Make sure this is provided
-        input.name_list = input.name_list or []
+        # Turn names into objects
+        input = self._turn_names_into_objects_list(input)
+
+        # At this point, we know we have a list of objects, even if empty.
+        if not input.object_list:
+            return
 
         # Log what we are about to do
-        self.logger.info('Creating topics -> len=%s', len(input.name_list))
-
-        # Requests of these types will not have any names on input
-        no_name_requests = {
-            CommonObject.PubSub_Publish,
-            CommonObject.PubSub_Subscription,
-        }
-
-        if input.object_type in no_name_requests:
-            name_list = ['']
-        else:
-            name_list = input.name_list
+        self.logger.info('Creating objects -> len=%s', len(input.object_list))
 
         # .. go through each name we are given on input ..
-        for name in name_list:
+        for data in input.object_list:
 
             # .. get a request with basic details ..
             request_func = request_func_map[input.object_type]
-            request = request_func(name, input.initial_data)
+            request = request_func(data.name, input.initial_data)
 
             # .. add the name from input ..
-            request['name'] = name
+            request['name'] = data.name
 
             # .. populate the request with initial data ..
             if input.initial_data:
@@ -205,7 +248,7 @@ class CreateObjects(Service):
 
             else:
                 # .. finally, store information in logs that we are done.
-                self.logger.info('Object created -> %s -> %s', name, response)
+                self.logger.info('Object created -> %s -> %s', data.name, response)
 
         # Produce the response for our caller
         self.response.payload = out

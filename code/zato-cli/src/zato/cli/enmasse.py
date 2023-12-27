@@ -1492,9 +1492,8 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _import(self, item_type:'str', attrs:'any_', is_edit:'bool') -> 'None':
+    def _resolve_attrs(self, item_type:'str', attrs:'any_') -> 'any_':
 
-        # First, resolve values pointing to parameter placeholders and environment variables ..
         for key, orig_value in attrs.items():
 
             # .. preprocess values only if they are strings ..
@@ -1518,6 +1517,15 @@ class ObjectImporter:
                         value = os.environ.get(value)
 
                     attrs[key] = value
+
+        return attrs
+
+# ################################################################################################################################
+
+    def _import(self, item_type:'str', attrs:'any_', is_edit:'bool') -> 'None':
+
+        # First, resolve values pointing to parameter placeholders and environment variables ..
+        attrs = self._resolve_attrs(item_type, attrs)
 
         #
         # Preprocess the data to be imported
@@ -1670,6 +1678,20 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
+    def _import_pubsub_objects(self, data:'strlistdict') -> 'None':
+
+        for item_type, values in data.items():
+            for idx, value in enumerate(values):
+                value = dict(value)
+                value = self._resolve_attrs(item_type, value)
+                values[idx] = value
+
+        print()
+        print(111, data)
+        print()
+
+# ################################################################################################################################
+
     def import_objects(self, already_existing) -> 'Results': # type: ignore
 
         # stdlib
@@ -1724,6 +1746,10 @@ class ObjectImporter:
             item_type, attrs = w.value_raw
 
             if self.should_skip_item(item_type, attrs, True):
+                continue
+
+            # Skip pub/sub objects because they are handled separately (edit)
+            if item_type.startswith('pubsub'):
                 continue
 
             results = self._import(item_type, attrs, True)
@@ -1799,11 +1825,24 @@ class ObjectImporter:
         #
         new_combined:'any_' = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
 
+        # A container for pub/sub objects to be handled separately
+        pubsub_objects = {
+            'pubsub_endpoint': [],
+            'pubsub_topic': [],
+            'pubsub_subscription': [],
+        }
+
         for elem in new_combined:
             for item_type, attr_list in iteritems(elem):
                 for attrs in attr_list:
 
                     if self.should_skip_item(item_type, attrs, False):
+                        continue
+
+                    # Pub/sub objects are handled separately at the end of this function (create)
+                    if item_type.startswith('pubsub'):
+                        container = pubsub_objects[item_type]
+                        container.append(attrs)
                         continue
 
                     results = self._import(item_type, attrs, False)
@@ -1813,6 +1852,9 @@ class ObjectImporter:
 
                     if results:
                         return results
+
+        # Handle pub/sub objeccts as a whole here
+        self._import_pubsub_objects(pubsub_objects)
 
         return self.results
 
