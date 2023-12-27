@@ -205,7 +205,7 @@ class CreateTestTopics(CreateCommon):
     def _get_topics(self, data:'strdict') -> 'strlist':
 
         # Extract the objects returned ..
-        objects = data['objects']
+        objects = data.get('objects') or []
 
         # .. build a sorted list of names to be returned ..
         topic_name_list = sorted(elem['name'] for elem in objects)
