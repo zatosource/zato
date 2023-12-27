@@ -18,7 +18,7 @@ from time import sleep
 # Zato
 from zato.cli import ManageCommand
 from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
-    NotGiven, PUBSUB as Common_PubSub, TLS as COMMON_TLS, Zato_None
+    NotGiven, PUBSUB as Common_PubSub, Sec_Def_Type, TLS as COMMON_TLS, Zato_None
 from zato.common.const import ServiceConst
 from zato.common.typing_ import cast_
 
@@ -1678,10 +1678,11 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _import_basic_auth(self, data:'dictlist') -> 'None':
+    def _import_basic_auth(self, data:'dictlist', *, is_edit:'bool') -> 'None':
 
         # Local variables
         service_name = 'dev.zato.import-objects'
+        import_type = 'edit' if is_edit else 'create'
 
         # Build a request for the service
         imports = {
@@ -1694,7 +1695,7 @@ class ObjectImporter:
         }
 
         # .. log what we are about to do ..
-        self.logger.info(f'Invoking -> import security -> {service_name} -> {len_imports}')
+        self.logger.info(f'Invoking -> import security ({import_type}) -> {service_name} -> {len_imports}')
 
         _ = self.client.invoke(service_name, imports)
 
@@ -1774,12 +1775,9 @@ class ObjectImporter:
         existing_combined:'any_' = existing_defs + existing_rbac_role + existing_rbac_role_permission + \
             existing_rbac_client_role + existing_other
 
-
-        # Extract and load Basic Auth definitions as a whole, before any other updates
-        basic_auth_edit = self._extract_basic_auth(existing_combined)
-        self._import_basic_auth(basic_auth_edit)
-
-        zzz
+        # Extract and load Basic Auth definitions as a whole, before any other updates (edit)
+        basic_auth_edit = self._extract_basic_auth(existing_combined, is_edit=True)
+        self._import_basic_auth(basic_auth_edit, is_edit=True)
 
         for w in existing_combined:
 
@@ -1789,6 +1787,8 @@ class ObjectImporter:
                 continue
 
             # Basic Auth definitions have been already handled above (edit)
+            if item_type == Sec_Def_Type.BASIC_AUTH:
+                continue
 
             # Skip pub/sub objects because they are handled separately (edit)
             if item_type.startswith('pubsub'):
@@ -1874,6 +1874,10 @@ class ObjectImporter:
             'pubsub_subscription': [],
         }
 
+        # Extract and load Basic Auth definitions as a whole, before any other updates (create)
+        basic_auth_create = self._extract_basic_auth(new_combined, is_edit=False)
+        self._import_basic_auth(basic_auth_create, is_edit=False)
+
         for elem in new_combined:
             for item_type, attr_list in iteritems(elem):
                 for attrs in attr_list:
@@ -1882,6 +1886,8 @@ class ObjectImporter:
                         continue
 
                     # Basic Auth definitions have been already handled above (create)
+                    if item_type == Sec_Def_Type.BASIC_AUTH:
+                        continue
 
                     # Pub/sub objects are handled separately at the end of this function (create)
                     if item_type.startswith('pubsub'):
@@ -1890,10 +1896,6 @@ class ObjectImporter:
                         continue
 
                     results = self._import(item_type, attrs, False)
-
-                    print()
-                    print(111, item_type, attrs)
-                    print()
 
                     if 'rbac' in item_type:
                         sleep(rbac_sleep)
@@ -1908,15 +1910,23 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _extract_basic_auth(self, data:'any_') -> 'dictlist':
+    def _extract_basic_auth(self, data:'any_', *, is_edit:'bool') -> 'dictlist':
 
         out:'dictlist' = []
 
-        for item in data:
-            item_type, attrs = item.value_raw
-            if item_type == 'basic_auth':
-                attrs = dict(attrs)
-                out.append(attrs)
+        if is_edit:
+            for item in data:
+                value_raw = item.value_raw
+                item_type, attrs = value_raw
+                if item_type == Sec_Def_Type.BASIC_AUTH:
+                    attrs = dict(attrs)
+                    out.append(attrs)
+        else:
+            for item in data:
+                if basic_auth := item.get(Sec_Def_Type.BASIC_AUTH):
+                    for elem in basic_auth:
+                        attrs = dict(elem)
+                        out.append(attrs)
 
         return out
 

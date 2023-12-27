@@ -65,6 +65,9 @@ class ImportObjects(Service):
     name = 'dev.zato.import-objects'
 
     def handle(self):
+
+        self.logger.info('*' * 60)
+
         # data = test_data
         data = self.request.raw_request
 
@@ -90,8 +93,11 @@ class ImportObjects(Service):
                 if sec_info.to_update:
                     self.update_objects(session, SecurityBase, sec_info.to_update)
 
-                self.logger.info('Basic Auth created: %s', len(sec_info.to_add))
-                self.logger.info('Basic Auth updated: %s', len(sec_info.to_update))
+                if sec_info.to_add:
+                    self.logger.info('Basic Auth created: %s', len(sec_info.to_add))
+
+                if sec_info.to_update:
+                    self.logger.info('Basic Auth updated: %s', len(sec_info.to_update))
 
             # Rebuild it now because we may have added some above
             sec_list = self._get_sec_list(session)
@@ -128,11 +134,17 @@ class ImportObjects(Service):
 
             session.commit()
 
-        self.logger.info('Topics created: %s', len(topics_info.to_add))
-        self.logger.info('Topics updated: %s', len(topics_info.to_update))
+        if topics_info.to_add:
+            self.logger.info('Topics created: %s', len(topics_info.to_add))
 
-        self.logger.info('Endpoints created: %s', len(endpoints_info.to_add))
-        self.logger.info('Endpoints updated: %s', len(endpoints_info.to_update))
+        if topics_info.to_update:
+            self.logger.info('Topics updated: %s', len(topics_info.to_update))
+
+        if endpoints_info.to_add:
+            self.logger.info('Endpoints created: %s', len(endpoints_info.to_add))
+
+        if endpoints_info.to_update:
+            self.logger.info('Endpoints updated: %s', len(endpoints_info.to_update))
 
 # ################################################################################################################################
 
