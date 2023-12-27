@@ -52,6 +52,24 @@ class ObjectContainer(Model):
     basic_auth: 'dictlist | None' = None
 
 # ################################################################################################################################
+
+    def get_topic_id_by_name(self, name:'str') -> 'any_':
+        for item in self.pubsub_topic: # type: ignore
+            if item['name'] == name:
+                return item['id']
+        else:
+            raise Exception(f'Topic not found -> {name}')
+
+# ################################################################################################################################
+
+    def get_endpoint_id_by_name(self, name:'str') -> 'any_':
+        for item in self.pubsub_endpoint: # type: ignore
+            if item['name'] == name:
+                return item['id']
+        else:
+            raise Exception(f'Endpoint not found -> {name}')
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=False)
@@ -70,8 +88,8 @@ class ImportObjects(Service):
 
     def handle(self):
 
-        # data = test_data
-        data = self.request.raw_request
+        data = test_data
+        # data = self.request.raw_request
 
         # Data that we received on input
         input:'ObjectContainer' = ObjectContainer.from_dict(data)
@@ -112,7 +130,7 @@ class ImportObjects(Service):
             sec_list = self._get_sec_list(session)
 
             # All pub/sub objects that currently exist
-            existing = self._get_existing_data(session)
+            existing = self._get_existing_data(session, needs_subs=True)
 
             # Make sure we always have lists of dicts
             input_topics = input.pubsub_topic or []
@@ -141,6 +159,25 @@ class ImportObjects(Service):
             if endpoints_info.to_update:
                 self.update_objects(session, PubSubEndpoint, endpoints_info.to_update)
 
+            # Commit topics and endpoints so that we can find them when we handle subscriptions below
+            session.commit()
+
+            # Load it again, now that we added topics and endpoints
+            existing = self._get_existing_data(session, needs_subs=True)
+
+            input_subscriptions = input.pubsub_subscription or []
+            existing_subscriptions = existing.pubsub_subscription or []
+            input_subscriptions = self._resolve_input_subscriptions(input_subscriptions, existing)
+            subscriptions_info = self._find_subscriptions(input_subscriptions, existing_subscriptions)
+
+            if subscriptions_info.to_add:
+                subscriptions_insert = self.create_objects(PubSubSubscriptionTable, subscriptions_info.to_add)
+                session.execute(subscriptions_insert)
+
+            if subscriptions_info.to_update:
+                self.update_objects(session, PubSubSubscription, subscriptions_info.to_update)
+
+            # Commit once more, this time around, it will include subscriptions
             session.commit()
 
         if topics_info.to_add:
@@ -154,6 +191,64 @@ class ImportObjects(Service):
 
         if endpoints_info.to_update:
             self.logger.info('Endpoints updated: %s', len(endpoints_info.to_update))
+
+        if subscriptions_info.to_add:
+            self.logger.info('Subscriptions created: %s', len(subscriptions_info.to_add))
+
+        if subscriptions_info.to_update:
+            self.logger.info('Subscriptions updated: %s', len(subscriptions_info.to_update))
+
+# ################################################################################################################################
+
+    def _resolve_input_subscriptions(self, input_subscriptions:'dictlist', existing:'ObjectContainer') -> 'dictlist':
+
+        out:'dictlist' = []
+
+        for item in deepcopy(input_subscriptions):
+
+            _ = item.pop('name', None)
+
+            endpoint_name = item.pop('endpoint_name')
+            endpoint_id = existing.get_endpoint_id_by_name(endpoint_name)
+
+            for topic_name in item.pop('topic_list_json'):
+                topic_id = existing.get_topic_id_by_name(topic_name)
+                new_item = {
+                    'topic_id': topic_id,
+                    'endpoint_id': endpoint_id,
+                    'delivery_method': item['delivery_method'],
+                    'creation_time': self.time.utcnow(needs_format=False).float_timestamp,
+                    'sub_key': self.time.utcnow(),
+                    'sub_pattern_matched': 'auto-import',
+                    'has_gd': True,
+                    'wrap_one_msg_in_list': True,
+                    'delivery_err_should_block': True,
+                }
+                out.append(new_item)
+
+        return out
+
+# ################################################################################################################################
+
+    def _find_subscriptions(self, incoming:'dictlist', existing:'dictlist') -> 'ItemsInfo':
+
+        # Our response to produce
+        out = ItemsInfo()
+        out.to_add = []
+        out.to_update = []
+
+        for new_item in deepcopy(incoming):
+            for existing_item in existing:
+                subscription_id, topic_id, endpoint_id = existing_item
+                if new_item['topic_id'] == topic_id and new_item['endpoint_id'] == endpoint_id:
+                    new_item['id'] = subscription_id
+                    out.to_update.append(new_item)
+                    break
+            else:
+                out.to_add.append(new_item)
+
+        # .. now, we can return the response to our caller.
+        return out
 
 # ################################################################################################################################
 
@@ -310,13 +405,17 @@ class ImportObjects(Service):
 
     def _get_existing_subscriptions(self, session:'SASession') -> 'dictlist':
 
-        columns = [PubSubSubscriptionTable.c.topic_id, PubSubSubscriptionTable.c.endpoint_id]
+        columns = [
+            PubSubSubscriptionTable.c.id,
+            PubSubSubscriptionTable.c.topic_id,
+            PubSubSubscriptionTable.c.endpoint_id,
+        ]
         subscriptions = get_object_list_by_columns(session, columns)
         return subscriptions
 
 # ################################################################################################################################
 
-    def _get_existing_data(self, session:'SASession') -> 'ObjectContainer':
+    def _get_existing_data(self, session:'SASession', *, needs_subs:'bool') -> 'ObjectContainer':
 
         # Our response to produce
         out = ObjectContainer()
@@ -326,11 +425,13 @@ class ImportObjects(Service):
 
         existing_topics = self._get_existing_topics(session)
         existing_endpoints = self._get_existing_endpoints(session)
-        existing_subscriptions = self._get_existing_endpoints(session)
 
         out.pubsub_topic.extend(existing_topics)
         out.pubsub_endpoint.extend(existing_endpoints)
-        out.pubsub_subscription.extend(existing_subscriptions)
+
+        if needs_subs:
+            existing_subscriptions = self._get_existing_subscriptions(session)
+            out.pubsub_subscription.extend(existing_subscriptions)
 
         return out
 
