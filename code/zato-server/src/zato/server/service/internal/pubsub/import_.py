@@ -12,7 +12,7 @@ from contextlib import closing
 from dataclasses import dataclass
 
 # SQLAlchemy
-from sqlalchemy import and_, delete, exists, insert, update
+from sqlalchemy import insert, update
 
 # Zato
 from zato.common.odb.model import PubSubEndpoint, PubSubSubscription, PubSubTopic, SecurityBase
@@ -63,8 +63,8 @@ class ImportObjects(Service):
     name = 'dev.zato.pubsub.import-objects'
 
     def handle(self):
-        data = test_data
-        # data = self.request.raw_request
+        # data = test_data
+        data = self.request.raw_request
 
         # Data that we received on input
         input = PubSubContainer.from_dict(data)
@@ -86,26 +86,32 @@ class ImportObjects(Service):
             existing_endpoints = existing.pubsub_endpoint or []
 
             topics_info = self._find_items(input_topics, existing_topics)
+            endpoints_info = self._find_items(input_endpoints, existing_endpoints)
+
+            self._enrich_endpoints(endpoints_info.to_add, sec_list)
+            self._enrich_endpoints(endpoints_info.to_update, sec_list)
 
             if topics_info.to_add:
                 topics_insert = self.create_objects(PubSubTopicTable, topics_info.to_add)
                 session.execute(topics_insert)
 
-            self.logger.info('Topics created: %s', len(topics_info.to_add))
-            self.logger.info('Topics updated: %s', len(topics_info.to_update))
-
-            endpoints_info = self._find_items(input_endpoints, existing_endpoints)
-            self._enrich_endpoints(endpoints_info.to_add, sec_list)
-            self._enrich_endpoints(endpoints_info.to_update, sec_list)
+            if topics_info.to_update:
+                self.update_objects(session, PubSubTopic, topics_info.to_update)
 
             if endpoints_info.to_add:
                 endpoints_insert = self.create_objects(PubSubEndpointTable, endpoints_info.to_add)
                 session.execute(endpoints_insert)
 
-            self.logger.info('Endpoints created: %s', len(endpoints_info.to_add))
-            self.logger.info('Endpoints updated: %s', len(endpoints_info.to_update))
+            if endpoints_info.to_update:
+                self.update_objects(session, PubSubEndpoint, endpoints_info.to_update)
 
             session.commit()
+
+        self.logger.info('Topics created: %s', len(topics_info.to_add))
+        self.logger.info('Topics updated: %s', len(topics_info.to_update))
+
+        self.logger.info('Endpoints created: %s', len(endpoints_info.to_add))
+        self.logger.info('Endpoints updated: %s', len(endpoints_info.to_update))
 
 # ################################################################################################################################
 
@@ -133,10 +139,13 @@ class ImportObjects(Service):
 # ################################################################################################################################
 
     def create_objects(self, table:'any_', values:'dictlist') -> 'any_':
-        """ Creates a new row for input data.
-        """
         result = insert(table).values(values)
         return result
+
+# ################################################################################################################################
+
+    def update_objects(self, session:'SASession', table:'any_', values:'dictlist') -> 'any_':
+        session.bulk_update_mappings(table, values)
 
 # ################################################################################################################################
 
@@ -151,6 +160,8 @@ class ImportObjects(Service):
         for new_item in incoming:
             for existing_item in existing:
                 if new_item['name'] == existing_item['name']:
+                    new_item['id'] = existing_item['id']
+                    new_item['cluster_id'] = self.server.cluster_id
                     out.to_update.append(new_item)
                     break
 
@@ -245,9 +256,9 @@ test_data = {
             'has_gd': True,
             'is_active': True,
             'is_api_sub_allowed': True,
-            'max_depth_gd': 10000,
-            'max_depth_non_gd': 1000,
-            'depth_check_freq': 100,
+            'max_depth_gd': 999,
+            'max_depth_non_gd': 333,
+            'depth_check_freq': 123,
             'pub_buffer_size_gd': 0,
             'task_sync_interval': 500,
             'task_delivery_interval': 2000
