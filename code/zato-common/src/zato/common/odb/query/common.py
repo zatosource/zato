@@ -32,6 +32,38 @@ TopicTable:'any_' = PubSubTopic.__table__
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_object_list_by_columns(
+    session:'SASession',
+    columns:'anylist',
+    order_by:'any_'=None
+) -> 'anylist':
+    """ Returns all ODB objects from a given table.
+    """
+
+    q = select(columns)
+    if order_by is not None:
+        q = q.order_by(order_by)
+
+    result:'anylist' = session.execute(q).fetchall()
+    return result
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_object_list(
+    session:'SASession',
+    table:'BaseTable',
+) -> 'anylist':
+    """ Returns all ODB objects from a given table.
+    """
+    columns = [table.c.id, table.c.name]
+    order_by = table.c.name.desc()
+    result = get_object_list_by_columns(session, columns, order_by)
+    return result
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_object_list_by_where_impl(
     session:'SASession',
     table:'BaseTable',
