@@ -18,7 +18,7 @@ from time import sleep
 # Zato
 from zato.cli import ManageCommand
 from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
-    NotGiven, PUBSUB as Common_PubSub, Sec_Def_Type, TLS as COMMON_TLS, Zato_None
+    NotGiven, PUBSUB as Common_PubSub, Sec_Def_Type, TLS as COMMON_TLS, Zato_No_Security, Zato_None
 from zato.common.const import ServiceConst
 from zato.common.typing_ import cast_
 
@@ -45,7 +45,7 @@ zato_enmasse_env2 = 'Zato_Enmasse_Env.'
 zato_enmasse_env_value_prefix = 'Zato_Enmasse_Env_'
 
 DEFAULT_COLS_WIDTH = '15,100'
-ZATO_NO_SECURITY = 'zato-no-security'
+Zato_No_Security = 'zato-no-security'
 
 Code = namedtuple('Code', ('symbol', 'desc')) # type: ignore
 
@@ -437,7 +437,7 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches = {
     'email_imap':  {'get_criteria':'UNSEEN', 'timeout':10},
 
     # Pub/sub - Endpoints
-    'pubsub_endpoint':  {'security_name':ZATO_NO_SECURITY},
+    'pubsub_endpoint':  {'security_name':Zato_No_Security},
 
     # Pub/sub - Subscriptions
     'pubsub_subscription':  {'delivery_server':'server1'},
@@ -473,7 +473,7 @@ ModuleCtx.Enmasse_Attr_List_Default_By_Type = {
 
         # Note that it is not security_name because it has been already re-mapped to sec_name
         # by the time this check is taking place.
-        'sec_name': ZATO_NO_SECURITY,
+        'sec_name': Zato_No_Security,
 
     },
 
@@ -494,12 +494,12 @@ ModuleCtx.Enmasse_Attr_List_Default_By_Type = {
     },
 
     'channel_rest': {
-        'security_name': ZATO_NO_SECURITY,
+        'security_name': Zato_No_Security,
         'merge_url_params_req': True,
     },
 
     'outgoing_rest': {
-        'security_name': ZATO_NO_SECURITY,
+        'security_name': Zato_No_Security,
         'merge_url_params_req': True,
     }
 }
@@ -853,7 +853,7 @@ class ServiceInfo:
 
         # Specifies a list of object dependencies:
         # field_name: {"dependent_type": "shortname", "dependent_field":
-        # "fieldname", "empty_value": None, or e.g. ZATO_NO_SECURITY}
+        # "fieldname", "empty_value": None, or e.g. Zato_No_Security}
         self.object_dependencies = object_dependencies or {}
 
         # Specifies a list of service dependencies. The field's value contains
@@ -920,7 +920,7 @@ SERVICES = [
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
-                'empty_value': ZATO_NO_SECURITY,
+                'empty_value': Zato_No_Security,
                 'id_field': 'security_id',
             },
         },
@@ -945,7 +945,7 @@ SERVICES = [
             'sec_name': {
                 'dependent_type': 'basic_auth',
                 'dependent_field': 'name',
-                'empty_value': ZATO_NO_SECURITY,
+                'empty_value': Zato_No_Security,
                 'condition': {
                     'only_if_field': 'endpoint_type',
                     'only_if_value': ['soap', 'rest'],
@@ -1012,13 +1012,13 @@ SERVICES = [
             'security': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
-                'empty_value': ZATO_NO_SECURITY,
+                'empty_value': Zato_No_Security,
                 'id_field': 'security_id',
             },
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
-                'empty_value': ZATO_NO_SECURITY,
+                'empty_value': Zato_No_Security,
                 'id_field': 'security_id',
             },
         },
@@ -1084,7 +1084,7 @@ SERVICES = [
             'def_name': {
                 'dependent_type': 'def_cassandra',
                 'dependent_field': 'name',
-                'empty_value': ZATO_NO_SECURITY,
+                'empty_value': Zato_No_Security,
             },
         },
     ),
@@ -1779,6 +1779,8 @@ class ObjectImporter:
         basic_auth_edit = self._extract_basic_auth(existing_combined, is_edit=True)
         self._import_basic_auth(basic_auth_edit, is_edit=True)
 
+        self.object_mgr.refresh_objects()
+
         for w in existing_combined:
 
             item_type, attrs = w.value_raw
@@ -1877,6 +1879,7 @@ class ObjectImporter:
         # Extract and load Basic Auth definitions as a whole, before any other updates (create)
         basic_auth_create = self._extract_basic_auth(new_combined, is_edit=False)
         self._import_basic_auth(basic_auth_create, is_edit=False)
+        self.object_mgr.refresh_objects()
 
         for elem in new_combined:
             for item_type, attr_list in iteritems(elem):
@@ -1985,7 +1988,12 @@ class ObjectImporter:
                     field_value:'any_' = item[field_name]
 
                 # Ignore explicit indicators of the absence of a security definition
-                if field_value != ZATO_NO_SECURITY:
+                if field_value != Zato_No_Security:
+
+                    print()
+                    print(111, field_name)
+                    print(222, field_value)
+                    print()
 
                     criteria:'any_' = {dependent_field: field_value}
                     dep_obj:'any_' = self.object_mgr.find(dependent_type, criteria)
@@ -2065,12 +2073,12 @@ class ObjectManager:
 # ################################################################################################################################
 
     def refresh(self):
-        self._refresh_services()
-        self._refresh_objects()
+        self.refresh_services()
+        self.refresh_objects()
 
 # ################################################################################################################################
 
-    def _refresh_services(self):
+    def refresh_services(self):
 
         # Bunch
         from bunch import Bunch
@@ -2095,7 +2103,7 @@ class ObjectManager:
     def fix_up_odb_object(self, item_type, item): # type: ignore
         """ For each ODB object, ensure fields that specify a dependency have their associated name field updated
         to match the dependent object. Otherwise, ensure the field is set to the corresponding empty value
-        (either None or ZATO_NO_SECURITY).
+        (either None or Zato_No_Security).
         """
 
         # Python 2/3 compatibility
@@ -2281,7 +2289,7 @@ class ObjectManager:
 
 # ################################################################################################################################
 
-    def _refresh_objects(self):
+    def refresh_objects(self):
 
         # stdlib
         from operator import attrgetter
