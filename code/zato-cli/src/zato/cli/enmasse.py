@@ -1678,10 +1678,32 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
+    def _import_basic_auth(self, data:'dictlist') -> 'None':
+
+        # Local variables
+        service_name = 'dev.zato.import-objects'
+
+        # Build a request for the service
+        imports = {
+            'basic_auth': data
+        }
+
+        # .. details of how many objects we are importing ..
+        len_imports = {
+            'basic_auth': len(imports['basic_auth']),
+        }
+
+        # .. log what we are about to do ..
+        self.logger.info(f'Invoking -> import security -> {service_name} -> {len_imports}')
+
+        _ = self.client.invoke(service_name, imports)
+
+# ################################################################################################################################
+
     def _import_pubsub_objects(self, data:'strlistdict') -> 'None':
 
         # Local variables
-        service_name = 'dev.zato.pubsub.import-objects'
+        service_name = 'dev.zato.import-objects'
 
         # Resolve all values first ..
         for item_type, values in data.items():
@@ -1752,12 +1774,21 @@ class ObjectImporter:
         existing_combined:'any_' = existing_defs + existing_rbac_role + existing_rbac_role_permission + \
             existing_rbac_client_role + existing_other
 
+
+        # Extract and load Basic Auth definitions as a whole, before any other updates
+        basic_auth_edit = self._extract_basic_auth(existing_combined)
+        self._import_basic_auth(basic_auth_edit)
+
+        zzz
+
         for w in existing_combined:
 
             item_type, attrs = w.value_raw
 
             if self.should_skip_item(item_type, attrs, True):
                 continue
+
+            # Basic Auth definitions have been already handled above (edit)
 
             # Skip pub/sub objects because they are handled separately (edit)
             if item_type.startswith('pubsub'):
@@ -1850,6 +1881,8 @@ class ObjectImporter:
                     if self.should_skip_item(item_type, attrs, False):
                         continue
 
+                    # Basic Auth definitions have been already handled above (create)
+
                     # Pub/sub objects are handled separately at the end of this function (create)
                     if item_type.startswith('pubsub'):
                         container = pubsub_objects[item_type]
@@ -1857,6 +1890,10 @@ class ObjectImporter:
                         continue
 
                     results = self._import(item_type, attrs, False)
+
+                    print()
+                    print(111, item_type, attrs)
+                    print()
 
                     if 'rbac' in item_type:
                         sleep(rbac_sleep)
@@ -1868,6 +1905,20 @@ class ObjectImporter:
         self._import_pubsub_objects(pubsub_objects)
 
         return self.results
+
+# ################################################################################################################################
+
+    def _extract_basic_auth(self, data:'any_') -> 'dictlist':
+
+        out:'dictlist' = []
+
+        for item in data:
+            item_type, attrs = item.value_raw
+            if item_type == 'basic_auth':
+                attrs = dict(attrs)
+                out.append(attrs)
+
+        return out
 
 # ################################################################################################################################
 

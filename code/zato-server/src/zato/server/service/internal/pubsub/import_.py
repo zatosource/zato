@@ -12,9 +12,10 @@ from contextlib import closing
 from dataclasses import dataclass
 
 # SQLAlchemy
-from sqlalchemy import insert, update
+from sqlalchemy import insert
 
 # Zato
+from zato.common.api import Sec_Def_Type
 from zato.common.odb.model import PubSubEndpoint, PubSubSubscription, PubSubTopic, SecurityBase
 from zato.common.odb.query.common import get_object_list, get_object_list_by_columns
 from zato.common.typing_ import dictlist
@@ -39,11 +40,12 @@ PubSubTopicTable:'any_' = PubSubTopic.__table__
 # ################################################################################################################################
 
 @dataclass(init=False)
-class PubSubContainer(Model):
+class ObjectContainer(Model):
 
-    pubsub_topic: 'dictlist | None'
-    pubsub_endpoint: 'dictlist | None'
-    pubsub_subscription: 'dictlist | None'
+    pubsub_topic: 'dictlist | None' = None
+    pubsub_endpoint: 'dictlist | None' = None
+    pubsub_subscription: 'dictlist | None' = None
+    basic_auth: 'dictlist | None' = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,19 +62,38 @@ class ItemsInfo(Model):
 class ImportObjects(Service):
     """ Imports multiple pub/sub objects en masse.
     """
-    name = 'dev.zato.pubsub.import-objects'
+    name = 'dev.zato.import-objects'
 
     def handle(self):
         # data = test_data
         data = self.request.raw_request
 
         # Data that we received on input
-        input = PubSubContainer.from_dict(data)
+        input:'ObjectContainer' = ObjectContainer.from_dict(data)
 
         # Data that already exists
         with closing(self.odb.session()) as session:
 
             # All security definitions that currently exist
+            sec_list = self._get_sec_list(session)
+
+            # If we have security definitions on input,
+            # import them first, as they may be needed in subsequent steps.
+            if input.basic_auth:
+
+                sec_info = self._handle_basic_auth_input(input.basic_auth, sec_list)
+
+                if sec_info.to_add:
+                    sec_insert = self.create_objects(SecurityBase, sec_info.to_add)
+                    session.execute(sec_insert)
+
+                if sec_info.to_update:
+                    self.update_objects(session, SecurityBase, sec_info.to_update)
+
+                self.logger.info('Basic Auth created: %s', len(sec_info.to_add))
+                self.logger.info('Basic Auth updated: %s', len(sec_info.to_update))
+
+            # Rebuild it now because we may have added some above
             sec_list = self._get_sec_list(session)
 
             # All pub/sub objects that currently exist
@@ -112,6 +133,37 @@ class ImportObjects(Service):
 
         self.logger.info('Endpoints created: %s', len(endpoints_info.to_add))
         self.logger.info('Endpoints updated: %s', len(endpoints_info.to_update))
+
+# ################################################################################################################################
+
+    def _handle_basic_auth_input(self, incoming:'dictlist', existing:'dictlist') -> 'ItemsInfo':
+
+        # Our response to produce
+        out = ItemsInfo()
+        out.to_add = []
+        out.to_update = []
+
+        # Go through each item that we potentially need to create and see if there is a match
+        for new_item in incoming:
+            for existing_item in existing:
+                if existing_item['sec_type'] == Sec_Def_Type.BASIC_AUTH:
+                    if new_item['name'] == existing_item['name']:
+                        new_item['id'] = existing_item['id']
+                        new_item['sec_type'] = existing_item['sec_type']
+                        new_item['cluster_id'] = self.server.cluster_id
+                        _ = new_item.pop('realm', None)
+                        out.to_update.append(new_item)
+                        break
+
+            # .. if we are here, it means that there was no match, which means that this item truly is new ..
+            else:
+                new_item['sec_type'] = Sec_Def_Type.BASIC_AUTH
+                new_item['cluster_id'] = self.server.cluster_id
+                _ = new_item.pop('realm', None)
+                out.to_add.append(new_item)
+
+        # .. now, we can return the response to our caller.
+        return out
 
 # ################################################################################################################################
 
@@ -177,7 +229,8 @@ class ImportObjects(Service):
 
     def _get_sec_list(self, session:'SASession') -> 'dictlist':
 
-        out = get_object_list(session, SecurityBaseTable)
+        columns = [SecurityBaseTable.c.id, SecurityBaseTable.c.name, SecurityBaseTable.c.sec_type]
+        out = get_object_list_by_columns(session, columns)
         return out
 
 # ################################################################################################################################
@@ -204,10 +257,10 @@ class ImportObjects(Service):
 
 # ################################################################################################################################
 
-    def _get_existing_data(self, session:'SASession') -> 'PubSubContainer':
+    def _get_existing_data(self, session:'SASession') -> 'ObjectContainer':
 
         # Our response to produce
-        out = PubSubContainer()
+        out = ObjectContainer()
         out.pubsub_topic = []
         out.pubsub_endpoint = []
         out.pubsub_subscription = []
@@ -226,6 +279,14 @@ class ImportObjects(Service):
 # ################################################################################################################################
 
 test_data = {
+    'basic_auth': [
+        {
+            'is_active':True,
+            'name':'security-test-cli-/test-perf.02/sec/sub/0000',
+            'realm':'Zato.Test',
+            'username':'zato-test-security-test-cli-/test-perf.02/sec/sub/0000'
+        },
+    ],
     'pubsub_endpoint': [
         {
             'name': 'endpoint-test-cli-security-test-cli-/test-perf.01/sec/pub/0000',
