@@ -727,8 +727,8 @@ class DeleteAll(AdminService):
         with closing(self.odb.session()) as session:
 
             # Get all subscriptions for that endpoint ..
-            items = pubsub_subscription_list_by_endpoint_id_no_search(
-                session, cluster_id, endpoint_id)
+            items = pubsub_subscription_list_by_endpoint_id_no_search(session, cluster_id, endpoint_id)
+            items = list(items)
 
             # Build a list of sub_keys that this endpoint was using and delete them all in one go.
             sub_key_list = [item.sub_key for item in items]

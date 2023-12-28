@@ -172,7 +172,11 @@ class PubRequest(Model):
     ext_pub_time:  strnone = None
 
     security_id:   intnone = None
+    security_name: strnone = None
+
     endpoint_id:   intnone = None
+    endpoint_name: strnone = None
+
     ws_channel_id: intnone = None
 
     group_id:          strnone = ''
@@ -252,7 +256,7 @@ class Publisher:
         # .. otherwise, use request GD value or the default per topic.
         else:
             has_gd = request.has_gd
-            if has_gd not in (None, ZATO_NONE):
+            if has_gd not in (None, '', ZATO_NONE):
                 if not isinstance(has_gd, bool):
                     raise ValueError('Input has_gd is not a bool (found:`{}`)'.format(repr(has_gd)))
             else:
@@ -406,18 +410,44 @@ class Publisher:
 
 # ################################################################################################################################
 
+    def _get_endpoint_id_by_security_name(self, security_name:'str') -> 'intnone':
+        security = self.server.worker_store.basic_auth_get(security_name)
+        security_config = security['config']
+        security_id = security_config['id']
+        endpoint_id = self.pubsub.get_endpoint_id_by_sec_id(security_id)
+        return endpoint_id
+
+# ################################################################################################################################
+
     def get_pub_pattern_matched(self, endpoint_id:'intnone', request:'PubRequest') -> 'tuple_[int, str]':
         """ Returns a publication pattern matched that allows the endpoint to publish messages
         or raises an exception if no pattern was matched. Takes into account various IDs possibly given on request,
         depending on what our caller wanted to provide.
         """
         security_id = request.security_id
+        security_name = request.security_name
+
         ws_channel_id = request.ws_channel_id
+        endpoint_name = request.endpoint_name
+
+        #
+        # Note that if we have security name on input, it will take precedence over input security ID.
+        #
+        if security_name:
+            endpoint_id = self._get_endpoint_id_by_security_name(security_name)
+
+        #
+        # Again, the name of the endpoint takes precedence over its ID
+        #
+        if endpoint_name:
+            endpoint = self.pubsub.get_endpoint_by_name(endpoint_name)
+            endpoint_id = endpoint.id
 
         if not endpoint_id:
 
             if security_id:
                 endpoint_id = self.pubsub.get_endpoint_id_by_sec_id(security_id)
+
             elif ws_channel_id:
                 endpoint_id_by_wsx_id = self.pubsub.get_endpoint_id_by_ws_channel_id(ws_channel_id)
                 if endpoint_id_by_wsx_id:

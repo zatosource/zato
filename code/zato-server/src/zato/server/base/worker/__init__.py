@@ -108,7 +108,7 @@ logger = logging.getLogger(__name__)
 if 0:
     from bunch import Bunch as bunch_
     from zato.broker.client import BrokerClient
-    from zato.common.typing_ import any_, anylist, callable_, callnone, dictnone, stranydict, tuple_, tupnone
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, dictnone, stranydict, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
     from zato.server.config import ConfigStore
@@ -149,7 +149,7 @@ class GeventWorker(GunicornGeventWorker):
 
 # ################################################################################################################################
 
-def _get_base_classes():
+def _get_base_classes() -> 'anytuple':
     ignore = ('__init__.py', 'common.py')
     out = []
 
@@ -167,7 +167,7 @@ def _get_base_classes():
                 if isclass(item) and issubclass(item, WorkerImpl) and item is not WorkerImpl:
                     out.append(item)
 
-    return tuple(out)
+    return tuple(out) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -249,7 +249,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def init(self):
+    def init(self) -> 'None':
 
         # Search
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
@@ -371,7 +371,7 @@ class WorkerStore(_WorkerStoreBase):
         url_data = URLData(
             self,
             self.worker_config.http_soap,
-            self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
+            self._get_channel_url_sec(),
             self.worker_config.basic_auth,
             self.worker_config.jwt,
             self.worker_config.ntlm,
@@ -419,7 +419,13 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def early_init(self):
+    def _get_channel_url_sec(self) -> 'any_':
+        out:'any_' = self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0]
+        return out
+
+# ################################################################################################################################
+
+    def early_init(self) -> 'None':
         """ Initialises these parts of our configuration that are needed earlier than others.
         """
         self.init_ftp()
@@ -489,7 +495,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _http_soap_wrapper_from_config(self, config:'bunch_', has_sec_config:'bool'=True) -> 'BaseHTTPSOAPWrapper':
+    def _http_soap_wrapper_from_config(self, config:'bunch_', *, has_sec_config:'bool'=True) -> 'BaseHTTPSOAPWrapper':
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration dictionary.
         """
 
@@ -617,12 +623,18 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def yield_outconn_http_config_dicts(self) -> 'any_':
+    def get_outconn_http_config_dicts(self) -> 'any_':
+
+        out:'any_' = []
+
         for transport in('soap', 'plain_http'):
             config_dict = getattr(self.worker_config, 'out_' + transport)
             for name in list(config_dict): # Must use list explicitly so config_dict can be changed during iteration
                 config_data = config_dict[name]
-                yield config_dict, config_data
+                if not isinstance(config_data, str):
+                    out.append([config_dict, config_data])
+
+        return out
 
 # ################################################################################################################################
 
@@ -658,12 +670,15 @@ class WorkerStore(_WorkerStoreBase):
         for value in self.worker_config.out_sftp.values():
             value['conn'] = SFTPIPCFacade(self.server, value['config'])
 
-    def init_http_soap(self) -> 'None':
+    def init_http_soap(self, *, has_sec_config:'bool'=True) -> 'None':
         """ Initializes plain HTTP/SOAP connections.
         """
-        for config_dict, config_data in self.yield_outconn_http_config_dicts():
+        config_dicts = self.get_outconn_http_config_dicts()
+        config_dicts
 
-            wrapper = self._http_soap_wrapper_from_config(config_data.config)
+        for config_dict, config_data in config_dicts:
+
+            wrapper = self._http_soap_wrapper_from_config(config_data.config, has_sec_config=has_sec_config)
             config_data.conn = wrapper
 
             # To make the API consistent with that of SQL connection pools
@@ -973,6 +988,47 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
+    def sync_security(self):
+        """ Rebuilds all the in-RAM security structures and objects.
+        """
+
+        # First, load up all the definitions from the database ..
+        self.server.set_up_security(self.server.cluster_id)
+
+        # .. update in-RAM config values ..
+        url_sec = self._get_channel_url_sec()
+        self.request_dispatcher.url_data.set_security_objects(
+            url_sec=url_sec,
+            basic_auth_config=self.worker_config.basic_auth,
+            jwt_config=self.worker_config.jwt,
+            ntlm_config=self.worker_config.ntlm,
+            oauth_config=self.worker_config.oauth,
+            apikey_config=self.worker_config.apikey,
+            aws_config=self.worker_config.aws,
+            tls_channel_sec_config=self.worker_config.tls_channel_sec,
+            tls_key_cert_config=self.worker_config.tls_key_cert,
+            vault_conn_sec_config=self.worker_config.vault_conn_sec,
+        )
+
+        # .. now, initialize connections that may depend on what we have just loaded ..
+        self.init_http_soap(has_sec_config=False)
+
+# ################################################################################################################################
+
+    def sync_pubsub(self):
+        """ Rebuilds all the in-RAM pub/sub structures and tasks.
+        """
+        # First, stop everything ..
+        self.pubsub.stop()
+
+        # .. now, load it into RAM from the database ..
+        self.server.set_up_pubsub(self.server.cluster_id)
+
+        # .. finally, initialize everything once more.
+        self.init_pubsub()
+
+# ################################################################################################################################
+
     def init_pubsub(self) -> 'None':
         """ Sets up all pub/sub endpoints, subscriptions and topics. Also, configures pubsub with getters for each endpoint type.
         """
@@ -981,12 +1037,15 @@ class WorkerStore(_WorkerStoreBase):
         service_pubsub_tool = PubSubTool(self.pubsub, self.server, PUBSUB.ENDPOINT_TYPE.SERVICE.id, True)
         self.pubsub.service_pubsub_tool = service_pubsub_tool
 
-        for value in self.worker_config.pubsub_endpoint.values():
+        for value in self.worker_config.pubsub_topic.values(): # type: ignore
+            self.pubsub.create_topic_object(bunchify(value['config']))
+
+        for value in self.worker_config.pubsub_endpoint.values(): # type: ignore
             self.pubsub.create_endpoint(bunchify(value['config']))
 
-        for value in self.worker_config.pubsub_subscription.values():
+        for value in self.worker_config.pubsub_subscription.values(): # type: ignore
 
-            config = bunchify(value['config'])
+            config:'bunch_' = bunchify(value['config'])
             config.add_subscription = True # We don't create WSX subscriptions here so it is always True
 
             self.pubsub.create_subscription_object(config)
@@ -994,9 +1053,6 @@ class WorkerStore(_WorkerStoreBase):
             # Special-case delivery of messages to services
             if is_service_subscription(config):
                 self.pubsub.set_config_for_service_subscription(config['sub_key'])
-
-        for value in self.worker_config.pubsub_topic.values():
-            self.pubsub.create_topic_object(bunchify(value['config']))
 
         self.pubsub.set_endpoint_impl_getter(PUBSUB.ENDPOINT_TYPE.REST.id, self.worker_config.out_plain_http.get_by_id)
 
@@ -1046,7 +1102,7 @@ class WorkerStore(_WorkerStoreBase):
                         else:
                             visit_wrapper(wrapper, msg)
 
-    def _visit_wrapper_edit(self, wrapper:'HTTPSOAPWrapper', msg:'bunch_', keys:'tuple_') -> 'None':
+    def _visit_wrapper_edit(self, wrapper:'HTTPSOAPWrapper', msg:'bunch_', keys:'anytuple') -> 'None':
         """ Updates a given wrapper's security configuration.
         """
         if wrapper.config['security_name'] == msg['old_name']:
@@ -1082,7 +1138,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _convert_pickup_config_to_file_transfer(self, name:'str', config:'bunch_') -> 'bunch_ | None':
+    def _convert_pickup_config_to_file_transfer(self, name:'str', config:'anydict | bunch_') -> 'bunch_ | None':
 
         # Convert paths to full ones
         pickup_from_list = config.get('pickup_from') or []
@@ -1358,7 +1414,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def wait_for_apikey(self, name:'str', timeout:'int'=600) -> 'bool':
+    def wait_for_apikey(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.apikey_get, name, timeout, interval=0.5)
 
     def apikey_get(self, name:'str') -> 'bunch_':
@@ -1393,7 +1449,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def wait_for_aws(self, name:'str', timeout:'int'=600) -> 'bool':
+    def wait_for_aws(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.aws_get, name, timeout, interval=0.5)
 
     def aws_get(self, name:'str') -> 'bunch_':
@@ -1427,7 +1483,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def wait_for_ntlm(self, name:'str', timeout:'int'=600) -> 'bool':
+    def wait_for_ntlm(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.ntlm_get, name, timeout, interval=0.5)
 
     def ntlm_get(self, name:'str') -> 'bunch_':
@@ -1461,13 +1517,18 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def wait_for_basic_auth(self, name:'str', timeout:'int'=600) -> 'bool':
-        return wait_for_dict_key_by_get_func(self.basic_auth_get, name, timeout, interval=0.5)
+    def wait_for_basic_auth(self, name:'str', timeout:'int'=999999) -> 'bool':
+        return wait_for_dict_key_by_get_func(self._basic_auth_get, name, timeout, interval=0.5)
+
+    def _basic_auth_get(self, name:'str') -> 'bunch_':
+        """ Implements self.basic_auth_get.
+        """
+        return self.request_dispatcher.url_data.basic_auth_get(name)
 
     def basic_auth_get(self, name:'str') -> 'bunch_':
         """ Returns the configuration of the HTTP Basic Auth security definition of the given name.
         """
-        return self.request_dispatcher.url_data.basic_auth_get(name)
+        return self._basic_auth_get(name)
 
     def basic_auth_get_by_id(self, def_id:'int') -> 'bunch_':
         """ Same as basic_auth_get but by definition ID.
@@ -1517,7 +1578,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def wait_for_jwt(self, name:'str', timeout:'int'=600) -> 'bool':
+    def wait_for_jwt(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.jwt_get, name, timeout, interval=0.5)
 
     def jwt_get(self, name:'str') -> 'bunch_':
@@ -1562,7 +1623,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def wait_for_oauth(self, name:'str', timeout:'int'=600) -> 'bool':
+    def wait_for_oauth(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.oauth_get, name, timeout, interval=0.5)
 
     def oauth_get(self, name:'str') -> 'bunch_':
@@ -1610,7 +1671,7 @@ class WorkerStore(_WorkerStoreBase):
 
     def _update_tls_outconns(self, material_type_id:'str', update_key:'str', msg:'bunch_') -> 'None':
 
-        for config_dict, config_data in self.yield_outconn_http_config_dicts():
+        for config_dict, config_data in self.get_outconn_http_config_dicts():
 
             # Here, config_data is a string such as _zato_id_633 that points to an actual outconn name
             if isinstance(config_data, str):
@@ -1701,7 +1762,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def wait_for_wss(self, name:'str', timeout:'int'=600) -> 'bool':
+    def wait_for_wss(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.wss_get, name, timeout, interval=0.5)
 
     def wss_get(self, name:'str') -> 'bunch_':
@@ -1922,12 +1983,18 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
+    def wait_for_outconn_rest(self, name:'str', timeout:'int'=999999) -> 'bool':
+        return wait_for_dict_key(self.worker_config.out_plain_http, name, timeout, interval=0.5)
+
+# ################################################################################################################################
+
     def get_channel_rest(self, name:'str') -> 'bunch_':
         return self._get_channel_rest(CONNECTION.CHANNEL, name)
 
 # ################################################################################################################################
 
     def get_outconn_rest(self, name:'str') -> 'dictnone':
+        self.wait_for_outconn_rest(name)
         return self._get_outconn_rest(name)
 
 # ################################################################################################################################
@@ -2015,7 +2082,7 @@ class WorkerStore(_WorkerStoreBase):
         self._delete_config_close_wrapper_http_soap(del_name, msg['transport'], logger.debug)
 
         # .. and create a new one
-        wrapper = self._http_soap_wrapper_from_config(msg, False)
+        wrapper = self._http_soap_wrapper_from_config(msg, has_sec_config=False)
         config_dict = getattr(self.worker_config, 'out_' + msg['transport'])
         config_dict[msg['name']] = Bunch()
         config_dict[msg['name']].config = msg
@@ -2522,7 +2589,7 @@ class WorkerStore(_WorkerStoreBase):
 
         try:
             with open(msg.reply_to_fifo, 'wb') as fifo:
-                fifo.write(data if isinstance(data, bytes) else data.encode('utf'))
+                _ = fifo.write(data if isinstance(data, bytes) else data.encode('utf'))
         except Exception:
             logger.warning('Could not write to FIFO, m:`%s`, r:`%s`, s:`%s`, e:`%s`', msg, response, status, format_exc())
 
