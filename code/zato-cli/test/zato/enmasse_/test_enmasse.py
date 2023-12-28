@@ -163,12 +163,13 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_enmasse_simple_ok_03(self) -> 'None':
+    def test_enmasse_simple_ok_03(self) -> 'None':
         self._test_enmasse_ok('simple_ok_03', template_simple_03)
 
 # ################################################################################################################################
 
     def xtest_enmasse_simple_ok_04(self) -> 'None':
+
         self._test_enmasse_ok('simple_ok_04', template_simple_04)
 
 # ################################################################################################################################
