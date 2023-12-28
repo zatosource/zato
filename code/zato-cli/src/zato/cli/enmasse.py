@@ -45,7 +45,8 @@ zato_enmasse_env2 = 'Zato_Enmasse_Env.'
 zato_enmasse_env_value_prefix = 'Zato_Enmasse_Env_'
 
 DEFAULT_COLS_WIDTH = '15,100'
-Zato_No_Security = 'zato-no-security'
+
+# ################################################################################################################################
 
 Code = namedtuple('Code', ('symbol', 'desc')) # type: ignore
 
@@ -1738,7 +1739,7 @@ class ObjectImporter:
         }
 
         self.logger.info(f'Invoking -> trigger sync -> {service_name}')
-        _ = self.client.invoke(service_name)
+        _ = self.client.invoke(service_name, request)
 
 # ################################################################################################################################
 

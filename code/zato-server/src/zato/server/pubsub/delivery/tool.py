@@ -105,7 +105,7 @@ class PubSubTool:
 
 # ################################################################################################################################
 
-    def stop(self):
+    def stop(self) -> 'None':
         """ Stops all delivery asks belonging to this tool.
         """
         for item in self.delivery_tasks.values():
@@ -489,9 +489,9 @@ class PubSubTool:
                     # let users know that their server has to do something extra
                     for _logger in logger, logger_zato:
                         _logger.info('Found %d initial message%sto enqueue for sub_key:`%s` (%s -> %s), g:%d, gs:%d',
-                            len_msg_ids, suffix, sub_key, topic_name, endpoint_name, len(groups), _group_size)
+                            len_msg_ids, suffix, sub_key, topic_name, endpoint_name, len_groups, _group_size)
 
-                    for idx, group in enumerate(groups, 1):
+                    for _, group in enumerate(groups, 1):
                         group = cast_('strlist', group)
                         group_msg_ids = [elem for elem in group if elem] # type: strlist
                         # logger.info('Enqueuing group %d/%d (gs:%d) (%s, %s -> %s) `%s`',

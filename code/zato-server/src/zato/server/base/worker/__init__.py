@@ -51,7 +51,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      fs_safe_name, import_module_from_path, new_cid, parse_extra_into_dict, parse_tls_channel_security_definition, \
      start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source, wait_for_dict_key, \
-     wait_for_dict_key_by_get_func, wait_for_predicate
+     wait_for_dict_key_by_get_func
 from zato.common.util.file_system import resolve_path
 from zato.common.util.pubsub import is_service_subscription
 from zato.cy.reqresp.payload import SimpleIOPayload
@@ -985,7 +985,6 @@ class WorkerStore(_WorkerStoreBase):
             cache = getattr(self.worker_config, 'cache_{}'.format(name))
             for value in cache.values():
                 self.cache_api.create(bunchify(value['config']))
-
 
 # ################################################################################################################################
 
