@@ -1,4 +1,3 @@
-'''
 # -*- coding: utf-8 -*-
 
 """
@@ -11,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 
 # Zato
+from zato.common.broker_message import Common as BrokerMessageCommon
 from zato.server.service import Model, Service
 
 # ################################################################################################################################
@@ -18,8 +18,8 @@ from zato.server.service import Model, Service
 
 @dataclass(init=False)
 class SyncObjectsRequest(Model):
-    security: 'bool'= False
-    pubsub: 'bool' = False
+    security: 'bool'= True
+    pubsub: 'bool' = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,7 +27,7 @@ class SyncObjectsRequest(Model):
 class SyncObjectsImpl(Service):
     """ Syncs in-RAM objects with what is in the ODB.
     """
-    name = 'dev.zato.sync-objects-impl'
+    name = 'pub.zato.common.sync-objects-impl'
     input = SyncObjectsRequest
 
     def handle(self):
@@ -47,4 +47,26 @@ class SyncObjectsImpl(Service):
 
 # ################################################################################################################################
 # ################################################################################################################################
-'''
+
+class SyncObjects(Service):
+    """ Syncs in-RAM objects with what is in the ODB.
+    """
+    name = 'pub.zato.common.sync-objects'
+    input = SyncObjectsRequest
+
+    def handle(self):
+
+        # Local aliases
+        input:'SyncObjectsRequest' = self.request.input
+
+        # Build a dict that we can publish ..
+        msg = input.to_dict()
+
+        # .. enrich it with additional details ..
+        msg['action'] = BrokerMessageCommon.Sync_Objects.value
+
+        # .. and do publish the request now.
+        self.broker_client.publish(msg)
+
+# ################################################################################################################################
+# ################################################################################################################################
