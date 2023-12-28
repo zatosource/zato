@@ -415,6 +415,8 @@ class DeleteMany(Service):
             name:'strlist' = [
                 '.abc-123-',
                 '.complex-',
+                'Demo.',
+                'Enmasse',
                 'Enmasse',
                 'enmasse',
                 'enmasse1',
