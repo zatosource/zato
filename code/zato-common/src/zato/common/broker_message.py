@@ -492,8 +492,8 @@ class GENERIC(Constants):
 class SSO(Constants):
     code_start = 107200
 
-    USER_CREATE      = ValueConstant('')
-    USER_EDIT        = ValueConstant('')
+    USER_CREATE = ValueConstant('')
+    USER_EDIT   = ValueConstant('')
 
     LINK_AUTH_CREATE = ValueConstant('')
     LINK_AUTH_DELETE = ValueConstant('')
@@ -505,6 +505,10 @@ class EVENT(Constants):
 class SERVER_IPC(Constants):
     code_start = 107600
     INVOKE = ValueConstant('')
+
+class Common(Constants):
+    code_start = 107800
+    Sync_Objects = ValueConstant('')
 
 code_to_name = {}
 
