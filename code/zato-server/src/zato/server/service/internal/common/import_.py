@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import closing
 from copy import deepcopy
 from dataclasses import dataclass
+from json import dumps
 
 # SQLAlchemy
 from sqlalchemy import insert
@@ -44,6 +45,7 @@ HTTPBasicAuthInsert = HTTPBasicAuthTable.insert
 # ################################################################################################################################
 
 Default = PUBSUB.DEFAULT
+Generic_Attr_Name = GENERIC.ATTR_NAME
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,6 +148,9 @@ class ImportObjects(Service):
 
             topics_info = self._find_items(input_topics, existing_topics)
             endpoints_info = self._find_items(input_endpoints, existing_endpoints)
+
+            self._enrich_topics(topics_info.to_add)
+            self._enrich_topics(topics_info.to_update)
 
             self._enrich_endpoints(endpoints_info.to_add, sec_list)
             self._enrich_endpoints(endpoints_info.to_update, sec_list)
@@ -293,7 +298,7 @@ class ImportObjects(Service):
                     break
             else:
                 new_item['cluster_id'] = self.server.cluster_id
-                new_item[GENERIC.ATTR_NAME] = None
+                new_item[Generic_Attr_Name] = None
                 out.to_add.append(new_item)
 
         # .. now, we can return the response to our caller.
@@ -390,6 +395,21 @@ class ImportObjects(Service):
                 else:
                     if sec_name != Zato_No_Security:
                         raise Exception(f'Security definition not found -> {sec_name}')
+
+# ################################################################################################################################
+
+    def _enrich_topics(self, topics:'dictlist') -> 'None':
+
+        for item in topics:
+
+            if not Generic_Attr_Name in item:
+                item[Generic_Attr_Name] = {}
+
+            opaque1 = item[Generic_Attr_Name]
+            opaque1['on_no_subs_pub'] = item.pop('on_no_subs_pub', None)
+            opaque1['hook_service_name'] = item.pop('hook_service_name', None)
+
+            item[Generic_Attr_Name] = dumps(opaque1)
 
 # ################################################################################################################################
 
