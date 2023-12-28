@@ -206,6 +206,16 @@ class ImportObjects(Service):
 
 # ################################################################################################################################
 
+    def _get_rest_conn_id_by_name(self, name:'str') -> 'int':
+        if conn := self.server.worker_store.get_outconn_rest(name):
+            conn_config = conn['config']
+            conn_id = conn_config['id']
+            return conn_id
+        else:
+            raise Exception(f'Outgoing REST connection not found -> {name}')
+
+# ################################################################################################################################
+
     def _resolve_input_subscriptions(self, input_subscriptions:'dictlist', existing:'ObjectContainer') -> 'dictlist':
 
         out:'dictlist' = []
@@ -224,8 +234,10 @@ class ImportObjects(Service):
             wrap_one_msg_in_list = item.get('wrap_one_msg_in_list', Default.Wrap_One_Msg_In_List)
             delivery_err_should_block = item.get('delivery_err_should_block', Default.Delivery_Err_Should_Block)
 
+
             for topic_name in item.pop('topic_list_json'):
                 topic_id = existing.get_topic_id_by_name(topic_name)
+
                 new_item = {
                     'topic_id': topic_id,
                     'endpoint_id': endpoint_id,
@@ -237,6 +249,11 @@ class ImportObjects(Service):
                     'wrap_one_msg_in_list': wrap_one_msg_in_list,
                     'delivery_err_should_block': delivery_err_should_block,
                 }
+
+                if rest_connection := item.get('rest_connection'):
+                    rest_connection_id = self._get_rest_conn_id_by_name(rest_connection)
+                    new_item['out_http_soap_id'] = rest_connection_id
+
                 out.append(new_item)
 
         return out
@@ -511,7 +528,9 @@ test_data = {
             'name': 'Subscription.000000001',
             'endpoint_name': 'endpoint-test-cli-security-test-cli-/test-perf.01/sec/sub/0000',
             'endpoint_type': 'rest',
-            'delivery_method': 'pull',
+            # 'delivery_method': 'pull',
+            'delivery_method': 'notify',
+            'rest_connection': 'pubsub.test.sample.outconn',
             'topic_list_json': ['/test-perf.01'],
             'is_active': True,
             'should_ignore_if_sub_exists': True,
