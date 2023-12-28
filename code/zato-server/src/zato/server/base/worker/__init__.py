@@ -489,7 +489,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _http_soap_wrapper_from_config(self, config:'bunch_', has_sec_config:'bool'=True) -> 'BaseHTTPSOAPWrapper':
+    def _http_soap_wrapper_from_config(self, config:'bunch_', *, has_sec_config:'bool'=True) -> 'BaseHTTPSOAPWrapper':
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration dictionary.
         """
 
@@ -617,12 +617,18 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def yield_outconn_http_config_dicts(self) -> 'any_':
+    def get_outconn_http_config_dicts(self) -> 'any_':
+
+        out:'any_' = []
+
         for transport in('soap', 'plain_http'):
             config_dict = getattr(self.worker_config, 'out_' + transport)
             for name in list(config_dict): # Must use list explicitly so config_dict can be changed during iteration
                 config_data = config_dict[name]
-                yield config_dict, config_data
+                if not isinstance(config_data, str):
+                    out.append([config_dict, config_data])
+
+        return out
 
 # ################################################################################################################################
 
@@ -658,12 +664,15 @@ class WorkerStore(_WorkerStoreBase):
         for value in self.worker_config.out_sftp.values():
             value['conn'] = SFTPIPCFacade(self.server, value['config'])
 
-    def init_http_soap(self) -> 'None':
+    def init_http_soap(self, *, has_sec_config:'bool'=True) -> 'None':
         """ Initializes plain HTTP/SOAP connections.
         """
-        for config_dict, config_data in self.yield_outconn_http_config_dicts():
+        config_dicts = self.get_outconn_http_config_dicts()
+        config_dicts
 
-            wrapper = self._http_soap_wrapper_from_config(config_data.config)
+        for config_dict, config_data in config_dicts:
+
+            wrapper = self._http_soap_wrapper_from_config(config_data.config, has_sec_config=has_sec_config)
             config_data.conn = wrapper
 
             # To make the API consistent with that of SQL connection pools
@@ -976,7 +985,6 @@ class WorkerStore(_WorkerStoreBase):
     def sync_pubsub(self):
         """ Rebuilds all the in-RAM pub/sub structures and tasks.
         """
-
         # First, stop everything ..
         self.pubsub.stop()
 
@@ -1630,7 +1638,7 @@ class WorkerStore(_WorkerStoreBase):
 
     def _update_tls_outconns(self, material_type_id:'str', update_key:'str', msg:'bunch_') -> 'None':
 
-        for config_dict, config_data in self.yield_outconn_http_config_dicts():
+        for config_dict, config_data in self.get_outconn_http_config_dicts():
 
             # Here, config_data is a string such as _zato_id_633 that points to an actual outconn name
             if isinstance(config_data, str):
@@ -2035,7 +2043,7 @@ class WorkerStore(_WorkerStoreBase):
         self._delete_config_close_wrapper_http_soap(del_name, msg['transport'], logger.debug)
 
         # .. and create a new one
-        wrapper = self._http_soap_wrapper_from_config(msg, False)
+        wrapper = self._http_soap_wrapper_from_config(msg, has_sec_config=False)
         config_dict = getattr(self.worker_config, 'out_' + msg['transport'])
         config_dict[msg['name']] = Bunch()
         config_dict[msg['name']].config = msg
