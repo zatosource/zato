@@ -21,6 +21,7 @@ from zato.common.odb.model import HTTPBasicAuth, PubSubEndpoint, PubSubSubscript
 from zato.common.odb.query.common import get_object_list, get_object_list_by_columns, get_object_list_by_name_list
 from zato.common.pubsub import new_sub_key
 from zato.common.typing_ import dictlist
+from zato.common.crypto.api import CryptoManager
 from zato.server.service import Model, Service
 
 # ################################################################################################################################
@@ -329,6 +330,7 @@ class ImportObjects(Service):
             else:
                 new_item['sec_type'] = Sec_Def_Type.BASIC_AUTH
                 new_item['cluster_id'] = self.server.cluster_id
+                new_item['password'] = CryptoManager.generate_secret()
                 _ = new_item.pop('realm', None)
                 out.to_add.append(new_item)
 
