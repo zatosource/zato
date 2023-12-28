@@ -23,7 +23,10 @@ class CreateForm(forms.Form):
     endpoint_type = forms.ChoiceField(widget=forms.Select())
     is_internal = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     role = forms.ChoiceField(widget=forms.Select())
-    topic_patterns = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:120px'}))
+    topic_patterns = forms.CharField(widget=forms.Textarea(attrs={
+        'style':'width:100%; height:120px',
+        'placeholder':'pub=/*\nsub=/*',
+    }))
 
     # REST/SOAP
     security_id = forms.ChoiceField(widget=forms.Select())
