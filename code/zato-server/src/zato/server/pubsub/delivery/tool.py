@@ -61,6 +61,7 @@ class PubSubTool:
         is_for_services=False,  # type: bool
         deliver_pubsub_msg=None # type: callnone
     ) -> 'None':
+
         self.pubsub = pubsub
         self.parent = parent # This is our parent, e.g. an individual WebSocket on whose behalf we execute
         self.endpoint_type = endpoint_type
@@ -101,6 +102,17 @@ class PubSubTool:
 
         # Is this tool solely dedicated to delivery of messages to Zato services
         self.is_for_services = is_for_services
+
+# ################################################################################################################################
+
+    def stop(self) -> 'None':
+        """ Stops all delivery asks belonging to this tool.
+        """
+        for item in self.delivery_tasks.values():
+            try:
+                item.stop()
+            except Exception:
+                logger.info('Ignoring exception in PubSubTool.stop -> %s', format_exc())
 
 # ################################################################################################################################
 
@@ -425,10 +437,10 @@ class PubSubTool:
             gd_msg = GDMessage(sub_key, topic_name, msg.get_value())
             delivery_list = self.delivery_lists[sub_key]
             delivery_list.add(gd_msg)
-            logger.info('Adding a GD message `%s` to delivery_list=%s (%s)', gd_msg.pub_msg_id, hex(id(delivery_list)), sub_key)
+            # logger.info('Adding a GD message `%s` to delivery_list=%s (%s)', gd_msg.pub_msg_id, hex(id(delivery_list)), sub_key)
             count += 1
 
-        logger.info('Pushing %d GD message{}to task:%s; msg_ids:%s'.format(' ' if count==1 else 's '), count, sub_key, msg_ids)
+        # logger.info('Pushing %d GD message{}to task:%s; msg_ids:%s'.format(' ' if count==1 else 's '), count, sub_key, msg_ids)
 
 # ################################################################################################################################
 
@@ -477,13 +489,13 @@ class PubSubTool:
                     # let users know that their server has to do something extra
                     for _logger in logger, logger_zato:
                         _logger.info('Found %d initial message%sto enqueue for sub_key:`%s` (%s -> %s), g:%d, gs:%d',
-                            len_msg_ids, suffix, sub_key, topic_name, endpoint_name, len(groups), _group_size)
+                            len_msg_ids, suffix, sub_key, topic_name, endpoint_name, len_groups, _group_size)
 
-                    for idx, group in enumerate(groups, 1):
+                    for _, group in enumerate(groups, 1):
                         group = cast_('strlist', group)
                         group_msg_ids = [elem for elem in group if elem] # type: strlist
-                        logger.info('Enqueuing group %d/%d (gs:%d) (%s, %s -> %s) `%s`',
-                            idx, len_groups, _group_size, sub_key, topic_name, endpoint_name, group_msg_ids)
+                        # logger.info('Enqueuing group %d/%d (gs:%d) (%s, %s -> %s) `%s`',
+                        #    idx, len_groups, _group_size, sub_key, topic_name, endpoint_name, group_msg_ids)
 
                         msg_list = self.pubsub.get_sql_messages_by_msg_id_list(session, sub_key, pub_time_max, group_msg_ids)
                         self._enqueue_gd_messages_by_sub_key(sub_key, msg_list)
