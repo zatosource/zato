@@ -128,37 +128,37 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_enmasse_complex_ok_01(self) -> 'None':
+    def test_enmasse_complex_ok_01(self) -> 'None':
         self._test_enmasse_ok('complex_ok_01', template_complex_01)
 
 # ################################################################################################################################
 
-    def xtest_enmasse_complex_ok_02(self) -> 'None':
+    def test_enmasse_complex_ok_02(self) -> 'None':
         self._test_enmasse_ok('complex_ok_02', template_complex_02)
 
 # ################################################################################################################################
 
-    def xtest_enmasse_complex_ok_03(self) -> 'None':
+    def test_enmasse_complex_ok_03(self) -> 'None':
         self._test_enmasse_ok('complex_ok_03', template_complex_03)
 
 # ################################################################################################################################
 
-    def xtest_enmasse_complex_ok_04(self) -> 'None':
+    def test_enmasse_complex_ok_04(self) -> 'None':
         self._test_enmasse_ok('complex_ok_04', template_complex_04)
 
 # ################################################################################################################################
 
-    def xtest_enmasse_complex_ok_05(self) -> 'None':
+    def test_enmasse_complex_ok_05(self) -> 'None':
         self._test_enmasse_ok('complex_ok_05', template_complex_05)
 
 # ################################################################################################################################
 
-    def xtest_enmasse_simple_ok_01(self) -> 'None':
+    def test_enmasse_simple_ok_01(self) -> 'None':
         self._test_enmasse_ok('simple_ok_01', template_simple_01)
 
 # ################################################################################################################################
 
-    def xtest_enmasse_simple_ok_02(self) -> 'None':
+    def test_enmasse_simple_ok_02(self) -> 'None':
         self._test_enmasse_ok('simple_ok_02', template_simple_02)
 
 # ################################################################################################################################
@@ -168,22 +168,22 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_enmasse_simple_ok_04(self) -> 'None':
+    def test_enmasse_simple_ok_04(self) -> 'None':
         self._test_enmasse_ok('simple_ok_04', template_simple_04)
 
 # ################################################################################################################################
 
-    def xtest_enmasse_simple_ok_05(self) -> 'None':
+    def test_enmasse_simple_ok_05(self) -> 'None':
         self._test_enmasse_ok('simple_ok_05', template_simple_05)
 
 # ################################################################################################################################
 
-    def xtest_enmasse_simple_ok_06(self) -> 'None':
+    def test_enmasse_simple_ok_06(self) -> 'None':
         self._test_enmasse_ok('simple_ok_06', template_simple_06)
 
 # ################################################################################################################################
 
-    def xtest_enmasse_service_does_not_exit(self) -> 'None':
+    def test_enmasse_service_does_not_exit(self) -> 'None':
 
         # We are going to wait that many seconds for enmasse to complete
         start = datetime.utcnow()
