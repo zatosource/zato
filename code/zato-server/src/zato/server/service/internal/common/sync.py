@@ -39,6 +39,26 @@ class SyncObjectsImpl(Service):
         if input.security:
             self.logger.info('Synchronizing security definitions')
 
+            # First, load up all the definitions from the database ..
+            self.server.set_up_security(self.server.cluster_id)
+
+            # .. update in-RAM config values ..
+            self.worker_config.http_soap,
+            self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
+            self.worker_config.basic_auth,
+            self.worker_config.jwt,
+            self.worker_config.ntlm,
+            self.worker_config.oauth,
+            self.worker_config.apikey,
+            self.worker_config.aws,
+            self.worker_config.tls_channel_sec,
+            self.worker_config.tls_key_cert,
+            self.worker_config.vault_conn_sec,
+            self.kvdb,
+
+            # .. now, initialize connections that may depend on what we have just loaded ..
+            self.server.worker_store.init_http_soap(has_sec_config=False)
+
         # Optionally, synchronize in-RAM state of pub/sub
         if input.pubsub:
             self.logger.info('Synchronizing pub/sub objects')
