@@ -13,8 +13,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 template_simple_05 = """
 security:
 
-  - name: 'Test.Enmasse.Simple-05.Demo Security Definition'
-    username: 'Demo Security Definition'
+  - name: 'Test.Enmasse.Simple-05.Demo Security Definition.{test_suffix}'
+    username: 'Demo Security Definition.{test_suffix}'
     type: basic_auth
     realm: 'Demo Security Definition'
 
@@ -22,7 +22,7 @@ pubsub_endpoint:
 
   - name: 'Test.Enmasse.Simple-05.Demo Endpoint'
     endpoint_type: rest
-    security_name: 'Test.Enmasse.Simple-05.Demo Security Definition'
+    security_name: 'Test.Enmasse.Simple-05.Demo Security Definition.{test_suffix}'
     topic_patterns: |-
       pub=/*
       sub=/*
@@ -32,7 +32,7 @@ outgoing_rest:
   - name: 'Test.Enmasse.Simple-05.Demo REST Connection.{test_suffix}'
     host: https://example.com
     url_path: /
-    security_name: 'Test.Enmasse.Simple-05.Demo Security Definition'
+    security_name: 'Test.Enmasse.Simple-05.Demo Security Definition.{test_suffix}'
 
 pubsub_subscription:
 

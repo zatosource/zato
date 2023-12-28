@@ -1912,7 +1912,7 @@ def wait_for_predicate(
 
     # After that many seconds, we are going to start logging the fact that we are still waiting.
     # In this way, we do not need to log information about all the predicates that finish quickly.
-    log_after_seconds = 0
+    log_after_seconds = 5
 
     # Perhaps we can already return and we enter this branch if we cannot ..
     if not is_fulfilled:
