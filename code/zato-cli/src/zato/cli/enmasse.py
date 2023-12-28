@@ -1681,7 +1681,7 @@ class ObjectImporter:
     def _import_basic_auth(self, data:'dictlist', *, is_edit:'bool') -> 'None':
 
         # Local variables
-        service_name = 'dev.zato.import-objects'
+        service_name = 'zato.common.import-objects'
         import_type = 'edit' if is_edit else 'create'
 
         # Build a request for the service
@@ -1704,7 +1704,7 @@ class ObjectImporter:
     def _import_pubsub_objects(self, data:'strlistdict') -> 'None':
 
         # Local variables
-        service_name = 'dev.zato.import-objects'
+        service_name = 'zato.common.import-objects'
 
         # Resolve all values first ..
         for item_type, values in data.items():
@@ -1723,6 +1723,16 @@ class ObjectImporter:
         # .. log what we are about to do ..
         self.logger.info(f'Invoking -> import pub/sub -> {service_name} -> {len_imports}')
         _ = self.client.invoke(service_name, data)
+
+# ################################################################################################################################
+
+    def _trigger_sync_server_objects(self):
+
+        # Local variables
+        service_name = 'pub.zato.common.sync-objects'
+
+        self.logger.info(f'Invoking -> trigger sync -> {service_name}')
+        _ = self.client.invoke(service_name)
 
 # ################################################################################################################################
 
@@ -1908,6 +1918,9 @@ class ObjectImporter:
 
         # Handle pub/sub objeccts as a whole here
         self._import_pubsub_objects(pubsub_objects)
+
+        # Now, having imported all the objects, we can trigger their synchronization among the members of the cluster
+        self._trigger_sync_server_objects()
 
         return self.results
 

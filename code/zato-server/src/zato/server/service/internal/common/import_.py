@@ -1,4 +1,3 @@
-'''
 # -*- coding: utf-8 -*-
 
 """
@@ -90,12 +89,12 @@ class ItemsInfo(Model):
 class ImportObjects(Service):
     """ Imports multiple pub/sub objects en masse.
     """
-    name = 'dev.zato.import-objects'
+    name = 'zato.common.import-objects'
 
     def handle(self):
 
-        data = test_data
-        # data = self.request.raw_request
+        # data = test_data
+        data = self.request.raw_request
 
         # Data that we received on input
         input:'ObjectContainer' = ObjectContainer.from_dict(data)
@@ -493,70 +492,3 @@ class ImportObjects(Service):
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-test_data = {
-    'basic_auth': [
-        {
-            'is_active':True,
-            'name':'security-test-cli-/test-perf.02/sec/sub/0000',
-            'realm':'Zato.Test',
-            'username':'zato-test-security-test-cli-/test-perf.02/sec/sub/0000'
-        },
-    ],
-    'pubsub_endpoint': [
-        {
-            'name': 'endpoint-test-cli-security-test-cli-/test-perf.01/sec/pub/0000',
-            'endpoint_type': 'rest',
-            'service_name': None,
-            'topic_patterns': 'pub=/*',
-            'sec_name': 'security-test-cli-/test-perf.01/sec/pub/0000',
-            'is_active': True,
-            'is_internal': False,
-            'role': 'pub-sub',
-            'service': None
-        },
-        {
-            'name': 'endpoint-test-cli-security-test-cli-/test-perf.01/sec/sub/0000',
-            'endpoint_type': 'rest',
-            'service_name': None,
-            'topic_patterns': 'sub=/*',
-            'sec_name': 'security-test-cli-/test-perf.01/sec/sub/0000',
-            'is_active': True,
-            'is_internal': False,
-            'role': 'pub-sub',
-            'service': None
-        }
-    ],
-    'pubsub_topic': [
-        {
-            'name': '/test-perf.01',
-            'has_gd': True,
-            'is_active': True,
-            'is_api_sub_allowed': True,
-            'max_depth_gd': 999,
-            'max_depth_non_gd': 333,
-            'depth_check_freq': 123,
-            'pub_buffer_size_gd': 0,
-            'task_sync_interval': 500,
-            'task_delivery_interval': 2000
-        }
-    ],
-    'pubsub_subscription': [
-        {
-            'name': 'Subscription.000000001',
-            'endpoint_name': 'endpoint-test-cli-security-test-cli-/test-perf.01/sec/sub/0000',
-            'endpoint_type': 'rest',
-            # 'delivery_method': 'pull',
-            'delivery_method': 'notify',
-            'rest_connection': 'pubsub.test.sample.outconn',
-            'topic_list_json': ['/test-perf.01'],
-            'is_active': True,
-            'should_ignore_if_sub_exists': True,
-            'should_delete_all': True
-        }
-    ]
-}
-
-# ################################################################################################################################
-# ################################################################################################################################
-'''
