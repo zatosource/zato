@@ -73,6 +73,7 @@ ZATO_NONE = 'ZATO_NONE'
 ZATO_DEFAULT = 'ZATO_DEFAULT'
 ZATO_SEC_USE_RBAC = 'ZATO_SEC_USE_RBAC'
 Zato_None = ZATO_NONE
+Zato_No_Security = 'zato-no-security'
 
 DELEGATED_TO_RBAC = 'Delegated to RBAC'
 
@@ -279,6 +280,8 @@ class SEC_DEF_TYPE:
     TLS_KEY_CERT = 'tls_key_cert'
     VAULT = 'vault_conn_sec'
     WSS = 'wss'
+
+Sec_Def_Type = SEC_DEF_TYPE
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -895,9 +898,13 @@ class PUBSUB:
         WAIT_TIME_NON_SOCKET_ERROR = 3
         ON_NO_SUBS_PUB = 'accept'
         SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
-        UnsubOnWSXClose = True
-        PositionInGroup = 1
+
         Dashboard_Message_Body = 'This is a sample message'
+        Delivery_Err_Should_Block = True
+        Has_GD = False
+        PositionInGroup = 1
+        UnsubOnWSXClose = True
+        Wrap_One_Msg_In_List = True
 
         LimitMessageExpiry  = 86_400 # In seconds = 1 day # 0.1
         LimitTopicRetention = 86_400 # In seconds = 1 day # 0.1
@@ -1176,6 +1183,20 @@ class RATE_LIMIT:
         SERVICE   = 'service'
         SEC_DEF   = 'sec_def'
         SSO_USER  = 'sso_user'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CommonObject:
+
+    Prefix_Invalid = 'prefix-invalid'
+
+    Invalid = 'invalid-invalid'
+    PubSub_Endpoint = 'pubsub-endpoint'
+    PubSub_Publish = 'pubsub-publish'
+    PubSub_Subscription = 'pubsub-subscription'
+    PubSub_Topic = 'pubsub-topic'
+    Security_Basic_Auth = 'security-basic-auth'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -2128,6 +2149,11 @@ default_internal_modules = {
     'zato.server.service.internal.channel.web_socket.subscription': True,
     'zato.server.service.internal.channel.zmq': True,
     'zato.server.service.internal.cloud.aws.s3': True,
+    'zato.server.service.internal.common': True,
+    'zato.server.service.internal.common.create': True,
+    'zato.server.service.internal.common.delete': True,
+    'zato.server.service.internal.common.import_': True,
+    'zato.server.service.internal.common.sync': True,
     'zato.server.service.internal.connector.amqp_': True,
     'zato.server.service.internal.crypto': True,
     'zato.server.service.internal.definition.amqp_': True,

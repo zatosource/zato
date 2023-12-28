@@ -18,7 +18,7 @@ from time import sleep
 # Zato
 from zato.cli import ManageCommand
 from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
-    NotGiven, PUBSUB as Common_PubSub, TLS as COMMON_TLS, Zato_None
+    NotGiven, PUBSUB as Common_PubSub, Sec_Def_Type, TLS as COMMON_TLS, Zato_No_Security, Zato_None
 from zato.common.const import ServiceConst
 from zato.common.typing_ import cast_
 
@@ -45,7 +45,8 @@ zato_enmasse_env2 = 'Zato_Enmasse_Env.'
 zato_enmasse_env_value_prefix = 'Zato_Enmasse_Env_'
 
 DEFAULT_COLS_WIDTH = '15,100'
-ZATO_NO_SECURITY = 'zato-no-security'
+
+# ################################################################################################################################
 
 Code = namedtuple('Code', ('symbol', 'desc')) # type: ignore
 
@@ -79,7 +80,6 @@ _attr_outconn_ldap = f'{_prefix_generic}_{outconn_ldap}'
 _All_Sec_Def_Types = All_Sec_Def_Types + ['bearer_token']
 
 _pubsub_default = Common_PubSub.DEFAULT
-
 
 zato_name_prefix = (
     'admin.',
@@ -438,7 +438,7 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches = {
     'email_imap':  {'get_criteria':'UNSEEN', 'timeout':10},
 
     # Pub/sub - Endpoints
-    'pubsub_endpoint':  {'security_name':ZATO_NO_SECURITY},
+    'pubsub_endpoint':  {'security_name':Zato_No_Security},
 
     # Pub/sub - Subscriptions
     'pubsub_subscription':  {'delivery_server':'server1'},
@@ -474,7 +474,7 @@ ModuleCtx.Enmasse_Attr_List_Default_By_Type = {
 
         # Note that it is not security_name because it has been already re-mapped to sec_name
         # by the time this check is taking place.
-        'sec_name': ZATO_NO_SECURITY,
+        'sec_name': Zato_No_Security,
 
     },
 
@@ -495,12 +495,12 @@ ModuleCtx.Enmasse_Attr_List_Default_By_Type = {
     },
 
     'channel_rest': {
-        'security_name': ZATO_NO_SECURITY,
+        'security_name': Zato_No_Security,
         'merge_url_params_req': True,
     },
 
     'outgoing_rest': {
-        'security_name': ZATO_NO_SECURITY,
+        'security_name': Zato_No_Security,
         'merge_url_params_req': True,
     }
 }
@@ -795,20 +795,24 @@ def normalize_service_name(item): # type: ignore
 
 # ################################################################################################################################
 
-def test_item(item, cond): # type: ignore
+def test_item(item, condition): # type: ignore
     """ Given a dictionary `cond` containing some conditions to test an item for, return True if those conditions match.
     Currently only supports testing whether a field has a particular value. Returns ``True`` if `cond` is ``None``."""
 
-    if cond is not None:
+    if condition is not None:
 
-        only_if_field:'any_' = cond.get('only_if_field')
-        only_if_value:'any_' = cond.get('only_if_value')
+        condition = condition if isinstance(condition, list) else [condition] # type: ignore
 
-        if not isinstance(only_if_value, (list, tuple)):
-            only_if_value = [only_if_value]
+        for condition_config in condition: # type: ignore
 
-        if only_if_field and item.get(only_if_field) not in only_if_value:
-            return False
+            only_if_field:'any_' = condition_config.get('only_if_field')
+            only_if_value:'any_' = condition_config.get('only_if_value')
+
+            if not isinstance(only_if_value, (list, tuple)):
+                only_if_value = [only_if_value]
+
+            if only_if_field and item.get(only_if_field) not in only_if_value:
+                return False
 
     return True
 
@@ -850,7 +854,7 @@ class ServiceInfo:
 
         # Specifies a list of object dependencies:
         # field_name: {"dependent_type": "shortname", "dependent_field":
-        # "fieldname", "empty_value": None, or e.g. ZATO_NO_SECURITY}
+        # "fieldname", "empty_value": None, or e.g. Zato_No_Security}
         self.object_dependencies = object_dependencies or {}
 
         # Specifies a list of service dependencies. The field's value contains
@@ -917,7 +921,7 @@ SERVICES = [
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
-                'empty_value': ZATO_NO_SECURITY,
+                'empty_value': Zato_No_Security,
                 'id_field': 'security_id',
             },
         },
@@ -942,7 +946,7 @@ SERVICES = [
             'sec_name': {
                 'dependent_type': 'basic_auth',
                 'dependent_field': 'name',
-                'empty_value': ZATO_NO_SECURITY,
+                'empty_value': Zato_No_Security,
                 'condition': {
                     'only_if_field': 'endpoint_type',
                     'only_if_value': ['soap', 'rest'],
@@ -963,10 +967,16 @@ SERVICES = [
             'rest_connection': {
                 'dependent_type': 'http_soap',
                 'dependent_field': 'name',
-                'condition': {
+                'condition': [
+                {
                     'only_if_field': 'endpoint_type',
                     'only_if_value': ['soap', 'rest'],
                 },
+                {
+                    'only_if_field': 'delivery_method',
+                    'only_if_value': ['push'],
+                }
+                ],
             },
         },
     ),
@@ -1003,13 +1013,13 @@ SERVICES = [
             'security': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
-                'empty_value': ZATO_NO_SECURITY,
+                'empty_value': Zato_No_Security,
                 'id_field': 'security_id',
             },
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
-                'empty_value': ZATO_NO_SECURITY,
+                'empty_value': Zato_No_Security,
                 'id_field': 'security_id',
             },
         },
@@ -1075,7 +1085,7 @@ SERVICES = [
             'def_name': {
                 'dependent_type': 'def_cassandra',
                 'dependent_field': 'name',
-                'empty_value': ZATO_NO_SECURITY,
+                'empty_value': Zato_No_Security,
             },
         },
     ),
@@ -1293,11 +1303,8 @@ class DependencyScanner:
 
     def scan(self) -> 'Results':
 
-        # Python 2/3 compatibility
-        from zato.common.ext.future.utils import iteritems
-
         results = Results()
-        for item_type, items in iteritems(self.json):
+        for item_type, items in self.json.items():
 
             #
             # Preprocess item type
@@ -1308,7 +1315,7 @@ class DependencyScanner:
                 self.scan_item(item_type, item, results)
 
         if not self.ignore_missing:
-            for (missing_type, missing_name), dep_names in sorted(iteritems(self.missing)): # type: ignore
+            for (missing_type, missing_name), dep_names in sorted(self.missing.items()): # type: ignore
                 existing = sorted(item.name for item in self.json.get(missing_type, []))
                 raw:'any_' = (missing_type, missing_name, dep_names, existing)
 
@@ -1386,9 +1393,6 @@ class ObjectImporter:
 
     def validate_import_data(self):
 
-        # Python 2/3 compatibility
-        from zato.common.ext.future.utils import iteritems
-
         results = Results()
         dep_scanner = DependencyScanner(
             self.json,
@@ -1408,7 +1412,7 @@ class ObjectImporter:
                 results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB, "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
                                     missing_name, missing_type, dep_names)
 
-        for item_type, items in iteritems(self.json): # type: ignore
+        for item_type, items in self.json.items(): # type: ignore
 
             #
             # Preprocess item type
@@ -1489,9 +1493,8 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _import(self, item_type:'str', attrs:'any_', is_edit:'bool') -> 'None':
+    def _resolve_attrs(self, item_type:'str', attrs:'any_') -> 'any_':
 
-        # First, resolve values pointing to parameter placeholders and environment variables ..
         for key, orig_value in attrs.items():
 
             # .. preprocess values only if they are strings ..
@@ -1515,6 +1518,15 @@ class ObjectImporter:
                         value = os.environ.get(value)
 
                     attrs[key] = value
+
+        return attrs
+
+# ################################################################################################################################
+
+    def _import(self, item_type:'str', attrs:'any_', is_edit:'bool') -> 'None':
+
+        # First, resolve values pointing to parameter placeholders and environment variables ..
+        attrs = self._resolve_attrs(item_type, attrs)
 
         #
         # Preprocess the data to be imported
@@ -1667,6 +1679,70 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
+    def _import_basic_auth(self, data:'dictlist', *, is_edit:'bool') -> 'None':
+
+        # Local variables
+        service_name = 'zato.common.import-objects'
+        import_type = 'edit' if is_edit else 'create'
+
+        # Build a request for the service
+        imports = {
+            'basic_auth': data
+        }
+
+        # .. details of how many objects we are importing ..
+        len_imports = {
+            'basic_auth': len(imports['basic_auth']),
+        }
+
+        # .. log what we are about to do ..
+        self.logger.info(f'Invoking -> import security ({import_type}) -> {service_name} -> {len_imports}')
+
+        _ = self.client.invoke(service_name, imports)
+
+# ################################################################################################################################
+
+    def _import_pubsub_objects(self, data:'strlistdict') -> 'None':
+
+        # Local variables
+        service_name = 'zato.common.import-objects'
+
+        # Resolve all values first ..
+        for item_type, values in data.items():
+            for idx, value in enumerate(values):
+                value = dict(value)
+                value = self._resolve_attrs(item_type, value)
+                values[idx] = value
+
+        # .. details of how many objects we are importing ..
+        len_imports = {
+            'topics': len(data['pubsub_topic']),
+            'endpoints': len(data['pubsub_endpoint']),
+            'subs': len(data['pubsub_subscription']),
+        }
+
+        # .. log what we are about to do ..
+        self.logger.info(f'Invoking -> import pub/sub -> {service_name} -> {len_imports}')
+        _ = self.client.invoke(service_name, data)
+
+# ################################################################################################################################
+
+    def _trigger_sync_server_objects(self, *, sync_security:'bool'=True, sync_pubsub:'bool'=True):
+
+        # Local variables
+        service_name = 'pub.zato.common.sync-objects'
+
+        # Request to send to the server
+        request = {
+            'security': sync_security,
+            'pubsub': sync_pubsub,
+        }
+
+        self.logger.info(f'Invoking -> trigger sync -> {service_name}')
+        _ = self.client.invoke(service_name, request)
+
+# ################################################################################################################################
+
     def import_objects(self, already_existing) -> 'Results': # type: ignore
 
         # stdlib
@@ -1716,11 +1792,25 @@ class ObjectImporter:
         existing_combined:'any_' = existing_defs + existing_rbac_role + existing_rbac_role_permission + \
             existing_rbac_client_role + existing_other
 
+        # Extract and load Basic Auth definitions as a whole, before any other updates (edit)
+        basic_auth_edit = self._extract_basic_auth(existing_combined, is_edit=True)
+        self._import_basic_auth(basic_auth_edit, is_edit=True)
+        self._trigger_sync_server_objects(sync_pubsub=False)
+        self.object_mgr.refresh_objects()
+
         for w in existing_combined:
 
             item_type, attrs = w.value_raw
 
             if self.should_skip_item(item_type, attrs, True):
+                continue
+
+            # Basic Auth definitions have been already handled above (edit)
+            if item_type == Sec_Def_Type.BASIC_AUTH:
+                continue
+
+            # Skip pub/sub objects because they are handled separately (edit)
+            if item_type.startswith('pubsub'):
                 continue
 
             results = self._import(item_type, attrs, True)
@@ -1796,11 +1886,34 @@ class ObjectImporter:
         #
         new_combined:'any_' = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
 
+        # A container for pub/sub objects to be handled separately
+        pubsub_objects:'strlistdict' = {
+            'pubsub_endpoint': [],
+            'pubsub_topic': [],
+            'pubsub_subscription': [],
+        }
+
+        # Extract and load Basic Auth definitions as a whole, before any other updates (create)
+        basic_auth_create = self._extract_basic_auth(new_combined, is_edit=False)
+        self._import_basic_auth(basic_auth_create, is_edit=False)
+        self._trigger_sync_server_objects(sync_pubsub=False)
+        self.object_mgr.refresh_objects()
+
         for elem in new_combined:
             for item_type, attr_list in iteritems(elem):
                 for attrs in attr_list:
 
                     if self.should_skip_item(item_type, attrs, False):
+                        continue
+
+                    # Basic Auth definitions have been already handled above (create)
+                    if item_type == Sec_Def_Type.BASIC_AUTH:
+                        continue
+
+                    # Pub/sub objects are handled separately at the end of this function (create)
+                    if item_type.startswith('pubsub'):
+                        container = pubsub_objects[item_type]
+                        container.append(attrs)
                         continue
 
                     results = self._import(item_type, attrs, False)
@@ -1811,7 +1924,35 @@ class ObjectImporter:
                     if results:
                         return results
 
+        # Handle pub/sub objeccts as a whole here
+        self._import_pubsub_objects(pubsub_objects)
+
+        # Now, having imported all the objects, we can trigger their synchronization among the members of the cluster
+        self._trigger_sync_server_objects(sync_security=False)
+
         return self.results
+
+# ################################################################################################################################
+
+    def _extract_basic_auth(self, data:'any_', *, is_edit:'bool') -> 'dictlist':
+
+        out:'dictlist' = []
+
+        if is_edit:
+            for item in data:
+                value_raw = item.value_raw
+                item_type, attrs = value_raw
+                if item_type == Sec_Def_Type.BASIC_AUTH:
+                    attrs = dict(attrs)
+                    out.append(attrs)
+        else:
+            for item in data:
+                if basic_auth := item.get(Sec_Def_Type.BASIC_AUTH):
+                    for elem in basic_auth:
+                        attrs = dict(elem)
+                        out.append(attrs)
+
+        return out
 
 # ################################################################################################################################
 
@@ -1838,7 +1979,7 @@ class ObjectImporter:
         self._swap_service_name(required, item, 'service', 'service_name')
         self._swap_service_name(required, item, 'service_name', 'service')
 
-        # Fetch an item from a cache of ODB object and assign its ID to item so that the Edit service knows what to update.
+        # Fetch an item from a cache of ODB objects and assign its ID to item so that the Edit service knows what to update.
         if is_edit:
             lookup_config:'any_' = {'name': item.name}
             if def_type == 'http_soap':
@@ -1868,8 +2009,7 @@ class ObjectImporter:
                     field_value:'any_' = item[field_name]
 
                 # Ignore explicit indicators of the absence of a security definition
-                if field_value != ZATO_NO_SECURITY:
-
+                if field_value != Zato_No_Security:
                     criteria:'any_' = {dependent_field: field_value}
                     dep_obj:'any_' = self.object_mgr.find(dependent_type, criteria)
                     item[id_field] = dep_obj.id
@@ -1948,12 +2088,12 @@ class ObjectManager:
 # ################################################################################################################################
 
     def refresh(self):
-        self._refresh_services()
-        self._refresh_objects()
+        self.refresh_services()
+        self.refresh_objects()
 
 # ################################################################################################################################
 
-    def _refresh_services(self):
+    def refresh_services(self):
 
         # Bunch
         from bunch import Bunch
@@ -1978,7 +2118,7 @@ class ObjectManager:
     def fix_up_odb_object(self, item_type, item): # type: ignore
         """ For each ODB object, ensure fields that specify a dependency have their associated name field updated
         to match the dependent object. Otherwise, ensure the field is set to the corresponding empty value
-        (either None or ZATO_NO_SECURITY).
+        (either None or Zato_No_Security).
         """
 
         # Python 2/3 compatibility
@@ -2017,7 +2157,8 @@ class ObjectManager:
             if (dep_id != 'ZATO_SEC_USE_RBAC') and (field_name != 'sec_name' and dep is None):
                 if not dep:
                     msg = 'Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, item:`{}`'
-                    raise Exception(msg.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
+                    raise Exception(msg.format(service_info.name, field_name, info['dependent_type'], dep_id, dep,
+                        item.toDict()))
                 else:
                     item[field_name] = dep[info['dependent_field']]
 
@@ -2164,7 +2305,12 @@ class ObjectManager:
 
 # ################################################################################################################################
 
-    def _refresh_objects(self):
+    def refresh_security_objects(self):
+        self.refresh_objects(sec_only=True)
+
+# ################################################################################################################################
+
+    def refresh_objects(self, *, sec_only:'bool'=False):
 
         # stdlib
         from operator import attrgetter
@@ -2174,6 +2320,10 @@ class ObjectManager:
 
         self.objects = Bunch()
         for service_info in sorted(SERVICES, key=attrgetter('name')):
+
+            if sec_only:
+                if not service_info.is_security:
+                    continue
 
             self.get_objects_by_type(service_info.name)
 
