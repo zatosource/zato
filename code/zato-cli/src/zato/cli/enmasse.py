@@ -1789,7 +1789,7 @@ class ObjectImporter:
         basic_auth_edit = self._extract_basic_auth(existing_combined, is_edit=True)
         self._import_basic_auth(basic_auth_edit, is_edit=True)
 
-        self.object_mgr.refresh_security_objects()
+        self.object_mgr.refresh_objects()
 
         for w in existing_combined:
 
@@ -1889,7 +1889,7 @@ class ObjectImporter:
         # Extract and load Basic Auth definitions as a whole, before any other updates (create)
         basic_auth_create = self._extract_basic_auth(new_combined, is_edit=False)
         self._import_basic_auth(basic_auth_create, is_edit=False)
-        self.object_mgr.refresh_security_objects()
+        self.object_mgr.refresh_objects()
 
         for elem in new_combined:
             for item_type, attr_list in iteritems(elem):
@@ -1971,7 +1971,7 @@ class ObjectImporter:
         self._swap_service_name(required, item, 'service', 'service_name')
         self._swap_service_name(required, item, 'service_name', 'service')
 
-        # Fetch an item from a cache of ODB object and assign its ID to item so that the Edit service knows what to update.
+        # Fetch an item from a cache of ODB objects and assign its ID to item so that the Edit service knows what to update.
         if is_edit:
             lookup_config:'any_' = {'name': item.name}
             if def_type == 'http_soap':
@@ -2002,12 +2002,6 @@ class ObjectImporter:
 
                 # Ignore explicit indicators of the absence of a security definition
                 if field_value != Zato_No_Security:
-
-                    print()
-                    print(111, field_name)
-                    print(222, field_value)
-                    print()
-
                     criteria:'any_' = {dependent_field: field_value}
                     dep_obj:'any_' = self.object_mgr.find(dependent_type, criteria)
                     item[id_field] = dep_obj.id
@@ -2155,7 +2149,8 @@ class ObjectManager:
             if (dep_id != 'ZATO_SEC_USE_RBAC') and (field_name != 'sec_name' and dep is None):
                 if not dep:
                     msg = 'Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, item:`{}`'
-                    raise Exception(msg.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
+                    raise Exception(msg.format(service_info.name, field_name, info['dependent_type'], dep_id, dep,
+                        item.toDict()))
                 else:
                     item[field_name] = dep[info['dependent_field']]
 

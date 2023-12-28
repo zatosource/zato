@@ -382,6 +382,9 @@ class ImportObjects(Service):
             service_name = item.pop('service_name', None)
             service_name = service or service_name
 
+            _ = item.pop('ws_channel_name', None)
+            _ = item.pop('sec_def', None)
+
             if service_name:
                 service_id = self.server.service_store.get_service_id_by_name(service_name)
                 item['service_id'] = service_id
