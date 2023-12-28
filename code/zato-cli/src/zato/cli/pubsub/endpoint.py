@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.cli import ServerAwareCommand
 from zato.common.api import CommonObject, PUBSUB
-from zato.common.test.config import TestConfig
 from zato.common.util.api import fs_safe_now
 
 from zato.cli.common import CreateCommon

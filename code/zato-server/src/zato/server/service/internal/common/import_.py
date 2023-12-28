@@ -20,7 +20,6 @@ from zato.common.api import GENERIC, PUBSUB, Sec_Def_Type, Zato_No_Security
 from zato.common.odb.model import HTTPBasicAuth, PubSubEndpoint, PubSubSubscription, PubSubTopic, SecurityBase
 from zato.common.odb.query.common import get_object_list, get_object_list_by_columns, get_object_list_by_name_list
 from zato.common.pubsub import new_sub_key
-from zato.common.typing_ import dictlist
 from zato.common.crypto.api import CryptoManager
 from zato.server.service import Model, Service
 

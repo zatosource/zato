@@ -205,7 +205,7 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def stop(self):
+    def stop(self) -> 'None':
         """ Stops all pub/sub tools, which in turn stops all the delivery tasks.
         """
         for item in self.pubsub_tools:
