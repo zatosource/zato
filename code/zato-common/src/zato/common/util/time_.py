@@ -162,6 +162,13 @@ class TimeUtil:
 
 # ################################################################################################################################
 
+    def utcnow_as_float(self, format=ModuleCtx.Date_Time_Format, needs_format=True) -> 'any_':
+        """ Returns now in UTC as a float number.
+        """
+        return self.utcnow(needs_format=False).float_timestamp
+
+# ################################################################################################################################
+
     def today(self, format=ModuleCtx.Date_Format, tz=local_tz_zone, needs_format=True):
         """ Returns current day in a given timezone.
         """

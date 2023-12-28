@@ -16,9 +16,10 @@ from dataclasses import dataclass
 from sqlalchemy import insert
 
 # Zato
-from zato.common.api import GENERIC, Sec_Def_Type, Zato_No_Security
+from zato.common.api import GENERIC, PUBSUB, Sec_Def_Type, Zato_No_Security
 from zato.common.odb.model import HTTPBasicAuth, PubSubEndpoint, PubSubSubscription, PubSubTopic, SecurityBase
 from zato.common.odb.query.common import get_object_list, get_object_list_by_columns, get_object_list_by_name_list
+from zato.common.pubsub import new_sub_key
 from zato.common.typing_ import dictlist
 from zato.server.service import Model, Service
 
@@ -43,6 +44,11 @@ HTTPBasicAuthInsert = HTTPBasicAuthTable.insert
 # ################################################################################################################################
 # ################################################################################################################################
 
+Default = PUBSUB.DEFAULT
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass(init=False)
 class ObjectContainer(Model):
 
@@ -62,10 +68,10 @@ class ObjectContainer(Model):
 
 # ################################################################################################################################
 
-    def get_endpoint_id_by_name(self, name:'str') -> 'any_':
+    def get_endpoint_by_name(self, name:'str') -> 'any_':
         for item in self.pubsub_endpoint: # type: ignore
             if item['name'] == name:
-                return item['id']
+                return item
         else:
             raise Exception(f'Endpoint not found -> {name}')
 
@@ -209,7 +215,14 @@ class ImportObjects(Service):
             _ = item.pop('name', None)
 
             endpoint_name = item.pop('endpoint_name')
-            endpoint_id = existing.get_endpoint_id_by_name(endpoint_name)
+            endpoint = existing.get_endpoint_by_name(endpoint_name)
+
+            endpoint_id = endpoint['id']
+            endpoint_type = endpoint['endpoint_type']
+
+            has_gd = item.get('has_gd', Default.Has_GD)
+            wrap_one_msg_in_list = item.get('wrap_one_msg_in_list', Default.Wrap_One_Msg_In_List)
+            delivery_err_should_block = item.get('delivery_err_should_block', Default.Delivery_Err_Should_Block)
 
             for topic_name in item.pop('topic_list_json'):
                 topic_id = existing.get_topic_id_by_name(topic_name)
@@ -217,12 +230,12 @@ class ImportObjects(Service):
                     'topic_id': topic_id,
                     'endpoint_id': endpoint_id,
                     'delivery_method': item['delivery_method'],
-                    'creation_time': self.time.utcnow(needs_format=False).float_timestamp,
-                    'sub_key': self.time.utcnow(),
+                    'creation_time': self.time.utcnow_as_float(),
+                    'sub_key': new_sub_key(endpoint_type),
                     'sub_pattern_matched': 'auto-import',
-                    'has_gd': True,
-                    'wrap_one_msg_in_list': True,
-                    'delivery_err_should_block': True,
+                    'has_gd': has_gd,
+                    'wrap_one_msg_in_list': wrap_one_msg_in_list,
+                    'delivery_err_should_block': delivery_err_should_block,
                 }
                 out.append(new_item)
 
@@ -393,15 +406,21 @@ class ImportObjects(Service):
 
     def _get_existing_topics(self, session:'SASession') -> 'dictlist':
 
-        topics = get_object_list(session, PubSubTopicTable)
-        return topics
+        out = get_object_list(session, PubSubTopicTable)
+        return out
 
 # ################################################################################################################################
 
     def _get_existing_endpoints(self, session:'SASession') -> 'dictlist':
 
-        topics = get_object_list(session, PubSubEndpointTable)
-        return topics
+        columns = [
+            PubSubEndpointTable.c.id,
+            PubSubEndpointTable.c.name,
+            PubSubEndpointTable.c.endpoint_type,
+        ]
+
+        out = get_object_list_by_columns(session, columns)
+        return out
 
 # ################################################################################################################################
 
@@ -412,8 +431,8 @@ class ImportObjects(Service):
             PubSubSubscriptionTable.c.topic_id,
             PubSubSubscriptionTable.c.endpoint_id,
         ]
-        subscriptions = get_object_list_by_columns(session, columns)
-        return subscriptions
+        out = get_object_list_by_columns(session, columns)
+        return out
 
 # ################################################################################################################################
 
