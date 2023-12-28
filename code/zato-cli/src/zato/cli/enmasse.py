@@ -1726,10 +1726,16 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _trigger_sync_server_objects(self):
+    def _trigger_sync_server_objects(self, *, sync_security:'bool'=True, sync_pubsub:'bool'=True):
 
         # Local variables
         service_name = 'pub.zato.common.sync-objects'
+
+        # Request to send to the server
+        request = {
+            'security': sync_security,
+            'pubsub': sync_pubsub,
+        }
 
         self.logger.info(f'Invoking -> trigger sync -> {service_name}')
         _ = self.client.invoke(service_name)
@@ -1788,7 +1794,7 @@ class ObjectImporter:
         # Extract and load Basic Auth definitions as a whole, before any other updates (edit)
         basic_auth_edit = self._extract_basic_auth(existing_combined, is_edit=True)
         self._import_basic_auth(basic_auth_edit, is_edit=True)
-
+        self._trigger_sync_server_objects(sync_pubsub=False)
         self.object_mgr.refresh_objects()
 
         for w in existing_combined:
@@ -1889,6 +1895,7 @@ class ObjectImporter:
         # Extract and load Basic Auth definitions as a whole, before any other updates (create)
         basic_auth_create = self._extract_basic_auth(new_combined, is_edit=False)
         self._import_basic_auth(basic_auth_create, is_edit=False)
+        self._trigger_sync_server_objects(sync_pubsub=False)
         self.object_mgr.refresh_objects()
 
         for elem in new_combined:
@@ -1920,7 +1927,7 @@ class ObjectImporter:
         self._import_pubsub_objects(pubsub_objects)
 
         # Now, having imported all the objects, we can trigger their synchronization among the members of the cluster
-        self._trigger_sync_server_objects()
+        self._trigger_sync_server_objects(sync_security=False)
 
         return self.results
 
