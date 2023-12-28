@@ -898,9 +898,13 @@ class PUBSUB:
         WAIT_TIME_NON_SOCKET_ERROR = 3
         ON_NO_SUBS_PUB = 'accept'
         SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
-        UnsubOnWSXClose = True
-        PositionInGroup = 1
+
         Dashboard_Message_Body = 'This is a sample message'
+        Delivery_Err_Should_Block = True
+        Has_GD = False
+        PositionInGroup = 1
+        UnsubOnWSXClose = True
+        Wrap_One_Msg_In_List = True
 
         LimitMessageExpiry  = 86_400 # In seconds = 1 day # 0.1
         LimitTopicRetention = 86_400 # In seconds = 1 day # 0.1
