@@ -8,8 +8,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli import ServerAwareCommand
-from zato.common.api import PUBSUB
+from zato.common.api import CommonObject, PUBSUB
 from zato.common.util.api import fs_safe_now
+
+from zato.cli.common import CreateCommon
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,6 +103,22 @@ class DeleteEndpoint(ServerAwareCommand):
         }
 
         self._invoke_service_and_log_response(service, request)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CreateEndpoints(CreateCommon):
+    """ Creates multiple endpoints.
+    """
+    object_type = CommonObject.PubSub_Topic
+
+    def execute(self, args:'Namespace') -> 'None':
+        request = super().execute(args)
+
+        print()
+        print(111, request)
+        print(222, args)
+        print()
 
 # ################################################################################################################################
 # ################################################################################################################################

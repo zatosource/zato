@@ -263,7 +263,7 @@ class BaseRepo(InRAMStore):
 
 # ################################################################################################################################
 
-    def get_many(self, *args:'any_', **kwargs:'any_'):
+    def get_many(self, *args:'any_', **kwargs:'any_') -> 'anylist':
         with self.update_lock:
             return self._get_many(*args, **kwargs)
 

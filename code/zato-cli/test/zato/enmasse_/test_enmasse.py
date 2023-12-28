@@ -83,7 +83,7 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
 # ################################################################################################################################
 
-    def _test_enmasse_ok(self, template:'str') -> 'None':
+    def _test_enmasse_ok(self, test_name:'str', template:'str') -> 'None':
 
         # sh
         from sh import ErrorReturnCode
@@ -123,57 +123,57 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 # ################################################################################################################################
 
     def test_enmasse_complex_ok_01(self) -> 'None':
-        self._test_enmasse_ok(template_complex_01)
+        self._test_enmasse_ok('complex_ok_01', template_complex_01)
 
 # ################################################################################################################################
 
     def test_enmasse_complex_ok_02(self) -> 'None':
-        self._test_enmasse_ok(template_complex_02)
+        self._test_enmasse_ok('complex_ok_02', template_complex_02)
 
 # ################################################################################################################################
 
     def test_enmasse_complex_ok_03(self) -> 'None':
-        self._test_enmasse_ok(template_complex_03)
+        self._test_enmasse_ok('complex_ok_03', template_complex_03)
 
 # ################################################################################################################################
 
     def test_enmasse_complex_ok_04(self) -> 'None':
-        self._test_enmasse_ok(template_complex_04)
+        self._test_enmasse_ok('complex_ok_04', template_complex_04)
 
 # ################################################################################################################################
 
     def test_enmasse_complex_ok_05(self) -> 'None':
-        self._test_enmasse_ok(template_complex_05)
+        self._test_enmasse_ok('complex_ok_05', template_complex_05)
 
 # ################################################################################################################################
 
     def test_enmasse_simple_ok_01(self) -> 'None':
-        self._test_enmasse_ok(template_simple_01)
+        self._test_enmasse_ok('simple_ok_01', template_simple_01)
 
 # ################################################################################################################################
 
     def test_enmasse_simple_ok_02(self) -> 'None':
-        self._test_enmasse_ok(template_simple_02)
+        self._test_enmasse_ok('simple_ok_02', template_simple_02)
 
 # ################################################################################################################################
 
     def test_enmasse_simple_ok_03(self) -> 'None':
-        self._test_enmasse_ok(template_simple_03)
+        self._test_enmasse_ok('simple_ok_03', template_simple_03)
 
 # ################################################################################################################################
 
     def test_enmasse_simple_ok_04(self) -> 'None':
-        self._test_enmasse_ok(template_simple_04)
+        self._test_enmasse_ok('simple_ok_04', template_simple_04)
 
 # ################################################################################################################################
 
     def test_enmasse_simple_ok_05(self) -> 'None':
-        self._test_enmasse_ok(template_simple_05)
+        self._test_enmasse_ok('simple_ok_05', template_simple_05)
 
 # ################################################################################################################################
 
     def test_enmasse_simple_ok_06(self) -> 'None':
-        self._test_enmasse_ok(template_simple_06)
+        self._test_enmasse_ok('simple_ok_06', template_simple_06)
 
 # ################################################################################################################################
 
