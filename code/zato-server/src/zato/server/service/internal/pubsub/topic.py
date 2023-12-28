@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,9 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from dataclasses import dataclass
-
-# gevent
-from gevent import sleep
 
 # Python 2/3 compatibility
 from six import add_metaclass
@@ -21,13 +18,12 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubTopic
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
-from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_gd_depth_topic_list, get_topic_list_by_id_list, \
-    get_topic_list_by_name_list, get_topic_list_by_name_pattern, get_topic_sub_count_list, get_topics_by_sub_keys
+from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_gd_depth_topic_list,  get_topic_sub_count_list, \
+    get_topics_by_sub_keys
 from zato.common.typing_ import anylist, cast_, intlistnone, intnone, strlistnone, strnone
 from zato.common.util.api import ensure_pubsub_hook_is_valid
 from zato.common.util.pubsub import get_last_pub_metadata
 from zato.common.util.time_ import datetime_from_ms
-from zato.server.connection.http_soap import BadRequest
 from zato.server.service import AsIs, Bool, Int, List, Model, Opaque, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.internal.pubsub.search import NonGDSearchService
@@ -39,14 +35,14 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 if 0:
     from bunch import Bunch
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, stranydict, strlist
+    from zato.common.typing_ import any_, anydict, anytuple, stranydict, strlist
     Bunch = Bunch
     strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-topic_limit_fields = [Int('limit_retention'), Int('limit_message_expiry'), Int('limit_sub_inactivity')]
+topic_limit_fields:'anylist' = [Int('limit_retention'), Int('limit_message_expiry'), Int('limit_sub_inactivity')]
 
 elem = 'pubsub_topic'
 model = PubSubTopic
@@ -54,11 +50,11 @@ label = 'a pub/sub topic'
 get_list_docs = 'pub/sub topics'
 broker_message = BROKER_MSG_PUBSUB
 broker_message_prefix = 'TOPIC_'
-list_func = pubsub_topic_list
+list_func:'any_' = pubsub_topic_list
 skip_input_params = ['cluster_id', 'is_internal', 'current_depth_gd', 'last_pub_time', 'last_pub_msg_id', 'last_endpoint_id',
     'last_endpoint_name']
 input_optional_extra = ['needs_details', 'on_no_subs_pub', 'hook_service_name', 'target_service_name'] + topic_limit_fields
-output_optional_extra = ['is_internal', Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time',
+output_optional_extra:'anylist' = ['is_internal', Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time',
     'hook_service_name', 'last_pub_time', AsIs('last_pub_msg_id'), 'last_endpoint_id', 'last_endpoint_name',
     Bool('last_pub_has_gd'), Opaque('last_pub_server_pid'), 'last_pub_server_name', 'on_no_subs_pub',
     Int('sub_count'),] + topic_limit_fields
@@ -83,9 +79,9 @@ def _format_meta_topic_key(cluster_id:'int', topic_id:'int') -> 'str':
 
 def broker_message_hook(
     self:'Service',
-    input:'stranydict',
+    input:'anydict',
     instance:'PubSubTopic',
-    attrs:'stranydict',
+    attrs:'anydict',
     service_type:'str'
 ) -> 'None':
 
@@ -107,7 +103,7 @@ def _add_limits(item:'any_') -> 'None':
 
 # ################################################################################################################################
 
-def response_hook(self:'Service', input:'stranydict', instance:'PubSubTopic', attrs:'stranydict', service_type:'str') -> 'None':
+def response_hook(self:'Service', input:'anydict', instance:'PubSubTopic', attrs:'anydict', service_type:'str') -> 'None':
 
     if service_type == 'create_edit':
         _ = self.pubsub.wait_for_topic(input['name'])
@@ -140,7 +136,7 @@ def response_hook(self:'Service', input:'stranydict', instance:'PubSubTopic', at
             sub_count_by_topic = dict(sub_count_by_topic)
 
             # .. look up last pub metadata among all the servers ..
-            last_pub_by_topic = get_last_pub_metadata(self.server, topic_id_list) # type: dict
+            last_pub_by_topic:'anydict' = get_last_pub_metadata(self.server, topic_id_list)
 
             # .. now, having collected all the details, go through all the topics again
             # .. and assign the metadata found.
@@ -168,7 +164,7 @@ def response_hook(self:'Service', input:'stranydict', instance:'PubSubTopic', at
 
 # ################################################################################################################################
 
-def pre_opaque_attrs_hook(self:'Service', input:'stranydict', instance:'PubSubTopic', attrs:'stranydict') -> 'None':
+def pre_opaque_attrs_hook(self:'Service', input:'anydict', instance:'PubSubTopic', attrs:'anydict') -> 'None':
 
     if not input.get('hook_service_name'):
         if input.get('hook_service_id'):
@@ -177,7 +173,7 @@ def pre_opaque_attrs_hook(self:'Service', input:'stranydict', instance:'PubSubTo
 
 # ################################################################################################################################
 
-def instance_hook(self:'Service', input:'stranydict', instance:'PubSubTopic', attrs:'stranydict') -> 'None':
+def instance_hook(self:'Service', input:'anydict', instance:'PubSubTopic', attrs:'anydict') -> 'None':
 
     if attrs['is_create_edit']:
 
@@ -243,135 +239,12 @@ class Delete(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class DeleteTopics(Service):
-
-    class SimpleIO:
-        input = DeleteTopicRequest
-        output = DeleteTopicResponse
-
-    def _get_topic_data(self, query:'any_', condition:'any_') -> 'anylist':
-
-        with closing(self.odb.session()) as session:
-            topic_data = query(session, condition)
-
-        topic_data = [dict(elem) for elem in topic_data]
-        return topic_data
-
-# ################################################################################################################################
-
-    def _delete_topic_list(self, topic_id_list:'anylist') -> 'anylist':
-
-        # Make sure we have a list of integers on input
-        topic_id_list = [int(elem) for elem in topic_id_list]
-
-        # We want to return a list of their IDs along with names so that the API users can easily understand what was deleted
-        # which means that we need to construct the list upfront as otherwise, once we delete a topic,
-        # such information will be no longer available.
-        topic_data = self._get_topic_data(get_topic_list_by_id_list, topic_id_list)
-
-        # Our response to produce
-        out = []
-
-        # A list of topic IDs that we were able to delete
-        topics_deleted = []
-
-        # Go through each of the input topic IDs ..
-        for topic_id in topic_id_list:
-
-            # .. invoke the service that will delete the topic ..
-            try:
-                self.invoke(Delete.get_name(), {
-                    'id': topic_id
-                })
-            except Exception as e:
-                self.logger.warn('Exception while deleting topic `%s` -> `%s`', topic_id, e)
-            else:
-                # If we are here, it means that the topic was deleted
-                # in which case we add its ID for later use ..
-                topics_deleted.append(topic_id)
-
-                # .. sleep for a while in case to make sure there is no sudden surge of deletions ..
-                sleep(0.05)
-
-        # Go through each of the IDs given on input and return it on output too
-        # as long as we actually did delete such a topic.
-        for elem in topic_data:
-            if elem['id'] in topics_deleted:
-                out.append(elem)
-
-        # Return the response to our caller
-        return out
-
-# ################################################################################################################################
-
-    def _get_topic_id_list(self, query:'any_', condition:'any_') -> 'anylist':
-        topic_data = self._get_topic_data(query, condition)
-        out = [elem['id'] for elem in topic_data]
-        return out
-
-# ################################################################################################################################
-
-    def handle(self) -> 'None':
-
-        # Type checks
-        topic_id_list:'anylist'
-
-        # Local aliases
-        input = self.request.input # type: DeleteTopicRequest
-
-        # We can be given several types of input elements in the incoming request
-        # and we always need to build a list of IDs out of them, unless we already
-        # have a list of IDs on input.
-
-        # This is a list - use it as-is
-        if input.id_list:
-            topic_id_list = input.id_list
-
-        # It is an individual topic ID - we can turn it into a list as-is
-        elif input.id:
-            topic_id_list = [input.id]
-
-        # It is an individual topic name - turn it into a list look it up in the database
-        elif input.name:
-            query = get_topic_list_by_name_list
-            condition = [input.name]
-            topic_id_list = self._get_topic_id_list(query, condition)
-
-        # It is a list of names - look up topics matching them now
-        elif input.name_list:
-            query = get_topic_list_by_name_list
-            condition = input.name_list
-            topic_id_list = self._get_topic_id_list(query, condition)
-
-        # This is a list of patterns but not necessarily full topic names as above
-        elif input.pattern:
-            query = get_topic_list_by_name_pattern
-            condition = input.pattern
-            topic_id_list = self._get_topic_id_list(query, condition)
-
-        else:
-            raise BadRequest(self.cid, 'No deletion criteria were given on input')
-
-        # No matter how we arrived at this result, we have a list of topic IDs
-        # and we can delete each of them now ..
-        topics_deleted = self._delete_topic_list(topic_id_list)
-
-        # .. now, we can produce a response for our caller ..
-        response = DeleteTopicResponse()
-        response.topics_deleted = topics_deleted
-
-        # .. and return it on output
-        self.response.payload = response
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class Get(AdminService):
     """ Returns a pub/sub topic by its ID.
     """
     class SimpleIO:
-        input_optional = 'cluster_id', AsIs('id'), 'name'
-        output_optional = 'id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd', \
+        input_optional:'anytuple' = 'cluster_id', AsIs('id'), 'name'
+        output_optional:'anytuple' = 'id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd', \
             'current_depth_gd', Int('limit_retention'), Int('limit_message_expiry'), Int('limit_sub_inactivity'), \
                 'last_pub_time', 'on_no_subs_pub', 'target_service_name'
 
@@ -462,8 +335,9 @@ class GetPublisherList(AdminService):
         input_required = 'topic_id'
         input_optional = 'cluster_id'
         output_required = ('name', 'is_active', 'is_internal', 'pub_pattern_matched')
-        output_optional = ('service_id', 'security_id', 'ws_channel_id', 'last_seen', 'last_pub_time', AsIs('last_msg_id'),
-            AsIs('last_correl_id'), 'last_in_reply_to', 'service_name', 'sec_name', 'ws_channel_name', AsIs('ext_client_id'))
+        output_optional:'anytuple' = ('service_id', 'security_id', 'ws_channel_id', 'last_seen', 'last_pub_time', \
+            AsIs('last_msg_id'), AsIs('last_correl_id'), 'last_in_reply_to', 'service_name', 'sec_name', 'ws_channel_name', \
+            AsIs('ext_client_id'))
         output_repeated = True
 
     def handle(self) -> 'None':
@@ -479,7 +353,7 @@ class GetPublisherList(AdminService):
         with closing(self.odb.session()) as session:
 
             # Get last pub time for that specific endpoint to this very topic
-            last_data = pubsub_publishers_for_topic(session, cluster_id, self.request.input.topic_id).all()
+            last_data:'anylist' = pubsub_publishers_for_topic(session, cluster_id, self.request.input.topic_id).all()
 
             for item in last_data:
                 item.last_seen = datetime_from_ms(cast_('float', item.last_seen))
@@ -498,9 +372,9 @@ class GetGDMessageList(AdminService):
 
     class SimpleIO(GetListAdminSIO):
         input_required = 'topic_id'
-        input_optional = GetListAdminSIO.input_optional + ('cluster_id', 'has_gd')
-        output_required = (AsIs('msg_id'), 'pub_time', 'data_prefix_short', 'pub_pattern_matched')
-        output_optional = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id',
+        input_optional:'anytuple' = GetListAdminSIO.input_optional + ('cluster_id', 'has_gd')
+        output_required:'anytuple' = (AsIs('msg_id'), 'pub_time', 'data_prefix_short', 'pub_pattern_matched')
+        output_optional:'anytuple' = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id',
             'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name', 'server_pid', 'server_name')
         output_repeated = True
 
@@ -553,9 +427,9 @@ class GetNonGDMessageList(NonGDSearchService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'topic_id')
-        input_optional = (Bool('paginate'), Int('cur_page'), 'query')
-        output_required = (AsIs('_meta'),)
-        output_optional = (AsIs('response'),)
+        input_optional:'anytuple' = (Bool('paginate'), Int('cur_page'), 'query')
+        output_required:'anytuple' = (AsIs('_meta'),)
+        output_optional:'anytuple' = (AsIs('response'),)
         response_elem = None
 
 # ################################################################################################################################
@@ -583,7 +457,7 @@ class GetServerMessageList(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('topic_id',)
         input_optional = ('cur_page', 'query', 'paginate')
-        output_optional = (Opaque('data'),)
+        output_optional:'anytuple' = (Opaque('data'),)
 
 # ################################################################################################################################
 
@@ -598,17 +472,17 @@ class GetInRAMMessageList(AdminService):
     """ Returns all in-RAM messages matching input sub_keys. Messages, if there were any, are deleted from RAM.
     """
     class SimpleIO:
-        input_required = List('sub_key_list')
-        output_optional = List('messages')
+        input_required:'anytuple' = List('sub_key_list')
+        output_optional:'anytuple' = List('messages')
 
     def handle(self) -> 'None':
 
         out = []
-        topic_sub_keys = {}
+        topic_sub_keys:'stranydict' = {}
 
         with closing(self.odb.session()) as session:
             for topic_id, sub_key in get_topics_by_sub_keys(session, self.server.cluster_id, self.request.input.sub_key_list):
-                sub_keys = topic_sub_keys.setdefault(topic_id, [])
+                sub_keys:'strlist' = topic_sub_keys.setdefault(topic_id, [])
                 sub_keys.append(sub_key)
 
         for topic_id, sub_keys in topic_sub_keys.items():
@@ -616,7 +490,7 @@ class GetInRAMMessageList(AdminService):
             # This is a dictionary of sub_key -> msg_id -> message data ..
             data = self.pubsub.sync_backlog.retrieve_messages_by_sub_keys(
                 cast_('int', topic_id),
-                cast_('strlist', sub_keys)
+                sub_keys,
             )
 
             # .. which is why we can extend out directly - sub_keys are always unique
@@ -632,7 +506,7 @@ class GetNonGDDepth(AdminService):
     """
     class SimpleIO:
         input_required = ('topic_name',)
-        output_optional = (Int('depth'),)
+        output_optional:'anytuple' = (Int('depth'),)
         response_elem = None
 
     def handle(self) -> 'None':
@@ -646,7 +520,7 @@ class CollectNonGDDepth(AdminService):
     """
     class SimpleIO:
         input_required = ('topic_name',)
-        output_optional = (Int('current_depth_non_gd'),)
+        output_optional:'anytuple' = (Int('current_depth_non_gd'),)
 
     def handle(self) -> 'None':
 

@@ -35,7 +35,7 @@ class EventInfo:
         service_request = 1_000_000
         service_response = 1_000_001
 
-    class ObjectType:
+    class CommonObject:
         service = 2_000_000
 
 # ################################################################################################################################
