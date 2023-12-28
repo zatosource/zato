@@ -121,6 +121,22 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
+    def set_security_objects(self, *, url_sec, basic_auth_config, jwt_config, ntlm_config,
+        oauth_config, apikey_config, aws_config, tls_channel_sec_config, tls_key_cert_config, vault_conn_sec_config):
+
+        self.url_sec = url_sec
+        self.basic_auth_config = basic_auth_config
+        self.jwt_config = jwt_config
+        self.ntlm_config = ntlm_config
+        self.oauth_config = oauth_config
+        self.apikey_config = apikey_config
+        self.aws_config = aws_config
+        self.tls_channel_sec_config = tls_channel_sec_config
+        self.tls_key_cert_config = tls_key_cert_config
+        self.vault_conn_sec_config = vault_conn_sec_config
+
+# ################################################################################################################################
+
     def dispatcher_callback(self, event, ctx, **opaque):
         getattr(self, 'on_broker_msg_{}'.format(code_to_name[event]))(ctx)
 
