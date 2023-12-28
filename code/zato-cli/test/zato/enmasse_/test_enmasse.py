@@ -88,10 +88,6 @@ class EnmasseTestCase(BaseEnmasseTestCase):
         # sh
         from sh import ErrorReturnCode
 
-        print()
-        print('Enmasse Test:', test_name)
-        print()
-
         tmp_dir = gettempdir()
         test_suffix = rand_unicode() + '.' + rand_string()
 
@@ -105,8 +101,6 @@ class EnmasseTestCase(BaseEnmasseTestCase):
         f = open_w(config_path)
         _ = f.write(data)
         f.close()
-
-        print(data)
 
         try:
             # Invoke enmasse to create objects ..
