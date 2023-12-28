@@ -371,7 +371,7 @@ class WorkerStore(_WorkerStoreBase):
         url_data = URLData(
             self,
             self.worker_config.http_soap,
-            self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
+            self._get_channel_url_sec(),
             self.worker_config.basic_auth,
             self.worker_config.jwt,
             self.worker_config.ntlm,
@@ -416,6 +416,12 @@ class WorkerStore(_WorkerStoreBase):
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
+
+# ################################################################################################################################
+
+    def _get_channel_url_sec(self) -> 'any_':
+        out:'any_' = self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0]
+        return out
 
 # ################################################################################################################################
 
@@ -979,6 +985,34 @@ class WorkerStore(_WorkerStoreBase):
             cache = getattr(self.worker_config, 'cache_{}'.format(name))
             for value in cache.values():
                 self.cache_api.create(bunchify(value['config']))
+
+
+# ################################################################################################################################
+
+    def sync_security(self):
+        """ Rebuilds all the in-RAM security structures and objects.
+        """
+
+        # First, load up all the definitions from the database ..
+        self.server.set_up_security(self.server.cluster_id)
+
+        # .. update in-RAM config values ..
+        url_sec = self._get_channel_url_sec()
+        self.request_dispatcher.url_data.set_security_objects(
+            url_sec=url_sec,
+            basic_auth_config=self.worker_config.basic_auth,
+            jwt_config=self.worker_config.jwt,
+            ntlm_config=self.worker_config.ntlm,
+            oauth_config=self.worker_config.oauth,
+            apikey_config=self.worker_config.apikey,
+            aws_config=self.worker_config.aws,
+            tls_channel_sec_config=self.worker_config.tls_channel_sec,
+            tls_key_cert_config=self.worker_config.tls_key_cert,
+            vault_conn_sec_config=self.worker_config.vault_conn_sec,
+        )
+
+        # .. now, initialize connections that may depend on what we have just loaded ..
+        self.init_http_soap(has_sec_config=False)
 
 # ################################################################################################################################
 
