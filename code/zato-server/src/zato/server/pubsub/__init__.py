@@ -205,6 +205,17 @@ class PubSub:
 
 # ################################################################################################################################
 
+    def stop(self) -> 'None':
+        """ Stops all pub/sub tools, which in turn stops all the delivery tasks.
+        """
+        for item in self.pubsub_tools:
+            try:
+                item.stop()
+            except Exception:
+                logger.info('Ignoring exception in PubSub.stop -> %s', format_exc())
+
+# ################################################################################################################################
+
     @property
     def subscriptions_by_sub_key(self) -> 'strsubdict':
         return self._subscriptions_by_sub_key
@@ -487,7 +498,7 @@ class PubSub:
                     sk_list.append(sub.sub_key)
 
             # .. delete all references to the sub_keys found ..
-            for sub_key in sk_list:
+            for sub_key in sk_list: # type: ignore
 
                 # .. first, stop the delivery tasks ..
                 _ = self._delete_subscription_by_sub_key(sub_key, ignore_missing=True)
@@ -535,7 +546,12 @@ class PubSub:
 
     def get_topic_by_name(self, topic_name:'str') -> 'Topic':
         with self.lock:
-            return self.topic_api.get_topic_by_name(topic_name)
+            return self.get_topic_by_name_no_lock(topic_name)
+
+# ################################################################################################################################
+
+    def get_topic_by_name_no_lock(self, topic_name:'str') -> 'Topic':
+        return self.topic_api.get_topic_by_name(topic_name)
 
 # ################################################################################################################################
 
@@ -783,7 +799,7 @@ class PubSub:
 # ################################################################################################################################
 
     def wait_for_topic(self, topic_name:'str', timeout:'int'=600) -> 'bool':
-        return wait_for_dict_key_by_get_func(self.topic_api.get_topic_by_name, topic_name, timeout, interval=0.5)
+        return wait_for_dict_key_by_get_func(self.topic_api.get_topic_by_name, topic_name, timeout, interval=0.01)
 
 # ################################################################################################################################
 
