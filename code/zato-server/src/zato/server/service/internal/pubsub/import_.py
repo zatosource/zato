@@ -28,7 +28,7 @@ from zato.server.service import Model, Service
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import any_, dictlist
+    from zato.common.typing_ import any_, dictlist, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -207,12 +207,21 @@ class ImportObjects(Service):
 # ################################################################################################################################
 
     def _get_rest_conn_id_by_name(self, name:'str') -> 'int':
+
         if conn := self.server.worker_store.get_outconn_rest(name):
             conn_config = conn['config']
             conn_id = conn_config['id']
             return conn_id
         else:
             raise Exception(f'Outgoing REST connection not found -> {name}')
+
+# ################################################################################################################################
+
+    def _get_rest_conn_id_by_item(self, item:'strdict') -> 'int | None':
+
+        if rest_connection := item.get('rest_connection'): # type: ignore
+            rest_connection_id = self._get_rest_conn_id_by_name(rest_connection)
+            return rest_connection_id
 
 # ################################################################################################################################
 
@@ -234,10 +243,16 @@ class ImportObjects(Service):
             wrap_one_msg_in_list = item.get('wrap_one_msg_in_list', Default.Wrap_One_Msg_In_List)
             delivery_err_should_block = item.get('delivery_err_should_block', Default.Delivery_Err_Should_Block)
 
+            # Resolve a potential outgoing REST connection
+            out_http_soap_id = self._get_rest_conn_id_by_item(item)
 
+            # A new item needs to be created for each topic this endpoint is subscribed to ..
             for topic_name in item.pop('topic_list_json'):
+
+                # .. turn a topic's name into its ID ..
                 topic_id = existing.get_topic_id_by_name(topic_name)
 
+                # .. build basic information about the subscription ..
                 new_item = {
                     'topic_id': topic_id,
                     'endpoint_id': endpoint_id,
@@ -248,14 +263,13 @@ class ImportObjects(Service):
                     'has_gd': has_gd,
                     'wrap_one_msg_in_list': wrap_one_msg_in_list,
                     'delivery_err_should_block': delivery_err_should_block,
+                    'out_http_soap_id': out_http_soap_id,
                 }
 
-                if rest_connection := item.get('rest_connection'):
-                    rest_connection_id = self._get_rest_conn_id_by_name(rest_connection)
-                    new_item['out_http_soap_id'] = rest_connection_id
-
+                # .. append the item for later use ..
                 out.append(new_item)
 
+        # .. now, we can return everything to our caller.
         return out
 
 # ################################################################################################################################
@@ -268,10 +282,14 @@ class ImportObjects(Service):
         out.to_update = []
 
         for new_item in deepcopy(incoming):
+
             for existing_item in existing:
                 subscription_id, topic_id, endpoint_id = existing_item
                 if new_item['topic_id'] == topic_id and new_item['endpoint_id'] == endpoint_id:
                     new_item['id'] = subscription_id
+                    _ = new_item.pop('sub_key', None)
+                    _ = new_item.pop('creation_time', None)
+                    _ = new_item.pop('sub_pattern_matched', None)
                     out.to_update.append(new_item)
                     break
             else:
