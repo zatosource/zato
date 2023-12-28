@@ -123,6 +123,7 @@ def _get_security_id_from_input(self:'Service', input:'strdict') -> 'intnone':
     if security_name := input.get('security_name'):
         security_name = security_name.strip()
         security = self.server.worker_store.basic_auth_get(security_name)
+        security = security['config']
         security_id:'int' = security['id']
 
     # .. otherwise, we use a service ID as it is.

@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
 from zato.cli import ServerAwareCommand
-from zato.common.api import GENERIC
+from zato.cli.common import CreateCommon, DeleteCommon
+from zato.common.api import GENERIC, CommonObject, PUBSUB as Common_PubSub
+from zato.common.test.config import TestConfig
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -16,7 +18,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from argparse import Namespace
-    from zato.common.typing_ import anydict, anylist
+    from zato.common.typing_ import anydict, anylist, strdict, strlist
     Namespace = Namespace
 
 # ################################################################################################################################
@@ -140,7 +142,7 @@ class GetTopics(ServerAwareCommand):
                 elem = cast_('anydict', elem)
 
                 # Delete the opaque attributes container
-                elem.pop(_opaque_attr, '')
+                _ = elem.pop(_opaque_attr, '')
 
                 # Make sure we return only the requested keys. Note that we build a new dictionary
                 # because we want to preserve the order of DefaultConfigKeys. Also note that if all keys
@@ -184,47 +186,141 @@ class GetTopics(ServerAwareCommand):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class DeleteTopics(ServerAwareCommand):
-    """ Returns one or more topic by their name. Accepts partial names, e.g. "demo" will match "/my/demo/topic".
+class DeleteTopics(DeleteCommon):
+    """ Deletes topic by input criteria.
     """
-    opts = [
-        {'name':'--id',       'help':'An exact ID of a topic to delete', 'required':False},
-        {'name':'--id-list',  'help':'A list of topic IDs to delete', 'required':False},
-        {'name':'--name',     'help':'An exact name of a topic to delete', 'required':False},
-        {'name':'--name-list','help':'List of topics to delete', 'required':False},
-        {'name':'--pattern',  'help':'All topics with names that contain this pattern', 'required':False},
-        {'name':'--path',     'help':'Path to a Zato server', 'required':False},
-    ]
+    object_type = CommonObject.PubSub_Topic
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CreateTestTopics(CreateCommon):
+    """ Creates multiple test topics.
+    """
+    object_type = CommonObject.PubSub_Topic
+    prefix = TestConfig.pubsub_topic_name_perf_auto_create
 
 # ################################################################################################################################
 
-    def execute(self, args:'Namespace'):
+    def _get_topics(self, data:'strdict') -> 'strlist':
 
-        # stdlib
-        import sys
+        # Extract the objects returned ..
+        objects = data.get('objects') or []
 
-        # This will be built based on the option provided by user
-        request = {}
+        # .. build a sorted list of names to be returned ..
+        topic_name_list = sorted(elem['name'] for elem in objects)
 
-        options = ['--id', '--id-list', '--name', '--name-list', '--pattern']
-        for name in options:
-            arg_attr = name.replace('--', '')
-            arg_attr = arg_attr.replace('-', '-s')
-            value = getattr(args, arg_attr, None)
-            if value:
-                request[arg_attr] = value
-                break
+        # .. and return them to our caller.
+        return topic_name_list
 
-        if not request:
-            options = ', '.join(options)
-            self.logger.warn(f'Input missing. One of the following is expected: {options}')
-            sys.exit(self.SYS_ERROR.PARAMETER_MISSING)
+# ################################################################################################################################
 
-        # Our service to invoke
-        service = 'zato.pubsub.topic.delete-topics'
+    def _create_security(
+        self,
+        count:'int',
+        prefix:'str',
+        endpoint_type:'str',
+    ) -> 'strlist':
 
-        # Invoke the service and log the response it produced
-        self._invoke_service_and_log_response(service, request)
+        # A list of endpoints to create ..
+        sec_name_list:'strlist' = []
+
+        # .. generate their names ..
+        for idx in range(count):
+            sec_name = f'security-test-cli-{prefix}/sec/{endpoint_type}/{idx:04}'
+            sec_name_list.append(sec_name)
+
+        # .. do create the endpoints now ..
+        _ = self.invoke_common_create(CommonObject.Security_Basic_Auth, sec_name_list)
+        return sec_name_list
+
+# ################################################################################################################################
+
+    def _create_endpoints(
+        self,
+        security_list: 'strlist',
+        *,
+        pub_allowed:'str'='',
+        sub_allowed:'str'=''
+    ) -> 'strlist':
+
+        # Local variables
+        endpoint_name_list:'strlist' = []
+        topic_patterns  = ''
+
+        if pub_allowed:
+            topic_patterns += f'pub={pub_allowed}\n'
+
+        if sub_allowed:
+            topic_patterns += f'sub={sub_allowed}'
+
+        for sec_name in security_list:
+            name = 'endpoint-test-cli-' + sec_name
+            endpoint_name_list.append(name)
+            initial_data = {
+                'security_name': sec_name,
+                'topic_patterns': topic_patterns,
+            }
+            _ = self.invoke_common_create(CommonObject.PubSub_Endpoint, [name], initial_data=initial_data)
+
+        return endpoint_name_list
+
+# ################################################################################################################################
+
+    def _create_subscriptions(self, sub_name_list:'strlist', topic:'str') -> 'None':
+
+        # Should all subscriptions for this endpoint be deleted before creating this one
+        should_delete_all = False
+
+        for endpoint_name in sub_name_list:
+
+            initial_data = {
+                'topic_name': topic,
+                'endpoint_name': endpoint_name,
+                'delivery_method': Common_PubSub.DELIVERY_METHOD.PULL.id,
+                'should_delete_all': should_delete_all,
+            }
+
+            _ = self.invoke_common_create(CommonObject.PubSub_Subscription, [], initial_data=initial_data)
+
+# ################################################################################################################################
+
+    def _publish_messages(self, pub_name_list:'strlist', topic:'str', messages_per_pub:'int') -> 'None':
+
+        for msg_idx in range(1, messages_per_pub+1):
+
+            for publisher_endpoint_name in pub_name_list:
+
+                data = f'{publisher_endpoint_name}-msg-{msg_idx}\n' * 200
+
+                initial_data = {
+                    'topic_name': topic,
+                    'endpoint_name': publisher_endpoint_name,
+                    'data': data,
+                    'has_gd': True,
+                }
+                _ = self.invoke_common_create(CommonObject.PubSub_Publish, [], initial_data=initial_data)
+
+# ################################################################################################################################
+
+    def execute(self, args:'Namespace') -> 'None':
+
+        # This call to our parent will create the topics ..
+        create_topics_result = super().execute(args)
+
+        # .. now, we can extract their names ..
+        topic_list = self._get_topics(create_topics_result)
+
+        for topic in topic_list:
+
+            pub_sec_name_list = self._create_security(args.endpoints_per_topic, topic, 'pub')
+            sub_sec_name_list = self._create_security(args.endpoints_per_topic, topic, 'sub')
+
+            pub_name_list = self._create_endpoints(pub_sec_name_list, pub_allowed='/*')
+            sub_name_list = self._create_endpoints(sub_sec_name_list, sub_allowed='/*')
+
+            self._create_subscriptions(sub_name_list, topic)
+            self._publish_messages(pub_name_list, topic, args.messages_per_pub)
 
 # ################################################################################################################################
 # ################################################################################################################################
