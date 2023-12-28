@@ -2287,7 +2287,6 @@ class ObjectManager:
 
                 self.objects[service_info.name].append(item)
 
-
 # ################################################################################################################################
 
     def refresh_security_objects(self):
