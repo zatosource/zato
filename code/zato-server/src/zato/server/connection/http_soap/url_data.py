@@ -720,7 +720,7 @@ class URLData(CyURLData, OAuthDataStore):
     def basic_auth_get(self, name):
         """ Returns the configuration of the HTTP Basic Auth security definition of the given name.
         """
-        wait_for_dict_key(self.basic_auth_config, name)
+        wait_for_dict_key(self.basic_auth_config._impl, name)
         with self.url_sec_lock:
             return self.basic_auth_config.get(name)
 
