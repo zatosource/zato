@@ -1779,7 +1779,7 @@ class ObjectImporter:
         basic_auth_edit = self._extract_basic_auth(existing_combined, is_edit=True)
         self._import_basic_auth(basic_auth_edit, is_edit=True)
 
-        self.object_mgr.refresh_objects()
+        self.object_mgr.refresh_security_objects()
 
         for w in existing_combined:
 
@@ -1879,7 +1879,7 @@ class ObjectImporter:
         # Extract and load Basic Auth definitions as a whole, before any other updates (create)
         basic_auth_create = self._extract_basic_auth(new_combined, is_edit=False)
         self._import_basic_auth(basic_auth_create, is_edit=False)
-        self.object_mgr.refresh_objects()
+        self.object_mgr.refresh_security_objects()
 
         for elem in new_combined:
             for item_type, attr_list in iteritems(elem):
@@ -2287,9 +2287,15 @@ class ObjectManager:
 
                 self.objects[service_info.name].append(item)
 
+
 # ################################################################################################################################
 
-    def refresh_objects(self):
+    def refresh_security_objects(self):
+        self.refresh_objects(sec_only=True)
+
+# ################################################################################################################################
+
+    def refresh_objects(self, *, sec_only:'bool'=False):
 
         # stdlib
         from operator import attrgetter
@@ -2299,6 +2305,10 @@ class ObjectManager:
 
         self.objects = Bunch()
         for service_info in sorted(SERVICES, key=attrgetter('name')):
+
+            if sec_only:
+                if not service_info.is_security:
+                    continue
 
             self.get_objects_by_type(service_info.name)
 
