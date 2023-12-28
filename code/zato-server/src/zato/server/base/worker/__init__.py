@@ -108,7 +108,7 @@ logger = logging.getLogger(__name__)
 if 0:
     from bunch import Bunch as bunch_
     from zato.broker.client import BrokerClient
-    from zato.common.typing_ import any_, anylist, callable_, callnone, dictnone, stranydict, tuple_, tupnone
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, dictnone, stranydict, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
     from zato.server.config import ConfigStore
@@ -149,7 +149,7 @@ class GeventWorker(GunicornGeventWorker):
 
 # ################################################################################################################################
 
-def _get_base_classes():
+def _get_base_classes() -> 'anytuple':
     ignore = ('__init__.py', 'common.py')
     out = []
 
@@ -167,7 +167,7 @@ def _get_base_classes():
                 if isclass(item) and issubclass(item, WorkerImpl) and item is not WorkerImpl:
                     out.append(item)
 
-    return tuple(out)
+    return tuple(out) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -249,7 +249,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def init(self):
+    def init(self) -> 'None':
 
         # Search
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
@@ -419,7 +419,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def early_init(self):
+    def early_init(self) -> 'None':
         """ Initialises these parts of our configuration that are needed earlier than others.
         """
         self.init_ftp()
@@ -973,6 +973,21 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
+    def sync_pubsub(self):
+        """ Rebuilds all the in-RAM pub/sub structures and tasks.
+        """
+
+        # First, stop everything ..
+        self.pubsub.stop()
+
+        # .. now, load it into RAM from the database ..
+        self.server.set_up_pubsub(self.server.cluster_id)
+
+        # .. finally, initialize everything once more.
+        self.init_pubsub()
+
+# ################################################################################################################################
+
     def init_pubsub(self) -> 'None':
         """ Sets up all pub/sub endpoints, subscriptions and topics. Also, configures pubsub with getters for each endpoint type.
         """
@@ -981,15 +996,15 @@ class WorkerStore(_WorkerStoreBase):
         service_pubsub_tool = PubSubTool(self.pubsub, self.server, PUBSUB.ENDPOINT_TYPE.SERVICE.id, True)
         self.pubsub.service_pubsub_tool = service_pubsub_tool
 
-        for value in self.worker_config.pubsub_topic.values():
+        for value in self.worker_config.pubsub_topic.values(): # type: ignore
             self.pubsub.create_topic_object(bunchify(value['config']))
 
-        for value in self.worker_config.pubsub_endpoint.values():
+        for value in self.worker_config.pubsub_endpoint.values(): # type: ignore
             self.pubsub.create_endpoint(bunchify(value['config']))
 
-        for value in self.worker_config.pubsub_subscription.values():
+        for value in self.worker_config.pubsub_subscription.values(): # type: ignore
 
-            config = bunchify(value['config'])
+            config:'bunch_' = bunchify(value['config'])
             config.add_subscription = True # We don't create WSX subscriptions here so it is always True
 
             self.pubsub.create_subscription_object(config)
@@ -1046,7 +1061,7 @@ class WorkerStore(_WorkerStoreBase):
                         else:
                             visit_wrapper(wrapper, msg)
 
-    def _visit_wrapper_edit(self, wrapper:'HTTPSOAPWrapper', msg:'bunch_', keys:'tuple_') -> 'None':
+    def _visit_wrapper_edit(self, wrapper:'HTTPSOAPWrapper', msg:'bunch_', keys:'anytuple') -> 'None':
         """ Updates a given wrapper's security configuration.
         """
         if wrapper.config['security_name'] == msg['old_name']:
@@ -1082,7 +1097,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def _convert_pickup_config_to_file_transfer(self, name:'str', config:'bunch_') -> 'bunch_ | None':
+    def _convert_pickup_config_to_file_transfer(self, name:'str', config:'anydict | bunch_') -> 'bunch_ | None':
 
         # Convert paths to full ones
         pickup_from_list = config.get('pickup_from') or []
@@ -2527,7 +2542,7 @@ class WorkerStore(_WorkerStoreBase):
 
         try:
             with open(msg.reply_to_fifo, 'wb') as fifo:
-                fifo.write(data if isinstance(data, bytes) else data.encode('utf'))
+                _ = fifo.write(data if isinstance(data, bytes) else data.encode('utf'))
         except Exception:
             logger.warning('Could not write to FIFO, m:`%s`, r:`%s`, s:`%s`, e:`%s`', msg, response, status, format_exc())
 
