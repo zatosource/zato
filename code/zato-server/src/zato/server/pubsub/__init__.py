@@ -205,6 +205,17 @@ class PubSub:
 
 # ################################################################################################################################
 
+    def stop(self):
+        """ Stops all pub/sub tools, which in turn stops all the delivery tasks.
+        """
+        for item in self.pubsub_tools:
+            try:
+                item.stop()
+            except Exception:
+                logger.info('Ignoring exception in PubSub.stop -> %s', format_exc())
+
+# ################################################################################################################################
+
     @property
     def subscriptions_by_sub_key(self) -> 'strsubdict':
         return self._subscriptions_by_sub_key

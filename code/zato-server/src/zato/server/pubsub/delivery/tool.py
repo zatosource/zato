@@ -61,6 +61,7 @@ class PubSubTool:
         is_for_services=False,  # type: bool
         deliver_pubsub_msg=None # type: callnone
     ) -> 'None':
+
         self.pubsub = pubsub
         self.parent = parent # This is our parent, e.g. an individual WebSocket on whose behalf we execute
         self.endpoint_type = endpoint_type
@@ -101,6 +102,17 @@ class PubSubTool:
 
         # Is this tool solely dedicated to delivery of messages to Zato services
         self.is_for_services = is_for_services
+
+# ################################################################################################################################
+
+    def stop(self):
+        """ Stops all delivery asks belonging to this tool.
+        """
+        for item in self.delivery_tasks.values():
+            try:
+                item.stop()
+            except Exception:
+                logger.info('Ignoring exception in PubSubTool.stop -> %s', format_exc())
 
 # ################################################################################################################################
 
