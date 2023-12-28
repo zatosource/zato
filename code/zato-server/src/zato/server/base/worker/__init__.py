@@ -51,7 +51,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      fs_safe_name, import_module_from_path, new_cid, parse_extra_into_dict, parse_tls_channel_security_definition, \
      start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source, wait_for_dict_key, \
-     wait_for_dict_key_by_get_func
+     wait_for_dict_key_by_get_func, wait_for_predicate
 from zato.common.util.file_system import resolve_path
 from zato.common.util.pubsub import is_service_subscription
 from zato.cy.reqresp.payload import SimpleIOPayload
@@ -1415,7 +1415,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def wait_for_apikey(self, name:'str', timeout:'int'=600) -> 'bool':
+    def wait_for_apikey(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.apikey_get, name, timeout, interval=0.5)
 
     def apikey_get(self, name:'str') -> 'bunch_':
@@ -1450,7 +1450,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def wait_for_aws(self, name:'str', timeout:'int'=600) -> 'bool':
+    def wait_for_aws(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.aws_get, name, timeout, interval=0.5)
 
     def aws_get(self, name:'str') -> 'bunch_':
@@ -1484,7 +1484,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def wait_for_ntlm(self, name:'str', timeout:'int'=600) -> 'bool':
+    def wait_for_ntlm(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.ntlm_get, name, timeout, interval=0.5)
 
     def ntlm_get(self, name:'str') -> 'bunch_':
@@ -1518,7 +1518,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def wait_for_basic_auth(self, name:'str', timeout:'int'=600) -> 'bool':
+    def wait_for_basic_auth(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self._basic_auth_get, name, timeout, interval=0.5)
 
     def _basic_auth_get(self, name:'str') -> 'bunch_':
@@ -1579,7 +1579,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def wait_for_jwt(self, name:'str', timeout:'int'=600) -> 'bool':
+    def wait_for_jwt(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.jwt_get, name, timeout, interval=0.5)
 
     def jwt_get(self, name:'str') -> 'bunch_':
@@ -1624,7 +1624,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def wait_for_oauth(self, name:'str', timeout:'int'=600) -> 'bool':
+    def wait_for_oauth(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.oauth_get, name, timeout, interval=0.5)
 
     def oauth_get(self, name:'str') -> 'bunch_':
@@ -1763,7 +1763,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def wait_for_wss(self, name:'str', timeout:'int'=600) -> 'bool':
+    def wait_for_wss(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.wss_get, name, timeout, interval=0.5)
 
     def wss_get(self, name:'str') -> 'bunch_':
@@ -1984,12 +1984,18 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
+    def wait_for_outconn_rest(self, name:'str', timeout:'int'=999999) -> 'bool':
+        return wait_for_dict_key(self.worker_config.out_plain_http, name, timeout, interval=0.5)
+
+# ################################################################################################################################
+
     def get_channel_rest(self, name:'str') -> 'bunch_':
         return self._get_channel_rest(CONNECTION.CHANNEL, name)
 
 # ################################################################################################################################
 
     def get_outconn_rest(self, name:'str') -> 'dictnone':
+        self.wait_for_outconn_rest(name)
         return self._get_outconn_rest(name)
 
 # ################################################################################################################################
