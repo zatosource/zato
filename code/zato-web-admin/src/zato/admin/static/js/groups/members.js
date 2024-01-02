@@ -182,6 +182,18 @@ $.fn.zato.groups.add_sortable = function(elem_id) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.groups.on_group_memebers_moved = function(item_id_list, group_id, is_add) {
+
+    var is_remove = !is_add;
+
+    $.each(item_id_list, function(idx, elem_id) {
+        alert(is_add + " " + is_remove);
+    });
+
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.groups.on_sortable_end = function(e) {
 
     // We only need to handle when wrappers are different
@@ -217,9 +229,12 @@ $.fn.zato.groups.on_sortable_end = function(e) {
             item_id_list.push(e.item.id)
         }
 
-        $.each(item_id_list, function(idx, elem_id) {
-            alert(elem_id);
-        });
+        //
+        // Invoke the function that will actually move the items between groups
+        //
+        var is_add_to_group = to_add == "right";
+        group_id = $("#groups-form-group-id").val()
+        $.fn.zato.groups.on_group_memebers_moved(item_id_list, group_id, is_add_to_group);
 
         //
         // Add an indicator that a given lis is empty
