@@ -337,7 +337,7 @@
 
   /**
    * Returns the content rect of the element (bounding rect minus border and padding)
-   * @param {HTMLElement} el 
+   * @param {HTMLElement} el
    */
   function getContentRect(el) {
     var rect = getRect(el);
@@ -2032,11 +2032,20 @@
               newIndex = oldIndex;
               newDraggableIndex = oldDraggableIndex;
             }
+
+            var item_id_list = [];
+            var selected = $(".selected");
+
+            $.each(selected, function(idx, item) {
+                item_id_list.push(item.id);
+            });
+
             _dispatchEvent({
               sortable: this,
               name: 'end',
               toEl: parentEl,
-              originalEvent: evt
+              originalEvent: evt,
+              extraEventProperties: {"zato_item_id_list": item_id_list},
             });
 
             // Save sorting
