@@ -205,6 +205,25 @@ $.fn.zato.groups.on_sortable_end = function(e) {
         }
         $("#"+ e.to.id + "> .list-group-item").removeClass(to_remove).addClass(to_add);
 
+        //
+        // Extract IDs of elements that have been moved
+        //
+        var item_id_list = [];
+
+        if(e.zato_item_id_list.length) {
+            item_id_list = e.zato_item_id_list;
+        }
+        else {
+            item_id_list.push(e.item.id)
+        }
+
+        $.each(item_id_list, function(idx, elem_id) {
+            alert(elem_id);
+        });
+
+        //
+        // Add an indicator that a given lis is empty
+        //
         let len_elems = $(".list-group-item." + to_remove).length;
         if(len_elems == 0) {
             add_listing_empty_func();
