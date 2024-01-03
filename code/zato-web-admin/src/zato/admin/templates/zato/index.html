@@ -82,7 +82,7 @@
 {% block body %}
     <div>
         <div id="hd">
-            <div id="console-header">&nbsp;<a href="https://zato.io/{% if user.is_authenticated %}?v={{ zato_version|cut:"Zato " }} {% endif %}" id="logo-link"><img src="/static/gfx/logo.png" alt="Zato logo" style="vertical-align:middle;padding-top:2px;padding-bottom:2px"/></a>
+            <div id="console-header">&nbsp;<a href="https://zato.io/{% if user.is_authenticated %}?v={{ zato_version|cut:"Zato " }} {% endif %}" id="logo-link"><img src="/static/gfx/logo.svg" alt="Zato logo" style="padding-top:3px;padding-bottom:3px;width:60px;margin-left:-0.25rem"/></a>
             {% if user.is_authenticated %}
                 <span id="logout" style="padding-top:10px">
                     <a class="top" href="{% url "account-settings-basic" %}">My settings</a>
@@ -334,6 +334,7 @@
                                 </ul>
                             </li>
                             <li class="first-level"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Scheduler</a></li>
+                            <!--
                             <li class="first-level">
                                 <a class="menu-link" href="#">Groups &darr;</a>
                                 <ul>
@@ -341,6 +342,7 @@
                                     <li class="child"><a class="menu-link" href="{% url "groups" "zato-api-creds" %}?cluster={{ cluster_id|default:"1" }}">API credentials</a></li>
                                 </ul>
                             </li>
+                            -->
 
                             {% if True|get_os_variable:"ZATO_HAS_CUSTOM_STATS" %}
                             <li class="first-level">
