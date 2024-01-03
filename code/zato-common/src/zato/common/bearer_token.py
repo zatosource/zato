@@ -358,7 +358,7 @@ class BearerTokenManager:
     ) -> 'BearerTokenInfoResult':
 
         # Get our security definition by its ID ..
-        sec_def:'stranydict' = self.security_facade.bearer_token.get_by_id(sec_def_id)
+        sec_def:'stranydict' = self.security_facade.get_bearer_token_by_id(sec_def_id)
 
         # .. get a token ..
         result = self._get_bearer_token_info(sec_def, scopes, data_format)
@@ -376,7 +376,7 @@ class BearerTokenManager:
     ) -> 'BearerTokenInfoResult':
 
         # Get our security definition by its ID ..
-        sec_def:'stranydict' = self.security_facade.bearer_token[sec_def_name]
+        sec_def:'stranydict' = self.security_facade.get_bearer_token_by_name(sec_def_name)
 
         # .. get a token ..
         result = self._get_bearer_token_info(sec_def, scopes, data_format)
