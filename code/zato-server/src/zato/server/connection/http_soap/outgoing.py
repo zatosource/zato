@@ -274,7 +274,7 @@ class BaseHTTPSOAPWrapper:
             if is_bearer_token:
 
                 # .. this is reusable ..
-                sec_def = self.server.security_facade.bearer_token[sec_def_name]
+                sec_def = self.server.security_facade.get_bearer_token_by_name(sec_def_name)
 
                 # .. each OAuth definition will use a specific data format ..
                 data_format = sec_def['data_format']
