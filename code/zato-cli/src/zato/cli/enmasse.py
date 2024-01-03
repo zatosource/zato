@@ -673,25 +673,13 @@ def dict_match(item_type, item, fields): # type: ignore
     """ Returns True if input item has all the fields matching.
     """
 
-    if item_type in {'oauth', 'bearer_token'}:
-        print()
-        print('ZZZ-01', item_type)
-        print('ZZZ-02', item)
-        print('ZZZ-03', fields)
-
     for key, value in fields.items(): # type: ignore
         item_value = item.get(key)    # type: ignore
         if item_value != value:
-            if item_type in {'oauth', 'bearer_token'}:
-                print()
             return False
 
     # If we are here, it means that we had a match
-    if item_type in {'oauth', 'bearer_token'}:
-        print()
     return True
-
-    # return all(item.get(key) == value for key, value in fields.items()) # type: ignore
 
 # ################################################################################################################################
 
@@ -1242,7 +1230,7 @@ class DependencyScanner:
 
         for service in SERVICES:
             if service.is_security:
-                service_name = _replace_item_type(False, service.name)
+                service_name = service.name # _replace_item_type(False, service.name)
                 item = self.find(service_name, fields)
                 if item is not None:
                     return item
@@ -1452,8 +1440,6 @@ class ObjectImporter:
         #
         # Preprocess item type
         #
-        if item_type == 'oauth':
-            item_type = 'bearer_token'
 
         list_:'any_' = self.json.get(item_type, [])
         item = find_first(list_, lambda item: item.name == name) # type: ignore
@@ -2032,11 +2018,6 @@ class ObjectImporter:
                 # Ignore explicit indicators of the absence of a security definition
                 if field_value != Zato_No_Security:
                     criteria:'any_' = {dependent_field: field_value}
-
-                    print()
-                    print('QQQ-01', '*' * 50)
-                    print()
-
                     dep_obj:'any_' = self.object_mgr.find(item_type, criteria)
                     item[id_field] = dep_obj.id
 
@@ -2097,12 +2078,6 @@ class ObjectManager:
         # This probably isn't necessary any more:
         item_type:'any_' = item_type.replace('-', '_')
         objects_by_type:'any_' = self.objects.get(item_type, ())
-
-        print()
-        print('EEE-01', item_type)
-        for item in objects_by_type:
-            print('EEE-02', item.toDict())
-        print()
 
         return find_first(objects_by_type, lambda item: dict_match(item_type, item, fields)) # type: ignore
 
@@ -2305,9 +2280,6 @@ class ObjectManager:
         if service_name is None:
             self.logger.info('Type `%s` has no `get-list` service (%s)', service_info, item_type)
             return
-
-        if service_name == 'zato.security.bearer_token.get-list':
-            service_name = 'zato.security.oauth.get-list'
 
         self.logger.debug('Invoking -> getter -> %s for %s (%s)', service_name, service_info.name, item_type)
         response = self.client.invoke(service_name, {
