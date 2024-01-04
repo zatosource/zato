@@ -48,6 +48,14 @@ DEFAULT_COLS_WIDTH = '15,100'
 
 # ################################################################################################################################
 
+class _NoValue:
+    pass
+
+_no_value1 = _NoValue()
+_no_value2 = _NoValue()
+
+# ################################################################################################################################
+
 Code = namedtuple('Code', ('symbol', 'desc')) # type: ignore
 
 WARNING_ALREADY_EXISTS_IN_ODB = Code('W01', 'already exists in ODB')
@@ -1780,7 +1788,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def _build_new_objects_to_create_during_import(self) -> 'any_':
+    def _build_new_objects_to_create_during_import(self, existing_combined:'any_') -> 'any_':
 
         # stdlib
         from collections import OrderedDict
@@ -1847,7 +1855,39 @@ class ObjectImporter:
 
             append_to.append({item_type: items})
 
+        # This is everything new that we know about ..
         new_combined:'any_' = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
+
+        # .. now, go through it once more and filter out elements that we know should be actually edited, not created ..
+        to_remove = []
+
+        for new_elem in new_combined:
+            for item_type, value_list in new_elem.items():
+                for value_dict in value_list:
+                    value_dict = value_dict.toDict()
+
+                    for existing_elem in existing_combined:
+                        existing_item_type, existing_item = existing_elem.value_raw
+                        if item_type == existing_item_type:
+                            if value_dict.get('name', _no_value1) == existing_item.get('name', _no_value2):
+                                to_remove.append({
+                                    'item_type': item_type,
+                                    'item': value_dict,
+                                })
+                                break
+
+        for elem in to_remove: # type: ignore
+            item_type = elem['item_type'] # type: ignore
+            item = elem['item'] # type: ignore
+
+            for new_elem in new_combined:
+                for new_item_type, value_list in new_elem.items():
+                    for idx, value_dict in enumerate(value_list):
+                        value_dict = value_dict.toDict()
+
+                        if new_item_type == item_type:
+                            if value_dict['name'] == item['name']:
+                                value_list.pop(idx)
 
         return new_combined
 
@@ -1862,11 +1902,7 @@ class ObjectImporter:
         rbac_sleep = float(rbac_sleep)
 
         existing_combined = self._build_existing_objects_to_edit_during_import(already_existing)
-        new_combined = self._build_new_objects_to_create_during_import()
-
-        print()
-        print('AAA-01', existing_combined)
-        print()
+        new_combined = self._build_new_objects_to_create_during_import(existing_combined)
 
         # Extract and load Basic Auth definitions as a whole, before any other updates (edit)
         basic_auth_edit = self._extract_basic_auth(existing_combined, is_edit=True)
@@ -1894,11 +1930,6 @@ class ObjectImporter:
             if item_type.startswith('pubsub'):
                 continue
 
-            #print()
-            #print(111, item_type)
-            #print(222, attrs)
-            #print()
-
             results = self._import(item_type, attrs, True)
 
             if 'rbac' in item_type:
@@ -1917,10 +1948,6 @@ class ObjectImporter:
             'pubsub_topic': [],
             'pubsub_subscription': [],
         }
-
-        print()
-        print('BBB-01', new_combined)
-        print()
 
         # Extract and load Basic Auth definitions as a whole, before any other updates (create)
         self._trigger_sync_server_objects(sync_pubsub=False)
@@ -1974,12 +2001,6 @@ class ObjectImporter:
                     out.append(attrs)
         else:
             for item in data:
-
-                print()
-                print('QQQ-01', is_edit)
-                print('QQQ-02', item)
-                print()
-
                 if basic_auth := item.get(Sec_Def_Type.BASIC_AUTH):
                     for elem in basic_auth:
                         attrs = dict(elem)
@@ -2044,7 +2065,6 @@ class ObjectImporter:
                 # Ignore explicit indicators of the absence of a security definition
                 if field_value != Zato_No_Security:
                     criteria:'any_' = {dependent_field: field_value}
-                    print('*' * 50)
                     dep_obj:'any_' = self.object_mgr.find(item_type, criteria)
                     item[id_field] = dep_obj.id
 
