@@ -1532,7 +1532,10 @@ class ObjectImporter:
                     else:
                         value = os.environ.get(value, NotGiven)
                         if value is NotGiven:
-                            value = 'Env-Value-Not-Found-' +orig_value
+                            if key.startswith(('is_', 'should_', 'needs_')):
+                                value = None
+                            else:
+                                value = 'Env-Value-Not-Found-' + orig_value
 
                     attrs[key] = value
 
