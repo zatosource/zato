@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from collections import namedtuple, OrderedDict
+from collections import namedtuple
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -45,6 +45,14 @@ zato_enmasse_env2 = 'Zato_Enmasse_Env.'
 zato_enmasse_env_value_prefix = 'Zato_Enmasse_Env_'
 
 DEFAULT_COLS_WIDTH = '15,100'
+
+# ################################################################################################################################
+
+class _NoValue:
+    pass
+
+_no_value1 = _NoValue()
+_no_value2 = _NoValue()
 
 # ################################################################################################################################
 
@@ -1750,33 +1758,13 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def import_objects(self, already_existing) -> 'Results': # type: ignore
-
-        # stdlib
-        from collections import OrderedDict
-        from time import sleep
-
-        # Python 2/3 compatibility
-        from zato.common.ext.future.utils import iteritems
-
-        rbac_sleep = getattr(self.args, 'rbac_sleep', 1)
-        rbac_sleep = float(rbac_sleep)
+    def _build_existing_objects_to_edit_during_import(self, already_existing:'any_') -> 'any_':
 
         existing_defs = []
         existing_rbac_role = []
         existing_rbac_role_permission = []
         existing_rbac_client_role = []
         existing_other = []
-
-        new_defs = []
-        new_rbac_role = []
-        new_rbac_role_permission = []
-        new_rbac_client_role = []
-        new_other = []
-
-        #
-        # Update already existing objects first, definitions before any object that may depend on them ..
-        #
 
         for w in already_existing.warnings: # type: ignore
             item_type, _ = w.value_raw # type: ignore
@@ -1793,44 +1781,23 @@ class ObjectImporter:
                 existing = existing_other
             existing.append(w)
 
-        #
-        # .. actually invoke the updates now ..
-        #
         existing_combined:'any_' = existing_defs + existing_rbac_role + existing_rbac_role_permission + \
             existing_rbac_client_role + existing_other
 
-        # Extract and load Basic Auth definitions as a whole, before any other updates (edit)
-        basic_auth_edit = self._extract_basic_auth(existing_combined, is_edit=True)
-        self._import_basic_auth(basic_auth_edit, is_edit=True)
-        self._trigger_sync_server_objects(sync_pubsub=False)
-        self.object_mgr.refresh_objects()
+        return existing_combined
 
-        for w in existing_combined:
+# ################################################################################################################################
 
-            item_type, attrs = w.value_raw
+    def _build_new_objects_to_create_during_import(self, existing_combined:'any_') -> 'any_':
 
-            if self.should_skip_item(item_type, attrs, True):
-                continue
+        # stdlib
+        from collections import OrderedDict
 
-            # Basic Auth definitions have been already handled above (edit)
-            if item_type == Sec_Def_Type.BASIC_AUTH:
-                continue
-
-            # Skip pub/sub objects because they are handled separately (edit)
-            if item_type.startswith('pubsub'):
-                continue
-
-            results = self._import(item_type, attrs, True)
-
-            if 'rbac' in item_type:
-                sleep(rbac_sleep)
-
-            if results:
-                return results
-
-        #
-        # Create new objects, again, definitions come first ..
-        #
+        new_defs = []
+        new_rbac_role = []
+        new_rbac_role_permission = []
+        new_rbac_client_role = []
+        new_other = []
 
         # Use an ordered dict to iterate over the data with dependencies first
         self_json = deepcopy(self.json)
@@ -1866,7 +1833,7 @@ class ObjectImporter:
             if key not in dep_order:
                 self_json_ordered[key] = value
 
-        for item_type, items in iteritems(self_json_ordered): # type: ignore
+        for item_type, items in self_json_ordered.items(): # type: ignore
 
             #
             # Preprocess item type
@@ -1888,10 +1855,92 @@ class ObjectImporter:
 
             append_to.append({item_type: items})
 
-        #
-        # .. actually create the objects now.
-        #
+        # This is everything new that we know about ..
         new_combined:'any_' = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
+
+        # .. now, go through it once more and filter out elements that we know should be actually edited, not created ..
+        to_remove = []
+
+        for new_elem in new_combined:
+            for item_type, value_list in new_elem.items():
+                for value_dict in value_list:
+                    value_dict = value_dict.toDict()
+
+                    for existing_elem in existing_combined:
+                        existing_item_type, existing_item = existing_elem.value_raw
+                        if item_type == existing_item_type:
+                            if value_dict.get('name', _no_value1) == existing_item.get('name', _no_value2):
+                                to_remove.append({
+                                    'item_type': item_type,
+                                    'item': value_dict,
+                                })
+                                break
+
+        for elem in to_remove: # type: ignore
+            item_type = elem['item_type'] # type: ignore
+            item = elem['item'] # type: ignore
+
+            for new_elem in new_combined:
+                for new_item_type, value_list in new_elem.items():
+                    for idx, value_dict in enumerate(value_list):
+                        value_dict = value_dict.toDict()
+
+                        if new_item_type == item_type:
+                            if value_dict['name'] == item['name']:
+                                value_list.pop(idx)
+
+        return new_combined
+
+# ################################################################################################################################
+
+    def import_objects(self, already_existing) -> 'Results': # type: ignore
+
+        # stdlib
+        from time import sleep
+
+        rbac_sleep = getattr(self.args, 'rbac_sleep', 1)
+        rbac_sleep = float(rbac_sleep)
+
+        existing_combined = self._build_existing_objects_to_edit_during_import(already_existing)
+        new_combined = self._build_new_objects_to_create_during_import(existing_combined)
+
+        # Extract and load Basic Auth definitions as a whole, before any other updates (edit)
+        basic_auth_edit = self._extract_basic_auth(existing_combined, is_edit=True)
+        self._import_basic_auth(basic_auth_edit, is_edit=True)
+
+        # Extract and load Basic Auth definitions as a whole, before any other updates (create)
+        basic_auth_create = self._extract_basic_auth(new_combined, is_edit=False)
+        self._import_basic_auth(basic_auth_create, is_edit=False)
+
+        self._trigger_sync_server_objects(sync_pubsub=False)
+        self.object_mgr.refresh_objects()
+
+        for w in existing_combined:
+
+            item_type, attrs = w.value_raw
+
+            if self.should_skip_item(item_type, attrs, True):
+                continue
+
+            # Basic Auth definitions have been already handled above (edit)
+            if item_type == Sec_Def_Type.BASIC_AUTH:
+                continue
+
+            # Skip pub/sub objects because they are handled separately (edit)
+            if item_type.startswith('pubsub'):
+                continue
+
+            results = self._import(item_type, attrs, True)
+
+            if 'rbac' in item_type:
+                sleep(rbac_sleep)
+
+            if results:
+                return results
+
+        #
+        # Create new objects, again, definitions come first ..
+        #
 
         # A container for pub/sub objects to be handled separately
         pubsub_objects:'strlistdict' = {
@@ -1901,13 +1950,11 @@ class ObjectImporter:
         }
 
         # Extract and load Basic Auth definitions as a whole, before any other updates (create)
-        basic_auth_create = self._extract_basic_auth(new_combined, is_edit=False)
-        self._import_basic_auth(basic_auth_create, is_edit=False)
         self._trigger_sync_server_objects(sync_pubsub=False)
         self.object_mgr.refresh_objects()
 
         for elem in new_combined:
-            for item_type, attr_list in iteritems(elem):
+            for item_type, attr_list in elem.items():
                 for attrs in attr_list:
 
                     if self.should_skip_item(item_type, attrs, False):
@@ -3417,6 +3464,9 @@ class Enmasse(ManageCommand):
         attr_key, # type: str
         item,     # type: strdict
     ) -> 'strdict':
+
+        # stdlib
+        from collections import OrderedDict
 
         # Turn the item into an object whose attributes can be sorted ..
         item = OrderedDict(item)
