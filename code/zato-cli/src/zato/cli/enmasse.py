@@ -1530,7 +1530,9 @@ class ObjectImporter:
                     if not value:
                         raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
                     else:
-                        value = os.environ.get(value)
+                        value = os.environ.get(value, NotGiven)
+                        if value is NotGiven:
+                            value = 'Env-Value-Not-Found-' +orig_value
 
                     attrs[key] = value
 
@@ -1625,7 +1627,7 @@ class ObjectImporter:
                 self._set_generic_connection_secret(attrs_dict['name'], attrs_dict['type_'], attrs_dict['secret'])
 
         # We'll see how expensive this call is. Seems to be but let's see in practice if it's a burden.
-        self.object_mgr.get_objects_by_type(item_type)
+        self.object_mgr.populate_objects_by_type(item_type)
 
 # ################################################################################################################################
 
@@ -1638,11 +1640,8 @@ class ObjectImporter:
 
     def find_already_existing_odb_objects(self):
 
-        # Python 2/3 compatibility
-        from zato.common.ext.future.utils import iteritems
-
         results = Results()
-        for item_type, items in iteritems(self.json): # type: ignore
+        for item_type, items in self.json.items(): # type: ignore
 
             #
             # Preprocess item type
@@ -1661,11 +1660,13 @@ class ObjectImporter:
 
                     existing:'any_' = find_first(self.object_mgr.objects.http_soap,
                         lambda item: connection == item.connection and transport == item.transport and name == item.name) # type: ignore
+
                     if existing is not None:
                         self.add_warning(results, item_type, item, existing)
 
                 else:
                     existing = self.object_mgr.find(item_type, {'name': name})
+
                     if existing is not None:
                         self.add_warning(results, item_type, item, existing)
 
@@ -1767,7 +1768,8 @@ class ObjectImporter:
         existing_other = []
 
         for w in already_existing.warnings: # type: ignore
-            item_type, _ = w.value_raw # type: ignore
+            item_type, value = w.value_raw # type: ignore
+            value = value
 
             if 'def' in item_type:
                 existing = existing_defs
@@ -1998,12 +2000,14 @@ class ObjectImporter:
                 item_type, attrs = value_raw
                 if item_type == Sec_Def_Type.BASIC_AUTH:
                     attrs = dict(attrs)
+                    attrs = self._resolve_attrs('basic_auth', attrs)
                     out.append(attrs)
         else:
             for item in data:
                 if basic_auth := item.get(Sec_Def_Type.BASIC_AUTH):
                     for elem in basic_auth:
                         attrs = dict(elem)
+                        attrs = self._resolve_attrs('basic_auth', attrs)
                         out.append(attrs)
 
         return out
@@ -2303,7 +2307,7 @@ class ObjectManager:
 
 # ################################################################################################################################
 
-    def get_objects_by_type(self, item_type:'str') -> 'None':
+    def populate_objects_by_type(self, item_type:'str') -> 'None':
 
         # Ignore artificial objects
         if item_type in {'def_sec'}:
@@ -2380,7 +2384,7 @@ class ObjectManager:
                 if not service_info.is_security:
                     continue
 
-            self.get_objects_by_type(service_info.name)
+            self.populate_objects_by_type(service_info.name)
 
         for item_type, items in self.objects.items(): # type: ignore
             for item in items: # type: ignore
