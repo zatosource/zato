@@ -1524,15 +1524,32 @@ class ObjectImporter:
 
                 if _prefix:
 
+                    print()
+                    print(111, _prefix)
+                    print(222, orig_value)
+
                     value = orig_value.split(_prefix)
                     value = value[1]
+
+                    print(333, value)
 
                     if not value:
                         raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
                     else:
-                        value = os.environ.get(value)
+                        value = os.environ.get(value, NotGiven)
+                        if value is NotGiven:
+                            value = 'Env-Value-Not-Found-' +orig_value
+
+                    print(444, value)
 
                     attrs[key] = value
+
+                    print(555, attrs)
+                    print()
+
+        print()
+        print('QQQ-01', attrs)
+        print()
 
         return attrs
 
@@ -1625,7 +1642,7 @@ class ObjectImporter:
                 self._set_generic_connection_secret(attrs_dict['name'], attrs_dict['type_'], attrs_dict['secret'])
 
         # We'll see how expensive this call is. Seems to be but let's see in practice if it's a burden.
-        self.object_mgr.get_objects_by_type(item_type)
+        self.object_mgr.populate_objects_by_type(item_type)
 
 # ################################################################################################################################
 
@@ -1638,11 +1655,8 @@ class ObjectImporter:
 
     def find_already_existing_odb_objects(self):
 
-        # Python 2/3 compatibility
-        from zato.common.ext.future.utils import iteritems
-
         results = Results()
-        for item_type, items in iteritems(self.json): # type: ignore
+        for item_type, items in self.json.items(): # type: ignore
 
             #
             # Preprocess item type
@@ -1661,11 +1675,13 @@ class ObjectImporter:
 
                     existing:'any_' = find_first(self.object_mgr.objects.http_soap,
                         lambda item: connection == item.connection and transport == item.transport and name == item.name) # type: ignore
+
                     if existing is not None:
                         self.add_warning(results, item_type, item, existing)
 
                 else:
                     existing = self.object_mgr.find(item_type, {'name': name})
+
                     if existing is not None:
                         self.add_warning(results, item_type, item, existing)
 
@@ -1709,6 +1725,12 @@ class ObjectImporter:
         len_imports = {
             'basic_auth': len(imports['basic_auth']),
         }
+
+        if not is_edit:
+            print()
+            print('GGG-01', imports)
+            print()
+            #ggg
 
         # .. log what we are about to do ..
         self.logger.info(f'Invoking -> import security ({import_type}) -> {service_name} -> {len_imports}')
@@ -1767,7 +1789,13 @@ class ObjectImporter:
         existing_other = []
 
         for w in already_existing.warnings: # type: ignore
-            item_type, _ = w.value_raw # type: ignore
+            item_type, value = w.value_raw # type: ignore
+            value = value
+
+            print()
+            print('BBB-01', item_type)
+            print('BBB-02', value)
+            print()
 
             if 'def' in item_type:
                 existing = existing_defs
@@ -1783,6 +1811,10 @@ class ObjectImporter:
 
         existing_combined:'any_' = existing_defs + existing_rbac_role + existing_rbac_role_permission + \
             existing_rbac_client_role + existing_other
+
+        print()
+        print('BBB-03', existing_combined)
+        print()
 
         return existing_combined
 
@@ -1895,6 +1927,15 @@ class ObjectImporter:
 
     def import_objects(self, already_existing) -> 'Results': # type: ignore
 
+        print()
+        print('CCC-00', already_existing.warnings)
+        for item in already_existing.warnings:
+            item = item.value_raw
+            item_type, item = item
+            item = item.toDict()
+            print('CCC-01', item_type, item)
+        print()
+
         # stdlib
         from time import sleep
 
@@ -1929,6 +1970,11 @@ class ObjectImporter:
             # Skip pub/sub objects because they are handled separately (edit)
             if item_type.startswith('pubsub'):
                 continue
+
+            print()
+            print('VVV-01', item_type)
+            print('VVV-02', attrs)
+            print()
 
             results = self._import(item_type, attrs, True)
 
@@ -1998,12 +2044,18 @@ class ObjectImporter:
                 item_type, attrs = value_raw
                 if item_type == Sec_Def_Type.BASIC_AUTH:
                     attrs = dict(attrs)
+                    attrs = self._resolve_attrs('basic_auth', attrs)
                     out.append(attrs)
         else:
+            print()
+            print('EEE-01', data)
+            print()
+            #eee
             for item in data:
                 if basic_auth := item.get(Sec_Def_Type.BASIC_AUTH):
                     for elem in basic_auth:
                         attrs = dict(elem)
+                        attrs = self._resolve_attrs('basic_auth', attrs)
                         out.append(attrs)
 
         return out
@@ -2303,7 +2355,7 @@ class ObjectManager:
 
 # ################################################################################################################################
 
-    def get_objects_by_type(self, item_type:'str') -> 'None':
+    def populate_objects_by_type(self, item_type:'str') -> 'None':
 
         # Ignore artificial objects
         if item_type in {'def_sec'}:
@@ -2341,6 +2393,12 @@ class ObjectManager:
 
         if response.has_data:
             data = self.get_data_from_response_data(response.data)
+
+            if service_name == 'zato.security.basic-auth.get-list':
+                print()
+                for item in data:
+                    print('AAA-01', item)
+                print()
 
             # A flag indicating if this service is related to security definitions
             is_sec_def = 'zato.security' in service_name
@@ -2380,7 +2438,7 @@ class ObjectManager:
                 if not service_info.is_security:
                     continue
 
-            self.get_objects_by_type(service_info.name)
+            self.populate_objects_by_type(service_info.name)
 
         for item_type, items in self.objects.items(): # type: ignore
             for item in items: # type: ignore
