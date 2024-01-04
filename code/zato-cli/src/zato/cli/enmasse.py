@@ -2126,19 +2126,6 @@ class ObjectManager:
         item_type:'any_' = item_type.replace('-', '_')
         objects_by_type:'any_' = self.objects.get(item_type, ())
 
-        if item_type == 'basic_auth':
-            pass
-            '''
-            print()
-            print(111, item_type)
-            print(222, fields)
-            print(333, check_sec)
-            import operator
-            for item in sorted(objects_by_type, key=operator.itemgetter('name')):
-                print(444, item.toDict())
-            print()
-            '''
-
         return find_first(objects_by_type, lambda item: dict_match(item_type, item, fields)) # type: ignore
 
 # ################################################################################################################################
