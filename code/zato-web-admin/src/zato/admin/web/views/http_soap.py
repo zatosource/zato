@@ -217,7 +217,16 @@ def index(req): # type: ignore
 
             _security_name = item.security_name
             if _security_name:
-                security_name = get_security_name_link(req, item.sec_type, _security_name)
+                sec_type_name = SEC_DEF_TYPE_NAME[item.sec_type]
+                sec_type_as_link = item.sec_type.replace('_', '-')
+                if item.sec_type == SEC_DEF_TYPE.OAUTH:
+                    direction = 'outconn/client-credentials/'
+                else:
+                    direction = ''
+                security_href   = f'/zato/security/{sec_type_as_link}/{direction}'
+                security_href  += f'?cluster={req.zato.cluster_id}&amp;query={_security_name}'
+                security_link = f'<a href="{security_href}">{_security_name}</a>'
+                security_name = f'{sec_type_name}<br/>{security_link}'
             else:
                 if item.sec_use_rbac:
                     security_name = DELEGATED_TO_RBAC
