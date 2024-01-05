@@ -3634,6 +3634,7 @@ class Enmasse(ManageCommand):
         import os
         import re
         from datetime import datetime
+        from collections import OrderedDict
 
         # Bunch
         from zato.bunch import debunchify
