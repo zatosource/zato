@@ -2,16 +2,23 @@
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
+
     $.fn.zato.groups.add_sortable("listing-left");
     $.fn.zato.groups.add_sortable("listing-right");
 
-    $("#search-form").on("submit", function(e) {
+    let search_form = $("#search-form");
+
+    search_form.on("submit", function(e) {
 
         let sec_type = $("#search-form-sec-type").val()
         let query = $("#search-form-query").val()
 
         $.fn.zato.groups.members.on_search_form_submitted(sec_type, query)
         e.preventDefault();
+    });
+
+    search_form.on("change", function(e) {
+        search_form.submit();
     });
 
     $("#groups-form").on("change", function(e) {
@@ -26,7 +33,26 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.groups.members.on_groups_form_changed = function(group_id) {
-    alert(group_id);
+
+    var callback = function(data, status) {
+        var success = status == "success" || status == "parsererror";
+        if(success) {
+            // $.fn.zato.user_message(true, status + " " + data.responseText);
+        }
+        else {
+            $.fn.zato.user_message(false, status + " " + data.responseText);
+        }
+    }
+
+    var action = is_add ? "add" : "remove";
+    let template = "/zato/groups/members/action/{0}/group/{1}/id-list/{2}/";
+    let url = String.format(template, action, group_id, item_id_list);
+    let data = "";
+    let data_type = "json";
+    let suppress_user_message = true;
+
+    $.fn.zato.post(url, callback, data, data_type, suppress_user_message);
+
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -75,7 +101,7 @@ $.fn.zato.groups.members.remove_listing_right_empty = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.groups.members.populate_security_list = function(security_list) {
+$.fn.zato.groups.members.populate_list = function(security_list) {
 
     // First, we always remove any items already displayed
     $(".list-group-item.left").remove();
@@ -137,6 +163,11 @@ $.fn.zato.groups.members.populate_security_list = function(security_list) {
     };
 }
 
+$.fn.zato.groups.members.populate_security_list = function(security_list) {
+    let func = $.fn.zato.groups.members.populate_list;
+    func(security_list);
+}
+
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.groups.members.on_search_form_submitted = function(sec_type, query) {
@@ -182,7 +213,7 @@ $.fn.zato.groups.add_sortable = function(elem_id) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.groups.on_group_memebers_moved = function(item_id_list, group_id, is_add) {
+$.fn.zato.groups.on_group_members_moved = function(item_id_list, group_id, is_add) {
 
     var callback = function(data, status) {
         var success = status == "success" || status == "parsererror";
@@ -247,7 +278,7 @@ $.fn.zato.groups.on_sortable_end = function(e) {
         //
         var is_add_to_group = to_add == "right";
         group_id = $("#groups-form-group-id").val()
-        $.fn.zato.groups.on_group_memebers_moved(item_id_list, group_id, is_add_to_group);
+        $.fn.zato.groups.on_group_members_moved(item_id_list, group_id, is_add_to_group);
 
         //
         // Add an indicator that a given lis is empty

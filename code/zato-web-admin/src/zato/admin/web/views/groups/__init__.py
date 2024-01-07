@@ -106,6 +106,22 @@ class Delete(_Delete):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_group_list(req:'any_', group_type:'str') -> 'anylist':
+
+    # Get a list of all the groups that exist
+    response = req.zato.client.invoke('dev.groups.get-list', {
+        'group_type': group_type,
+    })
+
+    # .. extract the business data ..
+    out = response.data
+
+    # .. and return it to our caller.
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_member_list(req:'any_', group_type:'str', group_id:'int') -> 'anylist':
 
     # Obtain an initial list of members for this group ..
@@ -185,6 +201,9 @@ def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
     # Local variables
     template_name = 'zato/groups/members.html'
 
+    # Get a list of all groups that exist
+    group_list = get_group_list(req, group_type)
+
     # Obtain an initial list of members for this group
     member_list = get_member_list(req, group_type, group_id)
 
@@ -194,6 +213,7 @@ def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
     # .. build the return data for the template ..
     return_data = {
         'cluster_id': req.zato.cluster_id,
+        'group_list': group_list,
         'member_list': member_list,
         'security_list': security_list,
     }
@@ -208,8 +228,15 @@ def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
 def members_action(req:'any_', action:'str', group_id:'str', member_id_list:'str') -> 'HttpResponse':
 
     # Local variables
+    group_id = group_id.replace('group-', '')
     member_id_list = member_id_list.split(',')
     member_id_list = [elem.strip() for elem in member_id_list]
+
+    print()
+    print(111, action)
+    print(222, group_id)
+    print(333, member_id_list)
+    print()
 
     # Invoke the remote service ..
     try:
