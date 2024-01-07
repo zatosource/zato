@@ -184,24 +184,25 @@ $.fn.zato.groups.add_sortable = function(elem_id) {
 
 $.fn.zato.groups.on_group_memebers_moved = function(item_id_list, group_id, is_add) {
 
-    var action = is_add ? "add" : "remove";
-    //let template = "/zato/groups/members/action/(?P<group_id>.*)/(?P<id_list>.*)/cluster/(?P<cluster_id>
-    let template = "/zato/groups/members/action/{0}/group/{1}/id-list/{2}";
-    let url = String.format(template, action, group_id, item_id_list,
-    //"/zato/groups/members/action/(?P<group_id>.*)/(?P<id_list>.*)/cluster/(?P<cluster_id>.
+    var callback = function(data, status) {
+        var success = status == "success";
+        if(success) {
+            // $.fn.zato.user_message(true, status + " " + data.responseText);
+        }
+        else {
+            $.fn.zato.user_message(false, data.responseText);
+        }
+    }
 
-    let url = String.format("/zato/groups/get-security-list/?sec_type={0}&query={1}", sec_type, query);
+    var action = is_add ? "add" : "remove";
+    let template = "/zato/groups/members/action/{0}/group/{1}/id-list/{2}/";
+    let url = String.format(template, action, group_id, item_id_list);
     let data = "";
     let data_type = "json";
     let suppress_user_message = true;
 
     $.fn.zato.post(url, callback, data, data_type, suppress_user_message);
 
-    //alert(action + " " + item_id_list + " " + group_id);
-
-    //$.each(item_id_list, function(idx, elem_id) {
-    //    alert(action + " " + item_id_list + " " + group_id);
-    //});
 
 }
 

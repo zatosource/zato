@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,7 +12,7 @@ from json import dumps
 from operator import attrgetter
 
 # Django
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.template.response import TemplateResponse
 
 # Zato
@@ -207,12 +207,12 @@ def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
 def members_action(req:'any_', action:'str', group_id:'str', id_list:'str') -> 'HttpResponse':
 
     print()
-    print(111, group_id)
-    print(222, id_list)
-    print(333, cluster_id)
+    print(111, action)
+    print(222, group_id)
+    print(333, id_list)
     print()
 
-    zzz
+    return HttpResponse(r'{}', content_type='application/javascript')
 
     # Local variables
     template_name = 'zato/groups/members.html'
