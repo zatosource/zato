@@ -1681,7 +1681,7 @@ urlpatterns += [
 
     # Groups
 
-    url(r'^zato/groups/members/action/(?P<action>.*)/group/(?P<group_id>.*)/id-list/(?P<id_list>.*)/$',
+    url(r'^zato/groups/members/action/(?P<action>.*)/group/(?P<group_id>.*)/id-list/(?P<member_id_list>.*)/$',
         login_required(groups.members_action), name='groups-members-action'),
     url(r'^zato/groups/members/(?P<group_type>.*)/(?P<group_id>.*)/$', # type: ignore
         login_required(groups.view), name='groups-members'),
