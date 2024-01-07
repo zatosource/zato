@@ -12,7 +12,7 @@ from contextlib import closing
 from json import dumps
 
 # Zato
-from zato.common.api import Groups
+from zato.common.api import Groups, SEC_DEF_TYPE
 from zato.common.odb.query.generic import GroupsWrapper
 from zato.server.service import AsIs, Service
 
@@ -137,8 +137,29 @@ class GroupsManager:
                 parent_object_id=group_id
             )
 
-            # .. populate our response ..
-            out[:] = results
+        # .. extract security information for each item ..
+        for item in results:
+
+            sec_info = item['name']
+            sec_info = sec_info.split('-')
+
+            sec_type, security_id = sec_info
+            security_id = int(security_id)
+
+            if sec_type == SEC_DEF_TYPE.BASIC_AUTH:
+                get_sec_func = self.server.worker_store.basic_auth_get_by_id
+            elif sec_type == SEC_DEF_TYPE.APIKEY:
+                get_sec_func = self.server.worker_store.apikey_get_by_id
+            else:
+                raise Exception(f'Unrecognized sec_type: {sec_type}')
+
+            sec_config = get_sec_func(security_id)
+
+            item['name'] = sec_config['name']
+            item['sec_type'] = sec_type
+
+        # .. populate our response ..
+        out[:] = results
 
         # .. and return the output to our caller.
         return out
