@@ -68,11 +68,14 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def get(self, name:'str') -> 'any_':
+    def get(self, name:'str', type_:'strnone'=None) -> 'any_':
+
+        # Local variables
+        type_ = type_ or self.type_
 
         item = self.session.query(self.model_class).\
             filter(self.model_class.name==name).\
-            filter(self.model_class.type_==self.type_).\
+            filter(self.model_class.type_==type_).\
             filter(self.model_class.cluster_id==self.cluster_id).\
             first()
 
@@ -80,16 +83,21 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def get_list(self) -> 'dictlist':
+    def get_list(self, type_:'strnone'=None, subtype:'strnone'=None) -> 'dictlist':
 
+        # Local variables
+        type_ = type_ or self.type_
+        subtype = subtype or self.subtype
+
+        # Our response to produce
         out:'dictlist' = []
 
         items = self.session.query(self.model_class).\
-            filter(self.model_class.type_==self.type_).\
+            filter(self.model_class.type_==type_).\
             filter(self.model_class.cluster_id==self.cluster_id)
 
-        if self.subtype:
-            items = items.filter(self.model_class.subtype==self.subtype)
+        if subtype:
+            items = items.filter(self.model_class.subtype==subtype)
 
         items = items.order_by(self.model_class.name)
         items = items.all()
@@ -114,13 +122,17 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def create(self, name:'str', opaque:'str') -> 'any_':
-        """ Creates a new row for input data.
+    def create(self, name:'str', opaque:'str', type_:'strnone'=None, subtype:'strnone'=None) -> 'any_':
+        """ Creates one more new srow for input data.
         """
+        # Local variables
+        type_ = type_ or self.type_
+        subtype = subtype or self.subtype
+
         result = insert(self.model_class).values(**{
             'name': name,
-            'type_': self.type_,
-            'subtype': self.subtype,
+            'type_': type_,
+            'subtype': subtype,
             'cluster_id': self.cluster_id,
             'creation_time': datetime.utcnow(),
             'last_modified': datetime.utcnow(),
@@ -130,9 +142,13 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def update(self, name:'str', opaque:'any_'=NotGiven, *, id:'int'=False) -> 'any_':
+    def update(self, name:'str', opaque:'any_'=NotGiven, type_:'strnone'=None, *, id:'int'=False) -> 'any_':
         """ Updates an already existing object.
         """
+
+        # Local variables
+        type_ = type_ or self.type_
+
         # Name will be always updated ..
         values = {
             'name': name
@@ -144,7 +160,7 @@ class GenericObjectWrapper:
 
         # .. build a basic filter for the query ..
         and_filter:'any_' = (
-            ModelGenericObjectTable.c.type_==self.type_,
+            ModelGenericObjectTable.c.type_==type_,
             ModelGenericObjectTable.c.cluster_id==self.cluster_id,
         )
 
