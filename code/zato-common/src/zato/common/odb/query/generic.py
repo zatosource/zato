@@ -83,7 +83,7 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def get_list(self, type_:'strnone'=None, subtype:'strnone'=None) -> 'dictlist':
+    def get_list(self, type_:'strnone'=None, subtype:'strnone'=None, *, parent_object_id:'strnone'=None) -> 'dictlist':
 
         # Local variables
         type_ = type_ or self.type_
@@ -98,6 +98,9 @@ class GenericObjectWrapper:
 
         if subtype:
             items = items.filter(self.model_class.subtype==subtype)
+
+        if parent_object_id:
+            items = items.filter(self.model_class.parent_object_id==parent_object_id)
 
         items = items.order_by(self.model_class.name)
         items = items.all()
