@@ -142,6 +142,18 @@ class GroupsManager:
         return out
 
 # ################################################################################################################################
+
+    def add_members_to_group(self, group_id:'str', member_id_list:'int') -> 'None':
+        self
+        self
+
+# ################################################################################################################################
+
+    def remove_members_from_group(self, group_id:'str', member_id_list:'int') -> 'None':
+        self
+        self
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetList(Service):
@@ -239,17 +251,20 @@ class EditMemberList(Service):
     """ Adds members to or removes them from a group.
     """
     name = 'dev.groups.edit-member-list'
-    input:'any_' = 'action', AsIs('group_id'), AsIs('id_list')
+    input:'any_' = 'action', AsIs('group_id'), AsIs('member_id_list')
 
     def handle(self):
 
         # Local variables
         input = self.request.input
 
-        return
         groups_manager = GroupsManager(self.server)
-        member_list = groups_manager.get_member_list(input.group_type, input.group_id)
-        self.response.payload = dumps(member_list)
+        if input.action == Groups.Membership_Action.Add:
+            func = groups_manager.add_members_to_group
+        else:
+            func = groups_manager.remove_members_from_group
+
+        func(input.group_id, input.member_id_list)
 
 # ################################################################################################################################
 # ################################################################################################################################

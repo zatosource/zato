@@ -205,18 +205,18 @@ def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def members_action(req:'any_', action:'str', group_id:'str', id_list:'str') -> 'HttpResponse':
+def members_action(req:'any_', action:'str', group_id:'str', member_id_list:'str') -> 'HttpResponse':
 
     # Local variables
-    id_list = id_list.split(',')
-    id_list = [elem.strip() for elem in id_list]
+    member_id_list = member_id_list.split(',')
+    member_id_list = [elem.strip() for elem in member_id_list]
 
     # Invoke the remote service ..
     try:
         _ = req.zato.client.invoke('dev.groups.edit-member-list', {
             'action': action,
             'group_id': group_id,
-            'id_list': id_list
+            'member_id_list': member_id_list
         })
     except Exception:
         response = format_exc()
