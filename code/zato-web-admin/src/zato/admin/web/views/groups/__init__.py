@@ -196,13 +196,14 @@ def get_security_list(req:'any_') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def get_security_list(req:'any_') -> 'HttpResponse':
+def get_member_list(req:'any_') -> 'HttpResponse':
 
-    sec_type = req.GET.get('sec_type')
-    query = req.GET.get('query')
+    group_type = req.GET.get('group_type')
+    group_id = req.GET.get('group_id')
 
-    sec_list = _get_security_list(req, sec_type, query)
-    data = dumps(sec_list)
+    member_list = _get_member_list(req, group_type, group_id)
+    data = dumps(member_list)
+
     return HttpResponse(data, content_type='application/javascript')
 
 # ################################################################################################################################
@@ -226,6 +227,7 @@ def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
     # .. build the return data for the template ..
     return_data = {
         'cluster_id': req.zato.cluster_id,
+        'group_type': group_type,
         'group_list': group_list,
         'member_list': member_list,
         'security_list': security_list,
