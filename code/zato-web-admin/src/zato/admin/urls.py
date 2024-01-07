@@ -1687,8 +1687,12 @@ urlpatterns += [
         login_required(groups.view), name='groups-members'),
     url(r'^zato/groups/group/(?P<group_type>.*)/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(groups.Delete()), name=groups.Delete.url_name),
+
     url(r'^zato/groups/get-security-list/$', # type: ignore
         login_required(groups.get_security_list), name='groups-get-security-list'),
+
+    url(r'^zato/groups/get-member-list/$', # type: ignore
+        login_required(groups.get_member_list), name='groups-get-member-list'),
 
     url(r'^zato/groups/group/(?P<group_type>.*)/$',
         login_required(groups.Index()), name=groups.Index.url_name),

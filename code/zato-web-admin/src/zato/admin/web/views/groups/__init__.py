@@ -122,7 +122,7 @@ def get_group_list(req:'any_', group_type:'str') -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_member_list(req:'any_', group_type:'str', group_id:'int') -> 'anylist':
+def _get_member_list(req:'any_', group_type:'str', group_id:'int') -> 'anylist':
 
     # Obtain an initial list of members for this group ..
     response = req.zato.client.invoke('dev.groups.get-member-list', {
@@ -195,6 +195,19 @@ def get_security_list(req:'any_') -> 'HttpResponse':
 # ################################################################################################################################
 # ################################################################################################################################
 
+@method_allowed('POST')
+def get_security_list(req:'any_') -> 'HttpResponse':
+
+    sec_type = req.GET.get('sec_type')
+    query = req.GET.get('query')
+
+    sec_list = _get_security_list(req, sec_type, query)
+    data = dumps(sec_list)
+    return HttpResponse(data, content_type='application/javascript')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('GET')
 def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
 
@@ -205,7 +218,7 @@ def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
     group_list = get_group_list(req, group_type)
 
     # Obtain an initial list of members for this group
-    member_list = get_member_list(req, group_type, group_id)
+    member_list = _get_member_list(req, group_type, group_id)
 
     # Obtain an initial list of security definitions
     security_list = _get_security_list(req)
@@ -229,8 +242,8 @@ def members_action(req:'any_', action:'str', group_id:'str', member_id_list:'str
 
     # Local variables
     group_id = group_id.replace('group-', '')
-    member_id_list = member_id_list.split(',')
-    member_id_list = [elem.strip() for elem in member_id_list]
+    member_id_list = member_id_list.split(',') # type: ignore
+    member_id_list = [elem.strip() for elem in member_id_list] # type: ignore
 
     print()
     print(111, action)
