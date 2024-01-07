@@ -97,7 +97,7 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.members_html|default:"0" }}</td>
-                        <td><a href="{% url "groups-members" item.type item.id %}?cluster={{ cluster_id|default:"1" }}">Go to members</a></td>
+                        <td><a href="{% url "groups-members-manage" item.type item.id %}?cluster={{ cluster_id|default:"1" }}">Go to members</a></td>
 
                         {% comment %} 2 {% endcomment %}
                         <td>
