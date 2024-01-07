@@ -62,8 +62,9 @@
         <div class="column-header right">
             <form id="groups-form" action="#">
                 <select id="groups-form-group-id">
-                    <option value="group-1">Group 1</option>
-                    <option value="group-2">Group 2</option>
+                    {% for item in group_list %}
+                        <option value="{{ item.id }}">{{ item.name }}</option>
+                    {% endfor %}
                 </select>
             </form>
             <div id="column-header-right-menu">
@@ -76,11 +77,10 @@
         </div>
         <div class="column-body right">
             <div id="listing-right" class="listing">
-                {% for item in group_list %}
+                {% for item in member_list %}
                 <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item right">
-                    <div class="sec-type">basic auth{{ item.sec_type|replace_in_string:"_, -" }}</div>
-                    <div class="sec-name"><a href="#">#2</a></div>
-                    <div class="sec-username">{% if False %}{{ item.username }}{% endif %}</div>
+                    <div class="sec-type">{{ item.sec_type_name }}</div>
+                    <div class="sec-name">{{ item.security_name|safe }}</a></div>
                     <div class="handle"></div>
                 </div>
                 {% empty %}
