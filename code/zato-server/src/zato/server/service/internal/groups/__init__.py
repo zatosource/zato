@@ -20,7 +20,7 @@ from zato.server.service import AsIs, Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, intnone
+    from zato.common.typing_ import any_, anylist, intnone, strlist
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -129,11 +129,13 @@ class GroupsManager:
 
             # .. build and object that will wrap access to the SQL database ..
             wrapper = GroupsWrapper(session, self.cluster_id)
-            wrapper.type_ = Groups.Type.Group_Parent
-            wrapper.subtype = group_type
 
             # .. get all the results ..
-            results = wrapper.get_list(parent_object_id=group_id)
+            results = wrapper.get_list(
+                Groups.Type.Group_Member,
+                Groups.Type.API_Credentials,
+                parent_object_id=group_id
+            )
 
             # .. populate our response ..
             out[:] = results
@@ -143,34 +145,34 @@ class GroupsManager:
 
 # ################################################################################################################################
 
-    def add_members_to_group(self, group_id:'str', member_id_list:'int') -> 'None':
+    def add_members_to_group(self, group_id:'int', member_id_list:'strlist') -> 'None':
 
         self
         self
-
-        return
 
         # Work in a new SQL transaction ..
         with closing(self.server.odb.session()) as session:
 
             # .. build and object that will wrap access to the SQL database ..
             wrapper = GroupsWrapper(session, self.cluster_id)
-            wrapper.type_ = Groups.Type.Group_Parent
-            wrapper.subtype = group_type
 
-            # .. do create the group now ..
-            insert = wrapper.create(group_name, '')
+            # .. do add the members to the group now ..
+            for member_id in member_id_list:
 
-            # .. commit the changes ..
-            session.execute(insert)
+                insert = wrapper.create(
+                    member_id, '',
+                    Groups.Type.Group_Member,
+                    Groups.Type.API_Credentials,
+                    parent_object_id=group_id)
+
+                session.execute(insert)
+
+            # .. and commit the changes.
             session.commit()
-
-            # .. get the newly added group now ..
-            group = wrapper.get(group_name)
 
 # ################################################################################################################################
 
-    def remove_members_from_group(self, group_id:'str', member_id_list:'int') -> 'None':
+    def remove_members_from_group(self, group_id:'str', member_id_list:'strlist') -> 'None':
         self
         self
 
