@@ -125,22 +125,34 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def create(self, name:'str', opaque:'str', type_:'strnone'=None, subtype:'strnone'=None) -> 'any_':
-        """ Creates one more new srow for input data.
+    def create(
+        self,
+        name:'str',
+        opaque:'str',
+        type_:'strnone'=None,
+        subtype:'strnone'=None,
+        *,
+        parent_object_id:'intnone'=None
+    ) -> 'any_':
+        """ Creates one or more new rows based on the input data.
         """
+
         # Local variables
         type_ = type_ or self.type_
         subtype = subtype or self.subtype
+        now = datetime.utcnow()
 
         result = insert(self.model_class).values(**{
             'name': name,
             'type_': type_,
             'subtype': subtype,
+            'parent_object_id': parent_object_id,
             'cluster_id': self.cluster_id,
-            'creation_time': datetime.utcnow(),
-            'last_modified': datetime.utcnow(),
+            'creation_time': now,
+            'last_modified': now,
             _generic_attr_name: opaque,
         })
+
         return result
 
 # ################################################################################################################################
