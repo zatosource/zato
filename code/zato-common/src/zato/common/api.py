@@ -1417,6 +1417,7 @@ class GENERIC:
 class Groups:
     class Type:
         Group_Parent    = 'zato-group'
+        Group_Member    = 'zato-member'
         API_Credentials = 'zato-api-creds'
         Organizations   = 'zato-org'
 
