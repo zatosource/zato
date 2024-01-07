@@ -14,7 +14,7 @@ from json import dumps
 # Zato
 from zato.common.api import Groups
 from zato.common.odb.query.generic import GroupsWrapper
-from zato.server.service import Service
+from zato.server.service import AsIs, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -228,6 +228,25 @@ class GetMemberList(Service):
         # Local variables
         input = self.request.input
 
+        groups_manager = GroupsManager(self.server)
+        member_list = groups_manager.get_member_list(input.group_type, input.group_id)
+        self.response.payload = dumps(member_list)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class EditMemberList(Service):
+    """ Adds members to or removes them from a group.
+    """
+    name = 'dev.groups.edit-member-list'
+    input:'any_' = 'action', AsIs('group_id'), AsIs('id_list')
+
+    def handle(self):
+
+        # Local variables
+        input = self.request.input
+
+        return
         groups_manager = GroupsManager(self.server)
         member_list = groups_manager.get_member_list(input.group_type, input.group_id)
         self.response.payload = dumps(member_list)

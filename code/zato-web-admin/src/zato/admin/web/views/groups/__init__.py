@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from json import dumps
 from operator import attrgetter
+from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseBadRequest
@@ -206,32 +207,25 @@ def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
 @method_allowed('POST')
 def members_action(req:'any_', action:'str', group_id:'str', id_list:'str') -> 'HttpResponse':
 
-    print()
-    print(111, action)
-    print(222, group_id)
-    print(333, id_list)
-    print()
-
-    return HttpResponse(r'{}', content_type='application/javascript')
-
     # Local variables
-    template_name = 'zato/groups/members.html'
+    id_list = id_list.split(',')
+    id_list = [elem.strip() for elem in id_list]
 
-    # Obtain an initial list of members for this group
-    member_list = get_member_list(req, group_type, group_id)
-
-    # Obtain an initial list of security definitions
-    security_list = _get_security_list(req)
-
-    # .. build the return data for the template ..
-    return_data = {
-        'cluster_id': req.zato.cluster_id,
-        'member_list': member_list,
-        'security_list': security_list,
-    }
-
-    # .. and return everything to our caller.
-    return TemplateResponse(req, template_name, return_data)
+    # Invoke the remote service ..
+    try:
+        _ = req.zato.client.invoke('dev.groups.edit-member-list', {
+            'action': action,
+            'group_id': group_id,
+            'id_list': id_list
+        })
+    except Exception:
+        response = format_exc()
+        response_class = HttpResponseBadRequest
+    else:
+        response = ''
+        response_class = HttpResponse
+    finally:
+        return response_class(response, content_type='text/plain')
 
 # ################################################################################################################################
 # ################################################################################################################################
