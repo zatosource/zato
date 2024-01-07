@@ -201,3 +201,37 @@ def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
     return TemplateResponse(req, template_name, return_data)
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def members_action(req:'any_', action:'str', group_id:'str', id_list:'str') -> 'HttpResponse':
+
+    print()
+    print(111, group_id)
+    print(222, id_list)
+    print(333, cluster_id)
+    print()
+
+    zzz
+
+    # Local variables
+    template_name = 'zato/groups/members.html'
+
+    # Obtain an initial list of members for this group
+    member_list = get_member_list(req, group_type, group_id)
+
+    # Obtain an initial list of security definitions
+    security_list = _get_security_list(req)
+
+    # .. build the return data for the template ..
+    return_data = {
+        'cluster_id': req.zato.cluster_id,
+        'member_list': member_list,
+        'security_list': security_list,
+    }
+
+    # .. and return everything to our caller.
+    return TemplateResponse(req, template_name, return_data)
+
+# ################################################################################################################################
+# ################################################################################################################################
