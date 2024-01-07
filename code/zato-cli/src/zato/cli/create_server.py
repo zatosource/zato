@@ -310,7 +310,10 @@ sample_key=sample_value
 
 # ################################################################################################################################
 
-pickup_conf = """[json]
+pickup_conf = """#[hot-deploy.user.local-dev]
+#pickup_from=/uncomment/this/stanza/to/enable/a/custom/location
+
+[json]
 pickup_from=./pickup/incoming/json
 move_processed_to=./pickup/processed/json
 patterns=*.json
