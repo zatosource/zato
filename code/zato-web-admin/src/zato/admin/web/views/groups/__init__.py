@@ -193,14 +193,38 @@ def _get_member_list(req:'any_', group_type:'str', group_id:'int') -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _filter_out_members_from_security_list(security_list:'anylist', member_list:'anylist') -> 'anylist':
+
+    out:'anylist' = []
+
+    for sec_item in security_list:
+        for member in member_list:
+            if sec_item.id == member.security_id:
+                break
+        else:
+            out.append(sec_item)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('POST')
 def get_security_list(req:'any_') -> 'HttpResponse':
 
     sec_type = req.GET.get('sec_type')
     query = req.GET.get('query')
 
-    sec_list = _get_security_list(req, sec_type, query)
-    data = dumps(sec_list)
+    group_type = req.GET.get('group_type')
+    group_id = req.GET.get('group_id')
+
+    member_list = _get_member_list(req, group_type, group_id)
+    security_list = _get_security_list(req, sec_type, query)
+
+    security_list = _filter_out_members_from_security_list(security_list, member_list)
+
+    data = dumps(security_list)
+
     return HttpResponse(data, content_type='application/javascript')
 
 # ################################################################################################################################
@@ -221,7 +245,7 @@ def get_member_list(req:'any_') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('GET')
-def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
+def manage_group_members(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
 
     # Local variables
     template_name = 'zato/groups/members.html'
@@ -235,7 +259,10 @@ def view(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
     # Obtain an initial list of security definitions
     security_list = _get_security_list(req)
 
-    # .. build the return data for the template ..
+    # Filter out security definitions with members that already exist in the current group
+    security_list = _filter_out_members_from_security_list(security_list, member_list)
+
+    # Build the return data for the template ..
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'group_type': group_type,
