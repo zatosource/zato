@@ -23,38 +23,15 @@ $(document).ready(function() {
 
     $("#groups-form").on("change", function(e) {
 
+        let group_type = $("#group_type").val()
         let group_id = $("#groups-form-group-id").val()
-        $.fn.zato.groups.members.on_groups_form_changed(group_id)
+
+        $.fn.zato.groups.members.on_groups_form_changed(group_type, group_id)
         e.preventDefault();
     });
 
 })
 
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.groups.members.on_groups_form_changed = function(group_id) {
-
-    var callback = function(data, status) {
-        var success = status == "success" || status == "parsererror";
-        if(success) {
-            $.fn.zato.user_message(true, status + " " + data.responseText);
-            // $.fn.zato.groups.members.populate_member_list
-        }
-        else {
-            $.fn.zato.user_message(false, status + " " + data.responseText);
-        }
-    }
-
-    var action = is_add ? "add" : "remove";
-    let template = "/zato/groups/members/action/{0}/group/{1}/id-list/{2}/";
-    let url = String.format(template, action, group_id, item_id_list);
-    let data = "";
-    let data_type = "json";
-    let suppress_user_message = true;
-
-    $.fn.zato.post(url, callback, data, data_type, suppress_user_message);
-
-}
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -208,6 +185,29 @@ $.fn.zato.groups.members.on_search_form_submitted = function(sec_type, query) {
     }
 
     let url = String.format("/zato/groups/get-security-list/?sec_type={0}&query={1}", sec_type, query);
+    let data = "";
+    let data_type = "json";
+    let suppress_user_message = true;
+
+    $.fn.zato.post(url, callback, data, data_type, suppress_user_message);
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.members.on_groups_form_changed = function(group_type, group_id) {
+
+    var callback = function(data, status) {
+        var success = status == "success";
+        if(success) {
+            var data = $.parseJSON(data.responseText)
+            $.fn.zato.groups.members.populate_member_list(data);
+        }
+        else {
+            $.fn.zato.user_message(false, data.responseText);
+        }
+    }
+
+    let url = String.format("/zato/groups/get-member-list/?group_type={0}&group_id={1}", group_type, group_id);
     let data = "";
     let data_type = "json";
     let suppress_user_message = true;

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -25,7 +25,7 @@ from zato.common.util.sql import get_dict_with_opaque
 
 if 0:
     from sqlalchemy.orm import Session as SASession
-    from zato.common.typing_ import any_, dictlist, strdict, strnone, type_
+    from zato.common.typing_ import any_, dictlist, intnone, strdict, strnone, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,7 +83,7 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def get_list(self, type_:'strnone'=None, subtype:'strnone'=None, *, parent_object_id:'strnone'=None) -> 'dictlist':
+    def get_list(self, type_:'strnone'=None, subtype:'strnone'=None, *, parent_object_id:'intnone'=None) -> 'dictlist':
 
         # Local variables
         type_ = type_ or self.type_
