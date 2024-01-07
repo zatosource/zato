@@ -143,7 +143,7 @@ class GroupsManager:
             sec_info = item['name']
             sec_info = sec_info.split('-')
 
-            sec_type, security_id = sec_info
+            sec_type, security_id, _ignored_sql_group_id = sec_info
             security_id = int(security_id)
 
             if sec_type == SEC_DEF_TYPE.BASIC_AUTH:
@@ -169,9 +169,6 @@ class GroupsManager:
 
     def add_members_to_group(self, group_id:'int', member_id_list:'strlist') -> 'None':
 
-        self
-        self
-
         # Work in a new SQL transaction ..
         with closing(self.server.odb.session()) as session:
 
@@ -181,8 +178,11 @@ class GroupsManager:
             # .. do add the members to the group now ..
             for member_id in member_id_list:
 
+                # This is a composite name because each such name has to be unique in the database
+                name = f'{member_id}-{group_id}'
+
                 insert = wrapper.create(
-                    member_id, '',
+                    name, '',
                     Groups.Type.Group_Member,
                     Groups.Type.API_Credentials,
                     parent_object_id=group_id)
