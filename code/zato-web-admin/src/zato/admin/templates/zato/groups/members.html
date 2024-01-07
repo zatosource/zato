@@ -46,11 +46,13 @@
             <div class="column-body left">
                 <div id="listing-left" class="listing">
                     {% for item in security_list %}
-                        <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item left">
-                            <div class="sec-type">{{ item.sec_type_name }}</div>
-                            <div class="sec-name">{{ item.security_name|safe }}</a></div>
-                            <div class="handle"></div>
-                        </div>
+                    <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item left">
+                        <div class="sec-type">{{ item.sec_type_name }}</div>
+                        <div class="sec-name">{{ item.security_name|safe }}</a></div>
+                        <div class="handle"></div>
+                    </div>
+                    {% empty %}
+                        <div id="listing-left-empty">No results</div>
                     {% endfor %}
                 </div>
             </div>
@@ -74,18 +76,16 @@
         </div>
         <div class="column-body right">
             <div id="listing-right" class="listing">
-                <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item right">
-                    <div class="sec-type">api key{{ item.sec_type|replace_in_string:"_, -" }}</div>
-                    <div class="sec-name"><a href="#">#1</a></div>
-                    <div class="sec-username">{% if False %}{{ item.username }}{% endif %}</div>
-                    <div class="handle"></div>
-                </div>
+                {% for item in group_list %}
                 <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item right">
                     <div class="sec-type">basic auth{{ item.sec_type|replace_in_string:"_, -" }}</div>
                     <div class="sec-name"><a href="#">#2</a></div>
                     <div class="sec-username">{% if False %}{{ item.username }}{% endif %}</div>
                     <div class="handle"></div>
                 </div>
+                {% empty %}
+                    <div id="listing-right-empty">No members in group</div>
+                {% endfor %}
             </div>
         </div>
     </div>
