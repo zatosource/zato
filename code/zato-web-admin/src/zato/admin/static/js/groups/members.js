@@ -184,7 +184,11 @@ $.fn.zato.groups.members.on_search_form_submitted = function(sec_type, query) {
         }
     }
 
-    let url = String.format("/zato/groups/get-security-list/?sec_type={0}&query={1}", sec_type, query);
+    let group_type = $("#group_type").val()
+    let group_id = $("#groups-form-group-id").val()
+
+    let template = "/zato/groups/get-security-list/?sec_type={0}&query={1}&group_type={2}&group_id={3}"
+    let url = String.format(template, sec_type, query, group_type, group_id);
     let data = "";
     let data_type = "json";
     let suppress_user_message = true;

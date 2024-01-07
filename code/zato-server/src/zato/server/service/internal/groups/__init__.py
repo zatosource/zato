@@ -156,6 +156,7 @@ class GroupsManager:
             sec_config = get_sec_func(security_id)
 
             item['name'] = sec_config['name']
+            item['security_id'] = sec_config['id']
             item['sec_type'] = sec_type
 
         # .. populate our response ..
