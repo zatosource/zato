@@ -247,12 +247,6 @@ def members_action(req:'any_', action:'str', group_id:'str', member_id_list:'str
     member_id_list = member_id_list.split(',') # type: ignore
     member_id_list = [elem.strip() for elem in member_id_list] # type: ignore
 
-    print()
-    print(111, action)
-    print(222, group_id)
-    print(333, member_id_list)
-    print()
-
     # Invoke the remote service ..
     try:
         _ = req.zato.client.invoke('dev.groups.edit-member-list', {
@@ -267,7 +261,7 @@ def members_action(req:'any_', action:'str', group_id:'str', member_id_list:'str
         response = ''
         response_class = HttpResponse
     finally:
-        return response_class(response, content_type='text/plain')
+        return response_class(response, content_type='text/plain') # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
