@@ -101,18 +101,24 @@ $.fn.zato.groups.members.remove_listing_right_empty = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.groups.members.populate_list = function(security_list) {
+$.fn.zato.groups.members.populate_list = function(
+    item_list,
+    listing_id,
+    item_list_class,
+    add_listing_empty_func,
+    remove_listing_empty_func,
+) {
 
     // First, we always remove any items already displayed
-    $(".list-group-item.left").remove();
-    $.fn.zato.groups.members.remove_listing_left_empty();
+    $(".list-group-item." + item_list_class).remove();
+    remove_listing_empty_func();
 
     // We go here if we have something to show ..
-    if(security_list.length) {
+    if(item_list.length) {
 
-        var listing_left = $("#listing-left");
+        var listing = $("#" + listing_id);
 
-        $.each(security_list, function(idx, elem) {
+        $.each(item_list, function(idx, elem) {
 
             //
             // Root item div elem
@@ -121,7 +127,7 @@ $.fn.zato.groups.members.populate_list = function(security_list) {
             let div_item_id = String.format("{0}-{1}", elem.sec_type, elem.id);
 
             div_item.attr("id", div_item_id);
-            div_item.attr("class", "list-group-item left");
+            div_item.attr("class", "list-group-item " + item_list_class);
 
             //
             // Sec type div elem
@@ -149,7 +155,7 @@ $.fn.zato.groups.members.populate_list = function(security_list) {
             let div_handle = $("<div/>");
             div_handle.attr("class", "handle");
 
-            listing_left.append(div_item);
+            listing.append(div_item);
             div_item.append(div_sec_type);
             div_item.append(div_sec_name);
             div_sec_name.append(a_sec_name);
@@ -159,13 +165,17 @@ $.fn.zato.groups.members.populate_list = function(security_list) {
     }
     // .. we go here if we have no results to show.
     else {
-        $.fn.zato.groups.members.add_listing_left_empty();
+        add_listing_empty_func();
     };
 }
 
 $.fn.zato.groups.members.populate_security_list = function(security_list) {
-    let func = $.fn.zato.groups.members.populate_list;
-    func(security_list);
+    let listing_id = "listing-left";
+    let item_list_class = "left";
+    let main_func = $.fn.zato.groups.members.populate_list;
+    let add_listing_empty_func = $.fn.zato.groups.members.add_listing_left_empty;
+    let remove_listing_empty_func = $.fn.zato.groups.members.remove_listing_left_empty;
+    main_func(security_list, listing_id, item_list_class, add_listing_empty_func, remove_listing_empty_func);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
