@@ -204,14 +204,20 @@ $.fn.zato.groups.members.on_groups_form_changed = function(group_type, group_id)
         var success = status == "success";
         if(success) {
             var data = $.parseJSON(data.responseText)
+
+            let sec_type = $("#search-form-sec-type").val()
+            let query = $("#search-form-query").val()
+
             $.fn.zato.groups.members.populate_member_list(data);
+            $.fn.zato.groups.members.on_search_form_submitted(sec_type, query)
         }
         else {
             $.fn.zato.user_message(false, data.responseText);
         }
     }
 
-    let url = String.format("/zato/groups/get-member-list/?group_type={0}&group_id={1}", group_type, group_id);
+    let template = "/zato/groups/get-member-list/?group_type={0}&group_id={1}";
+    let url = String.format(template, group_type, group_id);
     let data = "";
     let data_type = "json";
     let suppress_user_message = true;
