@@ -122,43 +122,16 @@ def get_group_list(req:'any_', group_type:'str') -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_member_list(req:'any_', group_type:'str', group_id:'int') -> 'anylist':
+def _extract_items_from_response(req:'any_', response:'any_') -> 'anylist':
 
-    # Obtain an initial list of members for this group ..
-    response = req.zato.client.invoke('dev.groups.get-member-list', {
-        'group_type': group_type,
-        'group_id': group_id,
-    })
-
-    # .. extract the business data ..
-    out = response.data
-
-    # .. and return it to our caller.
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None, query:'strnone'=None) -> 'anylist':
+    # Type hints
+    item:'any_'
 
     # Our response to produce
     out:'anylist' = []
 
-    # Handle optional parameters
-    sec_type = sec_type or ['apikey', 'basic_auth']
-
-    # Obtain an initial list of members for this group ..
-    response = req.zato.client.invoke('zato.security.get-list', {
-        'sec_type': sec_type,
-        'query': query,
-        'paginate': False,
-    })
-
-    # .. extract the business data ..
-    data = response.data
-
     # .. preprocess all the items received ..
-    for item in data:
+    for item in response.data:
         name = item['name']
         if name in {'pubsub', 'ide_publisher', 'pubapi'}:
             continue
@@ -175,6 +148,44 @@ def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None, query:'str
 
     # .. sort it in a human-readable way ..
     out.sort(key=attrgetter('sec_type', 'name'))
+
+    # .. and return it to our caller.
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None, query:'strnone'=None) -> 'anylist':
+
+    # Handle optional parameters
+    sec_type = sec_type or ['apikey', 'basic_auth']
+
+    # Obtain an initial list of members for this group ..
+    response = req.zato.client.invoke('zato.security.get-list', {
+        'sec_type': sec_type,
+        'query': query,
+        'paginate': False,
+    })
+
+    # .. extract the business data ..
+    out = _extract_items_from_response(req, response)
+
+    # .. and return it to our caller.
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_member_list(req:'any_', group_type:'str', group_id:'int') -> 'anylist':
+
+    # Obtain an initial list of members for this group ..
+    response = req.zato.client.invoke('dev.groups.get-member-list', {
+        'group_type': group_type,
+        'group_id': group_id,
+    })
+
+    # .. extract the business data ..
+    out = _extract_items_from_response(req, response)
 
     # .. and return it to our caller.
     return out

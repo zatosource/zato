@@ -1422,6 +1422,11 @@ class WorkerStore(_WorkerStoreBase):
         """
         return self.request_dispatcher.url_data.apikey_get(name)
 
+    def apikey_get_by_id(self, def_id:'int') -> 'bunch_':
+        """ Same as apikey_get but by definition ID.
+        """
+        return self.request_dispatcher.url_data.apikey_get_by_id(def_id)
+
     def on_broker_msg_SECURITY_APIKEY_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates a new API key security definition.
         """
