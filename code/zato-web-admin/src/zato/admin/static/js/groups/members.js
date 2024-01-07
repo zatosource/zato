@@ -37,7 +37,8 @@ $.fn.zato.groups.members.on_groups_form_changed = function(group_id) {
     var callback = function(data, status) {
         var success = status == "success" || status == "parsererror";
         if(success) {
-            // $.fn.zato.user_message(true, status + " " + data.responseText);
+            $.fn.zato.user_message(true, status + " " + data.responseText);
+            // $.fn.zato.groups.members.populate_member_list
         }
         else {
             $.fn.zato.user_message(false, status + " " + data.responseText);
@@ -169,13 +170,26 @@ $.fn.zato.groups.members.populate_list = function(
     };
 }
 
-$.fn.zato.groups.members.populate_security_list = function(security_list) {
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.members.populate_security_list = function(item_list) {
     let listing_id = "listing-left";
     let item_list_class = "left";
     let main_func = $.fn.zato.groups.members.populate_list;
     let add_listing_empty_func = $.fn.zato.groups.members.add_listing_left_empty;
     let remove_listing_empty_func = $.fn.zato.groups.members.remove_listing_left_empty;
-    main_func(security_list, listing_id, item_list_class, add_listing_empty_func, remove_listing_empty_func);
+    main_func(item_list, listing_id, item_list_class, add_listing_empty_func, remove_listing_empty_func);
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.members.populate_member_list = function(item_list) {
+    let listing_id = "listing-right";
+    let item_list_class = "right";
+    let main_func = $.fn.zato.groups.members.populate_list;
+    let add_listing_empty_func = $.fn.zato.groups.members.add_listing_right_empty;
+    let remove_listing_empty_func = $.fn.zato.groups.members.remove_listing_right_empty;
+    main_func(item_list, listing_id, item_list_class, add_listing_empty_func, remove_listing_empty_func);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
