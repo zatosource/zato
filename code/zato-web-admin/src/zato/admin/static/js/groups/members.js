@@ -185,12 +185,12 @@ $.fn.zato.groups.add_sortable = function(elem_id) {
 $.fn.zato.groups.on_group_memebers_moved = function(item_id_list, group_id, is_add) {
 
     var callback = function(data, status) {
-        var success = status == "success";
+        var success = status == "success" || status == "parsererror";
         if(success) {
             // $.fn.zato.user_message(true, status + " " + data.responseText);
         }
         else {
-            $.fn.zato.user_message(false, data.responseText);
+            $.fn.zato.user_message(false, status + " " + data.responseText);
         }
     }
 
@@ -202,7 +202,6 @@ $.fn.zato.groups.on_group_memebers_moved = function(item_id_list, group_id, is_a
     let suppress_user_message = true;
 
     $.fn.zato.post(url, callback, data, data_type, suppress_user_message);
-
 
 }
 
