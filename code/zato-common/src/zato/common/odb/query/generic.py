@@ -25,7 +25,7 @@ from zato.common.util.sql import get_dict_with_opaque
 
 if 0:
     from sqlalchemy.orm import Session as SASession
-    from zato.common.typing_ import any_, dictlist, intnone, strdict, strnone, type_
+    from zato.common.typing_ import any_, dictlist, intnone, strdict, strintnone, strnone, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -201,10 +201,33 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def delete(self, id:'int') -> 'any_':
-        """ Creates a new row for input data.
+    def delete_by_id(self, id:'int') -> 'any_':
+        """ Deletes an existing object by its ID.
         """
         query = delete(ModelGenericObjectTable).where(ModelGenericObjectTable.c.id==id)
+        return query
+
+# ################################################################################################################################
+
+    def delete_by_name(self, name:'str', *, parent_object_id:'strintnone'=None) -> 'any_':
+        """ Deletes an existing object by its and and, potentially, other attributes.
+        """
+
+        # This is always used ..
+        criteria = [ModelGenericObjectTable.c.name==name]
+
+        # .. this is optional ..
+        if parent_object_id:
+            if parent_object_id:
+                criteria.append(ModelGenericObjectTable.c.parent_object_id==parent_object_id)
+
+        # .. regardless of what we had, build an 'and' operator of it ..
+        criteria = and_(*criteria)
+
+        # .. build a query object now ..
+        query = delete(ModelGenericObjectTable).where(criteria)
+
+        # .. and return it to our caller.
         return query
 
 # ################################################################################################################################

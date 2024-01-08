@@ -11,8 +11,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import closing
 from json import dumps
 
+# SQLAlchemy
+from sqlalchemy import and_, func, select
+
 # Zato
 from zato.common.api import Groups, SEC_DEF_TYPE
+from zato.common.odb.model import GenericObject as ModelGenericObject
 from zato.common.odb.query.generic import GroupsWrapper
 from zato.server.service import AsIs, Service
 
@@ -20,8 +24,10 @@ from zato.server.service import AsIs, Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, intnone, strlist
+    from zato.common.typing_ import any_, anydict, anylist, intnone, strlist
     from zato.server.base.parallel import ParallelServer
+
+ModelGenericObjectTable:'any_' = ModelGenericObject.__table__
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,7 +93,7 @@ class GroupsManager:
             wrapper = GroupsWrapper(session, self.cluster_id)
 
             # .. do delete the group ..
-            delete = wrapper.delete(group_id)
+            delete = wrapper.delete_by_id(group_id)
 
             # .. commit the changes now.
             session.execute(delete)
@@ -156,6 +162,7 @@ class GroupsManager:
             sec_config = get_sec_func(security_id)
 
             item['name'] = sec_config['name']
+            item['id'] = sec_config['id']
             item['security_id'] = sec_config['id']
             item['sec_type'] = sec_type
 
@@ -163,6 +170,34 @@ class GroupsManager:
         out[:] = results
 
         # .. and return the output to our caller.
+        return out
+
+# ################################################################################################################################
+
+    def get_member_count(self, group_type:'str') -> 'anydict':
+
+        # Our response to produce
+        out:'anydict' = {}
+
+        # Work in a new SQL transaction ..
+        with closing(self.server.odb.session()) as session:
+
+            q = select([
+                ModelGenericObjectTable.c.parent_object_id,
+                func.count(ModelGenericObjectTable.c.parent_object_id)
+                ]).\
+                where(and_(
+                    ModelGenericObjectTable.c.type_ == Groups.Type.Group_Member,
+                    ModelGenericObjectTable.c.subtype == group_type,
+                )).\
+                group_by(ModelGenericObjectTable.c.parent_object_id)
+
+            result:'any_' = session.execute(q).fetchall()
+
+            for item in result:
+                group_id, member_count = item
+                out[group_id] = member_count
+
         return out
 
 # ################################################################################################################################
@@ -195,8 +230,24 @@ class GroupsManager:
 # ################################################################################################################################
 
     def remove_members_from_group(self, group_id:'str', member_id_list:'strlist') -> 'None':
-        self
-        self
+
+        # Work in a new SQL transaction ..
+        with closing(self.server.odb.session()) as session:
+
+            # .. build and object that will wrap access to the SQL database ..
+            wrapper = GroupsWrapper(session, self.cluster_id)
+
+            # .. delete members from the group now ..
+            for member_id in member_id_list:
+
+                # This is a composite name because each such name has to be unique in the database
+                name = f'{member_id}-{group_id}'
+
+                delete = wrapper.delete_by_name(name, parent_object_id=group_id)
+                session.execute(delete)
+
+            # .. and commit the changes.
+            session.commit()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -275,7 +326,7 @@ class Delete(Service):
 # ################################################################################################################################
 
 class GetMemberList(Service):
-    """ Returns current members of a group..
+    """ Returns current members of a group.
     """
     name = 'dev.groups.get-member-list'
     input:'any_' = 'group_type', 'group_id'
@@ -288,6 +339,24 @@ class GetMemberList(Service):
         groups_manager = GroupsManager(self.server)
         member_list = groups_manager.get_member_list(input.group_type, input.group_id)
         self.response.payload = dumps(member_list)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetMemberCount(Service):
+    """ Returns information about how many members are in each group.
+    """
+    name = 'dev.groups.get-member-count'
+    input:'any_' = 'group_type'
+
+    def handle(self):
+
+        # Local variables
+        input = self.request.input
+
+        groups_manager = GroupsManager(self.server)
+        member_count = groups_manager.get_member_count(input.group_type)
+        self.response.payload = dumps(member_count)
 
 # ################################################################################################################################
 # ################################################################################################################################

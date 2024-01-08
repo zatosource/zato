@@ -61,7 +61,16 @@ class Index(_Index):
         return return_data
 
     def handle(self):
+
+        # Get information about how many members are in each group ..
+        response = self.req.zato.client.invoke('dev.groups.get-member-count', {
+            'group_type': Groups.Type.API_Credentials,
+        })
+
+        member_count = response.data
+
         return {
+            'member_count': member_count,
             'create_form': CreateForm(self.req),
             'edit_form': EditForm(self.req, prefix='edit'),
         }
