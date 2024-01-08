@@ -24,6 +24,7 @@ from zato.server.service import AsIs, Service
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.orm import Session as SASession
     from zato.common.typing_ import any_, anydict, anylist, intnone, strlist
     from zato.server.base.parallel import ParallelServer
 
@@ -92,11 +93,15 @@ class GroupsManager:
             # .. build and object that will wrap access to the SQL database ..
             wrapper = GroupsWrapper(session, self.cluster_id)
 
-            # .. do delete the group ..
-            delete = wrapper.delete_by_id(group_id)
+            # .. delete the group ..
+            delete_group = wrapper.delete_by_id(group_id)
+            session.execute(delete_group)
 
-            # .. commit the changes now.
-            session.execute(delete)
+            # .. remove its members in bulk ..
+            remove_members = wrapper.delete_by_parent_object_id(group_id)
+            session.execute(remove_members)
+
+            # .. and commit the changes now.
             session.commit()
 
 # ################################################################################################################################
