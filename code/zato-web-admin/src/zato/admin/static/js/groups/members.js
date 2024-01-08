@@ -126,7 +126,10 @@ $.fn.zato.groups.members.populate_list = function(
             // Sec name div elem - link
             //
             let a_sec_name = $("<a/>");
-            a_sec_name.attr("href", "QQQ");
+            let href_sec_type = elem.sec_type == "basic_auth" ? "basic-auth" : "apikey";
+            let href_template = "/zato/security/{0}/?cluster=1&query={1}";
+            let href = String.format(href_template, href_sec_type, elem.name)
+            a_sec_name.attr("href", href);
             a_sec_name.text(elem.name);
 
             //
