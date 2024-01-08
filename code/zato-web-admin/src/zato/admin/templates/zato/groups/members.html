@@ -63,7 +63,7 @@
             <form id="groups-form" action="#">
                 <select id="groups-form-group-id">
                     {% for item in group_list %}
-                        <option value="{{ item.id }}">{{ item.name }}</option>
+                        <option value="{{ item.id }}" {% if item.id == group_id %}selected="selected"{% endif %}>{{ item.name }}</option>
                     {% endfor %}
                 </select>
             </form>
@@ -78,7 +78,7 @@
         <div class="column-body right">
             <div id="listing-right" class="listing">
                 {% for item in member_list %}
-                <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item right">
+                <div id="{{ item.sec_type }}-{{ item.security_id }}" class="list-group-item right">
                     <div class="sec-type">{{ item.sec_type_name }}</div>
                     <div class="sec-name">{{ item.security_name|safe }}</a></div>
                     <div class="handle"></div>
