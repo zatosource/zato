@@ -24,9 +24,11 @@ from zato.server.service import AsIs, Service
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.orm import Session as SASession
     from zato.common.typing_ import any_, anydict, anylist, intnone, strlist
     from zato.server.base.parallel import ParallelServer
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 ModelGenericObjectTable:'any_' = ModelGenericObject.__table__
 
@@ -167,7 +169,6 @@ class GroupsManager:
             sec_config = get_sec_func(security_id)
 
             item['name'] = sec_config['name']
-            item['id'] = sec_config['id']
             item['security_id'] = sec_config['id']
             item['sec_type'] = sec_type
 
@@ -184,12 +185,18 @@ class GroupsManager:
         # Our response to produce
         out:'anydict' = {}
 
+        # By default, assume that there are no members in any group
+        group_list = self.get_group_list(group_type)
+        for item in group_list:
+            group_id = item['id']
+            out[group_id] = 0
+
         # Work in a new SQL transaction ..
         with closing(self.server.odb.session()) as session:
 
             q = select([
                 ModelGenericObjectTable.c.parent_object_id,
-                func.count(ModelGenericObjectTable.c.parent_object_id)
+                func.count(ModelGenericObjectTable.c.parent_object_id),
                 ]).\
                 where(and_(
                     ModelGenericObjectTable.c.type_ == Groups.Type.Group_Member,
