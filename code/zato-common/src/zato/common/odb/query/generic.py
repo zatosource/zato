@@ -209,6 +209,14 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
+    def delete_by_parent_object_id(self, parent_object_id:'int') -> 'any_':
+        """ Deletes objects by their parent object's ID.
+        """
+        query = delete(ModelGenericObjectTable).where(ModelGenericObjectTable.c.parent_object_id==parent_object_id)
+        return query
+
+# ################################################################################################################################
+
     def delete_by_name(self, name:'str', *, parent_object_id:'strintnone'=None) -> 'any_':
         """ Deletes an existing object by its and and, potentially, other attributes.
         """
