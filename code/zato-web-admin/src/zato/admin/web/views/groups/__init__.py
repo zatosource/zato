@@ -254,9 +254,10 @@ def get_member_list(req:'any_') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('GET')
-def manage_group_members(req:'any_', group_type:'str', group_id:'int') -> 'HttpResponse':
+def manage_group_members(req:'any_', group_type:'str', group_id:'str | int') -> 'HttpResponse':
 
     # Local variables
+    group_id = int(group_id)
     template_name = 'zato/groups/members.html'
 
     # Get a list of all groups that exist
@@ -275,6 +276,7 @@ def manage_group_members(req:'any_', group_type:'str', group_id:'int') -> 'HttpR
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'group_type': group_type,
+        'group_id': group_id,
         'group_list': group_list,
         'member_list': member_list,
         'security_list': security_list,

@@ -85,6 +85,7 @@ $.fn.zato.groups.members.populate_list = function(
     item_list_class,
     add_listing_empty_func,
     remove_listing_empty_func,
+    use_security_id_for_id,
 ) {
 
     // First, we always remove any items already displayed
@@ -101,8 +102,9 @@ $.fn.zato.groups.members.populate_list = function(
             //
             // Root item div elem
             //
+            let elem_id = use_security_id_for_id ? elem.security_id : elem.id;
             let div_item = $("<div/>");
-            let div_item_id = String.format("{0}-{1}", elem.sec_type, elem.id);
+            let div_item_id = String.format("{0}-{1}", elem.sec_type, elem_id);
 
             div_item.attr("id", div_item_id);
             div_item.attr("class", "list-group-item " + item_list_class);
@@ -155,7 +157,8 @@ $.fn.zato.groups.members.populate_security_list = function(item_list) {
     let main_func = $.fn.zato.groups.members.populate_list;
     let add_listing_empty_func = $.fn.zato.groups.members.add_listing_left_empty;
     let remove_listing_empty_func = $.fn.zato.groups.members.remove_listing_left_empty;
-    main_func(item_list, listing_id, item_list_class, add_listing_empty_func, remove_listing_empty_func);
+    let use_security_id_for_id = false;
+    main_func(item_list, listing_id, item_list_class, add_listing_empty_func, remove_listing_empty_func, use_security_id_for_id);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -166,7 +169,8 @@ $.fn.zato.groups.members.populate_member_list = function(item_list) {
     let main_func = $.fn.zato.groups.members.populate_list;
     let add_listing_empty_func = $.fn.zato.groups.members.add_listing_right_empty;
     let remove_listing_empty_func = $.fn.zato.groups.members.remove_listing_right_empty;
-    main_func(item_list, listing_id, item_list_class, add_listing_empty_func, remove_listing_empty_func);
+    let use_security_id_for_id = true;
+    main_func(item_list, listing_id, item_list_class, add_listing_empty_func, remove_listing_empty_func, use_security_id_for_id);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
