@@ -152,6 +152,8 @@ $.fn.zato.http_soap.edit = function(id) {
 $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var row = '';
 
+    $.fn.zato.toggle_visible_hidden(".api-client-groups-options-block", false);
+
     if(include_tr) {
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
