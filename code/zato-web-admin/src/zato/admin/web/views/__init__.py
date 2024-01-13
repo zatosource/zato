@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -259,10 +259,6 @@ def get_security_groups_from_checkbox_list(params, prefix, field_name_prefix='ht
             item = item.replace(full_prefix, '')
             item = int(item)
             groups.append(item)
-
-    print()
-    print(333, groups)
-    print()
 
     return groups
 
@@ -955,4 +951,35 @@ def get_security_name_link(req, sec_type, sec_name, *, needs_type=True):
         sec_name = security_link
     return sec_name
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_group_list(req:'any_', group_type:'str', *, http_soap_channel_id:'str'='') -> 'anylist':
+
+    # Get a list of all the groups that exist
+    response = req.zato.client.invoke('dev.groups.get-list', {
+        'group_type': group_type,
+    })
+
+    # .. extract the business data ..
+    groups = response.data
+
+    # .. if we have a channel ID on input, we need to indicate which groups are assigned to it ..
+    if http_soap_channel_id:
+        http_soap_channel = req.zato.client.invoke('zato.http-soap.get', {
+            'id': http_soap_channel_id,
+        })
+        http_soap_channel = http_soap_channel.data
+        http_soap_channel_security_groups = http_soap_channel['security_groups']
+
+        for item in groups:
+            if item.id in http_soap_channel_security_groups:
+                item.is_assigned = True
+            else:
+                item.is_assigned = False
+
+    # .. and return it to our caller.
+    return groups
+
+# ################################################################################################################################
 # ################################################################################################################################
