@@ -36,6 +36,8 @@ $(document).ready(function() {
     });
 })
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.data_table.after_populate = function() {
     $.each(['', 'edit-'], function(ignored, suffix) {
         var elem = $(String.format('#id_{0}serialization_type', suffix));
@@ -43,13 +45,64 @@ $.fn.zato.data_table.after_populate = function() {
     });
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.populate_groups = function(item_list) {
+
+    let item_html_prefix = "topic_checkbox_";
+    let id_field = "id";
+    let name_field = "name";
+    let is_taken_field = "is_subscribed";
+    let url_template = "/zato/pubsub/topic/?cluster={0}&query={1}";
+    let html_table_id = "multi-select-table";
+    let html_elem_id_selector = "#create-groups-multi-select-div";
+
+    $.fn.zato.populate_multi_checkbox(
+        item_list,
+        item_html_prefix,
+        id_field,
+        name_field,
+        is_taken_field,
+        url_template,
+        html_table_id,
+        html_elem_id_selector
+    );
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.populate_groups_callback = function(data, status) {
+    var success = status == 'success';
+    if(success) {
+        var item_list = $.parseJSON(data.responseText);
+        if(item_list.length) {
+            $.fn.zato.http_soap.populate_groups(item_list);
+        }
+        else {
+            alert(123)
+        }
+    }
+    else {
+        console.log(data.responseText);
+    }
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.http_soap.create = function(object_type) {
+
+    var url = String.format('/zato/http-soap/get-all-security-groups/zato-api-creds/');
+    $.fn.zato.post(url, $.fn.zato.http_soap.populate_groups_callback);
     $.fn.zato.data_table._create_edit('create', 'Create a new ' + object_type, null);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.http_soap.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the object', id);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var row = '';
@@ -247,12 +300,16 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.http_soap.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Object `{0}` deleted',
         'Are you sure you want to delete object `{0}`?',
         true);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.http_soap.reload_wsdl = function(id) {
 
@@ -266,9 +323,13 @@ $.fn.zato.http_soap.reload_wsdl = function(id) {
 
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.http_soap.data_table.toggle_sec_tls_ca_cert_id = function(suffix, is_suds) {
     $(String.format('#id_{0}sec_tls_ca_cert_id', suffix)).prop('disabled', is_suds);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.http_soap.data_table.on_serialization_change = function() {
 
@@ -276,3 +337,5 @@ $.fn.zato.http_soap.data_table.on_serialization_change = function() {
     var suffix = is_edit ? 'edit-' : '';
     $.fn.zato.http_soap.data_table.toggle_sec_tls_ca_cert_id(suffix, this.value == 'suds');
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
