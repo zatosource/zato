@@ -246,6 +246,28 @@ def get_security_id_from_select(params, prefix, field_name='security'):
 
 # ################################################################################################################################
 
+def get_security_groups_from_checkbox_list(params, prefix, field_name_prefix='http_soap_security_group_checkbox_'):
+
+    # Our response to produce
+    groups = []
+
+    # Local variables
+    full_prefix = prefix + field_name_prefix
+
+    for item in params:
+        if item.startswith(full_prefix):
+            item = item.replace(full_prefix, '')
+            item = int(item)
+            groups.append(item)
+
+    print()
+    print(333, groups)
+    print()
+
+    return groups
+
+# ################################################################################################################################
+
 def build_sec_def_link(cluster_id, sec_type, sec_name):
 
     sec_type_name = SEC_DEF_TYPE_NAME[sec_type]
