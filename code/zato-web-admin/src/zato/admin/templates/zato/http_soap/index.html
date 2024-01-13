@@ -349,7 +349,7 @@
                             {% endif %}
                         <td>
                             {% if item.security_group_count %}
-                                {{ item.security_group_count }} group{% if item.security_group_count == 0 or item.security_group_count > 1 %}s{% endif %}, {{ item.security_group_member_count }} client{% if item.security_group_count == 0 or item.security_group_count > 1 %}s{% endif %}
+                                {{ item.security_group_count }} group{% if item.security_group_count == 0 or item.security_group_count > 1 %}s{% endif %}, {{ item.security_group_member_count }} client{% if item.security_group_member_count == 0 or item.security_group_member_count > 1 %}s{% endif %}
                             {% else %}
                             <span class="form_hint">---</span>
                             {% endif %}
