@@ -17,11 +17,11 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
-from zato.admin.web.views import get_http_channel_security_id, get_security_id_from_select, \
-    get_security_groups_from_checkbox_list, get_tls_ca_cert_list, id_only_service, method_allowed, parse_response_data, \
-        SecurityList
+from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
+    get_security_id_from_select, get_security_groups_from_checkbox_list, get_tls_ca_cert_list, id_only_service, \
+        method_allowed, parse_response_data, SecurityList
 from zato.common.api import AuditLog, CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
-     generic_attrs, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
+     generic_attrs, Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
@@ -144,11 +144,31 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
 
 def _edit_create_response(req, id, verb, transport, connection, name): # type: ignore
 
+    groups = common_get_group_list(req, Groups.Type.API_Clients, http_soap_channel_id=id)
+
+    group_count = 0
+    group_member_count = 0
+
+    for item in groups:
+        if item.is_assigned:
+            group_count += 1
+            group_member_count += item.member_count
+
+    if (group_count == 0) or (group_count > 1):
+        group_count_suffix = 's'
+    else:
+        group_count_suffix = ''
+
+    if (group_member_count == 0) or (group_member_count > 1):
+        group_member_count_suffix = 's'
+    else:
+        group_member_count_suffix = ''
+
     return_data = {
         'id': id,
         'transport': transport,
-        'message': 'Successfully {} the {} {} `{}`, check server logs for details'.format(
-            verb, TRANSPORT[transport], CONNECTION[connection], name),
+        'message': 'Successfully {} {} {} `{}`'.format(verb, TRANSPORT[transport], CONNECTION[connection], name),
+        'security_groups_info': f'{group_count} group{group_count_suffix}, {group_member_count} client{group_member_count_suffix}'
     }
 
     # If current item has a cache assigned, provide its human-friendly name to the caller

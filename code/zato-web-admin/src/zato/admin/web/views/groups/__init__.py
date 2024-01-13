@@ -18,7 +18,8 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.groups import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, get_security_name_link, Index as _Index, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, get_group_list as common_get_group_list,  \
+    get_security_name_link, Index as _Index, method_allowed
 from zato.common.api import Groups, SEC_DEF_TYPE_NAME
 from zato.common.model.groups import GroupObject
 
@@ -111,34 +112,6 @@ class Delete(_Delete):
     url_name = 'groups-delete'
     error_message = 'Could not delete groups'
     service_name = 'dev.groups.delete'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _get_group_list(req:'any_', group_type:'str', *, http_soap_channel_id:'str'='') -> 'anylist':
-
-    # Get a list of all the groups that exist
-    response = req.zato.client.invoke('dev.groups.get-list', {
-        'group_type': group_type,
-    })
-
-    # .. extract the business data ..
-    groups = response.data
-
-    # .. if we have a channel ID on input, we need to indicate which groups are assigned to it ..
-    if http_soap_channel_id:
-        http_soap_channel = req.zato.client.invoke('zato.http-soap.get', {
-            'id': http_soap_channel_id,
-        })
-        http_soap_channel = http_soap_channel.data
-        http_soap_channel_security_groups = http_soap_channel['security_groups']
-
-        for item in groups:
-            if item.id in http_soap_channel_security_groups:
-                item.is_assigned = True
-
-    # .. and return it to our caller.
-    return groups
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -271,7 +244,7 @@ def manage_group_members(req:'any_', group_type:'str', group_id:'str | int') -> 
     template_name = 'zato/groups/members.html'
 
     # Get a list of all groups that exist
-    group_list = _get_group_list(req, group_type)
+    group_list = common_get_group_list(req, group_type)
 
     # Obtain an initial list of members for this group
     member_list = _get_member_list(req, group_type, group_id)
@@ -329,7 +302,7 @@ def members_action(req:'any_', action:'str', group_id:'str', member_id_list:'str
 def get_group_list(req:'any_', group_type:'str') -> 'HttpResponse':
 
     http_soap_channel_id = req.GET.get('http_soap_channel_id')
-    group_list = _get_group_list(req, group_type, http_soap_channel_id=http_soap_channel_id)
+    group_list = common_get_group_list(req, group_type, http_soap_channel_id=http_soap_channel_id)
     data = dumps(group_list)
     return HttpResponse(data, content_type='application/javascript')
 
