@@ -100,7 +100,7 @@ class _BaseGet(AdminService):
                 'data_encoding', 'is_audit_log_sent_active', 'is_audit_log_received_active', \
                 Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
                 Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
-                'username', 'is_wrapper', 'wrapper_type', 'security_groups', 'security_group_count', \
+                'username', 'is_wrapper', 'wrapper_type', AsIs('security_groups'), 'security_group_count', \
                     'security_group_member_count'
 
 # ################################################################################################################################
@@ -129,6 +129,12 @@ class _BaseGet(AdminService):
             'group_count': 0,
             'member_count': 0,
         }
+
+        if security_groups := item.get('security_groups'):
+            for group_id in security_groups:
+                member_count = security_groups_member_count[group_id]
+                out['member_count'] += member_count
+                out['group_count'] += 1
 
         # .. now, return the response to our caller.
         return out
@@ -320,7 +326,7 @@ class Create(_CreateEdit):
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify', \
-            'is_wrapper', 'wrapper_type', 'username', 'password', 'security_groups'
+            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
         output_required = 'id', 'name'
         output_optional = 'url_path'
 
@@ -516,7 +522,7 @@ class Edit(_CreateEdit):
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'cluster_id', 'is_active', 'transport', 'tls_verify', \
-            'is_wrapper', 'wrapper_type', 'username', 'password', 'security_groups'
+            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
         output_optional = 'id', 'name'
 
     def handle(self):
