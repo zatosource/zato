@@ -146,7 +146,7 @@ class GroupsManager:
             # .. get all the results ..
             results = wrapper.get_list(
                 Groups.Type.Group_Member,
-                Groups.Type.API_Credentials,
+                Groups.Type.API_Clients,
                 parent_object_id=group_id
             )
 
@@ -231,7 +231,7 @@ class GroupsManager:
                 insert = wrapper.create(
                     name, '',
                     Groups.Type.Group_Member,
-                    Groups.Type.API_Credentials,
+                    Groups.Type.API_Clients,
                     parent_object_id=group_id)
 
                 session.execute(insert)

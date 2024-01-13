@@ -17,7 +17,7 @@ from django.http import HttpResponse, HttpResponseBadRequest
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
+from zato.admin.web.forms.groups import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, get_security_name_link, Index as _Index, method_allowed
 from zato.common.api import Groups, SEC_DEF_TYPE_NAME
 from zato.common.model.groups import GroupObject
@@ -71,8 +71,8 @@ class Index(_Index):
 
         return {
             'member_count': member_count,
-            'create_form': CreateForm(self.req),
-            'edit_form': EditForm(self.req, prefix='edit'),
+            'create_form': CreateForm(self.req.POST),
+            'edit_form': EditForm(self.req.POST, prefix='edit'),
         }
 
 # ################################################################################################################################

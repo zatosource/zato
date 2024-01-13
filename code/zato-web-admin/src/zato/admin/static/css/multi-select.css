@@ -1,10 +1,14 @@
-.multi-select-div {
+.multi-select-div
+ {
     overflow: scroll;
+    overflow-y: auto;
+    overflow-x: auto;
     height:130px;
-    background-color:#fff;
+    background-color:#f3f3f3;
 }
 
-.multi-select-input {
+.multi-select-input
+ {
     height:100%;
     width:100%;
     border:none;
@@ -13,6 +17,10 @@
 
 .multi-select-table td {
      vertical-align:bottom;
+}
+
+.multi-select-table td {
+    border: 0 !important;
 }
 
 .multi-select-table td input {
