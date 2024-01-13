@@ -59,6 +59,7 @@ $.fn.zato.http_soap.populate_groups = function(
     let url_template = "/zato/groups/group/zato-api-creds/?cluster=1&query={1}&highlight={2}";
     let html_table_id = "multi-select-table";
     let checkbox_field_name = "id";
+    let disable_if_is_taken = false;
 
     $.fn.zato.populate_multi_checkbox(
         item_list,
@@ -69,7 +70,8 @@ $.fn.zato.http_soap.populate_groups = function(
         url_template,
         html_table_id,
         html_elem_id_selector,
-        checkbox_field_name
+        checkbox_field_name,
+        disable_if_is_taken
     );
 }
 
@@ -78,6 +80,14 @@ $.fn.zato.http_soap.populate_groups = function(
 $.fn.zato.http_soap.create_populate_groups = function(item_list) {
     let item_html_prefix = "http_soap_security_group_checkbox_";
     let html_elem_id_selector = "#multi-select-div-create";
+    $.fn.zato.http_soap.populate_groups(item_list, item_html_prefix, html_elem_id_selector);
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.edit_populate_groups = function(item_list) {
+    let item_html_prefix = "edit-http_soap_security_group_checkbox_";
+    let html_elem_id_selector = "#multi-select-div-edit";
     $.fn.zato.http_soap.populate_groups(item_list, item_html_prefix, html_elem_id_selector);
 }
 
@@ -100,19 +110,40 @@ $.fn.zato.http_soap.create_populate_groups_callback = function(data, status) {
         console.log(data.responseText);
     }
 }
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.edit_populate_groups_callback = function(data, status) {
+    var success = status == 'success';
+    if(success) {
+        var item_list = $.parseJSON(data.responseText);
+        if(item_list.length) {
+            $.fn.zato.http_soap.edit_populate_groups(item_list);
+        }
+        else {
+            let elem = $("#multi-select-div-edit");
+            elem.removeClass("multi-select-div");
+            elem.html("No security groups found. Click to <a href='/zato/groups/group/zato-api-creds/?cluster=1' target='_blank'>create one</a>.");
+        }
+    }
+    else {
+        console.log(data.responseText);
+    }
+}
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.http_soap.create = function(object_type) {
 
-    var url = String.format('/zato/http-soap/get-all-security-groups/zato-api-creds/');
-    $.fn.zato.post(url, $.fn.zato.http_soap.create_populate_groups_callback);
+    var url = String.format('/zato/http-soap/get-security-groups/zato-api-creds/');
+    $.fn.zato.post(url, $.fn.zato.http_soap.create_populate_groups_callback, '', '', true);
     $.fn.zato.data_table._create_edit('create', 'Create a new ' + object_type, null);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.http_soap.edit = function(id) {
+    var url = String.format('/zato/http-soap/get-security-groups/zato-api-creds/?http_soap_channel_id=' + id);
+    $.fn.zato.post(url, $.fn.zato.http_soap.edit_populate_groups_callback, '', '', true);
     $.fn.zato.data_table._create_edit('edit', 'Update the object', id);
 }
 
