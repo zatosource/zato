@@ -75,56 +75,61 @@ $.fn.zato.pubsub.set_current_endpoints = function(needs_blink) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.populate_endpoint_topics = function(topic_sub_list) {
+$.fn.zato.pubsub.populate_endpoint_topics = function(
+    item_list,
+    item_html_prefix,
+    id_field,
+    name_field,
+) {
     var table = $('<table/>', {
         'id':'multi-select-table',
         'class':'multi-select-table'
     })
 
-    for(var idx=0; idx < topic_sub_list.length; idx++) {
-        var topic = topic_sub_list[idx];
+    for(var idx=0; idx < item_list.length; idx++) {
+        var item = item_list[idx];
 
         var tr = $('<tr/>');
         var td_checkbox = $('<td/>');
         var td_toggle = $('<td/>');
-        var td_topic = $('<td/>');
+        var td_item = $('<td/>');
 
-        var topic_checkbox_id = 'topic_checkbox_' + topic.topic_id;
-        var topic_checkbox_name = 'topic_checkbox_' + topic.topic_name;
+        var checkbox_id = 'topic_checkbox_' + item["topic_id"];
+        var checkbox_name = 'topic_checkbox_' + item["topic_name"];
 
         var checkbox = $('<input/>', {
             'type': 'checkbox',
-            'id': topic_checkbox_id,
-            'name': topic_checkbox_name,
+            'id': checkbox_id,
+            'name': checkbox_name,
         });
 
         var toggle = $('<label/>', {
             'text': 'Toggle',
         });
 
-        if(topic.is_subscribed) {
+        if(item["is_subscribed"]) {
             checkbox.attr('disabled', 'disabled');
             checkbox.attr('checked', 'checked');
             toggle.attr('class', 'disabled');
         }
         else {
-            toggle.attr('for', topic_checkbox_id);
+            toggle.attr('for', checkbox_id);
             toggle.attr('class', 'toggle');
         }
 
-        var topic = $('<a/>', {
-            'href': String.format('/zato/pubsub/topic/?cluster={0}&query={1}', topic.cluster_id, topic.topic_name),
+        var item_link = $('<a/>', {
+            'href': String.format('/zato/pubsub/topic/?cluster={0}&query={1}', item["cluster_id"], item["topic_name"]),
             'target': '_blank',
-            'text': topic.topic_name,
+            'text': item["topic_name"],
         });
 
         td_checkbox.append(checkbox);
         td_toggle.append(toggle);
-        td_topic.append(topic);
+        td_item.append(item_link);
 
         tr.append(td_checkbox);
         tr.append(td_toggle);
-        tr.append(td_topic);
+        tr.append(td_item);
 
         table.append(tr);
 
