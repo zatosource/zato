@@ -85,6 +85,7 @@ $.fn.zato.pubsub.populate_endpoint_topics = function(item_list) {
     let html_table_id = "multi-select-table";
     let html_elem_id_selector = "#multi-select-div";
     let checkbox_field_name = "name";
+    let disable_if_is_taken = false;
 
     $.fn.zato.populate_multi_checkbox(
         item_list,
@@ -95,7 +96,8 @@ $.fn.zato.pubsub.populate_endpoint_topics = function(item_list) {
         url_template,
         html_table_id,
         html_elem_id_selector,
-        checkbox_field_name
+        checkbox_field_name,
+        disable_if_is_taken
     );
 }
 

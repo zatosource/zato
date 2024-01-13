@@ -1004,7 +1004,7 @@ urlpatterns += [
         login_required(http_soap.ping), name='http-soap-ping'),
     url(r'^zato/http-soap/reload-wsdl/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(http_soap.reload_wsdl), name='http-soap-reload-wsdl'),
-    url(r'^zato/http-soap/get-all-security-groups/(?P<group_type>.*)/$',
+    url(r'^zato/http-soap/get-security-groups/(?P<group_type>.*)/$',
         login_required(groups.get_group_list), name='http-soap-get-all-security-groups'),
 
     ]

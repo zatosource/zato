@@ -115,7 +115,7 @@ class Delete(_Delete):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_group_list(req:'any_', group_type:'str') -> 'anylist':
+def _get_group_list(req:'any_', group_type:'str', *, http_soap_channel_id:'str'='') -> 'anylist':
 
     # Get a list of all the groups that exist
     response = req.zato.client.invoke('dev.groups.get-list', {
@@ -123,10 +123,22 @@ def _get_group_list(req:'any_', group_type:'str') -> 'anylist':
     })
 
     # .. extract the business data ..
-    out = response.data
+    groups = response.data
+
+    # .. if we have a channel ID on input, we need to indicate which groups are assigned to it ..
+    if http_soap_channel_id:
+        http_soap_channel = req.zato.client.invoke('zato.http-soap.get', {
+            'id': http_soap_channel_id,
+        })
+        http_soap_channel = http_soap_channel.data
+        http_soap_channel_security_groups = http_soap_channel['security_groups']
+
+        for item in groups:
+            if item.id in http_soap_channel_security_groups:
+                item.is_assigned = True
 
     # .. and return it to our caller.
-    return out
+    return groups
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -316,7 +328,8 @@ def members_action(req:'any_', action:'str', group_id:'str', member_id_list:'str
 @method_allowed('POST')
 def get_group_list(req:'any_', group_type:'str') -> 'HttpResponse':
 
-    group_list = _get_group_list(req, group_type)
+    http_soap_channel_id = req.GET.get('http_soap_channel_id')
+    group_list = _get_group_list(req, group_type, http_soap_channel_id=http_soap_channel_id)
     data = dumps(group_list)
     return HttpResponse(data, content_type='application/javascript')
 
