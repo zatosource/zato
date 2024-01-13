@@ -59,8 +59,9 @@
                 '_cache',
             {% endif %}
 
-            // 9
+            // 9, 9b
             '_security',
+            '_security_groups',
 
             // 10, 11
             {% if transport == 'soap' %}
@@ -198,11 +199,12 @@
                         <!-- 7, 8 -->
                         {% if connection == 'channel' %}
                             <th><a href="#">Service</a></th>
-                            <th><a href="#">Cache</a></th>
+                            <th class='ignore'><a href="#">Cache</a></th>
                         {% endif %}
 
-                        <!-- 9 -->
+                        <!-- 9, 9b -->
                         <th><a href="#">Security</a></th>
+                        <th><a href="#">Groups</a></th>
 
                         <!-- 10, 11 -->
                         {% if transport == 'soap' %}
@@ -212,7 +214,7 @@
 
                         <!-- 12, 13, 13a -->
                         {% if connection == 'channel' %}
-                            <th><a href="#">Message log</a></th>
+                            <th class='ignore'><a href="#">Message log</a></th>
                             <th class='ignore'>&nbsp;</th> {% comment %} service {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} content_encoding {% endcomment %}
                         {% endif %}
@@ -328,7 +330,7 @@
                         <!-- 7, 8 -->
                         {% if connection == 'channel' %}
                             <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
-                            <td>
+                            <td class='ignore'>
                             {% if item.cache_id %}
                                 <a href="/zato/cache/{{ item.cache_type }}/?cluster={{ cluster_id }}&amp;highlight={{ item.cache_id }}">{{ item.cache_name }}</a>
                             {% else %}
@@ -337,8 +339,12 @@
                             </td>
                         {% endif %}
 
-                        <!-- 9 -->
-                        <td>{{ item.security_name|safe }}</td>
+                        <!-- 9, 9b -->
+                        <td>
+                            {{ item.security_name|safe }}
+                        <td>
+                            <a href="#">1 group</a>, <a href="#">17 clients</a>
+                        </td>
 
                         <!-- 10, 11 -->
                         {% if transport == 'soap' %}
@@ -348,7 +354,7 @@
 
                         <!-- 12, 13, 13a -->
                         {% if connection == 'channel' %}
-                            <td>
+                            <td class='ignore'>
                                 <a href="{% url "audit-log" "http-soap" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label={% if transport == 'soap' %}SOAP{% else %}REST{% endif %} {% if connection == 'channel' %}channel{% else %}outgoing connection{% endif %}">View</a>
                             </td>
                             <td class='ignore'>{{ item.service_name }}</td>

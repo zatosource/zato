@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -20,7 +20,7 @@ from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_http_channel_security_id, get_security_id_from_select, \
      get_tls_ca_cert_list, id_only_service, method_allowed, parse_response_data, SecurityList
 from zato.common.api import AuditLog, CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
-     generic_attrs, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, \
+     generic_attrs, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
@@ -217,7 +217,6 @@ def index(req): # type: ignore
 
             _security_name = item.security_name
             if _security_name:
-                sec_type_name = SEC_DEF_TYPE_NAME[item.sec_type]
                 sec_type_as_link = item.sec_type.replace('_', '-')
                 if item.sec_type == SEC_DEF_TYPE.OAUTH:
                     direction = 'outconn/client-credentials/'
@@ -226,7 +225,7 @@ def index(req): # type: ignore
                 security_href   = f'/zato/security/{sec_type_as_link}/{direction}'
                 security_href  += f'?cluster={req.zato.cluster_id}&amp;query={_security_name}'
                 security_link = f'<a href="{security_href}">{_security_name}</a>'
-                security_name = f'{sec_type_name}<br/>{security_link}'
+                security_name = security_link
             else:
                 if item.sec_use_rbac:
                     security_name = DELEGATED_TO_RBAC
