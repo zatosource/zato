@@ -708,7 +708,9 @@ div.page_prompt a.current {
 }
 
 #data-table * tr.odd:hover,
-#data-table * tr.even:hover {
+#data-table * tr.even:hover,
+table.multi-select-table tr:hover
+{
     background-color: #ff8;
 }
 
