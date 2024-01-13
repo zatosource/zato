@@ -1588,6 +1588,76 @@ $.fn.zato.jquery_pattern_equals   = "*[data-zato-validator-equals^='equals'";
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.populate_multi_checkbox = function(
+    item_list,
+    item_html_prefix,
+    id_field,
+    name_field,
+    is_taken_field,
+    url_template,
+    html_table_id,
+    html_elem_id_selector,
+) {
+    var table = $("<table/>", {
+        "id": html_table_id,
+        "class": "multi-select-table"
+    })
+
+    for(var idx=0; idx < item_list.length; idx++) {
+        var item = item_list[idx];
+
+        var tr = $("<tr/>");
+        var td_checkbox = $("<td/>");
+        var td_toggle = $("<td/>");
+        var td_item = $("<td/>");
+
+        var checkbox_id = item_html_prefix + item[id_field];
+        var checkbox_name = item_html_prefix + item[name_field];
+
+        var checkbox = $("<input/>", {
+            "type": "checkbox",
+            "id": checkbox_id,
+            "name": checkbox_name,
+        });
+
+        var toggle = $("<label/>", {
+            "text": "Toggle",
+        });
+
+        if(item[is_taken_field]) {
+            checkbox.attr("disabled", "disabled");
+            checkbox.attr("checked", "checked");
+            toggle.attr("class", "disabled");
+        }
+        else {
+            toggle.attr("for", checkbox_id);
+            toggle.attr("class", "toggle");
+        }
+
+        var item_link = $("<a/>", {
+            "href": String.format(url_template, item["cluster_id"], item[name_field]),
+            "target": "_blank",
+            "text": item[name_field],
+        });
+
+        td_checkbox.append(checkbox);
+        td_toggle.append(toggle);
+        td_item.append(item_link);
+
+        tr.append(td_checkbox);
+        tr.append(td_toggle);
+        tr.append(td_item);
+
+        table.append(tr);
+
+    }
+
+    $(html_elem_id_selector).html(table);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+
 $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 
     var is_valid = true;

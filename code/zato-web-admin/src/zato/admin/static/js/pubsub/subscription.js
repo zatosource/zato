@@ -75,67 +75,26 @@ $.fn.zato.pubsub.set_current_endpoints = function(needs_blink) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.populate_endpoint_topics = function(
-    item_list,
-    item_html_prefix,
-    id_field,
-    name_field,
-) {
-    var table = $('<table/>', {
-        'id':'multi-select-table',
-        'class':'multi-select-table'
-    })
+$.fn.zato.pubsub.populate_endpoint_topics = function(item_list) {
 
-    for(var idx=0; idx < item_list.length; idx++) {
-        var item = item_list[idx];
+    let item_html_prefix = "topic_checkbox_";
+    let id_field = "topic_id";
+    let name_field = "topic_name";
+    let is_taken_field = "is_subscribed";
+    let url_template = "/zato/pubsub/topic/?cluster={0}&query={1}";
+    let html_table_id = "multi-select-table";
+    let html_elem_id_selector = "#multi-select-div";
 
-        var tr = $('<tr/>');
-        var td_checkbox = $('<td/>');
-        var td_toggle = $('<td/>');
-        var td_item = $('<td/>');
-
-        var checkbox_id = 'topic_checkbox_' + item["topic_id"];
-        var checkbox_name = 'topic_checkbox_' + item["topic_name"];
-
-        var checkbox = $('<input/>', {
-            'type': 'checkbox',
-            'id': checkbox_id,
-            'name': checkbox_name,
-        });
-
-        var toggle = $('<label/>', {
-            'text': 'Toggle',
-        });
-
-        if(item["is_subscribed"]) {
-            checkbox.attr('disabled', 'disabled');
-            checkbox.attr('checked', 'checked');
-            toggle.attr('class', 'disabled');
-        }
-        else {
-            toggle.attr('for', checkbox_id);
-            toggle.attr('class', 'toggle');
-        }
-
-        var item_link = $('<a/>', {
-            'href': String.format('/zato/pubsub/topic/?cluster={0}&query={1}', item["cluster_id"], item["topic_name"]),
-            'target': '_blank',
-            'text': item["topic_name"],
-        });
-
-        td_checkbox.append(checkbox);
-        td_toggle.append(toggle);
-        td_item.append(item_link);
-
-        tr.append(td_checkbox);
-        tr.append(td_toggle);
-        tr.append(td_item);
-
-        table.append(tr);
-
-    }
-
-    $('#multi-select-div').html(table);
+    $.fn.zato.populate_multi_checkbox(
+        item_list,
+        item_html_prefix,
+        id_field,
+        name_field,
+        is_taken_field,
+        url_template,
+        html_table_id,
+        html_elem_id_selector
+    );
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
