@@ -49,13 +49,14 @@ $.fn.zato.data_table.after_populate = function() {
 
 $.fn.zato.http_soap.populate_groups = function(item_list) {
 
-    let item_html_prefix = "topic_checkbox_";
+    let item_html_prefix = "http_soap_security_group_checkbox_";
     let id_field = "id";
     let name_field = "name";
     let is_taken_field = "is_subscribed";
-    let url_template = "/zato/groups/group/zato-api-creds/?cluster={0}&query={1}";
+    let url_template = "/zato/groups/group/zato-api-creds/?cluster=1&query={1}&highlight={2}";
     let html_table_id = "multi-select-table";
     let html_elem_id_selector = "#multi-select-div-create";
+    let checkbox_field_name = "id";
 
     $.fn.zato.populate_multi_checkbox(
         item_list,
@@ -65,7 +66,8 @@ $.fn.zato.http_soap.populate_groups = function(item_list) {
         is_taken_field,
         url_template,
         html_table_id,
-        html_elem_id_selector
+        html_elem_id_selector,
+        checkbox_field_name
     );
 }
 

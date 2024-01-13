@@ -1601,6 +1601,7 @@ $.fn.zato.populate_multi_checkbox = function(
     url_template,
     html_table_id,
     html_elem_id_selector,
+    checkbox_field_name,
 ) {
     var table = $("<table/>", {
         "id": html_table_id,
@@ -1620,10 +1621,17 @@ $.fn.zato.populate_multi_checkbox = function(
         var checkbox_id = item_html_prefix + item[id_field];
         var checkbox_name = item_html_prefix + item[name_field];
 
+        if(checkbox_field_name == "id") {
+            checkbox_name_field = checkbox_id;
+        }
+        else {
+            checkbox_name_field = checkbox_name
+        }
+
         var checkbox = $("<input/>", {
             "type": "checkbox",
             "id": checkbox_id,
-            "name": checkbox_name,
+            "name": checkbox_name_field,
         });
 
         var toggle = $("<label/>", {
@@ -1641,7 +1649,7 @@ $.fn.zato.populate_multi_checkbox = function(
         }
 
         var item_link = $("<a/>", {
-            "href": String.format(url_template, item["cluster_id"], item[name_field]),
+            "href": String.format(url_template, item["cluster_id"], item[name_field], item[id_field]),
             "target": "_blank",
             "text": item[name_field],
         });
