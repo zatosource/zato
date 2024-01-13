@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,7 +15,7 @@ from paste.util.converters import asbool
 
 # Zato
 from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
+     Groups, HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZATO_DEFAULT, ZATO_NONE, ZatoNotGiven, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.exception import ServiceMissingException, ZatoException
@@ -34,7 +34,7 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import any_, anylist, strdict, strintdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,7 +100,8 @@ class _BaseGet(AdminService):
                 'data_encoding', 'is_audit_log_sent_active', 'is_audit_log_received_active', \
                 Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
                 Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
-                'username', 'is_wrapper', 'wrapper_type'
+                'username', 'is_wrapper', 'wrapper_type', 'security_groups', 'security_group_count', \
+                    'security_group_member_count'
 
 # ################################################################################################################################
 
@@ -117,6 +118,19 @@ class _BaseGet(AdminService):
         else:
             out = sec_tls_ca_cert_id
 
+        return out
+
+# ################################################################################################################################
+
+    def _get_security_groups_info(self, item:'any_', security_groups_member_count:'strintdict') -> 'strdict':
+
+        # Our response to produce
+        out:'strdict' = {
+            'group_count': 0,
+            'member_count': 0,
+        }
+
+        # .. now, return the response to our caller.
         return out
 
 # ################################################################################################################################
@@ -160,6 +174,9 @@ class GetList(_BaseGet):
         include_wrapper = self.request.input.get('include_wrapper') or False
         should_ignore_wrapper = not include_wrapper
 
+        # Get information about security groups which may be used later by each item
+        security_groups_member_count = self.invoke('dev.groups.get-member-count', group_type=Groups.Type.API_Clients)
+
         # Obtain the basic result ..
         result = self._search(http_soap_list, session, cluster_id,
             self.request.input.connection, self.request.input.transport,
@@ -173,6 +190,12 @@ class GetList(_BaseGet):
 
         # .. go through everything we have so far ..
         for item in data:
+
+            # .. build a dictionary of information about groups ..
+            security_groups_for_item = self._get_security_groups_info(item, security_groups_member_count)
+
+            item['security_group_count'] = security_groups_for_item['group_count']
+            item['security_group_member_count'] = security_groups_for_item['member_count']
 
             # .. this needs to be extracted ..
             item['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(item)
@@ -297,7 +320,7 @@ class Create(_CreateEdit):
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify', \
-            'is_wrapper', 'wrapper_type', 'username', 'password'
+            'is_wrapper', 'wrapper_type', 'username', 'password', 'security_groups'
         output_required = 'id', 'name'
         output_optional = 'url_path'
 
@@ -493,7 +516,7 @@ class Edit(_CreateEdit):
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'cluster_id', 'is_active', 'transport', 'tls_verify', \
-            'is_wrapper', 'wrapper_type', 'username', 'password'
+            'is_wrapper', 'wrapper_type', 'username', 'password', 'security_groups'
         output_optional = 'id', 'name'
 
     def handle(self):
