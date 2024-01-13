@@ -56,15 +56,15 @@ class Index(_Index):
         }
 
     def handle_return_data(self, return_data:'strdict') -> 'strdict':
-        return_data['group_type'] = Groups.Type.API_Credentials
-        return_data['group_type_name_title'] = 'API Credentials'
+        return_data['group_type'] = Groups.Type.API_Clients
+        return_data['group_type_name_title'] = 'API Clients'
         return return_data
 
     def handle(self):
 
         # Get information about how many members are in each group ..
         response = self.req.zato.client.invoke('dev.groups.get-member-count', {
-            'group_type': Groups.Type.API_Credentials,
+            'group_type': Groups.Type.API_Clients,
         })
 
         member_count = response.data

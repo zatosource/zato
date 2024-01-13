@@ -203,8 +203,8 @@
                         {% endif %}
 
                         <!-- 9, 9b -->
-                        <th><a href="#">Security</a></th>
-                        <th><a href="#">Groups</a></th>
+                        <th><a href="#">API client</a></th>
+                        <th><a href="#">API client groups</a></th>
 
                         <!-- 10, 11 -->
                         {% if transport == 'soap' %}
@@ -341,7 +341,11 @@
 
                         <!-- 9, 9b -->
                         <td>
-                            {{ item.security_name|safe }}
+                            {% if item.security_name == "Delegated to RBAC" %}
+                                <span class="form_hint">Delegated to RBAC</span>
+                            {% else %}
+                                {{ item.security_name|safe }}
+                            {% endif %}
                         <td>
                             <a href="#">1 group</a>, <a href="#">17 clients</a>
                         </td>
@@ -456,7 +460,7 @@
                 <form novalidate action="{% url "http-soap-create" %}?connection={{ connection }}&amp;transport={{ transport }}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:17%">Name</td>
+                            <td style="vertical-align:middle;width:19%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
 
@@ -499,9 +503,25 @@
                         {% endif %}
 
                         <tr>
-                            <td style="vertical-align:middle">Security<br/>definition</td>
+                            <td style="vertical-align:middle">API client</td>
                             <td>
                                 {{ create_form.security }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                                API client groups
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.api-client-groups-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="api-client-groups-options-block hidden">
+                            <td></td>
+                            <td>
+                                <div class="multi-select-div" id="multi-select-div">
+                                    <input class="multi-select-input" id="multi-select-input" disabled="disabled"></input>
+                                </div>
                             </td>
                         </tr>
 
@@ -579,7 +599,7 @@
                         {% include "zato/include/rate-limiting/create.html" %}
                         {% endif %}
 
-                        {% if connection == 'channel' %}
+                        {% if False and connection == 'channel' %}
                             {% include "zato/include/audit-log/create.html" %}
                         {% endif %}
 
