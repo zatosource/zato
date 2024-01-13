@@ -102,9 +102,9 @@ $.fn.zato.pubsub.populate_endpoint_topics = function(item_list) {
 $.fn.zato.pubsub.populate_endpoint_topics_callback = function(data, status) {
     var success = status == 'success';
     if(success) {
-        var topic_sub_list = $.parseJSON(data.responseText);
-        if(topic_sub_list.length) {
-            $.fn.zato.pubsub.populate_endpoint_topics(topic_sub_list);
+        var item_list = $.parseJSON(data.responseText);
+        if(item_list.length) {
+            $.fn.zato.pubsub.populate_endpoint_topics(item_list);
         }
         else {
             $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
