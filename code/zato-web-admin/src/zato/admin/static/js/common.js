@@ -1611,9 +1611,11 @@ $.fn.zato.populate_multi_checkbox = function(
         var item = item_list[idx];
 
         var tr = $("<tr/>");
-        var td_checkbox = $("<td/>");
-        var td_toggle = $("<td/>");
-        var td_item = $("<td/>");
+        var td_checkbox = $("<td style='white-space: nowrap'/>");
+        var td_toggle = $("<td style='white-space: nowrap'/>");
+        var td_item = $("<td style='white-space: nowrap'/>");
+        var td_description = $("<td style='white-space: nowrap'/>");
+        var td_filler = $("<td style='width:99%'/>");
 
         var checkbox_id = item_html_prefix + item[id_field];
         var checkbox_name = item_html_prefix + item[name_field];
@@ -1644,13 +1646,20 @@ $.fn.zato.populate_multi_checkbox = function(
             "text": item[name_field],
         });
 
+        var item_description = $("<span/>", {
+            "text": "17 members",
+        });
+
         td_checkbox.append(checkbox);
         td_toggle.append(toggle);
         td_item.append(item_link);
+        td_description.append(item_description);
 
         tr.append(td_checkbox);
         tr.append(td_toggle);
         tr.append(td_item);
+        tr.append(td_description);
+        tr.append(td_filler);
 
         table.append(tr);
 
