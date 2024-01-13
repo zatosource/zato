@@ -272,7 +272,22 @@ class GetList(Service):
 
     def handle(self):
         groups_manager = GroupsManager(self.server)
+
         group_list = groups_manager.get_group_list(self.request.input.group_type)
+        member_count = self.invoke(GetMemberCount, group_type=self.request.input.group_type)
+
+        for item in group_list:
+            group_id = item['id']
+            group_member_count = member_count[group_id]
+            item['member_count'] = group_member_count
+
+            if (group_member_count == 0) or (group_member_count > 1):
+                suffix = 's'
+            else:
+                suffix = ''
+
+            item['description'] = f'{group_member_count} member{suffix}'
+
         self.response.payload = group_list
 
 # ################################################################################################################################
@@ -359,7 +374,7 @@ class GetMemberCount(Service):
     """ Returns information about how many members are in each group.
     """
     name = 'dev.groups.get-member-count'
-    input:'any_' = 'group_type'
+    input:'any_' = 'group_type', '-should_serialize'
 
     def handle(self):
 
@@ -368,7 +383,9 @@ class GetMemberCount(Service):
 
         groups_manager = GroupsManager(self.server)
         member_count = groups_manager.get_member_count(input.group_type)
-        self.response.payload = dumps(member_count)
+        if input.should_serialize:
+            member_count = dumps(member_count)
+        self.response.payload = member_count
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -1602,7 +1602,7 @@ $.fn.zato.populate_multi_checkbox = function(
     html_table_id,
     html_elem_id_selector,
     checkbox_field_name,
-    disable_if_is_taken,
+    disable_if_is_taken
 ) {
     var table = $("<table/>", {
         "id": html_table_id,
@@ -1662,7 +1662,7 @@ $.fn.zato.populate_multi_checkbox = function(
         });
 
         var item_description = $("<span/>", {
-            "text": "17 members",
+            "text": item["description"],
         });
 
         td_checkbox.append(checkbox);
