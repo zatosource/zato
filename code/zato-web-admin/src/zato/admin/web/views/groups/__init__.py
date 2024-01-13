@@ -115,7 +115,7 @@ class Delete(_Delete):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_group_list(req:'any_', group_type:'str') -> 'anylist':
+def _get_group_list(req:'any_', group_type:'str') -> 'anylist':
 
     # Get a list of all the groups that exist
     response = req.zato.client.invoke('dev.groups.get-list', {
@@ -229,11 +229,9 @@ def get_security_list(req:'any_') -> 'HttpResponse':
 
     member_list = _get_member_list(req, group_type, group_id)
     security_list = _get_security_list(req, sec_type, query)
-
     security_list = _filter_out_members_from_security_list(security_list, member_list)
 
     data = dumps(security_list)
-
     return HttpResponse(data, content_type='application/javascript')
 
 # ################################################################################################################################
@@ -261,7 +259,7 @@ def manage_group_members(req:'any_', group_type:'str', group_id:'str | int') -> 
     template_name = 'zato/groups/members.html'
 
     # Get a list of all groups that exist
-    group_list = get_group_list(req, group_type)
+    group_list = _get_group_list(req, group_type)
 
     # Obtain an initial list of members for this group
     member_list = _get_member_list(req, group_type, group_id)
@@ -311,6 +309,16 @@ def members_action(req:'any_', action:'str', group_id:'str', member_id_list:'str
         response_class = HttpResponse
     finally:
         return response_class(response, content_type='text/plain') # type: ignore
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def get_group_list(req:'any_', group_type:'str') -> 'HttpResponse':
+
+    group_list = _get_group_list(req, group_type)
+    data = dumps(group_list)
+    return HttpResponse(data, content_type='application/javascript')
 
 # ################################################################################################################################
 # ################################################################################################################################
