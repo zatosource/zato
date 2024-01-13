@@ -661,6 +661,8 @@ class HTTPSOAP(Base):
         self.is_wrapper = None
         self.wrapper_type = None
         self.password = None
+        self.security_groups_count = None
+        self.security_groups_member_count = None
 
 # ################################################################################################################################
 

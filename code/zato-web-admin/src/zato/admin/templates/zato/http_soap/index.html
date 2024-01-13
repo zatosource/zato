@@ -348,7 +348,7 @@
                                 {{ item.security_name|safe }}
                             {% endif %}
                         <td>
-                            <a href="#">1 group</a> <span class="form_hint">17 clients</span>
+                            {{ item.security_group_count }} group{% if item.security_group_count == 0 or item.security_group_count > 1 %}s{% endif %}, {{ item.security_group_member_count }} client{% if item.security_group_count == 0 or item.security_group_count > 1 %}s{% endif %}
                         </td>
 
                         <!-- 10, 11 -->
@@ -517,7 +517,7 @@
                             <a href="javascript:$.fn.zato.toggle_visibility('.api-client-groups-options-block')">Toggle options</a>
                             </td>
                         </tr>
-                        <tr class="api-client-groups-options-block hidden">
+                        <tr class="api-client-groups-options-block">
                             <td class="to-ignore"></td>
                             <td>
                                 <div class="multi-select-div" id="multi-select-div-create">

@@ -18,7 +18,8 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_http_channel_security_id, get_security_id_from_select, \
-     get_tls_ca_cert_list, id_only_service, method_allowed, parse_response_data, SecurityList
+    get_security_groups_from_checkbox_list, get_tls_ca_cert_list, id_only_service, method_allowed, parse_response_data, \
+        SecurityList
 from zato.common.api import AuditLog, CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
      generic_attrs, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
@@ -26,7 +27,13 @@ from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 from zato.common.odb.model import HTTPSOAP
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 CONNECTION = {
     'channel': 'channel',
@@ -59,11 +66,15 @@ _rest_security_type_supported = {
 _max_len_messages = AuditLog.Default.max_len_messages
 _max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _get_edit_create_message(params, prefix=''): # type: ignore
     """ A bunch of attributes that can be used by both 'edit' and 'create' actions
     for channels and outgoing connections.
     """
     security_id = get_security_id_from_select(params, prefix)
+    security_groups = get_security_groups_from_checkbox_list(params, prefix)
 
     message = {
         'is_internal': False,
@@ -91,6 +102,7 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'timeout': params.get(prefix + 'timeout'),
         'sec_tls_ca_cert_id': params.get(prefix + 'sec_tls_ca_cert_id'),
         'security_id': security_id,
+        'security_groups': security_groups,
         'has_rbac': bool(params.get(prefix + 'has_rbac')),
         'content_type': params.get(prefix + 'content_type'),
         'cache_id': params.get(prefix + 'cache_id'),
@@ -127,6 +139,9 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
 
     return message
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _edit_create_response(req, id, verb, transport, connection, name): # type: ignore
 
     return_data = {
@@ -153,6 +168,9 @@ def _edit_create_response(req, id, verb, transport, connection, name): # type: i
     return_data['cache_name'] = cache_name
 
     return HttpResponse(dumps(return_data), content_type='application/javascript')
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 @method_allowed('GET')
 def index(req): # type: ignore
@@ -286,6 +304,9 @@ def index(req): # type: ignore
 
     return TemplateResponse(req, 'zato/http_soap/index.html', return_data)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('POST')
 def create(req): # type: ignore
     try:
@@ -299,6 +320,9 @@ def create(req): # type: ignore
         msg = 'Object could not be created, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 @method_allowed('POST')
 def edit(req): # type: ignore
@@ -315,10 +339,16 @@ def edit(req): # type: ignore
         logger.error(msg)
         return HttpResponseServerError(msg)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('POST')
 def delete(req, id, cluster_id): # type: ignore
     _ = id_only_service(req, 'zato.http-soap.delete', id, 'Object could not be deleted, e:`{}`')
     return HttpResponse()
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 @method_allowed('POST')
 def ping(req, id, cluster_id): # type: ignore
@@ -332,9 +362,15 @@ def ping(req, id, cluster_id): # type: ignore
         else:
             return HttpResponseServerError(response.data.info)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('POST')
 def reload_wsdl(req, id, cluster_id): # type: ignore
     ret = id_only_service(req, 'zato.http-soap.reload-wsdl', id, 'WSDL could not be reloaded, e:`{}`')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse('WSDL reloaded, check server logs for details')
+
+# ################################################################################################################################
+# ################################################################################################################################
