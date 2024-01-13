@@ -53,9 +53,9 @@ $.fn.zato.http_soap.populate_groups = function(item_list) {
     let id_field = "id";
     let name_field = "name";
     let is_taken_field = "is_subscribed";
-    let url_template = "/zato/pubsub/topic/?cluster={0}&query={1}";
+    let url_template = "/zato/groups/group/zato-api-creds/?cluster={0}&query={1}";
     let html_table_id = "multi-select-table";
-    let html_elem_id_selector = "#create-groups-multi-select-div";
+    let html_elem_id_selector = "#multi-select-div-create";
 
     $.fn.zato.populate_multi_checkbox(
         item_list,
@@ -79,7 +79,9 @@ $.fn.zato.http_soap.populate_groups_callback = function(data, status) {
             $.fn.zato.http_soap.populate_groups(item_list);
         }
         else {
-            alert(123)
+            let elem = $("#multi-select-div-create");
+            elem.removeClass("multi-select-div");
+            elem.html("No security groups found. Click to <a href='/zato/groups/group/zato-api-creds/?cluster=1' target='_blank'>create one</a>.");
         }
     }
     else {

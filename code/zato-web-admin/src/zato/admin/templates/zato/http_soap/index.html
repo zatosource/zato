@@ -18,6 +18,7 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -517,10 +518,9 @@
                             </td>
                         </tr>
                         <tr class="api-client-groups-options-block hidden">
-                            <td></td>
+                            <td class="to-ignore"></td>
                             <td>
-                                <div class="multi-select-div" id="create-groups-multi-select-div">
-                                    <input class="multi-select-input" id="create-groups-multi-select-input" disabled="disabled"></input>
+                                <div class="multi-select-div" id="multi-select-div-create">
                                 </div>
                             </td>
                         </tr>
@@ -587,7 +587,7 @@
                             </td>
                         </tr>
                         <tr class="cache-options-block hidden">
-                            <td></td>
+                            <td class="to-ignore"></td>
                             <td>{{ create_form.cache_id }}
                             |
                             Expiry
