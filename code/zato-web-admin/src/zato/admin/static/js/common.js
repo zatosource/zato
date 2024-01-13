@@ -1214,11 +1214,13 @@ $.fn.zato.toggle_visible_hidden = function(elem, is_visible) {
 
     if(is_visible) {
         remove_class = 'hidden';
-        add_class = 'visible';
+        add_class = 'visible options-expanded';
+        $(elem).prev().addClass("options-expanded", 80);
     }
     else {
-        remove_class = 'visible';
+        remove_class = 'visible options-expanded';
         add_class = 'hidden';
+        $(elem).prev().removeClass("options-expanded", 80);
     }
     $(elem).removeClass(remove_class).addClass(add_class);
 }
@@ -1228,7 +1230,9 @@ $.fn.zato.toggle_visible_hidden = function(elem, is_visible) {
 $.fn.zato.toggle_visibility = function(selector) {
     var elems = $(selector);
     $.each(elems, function(idx, elem) {
-        $.fn.zato.toggle_visible_hidden(elem, !$(elem).hasClass('visible'));
+        elem = $(elem)
+        let is_visible = $(elem).hasClass('visible')
+        $.fn.zato.toggle_visible_hidden(elem, !is_visible);
     });
 }
 

@@ -444,7 +444,7 @@ a:not(.menu-link) {
     font-family: arial, helvetica, clean, sans-serif;
     text-decoration: underline;
     padding: 3px;
-    padding-left: 0px
+    QQQ-padding-left: 0px
 }
 
 a:hover {
@@ -755,4 +755,11 @@ input[data-zato-validator-required="required"]::placeholder {
     100% {
         opacity: 1;
     }
+}
+
+.options-expanded {
+    background-color:#e3e3e0;
+}
+.options-expanded td.to-ignore {
+    background-color: #ccc;
 }
