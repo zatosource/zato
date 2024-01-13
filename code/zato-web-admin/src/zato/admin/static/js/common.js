@@ -1602,6 +1602,7 @@ $.fn.zato.populate_multi_checkbox = function(
     html_table_id,
     html_elem_id_selector,
     checkbox_field_name,
+    disable_if_is_taken,
 ) {
     var table = $("<table/>", {
         "id": html_table_id,
@@ -1639,9 +1640,15 @@ $.fn.zato.populate_multi_checkbox = function(
         });
 
         if(item[is_taken_field]) {
-            checkbox.attr("disabled", "disabled");
             checkbox.attr("checked", "checked");
-            toggle.attr("class", "disabled");
+            if(disable_if_is_taken) {
+                checkbox.attr("disabled", "disabled");
+                toggle.attr("class", "disabled");
+            }
+            else {
+                toggle.attr("for", checkbox_id);
+                toggle.attr("class", "toggle");
+            }
         }
         else {
             toggle.attr("for", checkbox_id);
