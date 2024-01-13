@@ -75,7 +75,7 @@ ZATO_SEC_USE_RBAC = 'ZATO_SEC_USE_RBAC'
 Zato_None = ZATO_NONE
 Zato_No_Security = 'zato-no-security'
 
-DELEGATED_TO_RBAC = 'Delegated to RBAC'
+DELEGATED_TO_RBAC = '<span class="form_hint">Delegated to RBAC</span>'
 
 # Default HTTP method outgoing connections use to ping resources
 # TODO: Move it to MISC
