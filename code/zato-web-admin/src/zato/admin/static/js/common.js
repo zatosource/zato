@@ -1215,12 +1215,12 @@ $.fn.zato.toggle_visible_hidden = function(elem, is_visible) {
     if(is_visible) {
         remove_class = 'hidden';
         add_class = 'visible options-expanded';
-        $(elem).prev().addClass("options-expanded", 80);
+        $(elem).prev().addClass("options-expanded", 50);
     }
     else {
         remove_class = 'visible options-expanded';
         add_class = 'hidden';
-        $(elem).prev().removeClass("options-expanded", 80);
+        $(elem).prev().removeClass("options-expanded", 50);
     }
     $(elem).removeClass(remove_class).addClass(add_class);
 }
