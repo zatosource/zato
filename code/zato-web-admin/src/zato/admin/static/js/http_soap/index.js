@@ -47,15 +47,17 @@ $.fn.zato.data_table.after_populate = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.http_soap.populate_groups = function(item_list) {
+$.fn.zato.http_soap.populate_groups = function(
+    item_list,
+    item_html_prefix,
+    html_elem_id_selector
+) {
 
-    let item_html_prefix = "http_soap_security_group_checkbox_";
     let id_field = "id";
     let name_field = "name";
-    let is_taken_field = "is_subscribed";
+    let is_taken_field = "is_assigned";
     let url_template = "/zato/groups/group/zato-api-creds/?cluster=1&query={1}&highlight={2}";
     let html_table_id = "multi-select-table";
-    let html_elem_id_selector = "#multi-select-div-create";
     let checkbox_field_name = "id";
 
     $.fn.zato.populate_multi_checkbox(
@@ -73,12 +75,20 @@ $.fn.zato.http_soap.populate_groups = function(item_list) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.http_soap.populate_groups_callback = function(data, status) {
+$.fn.zato.http_soap.create_populate_groups = function(item_list) {
+    let item_html_prefix = "http_soap_security_group_checkbox_";
+    let html_elem_id_selector = "#multi-select-div-create";
+    $.fn.zato.http_soap.populate_groups(item_list, item_html_prefix, html_elem_id_selector);
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.create_populate_groups_callback = function(data, status) {
     var success = status == 'success';
     if(success) {
         var item_list = $.parseJSON(data.responseText);
         if(item_list.length) {
-            $.fn.zato.http_soap.populate_groups(item_list);
+            $.fn.zato.http_soap.create_populate_groups(item_list);
         }
         else {
             let elem = $("#multi-select-div-create");
@@ -96,7 +106,7 @@ $.fn.zato.http_soap.populate_groups_callback = function(data, status) {
 $.fn.zato.http_soap.create = function(object_type) {
 
     var url = String.format('/zato/http-soap/get-all-security-groups/zato-api-creds/');
-    $.fn.zato.post(url, $.fn.zato.http_soap.populate_groups_callback);
+    $.fn.zato.post(url, $.fn.zato.http_soap.create_populate_groups_callback);
     $.fn.zato.data_table._create_edit('create', 'Create a new ' + object_type, null);
 }
 
