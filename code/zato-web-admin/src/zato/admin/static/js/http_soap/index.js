@@ -232,16 +232,17 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += service_tr;
 
         if(item.cache_id) {
-            row += String.format('<td><a href="/zato/cache/{0}/?cluster={1}&amp;highlight={2}">{3}</a></td>',
+            row += String.format('<td class="ignore"><a href="/zato/cache/{0}/?cluster={1}&amp;highlight={2}">{3}</a></td>',
                     data.cache_type, cluster_id, item.cache_id, data.cache_name);
         }
         else {
-            row += '<td><span class="form_hint">---</span></td>';
+            row += '<td class="ignore"><span class="form_hint">---</span></td>';
         }
     }
 
-    /* 9 */
+    /* 9, 9b */
     row += String.format('<td>{0}</td>', security_name);
+    row += String.format('<td>{0}</td>', data.security_groups_info);
 
     /* 10, 11 */
     if(is_soap) {
@@ -252,7 +253,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     /* 12, 13, 13a */
     if(is_channel) {
 
-        row += String.format('<td><a href="/zato/audit-log/http-soap/{0}/?cluster={1}&amp;object_name={2}&amp;object_type_label={3}">View</a></td>',
+        row += String.format('<td class="ignore"><a href="/zato/audit-log/http-soap/{0}/?cluster={1}&amp;object_name={2}&amp;object_type_label={3}">View</a></td>',
             item.id, cluster_id, item.name, audit_object_type_label);
         row += String.format("<td class='ignore'>{0}</td>", item.service);
         row += String.format("<td class='ignore'>{0}</td>", item.content_encoding);
