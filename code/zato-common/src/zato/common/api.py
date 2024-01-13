@@ -75,7 +75,7 @@ ZATO_SEC_USE_RBAC = 'ZATO_SEC_USE_RBAC'
 Zato_None = ZATO_NONE
 Zato_No_Security = 'zato-no-security'
 
-DELEGATED_TO_RBAC = '<span class="form_hint">Delegated to RBAC</span>'
+DELEGATED_TO_RBAC = 'Delegated to RBAC'
 
 # Default HTTP method outgoing connections use to ping resources
 # TODO: Move it to MISC
@@ -1418,7 +1418,7 @@ class Groups:
     class Type:
         Group_Parent    = 'zato-group'
         Group_Member    = 'zato-group-member'
-        API_Credentials = 'zato-api-creds'
+        API_Clients     = 'zato-api-creds'
         Organizations   = 'zato-org'
 
     class Membership_Action:
