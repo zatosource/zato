@@ -84,6 +84,7 @@ $.fn.zato.pubsub.populate_endpoint_topics = function(item_list) {
     let url_template = "/zato/pubsub/topic/?cluster={0}&query={1}";
     let html_table_id = "multi-select-table";
     let html_elem_id_selector = "#multi-select-div";
+    let checkbox_field_name = "name";
 
     $.fn.zato.populate_multi_checkbox(
         item_list,
@@ -93,7 +94,8 @@ $.fn.zato.pubsub.populate_endpoint_topics = function(item_list) {
         is_taken_field,
         url_template,
         html_table_id,
-        html_elem_id_selector
+        html_elem_id_selector,
+        checkbox_field_name
     );
 }
 
