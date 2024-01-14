@@ -97,7 +97,7 @@ $.fn.zato.http_soap.create_populate_groups_callback = function(data, status) {
     var success = status == 'success';
     if(success) {
         var item_list = $.parseJSON(data.responseText);
-        if(item_list.length) {
+        if(item_list && item_list.length) {
             $.fn.zato.http_soap.create_populate_groups(item_list);
         }
         else {
