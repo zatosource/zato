@@ -510,6 +510,10 @@ class Common(Constants):
     code_start = 107800
     Sync_Objects = ValueConstant('')
 
+class Groups(Constants):
+    code_start = 108000
+    Delete = ValueConstant('')
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

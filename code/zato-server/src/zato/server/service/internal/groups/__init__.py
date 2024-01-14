@@ -1,5 +1,4 @@
-'''
-# -*- coding: utf-8 -*-
+'''# -*- coding: utf-8 -*-
 
 """
 Copyright (C) 2024, Zato Source s.r.o. https://zato.io
@@ -15,7 +14,8 @@ from json import dumps
 from sqlalchemy import and_, func, select
 
 # Zato
-from zato.common.api import Groups, SEC_DEF_TYPE
+from zato.common.api import CONNECTION, Groups, SEC_DEF_TYPE
+from zato.common.broker_message import Groups as Broker_Message_Groups
 from zato.common.odb.model import GenericObject as ModelGenericObject
 from zato.common.odb.query.generic import GroupsWrapper
 from zato.server.service import AsIs, Service
@@ -346,8 +346,27 @@ class Delete(Service):
         # Local variables
         input = self.request.input
 
+        # Delete this group from the database ..
         groups_manager = GroupsManager(self.server)
         groups_manager.delete_group(input.id)
+
+        # .. make sure the database configuration of channels using it is also updated ..
+        to_update = []
+        data = self.invoke('zato.http-soap.get-list', connection=CONNECTION.CHANNEL, paginate=False, skip_response_elem=True)
+
+        for item in data:
+            if security_groups := item.get('security_groups'):
+                if input.id in security_groups:
+                    security_groups.remove(input.id)
+                    item['security_groups'] = security_groups
+                    to_update.append(item)
+
+        for item in to_update:
+            _= self.invoke('zato.http-soap.edit', item)
+
+        # .. now, let all the threads know about the update.
+        input.action = Broker_Message_Groups.Delete.value
+        self.broker_client.publish(input)
 
 # ################################################################################################################################
 # ################################################################################################################################
