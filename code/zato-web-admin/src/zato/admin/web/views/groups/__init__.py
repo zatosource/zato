@@ -176,6 +176,7 @@ def _get_member_list(req:'any_', group_type:'str', group_id:'int') -> 'anylist':
     response = req.zato.client.invoke('dev.groups.get-member-list', {
         'group_type': group_type,
         'group_id': group_id,
+        'should_serialize': True,
     })
 
     # .. extract the business data ..
