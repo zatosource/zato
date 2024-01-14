@@ -180,7 +180,7 @@ class ModuleCtx:
     # As above, in the reverse direction, but only for specific types
     Enmasse_Item_Type_Name_Map_Reverse_By_Type = cast_('strdict', None)
 
-    # How to sort attributes of a given object
+    # How to sort attributes of a given object during an export
     Enmasse_Attr_List_Sort_Order = cast_('strlistdict', None)
 
     # How many seconds to wait for servers to start up
@@ -3805,6 +3805,7 @@ class Enmasse(ManageCommand):
 
         # .. certain keys should be stored in a specific order at the head of the output ..
         key_order = reversed([
+            'security_groups',
             'security',
             'channel_rest',
             'outgoing_rest',
