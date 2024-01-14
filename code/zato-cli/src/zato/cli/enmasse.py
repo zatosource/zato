@@ -2385,11 +2385,6 @@ class ObjectManager:
             self.logger.warning('Could not fetch objects of type {}: {}'.format(service_info.name, response.details))
             return
 
-        if service_name == 'dev.groups.get-list':
-            print()
-            print(111, response.data)
-            print()
-
         self.objects[service_info.name] = []
 
         if response.has_data:

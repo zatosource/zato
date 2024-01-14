@@ -132,7 +132,7 @@ class _BaseGet(AdminService):
 
         if security_groups := item.get('security_groups'):
             for group_id in security_groups:
-                member_count = security_groups_member_count[group_id]
+                member_count = security_groups_member_count.get(group_id) or 0
                 out['member_count'] += member_count
                 out['group_count'] += 1
 
