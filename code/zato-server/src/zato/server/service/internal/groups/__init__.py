@@ -330,16 +330,27 @@ class Create(Service):
     """
     name = 'dev.groups.create'
 
-    input:'any_' = 'group_type', 'name'
+    input:'any_' = 'group_type', 'name', AsIs('-members')
     output:'any_' = 'id', 'name'
 
     def handle(self):
 
+        # Local variables
+        input = self.request.input
+
         groups_manager = GroupsManager(self.server)
-        id = groups_manager.create_group(self.request.input.group_type, self.request.input.name)
+        id = groups_manager.create_group(input.group_type, input.name)
+
+        self.invoke(
+            EditMemberList,
+            group_type=input.group_type,
+            group_action=Groups.Membership_Action.Add,
+            group_id=id,
+            members=input.members,
+        )
 
         self.response.payload.id = id
-        self.response.payload.name = self.request.input.name
+        self.response.payload.name = input.name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -448,20 +459,56 @@ class EditMemberList(Service):
     """ Adds members to or removes them from a group.
     """
     name = 'dev.groups.edit-member-list'
-    input:'any_' = 'group_action', 'group_id', AsIs('member_id_list')
+    input:'any_' = 'group_action', 'group_id', AsIs('-member_id_list'), AsIs('-members')
+
+# ################################################################################################################################
+
+    def _get_member_id_list_from_name_list(self, member_name_list:'any_') -> 'strlist':
+
+        # Our response to produce
+        out:'strlist' = []
+
+        # Make sure this is actually a list
+        member_name_list = member_name_list if isinstance(member_name_list, list) else [member_name_list] # type: ignore
+
+        # Get a list of all the security definitions possible, out of which we will be building our IDs.
+        security_list = self.invoke('zato.security.get-list', skip_response_elem=True)
+        for item in member_name_list:
+            if isinstance(item, dict):
+                item_name = item['name']
+            else:
+                item_name = item
+            for security in security_list:
+                if item_name == security['name']:
+                    sec_type = security['sec_type']
+                    sec_def_id = security['id']
+                    member_name = f'{sec_type}-{sec_def_id}'
+                    out.append(member_name)
+
+        return out
+
+# ################################################################################################################################
 
     def handle(self):
 
         # Local variables
         input = self.request.input
 
+        # We need to have member IDs in further steps so if we have names, they have to be turned into IDs here.
+        if not (member_id_list := input.get('member_id_list')):
+            member_id_list = self._get_member_id_list_from_name_list(input.members)
+
+        if not member_id_list:
+            return
+
         groups_manager = GroupsManager(self.server)
+
         if input.group_action == Groups.Membership_Action.Add:
             func = groups_manager.add_members_to_group
         else:
             func = groups_manager.remove_members_from_group
 
-        func(input.group_id, input.member_id_list)
+        func(input.group_id, member_id_list)
 
         # .. now, let all the threads know about the update.
         input.action = Broker_Message_Groups.Edit_Member_List.value
