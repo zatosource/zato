@@ -282,7 +282,7 @@ def members_action(req:'any_', action:'str', group_id:'str', member_id_list:'str
     # Invoke the remote service ..
     try:
         _ = req.zato.client.invoke('dev.groups.edit-member-list', {
-            'action': action,
+            'group_action': action,
             'group_id': group_id,
             'member_id_list': member_id_list
         })
