@@ -946,21 +946,6 @@ class Service:
     ) -> 'any_':
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
         """
-        if self.component_enabled_target_matcher:
-
-            orig_impl_name = impl_name
-            impl_name, target = self.extract_target(impl_name)
-
-            # It's possible we are being invoked through self.invoke or self.invoke_by_id
-            target = target or kwargs.get('target', '')
-
-            if not self._worker_store.target_matcher.is_allowed(target):
-                raise ZatoException(self.cid, 'Invocation target `{}` not allowed ({})'.format(target, orig_impl_name))
-
-        if self.component_enabled_invoke_matcher:
-            if not self._worker_store.invoke_matcher.is_allowed(impl_name):
-                raise ZatoException(self.cid, 'Service `{}` (impl_name) cannot be invoked'.format(impl_name))
-
         if self.impl_name == impl_name:
             msg = 'A service cannot invoke itself, name:[{}]'.format(self.name)
             self.logger.error(msg)
@@ -1016,16 +1001,6 @@ class Service:
         # not its name, and we need to extract the name ourselves.
         if isclass(zato_name) and issubclass(zato_name, Service): # type: Service
             zato_name = zato_name.get_name()
-
-        if self.component_enabled_target_matcher:
-            zato_name, target = self.extract_target(zato_name) # type: ignore
-            kwargs['target'] = target
-
-        if self._enforce_service_invokes and self.invokes:
-            if zato_name not in self.invokes:
-                msg = 'Could not invoke `{}` which is not in `{}`'.format(zato_name, self.invokes)
-                self.logger.warning(msg)
-                raise ValueError(msg)
 
         return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[zato_name], *args, **kwargs)
 

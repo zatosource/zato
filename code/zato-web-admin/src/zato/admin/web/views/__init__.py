@@ -257,7 +257,6 @@ def get_security_groups_from_checkbox_list(params, prefix, field_name_prefix='ht
     for item in params:
         if item.startswith(full_prefix):
             item = item.replace(full_prefix, '')
-            item = int(item)
             groups.append(item)
 
     return groups
