@@ -125,7 +125,7 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
-    def _create_from_list(
+    def create_many(
         self,
         item_list:'dictlist',
         type_:'strnone'=None,
@@ -164,31 +164,14 @@ class GenericObjectWrapper:
     ) -> 'any_':
         """ Creates a row based on the input data.
         """
-        # Local variables
-        type_ = type_ or self.type_
-        subtype = subtype or self.subtype
 
         item = {
             'name': name,
             _generic_attr_name: opaque,
         }
 
-        result = self._create_from_list([item], type_, subtype, parent_object_id=parent_object_id)
+        result = self.create_many([item], type_, subtype, parent_object_id=parent_object_id)
         return result
-
-# ################################################################################################################################
-
-    def create_many(
-        self,
-        name:'str',
-        opaque:'str',
-        type_:'strnone'=None,
-        subtype:'strnone'=None,
-        *,
-        parent_object_id:'intnone'=None
-    ) -> 'any_':
-        """ Creates multiple rows based on the input data.
-        """
 
 # ################################################################################################################################
 
