@@ -134,7 +134,7 @@ class GenericObjectWrapper:
         *,
         parent_object_id:'intnone'=None
     ) -> 'any_':
-        """ Creates one or more new rows based on the input data.
+        """ Creates a row based on the input data.
         """
 
         # Local variables
@@ -142,7 +142,7 @@ class GenericObjectWrapper:
         subtype = subtype or self.subtype
         now = datetime.utcnow()
 
-        result = insert(self.model_class).values(**{
+        result = insert(self.model_class).values([{
             'name': name,
             'type_': type_,
             'subtype': subtype,
@@ -151,7 +151,7 @@ class GenericObjectWrapper:
             'creation_time': now,
             'last_modified': now,
             _generic_attr_name: opaque,
-        })
+        }])
 
         return result
 
