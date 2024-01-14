@@ -96,7 +96,7 @@
 
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
-                        <td>{{ member_count|bunchget:item.id }}</td>
+                        <td id="group_member_count_{{ item.id }}">{{ member_count|bunchget:item.id }}</td>
                         <td><a href="{% url "groups-members-manage" item.type item.id %}?cluster={{ cluster_id|default:"1" }}">Go to members</a></td>
 
                         {% comment %} 2 {% endcomment %}
