@@ -53,7 +53,7 @@ $.fn.zato.http_soap.populate_groups = function(
     html_elem_id_selector
 ) {
 
-    let id_field = "name";
+    let id_field = "id";
     let name_field = "name";
     let is_taken_field = "is_assigned";
     let url_template = "/zato/groups/group/zato-api-creds/?cluster=1&query={1}&highlight={2}";
