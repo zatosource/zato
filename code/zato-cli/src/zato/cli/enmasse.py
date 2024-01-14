@@ -1636,18 +1636,7 @@ class ObjectImporter:
         attrs.cluster_id = self.client.cluster_id
         attrs.is_source_external = True
 
-        if item_type == 'security_groups':
-            print()
-            print(111, item_type)
-            print(222, attrs)
-            print()
-
         response = self._import_object(item_type, attrs, is_edit)
-
-        if item_type == 'security_groups':
-            print()
-            print(333, response.data)
-            print()
 
         if response and response.ok:
             if self._needs_change_password(item_type, attrs, is_edit):
