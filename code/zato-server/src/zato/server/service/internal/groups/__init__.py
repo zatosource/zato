@@ -360,7 +360,7 @@ class Edit(Service):
     """
     name = 'dev.groups.edit'
 
-    input:'any_' = 'id', 'group_type', 'name'
+    input:'any_' = 'id', 'group_type', 'name', AsIs('-members')
     output:'any_' = 'id', 'name'
 
     def handle(self):
@@ -368,11 +368,62 @@ class Edit(Service):
         # Local variables
         input = self.request.input
 
+        # All the new members of this group
+        to_add:'strlist' = []
+
+        # All the members that have to be removed from the group
+        to_remove:'strlist' = []
+
         groups_manager = GroupsManager(self.server)
         groups_manager.edit_group(input.id, input.group_type, input.name)
 
+        if input.members:
+
+            group_members = groups_manager.get_member_list(input.group_type, input.id)
+
+            input_member_names = set(item['name'] for item in input.members)
+            group_member_names = set(item['name'] for item in group_members)
+
+            for group_member_name in group_member_names:
+                if not group_member_name in input_member_names:
+                    to_remove.append(group_member_name)
+
+            for input_member_name in input_member_names:
+                if not input_member_name in group_member_names:
+                    to_add.append(input_member_name)
+
+        #
+        # Add all the new members to the group
+        #
+        if to_add:
+            _ = self.invoke(
+                EditMemberList,
+                group_action=Groups.Membership_Action.Add,
+                group_id=input.id,
+                members=to_add,
+            )
+
+        #
+        # Remove all the members that should not belong to the group
+        #
+        if to_remove:
+            _ = self.invoke(
+                EditMemberList,
+                group_action=Groups.Membership_Action.Remove,
+                group_id=input.id,
+                members=to_remove,
+            )
+
         self.response.payload.id = self.request.input.id
         self.response.payload.name = self.request.input.name
+
+        # .. enrich the message that is to be published ..
+        input.to_add = to_add
+        input.to_remove = to_remove
+
+        # .. now, let all the threads know about the update.
+        input.action = Broker_Message_Groups.Edit.value
+        self.broker_client.publish(input)
 
 # ################################################################################################################################
 # ################################################################################################################################
