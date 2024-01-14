@@ -306,6 +306,39 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
             input['sec_tls_ca_cert_verify_strategy'] = True # By default, verify using the built-in bundle
 
 # ################################################################################################################################
+
+    def _preprocess_security_groups(self, input):
+
+        # This will contain only IDs
+        new_input_security_groups = []
+
+        # Security groups are optional
+        if input_security_groups := input.get('security_groups'):
+
+            # Get information about security groups which is need to turn group names into group IDs
+            existing_security_groups = self.invoke('dev.groups.get-list', group_type=Groups.Type.API_Clients)
+
+            for input_group in input_security_groups:
+                group_id = None
+                try:
+                    input_group = int(input_group)
+                except ValueError:
+                    for existing_group in existing_security_groups:
+                        if input_group == existing_group['name']:
+                            group_id = existing_group['id']
+                            break
+                    else:
+                        raise Exception(f'Could not find ID for group `{input_group}`')
+                else:
+                    group_id = input_group
+                finally:
+                    if group_id:
+                        new_input_security_groups.append(group_id)
+
+        # Return what we have to our caller
+        return new_input_security_groups
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -315,7 +348,7 @@ class Create(_CreateEdit):
         request_elem = 'zato_http_soap_create_request'
         response_elem = 'zato_http_soap_create_response'
         input_required = 'name', 'url_path', 'connection'
-        input_optional = 'service', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
+        input_optional = 'service', 'service_id', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
             'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
@@ -343,6 +376,7 @@ class Create(_CreateEdit):
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
         input.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+        input.security_groups = self._preprocess_security_groups(input)
 
         input.is_active   = input.get('is_active',   True)
         input.is_internal = input.get('is_internal', False)
@@ -394,8 +428,16 @@ class Create(_CreateEdit):
             # Is the service's name correct?
             service = session.query(Service).\
                 filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id).\
-                filter(Service.name==input.service).first()
+                filter(Service.cluster_id==Cluster.id)
+
+            if input.service:
+                service = service.filter(Service.name==input.service)
+            elif input.service_id:
+                service = service.filter(Service.id==input.service_id)
+            else:
+                raise Exception('Either service or service_id is required on input')
+
+            service = service.first()
 
             if input.connection == CONNECTION.CHANNEL and not service:
                 msg = 'Service `{}` does not exist in this cluster'.format(input.service)
@@ -511,9 +553,9 @@ class Edit(_CreateEdit):
         request_elem = 'zato_http_soap_edit_request'
         response_elem = 'zato_http_soap_edit_response'
         input_required = 'id', 'name', 'url_path', 'connection'
-        input_optional = 'service', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
-            'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
-            'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), 'content_type', \
+        input_optional = 'service', 'service_id', AsIs('security_id'), 'method', 'soap_action', 'soap_version', \
+            'data_format', 'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', \
+            'params_pri', 'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
@@ -538,6 +580,7 @@ class Edit(_CreateEdit):
         input.security_id  = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action  = input.soap_action if input.soap_action else ''
         input.timeout      = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+        input.security_groups = self._preprocess_security_groups(input)
 
         input.is_active   = input.get('is_active',   True)
         input.is_internal = input.get('is_internal', False)
@@ -599,8 +642,16 @@ class Edit(_CreateEdit):
             # Is the service's name correct?
             service = session.query(Service).\
                 filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id).\
-                filter(Service.name==input.service).first()
+                filter(Service.cluster_id==Cluster.id)
+
+            if input.service:
+                service = service.filter(Service.name==input.service)
+            elif input.service_id:
+                service = service.filter(Service.id==input.service_id)
+            else:
+                raise Exception('Either service or service_id is required on input')
+
+            service = service.first()
 
             if input.connection == CONNECTION.CHANNEL and not service:
                 msg = 'Service `{}` does not exist in this cluster'.format(input.service)
