@@ -1587,6 +1587,10 @@ class ObjectImporter:
         if item_type == 'zato_generic_connection' and is_edit:
             _= attrs_dict.pop('id', None)
 
+        # We handle security groups only
+        elif item_type == 'security_groups':
+            attrs['group_type'] = Common_Groups.Type.API_Clients
+
         # RBAC objects cannot refer to other objects by their IDs
         elif item_type == 'rbac_role_permission':
             _= attrs_dict.pop('id', None)
