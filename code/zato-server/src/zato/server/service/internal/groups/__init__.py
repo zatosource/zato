@@ -15,7 +15,7 @@ from operator import itemgetter
 from sqlalchemy import and_, func, select
 
 # Zato
-from zato.common.api import CONNECTION, Groups, SEC_DEF_TYPE
+from zato.common.api import CONNECTION, GENERIC, Groups, SEC_DEF_TYPE
 from zato.common.broker_message import Groups as Broker_Message_Groups
 from zato.common.odb.model import GenericObject as ModelGenericObject
 from zato.common.odb.query.generic import GroupsWrapper
@@ -31,6 +31,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+_generic_attr_name = GENERIC.ATTR_NAME
 ModelGenericObjectTable:'any_' = ModelGenericObject.__table__
 
 # ################################################################################################################################
@@ -217,6 +218,21 @@ class GroupsManager:
 
     def add_members_to_group(self, group_id:'int', member_id_list:'strlist') -> 'None':
 
+        # Local variables
+        member_list = []
+
+        # Process each input member ..
+        for member_id in member_id_list:
+
+            # .. each one needs a composite name because each such name has to be unique in the database
+            name = f'{member_id}-{group_id}'
+
+            # .. append it for later use
+            member_list.append({
+                'name': name,
+                _generic_attr_name: '',
+            })
+
         # Work in a new SQL transaction ..
         with closing(self.server.odb.session()) as session:
 
@@ -224,18 +240,15 @@ class GroupsManager:
             wrapper = GroupsWrapper(session, self.cluster_id)
 
             # .. do add the members to the group now ..
-            for member_id in member_id_list:
+            insert = wrapper.create_many(
+                member_list,
+                Groups.Type.Group_Member,
+                Groups.Type.API_Clients,
+                parent_object_id=group_id
+            )
 
-                # This is a composite name because each such name has to be unique in the database
-                name = f'{member_id}-{group_id}'
-
-                insert = wrapper.create(
-                    name, '',
-                    Groups.Type.Group_Member,
-                    Groups.Type.API_Clients,
-                    parent_object_id=group_id)
-
-                session.execute(insert)
+            # .. run the query ..
+            session.execute(insert)
 
             # .. and commit the changes.
             session.commit()
