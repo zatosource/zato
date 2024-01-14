@@ -125,6 +125,34 @@ class GenericObjectWrapper:
 
 # ################################################################################################################################
 
+    def _create_from_list(
+        self,
+        item_list:'dictlist',
+        type_:'strnone'=None,
+        subtype:'strnone'=None,
+        *,
+        parent_object_id:'intnone'=None,
+    ) -> 'any_':
+
+        # Local variables
+        type_ = type_ or self.type_
+        subtype = subtype or self.subtype
+        now = datetime.utcnow()
+
+        # Preprocess each item we have on input
+        for item in item_list:
+            item['type_'] = type_
+            item['subtype'] = subtype
+            item['parent_object_id'] = parent_object_id
+            item['cluster_id'] = self.cluster_id
+            item['creation_time'] = now
+            item['last_modified'] = now
+
+        result = insert(self.model_class).values(item_list)
+        return result
+
+# ################################################################################################################################
+
     def create(
         self,
         name:'str',
@@ -136,24 +164,31 @@ class GenericObjectWrapper:
     ) -> 'any_':
         """ Creates a row based on the input data.
         """
-
         # Local variables
         type_ = type_ or self.type_
         subtype = subtype or self.subtype
-        now = datetime.utcnow()
 
-        result = insert(self.model_class).values([{
+        item = {
             'name': name,
-            'type_': type_,
-            'subtype': subtype,
-            'parent_object_id': parent_object_id,
-            'cluster_id': self.cluster_id,
-            'creation_time': now,
-            'last_modified': now,
             _generic_attr_name: opaque,
-        }])
+        }
 
+        result = self._create_from_list([item], type_, subtype, parent_object_id=parent_object_id)
         return result
+
+# ################################################################################################################################
+
+    def create_many(
+        self,
+        name:'str',
+        opaque:'str',
+        type_:'strnone'=None,
+        subtype:'strnone'=None,
+        *,
+        parent_object_id:'intnone'=None
+    ) -> 'any_':
+        """ Creates multiple rows based on the input data.
+        """
 
 # ################################################################################################################################
 
