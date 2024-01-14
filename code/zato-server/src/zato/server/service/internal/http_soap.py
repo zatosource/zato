@@ -39,7 +39,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_GetList_Optional = ('include_wrapper', 'cluster_id', 'connection', 'transport', 'data_format')
+_GetList_Optional = ('include_wrapper', 'cluster_id', 'connection', 'transport', 'data_format', 'needs_security_group_names')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,7 +101,7 @@ class _BaseGet(AdminService):
                 Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
                 Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
                 'username', 'is_wrapper', 'wrapper_type', AsIs('security_groups'), 'security_group_count', \
-                    'security_group_member_count'
+                'security_group_member_count', 'needs_security_group_names'
 
 # ################################################################################################################################
 
@@ -177,11 +177,18 @@ class GetList(_BaseGet):
         # Local aliases
         out:'anylist' = []
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
+        needs_security_group_names = self.request.input.get('needs_security_group_names') or False
         include_wrapper = self.request.input.get('include_wrapper') or False
         should_ignore_wrapper = not include_wrapper
 
-        # Get information about security groups which may be used later by each item
+        # Get information about security groups which may be used later on
         security_groups_member_count = self.invoke('dev.groups.get-member-count', group_type=Groups.Type.API_Clients)
+
+        if needs_security_group_names:
+            all_security_groups = self.invoke('dev.groups.get-list', group_type=Groups.Type.API_Clients)
+            all_security_groups
+        else:
+            all_security_groups = []
 
         # Obtain the basic result ..
         result = self._search(http_soap_list, session, cluster_id,
@@ -198,10 +205,21 @@ class GetList(_BaseGet):
         for item in data:
 
             # .. build a dictionary of information about groups ..
-            security_groups_for_item = self._get_security_groups_info(item, security_groups_member_count)
+            security_groups_for_item_info = self._get_security_groups_info(item, security_groups_member_count)
 
-            item['security_group_count'] = security_groups_for_item['group_count']
-            item['security_group_member_count'] = security_groups_for_item['member_count']
+            item['security_group_count'] = security_groups_for_item_info['group_count']
+            item['security_group_member_count'] = security_groups_for_item_info['member_count']
+
+            # .. optionally, we may need to turn security group IDs into their names ..
+            if needs_security_group_names:
+                if security_groups_for_item := item.get('security_groups'):
+                    new_security_groups = []
+                    for item_group_id in security_groups_for_item:
+                        for group in all_security_groups:
+                            if item_group_id == group['id']:
+                                new_security_groups.append(group['name'])
+                                break
+                    item['security_groups'] = sorted(new_security_groups)
 
             # .. this needs to be extracted ..
             item['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(item)
