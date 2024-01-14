@@ -512,6 +512,8 @@ class Common(Constants):
 
 class Groups(Constants):
     code_start = 108000
+    Edit = ValueConstant('')
+    Edit_Member_List = ValueConstant('')
     Delete = ValueConstant('')
 
 code_to_name = {}

@@ -413,7 +413,7 @@ class EditMemberList(Service):
     """ Adds members to or removes them from a group.
     """
     name = 'dev.groups.edit-member-list'
-    input:'any_' = 'action', AsIs('group_id'), AsIs('member_id_list')
+    input:'any_' = 'group_action', 'group_id', AsIs('member_id_list')
 
     def handle(self):
 
@@ -421,12 +421,16 @@ class EditMemberList(Service):
         input = self.request.input
 
         groups_manager = GroupsManager(self.server)
-        if input.action == Groups.Membership_Action.Add:
+        if input.group_action == Groups.Membership_Action.Add:
             func = groups_manager.add_members_to_group
         else:
             func = groups_manager.remove_members_from_group
 
         func(input.group_id, input.member_id_list)
+
+        # .. now, let all the threads know about the update.
+        input.action = Broker_Message_Groups.Edit_Member_List.value
+        self.broker_client.publish(input)
 
 # ################################################################################################################################
 # ################################################################################################################################
