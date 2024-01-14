@@ -1,4 +1,5 @@
-'''# -*- coding: utf-8 -*-
+'''
+# -*- coding: utf-8 -*-
 
 """
 Copyright (C) 2024, Zato Source s.r.o. https://zato.io
@@ -9,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from json import dumps
+from operator import itemgetter
 
 # SQLAlchemy
 from sqlalchemy import and_, func, select
@@ -268,18 +270,36 @@ class GetList(Service):
     """ Returns all groups matching the input criteria.
     """
     name = 'dev.groups.get-list'
-    input:'any_' = 'group_type'
+    input:'any_' = 'group_type', '-needs_members', '-needs_short_members'
 
     def handle(self):
-        groups_manager = GroupsManager(self.server)
 
-        group_list = groups_manager.get_group_list(self.request.input.group_type)
-        member_count = self.invoke(GetMemberCount, group_type=self.request.input.group_type)
+        group_type = self.request.input.group_type
+        needs_members = self.request.input.needs_members
+        needs_short_members = self.request.input.needs_short_members
+
+        groups_manager = GroupsManager(self.server)
+        group_list = groups_manager.get_group_list(group_type)
+        member_count = self.invoke(GetMemberCount, group_type=group_type)
 
         for item in group_list:
             group_id = item['id']
             group_member_count = member_count[group_id]
             item['member_count'] = group_member_count
+
+            if needs_members:
+                members = self.invoke(GetMemberList, group_type=group_type, group_id=group_id)
+                if needs_short_members:
+                    new_members = []
+                    for member in members:
+                        new_members.append({
+                            'name': member['name'],
+                            'sec_type': member['sec_type'],
+                        })
+                    members = new_members
+
+                members.sort(key=itemgetter('name')) # type: ignore
+                item['members'] = members
 
             if (group_member_count == 0) or (group_member_count > 1):
                 suffix = 's'
@@ -345,10 +365,11 @@ class Delete(Service):
 
         # Local variables
         input = self.request.input
+        group_id = int(input.id)
 
         # Delete this group from the database ..
         groups_manager = GroupsManager(self.server)
-        groups_manager.delete_group(input.id)
+        groups_manager.delete_group(group_id)
 
         # .. make sure the database configuration of channels using it is also updated ..
         to_update = []
@@ -356,8 +377,8 @@ class Delete(Service):
 
         for item in data:
             if security_groups := item.get('security_groups'):
-                if input.id in security_groups:
-                    security_groups.remove(input.id)
+                if group_id in security_groups:
+                    security_groups.remove(group_id)
                     item['security_groups'] = security_groups
                     to_update.append(item)
 
@@ -375,7 +396,7 @@ class GetMemberList(Service):
     """ Returns current members of a group.
     """
     name = 'dev.groups.get-member-list'
-    input:'any_' = 'group_type', 'group_id'
+    input:'any_' = 'group_type', 'group_id', '-should_serialize'
 
     def handle(self):
 
@@ -384,7 +405,9 @@ class GetMemberList(Service):
 
         groups_manager = GroupsManager(self.server)
         member_list = groups_manager.get_member_list(input.group_type, input.group_id)
-        self.response.payload = dumps(member_list)
+        if input.should_serialize:
+            member_list = dumps(member_list)
+        self.response.payload = member_list
 
 # ################################################################################################################################
 # ################################################################################################################################
