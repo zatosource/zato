@@ -293,12 +293,12 @@ class GetList(Service):
                     for member in members:
                         new_members.append({
                             'name': member['name'],
-                            'sec_type': member['sec_type'],
                         })
                     members = new_members
 
                 members.sort(key=itemgetter('name')) # type: ignore
-                item['members'] = members
+                if members:
+                    item['members'] = members
 
             if (group_member_count == 0) or (group_member_count > 1):
                 suffix = 's'
