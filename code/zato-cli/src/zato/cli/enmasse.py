@@ -2376,6 +2376,8 @@ class ObjectManager:
 
         elif service_name == 'dev.groups.get-list':
             request['group_type'] = Common_Groups.Type.API_Clients
+            request['needs_members'] = True
+            request['needs_short_members'] = True
 
         response = self.client.invoke(service_name, request)
 
