@@ -323,13 +323,12 @@ span.like-a {
     font-size: 12px;
     background-color: #ccc;
     color: #000;
-    text-shadow-QQQ: 1px 1px 0 #eee
 }
 
 .form-data td {
     border: none;
     padding: 4px;
-    padding-right: 12px
+    padding-right: 0px
 }
 
 .ui-dialog-titlebar {
