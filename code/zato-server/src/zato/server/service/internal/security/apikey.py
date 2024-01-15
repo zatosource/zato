@@ -17,7 +17,7 @@ from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, APIKeySecurity
 from zato.common.odb.query import apikey_security_list
 from zato.common.rate_limiting import DefinitionParser
-from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
+from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
@@ -61,10 +61,10 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_apikey_create_request'
         response_elem = 'zato_security_apikey_create_response'
-        input_required = 'name', 'is_active', 'username'
+        input_required = 'name', 'is_active'
         input_optional:'anytuple' = 'cluster_id', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def')
-        output_required = 'id', 'name'
+            Boolean('rate_limit_check_parent_def'), 'header'
+        output_required = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
 
@@ -72,7 +72,10 @@ class Create(AdminService):
         DefinitionParser.check_definition_from_input(self.request.input)
 
         input = self.request.input
+        input.username = 'Zato-Not-Used-' + uuid4().hex
         input.password = uuid4().hex
+        input.password = self.server.encrypt(input.password)
+        input.header = input.header or self.server.api_key_header
         cluster_id = input.get('cluster_id') or self.server.cluster_id
 
         with closing(self.odb.session()) as session:
@@ -107,6 +110,7 @@ class Create(AdminService):
 
                 self.response.payload.id = auth.id
                 self.response.payload.name = auth.name
+                self.response.payload.header = input.header
 
         # Make sure the object has been created
         _:'any_' = self.server.worker_store.wait_for_apikey(input.name)
@@ -120,13 +124,15 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_apikey_edit_request'
         response_elem = 'zato_security_apikey_edit_response'
-        input_required = 'id', 'name', 'is_active', 'username'
+        input_required = 'id', 'name', 'is_active'
         input_optional:'anytuple' = 'cluster_id', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def')
-        output_required = 'id', 'name'
+            Boolean('rate_limit_check_parent_def'), 'header'
+        output_required = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
+
         input = self.request.input
+        input.header = input.header or self.server.api_key_header
         cluster_id = input.get('cluster_id') or self.server.cluster_id
 
         # If we have a rate limiting definition, let's check it upfront
@@ -144,13 +150,14 @@ class Edit(AdminService):
                     raise Exception('API key `{}` already exists in this cluster'.format(input.name))
 
                 definition = session.query(APIKeySecurity).filter_by(id=input.id).one()
-                old_name = definition.name
 
+                opaque = parse_instance_opaque_attr(definition)
                 set_instance_opaque_attrs(definition, input)
+
+                old_name = definition.name
 
                 definition.name = input.name
                 definition.is_active = input.is_active
-                definition.username = input.username
 
                 session.add(definition)
                 session.commit()
@@ -163,11 +170,13 @@ class Edit(AdminService):
             else:
                 input.action = SECURITY.APIKEY_EDIT.value
                 input.old_name = old_name
+                input.username = definition.username
                 input.sec_type = SEC_DEF_TYPE.APIKEY
                 self.broker_client.publish(input)
 
                 self.response.payload.id = definition.id
                 self.response.payload.name = definition.name
+                self.response.payload.header = opaque.header
 
 # ################################################################################################################################
 # ################################################################################################################################
