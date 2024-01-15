@@ -425,7 +425,8 @@ class RequestDispatcher:
 
                     if isinstance(e, Unauthorized):
                         status = _status_unauthorized
-                        wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
+                        if e.challenge:
+                            wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
 
                     elif isinstance(e, (BadRequest, ModelValidationError)):
                         status = _status_bad_request
