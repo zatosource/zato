@@ -25,7 +25,8 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from sqlalchemy.orm import Session as SASession
+    from zato.common.typing_ import any_, anytuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,12 +41,14 @@ class GetList(AdminService):
         response_elem = 'zato_security_apikey_get_list_response'
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'username'
-        output_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+        output_optional:'anytuple' = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
+            Boolean('rate_limit_check_parent_def')
 
-    def get_data(self, session):
-        return elems_with_opaque(self._search(apikey_security_list, session, self.request.input.cluster_id, False))
+    def get_data(self, session:'SASession') -> 'any_':
+        search_result = self._search(apikey_security_list, session, self.request.input.cluster_id, False)
+        return elems_with_opaque(search_result) # type: ignore
 
-    def handle(self):
+    def handle(self) -> 'None':
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
@@ -59,11 +62,11 @@ class Create(AdminService):
         request_elem = 'zato_security_apikey_create_request'
         response_elem = 'zato_security_apikey_create_response'
         input_required = 'name', 'is_active', 'username'
-        input_optional = 'cluster_id', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
+        input_optional:'anytuple' = 'cluster_id', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def')
         output_required = 'id', 'name'
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         # If we have a rate limiting definition, let's check it upfront
         DefinitionParser.check_definition_from_input(self.request.input)
@@ -118,11 +121,11 @@ class Edit(AdminService):
         request_elem = 'zato_security_apikey_edit_request'
         response_elem = 'zato_security_apikey_edit_response'
         input_required = 'id', 'name', 'is_active', 'username'
-        input_optional = 'cluster_id', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
+        input_optional:'anytuple' = 'cluster_id', 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def')
         output_required = 'id', 'name'
 
-    def handle(self):
+    def handle(self) -> 'None':
         input = self.request.input
         cluster_id = input.get('cluster_id') or self.server.cluster_id
 
@@ -178,8 +181,9 @@ class ChangePassword(ChangePasswordBase):
         request_elem = 'zato_security_apikey_change_password_request'
         response_elem = 'zato_security_apikey_change_password_response'
 
-    def handle(self):
-        def _auth(instance, password):
+    def handle(self) -> 'None':
+
+        def _auth(instance:'any_', password:'str') -> 'None':
             instance.password = password
 
         return self._handle(APIKeySecurity, _auth, SECURITY.APIKEY_CHANGE_PASSWORD.value)
@@ -193,9 +197,9 @@ class Delete(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_apikey_delete_request'
         response_elem = 'zato_security_apikey_delete_response'
-        input_required = 'id',
+        input_required = 'id'
 
-    def handle(self):
+    def handle(self) -> 'None':
         with closing(self.odb.session()) as session:
             try:
                 auth = session.query(APIKeySecurity).\
