@@ -453,6 +453,7 @@ class APIKeySecurity(SecurityBase):
         self.username = username
         self.password = password
         self.cluster = cluster
+        self.header = None # Not used by the DB
 
     def to_json(self):
         return to_json(self)
