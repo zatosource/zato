@@ -51,7 +51,7 @@ slugify = slugify
 
 if 0:
     from zato.client import ServiceInvokeResponse
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
 
@@ -969,7 +969,7 @@ def get_group_list(req:'any_', group_type:'str', *, http_soap_channel_id:'str'='
             'id': http_soap_channel_id,
         })
         http_soap_channel = http_soap_channel.data
-        http_soap_channel_security_groups = http_soap_channel['security_groups']
+        http_soap_channel_security_groups = http_soap_channel.get('security_groups') or []
 
         for item in groups:
             if item.id in http_soap_channel_security_groups:
