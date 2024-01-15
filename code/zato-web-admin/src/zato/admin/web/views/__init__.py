@@ -489,6 +489,10 @@ class Index(_BaseView):
             # or use everything that we received from the service.
             names = names if names else msg_item.keys()
 
+            print()
+            print(111, msg_item)
+            print()
+
             for name in sorted(names):
                 value = getattr(msg_item, name, None)
                 if value is not None:

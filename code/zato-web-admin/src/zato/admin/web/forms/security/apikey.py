@@ -19,7 +19,7 @@ class CreateForm(WithRateLimiting):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     username = forms.CharField(widget=forms.TextInput(
         attrs={'class':'required', 'style':'width:100%', 'disabled':True}),
-        initial=API_Key.Default_Key,
+        initial=API_Key.Default_Header,
     )
     is_rate_limit_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     rate_limit_check_parent_def = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))

@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -30,7 +28,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'username'
-        output_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def'
+        output_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def', 'header'
         output_repeated = True
 
     def handle(self):

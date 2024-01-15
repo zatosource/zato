@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -42,7 +42,7 @@ class GetList(AdminService):
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'username'
         output_optional:'anytuple' = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def')
+            Boolean('rate_limit_check_parent_def'), 'header'
 
     def get_data(self, session:'SASession') -> 'any_':
         search_result = self._search(apikey_security_list, session, self.request.input.cluster_id, False)
@@ -50,7 +50,8 @@ class GetList(AdminService):
 
     def handle(self) -> 'None':
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            data = self.get_data(session)
+            self.response.payload[:] = data
 
 # ################################################################################################################################
 # ################################################################################################################################
