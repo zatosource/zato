@@ -965,7 +965,7 @@ def get_group_list(req:'any_', group_type:'str', *, http_soap_channel_id:'str'='
     })
 
     # .. extract the business data ..
-    groups = response.data
+    groups = response.data or []
 
     # .. if we have a channel ID on input, we need to indicate which groups are assigned to it ..
     if http_soap_channel_id:
