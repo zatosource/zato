@@ -245,7 +245,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
         self.enforce_service_invokes = False
         self.json_parser = BasicParser()
-        self.api_key_name = 'Zato-Default-Not-Set-API-Key'
+        self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
 
         # A server-wide publication counter, indicating which one the current publication is,
         # increased after each successful publication.
@@ -1438,13 +1438,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def set_up_api_key_config(self):
 
         # Prefer the value from environment variables ..
-        if not (api_key_name := os.environ.get(API_Key.Env_Key)):
+        if not (api_key_header := os.environ.get(API_Key.Env_Key)):
 
             # .. otherwise, use the default one .
-            api_key_name = API_Key.Default_Key
+            api_key_header = API_Key.Default_Header
 
         # .. now, we can set it for later use.
-        self.api_key_name = api_key_name
+        self.api_key_header = api_key_header
 
 # ################################################################################################################################
 
@@ -1726,12 +1726,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def encrypt(self, data:'any_', prefix:'str'=SECRETS.PREFIX) -> 'strnone':
+    def encrypt(self, data:'any_', prefix:'str'=SECRETS.PREFIX, *, needs_str:'bool'=True) -> 'strnone':
         """ Returns data encrypted using server's CryptoManager.
         """
         if data:
             data = data.encode('utf8') if isinstance(data, str) else data
-            encrypted = self.crypto_manager.encrypt(data, needs_str=True)
+            encrypted = self.crypto_manager.encrypt(data, needs_str=needs_str)
             return '{}{}'.format(prefix, encrypted)
 
 # ################################################################################################################################
