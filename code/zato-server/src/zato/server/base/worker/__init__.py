@@ -1068,7 +1068,7 @@ class WorkerStore(_WorkerStoreBase):
         """ API keys need to be upper-cased and in the format that WSGI environment will have them in.
         """
         for config_dict in self.worker_config.apikey.values():
-            config_dict.config.orig_username = config_dict.config.username
+            config_dict.config.orig_header = config_dict.config.header
             update_apikey_username_to_channel(config_dict.config)
 
 # ################################################################################################################################
