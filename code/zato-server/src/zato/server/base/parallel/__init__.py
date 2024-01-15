@@ -34,7 +34,7 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import DATA_FORMAT, default_internal_modules, EnvFile, EnvVariable,  GENERIC,  HotDeploy, IPC, \
+from zato.common.api import API_Key, DATA_FORMAT, default_internal_modules, EnvFile, EnvVariable,  GENERIC,  HotDeploy, IPC, \
     KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, \
         ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
@@ -245,6 +245,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
         self.enforce_service_invokes = False
         self.json_parser = BasicParser()
+        self.api_key_name = 'Zato-Default-Not-Set-API-Key'
 
         # A server-wide publication counter, indicating which one the current publication is,
         # increased after each successful publication.
@@ -1106,6 +1107,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Rate limiting for SSO
         self.set_up_sso_rate_limiting()
 
+        # API keys configuration
+        self.set_up_api_key_config()
+
         # Some parts of the worker store's configuration are required during the deployment of services
         # which is why we are doing it here, before worker_store.init() is called.
         self.worker_store.early_init()
@@ -1428,6 +1432,19 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         for item in self.odb.get_sso_user_rate_limiting_info():
             item = cast_('any_', item)
             self._create_sso_user_rate_limiting(item.user_id, True, item.rate_limit_def)
+
+# ################################################################################################################################
+
+    def set_up_api_key_config(self):
+
+        # Prefer the value from environment variables ..
+        if not (api_key_name := os.environ.get(API_Key.Env_Key)):
+
+            # .. otherwise, use the default one .
+            api_key_name = API_Key.Default_Key
+
+        # .. now, we can set it for later use.
+        self.api_key_name = api_key_name
 
 # ################################################################################################################################
 
