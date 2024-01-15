@@ -243,22 +243,24 @@ class URLData(CyURLData, OAuthDataStore):
         """ Performs the authentication against an API key in a specified HTTP header.
         """
         # Find out if the header was provided at all
-        if sec_def['username'] not in wsgi_environ:
+        if sec_def['header'] not in wsgi_environ:
             if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
+                msg = '401 UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
+                error_msg = '{"status": 401}'
                 logger.error(msg + ' (No header)')
-                raise Unauthorized(cid, msg, 'zato-apikey')
+                raise Unauthorized(cid, error_msg, None)
             else:
                 return False
 
         expected_key = sec_def.get('password', '')
 
         # Passwords are not required
-        if expected_key and wsgi_environ[sec_def['username']] != expected_key:
+        if expected_key and wsgi_environ[sec_def['header']] != expected_key:
             if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
-                logger.error(msg + ' (Invalid key)')
-                raise Unauthorized(cid, msg, 'zato-apikey')
+                msg = '401 UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
+                error_msg = '{"status": 401}'
+                logger.error(msg + ' (No header)')
+                raise Unauthorized(cid, msg, None)
             else:
                 return False
 
@@ -621,7 +623,7 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def _update_apikey(self, name, config):
-        config.orig_username = config.username
+        config.orig_header = config.header
         update_apikey_username_to_channel(config)
         self.apikey_config[name] = Bunch()
         self.apikey_config[name].config = config
