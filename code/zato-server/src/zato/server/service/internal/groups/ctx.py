@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+'''# -*- coding: utf-8 -*-
 
 """
 Copyright (C) 2024, Zato Source s.r.o. https://zato.io
@@ -11,6 +11,7 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common.api import Groups, Sec_Def_Type
+from zato.common.crypto.api import is_string_equal
 from zato.common.groups import Member
 from zato.server.service import Service
 
@@ -18,7 +19,7 @@ from zato.server.service import Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import intlist, intset, list_, strdict
+    from zato.common.typing_ import dict_, intlist, intset, list_, strdict
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -51,8 +52,8 @@ class SecurityGroupCtx:
     channel_id: 'int'
     security_groups: 'intset'
 
-    basic_auth_credentials: 'strdict'
-    apikey_credentials: 'strdict'
+    basic_auth_credentials: 'dict_[str, _BasicAuthSecDef]'
+    apikey_credentials: 'dict_[str, _APIKeySecDef]'
 
     def __init__(self) -> 'None':
 
@@ -70,7 +71,12 @@ class SecurityGroupCtx:
 # ################################################################################################################################
 
     def check_security_basic_auth(self, username:'str', password:'str') -> 'bool':
-        pass
+
+        if sec_info := self.basic_auth_credentials.get(username):
+            password = sec_info.password
+            is_string_equal
+        else:
+            return False
 
 # ################################################################################################################################
 
@@ -193,3 +199,4 @@ class BuildCtx(Service):
 
 # ################################################################################################################################
 # ################################################################################################################################
+'''
