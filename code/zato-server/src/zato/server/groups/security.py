@@ -1,4 +1,4 @@
-'''# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 """
 Copyright (C) 2024, Zato Source s.r.o. https://zato.io
@@ -94,8 +94,14 @@ class BuildCtx(Service):
     name = 'dev.groups.build-ctx'
 
     def handle(self):
-        pass
+
+        channel_id = 85
+        security_groups = [1, 3]
+
+        builder = SecurityGroupCtxBuilder(self.server)
+        ctx = builder.build_ctx(channel_id, security_groups)
+
+        ctx
 
 # ################################################################################################################################
 # ################################################################################################################################
-'''
