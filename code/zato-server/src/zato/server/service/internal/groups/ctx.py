@@ -131,7 +131,11 @@ class SecurityGroupCtxBuilder:
         # .. add all the credentials ..
         for group_id in ctx.security_groups:
 
-            # .. first, extract all the members from this group ..
+            # .. first, add an indication that we use this group,
+            # .. no matter what members are in it ..
+            ctx.security_groups.add(group_id)
+
+            # .. next, extract all the members from this group ..
             members = self._get_members_by_group_id(group_id)
 
             # .. now, go through each of the members found ..
