@@ -82,6 +82,7 @@ from zato.server.connection.pool_wrapper import ConnectionPoolWrapper
 from zato.server.connection.stats import ServiceStatsClient
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
+from zato.server.groups.base import GroupsManager
 from zato.server.sso import SSOTool
 
 # ################################################################################################################################
@@ -161,6 +162,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     stop_after: 'intnone'
     deploy_auto_from: 'str' = ''
+
+    groups_manager: 'GroupsManager'
 
     def __init__(self) -> 'None':
         self.logger = logger
@@ -1129,6 +1132,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Configure the store to obtain OAuth tokens through
         self.set_up_oauth_store()
+
+        # Build an object responsible for groups
+        self.groups_manager = GroupsManager(self)
 
         # Bearer tokens (OAuth)
         self.bearer_token_manager = BearerTokenManager(self)

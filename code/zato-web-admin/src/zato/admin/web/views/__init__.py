@@ -960,7 +960,7 @@ def get_security_name_link(req, sec_type, sec_name, *, needs_type=True):
 def get_group_list(req:'any_', group_type:'str', *, http_soap_channel_id:'str'='') -> 'anylist':
 
     # Get a list of all the groups that exist
-    response = req.zato.client.invoke('dev.groups.get-list', {
+    response = req.zato.client.invoke('zato.groups.get-list', {
         'group_type': group_type,
     })
 

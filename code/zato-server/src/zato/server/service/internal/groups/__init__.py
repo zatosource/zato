@@ -14,7 +14,6 @@ from operator import itemgetter
 from zato.common.api import CONNECTION, Groups
 from zato.common.broker_message import Groups as Broker_Message_Groups
 from zato.common.odb.model import GenericObject as ModelGenericObject
-from zato.server.groups.base import GroupsManager
 from zato.server.service import AsIs, Service
 
 # ################################################################################################################################
@@ -34,7 +33,6 @@ ModelGenericObjectTable:'any_' = ModelGenericObject.__table__
 class GetList(Service):
     """ Returns all groups matching the input criteria.
     """
-    name = 'dev.groups.get-list'
     input:'any_' = 'group_type', '-needs_members', '-needs_short_members'
 
     def handle(self):
@@ -43,8 +41,7 @@ class GetList(Service):
         needs_members = self.request.input.needs_members
         needs_short_members = self.request.input.needs_short_members
 
-        groups_manager = GroupsManager(self.server)
-        group_list = groups_manager.get_group_list(group_type)
+        group_list = self.server.groups_manager.get_group_list(group_type)
         member_count = self.invoke(GetMemberCount, group_type=group_type)
 
         for item in group_list:
@@ -81,8 +78,6 @@ class GetList(Service):
 class Create(Service):
     """ Creates a new group.
     """
-    name = 'dev.groups.create'
-
     input:'any_' = 'group_type', 'name', AsIs('-members')
     output:'any_' = 'id', 'name'
 
@@ -91,8 +86,7 @@ class Create(Service):
         # Local variables
         input = self.request.input
 
-        groups_manager = GroupsManager(self.server)
-        id = groups_manager.create_group(input.group_type, input.name)
+        id = self.server.groups_manager.create_group(input.group_type, input.name)
 
         self.invoke(
             EditMemberList,
@@ -111,8 +105,6 @@ class Create(Service):
 class Edit(Service):
     """ Updates an existing group.
     """
-    name = 'dev.groups.edit'
-
     input:'any_' = 'id', 'group_type', 'name', AsIs('-members')
     output:'any_' = 'id', 'name'
 
@@ -127,12 +119,11 @@ class Edit(Service):
         # All the members that have to be removed from the group
         to_remove:'strlist' = []
 
-        groups_manager = GroupsManager(self.server)
-        groups_manager.edit_group(input.id, input.group_type, input.name)
+        self.server.groups_manager.edit_group(input.id, input.group_type, input.name)
 
         if input.members:
 
-            group_members = groups_manager.get_member_list(input.group_type, input.id)
+            group_members = self.server.groups_manager.get_member_list(input.group_type, input.id)
 
             input_member_names = set(item['name'] for item in input.members)
             group_member_names = set(item['name'] for item in group_members)
@@ -184,8 +175,6 @@ class Edit(Service):
 class Delete(Service):
     """ Deletes an existing group.
     """
-    name = 'dev.groups.delete'
-
     input:'any_' = 'id'
 
     def handle(self):
@@ -195,8 +184,7 @@ class Delete(Service):
         group_id = int(input.id)
 
         # Delete this group from the database ..
-        groups_manager = GroupsManager(self.server)
-        groups_manager.delete_group(group_id)
+        self.server.groups_manager.delete_group(group_id)
 
         # .. make sure the database configuration of channels using it is also updated ..
         to_update = []
@@ -222,7 +210,6 @@ class Delete(Service):
 class GetMemberList(Service):
     """ Returns current members of a group.
     """
-    name = 'dev.groups.get-member-list'
     input:'any_' = 'group_type', 'group_id', '-should_serialize'
 
     def handle(self):
@@ -230,8 +217,7 @@ class GetMemberList(Service):
         # Local variables
         input = self.request.input
 
-        groups_manager = GroupsManager(self.server)
-        member_list = groups_manager.get_member_list(input.group_type, input.group_id)
+        member_list = self.server.groups_manager.get_member_list(input.group_type, input.group_id)
         if input.should_serialize:
             member_list = dumps(member_list)
         self.response.payload = member_list
@@ -242,7 +228,6 @@ class GetMemberList(Service):
 class GetMemberCount(Service):
     """ Returns information about how many members are in each group.
     """
-    name = 'dev.groups.get-member-count'
     input:'any_' = 'group_type', '-should_serialize'
 
     def handle(self):
@@ -250,8 +235,7 @@ class GetMemberCount(Service):
         # Local variables
         input = self.request.input
 
-        groups_manager = GroupsManager(self.server)
-        member_count = groups_manager.get_member_count(input.group_type)
+        member_count = self.server.groups_manager.get_member_count(input.group_type)
         if input.should_serialize:
             member_count = dumps(member_count)
         self.response.payload = member_count
@@ -262,10 +246,7 @@ class GetMemberCount(Service):
 class EditMemberList(Service):
     """ Adds members to or removes them from a group.
     """
-    name = 'dev.groups.edit-member-list'
     input:'any_' = 'group_action', 'group_id', AsIs('-member_id_list'), AsIs('-members')
-
-# ################################################################################################################################
 
     def _get_member_id_list_from_name_list(self, member_name_list:'any_') -> 'strlist':
 
@@ -305,12 +286,10 @@ class EditMemberList(Service):
         if not member_id_list:
             return
 
-        groups_manager = GroupsManager(self.server)
-
         if input.group_action == Groups.Membership_Action.Add:
-            func = groups_manager.add_members_to_group
+            func = self.server.groups_manager.add_members_to_group
         else:
-            func = groups_manager.remove_members_from_group
+            func = self.server.groups_manager.remove_members_from_group
 
         func(input.group_id, member_id_list)
 
