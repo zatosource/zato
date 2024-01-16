@@ -22,7 +22,7 @@ from zato.server.service import Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import dict_, intlist, intnone, intset, list_
+    from zato.common.typing_ import boolnone, dict_, intdict, intlist, intnone, intset, list_
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -55,6 +55,12 @@ class SecurityGroupCtx:
     # ID of a channel this ctx object is attached to
     channel_id: 'int'
 
+    # Maps member IDs to security definition IDs
+    members_to_sec: 'intdict'
+
+    # Maps security definition IDs to member IDs
+    sec_to_member: 'intdict'
+
     # IDs of all the security groups attached to this channel
     security_groups: 'intset'
 
@@ -66,11 +72,28 @@ class SecurityGroupCtx:
 
     def __init__(self) -> 'None':
 
-        security_groups:'intset' = set()
+        self.members_to_sec = {}
+        self.sec_to_member = {}
+
+        self.security_groups = set()
+
         self.basic_auth_credentials = {}
         self.apikey_credentials = {}
 
         self._lock = RLock()
+
+# ################################################################################################################################
+
+    def add_member(self, member_id:'int', security_id:'int') -> 'None':
+        with self._lock:
+            self.members_to_sec[member_id] = security_id
+            self.sec_to_member[security_id] = member_id
+
+# ################################################################################################################################
+
+    def add_security_group(self, group_id:'int') -> 'None':
+        with self._lock:
+            self.members.add(group_id)
 
 # ################################################################################################################################
 
@@ -96,8 +119,6 @@ class SecurityGroupCtx:
 
     def _create_basic_auth(
         self,
-        group_id:'int',
-        member_id:'int',
         security_id:'int',
         username:'str',
         password:'str'
@@ -116,8 +137,6 @@ class SecurityGroupCtx:
 
     def _create_apikey(
         self,
-        group_id:'int',
-        member_id:'int',
         security_id:'int',
         header_value:'str',
     ) -> 'None':
@@ -135,14 +154,21 @@ class SecurityGroupCtx:
     def edit_basic_auth(self, security_id:'int', current_username:'str', password:'str') -> 'None':
 
         with self._lock:
-            if sec_info := self._get_basic_auth_by_security_id(security_id):
-                _ = self.basic_auth_credentials.pop(sec_info.username)
+            if self._delete_basic_auth(security_id):
+                self._create_basic_auth(security_id, current_username, password)
+
+# ################################################################################################################################
+
+    def _delete_basic_auth(self, security_id:'int') -> 'boolnone':
+        if sec_info := self._get_basic_auth_by_security_id(security_id):
+            _ = self.basic_auth_credentials.pop(sec_info.username, None)
+            return True
 
 # ################################################################################################################################
 
     def delete_basic_auth(self, security_id:'int') -> 'None':
         with self._lock:
-            pass
+            _ = self._delete_basic_auth(security_id)
 
 # ################################################################################################################################
 
@@ -197,7 +223,7 @@ class SecurityGroupCtxBuilder:
 
             # .. first, add an indication that we use this group,
             # .. no matter what members are in it ..
-            ctx.security_groups.add(group_id)
+            ctx.add_security_group(group_id)
 
             # .. next, extract all the members from this group ..
             members = self._get_members_by_group_id(group_id)
@@ -213,8 +239,6 @@ class SecurityGroupCtxBuilder:
 
                     # .. populate the correct container ..
                     ctx._create_basic_auth(
-                        group_id,
-                        member.id,
                         sec_def['id'],
                         sec_def['username'],
                         sec_def['password'],
@@ -227,11 +251,15 @@ class SecurityGroupCtxBuilder:
 
                     # .. populate the correct container ..
                     ctx._create_apikey(
-                        group_id,
-                        member.id,
                         sec_def['id'],
                         sec_def['password'],
                     )
+
+
+                # .. add an indication that this channel has such a member,
+                # .. along with information which security ID it is.
+                ctx.add_member(member.id, member.security_id)
+
 
         # .. and return the business object to our caller.
         return ctx
