@@ -34,19 +34,14 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class _BasicAuthSecDef:
-
-    group_id: 'int'
-    member_id: 'int'
     security_id: 'int'
+    username: 'str'
     password: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class _APIKeySecDef:
-
-    group_id: 'int'
-    member_id: 'int'
     security_id: 'int'
     header_value: 'str'
 
@@ -91,9 +86,57 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
-    def edit_basic_auth(self, security_id:'int') -> 'None':
+    def _get_basic_auth_by_security_id(self, security_id:'int') -> '_BasicAuthSecDef | None':
+
+        for value in self.basic_auth_credentials.values():
+            if value.security_id == security_id:
+                return value
+
+# ################################################################################################################################
+
+    def _create_basic_auth(
+        self,
+        group_id:'int',
+        member_id:'int',
+        security_id:'int',
+        username:'str',
+        password:'str'
+    ) -> 'None':
+
+        # Build a business object containing all the data needed in runtime ..
+        item = _BasicAuthSecDef()
+        item.security_id = security_id
+        item.username = username
+        item.password = password
+
+        # .. and add the business object to our container.
+        self.basic_auth_credentials[username] = item
+
+# ################################################################################################################################
+
+    def _create_apikey(
+        self,
+        group_id:'int',
+        member_id:'int',
+        security_id:'int',
+        header_value:'str',
+    ) -> 'None':
+
+        # .. build a business object containing all the data needed in runtime ..
+        item = _APIKeySecDef()
+        item.security_id = security_id
+        item.header_value = header_value
+
+        # .. add the business object to our container.
+        self.apikey_credentials[item.header_value] = item
+
+# ################################################################################################################################
+
+    def edit_basic_auth(self, security_id:'int', current_username:'str', password:'str') -> 'None':
+
         with self._lock:
-            pass
+            if sec_info := self._get_basic_auth_by_security_id(security_id):
+                _ = self.basic_auth_credentials.pop(sec_info.username)
 
 # ################################################################################################################################
 
@@ -168,32 +211,29 @@ class SecurityGroupCtxBuilder:
                     # .. get the member's security definition ..
                     sec_def = self.server.worker_store.basic_auth_get_by_id(member.security_id)
 
-                    # .. build a business object containing all the data needed in runtime ..
-                    item = _BasicAuthSecDef()
-                    item.group_id = group_id
-                    item.member_id = member.id
-                    item.security_id = sec_def['id']
-                    item.password = sec_def['password']
-
-                    # .. add the business object to the correct container ..
-                    username:'str' = sec_def['username']
-                    ctx.basic_auth_credentials[username] = item
+                    # .. populate the correct container ..
+                    ctx._create_basic_auth(
+                        group_id,
+                        member.id,
+                        sec_def['id'],
+                        sec_def['username'],
+                        sec_def['password'],
+                    )
 
                 elif member.sec_type == Sec_Def_Type.APIKEY:
 
                     # .. get the member's security definition ..
                     sec_def = self.server.worker_store.apikey_get_by_id(member.security_id)
 
-                    # .. build a business object containing all the data needed in runtime ..
-                    item = _APIKeySecDef()
-                    item.group_id = group_id
-                    item.member_id = member.id
-                    item.security_id = sec_def['id']
-                    item.header_value = sec_def['password']
+                    # .. populate the correct container ..
+                    ctx._create_apikey(
+                        group_id,
+                        member.id,
+                        sec_def['id'],
+                        sec_def['password'],
+                    )
 
-                    # .. add the business object to the correct container ..
-                    ctx.apikey_credentials[item.header_value] = item
-
+        # .. and return the business object to our caller.
         return ctx
 
 # ################################################################################################################################
