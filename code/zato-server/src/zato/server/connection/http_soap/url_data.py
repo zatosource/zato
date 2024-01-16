@@ -237,7 +237,7 @@ class URLData(CyURLData, OAuthDataStore):
         if sec_def['header'] not in wsgi_environ:
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
-                error_msg = 'You are not allowed to access this resource'
+                error_msg = '401 Unauthorized'
                 logger.error(msg + ' (No header)')
                 raise Unauthorized(cid, error_msg, None)
             else:
@@ -249,9 +249,9 @@ class URLData(CyURLData, OAuthDataStore):
         if expected_key and wsgi_environ[sec_def['header']] != expected_key:
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
-                error_msg = 'You are not allowed to access this resource'
-                logger.error(msg + ' (No header)')
-                raise Unauthorized(cid, msg, None)
+                error_msg = '401 Unauthorized'
+                logger.error(msg + ' (Password)')
+                raise Unauthorized(cid, error_msg, None)
             else:
                 return False
 
