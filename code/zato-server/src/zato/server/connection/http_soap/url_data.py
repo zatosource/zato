@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,13 +15,13 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Python 2/3 compatibility
-from zato.common.ext.future.utils import iteritems, iterkeys, itervalues
-from zato.common.py23_.past.builtins import basestring, unicode
+from zato.common.ext.future.utils import iteritems, iterkeys
+from zato.common.py23_.past.builtins import unicode
 from six import PY2
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common.api import CHANNEL, CONNECTION, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
 from zato.common.vault_ import VAULT
 from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
@@ -223,15 +223,6 @@ class URLData(CyURLData, OAuthDataStore):
             get_func = self.jwt_get
             headers['HTTP_AUTHORIZATION'] ='Bearer {}'.format(auth['secret'])
 
-        elif sec_def_type == _vault_sec_def_type:
-            auth_func = self._handle_security_vault_conn_sec
-            get_func = self.vault_conn_sec_get
-
-            headers['zato.http.response.headers'] = {}
-            for header_info in itervalues(_vault_ws):
-                for key, header in iteritems(header_info):
-                    headers[header] = auth[key]
-
         else:
             raise ValueError('Unrecognized sec_def_type:`{}`'.format(sec_def_type))
 
@@ -392,100 +383,6 @@ class URLData(CyURLData, OAuthDataStore):
                     return False
 
         return True
-
-# ################################################################################################################################
-
-    def _vault_conn_check_headers(self, client, wsgi_environ, sec_def_config, _auth_method=VAULT.AUTH_METHOD,
-        _headers=VAULT.HEADERS):
-        """ Authenticate with Vault with credentials extracted from WSGI environment. Authentication is attempted
-        in the order of: API keys, username/password, GitHub.
-        """
-
-        # API key
-        if _headers.TOKEN_VAULT in wsgi_environ:
-            return client.authenticate(_auth_method.TOKEN.id, wsgi_environ[_headers.TOKEN_VAULT])
-
-        # Username/password
-        elif _headers.USERNAME in wsgi_environ:
-            return client.authenticate(
-                _auth_method.USERNAME_PASSWORD.id, wsgi_environ[_headers.USERNAME], wsgi_environ.get(_headers.PASSWORD))
-
-        # GitHub
-        elif _headers.TOKEN_GH in wsgi_environ:
-            return client.authenticate(_auth_method.GITHUB.id, wsgi_environ[_headers.TOKEN_GH])
-
-# ################################################################################################################################
-
-    def _vault_conn_by_method(self, client, method, headers):
-        auth_attrs = []
-        auth_headers = VAULT.METHOD_HEADER[method]
-        auth_headers = [auth_headers] if isinstance(auth_headers, basestring) else auth_headers
-
-        for header in auth_headers:
-            auth_attrs.append(headers[header])
-
-        return client.authenticate(method, *auth_attrs)
-
-# ################################################################################################################################
-
-    def _enforce_vault_sec(self, cid, name):
-        logger.error('Could not authenticate with Vault `%s`, cid:`%s`', name, cid)
-        raise Unauthorized(cid, 'Failed to authenticate', 'zato-vault')
-
-# ################################################################################################################################
-
-    def _handle_security_vault_conn_sec(self, cid, sec_def, path_info, body, wsgi_environ, post_data=None, enforce_auth=True):
-        """ Authenticates users with Vault.
-        """
-        # 1. Has service that will drive us and give us credentials out of incoming data
-        # 2. No service but has default authentication method - need to extract those headers that pertain to this method
-        # 3. No service and no default authentication method - need to extract all headers that may contain credentials
-
-        sec_def_config = self.vault_conn_sec_config[sec_def.name]['config']
-        client = self.worker.vault_conn_api.get_client(sec_def.name)
-
-        try:
-
-            #
-            # 1.
-            #
-            if sec_def_config.get('service_name'):
-                response = self.worker.invoke(sec_def_config['service_name'], {
-                    'sec_def': sec_def,
-                    'body': body,
-                    'environ': wsgi_environ
-                }, data_format=DATA_FORMAT.DICT, serialize=False)
-
-                vault_response = self._vault_conn_by_method(client, response['method'], response['headers'])
-
-            else:
-
-                #
-                # 2.
-                #
-                if sec_def_config['default_auth_method']:
-                    vault_response = self._vault_conn_by_method(client, sec_def_config['default_auth_method'], wsgi_environ)
-
-                #
-                # 3.
-                #
-                else:
-                    vault_response = self._vault_conn_check_headers(client, wsgi_environ, sec_def_config)
-
-        except Exception:
-            logger.warning(format_exc())
-            if enforce_auth:
-                self._enforce_vault_sec(cid, sec_def.name)
-            else:
-                return False
-        else:
-            if vault_response:
-                wsgi_environ['zato.http.response.headers'][VAULT.HEADERS.TOKEN_RESPONSE] = vault_response.client_token
-                wsgi_environ['zato.http.response.headers'][VAULT.HEADERS.TOKEN_RESPONSE_LEASE] = str(
-                    vault_response.lease_duration)
-                return vault_response
-            else:
-                self._enforce_vault_sec(cid, sec_def.name)
 
 # ################################################################################################################################
 
@@ -774,41 +671,6 @@ class URLData(CyURLData, OAuthDataStore):
         with self.url_sec_lock:
             self.basic_auth_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH)
-
-# ################################################################################################################################
-
-    def _update_vault_conn_sec(self, name, config):
-        self.vault_conn_sec_config[name] = Bunch()
-        self.vault_conn_sec_config[name].config = config
-
-    def vault_conn_sec_get(self, name):
-        """ Returns configuration of a Vault connection of the given name.
-        """
-        wait_for_dict_key(self.vault_conn_sec_config, name)
-        with self.url_sec_lock:
-            return self.vault_conn_sec_config.get(name)
-
-    def on_broker_msg_VAULT_CONNECTION_CREATE(self, msg, *args):
-        """ Creates a new Vault security definition.
-        """
-        with self.url_sec_lock:
-            self._update_vault_conn_sec(msg.name, msg)
-
-    def on_broker_msg_VAULT_CONNECTION_EDIT(self, msg, *args):
-        """ Updates an existing Vault security definition.
-        """
-        with self.url_sec_lock:
-            del self.vault_conn_sec_config[msg.old_name]
-            self._update_vault_conn_sec(msg.name, msg)
-            self._update_url_sec(msg, SEC_DEF_TYPE.VAULT)
-
-    def on_broker_msg_VAULT_CONNECTION_DELETE(self, msg, *args):
-        """ Deletes an Vault security definition.
-        """
-        with self.url_sec_lock:
-            self._delete_channel_data('vault_conn_sec', msg.name)
-            del self.vault_conn_sec_config[msg.name]
-            self._update_url_sec(msg, SEC_DEF_TYPE.VAULT, True)
 
 # ################################################################################################################################
 
