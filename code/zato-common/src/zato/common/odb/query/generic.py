@@ -25,7 +25,7 @@ from zato.common.util.sql import get_dict_with_opaque
 
 if 0:
     from sqlalchemy.orm import Session as SASession
-    from zato.common.typing_ import any_, dictlist, intnone, strdict, strintnone, strnone, type_
+    from zato.common.typing_ import any_, dictlist, intnone, strdict, strintnone, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
