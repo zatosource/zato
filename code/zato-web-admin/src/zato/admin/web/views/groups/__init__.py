@@ -41,7 +41,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'groups'
     template = 'zato/groups/index.html'
-    service_name = 'dev.groups.get-list'
+    service_name = 'zato.groups.get-list'
     output_class = GroupObject
     paginate = True
 
@@ -64,7 +64,7 @@ class Index(_Index):
     def handle(self):
 
         # Get information about how many members are in each group ..
-        response = self.req.zato.client.invoke('dev.groups.get-member-count', {
+        response = self.req.zato.client.invoke('zato.groups.get-member-count', {
             'group_type': Groups.Type.API_Clients,
         })
 
@@ -95,7 +95,7 @@ class _CreateEdit(CreateEdit):
 
 class Create(_CreateEdit):
     url_name = 'groups-create'
-    service_name = 'dev.groups.create'
+    service_name = 'zato.groups.create'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,7 +103,7 @@ class Create(_CreateEdit):
 class Edit(_CreateEdit):
     url_name = 'groups-edit'
     form_prefix = 'edit-'
-    service_name = 'dev.groups.edit'
+    service_name = 'zato.groups.edit'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -111,7 +111,7 @@ class Edit(_CreateEdit):
 class Delete(_Delete):
     url_name = 'groups-delete'
     error_message = 'Could not delete groups'
-    service_name = 'dev.groups.delete'
+    service_name = 'zato.groups.delete'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -173,7 +173,7 @@ def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None, query:'str
 def _get_member_list(req:'any_', group_type:'str', group_id:'int') -> 'anylist':
 
     # Obtain an initial list of members for this group ..
-    response = req.zato.client.invoke('dev.groups.get-member-list', {
+    response = req.zato.client.invoke('zato.groups.get-member-list', {
         'group_type': group_type,
         'group_id': group_id,
         'should_serialize': True,
@@ -282,7 +282,7 @@ def members_action(req:'any_', action:'str', group_id:'str', member_id_list:'str
 
     # Invoke the remote service ..
     try:
-        _ = req.zato.client.invoke('dev.groups.edit-member-list', {
+        _ = req.zato.client.invoke('zato.groups.edit-member-list', {
             'group_action': action,
             'group_id': group_id,
             'member_id_list': member_id_list
