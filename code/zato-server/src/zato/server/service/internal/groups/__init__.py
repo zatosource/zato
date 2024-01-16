@@ -218,8 +218,11 @@ class GetMemberList(Service):
         input = self.request.input
 
         member_list = self.server.groups_manager.get_member_list(input.group_type, input.group_id)
+        member_list = [elem.to_dict() for elem in member_list]
+
         if input.should_serialize:
             member_list = dumps(member_list)
+
         self.response.payload = member_list
 
 # ################################################################################################################################
