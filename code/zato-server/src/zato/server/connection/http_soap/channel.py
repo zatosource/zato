@@ -300,18 +300,38 @@ class RequestDispatcher:
                     if wsgi_environ.get('CONTENT_TYPE', '').startswith(ModuleCtx.Form_Data_Content_Type):
                         post_data = util_get_form_data(wsgi_environ)
 
+                # This the string pointing to the URL path that we matched
                 match_target = channel_item['match_target']
+
+                # This is the channel's security definition, if any
                 sec = self.url_data.url_sec[match_target]
+
+                # These are security groups assigned to this channel
+                security_groups = channel_item.get('security_groups') or []
 
                 if sec.sec_def != ZATO_NONE or sec.sec_use_rbac is True:
 
-                    # Will raise an exception on any security violation
+                    # Will raise an exception on any security violation,
+                    # but only if there are no security groups assigned to this channel.
+                    # If there are, we will want to give them a chance
+                    # to check the incoming credentials.
+                    enforce_auth = not security_groups
+
                     auth_result = self.url_data.check_security(
-                        sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store)
+                        sec,
+                        cid,
+                        channel_item,
+                        path_info,
+                        payload,
+                        wsgi_environ,
+                        post_data,
+                        worker_store,
+                        enforce_auth=enforce_auth
+                    )
 
                 # Check rate limiting now - this could not have been done earlier because we wanted
                 # for security checks to be made first. Otherwise, someone would be able to invoke
-                # our endpoint without credentials as many times as it is needed to exhaust the rate limit
+                # our endpoint without credentials as many times as it is needed to exhaust the rate limit,
                 # denying in this manner access to genuine users.
                 if channel_item.get('is_rate_limit_active'):
                     self.server.rate_limiting.check_limit(

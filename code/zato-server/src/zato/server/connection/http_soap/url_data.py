@@ -415,7 +415,8 @@ class URLData(CyURLData, OAuthDataStore):
                     _sec.sec_def = self.sec_config_getter[sec_type](sec_name)['config']
 
                     auth_result = self.check_security(
-                        _sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, False)
+                        _sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
+                        enforce_auth=False)
 
                     if auth_result:
 
@@ -449,7 +450,7 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
-    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
+    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, *,
         enforce_auth=True, _object_type=RATE_LIMIT.OBJECT_TYPE.SEC_DEF):
         """ Authenticates and authorizes a given request. Returns None on success
         """
