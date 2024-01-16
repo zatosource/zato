@@ -14,6 +14,7 @@ from sqlalchemy import and_, func, select
 
 # Zato
 from zato.common.api import GENERIC, Groups, SEC_DEF_TYPE
+from zato.common.groups import Member
 from zato.common.odb.model import GenericObject as ModelGenericObject
 from zato.common.odb.query.generic import GroupsWrapper
 
@@ -21,7 +22,7 @@ from zato.common.odb.query.generic import GroupsWrapper
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, intnone, strlist
+    from zato.common.typing_ import any_, anydict, anylist, intnone, list_, strlist
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -130,10 +131,10 @@ class GroupsManager:
 
 # ################################################################################################################################
 
-    def get_member_list(self, group_type:'str', group_id:'intnone'=None) -> 'anylist':
+    def get_member_list(self, group_type:'str', group_id:'intnone'=None) -> 'list_[Member]':
 
         # Our reponse to produce
-        out:'anylist' = []
+        out:'list_[Member]' = []
 
         # Work in a new SQL transaction ..
         with closing(self.server.odb.session()) as session:
@@ -142,11 +143,7 @@ class GroupsManager:
             wrapper = GroupsWrapper(session, self.cluster_id)
 
             # .. get all the results ..
-            results = wrapper.get_list(
-                Groups.Type.Group_Member,
-                Groups.Type.API_Clients,
-                parent_object_id=group_id
-            )
+            results = wrapper.get_list(Groups.Type.Group_Member, group_type, parent_object_id=group_id)
 
         # .. extract security information for each item ..
         for item in results:
@@ -170,8 +167,11 @@ class GroupsManager:
             item['security_id'] = sec_config['id']
             item['sec_type'] = sec_type
 
-        # .. populate our response ..
-        out[:] = results
+            # .. build a new business object for the member ..
+            member = Member.from_dict(item)
+
+            # .. populate our response list ..
+            out.append(member)
 
         # .. and return the output to our caller.
         return out
