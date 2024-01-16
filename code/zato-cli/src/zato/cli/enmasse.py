@@ -2378,7 +2378,7 @@ class ObjectManager:
         if service_name == 'zato.http-soap.get-list':
             request['needs_security_group_names'] = True
 
-        elif service_name == 'dev.groups.get-list':
+        elif service_name == 'zato.groups.get-list':
             request['group_type'] = Common_Groups.Type.API_Clients
             request['needs_members'] = True
             request['needs_short_members'] = True

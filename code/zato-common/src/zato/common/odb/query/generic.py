@@ -291,6 +291,7 @@ class GroupsWrapper(GenericObjectWrapper):
         out['name'] = row['name']
         out['type'] = row['subtype']
         out['id'] = row['id']
+        out['group_id'] = row['parent_object_id']
 
         return out
 

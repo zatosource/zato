@@ -182,10 +182,10 @@ class GetList(_BaseGet):
         should_ignore_wrapper = not include_wrapper
 
         # Get information about security groups which may be used later on
-        security_groups_member_count = self.invoke('dev.groups.get-member-count', group_type=Groups.Type.API_Clients)
+        security_groups_member_count = self.invoke('zato.groups.get-member-count', group_type=Groups.Type.API_Clients)
 
         if needs_security_group_names:
-            all_security_groups = self.invoke('dev.groups.get-list', group_type=Groups.Type.API_Clients)
+            all_security_groups = self.invoke('zato.groups.get-list', group_type=Groups.Type.API_Clients)
             all_security_groups
         else:
             all_security_groups = []
@@ -334,7 +334,7 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
         if input_security_groups := input.get('security_groups'):
 
             # Get information about security groups which is need to turn group names into group IDs
-            existing_security_groups = self.invoke('dev.groups.get-list', group_type=Groups.Type.API_Clients)
+            existing_security_groups = self.invoke('zato.groups.get-list', group_type=Groups.Type.API_Clients)
 
             for input_group in input_security_groups:
                 group_id = None
