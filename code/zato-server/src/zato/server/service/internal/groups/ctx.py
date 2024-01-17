@@ -22,7 +22,7 @@ from zato.server.service import Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import boolnone, dict_, intanydict, intlist, intnone, intset, list_, strlist
+    from zato.common.typing_ import boolnone, dict_, dictnone, intanydict, intlist, intnone, intset, list_, strlist
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -70,10 +70,9 @@ class SecurityGroupCtx:
     # Maps header values to _APIKeySecDef objects
     apikey_credentials: 'dict_[str, _APIKeySecDef]'
 
-    def __init__(self) -> 'None':
+    def __init__(self, server:'ParallelServer') -> 'None':
 
-        #self.members_to_sec = {}
-        #self.sec_to_member = {}
+        self.server = server
 
         self.group_to_sec_map = {}
         self.group_to_member_map = {}
@@ -242,6 +241,23 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
+    def _on_basic_auth_created(
+        self,
+        group_id:'int',
+        member_id:'int',
+        security_id:'int',
+        username:'str',
+        password:'str'
+    ) -> 'None':
+
+        # Create the base object ..
+        self._create_basic_auth(security_id, username, password)
+
+        # .. and populate common containers.
+        self._after_auth_created(group_id, member_id, security_id)
+
+# ################################################################################################################################
+
     def on_basic_auth_created(
         self,
         group_id:'int',
@@ -252,12 +268,7 @@ class SecurityGroupCtx:
     ) -> 'None':
 
         with self._lock:
-
-            # Create the base object ..
-            self._create_basic_auth(security_id, username, password)
-
-            # .. and populate common containers.
-            self._after_auth_created(group_id, member_id, security_id)
+            self._on_basic_auth_created(group_id, member_id, security_id, username, password)
 
 # ################################################################################################################################
 
@@ -273,6 +284,22 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
+    def _on_apikey_created(
+        self,
+        group_id:'int',
+        member_id:'int',
+        security_id:'int',
+        header_value:'str',
+    ) -> 'None':
+
+        # Create the base object ..
+        self._create_apikey(security_id, header_value)
+
+        # .. and populate common containers.
+        self._after_auth_created(group_id, member_id, security_id)
+
+# ################################################################################################################################
+
     def on_apikey_created(
         self,
         group_id:'int',
@@ -282,12 +309,7 @@ class SecurityGroupCtx:
     ) -> 'None':
 
         with self._lock:
-
-            # Create the base object ..
-            self._create_apikey(security_id, header_value)
-
-            # .. and populate common containers.
-            self._after_auth_created(group_id, member_id, security_id)
+            self._on_apikey_created(group_id, member_id, security_id, header_value)
 
 # ################################################################################################################################
 
@@ -355,11 +377,54 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
-    def on_member_added_to_group(self) -> 'None':
-        pass
+    def _get_sec_def_by_id(self, security_id:'int') -> 'dictnone':
 
-    def on_member_removed_from_group(self) -> 'None':
-        pass
+        # Let's try Basic Auth definitions first ..
+        if not (sec_def := self.server.worker_store.basic_auth_get_by_id(security_id)):
+
+            # .. if we do not have anything, it must be an API key definition then ..
+            sec_def = self.server.worker_store.apikey_get_by_id(security_id)
+
+        # .. note that at this point it can be still None.
+        return sec_def
+
+# ################################################################################################################################
+
+    def on_member_added_to_group(self, group_id:'int', member_id:'int', security_id:'int') -> 'None':
+
+        with self._lock:
+
+            # Continue only if this group has been previously assigned to our context object ..
+            if not group_id in self.security_groups:
+                return
+
+            # Let's get the details of the input security definition
+            sec_def = self._get_sec_def_by_id(security_id)
+
+            # If we do not have anything, we can only report an error
+            if not sec_def:
+                raise Exception(f'Security ID is neither Basic Auth nor API key')
+
+            # If we are here, we know we have everything to populate all the runtime containers
+            sec_def_type = sec_def['sec_type']
+
+            if sec_def_type == Sec_Def_Type.BASIC_AUTH:
+                self._on_basic_auth_created(group_id, member_id, security_id, sec_def['username'], sec_def['password'])
+            else:
+                self._on_apikey_created(group_id, member_id, security_id, sec_def['password'])
+
+# ################################################################################################################################
+
+    def on_member_removed_from_group(self, group_id:'int', member_id:'int', security_id:'int') -> 'None':
+
+        with self._lock:
+
+            # Continue only if this group has been previously assigned to our context object ..
+            if not group_id in self.security_groups:
+                return
+
+            self
+            self
 
 # ################################################################################################################################
 
@@ -402,7 +467,7 @@ class SecurityGroupCtxBuilder:
     def build_ctx(self, channel_id:'int', security_groups: 'intlist') -> 'SecurityGroupCtx':
 
         # Build a basic object ..
-        ctx = SecurityGroupCtx()
+        ctx = SecurityGroupCtx(self.server)
 
         # .. populate it with the core data ..
         ctx.channel_id = channel_id
@@ -474,6 +539,26 @@ class BuildCtx(Service):
         result = ctx.check_security_basic_auth(cid, channel_name, 'user1', 'pass1')
         print('QQQ-1', result)
 
+        result = ctx.check_security_apikey(cid, channel_name, 'key333')
+        print('QQQ-2', result)
+
+        #
+        #
+
+        ctx.on_member_added_to_group(1, 123, 18)
+
+        #
+        #
+
+        result = ctx.check_security_apikey(cid, channel_name, 'key333')
+        print('QQQ-3', result)
+
+# ################################################################################################################################
+
+        '''
+        result = ctx.check_security_basic_auth(cid, channel_name, 'user1', 'pass1')
+        print('QQQ-1', result)
+
         result = ctx.check_security_apikey(cid, channel_name, 'key1')
         print('QQQ-2', result)
 
@@ -490,6 +575,7 @@ class BuildCtx(Service):
 
         result = ctx.check_security_apikey(cid, channel_name, 'key2')
         print('QQQ-4', result)
+        '''
 
 # ################################################################################################################################
 
