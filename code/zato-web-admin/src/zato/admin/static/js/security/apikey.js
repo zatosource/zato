@@ -42,7 +42,7 @@ $.fn.zato.security.apikey.data_table.new_row = function(item, data, include_tr) 
     var rate_limit_check_parent_def = $.fn.zato.like_bool(data.rate_limit_check_parent_def) == true;
 
     var item_header_id = "item_header_" + item.id;
-    var item_header_value = $("#"+ item_header_id).text();
+    var item_header_value = $("#"+ item_header_id).text() || "X-API-Key";
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
