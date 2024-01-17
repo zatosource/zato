@@ -22,7 +22,7 @@ from zato.server.service import Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import boolnone, dict_, dictnone, intanydict, intlist, intnone, intset, list_, strlist
+    from zato.common.typing_ import anydict, boolnone, dict_, intanydict, intlist, intnone, intset, list_, strlist
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -271,6 +271,11 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
+    def _on_basic_auth_deleted(self, security_id:'int') -> 'None':
+        self.delete_basic_auth(security_id)
+
+# ################################################################################################################################
+
     def on_basic_auth_deleted(self, security_id:'int') -> 'None':
         with self._lock:
             self.delete_basic_auth(security_id)
@@ -307,6 +312,11 @@ class SecurityGroupCtx:
     def on_apikey_edited(self, security_id:'int', header_value:'str') -> 'None':
         with self._lock:
             self.edit_apikey(security_id, header_value)
+
+# ################################################################################################################################
+
+    def _on_apikey_deleted(self, security_id:'int') -> 'None':
+        _ = self._delete_apikey(security_id)
 
 # ################################################################################################################################
 
@@ -368,7 +378,7 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
-    def _get_sec_def_by_id(self, security_id:'int') -> 'dictnone':
+    def _get_sec_def_by_id(self, security_id:'int') -> 'anydict':
 
         # Let's try Basic Auth definitions first ..
         if not (sec_def := self.server.worker_store.basic_auth_get_by_id(security_id)):
@@ -376,8 +386,20 @@ class SecurityGroupCtx:
             # .. if we do not have anything, it must be an API key definition then ..
             sec_def = self.server.worker_store.apikey_get_by_id(security_id)
 
-        # .. note that at this point it can be still None.
-        return sec_def
+        # If we do not have anything, we can only report an error
+        if not sec_def:
+            raise Exception(f'Security ID is neither Basic Auth nor API key')
+
+        # .. otherwise, we can return the definition to our caller.
+        else:
+            return sec_def
+
+# ################################################################################################################################
+
+    def _get_sec_def_type_by_id(self, security_id:'int') -> 'str':
+        sec_def = self._get_sec_def_by_id(security_id)
+        sec_def_type = sec_def['sec_type']
+        return sec_def_type
 
 # ################################################################################################################################
 
@@ -389,16 +411,10 @@ class SecurityGroupCtx:
             if not group_id in self.security_groups:
                 return
 
-            # Let's get the details of the input security definition
             sec_def = self._get_sec_def_by_id(security_id)
-
-            # If we do not have anything, we can only report an error
-            if not sec_def:
-                raise Exception(f'Security ID is neither Basic Auth nor API key')
-
-            # If we are here, we know we have everything to populate all the runtime containers
             sec_def_type = sec_def['sec_type']
 
+            # If we are here, we know we have everything to populate all the runtime containers
             if sec_def_type == Sec_Def_Type.BASIC_AUTH:
                 self._on_basic_auth_created(group_id, security_id, sec_def['username'], sec_def['password'])
             else:
@@ -415,12 +431,25 @@ class SecurityGroupCtx:
                 return
 
             # First, remove the security ID from the input group ..
+            self._after_auth_deleted(security_id)
 
             # .. now, check if the security definition belongs to other groups as well ..
             # .. and if not, delete the security definition altogether because ..
             # .. it must have been the last one group to have contained it ..
-            self
-            self
+            for sec_def_ids in self.group_to_sec_map.values():
+                if security_id in sec_def_ids:
+                    break
+            else:
+                # .. if we are here, it means that there was no break above ..
+                # .. which means that the security ID is not in any group, ..
+                # .. in which case we need to delete this definition now ..
+                sec_def_type = self._get_sec_def_type_by_id(security_id)
+
+                # .. do delete the definition from the correct container.
+                if sec_def_type == Sec_Def_Type.BASIC_AUTH:
+                    self._on_basic_auth_deleted(security_id)
+                else:
+                    self._on_apikey_deleted(security_id)
 
 # ################################################################################################################################
 
@@ -555,7 +584,7 @@ class BuildCtx(Service):
         #
 
         result = ctx.check_security_apikey(cid, channel_name, 'key333')
-        print('QQQ-3', result)
+        print('QQQ-4', result)
 
 # ################################################################################################################################
 
