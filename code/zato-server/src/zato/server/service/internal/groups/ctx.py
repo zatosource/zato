@@ -76,28 +76,13 @@ class SecurityGroupCtx:
         #self.sec_to_member = {}
 
         self.group_to_sec_map = {}
+        self.group_to_member_map = {}
         self.security_groups = set()
 
         self.basic_auth_credentials = {}
         self.apikey_credentials = {}
 
         self._lock = RLock()
-
-# ################################################################################################################################
-
-    def add_member(self, member_id:'int', security_id:'int') -> 'None':
-        return
-        '''
-        with self._lock:
-            self.members_to_sec[member_id] = security_id
-            self.sec_to_member[security_id] = member_id
-        '''
-
-# ################################################################################################################################
-
-    # def add_security_group(self, group_id:'int') -> 'None':
-    #     with self._lock:
-    #         self.members.add(group_id)
 
 # ################################################################################################################################
 
@@ -121,10 +106,29 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
-    def _create_basic_auth(
+    def _after_auth_created(
         self,
         group_id:'int',
         member_id:'int',
+        security_id:'int',
+    ) -> 'None':
+
+        # Store information that we are aware of this group ..
+        self.security_groups.add(group_id)
+
+        # .. map the group ID to a list of security definitions that are related to it, ..
+        # .. note that a single group may point to multiple security IDs ..
+        sec_def_id_list = self.group_to_sec_map.setdefault(group_id, set())
+        sec_def_id_list.add(security_id)
+
+        # .. same as above but maps groups to their members ..
+        member_id_list = self.group_to_member_map.setdefault(group_id, set())
+        member_id_list.add(member_id)
+
+# ################################################################################################################################
+
+    def _create_basic_auth(
+        self,
         security_id:'int',
         username:'str',
         password:'str'
@@ -138,18 +142,6 @@ class SecurityGroupCtx:
 
         # .. and add the business object to our container ..
         self.basic_auth_credentials[username] = item
-
-        # .. store information that we are aware of this group ..
-        self.security_groups.add(group_id)
-
-        # .. map the group ID to a list of security definitions that are related to it, ..
-        # .. note that a single group may point to multiple security IDs ..
-        sec_def_id_list = self.group_to_sec_map.setdefault(group_id, set())
-        sec_def_id_list.add(security_id)
-
-        # .. same as above but maps groups to their members ..
-        sec_def_id_list = self.group_to_sec_map.setdefault(group_id, set())
-        sec_def_id_list.add(security_id)
 
 # ################################################################################################################################
 
@@ -208,8 +200,15 @@ class SecurityGroupCtx:
         password:'str'
     ) -> 'None':
 
-        # Creates a new Basic Auth groups definition for this context object
-        self._create_basic_auth(group_id, member_id, security_id, username, password)
+        with self._lock:
+
+            # Create the base object ..
+            self._create_basic_auth(security_id, username, password)
+
+            # .. and populate common containers.
+            self._after_auth_created(group_id, member_id, security_id)
+
+# ################################################################################################################################
 
     def on_basic_auth_edited(self):
 
@@ -227,12 +226,21 @@ class SecurityGroupCtx:
 
     def on_apikey_created(
         self,
+        group_id:'int',
+        member_id:'int',
         security_id:'int',
         header_value:'str',
     ) -> 'None':
 
-        # Creates a new API key groups definition for this context object
-        self._create_apikey(security_id, header_value)
+        with self._lock:
+
+            # Create the base object ..
+            self._create_apikey(security_id, header_value)
+
+            # .. and populate common containers.
+            self._after_auth_created(group_id, member_id, security_id)
+
+# ################################################################################################################################
 
     def on_apikey_edited(self):
         pass
@@ -276,16 +284,19 @@ class SecurityGroupCtx:
 
             # .. remove security definitions (Basic Auth) ..
             for item in basic_auth_list:
-                _ = self.basic_auth_credentials.pop(item)
+                _ = self.basic_auth_credentials.pop(item, None)
 
             # .. remove security definitions (API keys) ..
             for item in apikey_list:
-                _ = self.apikey_credentials.pop(item)
+                _ = self.apikey_credentials.pop(item, None)
 
             # .. remove member IDs too ..
 
             # .. and remove the group itself.
-            pass
+            try:
+                _ = self.security_groups.remove(group_id)
+            except KeyError:
+                pass
 
 # ################################################################################################################################
 
@@ -350,6 +361,7 @@ class SecurityGroupCtxBuilder:
 
             # .. next, extract all the members from this group ..
             members = self._get_members_by_group_id(group_id)
+            members
 
             # .. now, go through each of the members found ..
             for member in members:
@@ -376,13 +388,11 @@ class SecurityGroupCtxBuilder:
 
                     # .. populate the correct container ..
                     ctx.on_apikey_created(
+                        group_id,
+                        member.id,
                         sec_def['id'],
                         sec_def['password'],
                     )
-
-                # .. add an indication that this channel has such a member,
-                # .. along with information which security ID it is.
-                ctx.add_member(member.id, member.security_id)
 
         # .. and return the business object to our caller.
         return ctx
@@ -411,6 +421,12 @@ class BuildCtx(Service):
         print('QQQ-2', result)
 
         ctx.on_group_deleted(1)
+
+        result = ctx.check_security_basic_auth(cid, channel_name, 'user1', 'pass1')
+        print('QQQ-3', result)
+
+        result = ctx.check_security_apikey(cid, channel_name, 'key1')
+        print('QQQ-4', result)
 
 # ################################################################################################################################
 # ################################################################################################################################
