@@ -367,9 +367,6 @@ class WorkerStore(_WorkerStoreBase):
         # SFTP - attach handles to connections to each ConfigDict now that all their configuration is ready
         self.init_sftp()
 
-        # Security groups - add details of each to REST channels
-        self._populate_channel_security_groups_info(self.worker_config.http_soap)
-
         request_handler = RequestHandler(self.server)
         url_data = URLData(
             self,
@@ -402,6 +399,9 @@ class WorkerStore(_WorkerStoreBase):
             http_methods_allowed = self.server.http_methods_allowed
         )
 
+        # Security groups - add details of each one to REST channels
+        self._populate_channel_security_groups_info(self.worker_config.http_soap)
+
         # Create all the expected connections and objects
         self.init_sql()
         self.init_http_soap()
@@ -424,8 +424,14 @@ class WorkerStore(_WorkerStoreBase):
 
     def _populate_channel_security_groups_info(self, channel_data:'anylist') -> 'None':
 
+        # First, make sure the server has all the groups ..
+        self.server.security_groups_ctx_builder.populate_members()
+
+        # .. now, we can attach a groups context object to each channel that has any groups.
         for item in channel_data:
-            item['security_groups_ctx'] = 123
+            if security_groups := item.get('security_groups'):
+                ctx = self.server.security_groups_ctx_builder.build_ctx(item['id'], security_groups)
+                item['security_groups_ctx'] = ctx
 
 # ################################################################################################################################
 

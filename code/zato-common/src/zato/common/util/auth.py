@@ -17,6 +17,7 @@ from six import PY2
 # Zato
 from zato.common.api import AUTH_RESULT
 from zato.common.crypto.api import is_string_equal
+from zato.server.connection.http_soap import Forbidden
 
 logger = getLogger('zato')
 
@@ -140,21 +141,43 @@ def on_wsse_pwd(wsse, url_config, data, needs_auth_info=True):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def check_basic_auth(auth, expected_username, expected_password):
-    """ A low-level call for checking HTTP Basic Auth credentials.
-    """
+def extract_basic_auth(cid:'str', auth:'str', *, raise_on_error:'bool'=False) -> 'str':
+
     if not auth:
-        return Auth_Basic_No_Auth
+        if raise_on_error:
+            logger.warn(f'Basic Auth -> {Auth_Basic_No_Auth} -> {cid}')
+            raise Forbidden(self.cid)
+        else:
+            return None, Auth_Basic_No_Auth
 
     prefix = 'Basic '
     if not auth.startswith(prefix):
-        return Auth_Basic_Invalid_Prefix
+        if raise_on_error:
+            logger.warn(f'Basic Auth -> {Auth_Basic_Invalid_Prefix} -> {cid}')
+            raise Forbidden(self.cid)
+        else:
+            return None, Auth_Basic_Invalid_Prefix
 
     _, auth = auth.split(prefix)
     auth = auth.strip()
     auth = b64decode(auth)
     auth = auth if isinstance(auth, unicode) else auth.decode('utf8')
     username, password = auth.split(':', 1)
+
+    return username, password
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def check_basic_auth(cid, auth, expected_username, expected_password):
+    """ A low-level call for checking HTTP Basic Auth credentials.
+    """
+    result = extract_basic_auth(cid, auth, raise_on_error=False)
+
+    if result[0]:
+        username, password = result
+    else:
+        return result[1]
 
     if is_string_equal(username, expected_username) and is_string_equal(password, expected_password):
         return True
@@ -164,11 +187,11 @@ def check_basic_auth(auth, expected_username, expected_password):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def on_basic_auth(env, url_config, needs_auth_info=True):
+def on_basic_auth(cid, env, url_config, needs_auth_info=True):
     """ Visit _RequestApp.check_basic_auth method's docstring.
     """
     username = url_config['basic-auth-username']
-    result = check_basic_auth(env.get('HTTP_AUTHORIZATION', ''), username, url_config['basic-auth-password'])
+    result = check_basic_auth(cid, env.get('HTTP_AUTHORIZATION', ''), username, url_config['basic-auth-password'])
     is_success = result is True # Note that we need to compare with True
 
     auth_result = AuthResult(is_success)

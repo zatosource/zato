@@ -125,7 +125,7 @@ ClientHTTPError = Reportable
 # ################################################################################################################################
 
 class BadRequest(Reportable):
-    def __init__(self, cid, msg='Received a bad request', needs_msg=False):
+    def __init__(self, cid, msg='Bad request', needs_msg=False):
         super(BadRequest, self).__init__(cid, msg, BAD_REQUEST, needs_msg)
 
 # ################################################################################################################################

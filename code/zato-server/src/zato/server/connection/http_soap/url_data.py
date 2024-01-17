@@ -265,7 +265,7 @@ class URLData(CyURLData, OAuthDataStore):
         """
         env = {'HTTP_AUTHORIZATION':wsgi_environ.get('HTTP_AUTHORIZATION')}
         url_config = {'basic-auth-username':sec_def.username, 'basic-auth-password':sec_def.password}
-        result = on_basic_auth(env, url_config, False)
+        result = on_basic_auth(cid, env, url_config, False)
 
         if not result:
             if enforce_auth:
