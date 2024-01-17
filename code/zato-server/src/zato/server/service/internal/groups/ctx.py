@@ -22,7 +22,7 @@ from zato.server.service import Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist, boolnone, dict_, intanydict, intlist, intnone, intset, list_, strlist
+    from zato.common.typing_ import boolnone, dict_, intanydict, intlist, intnone, intset, list_, strlist
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -122,8 +122,8 @@ class SecurityGroupCtx:
         sec_def_id_list.add(security_id)
 
         # .. same as above but maps groups to their members ..
-        member_id_list = self.group_to_member_map.setdefault(group_id, set())
-        member_id_list.add(member_id)
+        # member_id_list = self.group_to_member_map.setdefault(group_id, set())
+        # member_id_list.add(member_id)
 
 # ################################################################################################################################
 
@@ -163,22 +163,31 @@ class SecurityGroupCtx:
 
     def edit_basic_auth(self, security_id:'int', current_username:'str', password:'str') -> 'None':
 
-        with self._lock:
-            if self._delete_basic_auth(security_id):
-                self._create_basic_auth(security_id, current_username, password)
+        if self._delete_basic_auth(security_id):
+            self._create_basic_auth(security_id, current_username, password)
 
 # ################################################################################################################################
 
     def _delete_basic_auth(self, security_id:'int') -> 'boolnone':
+
+        # Continue only if we recognize such a security definition ..
         if sec_info := self._get_basic_auth_by_security_id(security_id):
+
+            # .. delete the definition itself ..
             _ = self.basic_auth_credentials.pop(sec_info.username, None)
+
+            # .. remove it from maps too ..
+            for sec_def_ids in self.group_to_sec_map.values():
+                if security_id in sec_def_ids:
+                    sec_def_ids.remove(security_id)
+
+            # .. and indicate to our caller that we are done.
             return True
 
 # ################################################################################################################################
 
     def delete_basic_auth(self, security_id:'int') -> 'None':
-        with self._lock:
-            _ = self._delete_basic_auth(security_id)
+        _ = self._delete_basic_auth(security_id)
 
 # ################################################################################################################################
 
@@ -210,17 +219,15 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
-    def on_basic_auth_edited(self):
+    def on_basic_auth_edited(self, security_id:'int', current_username:'str', password:'str') -> 'None':
+        with self._lock:
+            self.edit_basic_auth(security_id, current_username, password)
 
-        # Delete the credentials from the main map
-        # Add new credentials on place of the deleted ones
-        pass
+# ################################################################################################################################
 
-    def on_basic_auth_deleted(self):
-
-        # Delete the credentials from the main map
-        # Delete security_id from any maps that point to it
-        pass
+    def on_basic_auth_deleted(self, security_id:'int'):
+        with self._lock:
+            self.delete_basic_auth(security_id)
 
 # ################################################################################################################################
 
@@ -291,6 +298,8 @@ class SecurityGroupCtx:
                 _ = self.apikey_credentials.pop(item, None)
 
             # .. remove member IDs too ..
+            #
+            #
 
             # .. and remove the group itself.
             try:
@@ -414,19 +423,54 @@ class BuildCtx(Service):
         cid = 'cid.1'
         channel_name = 'channel.1'
 
+# ################################################################################################################################
+
         result = ctx.check_security_basic_auth(cid, channel_name, 'user1', 'pass1')
         print('QQQ-1', result)
 
         result = ctx.check_security_apikey(cid, channel_name, 'key1')
         print('QQQ-2', result)
 
+        #
+        #
+
+        ctx.on_basic_auth_edited(14, 'user2', 'pass2')
+
+        #
+        #
+
+
+        result = ctx.check_security_basic_auth(cid, channel_name, 'user1', 'pass1')
+        print('QQQ-3', result)
+
+        result = ctx.check_security_basic_auth(cid, channel_name, 'user2', 'pass2')
+        print('QQQ-4', result)
+
+# ################################################################################################################################
+
+        '''
+        result = ctx.check_security_basic_auth(cid, channel_name, 'user1', 'pass1')
+        print('QQQ-1', result)
+
+        result = ctx.check_security_apikey(cid, channel_name, 'key1')
+        print('QQQ-2', result)
+
+        #
+        #
+
         ctx.on_group_deleted(1)
+
+        #
+        #
 
         result = ctx.check_security_basic_auth(cid, channel_name, 'user1', 'pass1')
         print('QQQ-3', result)
 
         result = ctx.check_security_apikey(cid, channel_name, 'key1')
         print('QQQ-4', result)
+        '''
+
+# ################################################################################################################################
 
 # ################################################################################################################################
 # ################################################################################################################################
