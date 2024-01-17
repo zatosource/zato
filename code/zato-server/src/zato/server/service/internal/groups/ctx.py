@@ -61,9 +61,6 @@ class SecurityGroupCtx:
     # Maps group IDs to security IDs
     group_to_sec_map: 'intanydict'
 
-    # Maps group IDs to member IDs
-    #group_to_member_map: 'intanydict'
-
     # Maps usernames to _BasicAuthSecDef objects
     basic_auth_credentials: 'dict_[str, _BasicAuthSecDef]'
 
@@ -75,7 +72,6 @@ class SecurityGroupCtx:
         self.server = server
 
         self.group_to_sec_map = {}
-        #self.group_to_member_map = {}
         self.security_groups = set()
 
         self.basic_auth_credentials = {}
@@ -453,8 +449,38 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
-    def on_group_assigned_to_channel(self) -> 'None':
-        pass
+    def on_group_assigned_to_channel(self, group_id:'int', members:'list_[Member]') -> 'None':
+
+        # .. now, go through each of the members found ..
+        for member in members:
+
+            # .. and add it to a container corresponding to its security type ..
+            if member.sec_type == Sec_Def_Type.BASIC_AUTH:
+
+                # .. get the member's security definition ..
+                sec_def = self.server.worker_store.basic_auth_get_by_id(member.security_id)
+
+                # .. populate the correct container ..
+                self.on_basic_auth_created(
+                    group_id,
+                    sec_def['id'],
+                    sec_def['username'],
+                    sec_def['password'],
+                )
+
+            elif member.sec_type == Sec_Def_Type.APIKEY:
+
+                # .. get the member's security definition ..
+                sec_def = self.server.worker_store.apikey_get_by_id(member.security_id)
+
+                # .. populate the correct container ..
+                self.on_apikey_created(
+                    group_id,
+                    sec_def['id'],
+                    sec_def['password'],
+                )
+
+# ################################################################################################################################
 
     def on_group_unassigned_from_channel(self) -> 'None':
         pass
@@ -500,41 +526,11 @@ class SecurityGroupCtxBuilder:
         # .. add all the credentials ..
         for group_id in security_groups:
 
-            # .. first, add an indication that we use this group,
-            # .. no matter what members are in it ..
-            # ctx.add_security_group(group_id)
-
-            # .. next, extract all the members from this group ..
+            # .. extract all the members from this group ..
             members = self._get_members_by_group_id(group_id)
 
-            # .. now, go through each of the members found ..
-            for member in members:
-
-                # .. and add it to a container corresponding to its security type ..
-                if member.sec_type == Sec_Def_Type.BASIC_AUTH:
-
-                    # .. get the member's security definition ..
-                    sec_def = self.server.worker_store.basic_auth_get_by_id(member.security_id)
-
-                    # .. populate the correct container ..
-                    ctx.on_basic_auth_created(
-                        group_id,
-                        sec_def['id'],
-                        sec_def['username'],
-                        sec_def['password'],
-                    )
-
-                elif member.sec_type == Sec_Def_Type.APIKEY:
-
-                    # .. get the member's security definition ..
-                    sec_def = self.server.worker_store.apikey_get_by_id(member.security_id)
-
-                    # .. populate the correct container ..
-                    ctx.on_apikey_created(
-                        group_id,
-                        sec_def['id'],
-                        sec_def['password'],
-                    )
+            # .. add them to the channel ..
+            ctx.on_group_assigned_to_channel(group_id, members)
 
         # .. and return the business object to our caller.
         return ctx
