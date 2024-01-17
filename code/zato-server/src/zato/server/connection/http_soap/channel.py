@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -292,31 +292,35 @@ class RequestDispatcher:
                     logger.warning('url_data:`%s` is not active, raising NotFound', url_match)
                     raise NotFound(cid, 'Channel inactive')
 
-                # Assume we have no form (POST) data by default.
-                post_data = {}
-
-                # Extract the form (POST) data in case we expect it and the content type indicates it will exist.
-                if channel_item['data_format'] == ModuleCtx.SIO_FORM_DATA:
-                    if wsgi_environ.get('CONTENT_TYPE', '').startswith(ModuleCtx.Form_Data_Content_Type):
-                        post_data = util_get_form_data(wsgi_environ)
-
                 # This the string pointing to the URL path that we matched
                 match_target = channel_item['match_target']
 
                 # This is the channel's security definition, if any
                 sec = self.url_data.url_sec[match_target]
 
-                # These are security groups assigned to this channel
-                security_groups = channel_item.get('security_groups') or []
+                # This may point to security groups assigned to this channel
+                security_groups_ctx = channel_item.get('security_groups_ctx')
 
+                #
+                # This will check credentials based on a security definition attached to the channel
+                #
                 if sec.sec_def != ZATO_NONE or sec.sec_use_rbac is True:
 
                     # Will raise an exception on any security violation,
                     # but only if there are no security groups assigned to this channel.
                     # If there are, we will want to give them a chance
                     # to check the incoming credentials.
-                    enforce_auth = not security_groups
+                    enforce_auth = not security_groups_ctx
 
+                    # Assume we have no form (POST) data by default.
+                    post_data = {}
+
+                    # Extract the form (POST) data in case we expect it and the content type indicates it will exist.
+                    if channel_item['data_format'] == ModuleCtx.SIO_FORM_DATA:
+                        if wsgi_environ.get('CONTENT_TYPE', '').startswith(ModuleCtx.Form_Data_Content_Type):
+                            post_data = util_get_form_data(wsgi_environ)
+
+                    # Do check credentials based on a security definition
                     auth_result = self.url_data.check_security(
                         sec,
                         cid,
@@ -328,6 +332,10 @@ class RequestDispatcher:
                         worker_store,
                         enforce_auth=enforce_auth
                     )
+
+                #
+                # This will check credentials based on security groups potentially assigned to the channel
+                #
 
                 # Check rate limiting now - this could not have been done earlier because we wanted
                 # for security checks to be made first. Otherwise, someone would be able to invoke
