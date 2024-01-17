@@ -521,8 +521,14 @@ class SecurityGroupsCtx:
 
 class SecurityGroupsCtxBuilder:
 
+    members: 'list_[Member]'
+
     def __init__(self, server:'ParallelServer') -> 'None':
         self.server = server
+
+# ################################################################################################################################
+
+    def populate_members(self) -> 'None':
         self.members = self.server.groups_manager.get_member_list(Groups.Type.API_Clients)
 
 # ################################################################################################################################
