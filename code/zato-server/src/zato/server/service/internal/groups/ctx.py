@@ -62,7 +62,7 @@ class SecurityGroupCtx:
     group_to_sec_map: 'intanydict'
 
     # Maps group IDs to member IDs
-    group_to_member_map: 'intanydict'
+    #group_to_member_map: 'intanydict'
 
     # Maps usernames to _BasicAuthSecDef objects
     basic_auth_credentials: 'dict_[str, _BasicAuthSecDef]'
@@ -75,7 +75,7 @@ class SecurityGroupCtx:
         self.server = server
 
         self.group_to_sec_map = {}
-        self.group_to_member_map = {}
+        #self.group_to_member_map = {}
         self.security_groups = set()
 
         self.basic_auth_credentials = {}
@@ -116,7 +116,6 @@ class SecurityGroupCtx:
     def _after_auth_created(
         self,
         group_id:'int',
-        member_id:'int',
         security_id:'int',
     ) -> 'None':
 
@@ -127,10 +126,6 @@ class SecurityGroupCtx:
         # .. note that a single group may point to multiple security IDs ..
         sec_def_id_list = self.group_to_sec_map.setdefault(group_id, set())
         sec_def_id_list.add(security_id)
-
-        # .. same as above but maps groups to their members ..
-        # member_id_list = self.group_to_member_map.setdefault(group_id, set())
-        # member_id_list.add(member_id)
 
 # ################################################################################################################################
 
@@ -244,7 +239,6 @@ class SecurityGroupCtx:
     def _on_basic_auth_created(
         self,
         group_id:'int',
-        member_id:'int',
         security_id:'int',
         username:'str',
         password:'str'
@@ -254,7 +248,7 @@ class SecurityGroupCtx:
         self._create_basic_auth(security_id, username, password)
 
         # .. and populate common containers.
-        self._after_auth_created(group_id, member_id, security_id)
+        self._after_auth_created(group_id, security_id)
 
 # ################################################################################################################################
 
@@ -287,7 +281,6 @@ class SecurityGroupCtx:
     def _on_apikey_created(
         self,
         group_id:'int',
-        member_id:'int',
         security_id:'int',
         header_value:'str',
     ) -> 'None':
@@ -296,20 +289,19 @@ class SecurityGroupCtx:
         self._create_apikey(security_id, header_value)
 
         # .. and populate common containers.
-        self._after_auth_created(group_id, member_id, security_id)
+        self._after_auth_created(group_id, security_id)
 
 # ################################################################################################################################
 
     def on_apikey_created(
         self,
         group_id:'int',
-        member_id:'int',
         security_id:'int',
         header_value:'str',
     ) -> 'None':
 
         with self._lock:
-            self._on_apikey_created(group_id, member_id, security_id, header_value)
+            self._on_apikey_created(group_id, security_id, header_value)
 
 # ################################################################################################################################
 
@@ -390,7 +382,7 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
-    def on_member_added_to_group(self, group_id:'int', member_id:'int', security_id:'int') -> 'None':
+    def on_member_added_to_group(self, group_id:'int', security_id:'int') -> 'None':
 
         with self._lock:
 
@@ -409,13 +401,13 @@ class SecurityGroupCtx:
             sec_def_type = sec_def['sec_type']
 
             if sec_def_type == Sec_Def_Type.BASIC_AUTH:
-                self._on_basic_auth_created(group_id, member_id, security_id, sec_def['username'], sec_def['password'])
+                self._on_basic_auth_created(group_id, security_id, sec_def['username'], sec_def['password'])
             else:
-                self._on_apikey_created(group_id, member_id, security_id, sec_def['password'])
+                self._on_apikey_created(group_id, security_id, sec_def['password'])
 
 # ################################################################################################################################
 
-    def on_member_removed_from_group(self, group_id:'int', member_id:'int', security_id:'int') -> 'None':
+    def on_member_removed_from_group(self, group_id:'int', security_id:'int') -> 'None':
 
         with self._lock:
 
@@ -423,6 +415,11 @@ class SecurityGroupCtx:
             if not group_id in self.security_groups:
                 return
 
+            # First, remove the security ID from the input group ..
+
+            # .. now, check if the security definition belongs to other groups as well ..
+            # .. and if not, delete the security definition altogether because ..
+            # .. it must have been the last one group to have contained it ..
             self
             self
 
@@ -545,7 +542,18 @@ class BuildCtx(Service):
         #
         #
 
-        ctx.on_member_added_to_group(1, 123, 18)
+        ctx.on_member_added_to_group(1, 18)
+
+        #
+        #
+
+        result = ctx.check_security_apikey(cid, channel_name, 'key333')
+        print('QQQ-3', result)
+
+        #
+        #
+
+        ctx.on_member_removed_from_group(1, 18)
 
         #
         #
