@@ -39,7 +39,7 @@ reportTypeCommentUsage     = "none"
 reportMissingImports        = "none"
 reportGeneralTypeIssues     = "none"
 reportOptionalMemberAccess  = "none"
-reportMissingModuleSource   = "error"
+reportMissingModuleSource   = "none"
 
 #
 # This is level 3

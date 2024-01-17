@@ -125,12 +125,12 @@ class Edit(Service):
 
             group_members = self.server.groups_manager.get_member_list(input.group_type, input.id)
 
-            input_member_names = set(item['name'] for item in input.members)
-            group_member_names = set(item['name'] for item in group_members)
+            input_member_names = {item['name'] for item in input.members}
+            group_member_names = {item['name'] for item in group_members}
 
             for group_member_name in group_member_names:
                 if not group_member_name in input_member_names:
-                    to_remove.append(group_member_name)
+                    to_remove.append(group_member_name) # type: ignore
 
             for input_member_name in input_member_names:
                 if not input_member_name in group_member_names:
