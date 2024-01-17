@@ -1,4 +1,4 @@
-'''# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 """
 Copyright (C) 2024, Zato Source s.r.o. https://zato.io
@@ -106,6 +106,18 @@ class SecurityGroupCtx:
         for value in self.apikey_credentials.values():
             if value.security_id == security_id:
                 return value
+
+# ################################################################################################################################
+
+    def _has_security_id(self, security_id:'int') -> 'bool':
+        """ Returns True if input security_id is among any groups that we handle. Returns False otherwise.
+        """
+        for sec_def_ids in self.group_to_sec_map.values():
+            if security_id in sec_def_ids:
+                return True
+
+        # If we are here, it means that do not have that security ID
+        return False
 
 # ################################################################################################################################
 
@@ -384,7 +396,7 @@ class SecurityGroupCtx:
 
         # If we do not have anything, we can only report an error
         if not sec_def:
-            raise Exception(f'Security ID is neither Basic Auth nor API key')
+            raise Exception(f'Security ID is neither Basic Auth nor API key -> {security_id}')
 
         # .. otherwise, we can return the definition to our caller.
         else:
@@ -418,34 +430,39 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
+    def _on_member_removed_from_group(self, group_id:'int', security_id:'int') -> 'None':
+
+        # Continue only if this group has been previously assigned to our context object ..
+        if not group_id in self.security_groups:
+            return
+
+        # First, remove the security ID from the input group ..
+        self._after_auth_deleted(security_id)
+
+        # .. now, check if the security definition belongs to other groups as well ..
+        # .. and if not, delete the security definition altogether because ..
+        # .. it must have been the last one group to have contained it ..
+        for sec_def_ids in self.group_to_sec_map.values():
+            if security_id in sec_def_ids:
+                break
+        else:
+            # .. if we are here, it means that there was no break above ..
+            # .. which means that the security ID is not in any group, ..
+            # .. in which case we need to delete this definition now ..
+            sec_def_type = self._get_sec_def_type_by_id(security_id)
+
+            # .. do delete the definition from the correct container.
+            if sec_def_type == Sec_Def_Type.BASIC_AUTH:
+                self._on_basic_auth_deleted(security_id)
+            else:
+                self._on_apikey_deleted(security_id)
+
+# ################################################################################################################################
+
     def on_member_removed_from_group(self, group_id:'int', security_id:'int') -> 'None':
 
         with self._lock:
-
-            # Continue only if this group has been previously assigned to our context object ..
-            if not group_id in self.security_groups:
-                return
-
-            # First, remove the security ID from the input group ..
-            self._after_auth_deleted(security_id)
-
-            # .. now, check if the security definition belongs to other groups as well ..
-            # .. and if not, delete the security definition altogether because ..
-            # .. it must have been the last one group to have contained it ..
-            for sec_def_ids in self.group_to_sec_map.values():
-                if security_id in sec_def_ids:
-                    break
-            else:
-                # .. if we are here, it means that there was no break above ..
-                # .. which means that the security ID is not in any group, ..
-                # .. in which case we need to delete this definition now ..
-                sec_def_type = self._get_sec_def_type_by_id(security_id)
-
-                # .. do delete the definition from the correct container.
-                if sec_def_type == Sec_Def_Type.BASIC_AUTH:
-                    self._on_basic_auth_deleted(security_id)
-                else:
-                    self._on_apikey_deleted(security_id)
+            self._on_member_removed_from_group(group_id, security_id)
 
 # ################################################################################################################################
 
@@ -482,8 +499,24 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
-    def on_group_unassigned_from_channel(self) -> 'None':
-        pass
+    def on_group_unassigned_from_channel(self, group_id:'int') -> 'None':
+
+        with self._lock:
+
+            # Pop the mapping which will also give us all the security definitions assigned to the group ..
+            sec_id_list = self.group_to_sec_map.pop(group_id, [])
+
+            # .. go through each definition ..
+            for security_id in sec_id_list:
+
+                # .. and remove it, if necessary.
+                self._on_member_removed_from_group(group_id, security_id)
+
+            # Lastly, delete the top-level container for groups.
+            try:
+                _ = self.security_groups.remove(group_id)
+            except KeyError:
+                pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -547,116 +580,6 @@ class BuildCtx(Service):
         security_groups = [1, 3]
 
         builder = SecurityGroupCtxBuilder(self.server)
-        ctx = builder.build_ctx(channel_id, security_groups)
-
-        cid = 'cid.1'
-        channel_name = 'channel.1'
+        _ = builder.build_ctx(channel_id, security_groups)
 
 # ################################################################################################################################
-
-        result = ctx.check_security_basic_auth(cid, channel_name, 'user1', 'pass1')
-        print('QQQ-1', result)
-
-        result = ctx.check_security_apikey(cid, channel_name, 'key333')
-        print('QQQ-2', result)
-
-        #
-        #
-
-        ctx.on_member_added_to_group(1, 18)
-
-        #
-        #
-
-        result = ctx.check_security_apikey(cid, channel_name, 'key333')
-        print('QQQ-3', result)
-
-        #
-        #
-
-        ctx.on_member_removed_from_group(1, 18)
-
-        #
-        #
-
-        result = ctx.check_security_apikey(cid, channel_name, 'key333')
-        print('QQQ-4', result)
-
-# ################################################################################################################################
-
-        '''
-        result = ctx.check_security_basic_auth(cid, channel_name, 'user1', 'pass1')
-        print('QQQ-1', result)
-
-        result = ctx.check_security_apikey(cid, channel_name, 'key1')
-        print('QQQ-2', result)
-
-        #
-        #
-
-        ctx.on_apikey_edited(16, 'key2')
-
-        #
-        #
-
-        result = ctx.check_security_apikey(cid, channel_name, 'key1')
-        print('QQQ-3', result)
-
-        result = ctx.check_security_apikey(cid, channel_name, 'key2')
-        print('QQQ-4', result)
-        '''
-
-# ################################################################################################################################
-
-        '''
-        result = ctx.check_security_basic_auth(cid, channel_name, 'user1', 'pass1')
-        print('QQQ-1', result)
-
-        result = ctx.check_security_apikey(cid, channel_name, 'key1')
-        print('QQQ-2', result)
-
-        #
-        #
-
-        ctx.on_basic_auth_edited(14, 'user2', 'pass2')
-
-        #
-        #
-
-
-        result = ctx.check_security_basic_auth(cid, channel_name, 'user1', 'pass1')
-        print('QQQ-3', result)
-
-        result = ctx.check_security_basic_auth(cid, channel_name, 'user2', 'pass2')
-        print('QQQ-4', result)
-        '''
-
-# ################################################################################################################################
-
-        '''
-        result = ctx.check_security_basic_auth(cid, channel_name, 'user1', 'pass1')
-        print('QQQ-1', result)
-
-        result = ctx.check_security_apikey(cid, channel_name, 'key1')
-        print('QQQ-2', result)
-
-        #
-        #
-
-        ctx.on_group_deleted(1)
-
-        #
-        #
-
-        result = ctx.check_security_basic_auth(cid, channel_name, 'user1', 'pass1')
-        print('QQQ-3', result)
-
-        result = ctx.check_security_apikey(cid, channel_name, 'key1')
-        print('QQQ-4', result)
-        '''
-
-# ################################################################################################################################
-
-# ################################################################################################################################
-# ################################################################################################################################
-'''
