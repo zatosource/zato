@@ -390,7 +390,7 @@ class AuxServer:
 
     def _check_credentials(self, credentials:'str') -> 'None':
 
-        result = check_basic_auth(credentials, self.config.username, self.config.password)
+        result = check_basic_auth('', credentials, self.config.username, self.config.password)
         if result is not True:
             logger.info('Credentials error -> %s', result)
             raise Exception('Invalid credentials')

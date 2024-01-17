@@ -83,6 +83,7 @@ from zato.server.connection.stats import ServiceStatsClient
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.groups.base import GroupsManager
+from zato.server.groups.ctx import SecurityGroupsCtxBuilder
 from zato.server.sso import SSOTool
 
 # ################################################################################################################################
@@ -164,6 +165,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     deploy_auto_from: 'str' = ''
 
     groups_manager: 'GroupsManager'
+    security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
 
     def __init__(self) -> 'None':
         self.logger = logger
@@ -249,6 +251,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.enforce_service_invokes = False
         self.json_parser = BasicParser()
         self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
+        self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
 
         # A server-wide publication counter, indicating which one the current publication is,
         # increased after each successful publication.
@@ -1120,6 +1123,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Deploys services
         locally_deployed = self._after_init_common(server) # type: ignore
 
+        # Build objects responsible for groups
+        self.groups_manager = GroupsManager(self)
+        self.security_groups_ctx_builder = SecurityGroupsCtxBuilder(self)
+
         # Initializes worker store, including connectors
         self.worker_store.init()
         self.request_dispatcher_dispatch = self.worker_store.request_dispatcher.dispatch
@@ -1132,9 +1139,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Configure the store to obtain OAuth tokens through
         self.set_up_oauth_store()
-
-        # Build an object responsible for groups
-        self.groups_manager = GroupsManager(self)
 
         # Bearer tokens (OAuth)
         self.bearer_token_manager = BearerTokenManager(self)
@@ -1451,6 +1455,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # .. now, we can set it for later use.
         self.api_key_header = api_key_header
+        self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
 
 # ################################################################################################################################
 
