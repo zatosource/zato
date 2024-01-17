@@ -228,6 +228,11 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
+    def delete_apikey(self, security_id:'int') -> 'None':
+        _ = self._delete_apikey(security_id)
+
+# ################################################################################################################################
+
     def check_security_apikey(self, cid:'str', channel_name:'str', header_value:'str') -> 'intnone':
 
         if sec_info := self.apikey_credentials.get(header_value):
@@ -262,7 +267,7 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
-    def on_basic_auth_deleted(self, security_id:'int'):
+    def on_basic_auth_deleted(self, security_id:'int') -> 'None':
         with self._lock:
             self.delete_basic_auth(security_id)
 
@@ -286,11 +291,15 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
-    def on_apikey_edited(self):
-        pass
+    def on_apikey_edited(self, security_id:'int', header_value:'str') -> 'None':
+        with self._lock:
+            self.edit_apikey(security_id, header_value)
 
-    def on_apikey_deleted(self):
-        pass
+# ################################################################################################################################
+
+    def on_apikey_deleted(self, security_id:'int') -> 'None':
+        with self._lock:
+            _ = self._delete_apikey(security_id)
 
 # ################################################################################################################################
 
@@ -346,18 +355,18 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
-    def on_member_added_to_group(self):
+    def on_member_added_to_group(self) -> 'None':
         pass
 
-    def on_member_removed_from_group(self):
+    def on_member_removed_from_group(self) -> 'None':
         pass
 
 # ################################################################################################################################
 
-    def on_group_assigned_to_channel(self):
+    def on_group_assigned_to_channel(self) -> 'None':
         pass
 
-    def on_group_unassigned_from_channel(self):
+    def on_group_unassigned_from_channel(self) -> 'None':
         pass
 
 # ################################################################################################################################
@@ -471,6 +480,29 @@ class BuildCtx(Service):
         #
         #
 
+        ctx.on_apikey_edited(16, 'key2')
+
+        #
+        #
+
+        result = ctx.check_security_apikey(cid, channel_name, 'key1')
+        print('QQQ-3', result)
+
+        result = ctx.check_security_apikey(cid, channel_name, 'key2')
+        print('QQQ-4', result)
+
+# ################################################################################################################################
+
+        '''
+        result = ctx.check_security_basic_auth(cid, channel_name, 'user1', 'pass1')
+        print('QQQ-1', result)
+
+        result = ctx.check_security_apikey(cid, channel_name, 'key1')
+        print('QQQ-2', result)
+
+        #
+        #
+
         ctx.on_basic_auth_edited(14, 'user2', 'pass2')
 
         #
@@ -482,6 +514,7 @@ class BuildCtx(Service):
 
         result = ctx.check_security_basic_auth(cid, channel_name, 'user2', 'pass2')
         print('QQQ-4', result)
+        '''
 
 # ################################################################################################################################
 
