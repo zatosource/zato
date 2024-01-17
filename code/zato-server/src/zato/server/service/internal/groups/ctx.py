@@ -106,6 +106,14 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
+    def _get_apikey_by_security_id(self, security_id:'int') -> '_APIKeySecDef | None':
+
+        for value in self.apikey_credentials.values():
+            if value.security_id == security_id:
+                return value
+
+# ################################################################################################################################
+
     def _after_auth_created(
         self,
         group_id:'int',
@@ -124,6 +132,14 @@ class SecurityGroupCtx:
         # .. same as above but maps groups to their members ..
         # member_id_list = self.group_to_member_map.setdefault(group_id, set())
         # member_id_list.add(member_id)
+
+# ################################################################################################################################
+
+    def _after_auth_deleted(self, security_id:'int') -> 'None':
+
+        for sec_def_ids in self.group_to_sec_map.values():
+            if security_id in sec_def_ids:
+                sec_def_ids.remove(security_id)
 
 # ################################################################################################################################
 
@@ -161,25 +177,46 @@ class SecurityGroupCtx:
 
 # ################################################################################################################################
 
-    def edit_basic_auth(self, security_id:'int', current_username:'str', password:'str') -> 'None':
+    def edit_basic_auth(self, security_id:'int', username:'str', password:'str') -> 'None':
 
         if self._delete_basic_auth(security_id):
-            self._create_basic_auth(security_id, current_username, password)
+            self._create_basic_auth(security_id, username, password)
+
+# ################################################################################################################################
+
+    def edit_apikey(self, security_id:'int', header_value:'str') -> 'None':
+
+        if self._delete_apikey(security_id):
+            self._create_apikey(security_id, header_value)
 
 # ################################################################################################################################
 
     def _delete_basic_auth(self, security_id:'int') -> 'boolnone':
 
-        # Continue only if we recognize such a security definition ..
+        # Continue only if we recognize such a Basic Auth definition ..
         if sec_info := self._get_basic_auth_by_security_id(security_id):
 
             # .. delete the definition itself ..
             _ = self.basic_auth_credentials.pop(sec_info.username, None)
 
             # .. remove it from maps too ..
-            for sec_def_ids in self.group_to_sec_map.values():
-                if security_id in sec_def_ids:
-                    sec_def_ids.remove(security_id)
+            self._after_auth_deleted(security_id)
+
+            # .. and indicate to our caller that we are done.
+            return True
+
+# ################################################################################################################################
+
+    def _delete_apikey(self, security_id:'int') -> 'boolnone':
+
+        # Continue only if we recognize such an API key definition ..
+        if sec_info := self._get_apikey_by_security_id(security_id):
+
+            # .. delete the definition itself ..
+            _ = self.apikey_credentials.pop(sec_info.header_value, None)
+
+            # .. remove it from maps too ..
+            self._after_auth_deleted(security_id)
 
             # .. and indicate to our caller that we are done.
             return True
