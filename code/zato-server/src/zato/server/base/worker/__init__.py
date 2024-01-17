@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -367,6 +367,9 @@ class WorkerStore(_WorkerStoreBase):
         # SFTP - attach handles to connections to each ConfigDict now that all their configuration is ready
         self.init_sftp()
 
+        # Security groups - add details of each to REST channels
+        self._populate_channel_security_groups_info(self.worker_config.http_soap)
+
         request_handler = RequestHandler(self.server)
         url_data = URLData(
             self,
@@ -416,6 +419,13 @@ class WorkerStore(_WorkerStoreBase):
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
+
+# ################################################################################################################################
+
+    def _populate_channel_security_groups_info(self, channel_data:'anylist') -> 'None':
+
+        for item in channel_data:
+            item['security_groups_ctx'] = 123
 
 # ################################################################################################################################
 
@@ -674,7 +684,6 @@ class WorkerStore(_WorkerStoreBase):
         """ Initializes plain HTTP/SOAP connections.
         """
         config_dicts = self.get_outconn_http_config_dicts()
-        config_dicts
 
         for config_dict, config_data in config_dicts:
 
