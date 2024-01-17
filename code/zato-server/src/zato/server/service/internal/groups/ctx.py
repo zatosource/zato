@@ -255,14 +255,13 @@ class SecurityGroupCtx:
     def on_basic_auth_created(
         self,
         group_id:'int',
-        member_id:'int',
         security_id:'int',
         username:'str',
         password:'str'
     ) -> 'None':
 
         with self._lock:
-            self._on_basic_auth_created(group_id, member_id, security_id, username, password)
+            self._on_basic_auth_created(group_id, security_id, username, password)
 
 # ################################################################################################################################
 
@@ -478,7 +477,6 @@ class SecurityGroupCtxBuilder:
 
             # .. next, extract all the members from this group ..
             members = self._get_members_by_group_id(group_id)
-            members
 
             # .. now, go through each of the members found ..
             for member in members:
@@ -492,7 +490,6 @@ class SecurityGroupCtxBuilder:
                     # .. populate the correct container ..
                     ctx.on_basic_auth_created(
                         group_id,
-                        member.id,
                         sec_def['id'],
                         sec_def['username'],
                         sec_def['password'],
@@ -506,7 +503,6 @@ class SecurityGroupCtxBuilder:
                     # .. populate the correct container ..
                     ctx.on_apikey_created(
                         group_id,
-                        member.id,
                         sec_def['id'],
                         sec_def['password'],
                     )
