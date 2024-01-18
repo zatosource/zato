@@ -333,43 +333,19 @@ class RequestDispatcher:
                     )
 
                 #
-                # This will check credentials based on security groups potentially assigned to the channel
+                # This will check credentials based on security groups potentially assigned to the channel ..
                 #
                 if security_groups_ctx:
 
-                    # Extract Basic Auth information from input ..
-                    basic_auth_info = wsgi_environ.get('HTTP_AUTHORIZATION')
+                    # .. if we do not have any members, we do not check anything ..
+                    if security_groups_ctx.has_members():
 
-                    # .. extract API key information too ..
-                    apikey_header_value = wsgi_environ.get(self.server.api_key_header_wsgi)
+                        # .. this will raise an exception if the validation fails.
+                        self.check_security_via_groups(cid, channel_item['name'], security_groups_ctx, wsgi_environ)
 
-                    # .. we cannot have both on input ..
-                    if basic_auth_info and apikey_header_value:
-                        logger.warn('Received both Basic Auth and API key (groups)')
-                        raise BadRequest(cid)
-
-                    # Handle Basic Auth via groups ..
-                    if basic_auth_info:
-
-                        # .. extract credentials ..
-                        username, password = extract_basic_auth(cid, basic_auth_info)
-
-                        # .. run the validation now ..
-                        if not security_groups_ctx.check_security_basic_auth(cid, channel_item['name'], username, password):
-                            logger.warn('Invalid Basic Auth credentials (groups)')
-                            raise Forbidden(cid)
-
-                    # Handle API keys via groups ..
-                    elif apikey_header_value:
-
-                        # .. run the validation now ..
-                        if not security_groups_ctx.check_security_apikey(cid, channel_item['name'], apikey_header_value):
-                            logger.warn('Invalid API key (groups)')
-                            raise Forbidden(cid)
-
-                    else:
-                        logger.warn('Received neither Basic Auth nor API key (groups)')
-                        raise Forbidden(cid)
+                #
+                # If we are here, it means that credentials are correct or they were not required
+                #
 
                 # Check rate limiting now - this could not have been done earlier because we wanted
                 # for security checks to be made first. Otherwise, someone would be able to invoke
@@ -451,7 +427,7 @@ class RequestDispatcher:
                     data_event = DataSent()
                     data_event.type_ = ModuleCtx.Channel
                     data_event.object_id = channel_item['id']
-                    data_event.data = response.payload
+                    data_event.data = response.payload # type: ignore
                     data_event.timestamp = _utcnow()
                     data_event.msg_id = 'zrp{}'.format(cid) # This is a response to this CID
                     data_event.in_reply_to = cid
@@ -585,6 +561,50 @@ class RequestDispatcher:
 
             # This is the payload for the caller
             return response
+
+# ################################################################################################################################
+
+    def check_security_via_groups(
+        self,
+        cid:'str',
+        channel_name:'str',
+        security_groups_ctx:'SecurityGroupsCtx',
+        wsgi_environ:'stranydict'
+    ) -> 'None':
+
+        # Extract Basic Auth information from input ..
+        basic_auth_info = wsgi_environ.get('HTTP_AUTHORIZATION')
+
+        # .. extract API key information too ..
+        apikey_header_value = wsgi_environ.get(self.server.api_key_header_wsgi)
+
+        # .. we cannot have both on input ..
+        if basic_auth_info and apikey_header_value:
+            logger.warn('Received both Basic Auth and API key (groups)')
+            raise BadRequest(cid)
+
+        # Handle Basic Auth via groups ..
+        if basic_auth_info:
+
+            # .. extract credentials ..
+            username, password = extract_basic_auth(cid, basic_auth_info)
+
+            # .. run the validation now ..
+            if not security_groups_ctx.check_security_basic_auth(cid, channel_name, username, password):
+                logger.warn('Invalid Basic Auth credentials (groups)')
+                raise Forbidden(cid)
+
+        # Handle API keys via groups ..
+        elif apikey_header_value:
+
+            # .. run the validation now ..
+            if not security_groups_ctx.check_security_apikey(cid, channel_name, apikey_header_value):
+                logger.warn('Invalid API key (groups)')
+                raise Forbidden(cid)
+
+        else:
+            logger.warn('Received neither Basic Auth nor API key (groups)')
+            raise Forbidden(cid)
 
 # ################################################################################################################################
 

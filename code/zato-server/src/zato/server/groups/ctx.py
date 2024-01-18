@@ -407,6 +407,12 @@ class SecurityGroupsCtx:
         sec_def_type = sec_def['sec_type']
         return sec_def_type
 
+
+# ################################################################################################################################
+
+    def has_members(self) -> 'bool':
+        return bool(self.basic_auth_credentials) or bool(self.apikey_credentials)
+
 # ################################################################################################################################
 
     def on_member_added_to_group(self, group_id:'int', security_id:'int') -> 'None':
