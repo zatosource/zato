@@ -103,7 +103,7 @@ class GroupsManager:
             session.execute(remove_members)
 
             # .. and commit the changes now.
-            session.commit()
+            # session.commit()
 
 # ################################################################################################################################
 

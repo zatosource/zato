@@ -348,9 +348,6 @@ class SecurityGroupsCtx:
 
             # If we are here, it means that we really have a group to delete
 
-            # Find all member IDs related to this group
-            # member_id_list =
-
             # Find all security IDs related to this group
             sec_id_list = self.group_to_sec_map.pop(group_id, [])
 
@@ -371,10 +368,6 @@ class SecurityGroupsCtx:
             # .. remove security definitions (API keys) ..
             for item in apikey_list:
                 _ = self.apikey_credentials.pop(item, None)
-
-            # .. remove member IDs too ..
-            #
-            #
 
             # .. and remove the group itself.
             try:
@@ -406,7 +399,6 @@ class SecurityGroupsCtx:
         sec_def = self._get_sec_def_by_id(security_id)
         sec_def_type = sec_def['sec_type']
         return sec_def_type
-
 
 # ################################################################################################################################
 
