@@ -42,7 +42,7 @@ class GetList(AdminService):
         output_required = 'id', 'name', 'is_active', 'username', 'realm'
         output_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
 
-    def get_data(self, session):
+    def get_data(self, session): # type: ignore
         data = elems_with_opaque(self._search(basic_auth_list, session, self.request.input.cluster_id, None, False))
         return data
 
@@ -195,7 +195,7 @@ class ChangePassword(ChangePasswordBase):
         response_elem = 'zato_security_basic_auth_change_password_response'
 
     def handle(self):
-        def _auth(instance, password):
+        def _auth(instance, password): # type: ignore
             instance.password = password
 
         return self._handle(HTTPBasicAuth, _auth, SECURITY.BASIC_AUTH_CHANGE_PASSWORD.value)
@@ -219,7 +219,7 @@ class Delete(AdminService):
                     one()
 
                 session.delete(auth)
-                session.commit()
+                # session.commit()
             except Exception:
                 self.logger.error('Could not delete HTTP Basic Auth definition, e:`%s`', format_exc())
                 session.rollback()
