@@ -315,7 +315,7 @@ class SecurityGroupsCtx:
 
 # ################################################################################################################################
 
-    def on_apikey_header_value_changed(self, security_id:'int', header_value:'str') -> 'None':
+    def set_current_apikey(self, security_id:'int', header_value:'str') -> 'None':
         with self._lock:
             self.edit_apikey(security_id, header_value)
 
