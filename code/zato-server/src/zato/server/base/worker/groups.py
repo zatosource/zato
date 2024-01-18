@@ -15,6 +15,7 @@ from zato.server.base.worker.common import WorkerImpl
 
 if 0:
     from bunch import Bunch
+    from zato.common.typing_ import any_
     from zato.server.base.worker import WorkerStore
 
 # ################################################################################################################################
