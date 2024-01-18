@@ -146,7 +146,7 @@ def extract_basic_auth(cid:'str', auth:'str', *, raise_on_error:'bool'=False) ->
     if not auth:
         if raise_on_error:
             logger.warn(f'Basic Auth -> {Auth_Basic_No_Auth} -> {cid}')
-            raise Forbidden(self.cid)
+            raise Forbidden(cid)
         else:
             return None, Auth_Basic_No_Auth
 
@@ -154,7 +154,7 @@ def extract_basic_auth(cid:'str', auth:'str', *, raise_on_error:'bool'=False) ->
     if not auth.startswith(prefix):
         if raise_on_error:
             logger.warn(f'Basic Auth -> {Auth_Basic_Invalid_Prefix} -> {cid}')
-            raise Forbidden(self.cid)
+            raise Forbidden(cid)
         else:
             return None, Auth_Basic_Invalid_Prefix
 
