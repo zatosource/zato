@@ -177,7 +177,7 @@ class SecurityGroupsCtx:
 
 # ################################################################################################################################
 
-    def edit_basic_auth(self, security_id:'int', username:'str', password:'str') -> 'None':
+    def set_basic_auth(self, security_id:'int', username:'str', password:'str') -> 'None':
 
         if self._delete_basic_auth(security_id):
             self._create_basic_auth(security_id, username, password)
@@ -271,9 +271,9 @@ class SecurityGroupsCtx:
 
 # ################################################################################################################################
 
-    def on_basic_auth_edited(self, security_id:'int', current_username:'str', password:'str') -> 'None':
+    def set_current_basic_auth(self, security_id:'int', current_username:'str', password:'str') -> 'None':
         with self._lock:
-            self.edit_basic_auth(security_id, current_username, password)
+            self.set_basic_auth(security_id, current_username, password)
 
 # ################################################################################################################################
 
@@ -315,7 +315,7 @@ class SecurityGroupsCtx:
 
 # ################################################################################################################################
 
-    def on_apikey_edited(self, security_id:'int', header_value:'str') -> 'None':
+    def on_apikey_header_value_changed(self, security_id:'int', header_value:'str') -> 'None':
         with self._lock:
             self.edit_apikey(security_id, header_value)
 
