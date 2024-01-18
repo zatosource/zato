@@ -1543,8 +1543,7 @@ class WorkerStore(_WorkerStoreBase):
         """ Updates an existing API key security definition.
         """
         # Update channels and outgoing connections ..
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY,
-                self._visit_wrapper_edit, keys=('username', 'name'))
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY, self._visit_wrapper_edit, keys=('username', 'name'))
 
         # .. and update rate limiters.
         self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'apikey')
@@ -1570,12 +1569,11 @@ class WorkerStore(_WorkerStoreBase):
         """ Changes password of an API key security definition.
         """
         # Update channels and outgoing connections ..
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY,
-                self._visit_wrapper_change_password)
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY, self._visit_wrapper_change_password)
 
         # .. and update security groups.
         for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
-            security_groups_ctx.on_apikey_header_value_changed(msg.id, msg.password)
+            security_groups_ctx.set_current_apikey(msg.id, msg.password)
 
 # ################################################################################################################################
 # ################################################################################################################################
