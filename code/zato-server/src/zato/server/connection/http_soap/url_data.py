@@ -942,7 +942,7 @@ class URLData(CyURLData, OAuthDataStore):
             'cache_type', 'cache_id', 'cache_name', 'cache_expiry', 'content_encoding', 'match_slash', 'hl7_version',
             'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding',
             'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
-            'max_bytes_per_message_sent', 'max_bytes_per_message_received'):
+            'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'security_groups', 'security_groups_ctx'):
 
             channel_item[name] = msg.get(name)
 
@@ -950,6 +950,12 @@ class URLData(CyURLData, OAuthDataStore):
             channel_item['sec_type'] = msg['sec_type']
             channel_item['security_id'] = msg['security_id']
             channel_item['security_name'] = msg['security_name']
+
+        if security_groups := msg.get('security_groups'):
+            channel_item['security_groups'] = security_groups
+            self.worker.server.security_groups_ctx_builder.populate_members()
+            security_groups_ctx = self.worker.server.security_groups_ctx_builder.build_ctx(channel_item['id'], security_groups)
+            channel_item['security_groups_ctx'] = security_groups_ctx
 
         # For JSON-RPC
         channel_item['service_whitelist'] = msg.get('service_whitelist', [])

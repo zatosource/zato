@@ -428,10 +428,10 @@ class WorkerStore(_WorkerStoreBase):
         self.server.security_groups_ctx_builder.populate_members()
 
         # .. now, we can attach a groups context object to each channel that has any groups.
-        for item in channel_data:
-            if security_groups := item.get('security_groups'):
-                ctx = self.server.security_groups_ctx_builder.build_ctx(item['id'], security_groups)
-                item['security_groups_ctx'] = ctx
+        for channel_item in channel_data:
+            if security_groups := channel_item.get('security_groups'):
+                security_groups_ctx = self.server.security_groups_ctx_builder.build_ctx(channel_item['id'], security_groups)
+                channel_item['security_groups_ctx'] = security_groups_ctx
 
 # ################################################################################################################################
 
