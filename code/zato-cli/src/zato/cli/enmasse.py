@@ -414,7 +414,7 @@ ModuleCtx.Enmasse_Attr_List_As_List = {
 ModuleCtx.Enmasse_Attr_List_Skip_Always = {
 
     # Security groups
-    'security_groups':  ['type', 'member_count', 'description'],
+    'security_groups':  ['description', 'group_id', 'member_count', 'type'],
 }
 
 # ################################################################################################################################
@@ -479,6 +479,11 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches = {
 # ################################################################################################################################
 
 ModuleCtx.Enmasse_Attr_List_Skip_If_Other_Value_Matches = {
+
+    # Security definitions
+    'def_sec':  [
+        {'criteria':[{'type':'apikey'}], 'attrs':['username']},
+    ],
 
     # Pub/sub subscriptions
     'pubsub_subscription':  [
@@ -3478,6 +3483,12 @@ class Enmasse(ManageCommand):
             if value := item.pop(pattern_key, NotGiven): # type: ignore
                 if value != pattern_value:
                     item[pattern_key] = value
+
+
+        print()
+        print(111, item)
+        print(222, item_type)
+        print()
 
         # .. optionally, skip attributes if other attributes have a specific value ..
         if attr_list_skip_if_other_value_matches:
