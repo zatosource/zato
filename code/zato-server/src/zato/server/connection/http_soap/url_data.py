@@ -26,7 +26,7 @@ from zato.common.vault_ import VAULT
 from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
 from zato.common.util.api import parse_tls_channel_security_definition, update_apikey_username_to_channel, wait_for_dict_key
-from zato.common.util.auth import on_basic_auth
+from zato.common.util.auth import enrich_with_sec_data, on_basic_auth
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.connection.http_soap import Forbidden, Unauthorized
 from zato.server.jwt_ import JWT
@@ -180,16 +180,6 @@ class URLData(CyURLData, OAuthDataStore):
     def authorize_request_token(self, oauth_token, user):
         """-> OAuthToken."""
         raise NotImplementedError
-
-# ################################################################################################################################
-
-    def enrich_with_sec_data(self, data_dict, sec_def, sec_def_type):
-        data_dict['zato.sec_def'] = {}
-        data_dict['zato.sec_def']['id'] = sec_def['id']
-        data_dict['zato.sec_def']['name'] = sec_def['name']
-        data_dict['zato.sec_def']['username'] = sec_def.get('username')
-        data_dict['zato.sec_def']['impl'] = sec_def
-        data_dict['zato.sec_def']['type'] = sec_def_type
 
 # ################################################################################################################################
 
@@ -427,7 +417,7 @@ class URLData(CyURLData, OAuthDataStore):
                         if hasattr(sec, 'keys'):
                             sec.sec_def = _sec['sec_def']
 
-                        self.enrich_with_sec_data(wsgi_environ, _sec.sec_def, sec_type)
+                        enrich_with_sec_data(wsgi_environ, _sec.sec_def, sec_type)
                         break
 
         if auth_result:
@@ -477,7 +467,7 @@ class URLData(CyURLData, OAuthDataStore):
         if sec_def.get('is_rate_limit_active'):
             self.worker.server.rate_limiting.check_limit(cid, _object_type, sec_def.name, wsgi_environ['zato.http.remote_addr'])
 
-        self.enrich_with_sec_data(wsgi_environ, sec_def, sec_def_type)
+        enrich_with_sec_data(wsgi_environ, sec_def, sec_def_type)
 
         return auth_result
 

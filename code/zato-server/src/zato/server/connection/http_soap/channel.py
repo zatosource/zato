@@ -30,7 +30,7 @@ from zato.common.json_schema import DictError as JSONSchemaDictError, Validation
 from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.typing_ import cast_
-from zato.common.util.auth import extract_basic_auth
+from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
 from zato.common.util.exception import pretty_format_exception
 from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
 from zato.cy.reqresp.payload import SimpleIOPayload as CySimpleIOPayload
@@ -572,6 +572,9 @@ class RequestDispatcher:
         wsgi_environ:'stranydict'
     ) -> 'None':
 
+        # Local variables
+        sec_def = None
+
         # Extract Basic Auth information from input ..
         basic_auth_info = wsgi_environ.get('HTTP_AUTHORIZATION')
 
@@ -590,7 +593,9 @@ class RequestDispatcher:
             username, password = extract_basic_auth(cid, basic_auth_info)
 
             # .. run the validation now ..
-            if not security_groups_ctx.check_security_basic_auth(cid, channel_name, username, password):
+            if security_id := security_groups_ctx.check_security_basic_auth(cid, channel_name, username, password):
+                sec_def = self.url_data.basic_auth_get_by_id(security_id)
+            else:
                 logger.warn('Invalid Basic Auth credentials (groups)')
                 raise Forbidden(cid)
 
@@ -598,13 +603,20 @@ class RequestDispatcher:
         elif apikey_header_value:
 
             # .. run the validation now ..
-            if not security_groups_ctx.check_security_apikey(cid, channel_name, apikey_header_value):
+            if security_id := security_groups_ctx.check_security_apikey(cid, channel_name, apikey_header_value):
+                sec_def = self.url_data.apikey_get_by_id(security_id)
+            else:
                 logger.warn('Invalid API key (groups)')
                 raise Forbidden(cid)
 
         else:
             logger.warn('Received neither Basic Auth nor API key (groups)')
             raise Forbidden(cid)
+
+        # Now we can enrich the WSGI environment with information
+        # that will become self.channel.security for services.
+        if sec_def:
+            enrich_with_sec_data(wsgi_environ, sec_def, sec_def['sec_type'])
 
 # ################################################################################################################################
 
