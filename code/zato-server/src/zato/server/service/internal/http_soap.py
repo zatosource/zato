@@ -243,6 +243,7 @@ class GetList(_BaseGet):
 # ################################################################################################################################
 
 class _CreateEdit(AdminService, _HTTPSOAPService):
+
     def add_tls_ca_cert(self, input, sec_tls_ca_cert_id):
         with closing(self.odb.session()) as session:
             input.sec_tls_ca_cert_name = session.query(TLSCACert.name).\
@@ -357,6 +358,30 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
         return new_input_security_groups
 
 # ################################################################################################################################
+
+    def _get_service_from_input(self, session, input):
+
+        service = session.query(Service).\
+            filter(Cluster.id==input.cluster_id).\
+            filter(Service.cluster_id==Cluster.id)
+
+        if input.service:
+            service = service.filter(Service.name==input.service)
+        elif input.service_id:
+            service = service.filter(Service.id==input.service_id)
+        else:
+            raise Exception('Either service or service_id is required on input')
+
+        service = service.first()
+
+        if not service:
+            msg = 'Service `{}` does not exist in this cluster'.format(input.service)
+            self.logger.info(msg)
+            raise ServiceMissingException(msg)
+        else:
+            return service
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -443,24 +468,10 @@ class Create(_CreateEdit):
             if existing_one:
                 raise Exception('An object of that name `{}` already exists in this cluster'.format(input.name))
 
-            # Is the service's name correct?
-            service = session.query(Service).\
-                filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id)
-
-            if input.service:
-                service = service.filter(Service.name==input.service)
-            elif input.service_id:
-                service = service.filter(Service.id==input.service_id)
+            if input.connection == CONNECTION.CHANNEL:
+                service = self._get_service_from_input(session, input)
             else:
-                raise Exception('Either service or service_id is required on input')
-
-            service = service.first()
-
-            if input.connection == CONNECTION.CHANNEL and not service:
-                msg = 'Service `{}` does not exist in this cluster'.format(input.service)
-                self.logger.info(msg)
-                raise ServiceMissingException(msg)
+                service = None
 
             # Will raise exception if the security type doesn't match connection
             # type and transport
@@ -657,24 +668,10 @@ class Edit(_CreateEdit):
                 msg = 'A {} of that name:`{}` already exists in this cluster; path: `{}` (id:{})'
                 raise Exception(msg.format(object_type, input.name, existing_one.url_path, existing_one.id))
 
-            # Is the service's name correct?
-            service = session.query(Service).\
-                filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id)
-
-            if input.service:
-                service = service.filter(Service.name==input.service)
-            elif input.service_id:
-                service = service.filter(Service.id==input.service_id)
+            if input.connection == CONNECTION.CHANNEL:
+                service = self._get_service_from_input(session, input)
             else:
-                raise Exception('Either service or service_id is required on input')
-
-            service = service.first()
-
-            if input.connection == CONNECTION.CHANNEL and not service:
-                msg = 'Service `{}` does not exist in this cluster'.format(input.service)
-                self.logger.info(msg)
-                raise ServiceMissingException(msg)
+                service = None
 
             # Will raise exception if the security type doesn't match connection
             # type and transport
