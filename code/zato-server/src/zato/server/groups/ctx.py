@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from uuid import uuid4
 
 # gevent
 from gevent.lock import RLock
@@ -478,7 +479,7 @@ class SecurityGroupsCtx:
                     group_id,
                     sec_def['id'],
                     sec_def['username'],
-                    sec_def['password'],
+                    sec_def.get('password') or 'Zato-Not-Provided-Basic-Auth-' + uuid4().hex,
                 )
 
             elif member.sec_type == Sec_Def_Type.APIKEY:
@@ -490,7 +491,7 @@ class SecurityGroupsCtx:
                 self.on_apikey_created(
                     group_id,
                     sec_def['id'],
-                    sec_def['password'],
+                    sec_def.get('password') or 'Zato-Not-Provided-API-Key-' + uuid4().hex,
                 )
 
 # ################################################################################################################################
