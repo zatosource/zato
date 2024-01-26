@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -34,7 +34,7 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import DATA_FORMAT, default_internal_modules, EnvFile, EnvVariable,  GENERIC,  HotDeploy, IPC, \
+from zato.common.api import API_Key, DATA_FORMAT, default_internal_modules, EnvFile, EnvVariable,  GENERIC,  HotDeploy, IPC, \
     KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, \
         ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
@@ -82,6 +82,8 @@ from zato.server.connection.pool_wrapper import ConnectionPoolWrapper
 from zato.server.connection.stats import ServiceStatsClient
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
+from zato.server.groups.base import GroupsManager
+from zato.server.groups.ctx import SecurityGroupsCtxBuilder
 from zato.server.sso import SSOTool
 
 # ################################################################################################################################
@@ -161,6 +163,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     stop_after: 'intnone'
     deploy_auto_from: 'str' = ''
+
+    groups_manager: 'GroupsManager'
+    security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
 
     def __init__(self) -> 'None':
         self.logger = logger
@@ -245,6 +250,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
         self.enforce_service_invokes = False
         self.json_parser = BasicParser()
+        self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
+        self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
 
         # A server-wide publication counter, indicating which one the current publication is,
         # increased after each successful publication.
@@ -1106,12 +1113,19 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Rate limiting for SSO
         self.set_up_sso_rate_limiting()
 
+        # API keys configuration
+        self.set_up_api_key_config()
+
         # Some parts of the worker store's configuration are required during the deployment of services
         # which is why we are doing it here, before worker_store.init() is called.
         self.worker_store.early_init()
 
         # Deploys services
         locally_deployed = self._after_init_common(server) # type: ignore
+
+        # Build objects responsible for groups
+        self.groups_manager = GroupsManager(self)
+        self.security_groups_ctx_builder = SecurityGroupsCtxBuilder(self)
 
         # Initializes worker store, including connectors
         self.worker_store.init()
@@ -1431,6 +1445,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def set_up_api_key_config(self):
+
+        # Prefer the value from environment variables ..
+        if not (api_key_header := os.environ.get(API_Key.Env_Key)):
+
+            # .. otherwise, use the default one .
+            api_key_header = API_Key.Default_Header
+
+        # .. now, we can set it for later use.
+        self.api_key_header = api_key_header
+        self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
+
+# ################################################################################################################################
+
     def _create_sso_user_rate_limiting(
         self,
         user_id:'str',
@@ -1709,12 +1737,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def encrypt(self, data:'any_', prefix:'str'=SECRETS.PREFIX) -> 'strnone':
+    def encrypt(self, data:'any_', prefix:'str'=SECRETS.PREFIX, *, needs_str:'bool'=True) -> 'strnone':
         """ Returns data encrypted using server's CryptoManager.
         """
         if data:
             data = data.encode('utf8') if isinstance(data, str) else data
-            encrypted = self.crypto_manager.encrypt(data, needs_str=True)
+            encrypted = self.crypto_manager.encrypt(data, needs_str=needs_str)
             return '{}{}'.format(prefix, encrypted)
 
 # ################################################################################################################################

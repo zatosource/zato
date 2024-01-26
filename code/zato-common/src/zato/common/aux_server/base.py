@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -390,7 +390,7 @@ class AuxServer:
 
     def _check_credentials(self, credentials:'str') -> 'None':
 
-        result = check_basic_auth(credentials, self.config.username, self.config.password)
+        result = check_basic_auth('', credentials, self.config.username, self.config.password)
         if result is not True:
             logger.info('Credentials error -> %s', result)
             raise Exception('Invalid credentials')
