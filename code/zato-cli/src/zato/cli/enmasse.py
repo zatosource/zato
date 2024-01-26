@@ -3484,12 +3484,6 @@ class Enmasse(ManageCommand):
                 if value != pattern_value:
                     item[pattern_key] = value
 
-
-        print()
-        print(111, item)
-        print(222, item_type)
-        print()
-
         # .. optionally, skip attributes if other attributes have a specific value ..
         if attr_list_skip_if_other_value_matches:
 
