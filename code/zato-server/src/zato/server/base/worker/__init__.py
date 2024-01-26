@@ -1504,11 +1504,12 @@ class WorkerStore(_WorkerStoreBase):
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH, self._visit_wrapper_change_password)
 
         # .. extract the newest information  ..
-        sec_def = self.basic_auth_get_by_id(msg.id)
+        if msg.id:
+            sec_def = self.basic_auth_get_by_id(msg.id)
 
-        # .. and update security groups.
-        for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
-            security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
+            # .. and update security groups.
+            for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
+                security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
 
 # ################################################################################################################################
 # ################################################################################################################################
