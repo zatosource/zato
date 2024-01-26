@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -100,9 +100,10 @@ if 0:
         modelnone, strdict, strdictnone, strstrdict, strnone, strlist
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
+    from zato.server.connection.connector import Connector
     from zato.server.connection.ftp import FTPStore
     from zato.server.connection.http_soap.outgoing import RESTWrapper
-    from zato.server.connection.web_socket import WebSocket
+    from zato.server.connection.web_socket import ChannelWebSocket, WebSocket
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
@@ -315,6 +316,14 @@ class _WSXChannelContainer:
         self.server = server
         self._lock = RLock()
         self._channels = {}
+
+    def invoke(self, cid:'str', conn_name:'str', **kwargs) -> 'any_':
+
+        wsx_channel:'Connector' = self.server.worker_store.web_socket_api.connectors[conn_name] # type: ignore
+        wsx_channel:'ChannelWebSocket' = cast_('ChannelWebSocket', wsx_channel) # type: ignore
+
+        response = wsx_channel.invoke_client(cid, **kwargs)
+        return response
 
 # ################################################################################################################################
 
