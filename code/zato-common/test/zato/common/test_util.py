@@ -3,7 +3,7 @@
 """
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -102,9 +102,9 @@ class TestUpdateBindPort(TestCase):
 
 class TestAPIKeyUsername(TestCase):
     def test_update_apikey_username(self):
-        config = Bunch(username='x-aaa')
+        config = Bunch(header='x-aaa')
         util_api.update_apikey_username_to_channel(config)
-        self.assertEqual(config.username, 'HTTP_X_AAA')
+        self.assertEqual(config.header, 'HTTP_X_AAA')
 
 # ################################################################################################################################
 # ################################################################################################################################
