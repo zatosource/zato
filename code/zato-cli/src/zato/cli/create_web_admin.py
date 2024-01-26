@@ -198,8 +198,9 @@ class Create(ZatoCommand):
         django.setup()
         self.reset_logger(args, True)
 
-        # # Can't import these without DJANGO_SETTINGS_MODULE being set
+        # Can't import these without DJANGO_SETTINGS_MODULE being set
         from django.contrib.auth.models import User
+        from django.core.management.base import CommandError
         from django.db import connection
         from django.db.utils import IntegrityError
 
@@ -215,7 +216,7 @@ class Create(ZatoCommand):
             user.set_password(admin_password)
             user.save()
 
-        except IntegrityError:
+        except (CommandError, IntegrityError):
             # This will happen if user 'admin' already exists, e.g. if this is not the first cluster in this database
             admin_created = False
             connection._rollback()
