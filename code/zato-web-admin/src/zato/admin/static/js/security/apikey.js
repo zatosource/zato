@@ -41,10 +41,13 @@ $.fn.zato.security.apikey.data_table.new_row = function(item, data, include_tr) 
     var is_rate_limit_active = $.fn.zato.like_bool(data.is_rate_limit_active) == true;
     var rate_limit_check_parent_def = $.fn.zato.like_bool(data.rate_limit_check_parent_def) == true;
 
+    var item_header_id = "item_header_" + item.id;
+    var item_header_value = $("#"+ item_header_id).text() || "X-API-Key";
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
-    row += String.format('<td>{0}</td>', item.username);
+    row += String.format('<td id="{0}">{1}</td>', item_header_id, item_header_value);
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change API key</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.security.apikey.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.apikey.delete_({0});'>Delete</a>", item.id));

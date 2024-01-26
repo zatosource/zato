@@ -4,7 +4,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -265,7 +265,7 @@ class BearerTokenManager:
         # .. make it expire in half the time the token will be valid for ..
         # .. or in one minute in case the expiration time is not available ..
         if info.expires_in_sec:
-            expiry = 10 # info.expires_in_sec / 2
+            expiry = info.expires_in_sec / 2
         else:
             expiry = 60
 

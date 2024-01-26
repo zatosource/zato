@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -1762,7 +1762,7 @@ def require_tcp_port(address):
 # ################################################################################################################################
 
 def update_apikey_username_to_channel(config):
-    config.username = 'HTTP_{}'.format(config.get('username', '').upper().replace('-', '_'))
+    config.header = 'HTTP_{}'.format(config.get('header', '').upper().replace('-', '_'))
 
 # ################################################################################################################################
 

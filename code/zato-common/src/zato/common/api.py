@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -107,7 +107,8 @@ generic_attrs = (
     'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
     'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding',
     'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq',
-    'max_wait_time', 'oauth_def', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout'
+    'max_wait_time', 'oauth_def', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout',
+    'security_group_count', 'security_group_member_count',
 )
 
 # ################################################################################################################################
@@ -157,6 +158,13 @@ class EnvConfigCtx:
     component:'str'
     file_name:'str'
     missing_suffix:'str' = EnvVariable.Key_Missing_Suffix
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class API_Key:
+    Env_Key = 'Zato_API_Key_Name'
+    Default_Header = 'X-API-Key'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -351,7 +359,7 @@ class NameId:
 # ################################################################################################################################
 
 class NotGiven:
-    pass # A marker for lazily-initialized attributes
+    pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1414,6 +1422,20 @@ class GENERIC:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class Groups:
+    class Type:
+        Group_Parent    = 'zato-group'
+        Group_Member    = 'zato-group-member'
+        API_Clients     = 'zato-api-creds'
+        Organizations   = 'zato-org'
+
+    class Membership_Action:
+        Add    = 'add'
+        Remove = 'remove'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class AuditLog:
 
     class Direction:
@@ -2154,6 +2176,7 @@ default_internal_modules = {
     'zato.server.service.internal.email.smtp': True,
     'zato.server.service.internal.generic.connection': True,
     'zato.server.service.internal.generic.rest_wrapper': True,
+    'zato.server.service.internal.groups': True,
     'zato.server.service.internal.helpers': True,
     'zato.server.service.internal.hot_deploy': True,
     'zato.server.service.internal.ide_deploy': True,

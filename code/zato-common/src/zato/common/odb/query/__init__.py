@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -82,16 +82,30 @@ class _SearchWrapper:
             q = q.filter(where)
         else:
 
-            # If there are multiple filters, they are by default OR-joined
-            # to ease in look ups over more than one column.
-            filter_op = and_ if config.get('filter_op') == 'and' else or_
             filters = []
 
-            for filter_by in config.get('filter_by', []):
-                for criterion in config.get('query', []):
-                    filters.append(filter_by.contains(criterion))
+            if query := config.get('query', []):
+                query = query if isinstance(query, (list, tuple)) else [query]
 
-            q = q.filter(filter_op(*filters))
+            if filter_by := config.get('filter_by', []):
+                filter_by = filter_by if isinstance(filter_by, (list, tuple)) else [filter_by]
+                len_filter_by = len(filter_by)
+                for column in filter_by:
+                    for criterion in query:
+                        expression = column.contains(criterion)
+                        if criterion.startswith('-'):
+                            expression = not_(expression)
+                        and_filter = and_(*[expression]) # type: ignore
+                        filters.append(and_filter)
+
+                # We need to use "or" if we filter by more then one column
+                # to let the filters match all of them independently.
+                if len_filter_by > 1:
+                    combine_criteria_using = or_
+                else:
+                    combine_criteria_using = and_
+
+                q = q.filter(combine_criteria_using(*filters))
 
         # Total number of results
         total_q = q.statement.with_only_columns([func.count()]).order_by(None)
