@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -15,7 +15,7 @@ from paste.util.converters import asbool
 
 # Zato
 from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
+     Groups, HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZATO_DEFAULT, ZATO_NONE, ZatoNotGiven, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.exception import ServiceMissingException, ZatoException
@@ -34,12 +34,12 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import any_, anylist, strdict, strintdict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_GetList_Optional = ('include_wrapper', 'cluster_id', 'connection', 'transport', 'data_format')
+_GetList_Optional = ('include_wrapper', 'cluster_id', 'connection', 'transport', 'data_format', 'needs_security_group_names')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,7 +100,8 @@ class _BaseGet(AdminService):
                 'data_encoding', 'is_audit_log_sent_active', 'is_audit_log_received_active', \
                 Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
                 Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
-                'username', 'is_wrapper', 'wrapper_type'
+                'username', 'is_wrapper', 'wrapper_type', AsIs('security_groups'), 'security_group_count', \
+                'security_group_member_count', 'needs_security_group_names'
 
 # ################################################################################################################################
 
@@ -117,6 +118,25 @@ class _BaseGet(AdminService):
         else:
             out = sec_tls_ca_cert_id
 
+        return out
+
+# ################################################################################################################################
+
+    def _get_security_groups_info(self, item:'any_', security_groups_member_count:'strintdict') -> 'strdict':
+
+        # Our response to produce
+        out:'strdict' = {
+            'group_count': 0,
+            'member_count': 0,
+        }
+
+        if security_groups := item.get('security_groups'):
+            for group_id in security_groups:
+                member_count = security_groups_member_count.get(group_id) or 0
+                out['member_count'] += member_count
+                out['group_count'] += 1
+
+        # .. now, return the response to our caller.
         return out
 
 # ################################################################################################################################
@@ -157,8 +177,18 @@ class GetList(_BaseGet):
         # Local aliases
         out:'anylist' = []
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
+        needs_security_group_names = self.request.input.get('needs_security_group_names') or False
         include_wrapper = self.request.input.get('include_wrapper') or False
         should_ignore_wrapper = not include_wrapper
+
+        # Get information about security groups which may be used later on
+        security_groups_member_count = self.invoke('zato.groups.get-member-count', group_type=Groups.Type.API_Clients)
+
+        if needs_security_group_names:
+            all_security_groups = self.invoke('zato.groups.get-list', group_type=Groups.Type.API_Clients)
+            all_security_groups
+        else:
+            all_security_groups = []
 
         # Obtain the basic result ..
         result = self._search(http_soap_list, session, cluster_id,
@@ -173,6 +203,23 @@ class GetList(_BaseGet):
 
         # .. go through everything we have so far ..
         for item in data:
+
+            # .. build a dictionary of information about groups ..
+            security_groups_for_item_info = self._get_security_groups_info(item, security_groups_member_count)
+
+            item['security_group_count'] = security_groups_for_item_info['group_count']
+            item['security_group_member_count'] = security_groups_for_item_info['member_count']
+
+            # .. optionally, we may need to turn security group IDs into their names ..
+            if needs_security_group_names:
+                if security_groups_for_item := item.get('security_groups'):
+                    new_security_groups = []
+                    for item_group_id in security_groups_for_item:
+                        for group in all_security_groups:
+                            if item_group_id == group['id']:
+                                new_security_groups.append(group['name'])
+                                break
+                    item['security_groups'] = sorted(new_security_groups)
 
             # .. this needs to be extracted ..
             item['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(item)
@@ -196,6 +243,7 @@ class GetList(_BaseGet):
 # ################################################################################################################################
 
 class _CreateEdit(AdminService, _HTTPSOAPService):
+
     def add_tls_ca_cert(self, input, sec_tls_ca_cert_id):
         with closing(self.odb.session()) as session:
             input.sec_tls_ca_cert_name = session.query(TLSCACert.name).\
@@ -277,6 +325,63 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
             input['sec_tls_ca_cert_verify_strategy'] = True # By default, verify using the built-in bundle
 
 # ################################################################################################################################
+
+    def _preprocess_security_groups(self, input):
+
+        # This will contain only IDs
+        new_input_security_groups = []
+
+        # Security groups are optional
+        if input_security_groups := input.get('security_groups'):
+
+            # Get information about security groups which is need to turn group names into group IDs
+            existing_security_groups = self.invoke('zato.groups.get-list', group_type=Groups.Type.API_Clients)
+
+            for input_group in input_security_groups:
+                group_id = None
+                try:
+                    input_group = int(input_group)
+                except ValueError:
+                    for existing_group in existing_security_groups:
+                        if input_group == existing_group['name']:
+                            group_id = existing_group['id']
+                            break
+                    else:
+                        raise Exception(f'Could not find ID for group `{input_group}`')
+                else:
+                    group_id = input_group
+                finally:
+                    if group_id:
+                        new_input_security_groups.append(group_id)
+
+        # Return what we have to our caller
+        return new_input_security_groups
+
+# ################################################################################################################################
+
+    def _get_service_from_input(self, session, input):
+
+        service = session.query(Service).\
+            filter(Cluster.id==input.cluster_id).\
+            filter(Service.cluster_id==Cluster.id)
+
+        if input.service:
+            service = service.filter(Service.name==input.service)
+        elif input.service_id:
+            service = service.filter(Service.id==input.service_id)
+        else:
+            raise Exception('Either service or service_id is required on input')
+
+        service = service.first()
+
+        if not service:
+            msg = 'Service `{}` does not exist in this cluster'.format(input.service)
+            self.logger.info(msg)
+            raise ServiceMissingException(msg)
+        else:
+            return service
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -286,7 +391,7 @@ class Create(_CreateEdit):
         request_elem = 'zato_http_soap_create_request'
         response_elem = 'zato_http_soap_create_response'
         input_required = 'name', 'url_path', 'connection'
-        input_optional = 'service', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
+        input_optional = 'service', 'service_id', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
             'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
@@ -297,7 +402,7 @@ class Create(_CreateEdit):
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify', \
-            'is_wrapper', 'wrapper_type', 'username', 'password'
+            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
         output_required = 'id', 'name'
         output_optional = 'url_path'
 
@@ -314,6 +419,7 @@ class Create(_CreateEdit):
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
         input.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+        input.security_groups = self._preprocess_security_groups(input)
 
         input.is_active   = input.get('is_active',   True)
         input.is_internal = input.get('is_internal', False)
@@ -362,16 +468,10 @@ class Create(_CreateEdit):
             if existing_one:
                 raise Exception('An object of that name `{}` already exists in this cluster'.format(input.name))
 
-            # Is the service's name correct?
-            service = session.query(Service).\
-                filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id).\
-                filter(Service.name==input.service).first()
-
-            if input.connection == CONNECTION.CHANNEL and not service:
-                msg = 'Service `{}` does not exist in this cluster'.format(input.service)
-                self.logger.info(msg)
-                raise ServiceMissingException(msg)
+            if input.connection == CONNECTION.CHANNEL:
+                service = self._get_service_from_input(session, input)
+            else:
+                service = None
 
             # Will raise exception if the security type doesn't match connection
             # type and transport
@@ -482,9 +582,9 @@ class Edit(_CreateEdit):
         request_elem = 'zato_http_soap_edit_request'
         response_elem = 'zato_http_soap_edit_response'
         input_required = 'id', 'name', 'url_path', 'connection'
-        input_optional = 'service', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
-            'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
-            'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), 'content_type', \
+        input_optional = 'service', 'service_id', AsIs('security_id'), 'method', 'soap_action', 'soap_version', \
+            'data_format', 'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', \
+            'params_pri', 'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
@@ -493,7 +593,7 @@ class Edit(_CreateEdit):
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
             'cluster_id', 'is_active', 'transport', 'tls_verify', \
-            'is_wrapper', 'wrapper_type', 'username', 'password'
+            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
         output_optional = 'id', 'name'
 
     def handle(self):
@@ -509,6 +609,7 @@ class Edit(_CreateEdit):
         input.security_id  = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action  = input.soap_action if input.soap_action else ''
         input.timeout      = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+        input.security_groups = self._preprocess_security_groups(input)
 
         input.is_active   = input.get('is_active',   True)
         input.is_internal = input.get('is_internal', False)
@@ -567,16 +668,10 @@ class Edit(_CreateEdit):
                 msg = 'A {} of that name:`{}` already exists in this cluster; path: `{}` (id:{})'
                 raise Exception(msg.format(object_type, input.name, existing_one.url_path, existing_one.id))
 
-            # Is the service's name correct?
-            service = session.query(Service).\
-                filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id).\
-                filter(Service.name==input.service).first()
-
-            if input.connection == CONNECTION.CHANNEL and not service:
-                msg = 'Service `{}` does not exist in this cluster'.format(input.service)
-                self.logger.info(msg)
-                raise ServiceMissingException(msg)
+            if input.connection == CONNECTION.CHANNEL:
+                service = self._get_service_from_input(session, input)
+            else:
+                service = None
 
             # Will raise exception if the security type doesn't match connection
             # type and transport

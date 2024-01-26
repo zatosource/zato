@@ -3,7 +3,7 @@
 """
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Django
@@ -39,6 +39,7 @@ from zato.admin.web.views.definition import kafka as def_kafka
 from zato.admin.web.views.definition import jms_wmq as def_wmq
 from zato.admin.web.views.email import imap as email_imap
 from zato.admin.web.views.email import smtp as email_smtp
+from zato.admin.web.views import groups
 from zato.admin.web.views.notif import sql as notif_sql
 from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
@@ -1003,6 +1004,9 @@ urlpatterns += [
         login_required(http_soap.ping), name='http-soap-ping'),
     url(r'^zato/http-soap/reload-wsdl/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(http_soap.reload_wsdl), name='http-soap-reload-wsdl'),
+    url(r'^zato/http-soap/get-security-groups/(?P<group_type>.*)/$',
+        login_required(groups.get_group_list), name='http-soap-get-all-security-groups'),
+
     ]
 
 # ################################################################################################################################
@@ -1669,7 +1673,44 @@ urlpatterns += [
     ]
 
 # ################################################################################################################################
+# ################################################################################################################################
+# #
+# #   Groups
+# #
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Groups
+
+    url(r'^zato/groups/members/action/(?P<action>.*)/group/(?P<group_id>.*)/id-list/(?P<member_id_list>.*)/$',
+        login_required(groups.members_action), name='groups-members-action'),
+    url(r'^zato/groups/members/(?P<group_type>.*)/(?P<group_id>.*)/$', # type: ignore
+        login_required(groups.manage_group_members), name='groups-members-manage'),
+    url(r'^zato/groups/group/(?P<group_type>.*)/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(groups.Delete()), name=groups.Delete.url_name),
+
+    url(r'^zato/groups/get-security-list/$', # type: ignore
+        login_required(groups.get_security_list), name='groups-get-security-list'),
+
+    url(r'^zato/groups/get-member-list/$', # type: ignore
+        login_required(groups.get_member_list), name='groups-get-member-list'),
+
+    url(r'^zato/groups/group/(?P<group_type>.*)/$',
+        login_required(groups.Index()), name=groups.Index.url_name),
+    url(r'^zato/groups/create/$',
+        login_required(groups.Create()), name=groups.Create.url_name),
+    url(r'^zato/groups/edit/$',
+        login_required(groups.Edit()), name=groups.Edit.url_name),
+    ]
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 urlpatterns += [
     url(r'^static/(?P<path>.*)$', django_static_serve, {'document_root': settings.MEDIA_ROOT}),
 ]
+
+# ################################################################################################################################
+# ################################################################################################################################

@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -724,7 +724,7 @@ class DeleteEndpointQueue(AdminService):
             self.logger.info('Deleting subscriptions `%s`', topic_sub_keys)
 
             # .. delete all subscriptions from the sub_key list ..
-            session.execute(
+            _:'any_' = session.execute(
                 delete(SubTable).\
                 where(
                     SubTable.c.sub_key.in_(sub_key_list),

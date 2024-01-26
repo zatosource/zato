@@ -36,6 +36,8 @@ $(document).ready(function() {
     });
 })
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.data_table.after_populate = function() {
     $.each(['', 'edit-'], function(ignored, suffix) {
         var elem = $(String.format('#id_{0}serialization_type', suffix));
@@ -43,16 +45,114 @@ $.fn.zato.data_table.after_populate = function() {
     });
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.populate_groups = function(
+    item_list,
+    item_html_prefix,
+    html_elem_id_selector
+) {
+
+    let id_field = "id";
+    let name_field = "name";
+    let is_taken_field = "is_assigned";
+    let url_template = "/zato/groups/group/zato-api-creds/?cluster=1&query={1}&highlight={2}";
+    let html_table_id = "multi-select-table";
+    let checkbox_field_name = "id";
+    let disable_if_is_taken = false;
+
+    $.fn.zato.populate_multi_checkbox(
+        item_list,
+        item_html_prefix,
+        id_field,
+        name_field,
+        is_taken_field,
+        url_template,
+        html_table_id,
+        html_elem_id_selector,
+        checkbox_field_name,
+        disable_if_is_taken
+    );
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.create_populate_groups = function(item_list) {
+    let item_html_prefix = "http_soap_security_group_checkbox_";
+    let html_elem_id_selector = "#multi-select-div-create";
+    $.fn.zato.http_soap.populate_groups(item_list, item_html_prefix, html_elem_id_selector);
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.edit_populate_groups = function(item_list) {
+    let item_html_prefix = "edit-http_soap_security_group_checkbox_";
+    let html_elem_id_selector = "#multi-select-div-edit";
+    $.fn.zato.http_soap.populate_groups(item_list, item_html_prefix, html_elem_id_selector);
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.create_populate_groups_callback = function(data, status) {
+    var success = status == 'success';
+    if(success) {
+        var item_list = $.parseJSON(data.responseText);
+        if(item_list && item_list.length) {
+            $.fn.zato.http_soap.create_populate_groups(item_list);
+        }
+        else {
+            let elem = $("#multi-select-div-create");
+            elem.removeClass("multi-select-div");
+            elem.html("No security groups found. Click to <a href='/zato/groups/group/zato-api-creds/?cluster=1' target='_blank'>create one</a>.");
+        }
+    }
+    else {
+        console.log(data.responseText);
+    }
+}
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.edit_populate_groups_callback = function(data, status) {
+    var success = status == 'success';
+    if(success) {
+        var item_list = $.parseJSON(data.responseText);
+        if(item_list.length) {
+            $.fn.zato.http_soap.edit_populate_groups(item_list);
+        }
+        else {
+            let elem = $("#multi-select-div-edit");
+            elem.removeClass("multi-select-div");
+            elem.html("No security groups found. Click to <a href='/zato/groups/group/zato-api-creds/?cluster=1' target='_blank'>create one</a>.");
+        }
+    }
+    else {
+        console.log(data.responseText);
+    }
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.http_soap.create = function(object_type) {
+
+    var url = String.format('/zato/http-soap/get-security-groups/zato-api-creds/');
+    $.fn.zato.post(url, $.fn.zato.http_soap.create_populate_groups_callback, '', '', true);
     $.fn.zato.data_table._create_edit('create', 'Create a new ' + object_type, null);
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.http_soap.edit = function(id) {
+    var url = String.format('/zato/http-soap/get-security-groups/zato-api-creds/?http_soap_channel_id=' + id);
+    $.fn.zato.post(url, $.fn.zato.http_soap.edit_populate_groups_callback, '', '', true);
     $.fn.zato.data_table._create_edit('edit', 'Update the object', id);
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var row = '';
+
+    $.fn.zato.toggle_visible_hidden(".api-client-groups-options-block", false);
 
     if(include_tr) {
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
@@ -134,16 +234,17 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += service_tr;
 
         if(item.cache_id) {
-            row += String.format('<td><a href="/zato/cache/{0}/?cluster={1}&amp;highlight={2}">{3}</a></td>',
+            row += String.format('<td class="ignore"><a href="/zato/cache/{0}/?cluster={1}&amp;highlight={2}">{3}</a></td>',
                     data.cache_type, cluster_id, item.cache_id, data.cache_name);
         }
         else {
-            row += '<td><span class="form_hint">---</span></td>';
+            row += '<td class="ignore"><span class="form_hint">---</span></td>';
         }
     }
 
-    /* 9 */
+    /* 9, 9b */
     row += String.format('<td>{0}</td>', security_name);
+    row += String.format('<td>{0}</td>', data.security_groups_info);
 
     /* 10, 11 */
     if(is_soap) {
@@ -154,7 +255,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     /* 12, 13, 13a */
     if(is_channel) {
 
-        row += String.format('<td><a href="/zato/audit-log/http-soap/{0}/?cluster={1}&amp;object_name={2}&amp;object_type_label={3}">View</a></td>',
+        row += String.format('<td class="ignore"><a href="/zato/audit-log/http-soap/{0}/?cluster={1}&amp;object_name={2}&amp;object_type_label={3}">View</a></td>',
             item.id, cluster_id, item.name, audit_object_type_label);
         row += String.format("<td class='ignore'>{0}</td>", item.service);
         row += String.format("<td class='ignore'>{0}</td>", item.content_encoding);
@@ -247,12 +348,16 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.http_soap.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Object `{0}` deleted',
         'Are you sure you want to delete object `{0}`?',
         true);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.http_soap.reload_wsdl = function(id) {
 
@@ -266,9 +371,13 @@ $.fn.zato.http_soap.reload_wsdl = function(id) {
 
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.http_soap.data_table.toggle_sec_tls_ca_cert_id = function(suffix, is_suds) {
     $(String.format('#id_{0}sec_tls_ca_cert_id', suffix)).prop('disabled', is_suds);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.http_soap.data_table.on_serialization_change = function() {
 
@@ -276,3 +385,5 @@ $.fn.zato.http_soap.data_table.on_serialization_change = function() {
     var suffix = is_edit ? 'edit-' : '';
     $.fn.zato.http_soap.data_table.toggle_sec_tls_ca_cert_id(suffix, this.value == 'suds');
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

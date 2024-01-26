@@ -3,7 +3,7 @@
 """
 Copyright (C) Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -108,5 +108,15 @@ def endswith(value, suffix):
 @register.filter
 def get_os_variable(_ignored, name):
     return os.environ.get(name)
+
+# ################################################################################################################################
+
+@register.filter
+def replace_in_string(item, config):
+    config = config.strip()
+    config = config.split(',')
+    config = [elem.strip() for elem in config]
+    old_value, new_value = config
+    return item.replace(old_value, new_value)
 
 # ################################################################################################################################
