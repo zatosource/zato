@@ -1927,8 +1927,20 @@ class ChannelWebSocket(Connector):
     def get_log_details(self) -> 'str':
         return cast_('str', self.config.address)
 
-    def invoke(self, cid:'str', pub_client_id:'str'='', request:'any_'=None, timeout:'int'=5) -> 'any_':
-        return self._wsx_server.invoke_client(cid, pub_client_id, request, timeout)
+    def invoke(
+        self,
+        cid:'str',
+        pub_client_id:'str'='',
+        request:'any_'=None,
+        timeout:'int'=5,
+        remove_wrapper:'bool'=True
+    ) -> 'any_':
+        response = self._wsx_server.invoke_client(cid, pub_client_id, request, timeout)
+        if remove_wrapper:
+            if isinstance(response, dict):
+                if 'response' in response:
+                    return response['response'] # type: ignore
+        return response # type: ignore
 
     def invoke_by_attrs(self, cid:'str', attrs:'stranydict', request:'any_', timeout:'int'=5) -> 'any_':
         return self._wsx_server.invoke_client_by_attrs(cid, attrs, request, timeout)
