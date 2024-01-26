@@ -297,7 +297,7 @@ class RequestFromServer(MessageFromServer):
         request.msg_impl = msg
         request.id = msg['meta']['id']
         request.timestamp = msg['meta']['timestamp']
-        request.data = msg['data']
+        request.data = msg.get('data')
 
         return request
 
@@ -501,9 +501,11 @@ class Client:
 
         # Request from Zato
         else:
-            data = self.on_request_callback(RequestFromServer.from_json(_msg))
+            request = RequestFromServer.from_json(_msg)
+            data = self.on_request_callback(request)
             response_id = MsgPrefix.SendResponse.format(new_cid())
-            self.send(response_id, ResponseToServer(_msg['meta']['id'], data, response_id, self.config, self.auth_token))
+            response = ResponseToServer(_msg['meta']['id'], data, response_id, self.config, self.auth_token)
+            self.send(response_id, response)
 
 # ################################################################################################################################
 

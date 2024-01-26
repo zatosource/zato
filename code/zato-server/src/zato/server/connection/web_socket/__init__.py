@@ -1660,7 +1660,32 @@ class WebSocketContainer(WebSocketWSGIApplication):
 # ################################################################################################################################
 
     def invoke_client(self, cid:'str', pub_client_id:'str', request:'any_', timeout:'int') -> 'any_':
-        return self.clients[pub_client_id].invoke_client(cid, request, timeout)
+
+        #
+        # We need to handle a few cases:
+        #
+        # 1) We have a specific pub_client_id, in which case we invoke that one client and the response is not a list
+        # 2) We have no pub_client_id and we have only one client so we invoke that one client and the response is not a list
+        # 3) We have no pub_client_id and we have multiple clients so we invoke them all and the response is a list
+        #
+
+        #
+        # Case 1)
+        #
+        if pub_client_id:
+            return self.clients[pub_client_id].invoke_client(cid, request, timeout) # type: ignore
+        else:
+            out = {} # type: ignore
+            for pub_client_id, wsx in self.clients.items(): # type: ignore
+                response:'any_' = wsx.invoke_client(cid, request, timeout)
+                out[pub_client_id] = response
+
+            if len(out) > 1:
+                return out # type: ignore
+            else:
+                key = list(out)[0] # type: ignore
+                response = out[key] # type: ignore
+                return response
 
 # ################################################################################################################################
 
@@ -1902,8 +1927,20 @@ class ChannelWebSocket(Connector):
     def get_log_details(self) -> 'str':
         return cast_('str', self.config.address)
 
-    def invoke(self, cid:'str', pub_client_id:'str', request:'any_', timeout:'int'=5) -> 'any_':
-        return self._wsx_server.invoke_client(cid, pub_client_id, request, timeout)
+    def invoke(
+        self,
+        cid:'str',
+        pub_client_id:'str'='',
+        request:'any_'=None,
+        timeout:'int'=5,
+        remove_wrapper:'bool'=True
+    ) -> 'any_':
+        response = self._wsx_server.invoke_client(cid, pub_client_id, request, timeout)
+        if remove_wrapper:
+            if isinstance(response, dict):
+                if 'response' in response:
+                    return response['response'] # type: ignore
+        return response # type: ignore
 
     def invoke_by_attrs(self, cid:'str', attrs:'stranydict', request:'any_', timeout:'int'=5) -> 'any_':
         return self._wsx_server.invoke_client_by_attrs(cid, attrs, request, timeout)
