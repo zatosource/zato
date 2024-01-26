@@ -90,6 +90,8 @@ $.namespace('zato.email');
 $.namespace('zato.email.imap');
 $.namespace('zato.email.smtp');
 $.namespace('zato.form');
+$.namespace('zato.groups');
+$.namespace('zato.groups.members');
 $.namespace('zato.http_soap');
 $.namespace('zato.http_soap.details');
 $.namespace('zato.load_balancer');
@@ -956,7 +958,7 @@ $.fn.zato.data_table.multirow.add_row = function(row_id, elem_id, is_add) {
 
     // Find all divs for such an element ID along with the last one in the list
     let existing = $(`div[id^="div_${elem_id}"]`);
-    let existing_size = existing.size();
+    let existing_size = existing.length;
     let last = existing[existing_size-1];
 
     if(is_add) {
@@ -1212,11 +1214,13 @@ $.fn.zato.toggle_visible_hidden = function(elem, is_visible) {
 
     if(is_visible) {
         remove_class = 'hidden';
-        add_class = 'visible';
+        add_class = 'visible options-expanded';
+        $(elem).prev().addClass("options-expanded", 50);
     }
     else {
-        remove_class = 'visible';
+        remove_class = 'visible options-expanded';
         add_class = 'hidden';
+        $(elem).prev().removeClass("options-expanded", 50);
     }
     $(elem).removeClass(remove_class).addClass(add_class);
 }
@@ -1226,7 +1230,9 @@ $.fn.zato.toggle_visible_hidden = function(elem, is_visible) {
 $.fn.zato.toggle_visibility = function(selector) {
     var elems = $(selector);
     $.each(elems, function(idx, elem) {
-        $.fn.zato.toggle_visible_hidden(elem, !$(elem).hasClass('visible'));
+        elem = $(elem)
+        let is_visible = $(elem).hasClass('visible')
+        $.fn.zato.toggle_visible_hidden(elem, !is_visible);
     });
 }
 
@@ -1585,6 +1591,100 @@ $.fn.zato.jquery_pattern_required = "*[data-zato-validator-required='required'";
 $.fn.zato.jquery_pattern_equals   = "*[data-zato-validator-equals^='equals'";
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.populate_multi_checkbox = function(
+    item_list,
+    item_html_prefix,
+    id_field,
+    name_field,
+    is_taken_field,
+    url_template,
+    html_table_id,
+    html_elem_id_selector,
+    checkbox_field_name,
+    disable_if_is_taken
+) {
+    var table = $("<table/>", {
+        "id": html_table_id,
+        "class": "multi-select-table"
+    })
+
+    for(var idx=0; idx < item_list.length; idx++) {
+        var item = item_list[idx];
+
+        var tr = $("<tr/>");
+        var td_checkbox = $("<td style='white-space: nowrap'/>");
+        var td_toggle = $("<td style='white-space: nowrap'/>");
+        var td_item = $("<td style='white-space: nowrap'/>");
+        var td_description = $("<td style='white-space: nowrap'/>");
+        var td_filler = $("<td style='width:99%'/>");
+
+        var checkbox_id = item_html_prefix + item[id_field];
+        var checkbox_name = item_html_prefix + item[name_field];
+
+        if(checkbox_field_name == "id") {
+            checkbox_name_field = checkbox_id;
+        }
+        else {
+            checkbox_name_field = checkbox_name
+        }
+
+        var checkbox = $("<input/>", {
+            "type": "checkbox",
+            "id": checkbox_id,
+            "name": checkbox_name_field,
+        });
+
+        var toggle = $("<label/>", {
+            "text": "Toggle",
+        });
+
+        if(item[is_taken_field]) {
+            checkbox.attr("checked", "checked");
+            if(disable_if_is_taken) {
+                checkbox.attr("disabled", "disabled");
+                toggle.attr("class", "disabled");
+            }
+            else {
+                toggle.attr("for", checkbox_id);
+                toggle.attr("class", "toggle");
+            }
+        }
+        else {
+            toggle.attr("for", checkbox_id);
+            toggle.attr("class", "toggle");
+        }
+
+        var item_link = $("<a/>", {
+            "href": String.format(url_template, item["cluster_id"], item[name_field], item[id_field]),
+            "target": "_blank",
+            "text": item[name_field],
+        });
+
+        var item_description = $("<span/>", {
+            "text": item["description"],
+        });
+
+        td_checkbox.append(checkbox);
+        td_toggle.append(toggle);
+        td_item.append(item_link);
+        td_description.append(item_description);
+
+        tr.append(td_checkbox);
+        tr.append(td_toggle);
+        tr.append(td_item);
+        tr.append(td_description);
+        tr.append(td_filler);
+
+        table.append(tr);
+
+    }
+
+    $(html_elem_id_selector).html(table);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 
 $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 

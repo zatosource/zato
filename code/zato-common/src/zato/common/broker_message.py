@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -509,6 +509,12 @@ class SERVER_IPC(Constants):
 class Common(Constants):
     code_start = 107800
     Sync_Objects = ValueConstant('')
+
+class Groups(Constants):
+    code_start = 108000
+    Edit = ValueConstant('')
+    Edit_Member_List = ValueConstant('')
+    Delete = ValueConstant('')
 
 code_to_name = {}
 

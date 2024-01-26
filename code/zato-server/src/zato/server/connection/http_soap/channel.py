@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -30,11 +30,13 @@ from zato.common.json_schema import DictError as JSONSchemaDictError, Validation
 from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.typing_ import cast_
+from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
 from zato.common.util.exception import pretty_format_exception
 from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
 from zato.cy.reqresp.payload import SimpleIOPayload as CySimpleIOPayload
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
+from zato.server.groups.ctx import SecurityGroupsCtx
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -292,6 +294,15 @@ class RequestDispatcher:
                     logger.warning('url_data:`%s` is not active, raising NotFound', url_match)
                     raise NotFound(cid, 'Channel inactive')
 
+                # This the string pointing to the URL path that we matched
+                match_target = channel_item['match_target']
+
+                # This is the channel's security definition, if any
+                sec = self.url_data.url_sec[match_target]
+
+                # This may point to security groups attached to this channel
+                security_groups_ctx = channel_item.get('security_groups_ctx')
+
                 # Assume we have no form (POST) data by default.
                 post_data = {}
 
@@ -300,18 +311,45 @@ class RequestDispatcher:
                     if wsgi_environ.get('CONTENT_TYPE', '').startswith(ModuleCtx.Form_Data_Content_Type):
                         post_data = util_get_form_data(wsgi_environ)
 
-                match_target = channel_item['match_target']
-                sec = self.url_data.url_sec[match_target]
+                        # This is handy if someone invoked URLData's OAuth API manually
+                        wsgi_environ['zato.oauth.post_data'] = post_data
 
+                #
+                # This will check credentials based on a security definition attached to the channel
+                #
                 if sec.sec_def != ZATO_NONE or sec.sec_use_rbac is True:
 
-                    # Will raise an exception on any security violation
+                    # Do check credentials based on a security definition
                     auth_result = self.url_data.check_security(
-                        sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store)
+                        sec,
+                        cid,
+                        channel_item,
+                        path_info,
+                        payload,
+                        wsgi_environ,
+                        post_data,
+                        worker_store,
+                        enforce_auth=True
+                    )
+
+                #
+                # This will check credentials based on security groups potentially assigned to the channel ..
+                #
+                if security_groups_ctx:
+
+                    # .. if we do not have any members, we do not check anything ..
+                    if security_groups_ctx.has_members():
+
+                        # .. this will raise an exception if the validation fails.
+                        self.check_security_via_groups(cid, channel_item['name'], security_groups_ctx, wsgi_environ)
+
+                #
+                # If we are here, it means that credentials are correct or they were not required
+                #
 
                 # Check rate limiting now - this could not have been done earlier because we wanted
                 # for security checks to be made first. Otherwise, someone would be able to invoke
-                # our endpoint without credentials as many times as it is needed to exhaust the rate limit
+                # our endpoint without credentials as many times as it is needed to exhaust the rate limit,
                 # denying in this manner access to genuine users.
                 if channel_item.get('is_rate_limit_active'):
                     self.server.rate_limiting.check_limit(
@@ -353,9 +391,6 @@ class RequestDispatcher:
                                 sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid,
                                 wsgi_environ, ext_session_id)
 
-                # This is handy if someone invoked URLData's OAuth API manually
-                wsgi_environ['zato.oauth.post_data'] = post_data
-
                 if channel_item['merge_url_params_req']:
                     channel_params = self.request_handler.create_channel_params(
                         url_match, # type: ignore
@@ -392,7 +427,7 @@ class RequestDispatcher:
                     data_event = DataSent()
                     data_event.type_ = ModuleCtx.Channel
                     data_event.object_id = channel_item['id']
-                    data_event.data = response.payload
+                    data_event.data = response.payload # type: ignore
                     data_event.timestamp = _utcnow()
                     data_event.msg_id = 'zrp{}'.format(cid) # This is a response to this CID
                     data_event.in_reply_to = cid
@@ -425,7 +460,8 @@ class RequestDispatcher:
 
                     if isinstance(e, Unauthorized):
                         status = _status_unauthorized
-                        wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
+                        if e.challenge:
+                            wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
 
                     elif isinstance(e, (BadRequest, ModelValidationError)):
                         status = _status_bad_request
@@ -438,7 +474,7 @@ class RequestDispatcher:
                             # Note that SSO channels do not return details
                             url_path = channel_item['url_path'] # type: str
                             needs_msg = e.needs_msg and (not url_path.startswith(SSO.Default.RESTPrefix))
-                            response = e.msg if needs_msg else 'Invalid input'
+                            response = e.msg if needs_msg else 'Bad request'
 
                     elif isinstance(e, NotFound):
                         status = _status_not_found
@@ -525,6 +561,62 @@ class RequestDispatcher:
 
             # This is the payload for the caller
             return response
+
+# ################################################################################################################################
+
+    def check_security_via_groups(
+        self,
+        cid:'str',
+        channel_name:'str',
+        security_groups_ctx:'SecurityGroupsCtx',
+        wsgi_environ:'stranydict'
+    ) -> 'None':
+
+        # Local variables
+        sec_def = None
+
+        # Extract Basic Auth information from input ..
+        basic_auth_info = wsgi_environ.get('HTTP_AUTHORIZATION')
+
+        # .. extract API key information too ..
+        apikey_header_value = wsgi_environ.get(self.server.api_key_header_wsgi)
+
+        # .. we cannot have both on input ..
+        if basic_auth_info and apikey_header_value:
+            logger.warn('Received both Basic Auth and API key (groups)')
+            raise BadRequest(cid)
+
+        # Handle Basic Auth via groups ..
+        if basic_auth_info:
+
+            # .. extract credentials ..
+            username, password = extract_basic_auth(cid, basic_auth_info)
+
+            # .. run the validation now ..
+            if security_id := security_groups_ctx.check_security_basic_auth(cid, channel_name, username, password):
+                sec_def = self.url_data.basic_auth_get_by_id(security_id)
+            else:
+                logger.warn('Invalid Basic Auth credentials (groups)')
+                raise Forbidden(cid)
+
+        # Handle API keys via groups ..
+        elif apikey_header_value:
+
+            # .. run the validation now ..
+            if security_id := security_groups_ctx.check_security_apikey(cid, channel_name, apikey_header_value):
+                sec_def = self.url_data.apikey_get_by_id(security_id)
+            else:
+                logger.warn('Invalid API key (groups)')
+                raise Forbidden(cid)
+
+        else:
+            logger.warn('Received neither Basic Auth nor API key (groups)')
+            raise Forbidden(cid)
+
+        # Now we can enrich the WSGI environment with information
+        # that will become self.channel.security for services.
+        if sec_def:
+            enrich_with_sec_data(wsgi_environ, sec_def, sec_def['sec_type'])
 
 # ################################################################################################################################
 
@@ -766,7 +858,8 @@ class RequestHandler:
         if self._needs_admin_response(service_instance):
             if data_format in {ModuleCtx.SIO_JSON, ModuleCtx.SIO_FORM_DATA}:
                 zato_env = {'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}}
-                if response.payload and (not isinstance(response.payload, str)):
+                is_not_str = not isinstance(response.payload, str)
+                if is_not_str and response.payload:
                     payload = response.payload.getvalue(False)
                     payload.update(zato_env)
                 else:

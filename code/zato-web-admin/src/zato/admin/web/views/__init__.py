@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # pylint: disable=attribute-defined-outside-init
@@ -51,7 +51,7 @@ slugify = slugify
 
 if 0:
     from zato.client import ServiceInvokeResponse
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
 
@@ -243,6 +243,23 @@ def get_security_id_from_select(params, prefix, field_name='security'):
         _, security_id = security.split('/')
 
     return security_id
+
+# ################################################################################################################################
+
+def get_security_groups_from_checkbox_list(params, prefix, field_name_prefix='http_soap_security_group_checkbox_'):
+
+    # Our response to produce
+    groups = []
+
+    # Local variables
+    full_prefix = prefix + field_name_prefix
+
+    for item in params:
+        if item.startswith(full_prefix):
+            item = item.replace(full_prefix, '')
+            groups.append(item)
+
+    return groups
 
 # ################################################################################################################################
 
@@ -472,6 +489,10 @@ class Index(_BaseView):
             # or use everything that we received from the service.
             names = names if names else msg_item.keys()
 
+            print()
+            print(111, msg_item)
+            print()
+
             for name in sorted(names):
                 value = getattr(msg_item, name, None)
                 if value is not None:
@@ -494,7 +515,7 @@ class Index(_BaseView):
         """
         names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
 
-        for msg_item in item_list:
+        for msg_item in (item_list or []):
 
             item = self.output_class()
             for name in sorted(names):
@@ -919,4 +940,49 @@ def invoke_action_handler(req, service_name:'str', send_attrs:'any_') -> 'any_':
         logger.error(msg)
         return HttpResponseServerError(msg)
 
+# ################################################################################################################################
+
+def get_security_name_link(req, sec_type, sec_name, *, needs_type=True):
+
+    sec_type_name = SEC_DEF_TYPE_NAME[sec_type]
+    sec_type_as_link = sec_type.replace('_', '-')
+    security_href = f'/zato/security/{sec_type_as_link}/?cluster={req.zato.cluster_id}&amp;query={sec_name}'
+    security_link = f'<a href="{security_href}">{sec_name}</a>'
+    if needs_type:
+        sec_name = f'{sec_type_name}<br/>{security_link}'
+    else:
+        sec_name = security_link
+    return sec_name
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_group_list(req:'any_', group_type:'str', *, http_soap_channel_id:'str'='') -> 'anylist':
+
+    # Get a list of all the groups that exist
+    response = req.zato.client.invoke('zato.groups.get-list', {
+        'group_type': group_type,
+    })
+
+    # .. extract the business data ..
+    groups = response.data or []
+
+    # .. if we have a channel ID on input, we need to indicate which groups are assigned to it ..
+    if http_soap_channel_id:
+        http_soap_channel = req.zato.client.invoke('zato.http-soap.get', {
+            'id': http_soap_channel_id,
+        })
+        http_soap_channel = http_soap_channel.data
+        http_soap_channel_security_groups = http_soap_channel.get('security_groups') or []
+
+        for item in groups:
+            if item.id in http_soap_channel_security_groups:
+                item.is_assigned = True
+            else:
+                item.is_assigned = False
+
+    # .. and return it to our caller.
+    return groups
+
+# ################################################################################################################################
 # ################################################################################################################################
