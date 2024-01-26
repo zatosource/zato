@@ -75,62 +75,30 @@ $.fn.zato.pubsub.set_current_endpoints = function(needs_blink) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.populate_endpoint_topics = function(topic_sub_list) {
-    var table = $('<table/>', {
-        'id':'multi-select-table',
-        'class':'multi-select-table'
-    })
+$.fn.zato.pubsub.populate_endpoint_topics = function(item_list) {
 
-    for(var idx=0; idx < topic_sub_list.length; idx++) {
-        var topic = topic_sub_list[idx];
+    let item_html_prefix = "topic_checkbox_";
+    let id_field = "topic_id";
+    let name_field = "topic_name";
+    let is_taken_field = "is_subscribed";
+    let url_template = "/zato/pubsub/topic/?cluster={0}&query={1}";
+    let html_table_id = "multi-select-table";
+    let html_elem_id_selector = "#multi-select-div";
+    let checkbox_field_name = "name";
+    let disable_if_is_taken = false;
 
-        var tr = $('<tr/>');
-        var td_checkbox = $('<td/>');
-        var td_toggle = $('<td/>');
-        var td_topic = $('<td/>');
-
-        var topic_checkbox_id = 'topic_checkbox_' + topic.topic_id;
-        var topic_checkbox_name = 'topic_checkbox_' + topic.topic_name;
-
-        var checkbox = $('<input/>', {
-            'type': 'checkbox',
-            'id': topic_checkbox_id,
-            'name': topic_checkbox_name,
-        });
-
-        var toggle = $('<label/>', {
-            'text': 'Toggle',
-        });
-
-        if(topic.is_subscribed) {
-            checkbox.attr('disabled', 'disabled');
-            checkbox.attr('checked', 'checked');
-            toggle.attr('class', 'disabled');
-        }
-        else {
-            toggle.attr('for', topic_checkbox_id);
-            toggle.attr('class', 'toggle');
-        }
-
-        var topic = $('<a/>', {
-            'href': String.format('/zato/pubsub/topic/?cluster={0}&query={1}', topic.cluster_id, topic.topic_name),
-            'target': '_blank',
-            'text': topic.topic_name,
-        });
-
-        td_checkbox.append(checkbox);
-        td_toggle.append(toggle);
-        td_topic.append(topic);
-
-        tr.append(td_checkbox);
-        tr.append(td_toggle);
-        tr.append(td_topic);
-
-        table.append(tr);
-
-    }
-
-    $('#multi-select-div').html(table);
+    $.fn.zato.populate_multi_checkbox(
+        item_list,
+        item_html_prefix,
+        id_field,
+        name_field,
+        is_taken_field,
+        url_template,
+        html_table_id,
+        html_elem_id_selector,
+        checkbox_field_name,
+        disable_if_is_taken
+    );
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -138,9 +106,9 @@ $.fn.zato.pubsub.populate_endpoint_topics = function(topic_sub_list) {
 $.fn.zato.pubsub.populate_endpoint_topics_callback = function(data, status) {
     var success = status == 'success';
     if(success) {
-        var topic_sub_list = $.parseJSON(data.responseText);
-        if(topic_sub_list.length) {
-            $.fn.zato.pubsub.populate_endpoint_topics(topic_sub_list);
+        var item_list = $.parseJSON(data.responseText);
+        if(item_list.length) {
+            $.fn.zato.pubsub.populate_endpoint_topics(item_list);
         }
         else {
             $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # pylint: disable=too-many-public-methods
@@ -399,6 +399,9 @@ class WorkerStore(_WorkerStoreBase):
             http_methods_allowed = self.server.http_methods_allowed
         )
 
+        # Security groups - add details of each one to REST channels
+        self._populate_channel_security_groups_info(self.worker_config.http_soap)
+
         # Create all the expected connections and objects
         self.init_sql()
         self.init_http_soap()
@@ -416,6 +419,19 @@ class WorkerStore(_WorkerStoreBase):
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
+
+# ################################################################################################################################
+
+    def _populate_channel_security_groups_info(self, channel_data:'anylist') -> 'None':
+
+        # First, make sure the server has all the groups ..
+        self.server.security_groups_ctx_builder.populate_members()
+
+        # .. now, we can attach a groups context object to each channel that has any groups.
+        for channel_item in channel_data:
+            if security_groups := channel_item.get('security_groups'):
+                security_groups_ctx = self.server.security_groups_ctx_builder.build_ctx(channel_item['id'], security_groups)
+                channel_item['security_groups_ctx'] = security_groups_ctx
 
 # ################################################################################################################################
 
@@ -674,7 +690,6 @@ class WorkerStore(_WorkerStoreBase):
         """ Initializes plain HTTP/SOAP connections.
         """
         config_dicts = self.get_outconn_http_config_dicts()
-        config_dicts
 
         for config_dict, config_data in config_dicts:
 
@@ -1068,7 +1083,7 @@ class WorkerStore(_WorkerStoreBase):
         """ API keys need to be upper-cased and in the format that WSGI environment will have them in.
         """
         for config_dict in self.worker_config.apikey.values():
-            config_dict.config.orig_username = config_dict.config.username
+            config_dict.config.orig_header = config_dict.config.header
             update_apikey_username_to_channel(config_dict.config)
 
 # ################################################################################################################################
@@ -1413,40 +1428,155 @@ class WorkerStore(_WorkerStoreBase):
                 raise Exception('No impl_func found for action `%s` -> %s', msg_action, conn_type)
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+    def wait_for_basic_auth(self, name:'str', timeout:'int'=999999) -> 'bool':
+        return wait_for_dict_key_by_get_func(self._basic_auth_get, name, timeout, interval=0.5)
+
+# ################################################################################################################################
+
+    def _basic_auth_get(self, name:'str') -> 'bunch_':
+        """ Implements self.basic_auth_get.
+        """
+        return self.request_dispatcher.url_data.basic_auth_get(name)
+
+# ################################################################################################################################
+
+    def basic_auth_get(self, name:'str') -> 'bunch_':
+        """ Returns the configuration of the HTTP Basic Auth security definition of the given name.
+        """
+        return self._basic_auth_get(name)
+
+# ################################################################################################################################
+
+    def basic_auth_get_by_id(self, def_id:'int') -> 'bunch_':
+        """ Same as basic_auth_get but by definition ID.
+        """
+        return self.request_dispatcher.url_data.basic_auth_get_by_id(def_id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Creates a new HTTP Basic Auth security definition
+        """
+        dispatcher.notify(broker_message.SECURITY.BASIC_AUTH_CREATE.value, msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Updates an existing HTTP Basic Auth security definition.
+        """
+        # Update channels and outgoing connections ..
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH,
+            self._visit_wrapper_edit, keys=('username', 'name'))
+
+        # .. extract the newest information  ..
+        sec_def = self.basic_auth_get_by_id(msg.id)
+
+        # .. update security groups ..
+        for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
+            security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
+
+        # .. and update rate limiters.
+        self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'basic_auth')
+
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Deletes an HTTP Basic Auth security definition.
+        """
+        # Update channels and outgoing connections ..
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH, self._visit_wrapper_delete)
+
+        # .. update security groups ..
+        for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
+            security_groups_ctx.on_basic_auth_deleted(msg.id)
+
+        # .. and update rate limiters.
+        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Changes password of an HTTP Basic Auth security definition.
+        """
+        # Update channels and outgoing connections ..
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH, self._visit_wrapper_change_password)
+
+        # .. extract the newest information  ..
+        if msg.id:
+            sec_def = self.basic_auth_get_by_id(msg.id)
+
+            # .. and update security groups.
+            for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
+                security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
+
+# ################################################################################################################################
+# ################################################################################################################################
 
     def wait_for_apikey(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.apikey_get, name, timeout, interval=0.5)
+
+# ################################################################################################################################
 
     def apikey_get(self, name:'str') -> 'bunch_':
         """ Returns the configuration of the API key of the given name.
         """
         return self.request_dispatcher.url_data.apikey_get(name)
 
+# ################################################################################################################################
+
+    def apikey_get_by_id(self, def_id:'int') -> 'bunch_':
+        """ Same as apikey_get but by definition ID.
+        """
+        return self.request_dispatcher.url_data.apikey_get_by_id(def_id)
+
+# ################################################################################################################################
+
     def on_broker_msg_SECURITY_APIKEY_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates a new API key security definition.
         """
         dispatcher.notify(broker_message.SECURITY.APIKEY_CREATE.value, msg)
 
+# ################################################################################################################################
+
     def on_broker_msg_SECURITY_APIKEY_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Updates an existing API key security definition.
         """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY,
-                self._visit_wrapper_edit, keys=('username', 'name'))
+        # Update channels and outgoing connections ..
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY, self._visit_wrapper_edit, keys=('username', 'name'))
+
+        # .. and update rate limiters.
         self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'apikey')
+
+# ################################################################################################################################
 
     def on_broker_msg_SECURITY_APIKEY_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an API key security definition.
         """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY,
-                self._visit_wrapper_delete)
+        # Update channels and outgoing connections ..
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY, self._visit_wrapper_delete)
+
+        # .. update security groups ..
+        for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
+            security_groups_ctx.on_apikey_deleted(msg.id)
+
+        # .. and update rate limiters.
         self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
+
+# ################################################################################################################################
 
     def on_broker_msg_SECURITY_APIKEY_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Changes password of an API key security definition.
         """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY,
-                self._visit_wrapper_change_password)
+        # Update channels and outgoing connections ..
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY, self._visit_wrapper_change_password)
 
+        # .. and update security groups.
+        for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
+            security_groups_ctx.set_current_apikey(msg.id, msg.password)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
     def wait_for_aws(self, name:'str', timeout:'int'=999999) -> 'bool':
@@ -1514,49 +1644,6 @@ class WorkerStore(_WorkerStoreBase):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.NTLM,
                 self._visit_wrapper_change_password)
-
-# ################################################################################################################################
-
-    def wait_for_basic_auth(self, name:'str', timeout:'int'=999999) -> 'bool':
-        return wait_for_dict_key_by_get_func(self._basic_auth_get, name, timeout, interval=0.5)
-
-    def _basic_auth_get(self, name:'str') -> 'bunch_':
-        """ Implements self.basic_auth_get.
-        """
-        return self.request_dispatcher.url_data.basic_auth_get(name)
-
-    def basic_auth_get(self, name:'str') -> 'bunch_':
-        """ Returns the configuration of the HTTP Basic Auth security definition of the given name.
-        """
-        return self._basic_auth_get(name)
-
-    def basic_auth_get_by_id(self, def_id:'int') -> 'bunch_':
-        """ Same as basic_auth_get but by definition ID.
-        """
-        return self.request_dispatcher.url_data.basic_auth_get_by_id(def_id)
-
-    def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Creates a new HTTP Basic Auth security definition
-        """
-        dispatcher.notify(broker_message.SECURITY.BASIC_AUTH_CREATE.value, msg)
-
-    def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Updates an existing HTTP Basic Auth security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH,
-            self._visit_wrapper_edit, keys=('username', 'name'))
-        self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'basic_auth')
-
-    def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Deletes an HTTP Basic Auth security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH, self._visit_wrapper_delete)
-        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
-
-    def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Changes password of an HTTP Basic Auth security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH, self._visit_wrapper_change_password)
 
 # ################################################################################################################################
 

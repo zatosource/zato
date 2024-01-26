@@ -1,0 +1,96 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}Group members{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.form.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/sortable/Sortable.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/sortable/jquery-sortable.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/groups/members.js"></script>
+
+{% endblock %}
+
+{% block "content" %}
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<h2 class="zato">Group members</span></h2>
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<div id="markup" class="columns">
+    <div class="left-column">
+        <div class="column-wrapper">
+            <div class="column-header left">
+                <form id="search-form" action="#">
+                    <select id="search-form-sec-type">
+                        <option value="">------</option>
+                        <option value="basic_auth">Basic Auth</option>
+                        <option value="apikey">API keys</option>
+                    </select>
+                    <input type="text" name="query" style="width:50%" placeholder="Enter search terms" id="search-form-query">
+                    <input type="submit"  style="vertical-align:top" value="Show definitions" />
+                </form>
+            </div>
+            <div class="column-body left">
+                <div id="listing-left" class="listing">
+                    {% for item in security_list %}
+                    <div id="{{ item.sec_type }}-{{ item.id }}" class="list-group-item left">
+                        <div class="sec-type">{{ item.sec_type_name }}</div>
+                        <div class="sec-name">{{ item.security_name|safe }}</a></div>
+                        <div class="handle"></div>
+                    </div>
+                    {% empty %}
+                        <div id="listing-left-empty">No results</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="right-column">
+        <div class="column-header right">
+            <form id="groups-form" action="#">
+                <select id="groups-form-group-id">
+                    {% for item in group_list %}
+                        <option value="{{ item.id }}" {% if item.id == group_id %}selected="selected"{% endif %}>{{ item.name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            <div id="column-header-right-menu">
+                {% if False %}
+                <span class="disabled">Remove selected</span>
+                |
+                <a href="#">Remove all</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="column-body right">
+            <div id="listing-right" class="listing">
+                {% for item in member_list %}
+                <div id="{{ item.sec_type }}-{{ item.security_id }}" class="list-group-item right">
+                    <div class="sec-type">{{ item.sec_type_name }}</div>
+                    <div class="sec-name">{{ item.security_name|safe }}</a></div>
+                    <div class="handle"></div>
+                </div>
+                {% empty %}
+                    <div id="listing-right-empty">No members in group</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="group_type" value="{{ group_type }}"/>
+
+{% endblock %}

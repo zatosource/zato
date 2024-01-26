@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -17,8 +17,8 @@ from time import sleep
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
-    NotGiven, PUBSUB as Common_PubSub, Sec_Def_Type, TLS as COMMON_TLS, Zato_No_Security, Zato_None
+from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, Groups as Common_Groups, \
+    LDAP as COMMON_LDAP, NotGiven, PUBSUB as Common_PubSub, Sec_Def_Type, TLS as COMMON_TLS, Zato_No_Security, Zato_None
 from zato.common.const import ServiceConst
 from zato.common.typing_ import cast_
 
@@ -147,6 +147,9 @@ class ModuleCtx:
     # Maps enmasse defintions types to their attributes that need to be converted to a list during an export
     Enmasse_Attr_List_As_List = cast_('strlistdict', None)
 
+    # Maps enmasse defintions types to their attributes that will be always skipped during an export
+    Enmasse_Attr_List_Skip_Always = cast_('strlistdict', None)
+
     # Maps enmasse defintions types to their attributes that will be skipped during an export if they are empty
     Enmasse_Attr_List_Skip_If_Empty = cast_('strlistdict', None)
 
@@ -177,7 +180,7 @@ class ModuleCtx:
     # As above, in the reverse direction, but only for specific types
     Enmasse_Item_Type_Name_Map_Reverse_By_Type = cast_('strdict', None)
 
-    # How to sort attributes of a given object
+    # How to sort attributes of a given object during an export
     Enmasse_Attr_List_Sort_Order = cast_('strlistdict', None)
 
     # How many seconds to wait for servers to start up
@@ -201,6 +204,9 @@ ModuleCtx.Enmasse_Type = {
 
     # Security definitions
     'def_sec': ModuleCtx.Include_Type.Security,
+
+    # Security definitions
+    'security_groups': ModuleCtx.Include_Type.Security,
 
     # SQL Connections
     'outconn_sql':ModuleCtx.Include_Type.SQL,
@@ -239,6 +245,7 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'service',
         'url_path',
         'security_name',
+        'security_groups',
         'is_active',
         'data_format',
         'connection',
@@ -404,10 +411,21 @@ ModuleCtx.Enmasse_Attr_List_As_List = {
 
 # ################################################################################################################################
 
+ModuleCtx.Enmasse_Attr_List_Skip_Always = {
+
+    # Security groups
+    'security_groups':  ['description', 'group_id', 'member_count', 'type'],
+}
+
+# ################################################################################################################################
+
 ModuleCtx.Enmasse_Attr_List_Skip_If_Empty = {
 
     # Security definitions
     'scheduler':  ['weeks', 'days', 'hours', 'minutes', 'seconds', 'cron_definition', 'repeats', 'extra'],
+
+    # REST channels
+    'channel_plain_http': ['data_format'],
 
     # Outgoing WSX connections
     _attr_outconn_wsx:  ['data_format', 'subscription_list'],
@@ -461,6 +479,11 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches = {
 # ################################################################################################################################
 
 ModuleCtx.Enmasse_Attr_List_Skip_If_Other_Value_Matches = {
+
+    # Security definitions
+    'def_sec':  [
+        {'criteria':[{'type':'apikey'}], 'attrs':['username']},
+    ],
 
     # Pub/sub subscriptions
     'pubsub_subscription':  [
@@ -577,6 +600,12 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
         'grant_type',
         'scopes',
         'extra_fields',
+    ],
+
+    # Security groups
+    'security_groups': [
+        'name',
+        'members',
     ],
 
     # Scheduled tasks
@@ -786,6 +815,10 @@ SHORTNAME_BY_PREFIX = [
 
 def make_service_name(prefix): # type: ignore
 
+    # This can be done quickly
+    if 'groups' in prefix:
+        return 'security_groups'
+
     # stdlib
     import re
 
@@ -798,6 +831,7 @@ def make_service_name(prefix): # type: ignore
             return name
         elif prefix == module_prefix:
             return name_prefix
+
     return escaped
 
 # ################################################################################################################################
@@ -1558,6 +1592,10 @@ class ObjectImporter:
         if item_type == 'zato_generic_connection' and is_edit:
             _= attrs_dict.pop('id', None)
 
+        # We handle security groups only
+        elif item_type == 'security_groups':
+            attrs['group_type'] = Common_Groups.Type.API_Clients
+
         # RBAC objects cannot refer to other objects by their IDs
         elif item_type == 'rbac_role_permission':
             _= attrs_dict.pop('id', None)
@@ -1819,6 +1857,7 @@ class ObjectImporter:
             'aws',
             'tls_key_cert',
             'tls_channel_sec',
+            'security_groups',
             # 'wss',
             # 'openstack',
             # 'xpath_sec',
@@ -2336,9 +2375,20 @@ class ObjectManager:
             return
 
         self.logger.debug('Invoking -> getter -> %s for %s (%s)', service_name, service_info.name, item_type)
-        response = self.client.invoke(service_name, {
-            'cluster_id': self.client.cluster_id
-        })
+
+        request = {
+            'cluster_id': self.client.cluster_id,
+        }
+
+        if service_name == 'zato.http-soap.get-list':
+            request['needs_security_group_names'] = True
+
+        elif service_name == 'zato.groups.get-list':
+            request['group_type'] = Common_Groups.Type.API_Clients
+            request['needs_members'] = True
+            request['needs_short_members'] = True
+
+        response = self.client.invoke(service_name, request)
 
         if not response.ok:
             self.logger.warning('Could not fetch objects of type {}: {}'.format(service_info.name, response.details))
@@ -3335,6 +3385,9 @@ class Enmasse(ManageCommand):
         # .. as above, for attributes that should be skipped if they are empty ..
         attr_list_as_multiline = ModuleCtx.Enmasse_Attr_List_As_Multiline.get(attr_key) or []
 
+        # .. as above, for attributes that should be always skipped ..
+        attr_list_skip_always = ModuleCtx.Enmasse_Attr_List_Skip_Always.get(attr_key) or []
+
         # .. as above, for attributes that should be skipped if they are empty ..
         attr_list_skip_if_empty = ModuleCtx.Enmasse_Attr_List_Skip_If_Empty.get(attr_key) or []
 
@@ -3399,6 +3452,10 @@ class Enmasse(ManageCommand):
                         value = value.splitlines()
                         value = '\n'.join(value)
                         item[attr] = value
+
+        # .. optionally, certain attributes will be always skipped ..
+        for attr in attr_list_skip_always:
+            _ = item.pop(attr, NotGiven)
 
         # .. optionally, skip empty attributes ..
         for attr in attr_list_skip_if_empty:
@@ -3754,6 +3811,7 @@ class Enmasse(ManageCommand):
 
         # .. certain keys should be stored in a specific order at the head of the output ..
         key_order = reversed([
+            'security_groups',
             'security',
             'channel_rest',
             'outgoing_rest',

@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -70,6 +70,22 @@ deployment_lock_timeout=180
 
 token=zato+secret://zato.server_conf.main.token
 service_sources=./service-sources.txt
+
+[http_response]
+server_header=Zato
+return_x_zato_cid=True
+code_400_message=400 Bad Request
+code_400_content_type=text/plain
+code_401_message=401 Unauthorized
+code_401_content_type=text/plain
+code_403_message=403 Forbidden
+code_403_content_type=text/plain
+code_404_message=404 Not Found
+code_404_content_type=text/plain
+code_405_message=405 Not Allowed
+code_405_content_type=text/plain
+code_500_message=500 Internal Server Error
+code_500_content_type=text/plain
 
 [crypto]
 use_tls=False
@@ -310,7 +326,10 @@ sample_key=sample_value
 
 # ################################################################################################################################
 
-pickup_conf = """[json]
+pickup_conf = """#[hot-deploy.user.local-dev]
+#pickup_from=/uncomment/this/stanza/to/enable/a/custom/location
+
+[json]
 pickup_from=./pickup/incoming/json
 move_processed_to=./pickup/processed/json
 patterns=*.json
