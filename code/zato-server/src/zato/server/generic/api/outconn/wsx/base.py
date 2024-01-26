@@ -150,8 +150,8 @@ class WSXClient:
 
 # ################################################################################################################################
 
-    def on_message_cb(self, msg:'MessageFromServer') -> 'None':
-        self.config['parent'].on_message_cb(msg)
+    def on_message_cb(self, msg:'MessageFromServer') -> 'any_':
+        return self.config['parent'].on_message_cb(msg)
 
 # ################################################################################################################################
 
@@ -356,9 +356,11 @@ class OutconnWSXWrapper(Wrapper):
                     msg = loads(msg) # type: ignore
                 ctx = OnMessageReceived(cast_('strdict | MessageFromServer', msg), self.config, self)
                 if self.is_on_message_service_wsx_adapter:
-                    self.server.invoke_wsx_adapter(self.on_message_service_name, ctx)
+                    response = self.server.invoke_wsx_adapter(self.on_message_service_name, ctx)
+                    return response
                 else:
-                    self.server.invoke(self.on_message_service_name, ctx)
+                    response = self.server.invoke(self.on_message_service_name, ctx)
+                    return response
             except Exception:
                 logger.warning('Could not invoke MESSAGE service `%s`, e:`%s`', self.on_message_service_name, format_exc())
 
