@@ -11,7 +11,7 @@ from datetime import datetime
 from ftplib import FTP_PORT
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_false, ForeignKey, func, Index, Integer, \
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_false, ForeignKey, Index, Integer, \
     LargeBinary, Numeric, Sequence, SmallInteger, String, Text, true as sa_true, UniqueConstraint
 from sqlalchemy.orm import backref, relationship
 
@@ -28,10 +28,8 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from datetime import datetime
     from zato.common.typing_ import boolnone, floatnone, intnone, strnone
     boolnone = boolnone
-    datetime = datetime
     floatnone = floatnone
     intnone = intnone
     strnone = strnone
