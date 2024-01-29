@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from datetime import datetime
 from ftplib import FTP_PORT
 
 # SQLAlchemy
@@ -2711,8 +2712,8 @@ class GenericObject(Base):
     category_id = Column(Text(191), nullable=True)
     subcategory_id = Column(Text(191), nullable=True)
 
-    creation_time = Column(DateTime, nullable=False, server_default=func.utc_timestamp())
-    last_modified = Column(DateTime, nullable=False, server_default=func.utc_timestamp())
+    creation_time = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_modified = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     category_name = Column(Text(191), nullable=True)
     subcategory_name = Column(Text(191), nullable=True)
