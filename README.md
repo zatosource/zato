@@ -7,7 +7,7 @@
 ESB, SOA, API and Cloud Integrations in Python.
 
 Zato is a Python-based, open-source platform that lets you automate, integrate and orchestrate business systems,
-IT/OT applications, APIs as well as hardware assets in industries such as
+APIs, workflows as well as hardware assets in industries such as
 [airports](https://zato.io/en/industry/airports/index.html),
 [defense](https://zato.io/en/industry/defense/index.html),
 [health care](https://zato.io/en/industry/healthcare/index.html),
