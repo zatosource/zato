@@ -36,7 +36,7 @@ from orjson import dumps
 # Zato
 from zato.bunch import Bunch
 from zato.common import broker_message
-from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
+from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
      HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, \
      URL_TYPE, WEB_SOCKET, Wrapper_Name_Prefix_List, ZATO_DEFAULT, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
@@ -1083,7 +1083,7 @@ class WorkerStore(_WorkerStoreBase):
         """ API keys need to be upper-cased and in the format that WSGI environment will have them in.
         """
         for config_dict in self.worker_config.apikey.values():
-            config_dict.config.orig_header = config_dict.config.header
+            config_dict.config.orig_header = config_dict.config.get('header') or API_Key.Default_Header
             update_apikey_username_to_channel(config_dict.config)
 
 # ################################################################################################################################
