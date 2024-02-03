@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -19,7 +19,10 @@ from zato.server.connection.queue import Wrapper
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict
+    from bunch import Bunch
+    from requests import Response
+    from zato.common.typing_ import any_, stranydict, strnone
+    from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,7 +43,8 @@ class _JiraClient(JiraClient):
         )
 
     def ping(self):
-        return self.request()
+        response:'Response' = self.request()
+        return response
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,7 +52,7 @@ class _JiraClient(JiraClient):
 class CloudJiraWrapper(Wrapper):
     """ Wraps a queue of connections to Jira.
     """
-    def __init__(self, config:'stranydict', server) -> 'None':
+    def __init__(self, config:'Bunch', server:'ParallelServer') -> 'None':
         config['auth_url'] = config['address']
         super(CloudJiraWrapper, self).__init__(config, 'Jira', server)
 
@@ -58,7 +62,7 @@ class CloudJiraWrapper(Wrapper):
 
         try:
             conn = _JiraClient(self.config)
-            self.client.put_client(conn)
+            _ = self.client.put_client(conn)
         except Exception:
             logger.warning('Caught an exception while adding a Jira client (%s); e:`%s`',
                 self.config['name'], format_exc())
@@ -68,11 +72,11 @@ class CloudJiraWrapper(Wrapper):
     def ping(self):
         with self.client() as client:
             client = cast_('_JiraClient', client)
-            client.ping()
+            _:'any_' = client.ping()
 
 # ################################################################################################################################
 
-    def delete(self, ignored_reason=None):
+    def delete(self, ignored_reason:'strnone'=None):
         pass
 
 # ################################################################################################################################
