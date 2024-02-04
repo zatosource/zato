@@ -55,6 +55,11 @@ class JiraClient(AtlassianJiraClient):
 
 # ################################################################################################################################
 
+    def ping(self):
+        _ = self.get_advanced_settings()
+
+# ################################################################################################################################
+
     @staticmethod
     def from_config(config:'stranydict') -> 'JiraClient':
         return JiraClient(
