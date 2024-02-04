@@ -77,14 +77,14 @@ class JiraClient(AtlassianJiraClient):
 # ################################################################################################################################
 
     def ping(self) -> 'None':
-        _ = self.get_advanced_settings()
+        _:'any_' = self.get_advanced_settings()
 
 # ################################################################################################################################
 
     def map_tickets_to_dataclasses(self, ctx:'TicketMappingCtx') -> 'anylist':
 
         # Our response to produce
-        out = []
+        out:'anylist' = []
 
         # .. finally, we can return out response to the caller.
         return out

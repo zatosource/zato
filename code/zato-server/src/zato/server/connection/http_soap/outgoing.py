@@ -419,7 +419,7 @@ class BaseHTTPSOAPWrapper:
 # ################################################################################################################################
 
     def _create_headers(self, cid:'str', user_headers:'strstrdict', now:'str'='') -> 'strstrdict':
-        headers = deepcopy(self.base_headers)
+        headers:'strstrdict' = deepcopy(self.base_headers)
         headers.update({
             'X-Zato-CID': cid,
             'X-Zato-Component': self._component_name,
@@ -427,7 +427,7 @@ class BaseHTTPSOAPWrapper:
         })
 
         if self.config.get('transport') == URL_TYPE.SOAP:
-            headers['SOAPAction'] = self.config.get('soap_action')
+            headers['SOAPAction'] = self.config.get('soap_action') # type: ignore
 
         content_type = user_headers.pop('Content-Type', self.default_content_type)
         if content_type:
