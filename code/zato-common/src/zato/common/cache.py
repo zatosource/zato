@@ -2,17 +2,22 @@
 # -*- coding: utf-8 -*-
 
 # stdlib
+import os
+from json import loads
 from time import time
 
 # Zato
+from zato.common.typing_ import cast_
 from zato.server.service import Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, callable_
+    from bunch import Bunch
+    from zato.common.typing_ import any_, anydict, callable_, strlistdict
     from zato.server.base.parallel import ParallelServer
+    from zato.server.connection.jira_ import JiraClient
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,6 +54,16 @@ class DictHolder:
         self.name = config.name
         self.server = config.server
         self.on_data_missing_func = config.on_data_missing_func
+
+# ################################################################################################################################
+
+    def _get_entry_from_cache(self) -> 'any_':
+        return None
+
+    def _store_data_in_cache(self, data:'any_') -> 'any_':
+        return None
+
+# ################################################################################################################################
 
     def get_all(self) -> 'InfoResult':
 
@@ -99,10 +114,72 @@ class DictHolder:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class JiraDataBuilder:
+
+    def __init__(self, config:'Bunch', client:'JiraClient') -> 'None':
+        self.config = config
+        self.client = client
+
+# ################################################################################################################################
+
+    def _get_data_dict(self) -> 'anydict':
+
+        file_name = os.environ['Zato_Test_Jira_Test_Data']
+        with open(file_name) as f:
+            data = f.read()
+
+        data = loads(data)
+        return data
+
+# ################################################################################################################################
+
+    def get_data(self) -> 'anydict':
+
+        # Our response to produce
+        out:'strlistdict' = {}
+
+        data = self._get_data_dict()
+        names = data['names']
+
+        for key, value in names.items():
+            keys = out.setdefault(value, [])
+            keys.append(key)
+
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class MyService(Service):
 
+# ################################################################################################################################
+
     def on_key_missing(self) -> 'any_':
-        pass
+
+        # Local variables
+        conn_name     = os.environ['Zato_Test_Jira_Connection_Name']
+        config_file   = os.environ['Zato_Test_Jira_Config_File']
+        config_stanza = os.environ['Zato_Test_Jira_Config_Stanza']
+
+        config:'Bunch' = self.user_config[config_file][config_stanza]
+
+        # Create a reference to our connection definition ..
+        jira = self.cloud.jira[conn_name]
+
+        # .. obtain a client to Jira ..
+        with jira.conn.client() as client:
+
+            # .. cast to enable code completion ..
+            client = cast_('JiraClient', client)
+
+            # .. create a business object to handle Jira connections ..
+            builder = JiraDataBuilder(config, client)
+
+            # .. obtain the result from Jira ..
+            result:'anydict' = builder.get_data()
+
+        # .. and return it to our caller.
+        return result
 
 # ################################################################################################################################
 
