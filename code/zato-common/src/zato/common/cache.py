@@ -7,6 +7,7 @@ from json import loads
 from time import time
 
 # Zato
+from zato.common.api import ZATO_NOT_GIVEN
 from zato.common.typing_ import cast_
 from zato.server.service import Service
 
@@ -17,6 +18,7 @@ if 0:
     from bunch import Bunch
     from zato.common.typing_ import any_, anydict, callable_, strlistdict
     from zato.server.base.parallel import ParallelServer
+    from zato.server.connection.cache import Cache
     from zato.server.connection.jira_ import JiraClient
 
 # ################################################################################################################################
@@ -50,49 +52,59 @@ class DictHolderConfig:
 
 class DictHolder:
 
+    # Type hints
+    cache: 'Cache'
+
     def __init__(self, config:'DictHolderConfig'):
-        self.name = config.name
         self.server = config.server
         self.on_data_missing_func = config.on_data_missing_func
+        self.cache_name = ModuleCtx.Cache_Name_Pattern.format(config.name)
+        self.set_cache()
+
+# ################################################################################################################################
+
+    def set_cache(self):
+        cache_api = self.server.worker_store.cache_api
+        try:
+            self.cache = cache_api.get_builtin_cache(self.cache_name)
+        except KeyError:
+            self.cache = None # type: ignore
+
+# ################################################################################################################################
+
+    def _get_cache_key(self) -> 'str':
+        out = 'issue_fields'
+        return out
 
 # ################################################################################################################################
 
     def _get_entry_from_cache(self) -> 'any_':
-        return None
 
-    def _store_data_in_cache(self, data:'any_') -> 'any_':
-        return None
+        # Local variables
+        key = self._get_cache_key()
+
+        if (out := self.cache.get(key)) != ZATO_NOT_GIVEN:
+            return out
 
 # ################################################################################################################################
 
-    def get_all(self) -> 'InfoResult':
+    def _store_data_in_cache(self, data:'any_') -> 'int':
 
         # Local variables
-        cache_entry:'any_'
+        expiry = 300 # In seconds
+        key = self._get_cache_key()
 
-        # Our response to produce
-        out = InfoResult()
+        self.cache.set(key, data, expiry=expiry)
+
+        return expiry
+
+# ################################################################################################################################
+
+    def get_all(self) -> 'any_':
 
         # If we have anything in our cache, we can return it immediately ..
-        if cache_entry := self._get_entry_from_cache():
-
-            # .. assign the actual value ..
-            out.data = cache_entry.value
-
-            # .. indicate that it came from the cache ..
-            out.is_cache_hit = True
-            out.cache_hits = cache_entry.hits
-
-            # .. build the remaining expiration time, in seconds ..
-            # .. rounded down to make sure it does not take too much log space  ..
-            expiry:'float' = cache_entry.expires_at - time()
-            expiry = round(expiry, 2)
-
-            # .. now, can assign the expiration time ..
-            out.cache_expiry = expiry
-
-            # .. and return the result to the caller.
-            return out
+        if data := self._get_entry_from_cache():
+            return data
 
         # .. we are here if the cache is empty ..
         else:
@@ -101,15 +113,8 @@ class DictHolder:
             data = self.on_data_missing_func()
 
             # .. then we can cache it ..
-            expiry:'float' = self._store_data_in_cache(data)
-
-            # .. build the result ..
-            out.data = data
-            out.is_cache_hit = False
-            out.cache_expiry = expiry
-
-            # .. and now, we can return it to our caller.
-            return out
+            _:'float' = self._store_data_in_cache(data)
+            return data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -152,8 +157,6 @@ class JiraDataBuilder:
 
 class MyService(Service):
 
-# ################################################################################################################################
-
     def on_key_missing(self) -> 'any_':
 
         # Local variables
@@ -186,7 +189,7 @@ class MyService(Service):
     def handle(self) -> 'None':
 
         config = DictHolderConfig()
-        config.name = 'Testing'
+        config.name = 'jira'
         config.server = self.server
         config.on_data_missing_func = self.on_key_missing
 
