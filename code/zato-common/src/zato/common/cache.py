@@ -4,11 +4,9 @@
 # stdlib
 import os
 from json import loads
-from time import time
 
 # Zato
 from zato.common.api import ZATO_NOT_GIVEN
-from zato.common.typing_ import cast_
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -16,7 +14,7 @@ from zato.server.service import Service
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, anydict, callable_, strlistdict
+    from zato.common.typing_ import any_, anydict, callable_, dictlist, strlistdict
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.cache import Cache
     from zato.server.connection.jira_ import JiraClient
@@ -43,6 +41,7 @@ class InfoResult:
 class DictHolderConfig:
 
     name: 'str'
+    cache_key_suffix: 'str'
     server: 'ParallelServer'
     on_data_missing_func: 'callable_'
     use_json: 'bool' = False
@@ -57,6 +56,7 @@ class DictHolder:
 
     def __init__(self, config:'DictHolderConfig'):
         self.server = config.server
+        self.cache_key_suffix = config.cache_key_suffix
         self.on_data_missing_func = config.on_data_missing_func
         self.cache_name = ModuleCtx.Cache_Name_Pattern.format(config.name)
         self.set_cache()
@@ -73,7 +73,7 @@ class DictHolder:
 # ################################################################################################################################
 
     def _get_cache_key(self) -> 'str':
-        out = 'issue_fields'
+        out = f'issue_fields.{self.cache_key_suffix}'
         return out
 
 # ################################################################################################################################
@@ -121,9 +121,28 @@ class DictHolder:
 
 class JiraDataBuilder:
 
-    def __init__(self, config:'Bunch', client:'JiraClient') -> 'None':
-        self.config = config
-        self.client = client
+    def __init__(self, service:'Service') -> 'None':
+        self.service = service
+
+        self.conn_name = os.environ['Zato_Test_Jira_Connection_Name']
+        config_file    = os.environ['Zato_Test_Jira_Config_File']
+        config_stanza  = os.environ['Zato_Test_Jira_Config_Stanza']
+
+        self.config:'Bunch' = self.service.user_config[config_file][config_stanza]
+
+# ################################################################################################################################
+
+    def _get_jira_client(self) -> 'JiraClient':
+
+        # Local variables
+
+
+        # Create a reference to our connection definition ..
+        jira = self.service.cloud.jira[self.conn_name]
+
+        # .. obtain a client to Jira ..
+        with jira.conn.client() as client:
+            return client
 
 # ################################################################################################################################
 
@@ -138,7 +157,7 @@ class JiraDataBuilder:
 
 # ################################################################################################################################
 
-    def get_data(self) -> 'anydict':
+    def _get_custom_fields_from_file(self) -> 'anydict':
 
         # Our response to produce
         out:'strlistdict' = {}
@@ -153,50 +172,55 @@ class JiraDataBuilder:
         return out
 
 # ################################################################################################################################
-# ################################################################################################################################
 
-class MyService(Service):
+    def _get_custom_fields_from_jira(self) -> 'anydict':
 
-    def on_key_missing(self) -> 'any_':
+        # Our response to produce
+        out:'strlistdict' = {}
 
-        # Local variables
-        conn_name     = os.environ['Zato_Test_Jira_Connection_Name']
-        config_file   = os.environ['Zato_Test_Jira_Config_File']
-        config_stanza = os.environ['Zato_Test_Jira_Config_Stanza']
+        client = self._get_jira_client()
+        fields:'dictlist' = client.get_all_custom_fields()
 
-        config:'Bunch' = self.user_config[config_file][config_stanza]
+        for field in fields:
+            key = field['id']
+            value = field['name']
+            keys = out.setdefault(value, [])
+            keys.append(key)
 
-        # Create a reference to our connection definition ..
-        jira = self.cloud.jira[conn_name]
-
-        # .. obtain a client to Jira ..
-        with jira.conn.client() as client:
-
-            # .. cast to enable code completion ..
-            client = cast_('JiraClient', client)
-
-            # .. create a business object to handle Jira connections ..
-            builder = JiraDataBuilder(config, client)
-
-            # .. obtain the result from Jira ..
-            result:'anydict' = builder.get_data()
-
-        # .. and return it to our caller.
-        return result
+        return out
 
 # ################################################################################################################################
 
-    def handle(self) -> 'None':
+    def _on_custom_fields_missing_in_cache(self) -> 'anydict':
+
+        out = self._get_custom_fields_from_jira()
+        return out
+
+# ################################################################################################################################
+
+    def get_custom_fields(self) -> 'anydict':
 
         config = DictHolderConfig()
         config.name = 'jira'
-        config.server = self.server
-        config.on_data_missing_func = self.on_key_missing
+        config.cache_key_suffix = self.conn_name
+        config.server = self.service.server
+        config.on_data_missing_func = self._on_custom_fields_missing_in_cache
 
         holder = DictHolder(config)
         data = holder.get_all()
 
-        data
+        return data
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MyService(Service):
+
+    def handle(self) -> 'None':
+
+        builder = JiraDataBuilder(self)
+        custom_fields = builder.get_custom_fields()
+        custom_fields
 
 # ################################################################################################################################
 # ################################################################################################################################
