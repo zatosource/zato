@@ -26,6 +26,7 @@ except ImportError:
     from json import dump, dumps as json_dumps
 
 # Zato
+from zato.common.marshal_.api import Model
 from zato.common.typing_ import datetime_, datetimez
 
 # ################################################################################################################################
@@ -53,29 +54,44 @@ def _ensure_serializable(value, simple_type=(str, dict, int, float, list, tuple,
 
         if not isinstance(value, simple_type):
 
-            # Useful in various contexts
+            # Useful in various contexts ..
             if isinstance(value, (date, datetime_, datetimez)):
 
-                # If it should be a time-zone-aware datetime object
-                # but it does not have any TZ, assume UTC.
+                # .. we enter here if it should be a time-zone-aware datetime object ..
+                # .. but it does not have any TZ, assume UTC ..
                 if isinstance(value, datetimez):
                     if not value.tzinfo:
                         value = value.replace(tzinfo=_utc)
 
-                # Now, we can format it as a string object
+                # .. now, we can format it as a string object ..
                 value = value.isoformat()
 
-            # Always use Unicode
+            # .. models can be serialized to dicts ..
+            elif isinstance(value, Model):
+                value = value.to_dict()
+
+            # .. always use Unicode ..
             elif isinstance(value, bytes):
                 value = value.decode('utf8')
 
-            # For MongoDB queries
+            # .. for MongoDB queries ..
             elif isinstance(value, ObjectId):
                 value = 'ObjectId({})'.format(value)
 
             else:
                 # We do not know how to serialize it
                 raise TypeError('Cannot serialize `{}` ({})'.format(value, type(value)))
+
+        # .. lists of models can be serialized to dicts ..
+        if isinstance(value, list):
+            if len(value):
+                item = value[0] # type: ignore
+                if isinstance(item, Model):
+                    _value = []
+                    for item in value: # type: ignore
+                        item = item.to_dict() # type: ignore
+                        _value.append(item)
+                    value = _value
 
     return value
 

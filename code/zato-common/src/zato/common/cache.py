@@ -3,18 +3,19 @@
 
 # stdlib
 import os
+from dataclasses import dataclass
 from json import loads
 
 # Zato
 from zato.common.api import ZATO_NOT_GIVEN
-from zato.server.service import Service
+from zato.server.service import Model, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, anydict, callable_, dictlist, strdict, strlistdict
+    from zato.common.typing_ import any_, anydict, anylist, callable_, dictlist, strdict, strlistdict
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.cache import Cache
     from zato.server.connection.jira_ import JiraClient
@@ -219,6 +220,15 @@ class JiraDataBuilder:
 
 # ################################################################################################################################
 
+    def _get_map_by_ticket_type(self, ticket_type:'str') -> 'strdict':
+
+        map_key = f'map_{ticket_type}'
+        map:'strdict' = self.config[map_key]
+
+        return map
+
+# ################################################################################################################################
+
     def _extract_fields_from_ticket(self, ticket:'strdict') -> 'strdict':
 
         # Type hints
@@ -235,9 +245,11 @@ class JiraDataBuilder:
         ticket_type = fields['issuetype']
         ticket_type = ticket_type['name']
 
+        # .. this can be pre-populated ..
+        out['ticket_type'] = ticket_type
+
         # .. find the names of the fields that we need to read from the ticket ..
-        fields_key = f'fields_{ticket_type}'
-        fields_to_extract:'any_' = self.config[fields_key]
+        fields_to_extract:'any_' = self._get_map_by_ticket_type(ticket_type)
         fields_to_extract = sorted(fields_to_extract)
 
         # .. go through all the fields to be extract ..
@@ -252,6 +264,10 @@ class JiraDataBuilder:
                 # .. if there are multiple IDs for that field name, ..
                 # .. the first one with a business value will be used ..
                 value = fields[field_id]
+
+                # .. status needs to be special-cased ..
+                if field_name == 'Status':
+                    value = value['name']
 
                 # .. note that we can always set it ..
                 out[field_name] = value
@@ -285,13 +301,56 @@ class JiraDataBuilder:
 
 # ################################################################################################################################
 
+    def _build_models_from_tickets(self, tickets:'dictlist', parent_model:'any_', child_model:'any_') -> 'anylist':
+
+        # Our response to produce
+        out:'anylist' = []
+
+        # Local variables
+        status_map:'strdict' = self.config.status_map
+
+        # Go through all the tickets that we have on input ..
+        for parent_ticket in tickets:
+
+            # .. this can and should be removed before we actually proceed to mapping ..
+            ticket_type = parent_ticket.pop('ticket_type')
+
+            # .. build an empty model for that ticket for later use ..
+            model = parent_model()
+
+            # .. get a mapping matching this ticket type ..
+            map = self._get_map_by_ticket_type(ticket_type)
+
+            # .. go through each of the fields in this ticket ..
+            for field_name, field_value in parent_ticket.items():
+
+                # .. map the field's name to the model attribute's name ..
+                model_attr_name = map[field_name]
+
+                # .. status needs to be special-cased ..
+                if field_name == 'Status':
+                    field_value = status_map[field_value]
+
+                # .. populate the model ..
+                setattr(model, model_attr_name, field_value)
+
+                # .. and append it to the result ..
+                out.append(model)
+
+        # Now, return the response to our caller
+        return out
+
+# ################################################################################################################################
+
     def get_tickets(
         self,
         *,
+        parent_model:'any_',
+        child_model:'any_'=None,
         board_name:'str'='',
         ticket_type:'str'='',
-        status:'str'=''
-    ) -> 'dictlist':
+        status:'str'='',
+    ) -> 'anylist':
 
         # Base query that will always match ..
         jql = 'votes >= 0'
@@ -302,15 +361,26 @@ class JiraDataBuilder:
 
         # .. ticket types are optional ..
         if ticket_type:
-            jql += f' and issuetype = {ticket_type}'
+            jql += f' and issuetype = "{ticket_type}"'
 
         # .. statuses are optional ..
         if status:
             jql = f' and status = "{status}"'
 
+        # .. obtains a Jira client ..
         client = self._get_jira_client()
+
+        # .. get a list of tickets matching input criteria ..
         tickets:'dictlist' = client.jql_get_list_of_tickets(jql=jql)
+
+        # .. extract the business fields from tickets ..
         tickets = self._extract_fields_from_tickets(tickets)
+
+        # .. turn them into model instances ..
+        models = self._build_models_from_tickets(tickets, parent_model, child_model)
+
+        # .. and return the result to our caller.
+        return models
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -319,16 +389,7 @@ class MyService(Service):
 
     def handle(self) -> 'None':
 
-        builder = JiraDataBuilder(self)
-
-        custom_fields = builder.get_all_field_types()
-        custom_fields
-
-        board_name = 'ABC'
-        ticket_type = '"123"'
-
-        tickets = builder.get_tickets(board_name=board_name, ticket_type=ticket_type)
-        tickets
+        self.response.payload = models
 
 # ################################################################################################################################
 # ################################################################################################################################
