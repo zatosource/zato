@@ -274,13 +274,18 @@ class JiraDataBuilder:
             # .. find the first matching value from the potential IDs ..
             for field_id in field_id_list:
 
-                # .. if there are multiple IDs for that field name, ..
-                # .. the first one with a business value will be used ..
-                value = fields[field_id]
+                # .. special-case ticket IDs ..
+                if field_id == 'issuekey':
+                    value = ticket['key']
+                else:
 
-                # .. status needs to be special-cased ..
-                if field_name == 'Status':
-                    value = value['name']
+                    # .. if there are multiple IDs for that field name, ..
+                    # .. the first one with a business value will be used ..
+                    value = fields[field_id]
+
+                    # .. status needs to be special-cased ..
+                    if field_name == 'Status':
+                        value = value['name']
 
                 # .. note that we can always set it ..
                 out[field_name] = value
@@ -315,25 +320,23 @@ class JiraDataBuilder:
 
             # .. now, go through all of the children found ..
             if ticket_children := parent_fields.pop('ticket_children', []):
-                children_fields = self.get_tickets(
+
+                # .. turn them all into models ..
+                child_models = self.get_tickets(
                     parent_model=child_model,
                     child_model=child_model,
+                    board_name=self.config.board_name,
+                    ticket_type=self.config.ticket_type_child,
                     ticket_id_list=ticket_children
                 )
-                children_fields
 
+                # .. attach the child models to the parent ..
+                parent_fields['child_models'] = child_models
+
+            # .. append the parent for later use ..
             out.append(parent_fields)
 
-        """
-        # .. subticket fields can be populated upfront too ..
-        out['child_fields'] = []
-        for link in fields.get('issuelinks') or []:
-            child_ticket = link['inwardIssue']
-            child_fields = self._extract_fields_from_ticket(child_ticket)
-            out['child_fields'].append(child_fields)
-        """
-
-        # Now, we can return the response to our caller
+        # .. now, we can return the response to our caller.
         return out
 
 # ################################################################################################################################
@@ -361,15 +364,22 @@ class JiraDataBuilder:
             # .. go through each of the fields in this ticket ..
             for field_name, field_value in parent_ticket.items():
 
-                # .. map the field's name to the model attribute's name ..
-                model_attr_name = map[field_name]
 
-                # .. status needs to be special-cased ..
-                if field_name == 'Status':
-                    field_value = status_map[field_value]
+                # .. child models need to be special-cased too ..
+                if field_name == 'child_models':
+                    setattr(model, self.config.child_field_name, field_value)
 
-                # .. populate the model ..
-                setattr(model, model_attr_name, field_value)
+                else:
+
+                    # .. map the field's name to the model attribute's name ..
+                    model_attr_name = map[field_name]
+
+                    # .. status needs to be special-cased ..
+                    if field_name == 'Status':
+                        field_value = status_map[field_value]
+
+                    # .. populate the model ..
+                    setattr(model, model_attr_name, field_value)
 
                 # .. and append it to the result ..
                 out.append(model)
@@ -431,28 +441,6 @@ class JiraDataBuilder:
 
         # .. and return the result to our caller.
         return models
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class MyService(Service):
-
-    def handle(self) -> 'None':
-
-        builder = JiraDataBuilder(self)
-
-        custom_fields = builder.get_all_field_types()
-        custom_fields
-
-        board_name = ''
-        ticket_type = ''
-
-        models = builder.get_tickets(
-            board_name=board_name,
-            ticket_type=ticket_type
-        )
-
-        self.response.payload = models
 
 # ################################################################################################################################
 # ################################################################################################################################
