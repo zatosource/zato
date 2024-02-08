@@ -5,6 +5,7 @@
 import os
 from dataclasses import dataclass
 from json import loads
+from logging import getLogger
 
 # Zato
 from zato.common.api import ZATO_NOT_GIVEN
@@ -15,10 +16,15 @@ from zato.server.service import Model, Service
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, anydict, anylist, callable_, dictlist, strdict, strlistdict
+    from zato.common.typing_ import any_, anydict, anylist, callable_, dictlist, strdict, strlistdict, strlistnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.cache import Cache
     from zato.server.connection.jira_ import JiraClient
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger('zato')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -240,6 +246,7 @@ class JiraDataBuilder:
 
         # Local variables
         fields = ticket['fields']
+        ticket_children = []
 
         # Extract the ticket type ..
         ticket_type = fields['issuetype']
@@ -247,12 +254,18 @@ class JiraDataBuilder:
 
         # .. this can be pre-populated ..
         out['ticket_type'] = ticket_type
+        out['ticket_children'] = ticket_children
 
         # .. find the names of the fields that we need to read from the ticket ..
         fields_to_extract:'any_' = self._get_map_by_ticket_type(ticket_type)
         fields_to_extract = sorted(fields_to_extract)
 
-        # .. go through all the fields to be extract ..
+        for link in fields.get('issuelinks') or []:
+            if child_ticket := link.get('inwardIssue'):
+                child_ticket_key = child_ticket['key']
+                ticket_children.append(child_ticket_key)
+
+        # .. go through all the fields to be extracted ..
         for field_name in fields_to_extract:
 
             # .. get the list of IDs that this name maps to
@@ -284,7 +297,7 @@ class JiraDataBuilder:
 
 # ################################################################################################################################
 
-    def _extract_fields_from_tickets(self, tickets:'dictlist') -> 'dictlist':
+    def _extract_fields_from_tickets(self, tickets:'dictlist', parent_model:'any_', child_model:'any_') -> 'dictlist':
 
         # Local variables
         item:'strdict'
@@ -292,16 +305,40 @@ class JiraDataBuilder:
         # Our response to produce
         out:'dictlist' = []
 
-        for item in tickets:
-            item = self._extract_fields_from_ticket(item)
-            out.append(item)
+        # Go through all the top-level tickets ..
+        for parent_ticket in tickets:
+
+            # logger.info('Parent ticket found -> %s', parent_ticket)
+
+            # .. extract the parent ticket's fields ..
+            parent_fields = self._extract_fields_from_ticket(parent_ticket)
+
+            # .. now, go through all of the children found ..
+            if ticket_children := parent_fields.pop('ticket_children', []):
+                children_fields = self.get_tickets(
+                    parent_model=child_model,
+                    child_model=child_model,
+                    ticket_id_list=ticket_children
+                )
+                children_fields
+
+            out.append(parent_fields)
+
+        """
+        # .. subticket fields can be populated upfront too ..
+        out['child_fields'] = []
+        for link in fields.get('issuelinks') or []:
+            child_ticket = link['inwardIssue']
+            child_fields = self._extract_fields_from_ticket(child_ticket)
+            out['child_fields'].append(child_fields)
+        """
 
         # Now, we can return the response to our caller
         return out
 
 # ################################################################################################################################
 
-    def _build_models_from_tickets(self, tickets:'dictlist', parent_model:'any_', child_model:'any_') -> 'anylist':
+    def _build_models_from_tickets(self, tickets:'dictlist', parent_model:'any_') -> 'anylist':
 
         # Our response to produce
         out:'anylist' = []
@@ -350,7 +387,10 @@ class JiraDataBuilder:
         board_name:'str'='',
         ticket_type:'str'='',
         status:'str'='',
+        ticket_id_list:'strlistnone'=None,
     ) -> 'anylist':
+
+        logger.info('Getting tickets -> %s', parent_model)
 
         # Base query that will always match ..
         jql = 'votes >= 0'
@@ -367,6 +407,16 @@ class JiraDataBuilder:
         if status:
             jql = f' and status = "{status}"'
 
+        # .. ticket lists are optional ..
+        if ticket_id_list:
+            for idx, ticket_id in enumerate(ticket_id_list):
+                if idx == 0:
+                    prefix = ' and'
+                else:
+                    prefix = ' or'
+                criterion = f'{prefix} key="{ticket_id}"'
+                jql += criterion
+
         # .. obtains a Jira client ..
         client = self._get_jira_client()
 
@@ -374,10 +424,10 @@ class JiraDataBuilder:
         tickets:'dictlist' = client.jql_get_list_of_tickets(jql=jql)
 
         # .. extract the business fields from tickets ..
-        tickets = self._extract_fields_from_tickets(tickets)
+        tickets = self._extract_fields_from_tickets(tickets, parent_model, child_model)
 
         # .. turn them into model instances ..
-        models = self._build_models_from_tickets(tickets, parent_model, child_model)
+        models = self._build_models_from_tickets(tickets, parent_model)
 
         # .. and return the result to our caller.
         return models
@@ -388,6 +438,19 @@ class JiraDataBuilder:
 class MyService(Service):
 
     def handle(self) -> 'None':
+
+        builder = JiraDataBuilder(self)
+
+        custom_fields = builder.get_all_field_types()
+        custom_fields
+
+        board_name = ''
+        ticket_type = ''
+
+        models = builder.get_tickets(
+            board_name=board_name,
+            ticket_type=ticket_type
+        )
 
         self.response.payload = models
 
