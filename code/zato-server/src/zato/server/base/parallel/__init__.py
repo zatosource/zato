@@ -932,7 +932,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def log_environment_details(self):
 
         # First, we need to have the correct variable set ..
-        if log_details := os.environ.get(EnvVariable.Log_Env_Details):
+        if log_details := os.environ.get(EnvVariable.Log_Env_Details, True):
 
             # .. now, make sure it is set to True ..
             if asbool(log_details):
