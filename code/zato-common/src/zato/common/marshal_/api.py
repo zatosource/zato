@@ -110,6 +110,8 @@ class Model(BaseModel):
     after_created = None
 
     def __getitem__(self, name, default=None):
+        if not isinstance(name, str):
+            name = str(name)
         return getattr(self, name, default)
 
     def __contains__(self, name):
