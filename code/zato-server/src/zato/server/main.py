@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -63,7 +63,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import absjoin, asbool, get_config, get_kvdb_config_for_log, is_encrypted, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.env import populate_environment_from_file
-from zato.common.util.platform_ import is_linux, is_windows
+from zato.common.util.platform_ import is_linux, is_mac, is_windows
 from zato.common.util.open_ import open_r
 from zato.server.base.parallel import ParallelServer
 from zato.server.ext import zunicorn
@@ -225,7 +225,7 @@ def get_bin_dir() -> 'str':
 def get_code_dir(bin_dir:'str') -> 'str':
 
     # Now, built the path up to the code_dir, which is is the directory with our code, not the directory where the server is.
-    if is_linux:
+    if is_linux or is_mac:
         levels = ['..']
     else:
         levels = ['..', '..', '..']

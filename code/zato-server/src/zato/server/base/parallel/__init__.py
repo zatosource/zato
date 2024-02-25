@@ -62,7 +62,7 @@ from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
-from zato.common.util.platform_ import is_posix
+from zato.common.util.platform_ import is_linux, is_posix
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
 from zato.common.util.tcp import wait_until_port_taken
@@ -240,7 +240,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self._hash_secret_salt_size = -1
         self.sso_tool = SSOTool(self)
         self.platform_system = platform_system().lower()
-        self.has_posix_ipc = is_posix
+        self.has_posix_ipc = is_linux
         self.user_config = Bunch()
         self.stderr_path = ''
         self.work_dir = 'ParallelServer-work_dir'
