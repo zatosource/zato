@@ -240,7 +240,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self._hash_secret_salt_size = -1
         self.sso_tool = SSOTool(self)
         self.platform_system = platform_system().lower()
-        self.has_posix_ipc = is_linux
+        self.has_posix_ipc = is_posix
         self.user_config = Bunch()
         self.stderr_path = ''
         self.work_dir = 'ParallelServer-work_dir'
@@ -1616,6 +1616,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             # Get all current PIDs
             all_pids_response = self.invoke('zato.info.get-worker-pids', serialize=False)
             pids = all_pids_response['pids']
+
+            # Use current PID if none were received (this is required on Mac)
+            pids = pids or [self.pid]
 
             # Invoke each of them
             for pid in pids:
