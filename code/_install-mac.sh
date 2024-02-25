@@ -1,5 +1,9 @@
 #!/bin/bash
 
+CURDIR="${BASH_SOURCE[0]}";RL="readlink";([[ `uname -s`=='Darwin' ]] || RL="$RL -f")
+while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
+N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
+
 if ! [[ "$(type -p brew)" ]]
 then
     echo "install.sh: Mac : please install Homebrew first." >&2
@@ -16,12 +20,19 @@ if [[ "$INSTALL_PYTHON" == "y" ]]; then
 fi
 
 brew install \
-    autoconf automake bzip2 curl git gsasl haproxy libev libevent libffi libtool libxml2 libxslt \
-    libyaml openldap openssl ossp-uuid pkg-config postgresql swig $PYTHON_DEPENDENCIES || true
+    autoconf automake bzip2 curl git gsasl haproxy libev libevent libffi libtool \
+    libyaml openssl ossp-uuid pkg-config $PYTHON_DEPENDENCIES || true
 
 curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
-$PY_BINARY -m pip install -U virtualenv --ignore-installed
+$PY_BINARY -m pip install -U virtualenv==20.8.1
 
-$PY_BINARY -m virtualenv .
-source ./bin/activate
-source ./_postinstall.sh $PY_BINARY
+echo Installing virtualenv in $CURDIR
+$PY_BINARY -m virtualenv $CURDIR
+
+echo Activating virtualenv in $CURDIR
+source $CURDIR/bin/activate
+
+echo Setting up environment in $CURDIR
+PIP_DISABLE_PIP_VERSION_CHECK=1 $CURDIR/bin/python $CURDIR/util/zato_environment.py install
+
+echo ⭐ Successfully installed `zato --version`

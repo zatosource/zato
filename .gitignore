@@ -1,6 +1,7 @@
 .idea
 .vscode
 code/.installed.cfg
+code/.Python
 code/\.vscode/
 code/bin/*
 code/build/*
