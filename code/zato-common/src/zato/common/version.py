@@ -40,7 +40,8 @@ def get_sys_info():
         out = '{}-{}'.format(_platform, _edition)
 
     elif is_mac:
-        out = 'mac'
+        out = platform.platform().lower()
+        return out
 
     else:
         out = 'os.unrecognised'
