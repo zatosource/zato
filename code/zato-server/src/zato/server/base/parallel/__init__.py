@@ -1617,6 +1617,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             all_pids_response = self.invoke('zato.info.get-worker-pids', serialize=False)
             pids = all_pids_response['pids']
 
+            # Use current PID if none were received (this is required on Mac)
+            pids = pids or [self.pid]
+
             # Invoke each of them
             for pid in pids:
                 pid_response = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
