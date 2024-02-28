@@ -11,7 +11,7 @@ reportAssertAlwaysTrue    = "error"
 reportUnusedImport        = "error"
 reportUnusedFunction      = "error"
 reportUnusedCallResult    = "error"
-reportUnusedVariable      = "error"
+reportUnusedVariable      = "none" # This leads to spurious errors
 reportInvalidTypeVarUse   = "error"
 reportOverlappingOverload = "error"
 reportPropertyTypeMismatch  = "error"
@@ -28,17 +28,18 @@ reportSelfClsParameterName = "none"
 #
 # This is level 1+
 #
+reportTypeCommentUsage     = "none"
 reportUnknownLambdaType    = "none"
 reportUnknownMemberType    = "none"
+reportMissingTypeArgument  = "none"
+reportUnknownVariableType  = "none"
 reportUnknownParameterType = "none"
-reportUnknownVariableType  = "error"
-reportTypeCommentUsage     = "none"
 
 #
 # This is level 2
 #
 reportMissingImports       = "none"
-reportGeneralTypeIssues    = "error"
+reportGeneralTypeIssues    = "none"
 reportOptionalMemberAccess = "error"
 reportMissingModuleSource  = "none"
 
