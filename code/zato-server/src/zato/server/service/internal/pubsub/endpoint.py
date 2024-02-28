@@ -181,7 +181,13 @@ def instance_hook(self:'Service', input:'strdict', instance:'PubSubEndpoint', at
 
 # ################################################################################################################################
 
-def response_hook(self:'Service', input:'Bunch', instance:'any_', attrs:'any_', service_type:'str'):
+def response_hook(
+    self:'Service',
+    input:'any_',
+    instance:'any_',
+    attrs:'any_',
+    service_type:'str',
+) -> 'None':
 
     if service_type == 'create_edit':
         _ = self.pubsub.wait_for_endpoint(input['name'])
@@ -412,9 +418,9 @@ class GetEndpointQueueNonGDDepth(AdminService):
         output_optional = Int('current_depth_non_gd')
 
     def handle(self):
-        pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        _, non_gd_depth = pubsub_tool.get_queue_depth(self.request.input.sub_key)
-        self.response.payload.current_depth_non_gd = non_gd_depth
+        if pubsub_tool := self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key):
+            _, non_gd_depth = pubsub_tool.get_queue_depth(self.request.input.sub_key)
+            self.response.payload.current_depth_non_gd = non_gd_depth
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -438,8 +444,8 @@ class _GetEndpointQueue(AdminService):
         if sk_server:
 
             if sk_server.server_name == self.server.name and sk_server.server_pid == self.server.pid:
-                pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(item['sub_key'])
-                _, current_depth_non_gd = pubsub_tool.get_queue_depth(item['sub_key'])
+                if pubsub_tool := self.pubsub.get_pubsub_tool_by_sub_key(item['sub_key']):
+                    _, current_depth_non_gd = pubsub_tool.get_queue_depth(item['sub_key'])
             else:
 
                 # An invoker pointing to that server
@@ -796,14 +802,15 @@ class GetServerEndpointQueueMessagesNonGD(AdminService):
     SimpleIO = _GetEndpointQueueMessagesSIO # type: ignore
 
     def handle(self) -> 'None':
-        ps_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        messages = ps_tool.get_messages(self.request.input.sub_key, False)
 
         data_prefix_len = self.pubsub.data_prefix_len
         data_prefix_short_len = self.pubsub.data_prefix_short_len
 
-        self.response.payload[:] = [
-            make_short_msg_copy_from_msg(elem, data_prefix_len, data_prefix_short_len) for elem in messages]
+        if ps_tool := self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key):
+            messages = ps_tool.get_messages(self.request.input.sub_key, False)
+
+            self.response.payload[:] = [
+                make_short_msg_copy_from_msg(elem, data_prefix_len, data_prefix_short_len) for elem in messages]
 
         for elem in self.response.payload:
             elem['recv_time'] = datetime_from_ms(elem['recv_time'] * 1000.0)
@@ -970,8 +977,8 @@ class GetServerDeliveryMessages(AdminService):
         output_optional = List('msg_list')
 
     def handle(self) -> 'None':
-        ps_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        self.response.payload.msg_list = ps_tool.pull_messages(self.request.input.sub_key)
+        if ps_tool := self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key):
+            self.response.payload.msg_list = ps_tool.pull_messages(self.request.input.sub_key)
 
 # ################################################################################################################################
 # ################################################################################################################################

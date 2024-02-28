@@ -5,15 +5,13 @@ typeCheckingMode = "basic"
 #
 # This is level 1
 #
-#reportOptionalOperand       = "none"
-#reportGeneralTypeIssues     = "none"
-#reportOptionalMemberAccess  = "none"
+reportOptionalOperand     = "error"
 reportPrivateUsage        = "none"
 reportAssertAlwaysTrue    = "error"
 reportUnusedImport        = "error"
 reportUnusedFunction      = "error"
 reportUnusedCallResult    = "error"
-reportUnusedVariable      = "none"
+reportUnusedVariable      = "none" # This leads to spurious errors
 reportInvalidTypeVarUse   = "error"
 reportOverlappingOverload = "error"
 reportPropertyTypeMismatch  = "error"
@@ -27,19 +25,23 @@ reportWildcardImportFromLibrary   = "error"
 reportImplicitStringConcatenation = "error"
 reportSelfClsParameterName = "none"
 
+#
+# This is level 1+
+#
+reportTypeCommentUsage     = "none"
 reportUnknownLambdaType    = "none"
 reportUnknownMemberType    = "none"
-reportUnknownParameterType = "none"
+reportMissingTypeArgument  = "none"
 reportUnknownVariableType  = "none"
-reportTypeCommentUsage     = "none"
+reportUnknownParameterType = "none"
 
 #
 # This is level 2
 #
-reportMissingImports        = "none"
-reportGeneralTypeIssues     = "none"
-reportOptionalMemberAccess  = "none"
-reportMissingModuleSource   = "none"
+reportMissingImports       = "none"
+reportGeneralTypeIssues    = "none"
+reportOptionalMemberAccess = "error"
+reportMissingModuleSource  = "none"
 
 #
 # This is level 3
@@ -49,17 +51,15 @@ reportMissingParameterType = "none"
 #
 # This is level 4, needed before reportUnknownMemberType
 #
-#reportUnknownArgumentType  = "error"
+# reportUnknownArgumentType  = "error"
 
 #
 # This is level 5
 #
-#reportUnknownLambdaType    = "error"
-#reportUnknownMemberType    = "error"
-#reportUnknownParameterType = "error"
-#reportUnknownVariableType  = "error"
-#reportUntypedClassDecorator    = "error"
-#reportUntypedFunctionDecorator = "error"
+# reportUnknownLambdaType    = "error"
+# reportUnknownMemberType    = "error"
+# reportUnknownParameterType = "error"
+# reportUnknownVariableType  = "error"
 
 extraPaths = [
     "./lib/python3.8/site-packages",

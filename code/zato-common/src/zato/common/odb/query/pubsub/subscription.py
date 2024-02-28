@@ -132,7 +132,7 @@ def pubsub_subscription_list(
 
 # ################################################################################################################################
 
-def pubsub_sub_key_list(session:'SASession') -> 'Query':
+def pubsub_sub_key_list(session:'SASession') -> 'Query': # type: ignore
     """ Returns a list of sub_keys and IDs in the database.
     """
     return session.query(
