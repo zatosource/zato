@@ -208,8 +208,8 @@ class QueueDeleteServerNonGD(AdminService):
         input_required = ('sub_key', AsIs('msg_id'))
 
     def handle(self) -> 'None':
-        pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        pubsub_tool.delete_messages(self.request.input.sub_key, [self.request.input.msg_id])
+        if pubsub_tool := self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key):
+            pubsub_tool.delete_messages(self.request.input.sub_key, [self.request.input.msg_id])
 
 # ################################################################################################################################
 
@@ -279,8 +279,8 @@ class DeleteDeliveryTaskMessage(AdminService):
         input_required = (AsIs('msg_id'), 'sub_key')
 
     def handle(self) -> 'None':
-        pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        pubsub_tool.delete_messages(self.request.input.sub_key, [self.request.input.msg_id])
+        if pubsub_tool := self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key):
+            pubsub_tool.delete_messages(self.request.input.sub_key, [self.request.input.msg_id])
 
 # ################################################################################################################################
 
@@ -425,34 +425,36 @@ class GetFromQueueServerNonGD(AdminService):
         input_required = _GetSIO.input_required + ('sub_key',)
 
     def handle(self) -> 'None':
-        pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        msg = pubsub_tool.get_message(self.request.input.sub_key, self.request.input.msg_id)
-        if msg:
-            msg = msg.to_dict()
 
-            msg['msg_id'] = msg.pop('pub_msg_id')
-            msg['correl_id'] = msg.pop('pub_correl_id', None)
+        if pubsub_tool := self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key):
+            msg = pubsub_tool.get_message(self.request.input.sub_key, self.request.input.msg_id)
 
-            for name in ('pub_time', 'ext_pub_time', 'expiration_time', 'recv_time'):
-                value = msg.pop(name, None)
-                if value:
-                    value = cast_('float', value)
-                    msg[name] = datetime_from_ms(value * 1000.0)
+            if msg:
+                msg = msg.to_dict()
 
-            published_by_id = msg['published_by_id']
-            published_by_id = cast_('int', published_by_id)
+                msg['msg_id'] = msg.pop('pub_msg_id')
+                msg['correl_id'] = msg.pop('pub_correl_id', None)
 
-            msg['published_by_name'] = self.pubsub.get_endpoint_by_id(published_by_id).name
+                for name in ('pub_time', 'ext_pub_time', 'expiration_time', 'recv_time'):
+                    value = msg.pop(name, None)
+                    if value:
+                        value = cast_('float', value)
+                        msg[name] = datetime_from_ms(value * 1000.0)
 
-            sub = self.pubsub.get_subscription_by_sub_key(self.request.input.sub_key)
-            if sub:
-                subscriber_id = sub.endpoint_id
-                subscriber_name = self.pubsub.get_endpoint_by_id(subscriber_id).name
+                published_by_id = msg['published_by_id']
+                published_by_id = cast_('int', published_by_id)
 
-                msg['subscriber_id'] = subscriber_id
-                msg['subscriber_name'] = subscriber_name
+                msg['published_by_name'] = self.pubsub.get_endpoint_by_id(published_by_id).name
 
-            self.response.payload = msg
+                sub = self.pubsub.get_subscription_by_sub_key(self.request.input.sub_key)
+                if sub:
+                    subscriber_id = sub.endpoint_id
+                    subscriber_name = self.pubsub.get_endpoint_by_id(subscriber_id).name
+
+                    msg['subscriber_id'] = subscriber_id
+                    msg['subscriber_name'] = subscriber_name
+
+                self.response.payload = msg
 
 # ################################################################################################################################
 
