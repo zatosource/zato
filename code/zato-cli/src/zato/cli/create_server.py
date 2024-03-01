@@ -679,6 +679,7 @@ class Create(ZatoCommand):
     opts.append({'name':'--http-port', 'help':'Server\'s HTTP port'})
     opts.append({'name':'--scheduler-host', 'help':"Host to invoke the cluster's scheduler on"})
     opts.append({'name':'--scheduler-port', 'help':"Port for invoking the cluster's scheduler"})
+    opts.append({'name':'--threads', 'help':'How many main threads the server should use', 'default':1}) # type: ignore
 
     opts += deepcopy(common_scheduler_server_api_client_opts)
 
@@ -832,10 +833,15 @@ class Create(ZatoCommand):
             scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
             scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
 
+            try:
+                threads = int(args.threads)
+            except Exception:
+                threads = 1
+
             # Substate the variables ..
             server_conf_data = server_conf_template.format(
                     port=getattr(args, 'http_port', None) or default_http_port,
-                    gunicorn_workers=1,
+                    gunicorn_workers=threads,
                     odb_db_name=args.odb_db_name or args.sqlite_path,
                     odb_engine=odb_engine,
                     odb_host=args.odb_host or '',
