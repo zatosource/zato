@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -267,8 +267,11 @@ class Create(ZatoCommand):
     opts = deepcopy(common_odb_opts)
     opts.append({'name':'--cluster-name', 'help':'Name to be given to the new cluster'})
     opts.append({'name':'--servers', 'help':'How many servers to create', 'default':1}) # type: ignore
+    opts.append({'name':'--threads-per-server', 'help':'How many main threads to use per server', 'default':1}) # type: ignore
     opts.append({'name':'--secret-key', 'help':'Main secret key the server(s) will use'})
     opts.append({'name':'--jwt-secret-key', 'help':'Secret key for JWT (JSON Web Tokens)'})
+    opts.append({'name':'--no-scheduler', 'help':'Create all the components but not a scheduler'})
+    opts.append({'name':'--scheduler-only', 'help':'Only create a scheduler, without other components'})
 
     opts += deepcopy(common_scheduler_server_api_client_opts)
 
@@ -393,6 +396,11 @@ class Create(ZatoCommand):
         for idx in range(1, servers+1):
             server_names['{}'.format(idx)] = 'server{}'.format(idx)
 
+        try:
+            threads_per_server = int(args.threads_per_server)
+        except Exception:
+            threads_per_server = 1
+
         # Under Windows, even if the load balancer is created, we do not log this information.
         total_non_servers_steps = 5 if is_windows else 7
 
@@ -486,6 +494,7 @@ class Create(ZatoCommand):
             create_server_args.path = server_path
             create_server_args.jwt_secret = jwt_secret
             create_server_args.secret_key = secret_key
+            create_server_args.threads = threads_per_server
             create_server_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
             create_server_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
             create_server_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
@@ -496,7 +505,8 @@ class Create(ZatoCommand):
                 create_server_args.priv_key_path = server_crypto_loc[name].priv_path # type: ignore
                 create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path # type: ignore
 
-            server_id = create_server.Create(create_server_args).execute(create_server_args, next(next_port), False, True)
+            server_id:'int' = create_server.Create(
+                create_server_args).execute(create_server_args, next(next_port), False, True) # type: ignore
 
             # We special case the first server ..
             if idx == 0:
