@@ -264,7 +264,7 @@ class Create(ZatoCommand):
     """ Quickly creates a working cluster
     """
     needs_empty_dir = True
-    opts = deepcopy(common_odb_opts)
+    opts:'any_' = deepcopy(common_odb_opts)
     opts.append({'name':'--cluster-name', 'help':'Name to be given to the new cluster'})
     opts.append({'name':'--servers', 'help':'How many servers to create', 'default':1}) # type: ignore
     opts.append({'name':'--threads-per-server', 'help':'How many main threads to use per server', 'default':1}) # type: ignore
@@ -566,7 +566,7 @@ class Create(ZatoCommand):
             create_web_admin_args.priv_key_path = web_admin_crypto_loc.priv_path # type: ignore
             create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path # type: ignore
 
-        web_admin_password = CryptoManager.generate_password()
+        web_admin_password:'bytes' = CryptoManager.generate_password() # type: ignore
         admin_created = create_web_admin.Create(create_web_admin_args).execute(
             create_web_admin_args, False, web_admin_password, True)
 
