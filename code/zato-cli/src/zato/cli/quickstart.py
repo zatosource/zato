@@ -417,11 +417,12 @@ class Create(ZatoCommand):
         # This will be True if the scheduler does not have to be created
         no_scheduler:'bool' = self.get_arg('no_scheduler', False)
 
-        # A shortcut for later use
-        should_create_scheduler = not no_scheduler
-
         # This will be True if we create only the scheduler, without any other components
         scheduler_only:'bool' = self.get_arg('scheduler_only', False)
+
+        # Shortcuts for later use
+        should_create_scheduler = not no_scheduler
+        create_components_other_than_scheduler = not scheduler_only
 
         # Under Windows, even if the load balancer is created, we do not log this information.
         total_non_servers_steps = 5 if is_windows else 7
@@ -430,6 +431,11 @@ class Create(ZatoCommand):
         # Take the scheduler into account
         if no_scheduler:
             total_steps -= 1
+        elif scheduler_only:
+            # 1 for servers
+            # 1 for Dashboard
+            # 1 for the load-balancer
+            total_steps -= 3
 
 # ################################################################################################################################
 
@@ -495,42 +501,45 @@ class Create(ZatoCommand):
         # 4) servers
         #
 
-        # This is populated lower in order for the scheduler to use it.
+
+        # This is populated below in order for the scheduler to use it.
         first_server_path = ''
 
-        for idx, name in enumerate(server_names): # type: ignore
-            server_path = os.path.join(args_path, server_names[name])
-            os.mkdir(server_path)
+        if create_components_other_than_scheduler:
 
-            create_server_args = self._bunch_from_args(args, cluster_name)
-            create_server_args.server_name = server_names[name]
-            create_server_args.path = server_path
-            create_server_args.jwt_secret = jwt_secret
-            create_server_args.secret_key = secret_key
-            create_server_args.threads = threads_per_server
-            create_server_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
-            create_server_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
-            create_server_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
+            for idx, name in enumerate(server_names): # type: ignore
+                server_path = os.path.join(args_path, server_names[name])
+                os.mkdir(server_path)
 
-            if has_tls:
-                create_server_args.cert_path = server_crypto_loc[name].cert_path # type: ignore
-                create_server_args.pub_key_path = server_crypto_loc[name].pub_path # type: ignore
-                create_server_args.priv_key_path = server_crypto_loc[name].priv_path # type: ignore
-                create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path # type: ignore
+                create_server_args = self._bunch_from_args(args, cluster_name)
+                create_server_args.server_name = server_names[name]
+                create_server_args.path = server_path
+                create_server_args.jwt_secret = jwt_secret
+                create_server_args.secret_key = secret_key
+                create_server_args.threads = threads_per_server
+                create_server_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
+                create_server_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
+                create_server_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
 
-            server_id:'int' = create_server.Create(
-                create_server_args).execute(create_server_args, next(next_port), False, True) # type: ignore
+                if has_tls:
+                    create_server_args.cert_path = server_crypto_loc[name].cert_path # type: ignore
+                    create_server_args.pub_key_path = server_crypto_loc[name].pub_path # type: ignore
+                    create_server_args.priv_key_path = server_crypto_loc[name].priv_path # type: ignore
+                    create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path # type: ignore
 
-            # We special case the first server ..
-            if idx == 0:
+                server_id:'int' = create_server.Create(
+                    create_server_args).execute(create_server_args, next(next_port), False, True) # type: ignore
 
-                # .. make it a delivery server for sample pub/sub topics ..
-                self._set_pubsub_server(args, server_id, cluster_name, '/zato/demo/sample') # type: ignore
+                # We special case the first server ..
+                if idx == 0:
 
-                # .. make the scheduler use it.
-                first_server_path = server_path
+                    # .. make it a delivery server for sample pub/sub topics ..
+                    self._set_pubsub_server(args, server_id, cluster_name, '/zato/demo/sample') # type: ignore
 
-            self.logger.info('[{}/{}] server{} created'.format(next(next_step), total_steps, name))
+                    # .. make the scheduler use it.
+                    first_server_path = server_path
+
+                self.logger.info('[{}/{}] server{} created'.format(next(next_step), total_steps, name))
 
 # ################################################################################################################################
 
@@ -538,55 +547,61 @@ class Create(ZatoCommand):
         # 5) load-balancer
         #
 
-        lb_path = os.path.join(args_path, 'load-balancer')
-        os.mkdir(lb_path)
+        if create_components_other_than_scheduler:
 
-        create_lb_args = self._bunch_from_args(args, cluster_name)
-        create_lb_args.path = lb_path
+            lb_path = os.path.join(args_path, 'load-balancer')
+            os.mkdir(lb_path)
 
-        if has_tls:
-            create_lb_args.cert_path = lb_agent_crypto_loc.cert_path # type: ignore
-            create_lb_args.pub_key_path = lb_agent_crypto_loc.pub_path # type: ignore
-            create_lb_args.priv_key_path = lb_agent_crypto_loc.priv_path # type: ignore
-            create_lb_args.ca_certs_path = lb_agent_crypto_loc.ca_certs_path # type: ignore
+            create_lb_args = self._bunch_from_args(args, cluster_name)
+            create_lb_args.path = lb_path
 
-        # Need to substract 1 because we've already called .next() twice
-        # when creating servers above.
-        servers_port = next(next_port) - 1
+            if has_tls:
+                create_lb_args.cert_path = lb_agent_crypto_loc.cert_path # type: ignore
+                create_lb_args.pub_key_path = lb_agent_crypto_loc.pub_path # type: ignore
+                create_lb_args.priv_key_path = lb_agent_crypto_loc.priv_path # type: ignore
+                create_lb_args.ca_certs_path = lb_agent_crypto_loc.ca_certs_path # type: ignore
 
-        create_lb.Create(create_lb_args).execute(create_lb_args, True, servers_port, False)
+            # Need to substract 1 because we've already called .next() twice
+            # when creating servers above.
+            servers_port = next(next_port) - 1
 
-        # Under Windows, we create the directory for the load-balancer
-        # but we do not advertise it because we do not start it.
-        if is_non_windows:
-            self.logger.info('[{}/{}] Load-balancer created'.format(next(next_step), total_steps))
+            create_lb.Create(create_lb_args).execute(create_lb_args, True, servers_port, False)
+
+            # Under Windows, we create the directory for the load-balancer
+            # but we do not advertise it because we do not start it.
+            if is_non_windows:
+                self.logger.info('[{}/{}] Load-balancer created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
         #
         # 6) Web admin
         #
-        web_admin_path = os.path.join(args_path, 'web-admin')
-        os.mkdir(web_admin_path)
 
-        create_web_admin_args = self._bunch_from_args(args, cluster_name)
-        create_web_admin_args.path = web_admin_path
-        create_web_admin_args.admin_invoke_password = admin_invoke_password
+        if create_components_other_than_scheduler:
+            web_admin_path = os.path.join(args_path, 'web-admin')
+            os.mkdir(web_admin_path)
 
-        if has_tls:
-            create_web_admin_args.cert_path = web_admin_crypto_loc.cert_path # type: ignore
-            create_web_admin_args.pub_key_path = web_admin_crypto_loc.pub_path # type: ignore
-            create_web_admin_args.priv_key_path = web_admin_crypto_loc.priv_path # type: ignore
-            create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path # type: ignore
+            create_web_admin_args = self._bunch_from_args(args, cluster_name)
+            create_web_admin_args.path = web_admin_path
+            create_web_admin_args.admin_invoke_password = admin_invoke_password
 
-        web_admin_password:'bytes' = CryptoManager.generate_password() # type: ignore
-        admin_created = create_web_admin.Create(create_web_admin_args).execute(
-            create_web_admin_args, False, web_admin_password, True)
+            if has_tls:
+                create_web_admin_args.cert_path = web_admin_crypto_loc.cert_path # type: ignore
+                create_web_admin_args.pub_key_path = web_admin_crypto_loc.pub_path # type: ignore
+                create_web_admin_args.priv_key_path = web_admin_crypto_loc.priv_path # type: ignore
+                create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path # type: ignore
 
-        # Need to reset the logger here because executing the create_web_admin command
-        # loads the web admin's logger which doesn't like that of ours.
-        self.reset_logger(args, True)
-        self.logger.info('[{}/{}] Dashboard created'.format(next(next_step), total_steps))
+            web_admin_password:'bytes' = CryptoManager.generate_password() # type: ignore
+            admin_created = create_web_admin.Create(create_web_admin_args).execute(
+                create_web_admin_args, False, web_admin_password, True)
+
+            # Need to reset the logger here because executing the create_web_admin command
+            # loads the web admin's logger which doesn't like that of ours.
+            self.reset_logger(args, True)
+            self.logger.info('[{}/{}] Dashboard created'.format(next(next_step), total_steps))
+        else:
+            admin_created = False
 
 # ################################################################################################################################
 
