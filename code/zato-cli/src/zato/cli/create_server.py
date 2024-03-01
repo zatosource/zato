@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -666,7 +666,7 @@ class Create(ZatoCommand):
     """
     needs_empty_dir = True
 
-    opts = deepcopy(common_odb_opts)
+    opts:'any_' = deepcopy(common_odb_opts)
 
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':'Server\'s name'})
@@ -721,7 +721,13 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def execute(self, args:'any_', default_http_port:'any_'=None, show_output:'bool'=True, return_server_id:'bool'=False):
+    def execute(
+        self,
+        args:'any_',
+        default_http_port:'any_'=None,
+        show_output:'bool'=True,
+        return_server_id:'bool'=False
+    ) -> 'int | None':
 
         # stdlib
         import os
@@ -1000,7 +1006,7 @@ You can now start it with the 'zato start {}' command.""".format(self.target_dir
         # This is optional - need only by quickstart.py and needs to be requested explicitly,
         # otherwise it would be construed as a non-0 return code from this process.
         if return_server_id:
-            return server.id
+            return server.id # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
