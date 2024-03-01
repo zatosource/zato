@@ -270,12 +270,12 @@ class Create(ZatoCommand):
     opts.append({'name':'--threads-per-server', 'help':'How many main threads to use per server', 'default':1}) # type: ignore
     opts.append({'name':'--secret-key', 'help':'Main secret key the server(s) will use'})
     opts.append({'name':'--jwt-secret-key', 'help':'Secret key for JWT (JSON Web Tokens)'})
-    opts.append({'name':'--no-scheduler', 'help':'Create all the components but not a scheduler'})
-    opts.append({'name':'--scheduler-only', 'help':'Only create a scheduler, without other components'})
+    opts.append({'name':'--no-scheduler', 'help':'Create all the components but not a scheduler', 'action':'store_true'})
+    opts.append({'name':'--scheduler-only', 'help':'Only create a scheduler, without other components', 'action':'store_true'})
 
     opts += deepcopy(common_scheduler_server_api_client_opts)
 
-    def _bunch_from_args(self, args:'any_', cluster_name:'str') -> 'Bunch':
+    def _bunch_from_args(self, args:'any_', cluster_name:'str'='') -> 'Bunch':
 
         # Bunch
         from bunch import Bunch
@@ -401,10 +401,6 @@ class Create(ZatoCommand):
         except Exception:
             threads_per_server = 1
 
-        # Under Windows, even if the load balancer is created, we do not log this information.
-        total_non_servers_steps = 5 if is_windows else 7
-
-        total_steps = total_non_servers_steps + servers
         admin_invoke_password = 'admin.invoke.' + uuid4().hex
         lb_host = '127.0.0.1'
         lb_port = 11223
@@ -417,6 +413,23 @@ class Create(ZatoCommand):
 
         # We use TLS only on systems other than Windows
         has_tls = is_non_windows
+
+        # This will be True if the scheduler does not have to be created
+        no_scheduler:'bool' = self.get_arg('no_scheduler', False)
+
+        # A shortcut for later use
+        should_create_scheduler = not no_scheduler
+
+        # This will be True if we create only the scheduler, without any other components
+        scheduler_only:'bool' = self.get_arg('scheduler_only', False)
+
+        # Under Windows, even if the load balancer is created, we do not log this information.
+        total_non_servers_steps = 5 if is_windows else 7
+        total_steps = total_non_servers_steps + servers
+
+        # Take the scheduler into account
+        if no_scheduler:
+            total_steps -= 1
 
 # ################################################################################################################################
 
@@ -580,32 +593,36 @@ class Create(ZatoCommand):
         #
         # 7) Scheduler
         #
-        scheduler_path = os.path.join(args_path, 'scheduler')
-        os.mkdir(scheduler_path)
 
-        session = get_session(get_engine(args)) # type: ignore
+        # Creation of a scheduler is optional
+        if should_create_scheduler:
 
-        with closing(session):
-            cluster_id:'int' = session.query(Cluster.id).\
-                filter(Cluster.name==cluster_name).\
-                one()[0]
+            scheduler_path = os.path.join(args_path, 'scheduler')
+            os.mkdir(scheduler_path)
 
-        create_scheduler_args = self._bunch_from_args(args, cluster_name)
-        create_scheduler_args.path = scheduler_path
-        create_scheduler_args.cluster_id = cluster_id
-        create_scheduler_args.server_path = first_server_path
-        create_scheduler_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
-        create_scheduler_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
-        create_scheduler_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
+            session = get_session(get_engine(args)) # type: ignore
 
-        if has_tls:
-            create_scheduler_args.cert_path = scheduler_crypto_loc.cert_path # type: ignore
-            create_scheduler_args.pub_key_path = scheduler_crypto_loc.pub_path # type: ignore
-            create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path # type: ignore
-            create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path # type: ignore
+            with closing(session):
+                cluster_id:'int' = session.query(Cluster.id).\
+                    filter(Cluster.name==cluster_name).\
+                    one()[0]
 
-        _ = create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True) # type: ignore
-        self.logger.info('[{}/{}] Scheduler created'.format(next(next_step), total_steps))
+            create_scheduler_args = self._bunch_from_args(args, cluster_name)
+            create_scheduler_args.path = scheduler_path
+            create_scheduler_args.cluster_id = cluster_id
+            create_scheduler_args.server_path = first_server_path
+            create_scheduler_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
+            create_scheduler_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
+            create_scheduler_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
+
+            if has_tls:
+                create_scheduler_args.cert_path = scheduler_crypto_loc.cert_path # type: ignore
+                create_scheduler_args.pub_key_path = scheduler_crypto_loc.pub_path # type: ignore
+                create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path # type: ignore
+                create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path # type: ignore
+
+            _ = create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True) # type: ignore
+            self.logger.info('[{}/{}] Scheduler created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
