@@ -81,9 +81,26 @@ common_totp_opts = [
     {'name': '--key-label', 'help': 'Label to apply to the key'},
 ]
 
-common_scheduler_api_client_for_server_opts = [
-    {'name':'--scheduler-api-client-for-server-username','help':'Name of the API user that the server connects to the scheduler with'},
-    {'name':'--scheduler-api-client-for-server-password', 'help':'Password of the API user that the server connects to the scheduler with'}
+common_scheduler_server_api_client_opts = [
+    {
+        'name':'--scheduler-api-client-for-server-username',
+        'help':'Name of the API user that the server connects to the scheduler with'
+    },
+
+    {
+        'name':'--scheduler-api-client-for-server-password',
+        'help':'Password of the API user that the server connects to the scheduler with'
+    },
+
+    {
+        'name':'--server-api-client-for-scheduler-username',
+        'help':'Name of the API user that the scheduler connects to the server with'
+    },
+
+    {
+        'name':'--server-api-client-for-scheduler-password',
+        'help':'Password of the API user that the scheduler connects to the server with'
+    },
 ]
 
 # ################################################################################################################################
