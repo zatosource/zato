@@ -11,7 +11,7 @@ import os
 from copy import deepcopy
 
 # Zato
-from zato.cli import common_odb_opts, common_scheduler_api_client_for_server_opts, ZatoCommand
+from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, ZatoCommand
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.platform_ import is_windows, is_non_windows
@@ -270,7 +270,7 @@ class Create(ZatoCommand):
     opts.append({'name':'--secret-key', 'help':'Main secret key the server(s) will use'})
     opts.append({'name':'--jwt-secret-key', 'help':'Secret key for JWT (JSON Web Tokens)'})
 
-    opts += deepcopy(common_scheduler_api_client_for_server_opts)
+    opts += deepcopy(common_scheduler_server_api_client_opts)
 
     def _bunch_from_args(self, args:'any_', cluster_name:'str') -> 'Bunch':
 

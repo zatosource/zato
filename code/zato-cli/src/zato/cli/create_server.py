@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from copy import deepcopy
 
 # Zato
-from zato.cli import common_odb_opts, common_scheduler_api_client_for_server_opts, sql_conf_contents, ZatoCommand
+from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import CONTENT_TYPE, default_internal_modules, SCHEDULER, SSO as CommonSSO
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.simpleio_ import simple_io_conf_contents
@@ -680,7 +680,7 @@ class Create(ZatoCommand):
     opts.append({'name':'--scheduler-host', 'help':"Host to invoke the cluster's scheduler on"})
     opts.append({'name':'--scheduler-port', 'help':"Port for invoking the cluster's scheduler"})
 
-    opts += deepcopy(common_scheduler_api_client_for_server_opts)
+    opts += deepcopy(common_scheduler_server_api_client_opts)
 
 # ################################################################################################################################
 
