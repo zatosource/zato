@@ -16,7 +16,7 @@ from copy import deepcopy
 from bunch import Bunch
 
 # Zato
-from zato.cli import common_odb_opts, common_scheduler_api_client_for_server_opts, sql_conf_contents, ZatoCommand
+from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import SCHEDULER
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.crypto.const import well_known_data
@@ -117,8 +117,8 @@ class Create(ZatoCommand):
     opts.append({'name':'--server-path', 'help':'Local path to a Zato server'})
     opts.append({'name':'--server-host', 'help':'Remote host of a Zato server'})
     opts.append({'name':'--server-port', 'help':'Remote TCP port of a Zato server'})
-    opts.append({'name':'--server-username', 'help':'Username to invoke the remote server with'})
-    opts.append({'name':'--server-password', 'help':'Password to invoke the remote server with'})
+    opts.append({'name':'--server-username', 'help':'An alias to --server-api-client-for-scheduler-username'})
+    opts.append({'name':'--server-password', 'help':'An alias to --server-api-client-for-scheduler-password'})
 
     opts.append({'name':'--bind-host', 'help':'Local address to start the scheduler on'})
     opts.append({'name':'--bind-port', 'help':'Local TCP port to start the scheduler on'})
@@ -136,7 +136,7 @@ class Create(ZatoCommand):
 
     opts.append({'name':'--initial-sleep-time', 'help':'How many seconds to sleep initially when the scheduler starts'})
 
-    opts += deepcopy(common_scheduler_api_client_for_server_opts)
+    opts += deepcopy(common_scheduler_server_api_client_opts)
 
 # ################################################################################################################################
 
