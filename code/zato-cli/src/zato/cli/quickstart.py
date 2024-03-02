@@ -115,7 +115,7 @@ ZATO_BIN={zato_bin}
 STEPS={start_steps}
 CLUSTER={cluster_name}
 
-echo Starting Zato cluster $CLUSTER
+{cluster_starting}
 echo Checking configuration
 """
 
@@ -127,13 +127,13 @@ zato_qs_start_body_template = """
 {check_config_extra}
 
 # Make sure TCP ports are available
-echo [3/$STEPS] Checking TCP ports availability
+echo [{check_config_step_number}/$STEPS] Checking TCP ports availability
 
 ZATO_BIN_PATH=`which zato`
 ZATO_BIN_DIR=`python -c "import os; print(os.path.dirname('$ZATO_BIN_PATH'))"`
 UTIL_DIR=`python -c "import os; print(os.path.join('$ZATO_BIN_DIR', '..', 'util'))"`
 
-$ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py
+$ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py {check_tcp_ports_suffix}
 
 # .. load-balancer ..
 {start_lb}
@@ -177,11 +177,30 @@ echo [$STEPS/$STEPS] Dashboard started
 # ################################################################################################################################
 # ################################################################################################################################
 
+zato_qs_cluster_starting = """
+echo Starting Zato cluster $CLUSTER
+"""
+
+zato_qs_cluster_started = """
+echo Zato cluster $CLUSTER started
+"""
+
+zato_qs_cluster_stopping = """
+echo Stopping Zato cluster $CLUSTER
+"""
+
+zato_qs_cluster_stopped = """
+echo Zato cluster $CLUSTER stopped
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 zato_qs_start_tail_template = """
 {start_dashboard}
 
 cd $BASE_DIR
-echo Zato cluster $CLUSTER started
+{cluster_started}
 echo Visit https://zato.io/support for more information and support options
 exit 0
 """
@@ -218,7 +237,7 @@ ZATO_BIN={zato_bin}
 STEPS={stop_steps}
 CLUSTER={cluster_name}
 
-echo Stopping Zato cluster $CLUSTER
+{cluster_stopping}
 
 # Start the load balancer first ..
 $ZATO_BIN stop $BASE_DIR/load-balancer
@@ -228,13 +247,13 @@ echo [1/$STEPS] Load-balancer stopped
 {stop_servers}
 
 $ZATO_BIN stop $BASE_DIR/web-admin
-echo [{web_admin_step_count}/$STEPS] Web admin stopped
+echo [{web_admin_step_count}/$STEPS] Dashboard stopped
 
 $ZATO_BIN stop $BASE_DIR/scheduler
 echo [$STEPS/$STEPS] Scheduler stopped
 
 cd $BASE_DIR
-echo Zato cluster $CLUSTER stopped
+{cluster_stopped}
 """
 
 # ################################################################################################################################
@@ -354,7 +373,7 @@ class Create(ZatoCommand):
         3) ODB initial data
         4) Servers
         5) Load-balancer
-        6) Web admin
+        6) Dashboard
         7) Scheduler
         8) Scripts
         """
@@ -589,7 +608,7 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
         #
-        # 6) Web admin
+        # 6) Dashboard
         #
 
         if create_components_other_than_scheduler:
@@ -611,7 +630,7 @@ class Create(ZatoCommand):
                 create_web_admin_args, False, web_admin_password, True)
 
             # Need to reset the logger here because executing the create_web_admin command
-            # loads the web admin's logger which doesn't like that of ours.
+            # loads the Dashboard's logger which doesn't like that of ours.
             self.reset_logger(args, True)
             self.logger.info('[{}/{}] Dashboard created'.format(next(next_step), total_steps))
         else:
@@ -690,30 +709,50 @@ class Create(ZatoCommand):
         check_config = '\n'.join(check_config)
         start_servers = '\n'.join(start_servers)
         stop_servers = '\n'.join(stop_servers)
-        start_steps = 6 + servers
-        stop_steps = 3 + servers
-
-        zato_qs_start_head = zato_qs_start_head_template.format(
-            zato_bin=zato_bin,
-            script_dir=script_dir,
-            cluster_name=cluster_name,
-            start_steps=start_steps
-        )
 
         if scheduler_only:
             start_servers = '# No servers to start'
             start_lb = '# No load-balancer to start'
             check_config_extra = ''
+            check_tcp_ports_suffix = 'scheduler-only'
+            cluster_starting = ''
+            cluster_started = ''
+            cluster_stopping = ''
+            cluster_stopped = ''
+            check_config_step_number = 1
+            scheduler_step_count = 2
+            start_steps = 2
+            stop_steps = 3
+
         else:
             start_lb = zato_qs_start_lb_windows if is_windows else zato_qs_start_lb_non_windows
             check_config_extra = zato_qs_check_config_extra
+            check_tcp_ports_suffix = ''
+            cluster_starting = zato_qs_cluster_started
+            cluster_started = zato_qs_cluster_started
+            cluster_stopping = zato_qs_cluster_stopping
+            cluster_stopped = zato_qs_cluster_stopped
+            check_config_step_number = 3
+            start_steps = 6 + servers
+            stop_steps = 3 + servers
+            scheduler_step_count = start_steps - 1
+
+        zato_qs_start_head = zato_qs_start_head_template.format(
+            zato_bin=zato_bin,
+            script_dir=script_dir,
+            cluster_name=cluster_name,
+            start_steps=start_steps,
+            cluster_starting=cluster_starting,
+        )
 
         zato_qs_start_body = zato_qs_start_body_template.format(
             check_config=check_config,
             check_config_extra=check_config_extra,
+            check_tcp_ports_suffix=check_tcp_ports_suffix,
             start_lb=start_lb,
-            scheduler_step_count=start_steps-1,
+            scheduler_step_count=scheduler_step_count,
             start_servers=start_servers,
+            check_config_step_number=check_config_step_number,
         )
 
         if scheduler_only:
@@ -721,7 +760,10 @@ class Create(ZatoCommand):
         else:
             start_dashboard = zato_qs_start_dashboard
 
-        zato_qs_start_tail = zato_qs_start_tail_template.format(start_dashboard=start_dashboard)
+        zato_qs_start_tail = zato_qs_start_tail_template.format(
+            start_dashboard=start_dashboard,
+            cluster_started=cluster_started,
+        )
         zato_qs_start = zato_qs_start_head + zato_qs_start_body + zato_qs_start_tail
 
         zato_qs_stop = zato_qs_stop_template.format(
@@ -730,7 +772,10 @@ class Create(ZatoCommand):
             cluster_name=cluster_name,
             web_admin_step_count=stop_steps-1,
             stop_steps=stop_steps,
-            stop_servers=stop_servers)
+            stop_servers=stop_servers,
+            cluster_stopping=cluster_stopping,
+            cluster_stopped=cluster_stopped,
+        )
 
         if is_windows:
 
