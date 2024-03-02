@@ -318,6 +318,9 @@ class Create(ZatoCommand):
     opts.append({'name':'--no-scheduler', 'help':'Create all the components but not a scheduler', 'action':'store_true'})
     opts.append({'name':'--scheduler-only', 'help':'Only create a scheduler, without other components', 'action':'store_true'})
 
+    opts.append({'name':'--scheduler-address-for-server', 'help':'Address of the scheduler for servers to invoke'})
+    opts.append({'name':'--server-address-for-scheduler', 'help':'Address of the server for a scheduler to invoke'})
+
     opts += deepcopy(common_scheduler_server_api_client_opts)
 
     def _bunch_from_args(self, args:'any_', cluster_name:'str'='') -> 'Bunch':
