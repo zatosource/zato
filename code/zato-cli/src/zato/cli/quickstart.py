@@ -124,9 +124,7 @@ echo Checking configuration
 
 zato_qs_start_body_template = """
 {check_config}
-
-echo [1/$STEPS] Redis connection OK
-echo [2/$STEPS] SQL ODB connection OK
+{check_config_extra}
 
 # Make sure TCP ports are available
 echo [3/$STEPS] Checking TCP ports availability
@@ -137,6 +135,7 @@ UTIL_DIR=`python -c "import os; print(os.path.join('$ZATO_BIN_DIR', '..', 'util'
 
 $ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py
 
+# .. load-balancer ..
 {start_lb}
 
 # .. servers ..
@@ -145,6 +144,14 @@ $ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py
 # .. scheduler ..
 $ZATO_BIN start $BASE_DIR/scheduler --verbose
 echo [{scheduler_step_count}/$STEPS] Scheduler started
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+zato_qs_check_config_extra = """
+echo [1/$STEPS] Redis connection OK
+echo [2/$STEPS] SQL ODB connection OK
 """
 
 # ################################################################################################################################
@@ -161,10 +168,17 @@ echo [4/$STEPS] Load-balancer started
 # ################################################################################################################################
 # ################################################################################################################################
 
-zato_qs_start_tail = """
-# .. web admin comes as the last one because it may ask Django-related questions.
+zato_qs_start_dashboard = """
+# .. Dashboard comes as the last one because it may ask Django-related questions.
 $ZATO_BIN start $BASE_DIR/web-admin --verbose
 echo [$STEPS/$STEPS] Dashboard started
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+zato_qs_start_tail_template = """
+{start_dashboard}
 
 cd $BASE_DIR
 echo Zato cluster $CLUSTER started
@@ -667,10 +681,11 @@ class Create(ZatoCommand):
         start_servers = []
         stop_servers = []
 
-        for name in server_names: # type: ignore
-            check_config.append(check_config_template.format(server_name=server_names[name]))
-            start_servers.append(start_servers_template.format(server_name=server_names[name], step_number=int(name)+4))
-            stop_servers.append(stop_servers_template.format(server_name=server_names[name], step_number=int(name)+1))
+        if create_components_other_than_scheduler:
+            for name in server_names: # type: ignore
+                check_config.append(check_config_template.format(server_name=server_names[name]))
+                start_servers.append(start_servers_template.format(server_name=server_names[name], step_number=int(name)+4))
+                stop_servers.append(stop_servers_template.format(server_name=server_names[name], step_number=int(name)+1))
 
         check_config = '\n'.join(check_config)
         start_servers = '\n'.join(start_servers)
@@ -685,13 +700,28 @@ class Create(ZatoCommand):
             start_steps=start_steps
         )
 
+        if scheduler_only:
+            start_servers = '# No servers to start'
+            start_lb = '# No load-balancer to start'
+            check_config_extra = ''
+        else:
+            start_lb = zato_qs_start_lb_windows if is_windows else zato_qs_start_lb_non_windows
+            check_config_extra = zato_qs_check_config_extra
+
         zato_qs_start_body = zato_qs_start_body_template.format(
             check_config=check_config,
-            start_lb=zato_qs_start_lb_windows if is_windows else zato_qs_start_lb_non_windows,
+            check_config_extra=check_config_extra,
+            start_lb=start_lb,
             scheduler_step_count=start_steps-1,
             start_servers=start_servers,
         )
 
+        if scheduler_only:
+            start_dashboard = ''
+        else:
+            start_dashboard = zato_qs_start_dashboard
+
+        zato_qs_start_tail = zato_qs_start_tail_template.format(start_dashboard=start_dashboard)
         zato_qs_start = zato_qs_start_head + zato_qs_start_body + zato_qs_start_tail
 
         zato_qs_stop = zato_qs_stop_template.format(
@@ -730,4 +760,5 @@ class Create(ZatoCommand):
         self.logger.info('Start the cluster by issuing this command: %s', zato_qs_start_path)
         self.logger.info('Visit https://zato.io/support for more information and support options')
 
+# ################################################################################################################################
 # ################################################################################################################################
