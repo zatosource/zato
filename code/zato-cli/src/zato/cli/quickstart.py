@@ -142,8 +142,7 @@ $ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py {check_tcp_ports_suffix}
 {start_servers}
 
 # .. scheduler ..
-$ZATO_BIN start $BASE_DIR/scheduler --verbose
-echo [{scheduler_step_count}/$STEPS] Scheduler started
+{start_scheduler}
 """
 
 # ################################################################################################################################
@@ -213,6 +212,19 @@ echo [{step_number}/$STEPS] {server_name} stopped
 # ################################################################################################################################
 # ################################################################################################################################
 
+zato_qs_start_scheduler = """
+$ZATO_BIN start $BASE_DIR/scheduler --verbose
+echo [{scheduler_step_count}/$STEPS] Scheduler started
+"""
+
+zato_qs_stop_scheduler = """
+$ZATO_BIN stop $BASE_DIR/scheduler
+echo [$STEPS/$STEPS] Scheduler stopped
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 zato_qs_stop_template = """#!/bin/bash
 
 export ZATO_CLI_DONT_SHOW_OUTPUT=1
@@ -249,8 +261,8 @@ echo [1/$STEPS] Load-balancer stopped
 $ZATO_BIN stop $BASE_DIR/web-admin
 echo [{web_admin_step_count}/$STEPS] Dashboard stopped
 
-$ZATO_BIN stop $BASE_DIR/scheduler
-echo [$STEPS/$STEPS] Scheduler stopped
+# .. scheduler ..
+{stop_scheduler}
 
 cd $BASE_DIR
 {cluster_stopped}
@@ -723,6 +735,8 @@ class Create(ZatoCommand):
             scheduler_step_count = 2
             start_steps = 2
             stop_steps = 3
+            start_scheduler = zato_qs_start_scheduler.format(scheduler_step_count=scheduler_step_count)
+            stop_scheduler = zato_qs_stop_scheduler
 
         else:
             start_lb = zato_qs_start_lb_windows if is_windows else zato_qs_start_lb_non_windows
@@ -736,6 +750,14 @@ class Create(ZatoCommand):
             start_steps = 6 + servers
             stop_steps = 3 + servers
             scheduler_step_count = start_steps - 1
+
+            if no_scheduler:
+                start_steps -= 1
+                start_scheduler = '# No scheduler to start'
+                stop_scheduler = '# No scheduler to stop'
+            else:
+                start_scheduler = zato_qs_start_scheduler.format(scheduler_step_count=scheduler_step_count)
+                stop_scheduler = zato_qs_stop_scheduler
 
         zato_qs_start_head = zato_qs_start_head_template.format(
             zato_bin=zato_bin,
@@ -753,6 +775,7 @@ class Create(ZatoCommand):
             scheduler_step_count=scheduler_step_count,
             start_servers=start_servers,
             check_config_step_number=check_config_step_number,
+            start_scheduler=start_scheduler,
         )
 
         if scheduler_only:
@@ -775,6 +798,7 @@ class Create(ZatoCommand):
             stop_servers=stop_servers,
             cluster_stopping=cluster_stopping,
             cluster_stopped=cluster_stopped,
+            stop_scheduler=stop_scheduler,
         )
 
         if is_windows:
