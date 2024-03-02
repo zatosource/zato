@@ -20,6 +20,25 @@ def wait_for_ports(*data): # type: ignore
             print(f'Port taken {port} ({component})')
 
 # ################################################################################################################################
+
+def get_scheduler_data():
+    return [[31530, 'Scheduler']] # type: ignore
+
+# ################################################################################################################################
+
+def get_non_scheduler_data():
+    return [
+        [8183,  'Dashboard'], # type: ignore
+        [11223, 'Load-balancer'],
+        [20151, 'Load-balancer\'s agent'],
+
+        # Servers come last because they may be the last to stop
+        # in case we are being called during an environment's restart.
+        [17010, 'server1'],
+        [17011, 'server2']
+    ]
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
@@ -27,40 +46,26 @@ if __name__ == '__main__':
     # stdlib
     import sys
 
-    print()
-    print(111, sys.argv)
-    print()
-
     if len(sys.argv) == 2:
         argv1 = sys.argv[1]
         scheduler_only = argv1 == 'scheduler-only'
         no_scheduler   = argv1 == 'no-scheduler'
+        needs_scheduler = not no_scheduler
     else:
-        scheduler_only = False
-        no_scheduler   = False
+        scheduler_only  = False
+        no_scheduler    = False
+        needs_scheduler = True
 
-    # To be populated
     data = []
+    scheduler_data     = get_scheduler_data()     # type: ignore
+    non_scheduler_data = get_non_scheduler_data() # type: ignore
 
     if scheduler_only:
-
-
-    # Base configuration, always used
-    data = [ # type: ignore
-        [31530, 'Scheduler']
-    ]
-
-    if not scheduler_only:
-        data.extend([
-            [8183,  'Dashboard'],
-            [11223, 'Load-balancer'],
-            [20151, 'Load-balancer\'s agent'],
-
-            # Servers come last because they may be the last to stop
-            # in case we are being called during an environment's restart.
-            [17010, 'server1'],
-            [17011, 'server2']
-    ])
+        data.extend(scheduler_data)
+    else:
+        if needs_scheduler:
+            data.extend(scheduler_data)
+        data.extend(non_scheduler_data)
 
     wait_for_ports(*data)
 
