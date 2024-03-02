@@ -753,11 +753,16 @@ class Create(ZatoCommand):
 
             if no_scheduler:
                 start_steps -= 1
+                stop_steps -= 1
                 start_scheduler = '# No scheduler to start'
                 stop_scheduler = '# No scheduler to stop'
             else:
                 start_scheduler = zato_qs_start_scheduler.format(scheduler_step_count=scheduler_step_count)
                 stop_scheduler = zato_qs_stop_scheduler
+
+        web_admin_step_count = stop_steps
+        if create_components_other_than_scheduler and should_create_scheduler:
+            web_admin_step_count -= 1
 
         zato_qs_start_head = zato_qs_start_head_template.format(
             zato_bin=zato_bin,
@@ -793,7 +798,7 @@ class Create(ZatoCommand):
             zato_bin=zato_bin,
             script_dir=script_dir,
             cluster_name=cluster_name,
-            web_admin_step_count=stop_steps-1,
+            web_admin_step_count=web_admin_step_count,
             stop_steps=stop_steps,
             stop_servers=stop_servers,
             cluster_stopping=cluster_stopping,
