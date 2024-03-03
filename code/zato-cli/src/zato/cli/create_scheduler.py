@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -19,6 +19,7 @@ from bunch import Bunch
 # Zato
 from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import SCHEDULER
+from zato.common.const import ServiceConst
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.crypto.const import well_known_data
 from zato.common.odb.model import Cluster
@@ -101,8 +102,9 @@ auth_required={scheduler_api_client_for_server_auth_required}
 
 @dataclass(init=False)
 class ServerConfigForScheduler:
-    host: 'str'
-    port: 'int'
+    server_host: 'str'
+    server_port: 'int'
+    server_path: 'str'
     use_tls: 'bool'
     is_auth_from_server_required: 'bool'
 
@@ -113,7 +115,7 @@ class ServerConfigForScheduler:
             password: 'str'
 
         class from_scheduler_to_server:
-            username: 'str'
+            username: 'str' = ServiceConst.API_Admin_Invoke_Username
             password: 'str'
 
 # ################################################################################################################################
@@ -212,7 +214,7 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def _get_server_config(self, args:'any_', secret_key:'bytes', odb_config:'strdict') -> 'ServerConfigForScheduler':
+    def _get_server_config(self, args:'any_', cm:'SchedulerCryptoManager', odb_config:'strdict') -> 'ServerConfigForScheduler':
 
         # stdlib
         import os
@@ -220,6 +222,70 @@ class Create(ZatoCommand):
 
         # Our response to produce
         out = ServerConfigForScheduler()
+
+        print()
+        for key, value in sorted(args.items()):
+            print(111, key, value)
+        print()
+
+        server_path = self.get_arg('server_path') or ''
+        server_host = self.get_arg('server_host', '127.0.0.1')
+        server_port = self.get_arg('server_port', 17010)
+
+        scheduler_api_client_for_server_auth_required = get_scheduler_api_client_for_server_auth_required(args)
+        scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
+        scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
+
+        out.server_path = server_path
+        out.server_host = server_host
+        out.server_port = server_port
+
+        out.is_auth_from_server_required = scheduler_api_client_for_server_auth_required # type: ignore
+        out.api_client.from_server_to_scheduler.username = scheduler_api_client_for_server_username
+        out.api_client.from_server_to_scheduler.password = scheduler_api_client_for_server_password
+
+        # Handle both ..
+        server_password = self.get_arg('server_password')
+        server_api_client_for_scheduler_password = self.get_arg('server_api_client_for_scheduler_password')
+
+        # .. but prefer the latter ..
+        server_api_client_for_scheduler_password = server_password or server_api_client_for_scheduler_password
+
+        # .. it still may be empty ..
+        if not server_api_client_for_scheduler_password:
+
+            # .. in which case, we look it up in the database ..
+            _, server_api_client_for_scheduler_password = self._get_server_admin_invoke_credentials(cm, odb_config)
+
+        # .. note that the username is always the same and we only set the password
+        out.api_client.from_scheduler_to_server.password = server_api_client_for_scheduler_password
+
+        # Try to extract the scheduler's address from a single option
+        if scheduler_address := args.scheduler_address_for_server:
+
+            # Make sure we have a scheme ..
+            if not '://' in scheduler_address:
+                scheduler_address = 'https://' + scheduler_address
+
+            # .. parse out the individual components ..
+            scheduler_address = urlparse(scheduler_address)
+
+            # .. now we know if TLS should be used ..
+            use_tls = scheduler_address.scheme == 'https'
+
+            # .. extract the host and port ..
+            address = scheduler_address.netloc.split(':')
+            host = address[0]
+
+            if len(address) == 2:
+                port = address[1]
+            else:
+                port = SCHEDULER.DefaultPort
+
+        else:
+            # Extract the scheduler's address from individual pieces
+            host = self.get_arg('scheduler_host', SCHEDULER.DefaultHost)
+            port = self.get_arg('scheduler_port', SCHEDULER.DefaultPort)
 
         '''
         scheduler_api_client_for_server_auth_required = get_scheduler_api_client_for_server_auth_required(args)
@@ -312,12 +378,6 @@ class Create(ZatoCommand):
 
     def execute(self, args:'Namespace', show_output:'bool'=True, needs_created_flag:'bool'=False):
 
-        print()
-        print(222, args)
-        print()
-
-        qqq
-
         # Zato
         from zato.common.util.logging_ import get_logging_conf_contents
 
@@ -397,16 +457,16 @@ class Create(ZatoCommand):
 
         config:'strdict' = {
             'scheduler_api_client_for_server_auth_required': server_config.is_auth_from_server_required,
-            'scheduler_api_client_for_server_username':  scheduler_api_client_for_server_username,
-            'scheduler_api_client_for_server_password': scheduler_api_client_for_server_password,
+            'scheduler_api_client_for_server_username':  server_config.api_client.from_server_to_scheduler.username,
+            'scheduler_api_client_for_server_password': server_config.api_client.from_server_to_scheduler.password,
             'cluster_id': cluster_id,
             'secret_key1': secret_key,
             'well_known_data': zato_well_known_data,
-            'server_path': server_path,
-            'server_host': server_host,
-            'server_port': server_port,
-            'server_username': server_username,
-            'server_password': server_password,
+            'server_path': server_config.server_path,
+            'server_host': server_config.server_host,
+            'server_port': server_config.server_port,
+            'server_username': server_config.api_client.from_scheduler_to_server.username,
+            'server_password': server_config.api_client.from_scheduler_to_server.password,
             'initial_sleep_time': initial_sleep_time,
             'scheduler_bind_host': scheduler_bind_host,
             'scheduler_bind_port': scheduler_bind_port,

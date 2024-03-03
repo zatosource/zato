@@ -747,7 +747,6 @@ class Create(ZatoCommand):
 
         # stdlib
         import os
-        from urllib.parse import urlparse
 
         # Local variables
         use_tls = NotGiven
@@ -755,33 +754,15 @@ class Create(ZatoCommand):
         # Our response to produce
         out = SchedulerConfigForServer()
 
-        # Try to Extract the scheduler's address from a single option
-        if scheduler_address := args.scheduler_address_for_server:
-
-            # Make sure we have a scheme ..
-            if not '://' in scheduler_address:
-                scheduler_address = 'https://' + scheduler_address
-
-            # .. parse out the individual components ..
-            scheduler_address = urlparse(scheduler_address)
-
-            # .. now we know if TLS should be used ..
-            use_tls = scheduler_address.scheme == 'https'
-
-            # .. extract the host and port ..
-            address = scheduler_address.netloc.split(':')
-            host = address[0]
-
-            if len(address) == 2:
-                port = address[1]
-                port = int(port)
-            else:
-                port = SCHEDULER.DefaultPort
-
-        else:
-            # Extract the scheduler's address from individual pieces
-            host = self.get_arg('scheduler_host', SCHEDULER.DefaultHost)
-            port = self.get_arg('scheduler_port', SCHEDULER.DefaultPort)
+        # Extract basic information about the scheduler the server will be invoking ..
+        use_tls, host, port = self._extract_address_data(
+            args,
+            'scheduler_address_for_server',
+            'scheduler_host',
+            'scheduler_port',
+            SCHEDULER.DefaultHost,
+            SCHEDULER.DefaultPort,
+        )
 
         # .. now, we can assign host and port to the response ..
         out.host = host
