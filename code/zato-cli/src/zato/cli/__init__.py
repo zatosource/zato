@@ -81,6 +81,11 @@ common_totp_opts = [
     {'name': '--key-label', 'help': 'Label to apply to the key'},
 ]
 
+common_scheduler_server_address_opts = [
+    {'name':'--scheduler-address-for-server', 'help':'Address of the scheduler for servers to invoke'},
+    {'name':'--server-address-for-scheduler', 'help':'Address of the server for a scheduler to invoke'},
+]
+
 common_scheduler_server_api_client_opts = [
     {
         'name':'--scheduler-api-client-for-server-username',
