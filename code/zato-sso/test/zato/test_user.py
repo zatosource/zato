@@ -262,7 +262,7 @@ class UserLoginInvalidUsernameTestCase(BaseTest):
         }, expect_ok=False)
 
         self.assertEqual(response.result, 'Error')
-        self.assertEqual(response.details, 'Invalid input')
+        self.assertEqual(response.details, 'Bad request')
         self.assertIn('cid', response)
         self.assertNotIn('ust', response)
 
@@ -317,7 +317,7 @@ class UserLoginInvalidPasswordTestCase(BaseTest):
         }, expect_ok=False)
 
         self.assertEqual(response.result, 'Error')
-        self.assertEqual(response.details, 'Invalid input')
+        self.assertEqual(response.details, 'Bad request')
         self.assertIn('cid', response)
         self.assertNotIn('ust', response)
 
