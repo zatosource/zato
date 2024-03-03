@@ -305,7 +305,7 @@ class ZatoCommand:
         LOAD_BALANCER = _ComponentName('LOAD_BALANCER', 'Load balancer')
         SCHEDULER = _ComponentName('SCHEDULER', 'Scheduler')
         SERVER = _ComponentName('SERVER', 'Server')
-        WEB_ADMIN = _ComponentName('WEB_ADMIN', 'Web admin')
+        WEB_ADMIN = _ComponentName('WEB_ADMIN', 'Dashboard')
 
 # ################################################################################################################################
 
