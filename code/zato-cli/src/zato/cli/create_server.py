@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 from copy import deepcopy
+from dataclasses import dataclass
 
 # Zato
-from zato.cli import common_odb_opts, common_scheduler_api_client_for_server_opts, sql_conf_contents, ZatoCommand
-from zato.common.api import CONTENT_TYPE, default_internal_modules, SCHEDULER, SSO as CommonSSO
+from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, \
+    sql_conf_contents, ZatoCommand
+from zato.common.api import CONTENT_TYPE, default_internal_modules, NotGiven, SCHEDULER, SSO as CommonSSO
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.simpleio_ import simple_io_conf_contents
 from zato.common.util import as_bool
@@ -111,7 +113,7 @@ use_async_driver=True
 [scheduler]
 scheduler_host={{scheduler_host}}
 scheduler_port={{scheduler_port}}
-scheduler_use_tls=False
+scheduler_use_tls={{scheduler_use_tls}}
 scheduler_api_username={{scheduler_api_client_for_server_username}}
 scheduler_api_password={{scheduler_api_client_for_server_password}}
 
@@ -661,12 +663,31 @@ priv_key_location = './config/repo/config-pub.pem'
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass(init=False)
+class SchedulerConfigForServer:
+    scheduler_host: 'str'
+    scheduler_port: 'int'
+    scheduler_use_tls: 'bool'
+
+    class api_client:
+
+        class from_server_to_scheduler:
+            username: 'str'
+            password: 'str'
+
+        class from_scheduler_to_server:
+            username: 'str'
+            password: 'str'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Create(ZatoCommand):
     """ Creates a new Zato server
     """
     needs_empty_dir = True
 
-    opts = deepcopy(common_odb_opts)
+    opts:'any_' = deepcopy(common_odb_opts)
 
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':'Server\'s name'})
@@ -677,10 +698,12 @@ class Create(ZatoCommand):
     opts.append({'name':'--secret-key', 'help':'Server\'s secret key (must be the same for all servers)'})
     opts.append({'name':'--jwt-secret', 'help':'Server\'s JWT secret (must be the same for all servers)'})
     opts.append({'name':'--http-port', 'help':'Server\'s HTTP port'})
-    opts.append({'name':'--scheduler-host', 'help':"Host to invoke the cluster's scheduler on"})
-    opts.append({'name':'--scheduler-port', 'help':"Port for invoking the cluster's scheduler"})
+    opts.append({'name':'--scheduler-host', 'help':'Deprecated. Use --scheduler-address-for-server instead.'})
+    opts.append({'name':'--scheduler-port', 'help':'Deprecated. Use --scheduler-address-for-server instead.'})
+    opts.append({'name':'--threads', 'help':'How many main threads the server should use', 'default':1}) # type: ignore
 
-    opts += deepcopy(common_scheduler_api_client_for_server_opts)
+    opts += deepcopy(common_scheduler_server_address_opts)
+    opts += deepcopy(common_scheduler_server_api_client_opts)
 
 # ################################################################################################################################
 
@@ -720,7 +743,63 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def execute(self, args:'any_', default_http_port:'any_'=None, show_output:'bool'=True, return_server_id:'bool'=False):
+    def _get_scheduler_config(self, args:'any_', secret_key:'bytes') -> 'SchedulerConfigForServer':
+
+        # stdlib
+        import os
+
+        # Local variables
+        use_tls = NotGiven
+
+        # Our response to produce
+        out = SchedulerConfigForServer()
+
+        # Extract basic information about the scheduler the server will be invoking ..
+        use_tls, host, port = self._extract_address_data(
+            args,
+            'scheduler_address_for_server',
+            'scheduler_host',
+            'scheduler_port',
+            SCHEDULER.DefaultHost,
+            SCHEDULER.DefaultPort,
+        )
+
+        # .. now, we can assign host and port to the response ..
+        out.scheduler_host = host
+        out.scheduler_port = port
+
+        # Extract API credentials
+        cm = ServerCryptoManager.from_secret_key(secret_key)
+        scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
+        scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
+
+        out.api_client.from_server_to_scheduler.username = scheduler_api_client_for_server_username
+        out.api_client.from_server_to_scheduler.password = scheduler_api_client_for_server_password
+
+        # This can be overridden through environment variables
+        env_keys = ['Zato_Server_To_Scheduler_Use_TLS', 'ZATO_SERVER_SCHEDULER_USE_TLS']
+        for key in env_keys:
+            if value := os.environ.get(key):
+                use_tls = as_bool(value)
+                break
+        else:
+            if use_tls is NotGiven:
+                use_tls = True
+
+        out.scheduler_use_tls = use_tls # type: ignore
+
+        # .. finally, return the response to our caller.
+        return out
+
+# ################################################################################################################################
+
+    def execute(
+        self,
+        args:'any_',
+        default_http_port:'any_'=None,
+        show_output:'bool'=True,
+        return_server_id:'bool'=False
+    ) -> 'int | None':
 
         # stdlib
         import os
@@ -818,24 +897,24 @@ class Create(ZatoCommand):
             if odb_engine.startswith('postgresql'):
                 odb_engine = 'postgresql+pg8000'
 
-            # This can be overridden through an environment variable
-            scheduler_use_tls = os.environ.get('ZATO_SERVER_SCHEDULER_USE_TLS', True)
-            scheduler_use_tls = as_bool(scheduler_use_tls)
-
             server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
             server_conf = open_w(server_conf_loc)
 
             # There will be multiple keys in future releases to allow for key rotation
             secret_key = args.secret_key or Fernet.generate_key()
-            cm = ServerCryptoManager.from_secret_key(secret_key)
 
-            scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
-            scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
+            try:
+                threads = int(args.threads)
+            except Exception:
+                threads = 1
 
-            # Substate the variables ..
+            # Build the scheduler's configuration
+            scheduler_config = self._get_scheduler_config(args, secret_key)
+
+            # Substitue the variables ..
             server_conf_data = server_conf_template.format(
                     port=getattr(args, 'http_port', None) or default_http_port,
-                    gunicorn_workers=1,
+                    gunicorn_workers=threads,
                     odb_db_name=args.odb_db_name or args.sqlite_path,
                     odb_engine=odb_engine,
                     odb_host=args.odb_host or '',
@@ -849,11 +928,11 @@ class Create(ZatoCommand):
                     events_fs_data_path=EventsDefault.fs_data_path,
                     events_sync_threshold=EventsDefault.sync_threshold,
                     events_sync_interval=EventsDefault.sync_interval,
-                    scheduler_host=self.get_arg('scheduler_host', SCHEDULER.DefaultHost),
-                    scheduler_port=self.get_arg('scheduler_port', SCHEDULER.DefaultPort),
-                    scheduler_use_tls=scheduler_use_tls,
-                    scheduler_api_client_for_server_username=scheduler_api_client_for_server_username,
-                    scheduler_api_client_for_server_password=scheduler_api_client_for_server_password,
+                    scheduler_host=scheduler_config.scheduler_host,
+                    scheduler_port=scheduler_config.scheduler_port,
+                    scheduler_use_tls=scheduler_config.scheduler_use_tls,
+                    scheduler_api_client_for_server_username=scheduler_config.api_client.from_server_to_scheduler.username,
+                    scheduler_api_client_for_server_password=scheduler_config.api_client.from_server_to_scheduler.password,
                 )
 
             # .. and special-case this one as it contains the {} characters
@@ -994,7 +1073,7 @@ You can now start it with the 'zato start {}' command.""".format(self.target_dir
         # This is optional - need only by quickstart.py and needs to be requested explicitly,
         # otherwise it would be construed as a non-0 return code from this process.
         if return_server_id:
-            return server.id
+            return server.id # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
