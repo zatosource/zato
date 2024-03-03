@@ -55,6 +55,7 @@ server_username={server_username}
 server_password={server_password}
 server_use_tls={server_use_tls}
 server_tls_verify=False
+server_prefer_odb_config={server_prefer_odb_config}
 
 [misc]
 initial_sleep_time={initial_sleep_time}
@@ -348,6 +349,14 @@ class Create(ZatoCommand):
         if isinstance(secret_key, (bytes, bytearray)):
             secret_key = secret_key.decode('utf8')
 
+        # If a server address was provided on input, it means that we prefer direct communication ..
+        if self.get_arg('server_address_for_scheduler'):
+            server_prefer_odb_config = False
+
+        # .. otherwise, we look up the server connection details in ODB.
+        else:
+            server_prefer_odb_config = True
+
         config:'strdict' = {
             'scheduler_api_client_for_server_auth_required': server_config.is_auth_from_server_required,
             'scheduler_api_client_for_server_username':  server_config.api_client.from_server_to_scheduler.username,
@@ -361,6 +370,7 @@ class Create(ZatoCommand):
             'server_use_tls': server_config.server_use_tls,
             'server_username': server_config.api_client.from_scheduler_to_server.username,
             'server_password': server_config.api_client.from_scheduler_to_server.password,
+            'server_prefer_odb_config': server_prefer_odb_config,
             'initial_sleep_time': initial_sleep_time,
             'scheduler_bind_host': scheduler_bind_host,
             'scheduler_bind_port': scheduler_bind_port,
@@ -374,7 +384,7 @@ class Create(ZatoCommand):
             'tls_ca_certs_location': ca_certs_location,
         }
 
-        # config.update(odb_config)
+        config.update(odb_config)
 
         logging_conf_contents = get_logging_conf_contents()
 
