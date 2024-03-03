@@ -561,7 +561,7 @@ class Scheduler:
         sleep(self.initial_sleep_time)
 
         # If we have ODB configuration, we will be initializing jobs in the ODB ..
-        if False: #self.odb:
+        if self.odb:
             self._init_jobs_by_odb()
 
         # .. otherwise, we are initializing jobs via API calls to a remote server.

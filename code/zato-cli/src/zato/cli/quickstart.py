@@ -344,8 +344,8 @@ class Create(ZatoCommand):
         out.kvdb_password = self.get_arg('kvdb_password')
         out.cluster_name = cluster_name
         out.scheduler_name = 'scheduler1'
-        out.scheduler_address_for_server = getattr(args, 'scheduler_address_for_server')
-        out.server_address_for_scheduler = getattr(args, 'server_address_for_scheduler')
+        out.scheduler_address_for_server = getattr(args, 'scheduler_address_for_server', '')
+        out.server_address_for_scheduler = getattr(args, 'server_address_for_scheduler', '')
 
         out['admin-invoke-password'] = admin_invoke_password
         out.admin_invoke_password = admin_invoke_password
@@ -561,7 +561,6 @@ class Create(ZatoCommand):
         #
         # 4) servers
         #
-
 
         # This is populated below in order for the scheduler to use it.
         first_server_path = ''
