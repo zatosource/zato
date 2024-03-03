@@ -54,8 +54,8 @@ server_host={server_host}
 server_port={server_port}
 server_username={server_username}
 server_password={server_password}
-server_use_tls=False
-server_tls_verify=True
+server_use_tls={server_use_tls}
+server_tls_verify=False
 
 [misc]
 initial_sleep_time={initial_sleep_time}
@@ -105,7 +105,7 @@ class ServerConfigForScheduler:
     server_host: 'str'
     server_port: 'int'
     server_path: 'str'
-    use_tls: 'bool'
+    server_use_tls: 'bool'
     is_auth_from_server_required: 'bool'
 
     class api_client:
@@ -260,32 +260,19 @@ class Create(ZatoCommand):
         # .. note that the username is always the same and we only set the password
         out.api_client.from_scheduler_to_server.password = server_api_client_for_scheduler_password
 
-        # Try to extract the scheduler's address from a single option
-        if scheduler_address := args.scheduler_address_for_server:
+        # Extract basic information about the scheduler the server will be invoking ..
+        server_use_tls, server_host, server_port = self._extract_address_data(
+            args,
+            'server_address_for_scheduler',
+            'server_host',
+            'server_port',
+            '127.0.0.1',
+            17010,
+        )
 
-            # Make sure we have a scheme ..
-            if not '://' in scheduler_address:
-                scheduler_address = 'https://' + scheduler_address
-
-            # .. parse out the individual components ..
-            scheduler_address = urlparse(scheduler_address)
-
-            # .. now we know if TLS should be used ..
-            use_tls = scheduler_address.scheme == 'https'
-
-            # .. extract the host and port ..
-            address = scheduler_address.netloc.split(':')
-            host = address[0]
-
-            if len(address) == 2:
-                port = address[1]
-            else:
-                port = SCHEDULER.DefaultPort
-
-        else:
-            # Extract the scheduler's address from individual pieces
-            host = self.get_arg('scheduler_host', SCHEDULER.DefaultHost)
-            port = self.get_arg('scheduler_port', SCHEDULER.DefaultPort)
+        out.server_use_tls = server_use_tls
+        out.server_host = server_host
+        out.server_port = server_port
 
         '''
         scheduler_api_client_for_server_auth_required = get_scheduler_api_client_for_server_auth_required(args)
@@ -465,6 +452,7 @@ class Create(ZatoCommand):
             'server_path': server_config.server_path,
             'server_host': server_config.server_host,
             'server_port': server_config.server_port,
+            'server_use_tls': server_config.server_use_tls,
             'server_username': server_config.api_client.from_scheduler_to_server.username,
             'server_password': server_config.api_client.from_scheduler_to_server.password,
             'initial_sleep_time': initial_sleep_time,

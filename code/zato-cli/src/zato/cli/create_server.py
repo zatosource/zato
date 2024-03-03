@@ -665,9 +665,9 @@ priv_key_location = './config/repo/config-pub.pem'
 
 @dataclass(init=False)
 class SchedulerConfigForServer:
-    host: 'str'
-    port: 'int'
-    use_tls: 'bool'
+    scheduler_host: 'str'
+    scheduler_port: 'int'
+    scheduler_use_tls: 'bool'
 
     class api_client:
 
@@ -765,8 +765,8 @@ class Create(ZatoCommand):
         )
 
         # .. now, we can assign host and port to the response ..
-        out.host = host
-        out.port = port
+        out.scheduler_host = host
+        out.scheduler_port = port
 
         # Extract API credentials
         cm = ServerCryptoManager.from_secret_key(secret_key)
@@ -786,7 +786,7 @@ class Create(ZatoCommand):
             if use_tls is NotGiven:
                 use_tls = True
 
-        out.use_tls = use_tls # type: ignore
+        out.scheduler_use_tls = use_tls # type: ignore
 
         # .. finally, return the response to our caller.
         return out
@@ -928,9 +928,9 @@ class Create(ZatoCommand):
                     events_fs_data_path=EventsDefault.fs_data_path,
                     events_sync_threshold=EventsDefault.sync_threshold,
                     events_sync_interval=EventsDefault.sync_interval,
-                    scheduler_host=scheduler_config.host,
-                    scheduler_port=scheduler_config.port,
-                    scheduler_use_tls=scheduler_config.use_tls,
+                    scheduler_host=scheduler_config.scheduler_host,
+                    scheduler_port=scheduler_config.scheduler_port,
+                    scheduler_use_tls=scheduler_config.scheduler_use_tls,
                     scheduler_api_client_for_server_username=scheduler_config.api_client.from_server_to_scheduler.username,
                     scheduler_api_client_for_server_password=scheduler_config.api_client.from_server_to_scheduler.password,
                 )
