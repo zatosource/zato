@@ -321,37 +321,38 @@ class Create(ZatoCommand):
     opts += deepcopy(common_scheduler_server_address_opts)
     opts += deepcopy(common_scheduler_server_api_client_opts)
 
-    def _bunch_from_args(self, args:'any_', cluster_name:'str'='') -> 'Bunch':
+    def _bunch_from_args(self, args:'any_', admin_invoke_password:'str', cluster_name:'str'='') -> 'Bunch':
 
         # Bunch
         from bunch import Bunch
 
-        bunch = Bunch()
-        bunch.path = args.path
-        bunch.verbose = args.verbose
-        bunch.store_log = args.store_log
-        bunch.store_config = args.store_config
-        bunch.odb_type = args.odb_type
-        bunch.odb_host = args.odb_host
-        bunch.odb_port = args.odb_port
-        bunch.odb_user = args.odb_user
-        bunch.odb_db_name = args.odb_db_name
-        bunch.kvdb_host = self.get_arg('kvdb_host')
-        bunch.kvdb_port = self.get_arg('kvdb_port')
-        bunch.sqlite_path = getattr(args, 'sqlite_path', None)
-        bunch.postgresql_schema = getattr(args, 'postgresql_schema', None)
-        bunch.odb_password = args.odb_password
-        bunch.kvdb_password = self.get_arg('kvdb_password')
-        bunch.cluster_name = cluster_name
-        bunch.scheduler_name = 'scheduler1'
-        bunch.scheduler_address_for_server = getattr(args, 'scheduler_address_for_server')
-        bunch.server_address_for_scheduler = getattr(args, 'server_address_for_scheduler')
-        bunch.server_api_client_for_scheduler_password = self.get_arg('server_api_client_for_scheduler_password')
+        out = Bunch()
+        out.path = args.path
+        out.verbose = args.verbose
+        out.store_log = args.store_log
+        out.store_config = args.store_config
+        out.odb_type = args.odb_type
+        out.odb_host = args.odb_host
+        out.odb_port = args.odb_port
+        out.odb_user = args.odb_user
+        out.odb_db_name = args.odb_db_name
+        out.kvdb_host = self.get_arg('kvdb_host')
+        out.kvdb_port = self.get_arg('kvdb_port')
+        out.sqlite_path = getattr(args, 'sqlite_path', None)
+        out.postgresql_schema = getattr(args, 'postgresql_schema', None)
+        out.odb_password = args.odb_password
+        out.kvdb_password = self.get_arg('kvdb_password')
+        out.cluster_name = cluster_name
+        out.scheduler_name = 'scheduler1'
+        out.scheduler_address_for_server = getattr(args, 'scheduler_address_for_server')
+        out.server_address_for_scheduler = getattr(args, 'server_address_for_scheduler')
 
-        # This is needed for the 'create cluster' command.
-        bunch.admin_invoke_password = bunch.server_api_client_for_scheduler_password
+        out['admin-invoke-password'] = admin_invoke_password
+        out.admin_invoke_password = admin_invoke_password
+        out.server_password = admin_invoke_password
+        out.server_api_client_for_scheduler_password = admin_invoke_password
 
-        return bunch
+        return out
 
 # ################################################################################################################################
 
@@ -424,6 +425,16 @@ class Create(ZatoCommand):
 
         random.seed()
 
+        # We handle both ..
+        admin_invoke_password = self.get_arg('admin_invoke_password')
+        server_api_client_for_scheduler_password = self.get_arg('server_api_client_for_scheduler_password')
+
+        # .. but we prefer the latter ..
+        admin_invoke_password = admin_invoke_password or server_api_client_for_scheduler_password
+
+        # .. and we build it ourselves if it is not given.
+        admin_invoke_password = admin_invoke_password or 'admin.invoke.' + uuid4().hex
+
         scheduler_api_client_for_server_auth_required = getattr(args, 'scheduler_api_client_for_server_auth_required', None)
         scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
         scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(
@@ -453,7 +464,6 @@ class Create(ZatoCommand):
         except Exception:
             threads_per_server = 1
 
-        admin_invoke_password = 'admin.invoke.' + uuid4().hex
         lb_host = '127.0.0.1'
         lb_port = 11223
         lb_agent_port = 20151
@@ -500,7 +510,7 @@ class Create(ZatoCommand):
             ca_path = os.path.join(args_path, 'ca')
             os.mkdir(ca_path)
 
-            ca_args = self._bunch_from_args(args, cluster_name)
+            ca_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
             ca_args.path = ca_path
 
             ca_create_ca.Create(ca_args).execute(ca_args, False)
@@ -537,11 +547,10 @@ class Create(ZatoCommand):
         #
         # 3) ODB initial data
         #
-        create_cluster_args = self._bunch_from_args(args, cluster_name)
+        create_cluster_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
         create_cluster_args.lb_host = lb_host
         create_cluster_args.lb_port = lb_port
         create_cluster_args.lb_agent_port = lb_agent_port
-        create_cluster_args['admin-invoke-password'] = create_cluster_args.admin_invoke_password or admin_invoke_password
         create_cluster_args.secret_key = secret_key
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False) # type: ignore
 
@@ -563,7 +572,7 @@ class Create(ZatoCommand):
                 server_path = os.path.join(args_path, server_names[name])
                 os.mkdir(server_path)
 
-                create_server_args = self._bunch_from_args(args, cluster_name)
+                create_server_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
                 create_server_args.server_name = server_names[name]
                 create_server_args.path = server_path
                 create_server_args.jwt_secret = jwt_secret
@@ -604,7 +613,7 @@ class Create(ZatoCommand):
             lb_path = os.path.join(args_path, 'load-balancer')
             os.mkdir(lb_path)
 
-            create_lb_args = self._bunch_from_args(args, cluster_name)
+            create_lb_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
             create_lb_args.path = lb_path
 
             if has_tls:
@@ -634,7 +643,7 @@ class Create(ZatoCommand):
             web_admin_path = os.path.join(args_path, 'web-admin')
             os.mkdir(web_admin_path)
 
-            create_web_admin_args = self._bunch_from_args(args, cluster_name)
+            create_web_admin_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
             create_web_admin_args.path = web_admin_path
             create_web_admin_args.admin_invoke_password = admin_invoke_password
 
@@ -674,7 +683,7 @@ class Create(ZatoCommand):
                     filter(Cluster.name==cluster_name).\
                     one()[0]
 
-            create_scheduler_args = self._bunch_from_args(args, cluster_name)
+            create_scheduler_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
             create_scheduler_args.path = scheduler_path
             create_scheduler_args.cluster_id = cluster_id
             create_scheduler_args.server_path = first_server_path
