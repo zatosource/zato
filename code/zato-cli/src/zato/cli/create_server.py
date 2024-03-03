@@ -698,8 +698,8 @@ class Create(ZatoCommand):
     opts.append({'name':'--secret-key', 'help':'Server\'s secret key (must be the same for all servers)'})
     opts.append({'name':'--jwt-secret', 'help':'Server\'s JWT secret (must be the same for all servers)'})
     opts.append({'name':'--http-port', 'help':'Server\'s HTTP port'})
-    opts.append({'name':'--scheduler-host', 'help':"Deprecated. Use --scheduler-address-for-server instead."})
-    opts.append({'name':'--scheduler-port', 'help':"Deprecated. Use --scheduler-address-for-server instead."})
+    opts.append({'name':'--scheduler-host', 'help':'Deprecated. Use --scheduler-address-for-server instead.'})
+    opts.append({'name':'--scheduler-port', 'help':'Deprecated. Use --scheduler-address-for-server instead.'})
     opts.append({'name':'--threads', 'help':'How many main threads the server should use', 'default':1}) # type: ignore
 
     opts += deepcopy(common_scheduler_server_address_opts)
