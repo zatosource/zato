@@ -346,6 +346,10 @@ class Create(ZatoCommand):
         bunch.scheduler_name = 'scheduler1'
         bunch.scheduler_address_for_server = getattr(args, 'scheduler_address_for_server')
         bunch.server_address_for_scheduler = getattr(args, 'server_address_for_scheduler')
+        bunch.server_api_client_for_scheduler_password = self.get_arg('server_api_client_for_scheduler_password')
+
+        # This is needed for the 'create cluster' command.
+        bunch.admin_invoke_password = bunch.server_api_client_for_scheduler_password
 
         return bunch
 
@@ -537,7 +541,7 @@ class Create(ZatoCommand):
         create_cluster_args.lb_host = lb_host
         create_cluster_args.lb_port = lb_port
         create_cluster_args.lb_agent_port = lb_agent_port
-        create_cluster_args['admin-invoke-password'] = admin_invoke_password
+        create_cluster_args['admin-invoke-password'] = create_cluster_args.admin_invoke_password or admin_invoke_password
         create_cluster_args.secret_key = secret_key
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False) # type: ignore
 
