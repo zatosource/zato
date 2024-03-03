@@ -191,6 +191,12 @@ class Create(ZatoCommand):
 
     def execute(self, args:'Namespace', show_output:'bool'=True, needs_created_flag:'bool'=False):
 
+        print()
+        print(222, args)
+        print()
+
+        qqq
+
         # Zato
         from zato.common.util.logging_ import get_logging_conf_contents
 

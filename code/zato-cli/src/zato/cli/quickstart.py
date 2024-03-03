@@ -11,7 +11,7 @@ import os
 from copy import deepcopy
 
 # Zato
-from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, ZatoCommand
+from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, ZatoCommand
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.platform_ import is_windows, is_non_windows
@@ -318,9 +318,7 @@ class Create(ZatoCommand):
     opts.append({'name':'--no-scheduler', 'help':'Create all the components but not a scheduler', 'action':'store_true'})
     opts.append({'name':'--scheduler-only', 'help':'Only create a scheduler, without other components', 'action':'store_true'})
 
-    opts.append({'name':'--scheduler-address-for-server', 'help':'Address of the scheduler for servers to invoke'})
-    opts.append({'name':'--server-address-for-scheduler', 'help':'Address of the server for a scheduler to invoke'})
-
+    opts += deepcopy(common_scheduler_server_address_opts)
     opts += deepcopy(common_scheduler_server_api_client_opts)
 
     def _bunch_from_args(self, args:'any_', cluster_name:'str'='') -> 'Bunch':
@@ -346,6 +344,8 @@ class Create(ZatoCommand):
         bunch.kvdb_password = self.get_arg('kvdb_password')
         bunch.cluster_name = cluster_name
         bunch.scheduler_name = 'scheduler1'
+        bunch.scheduler_address_for_server = getattr(args, 'scheduler_address_for_server')
+        bunch.server_address_for_scheduler = getattr(args, 'server_address_for_scheduler')
 
         return bunch
 

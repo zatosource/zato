@@ -8,9 +8,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from copy import deepcopy
+from dataclasses import dataclass
 
 # Zato
-from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, sql_conf_contents, ZatoCommand
+from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, \
+    sql_conf_contents, ZatoCommand
 from zato.common.api import CONTENT_TYPE, default_internal_modules, SCHEDULER, SSO as CommonSSO
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.simpleio_ import simple_io_conf_contents
@@ -661,6 +663,17 @@ priv_key_location = './config/repo/config-pub.pem'
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass(init=False)
+class SchedulerConfigForServer:
+    host: 'str'
+    port: 'int'
+    use_tls: 'bool'
+    api_username: 'str'
+    api_password: 'str'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Create(ZatoCommand):
     """ Creates a new Zato server
     """
@@ -677,10 +690,11 @@ class Create(ZatoCommand):
     opts.append({'name':'--secret-key', 'help':'Server\'s secret key (must be the same for all servers)'})
     opts.append({'name':'--jwt-secret', 'help':'Server\'s JWT secret (must be the same for all servers)'})
     opts.append({'name':'--http-port', 'help':'Server\'s HTTP port'})
-    opts.append({'name':'--scheduler-host', 'help':"Host to invoke the cluster's scheduler on"})
-    opts.append({'name':'--scheduler-port', 'help':"Port for invoking the cluster's scheduler"})
+    opts.append({'name':'--scheduler-host', 'help':"Deprecated. Use --scheduler-address-for-server instead."})
+    opts.append({'name':'--scheduler-port', 'help':"Deprecated. Use --scheduler-address-for-server instead."})
     opts.append({'name':'--threads', 'help':'How many main threads the server should use', 'default':1}) # type: ignore
 
+    opts += deepcopy(common_scheduler_server_address_opts)
     opts += deepcopy(common_scheduler_server_api_client_opts)
 
 # ################################################################################################################################
@@ -718,6 +732,70 @@ class Create(ZatoCommand):
             os.mkdir(d)
 
         self.dirs_prepared = True
+
+# ################################################################################################################################
+
+    def _get_scheduler_config(self, args:'any_', secret_key:'bytes') -> 'SchedulerConfigForServer':
+
+        # stdlib
+        import os
+        from urllib.parse import urlparse
+
+        # Our response to produce
+        out = SchedulerConfigForServer()
+
+        # Try to Extract the scheduler's address from a single option
+        if scheduler_address := args.scheduler_address_for_server:
+
+            # Make sure we have a scheme ..
+            if not '://' in scheduler_address:
+                scheduler_address = 'https://' + scheduler_address
+
+            # .. parse out the individual components ..
+            scheduler_address = urlparse(scheduler_address)
+
+            # .. now we know if TLS should be used ..
+            use_tls = scheduler_address.scheme == 'https'
+
+            # .. extract the host and port ..
+            address = scheduler_address.netloc.split(':')
+            host = address[0]
+
+            if len(address) == 2:
+                port = address[1]
+            else:
+                port = SCHEDULER.DefaultPort
+
+        else:
+            # Extract the scheduler's address from individual pieces
+            host = self.get_arg('scheduler_host', SCHEDULER.DefaultHost)
+            port = self.get_arg('scheduler_port', SCHEDULER.DefaultPort)
+
+        # .. now, we can assign host and port to the response ..
+        out.host = host
+        out.port = port
+
+        # Extract API credentials
+        cm = ServerCryptoManager.from_secret_key(secret_key)
+        scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
+        scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
+
+        out.api_username = scheduler_api_client_for_server_username
+        out.api_password = scheduler_api_client_for_server_password
+
+        # This can be overridden through environment variables
+        env_keys = ['Zato_Server_To_Scheduler_Use_TLS', 'ZATO_SERVER_SCHEDULER_USE_TLS']
+        for key in env_keys:
+            if value := os.environ.get(key):
+                use_tls = as_bool(value)
+                break
+        else:
+            use_tls = True
+
+        out.use_tls = use_tls
+
+        # .. finally, return the response to our caller.
+        return out
 
 # ################################################################################################################################
 
@@ -825,26 +903,21 @@ class Create(ZatoCommand):
             if odb_engine.startswith('postgresql'):
                 odb_engine = 'postgresql+pg8000'
 
-            # This can be overridden through an environment variable
-            scheduler_use_tls = os.environ.get('ZATO_SERVER_SCHEDULER_USE_TLS', True)
-            scheduler_use_tls = as_bool(scheduler_use_tls)
-
             server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
             server_conf = open_w(server_conf_loc)
 
             # There will be multiple keys in future releases to allow for key rotation
             secret_key = args.secret_key or Fernet.generate_key()
-            cm = ServerCryptoManager.from_secret_key(secret_key)
-
-            scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
-            scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
 
             try:
                 threads = int(args.threads)
             except Exception:
                 threads = 1
 
-            # Substate the variables ..
+            # Build the scheduler's configuration
+            scheduler_config = self._get_scheduler_config(args, secret_key)
+
+            # Substitue the variables ..
             server_conf_data = server_conf_template.format(
                     port=getattr(args, 'http_port', None) or default_http_port,
                     gunicorn_workers=threads,
@@ -861,11 +934,11 @@ class Create(ZatoCommand):
                     events_fs_data_path=EventsDefault.fs_data_path,
                     events_sync_threshold=EventsDefault.sync_threshold,
                     events_sync_interval=EventsDefault.sync_interval,
-                    scheduler_host=self.get_arg('scheduler_host', SCHEDULER.DefaultHost),
-                    scheduler_port=self.get_arg('scheduler_port', SCHEDULER.DefaultPort),
-                    scheduler_use_tls=scheduler_use_tls,
-                    scheduler_api_client_for_server_username=scheduler_api_client_for_server_username,
-                    scheduler_api_client_for_server_password=scheduler_api_client_for_server_password,
+                    scheduler_host=scheduler_config.host,
+                    scheduler_port=scheduler_config.port,
+                    scheduler_use_tls=scheduler_config.use_tls,
+                    scheduler_api_client_for_server_username=scheduler_config.api_username,
+                    scheduler_api_client_for_server_password=scheduler_config.api_password,
                 )
 
             # .. and special-case this one as it contains the {} characters
