@@ -11,6 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import sys
 from copy import deepcopy
+from dataclasses import dataclass
 
 # Bunch
 from bunch import Bunch
@@ -32,7 +33,7 @@ from zato.common.util.platform_ import is_linux
 
 if 0:
     from argparse import Namespace
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, strdict
     Namespace = Namespace
 
 # ################################################################################################################################
@@ -98,13 +99,33 @@ auth_required={scheduler_api_client_for_server_auth_required}
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass(init=False)
+class ServerConfigForScheduler:
+    host: 'str'
+    port: 'int'
+    use_tls: 'bool'
+    is_auth_from_server_required: 'bool'
+
+    class api_client:
+
+        class from_server_to_scheduler:
+            username: 'str'
+            password: 'str'
+
+        class from_scheduler_to_server:
+            username: 'str'
+            password: 'str'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Create(ZatoCommand):
     """ Creates a new scheduler instance.
     """
     needs_empty_dir = True
 
     # Redis options are no longer used by they are kept here for pre-3.2 backward compatibility
-    opts = deepcopy(common_odb_opts)
+    opts:'any_' = deepcopy(common_odb_opts)
 
     opts.append({'name':'--pub-key-path', 'help':'Path to scheduler\'s public key in PEM'})
     opts.append({'name':'--priv-key-path', 'help':'Path to scheduler\'s private key in PEM'})
@@ -115,8 +136,10 @@ class Create(ZatoCommand):
     opts.append({'name':'--secret-key', 'help':'Scheduler\'s secret crypto key'})
 
     opts.append({'name':'--server-path', 'help':'Local path to a Zato server'})
-    opts.append({'name':'--server-host', 'help':'Remote host of a Zato server'})
-    opts.append({'name':'--server-port', 'help':'Remote TCP port of a Zato server'})
+
+    opts.append({'name':'--server-host', 'help':'Deprecated. Use --server-address-for-scheduler instead.'})
+    opts.append({'name':'--server-port', 'help':'Deprecated. Use --server-address-for-scheduler instead.'})
+
     opts.append({'name':'--server-username', 'help':'An alias to --server-api-client-for-scheduler-username'})
     opts.append({'name':'--server-password', 'help':'An alias to --server-api-client-for-scheduler-password'})
 
@@ -189,6 +212,104 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
+    def _get_server_config(self, args:'any_', secret_key:'bytes', odb_config:'strdict') -> 'ServerConfigForScheduler':
+
+        # stdlib
+        import os
+        from urllib.parse import urlparse
+
+        # Our response to produce
+        out = ServerConfigForScheduler()
+
+        '''
+        scheduler_api_client_for_server_auth_required = get_scheduler_api_client_for_server_auth_required(args)
+        scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
+        scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
+
+        server_path = self.get_arg('server_path') or ''
+        server_host = self.get_arg('server_host', '127.0.0.1')
+        server_port = self.get_arg('server_port', 17010)
+
+        server_username = self.get_arg('server_username', '')
+        server_password = self.get_arg('server_password', '')
+
+        # We enter this branch if we have credentials given on input ..
+        if server_username or server_password:
+            if server_username:
+                if not server_password:
+                    self.logger.warn('Server password is required if server username is provided')
+                    sys.exit(self.SYS_ERROR.INVALID_INPUT)
+
+            if server_password:
+                if not server_username:
+                    self.logger.warn('Server username is required if server password is provided')
+                    sys.exit(self.SYS_ERROR.INVALID_INPUT)
+
+        # .. we enter this branch if server credentials needed to be looked up in the ODB.
+        else:
+            server_username, server_password = self._get_server_admin_invoke_credentials(cm, odb_config)
+
+        # .. encrypt the password before making use of it ..
+        server_password = cm.encrypt(server_password, needs_str=True)
+        '''
+
+        '''
+        # Try to Extract the scheduler's address from a single option
+        if scheduler_address := args.scheduler_address_for_server:
+
+            # Make sure we have a scheme ..
+            if not '://' in scheduler_address:
+                scheduler_address = 'https://' + scheduler_address
+
+            # .. parse out the individual components ..
+            scheduler_address = urlparse(scheduler_address)
+
+            # .. now we know if TLS should be used ..
+            use_tls = scheduler_address.scheme == 'https'
+
+            # .. extract the host and port ..
+            address = scheduler_address.netloc.split(':')
+            host = address[0]
+
+            if len(address) == 2:
+                port = address[1]
+            else:
+                port = SCHEDULER.DefaultPort
+
+        else:
+            # Extract the scheduler's address from individual pieces
+            host = self.get_arg('scheduler_host', SCHEDULER.DefaultHost)
+            port = self.get_arg('scheduler_port', SCHEDULER.DefaultPort)
+
+        # .. now, we can assign host and port to the response ..
+        out.host = host
+        out.port = port
+
+        # Extract API credentials
+        cm = ServerCryptoManager.from_secret_key(secret_key)
+        scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
+        scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
+
+        out.api_username = scheduler_api_client_for_server_username
+        out.api_password = scheduler_api_client_for_server_password
+
+        # This can be overridden through environment variables
+        env_keys = ['Zato_Server_To_Scheduler_Use_TLS', 'ZATO_SERVER_SCHEDULER_USE_TLS']
+        for key in env_keys:
+            if value := os.environ.get(key):
+                use_tls = as_bool(value)
+                break
+        else:
+            use_tls = True
+
+        out.use_tls = use_tls
+        '''
+
+        # .. finally, return the response to our caller.
+        return out
+
+# ################################################################################################################################
+
     def execute(self, args:'Namespace', show_output:'bool'=True, needs_created_flag:'bool'=False):
 
         print()
@@ -235,7 +356,7 @@ class Create(ZatoCommand):
         odb_password = cm.encrypt(odb_password, needs_str=True)
 
         # Collect ODB configuration in one place as it will be reusable further below.
-        odb_config = {
+        odb_config:'strdict' = {
             'odb_engine': odb_engine,
             'odb_password': odb_password,
             'odb_db_name': args.odb_db_name or args.sqlite_path,
@@ -244,43 +365,15 @@ class Create(ZatoCommand):
             'odb_username': args.odb_user or '',
         }
 
-        scheduler_api_client_for_server_auth_required = get_scheduler_api_client_for_server_auth_required(args)
-        scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
-        scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
-
-        zato_well_known_data = well_known_data.encode('utf8')
-        zato_well_known_data = cm.encrypt(zato_well_known_data, needs_str=True)
-
-        server_path = self.get_arg('server_path') or ''
-        server_host = self.get_arg('server_host', '127.0.0.1')
-        server_port = self.get_arg('server_port', 17010)
-
-        server_username = self.get_arg('server_username', '')
-        server_password = self.get_arg('server_password', '')
-
-        # We enter this branch if we have credentials given on input ..
-        if server_username or server_password:
-            if server_username:
-                if not server_password:
-                    self.logger.warn('Server password is required if server username is provided')
-                    sys.exit(self.SYS_ERROR.INVALID_INPUT)
-
-            if server_password:
-                if not server_username:
-                    self.logger.warn('Server username is required if server password is provided')
-                    sys.exit(self.SYS_ERROR.INVALID_INPUT)
-
-        # .. we enter this branch if server credentials needed to be looked up in the ODB.
-        else:
-            server_username, server_password = self._get_server_admin_invoke_credentials(cm, odb_config)
-
-        # .. encrypt the password before making use of it ..
-        server_password = cm.encrypt(server_password, needs_str=True)
+        server_config = self._get_server_config(args, cm, odb_config)
 
         initial_sleep_time = self.get_arg('initial_sleep_time', SCHEDULER.InitialSleepTime)
 
         scheduler_bind_host = self.get_arg('bind_host', SCHEDULER.DefaultBindHost)
         scheduler_bind_port = self.get_arg('bind_port', SCHEDULER.DefaultBindPort)
+
+        zato_well_known_data = well_known_data.encode('utf8')
+        zato_well_known_data = cm.encrypt(zato_well_known_data, needs_str=True)
 
         if is_linux:
             tls_version = SCHEDULER.TLS_Version_Default_Linux
@@ -302,9 +395,9 @@ class Create(ZatoCommand):
         if isinstance(secret_key, (bytes, bytearray)):
             secret_key = secret_key.decode('utf8')
 
-        config = {
-            'scheduler_api_client_for_server_auth_required': scheduler_api_client_for_server_auth_required,
-            'scheduler_api_client_for_server_username': scheduler_api_client_for_server_username,
+        config:'strdict' = {
+            'scheduler_api_client_for_server_auth_required': server_config.is_auth_from_server_required,
+            'scheduler_api_client_for_server_username':  scheduler_api_client_for_server_username,
             'scheduler_api_client_for_server_password': scheduler_api_client_for_server_password,
             'cluster_id': cluster_id,
             'secret_key1': secret_key,
