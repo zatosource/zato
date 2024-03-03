@@ -384,7 +384,7 @@ class Create(ZatoCommand):
             'tls_ca_certs_location': ca_certs_location,
         }
 
-        # config.update(odb_config)
+        config.update(odb_config)
 
         logging_conf_contents = get_logging_conf_contents()
 
