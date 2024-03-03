@@ -16,7 +16,8 @@ from dataclasses import dataclass
 from bunch import Bunch
 
 # Zato
-from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, sql_conf_contents, ZatoCommand
+from zato.cli import common_odb_opts, common_scheduler_server_address_opts, common_scheduler_server_api_client_opts, \
+     sql_conf_contents, ZatoCommand
 from zato.common.api import SCHEDULER
 from zato.common.const import ServiceConst
 from zato.common.crypto.api import SchedulerCryptoManager
@@ -142,8 +143,8 @@ class Create(ZatoCommand):
     opts.append({'name':'--server-host', 'help':'Deprecated. Use --server-address-for-scheduler instead.'})
     opts.append({'name':'--server-port', 'help':'Deprecated. Use --server-address-for-scheduler instead.'})
 
-    opts.append({'name':'--server-username', 'help':'An alias to --server-api-client-for-scheduler-username'})
-    opts.append({'name':'--server-password', 'help':'An alias to --server-api-client-for-scheduler-password'})
+    opts.append({'name':'--server-username', 'help':'Deprecated. Use --server-api-client-for-scheduler-username'})
+    opts.append({'name':'--server-password', 'help':'Deprecated. Use --server-api-client-for-scheduler-password'})
 
     opts.append({'name':'--bind-host', 'help':'Local address to start the scheduler on'})
     opts.append({'name':'--bind-port', 'help':'Local TCP port to start the scheduler on'})
@@ -161,6 +162,7 @@ class Create(ZatoCommand):
 
     opts.append({'name':'--initial-sleep-time', 'help':'How many seconds to sleep initially when the scheduler starts'})
 
+    opts += deepcopy(common_scheduler_server_address_opts)
     opts += deepcopy(common_scheduler_server_api_client_opts)
 
 # ################################################################################################################################
