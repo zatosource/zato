@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from json import dumps, loads
 
 # Zato
+from zato.common.api import NotGiven
 from zato.common.util.open_ import open_r, open_w
 
 # ################################################################################################################################
@@ -352,6 +353,54 @@ class ZatoCommand:
             return self.args.get(name) or default
         else:
             return getattr(self.args, name, default)
+
+# ################################################################################################################################
+
+    def _extract_address_data(
+        self,
+        args:'any_',
+        main_arg_name:'str',
+        host_arg_name:'str',
+        port_arg_name:'str',
+        default_host:'str',
+        default_port:'int'
+    ) -> 'any_':
+
+        # stdlib
+        from urllib.parse import urlparse
+
+        # Local variables
+        use_tls = NotGiven
+
+        # Try to extract the scheduler's address from a single option
+        if address := getattr(args, main_arg_name, None):
+
+            # Make sure we have a scheme ..
+            if not '://' in address:
+                address = 'https://' + address
+
+            # .. parse out the individual components ..
+            address = urlparse(address)
+
+            # .. now we know if TLS should be used ..
+            use_tls = address.scheme == 'https'
+
+            # .. extract the host and port ..
+            address = address.netloc.split(':')
+            host = address[0]
+
+            if len(address) == 2:
+                port = address[1]
+                port = int(port)
+            else:
+                port = default_port
+
+        else:
+            # Extract the scheduler's address from individual pieces
+            host = self.get_arg(host_arg_name, default_host)
+            port = self.get_arg(port_arg_name, default_port)
+
+        return use_tls, host, port
 
 # ################################################################################################################################
 
