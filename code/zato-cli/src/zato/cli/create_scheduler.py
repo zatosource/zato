@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import sys
 from copy import deepcopy
 from dataclasses import dataclass
 
@@ -216,17 +215,8 @@ class Create(ZatoCommand):
 
     def _get_server_config(self, args:'any_', cm:'SchedulerCryptoManager', odb_config:'strdict') -> 'ServerConfigForScheduler':
 
-        # stdlib
-        import os
-        from urllib.parse import urlparse
-
         # Our response to produce
         out = ServerConfigForScheduler()
-
-        print()
-        for key, value in sorted(args.items()):
-            print(111, key, value)
-        print()
 
         server_path = self.get_arg('server_path') or ''
         server_host = self.get_arg('server_host', '127.0.0.1')
@@ -273,90 +263,6 @@ class Create(ZatoCommand):
         out.server_use_tls = server_use_tls
         out.server_host = server_host
         out.server_port = server_port
-
-        '''
-        scheduler_api_client_for_server_auth_required = get_scheduler_api_client_for_server_auth_required(args)
-        scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
-        scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
-
-        server_path = self.get_arg('server_path') or ''
-        server_host = self.get_arg('server_host', '127.0.0.1')
-        server_port = self.get_arg('server_port', 17010)
-
-        server_username = self.get_arg('server_username', '')
-        server_password = self.get_arg('server_password', '')
-
-        # We enter this branch if we have credentials given on input ..
-        if server_username or server_password:
-            if server_username:
-                if not server_password:
-                    self.logger.warn('Server password is required if server username is provided')
-                    sys.exit(self.SYS_ERROR.INVALID_INPUT)
-
-            if server_password:
-                if not server_username:
-                    self.logger.warn('Server username is required if server password is provided')
-                    sys.exit(self.SYS_ERROR.INVALID_INPUT)
-
-        # .. we enter this branch if server credentials needed to be looked up in the ODB.
-        else:
-            server_username, server_password = self._get_server_admin_invoke_credentials(cm, odb_config)
-
-        # .. encrypt the password before making use of it ..
-        server_password = cm.encrypt(server_password, needs_str=True)
-        '''
-
-        '''
-        # Try to Extract the scheduler's address from a single option
-        if scheduler_address := args.scheduler_address_for_server:
-
-            # Make sure we have a scheme ..
-            if not '://' in scheduler_address:
-                scheduler_address = 'https://' + scheduler_address
-
-            # .. parse out the individual components ..
-            scheduler_address = urlparse(scheduler_address)
-
-            # .. now we know if TLS should be used ..
-            use_tls = scheduler_address.scheme == 'https'
-
-            # .. extract the host and port ..
-            address = scheduler_address.netloc.split(':')
-            host = address[0]
-
-            if len(address) == 2:
-                port = address[1]
-            else:
-                port = SCHEDULER.DefaultPort
-
-        else:
-            # Extract the scheduler's address from individual pieces
-            host = self.get_arg('scheduler_host', SCHEDULER.DefaultHost)
-            port = self.get_arg('scheduler_port', SCHEDULER.DefaultPort)
-
-        # .. now, we can assign host and port to the response ..
-        out.host = host
-        out.port = port
-
-        # Extract API credentials
-        cm = ServerCryptoManager.from_secret_key(secret_key)
-        scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
-        scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
-
-        out.api_username = scheduler_api_client_for_server_username
-        out.api_password = scheduler_api_client_for_server_password
-
-        # This can be overridden through environment variables
-        env_keys = ['Zato_Server_To_Scheduler_Use_TLS', 'ZATO_SERVER_SCHEDULER_USE_TLS']
-        for key in env_keys:
-            if value := os.environ.get(key):
-                use_tls = as_bool(value)
-                break
-        else:
-            use_tls = True
-
-        out.use_tls = use_tls
-        '''
 
         # .. finally, return the response to our caller.
         return out
@@ -468,7 +374,7 @@ class Create(ZatoCommand):
             'tls_ca_certs_location': ca_certs_location,
         }
 
-        config.update(odb_config)
+        # config.update(odb_config)
 
         logging_conf_contents = get_logging_conf_contents()
 
