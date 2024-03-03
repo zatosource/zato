@@ -13,7 +13,7 @@ from dataclasses import dataclass
 # Zato
 from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, \
     sql_conf_contents, ZatoCommand
-from zato.common.api import CONTENT_TYPE, default_internal_modules, SCHEDULER, SSO as CommonSSO
+from zato.common.api import CONTENT_TYPE, default_internal_modules, NotGiven, SCHEDULER, SSO as CommonSSO
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.simpleio_ import simple_io_conf_contents
 from zato.common.util import as_bool
@@ -113,7 +113,7 @@ use_async_driver=True
 [scheduler]
 scheduler_host={{scheduler_host}}
 scheduler_port={{scheduler_port}}
-scheduler_use_tls=False
+scheduler_use_tls={{scheduler_use_tls}}
 scheduler_api_username={{scheduler_api_client_for_server_username}}
 scheduler_api_password={{scheduler_api_client_for_server_password}}
 
@@ -668,8 +668,16 @@ class SchedulerConfigForServer:
     host: 'str'
     port: 'int'
     use_tls: 'bool'
-    api_username: 'str'
-    api_password: 'str'
+
+    class api_client:
+
+        class from_server_to_scheduler:
+            username: 'str'
+            password: 'str'
+
+        class from_scheduler_to_server:
+            username: 'str'
+            password: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -741,6 +749,9 @@ class Create(ZatoCommand):
         import os
         from urllib.parse import urlparse
 
+        # Local variables
+        use_tls = NotGiven
+
         # Our response to produce
         out = SchedulerConfigForServer()
 
@@ -763,6 +774,7 @@ class Create(ZatoCommand):
 
             if len(address) == 2:
                 port = address[1]
+                port = int(port)
             else:
                 port = SCHEDULER.DefaultPort
 
@@ -780,8 +792,8 @@ class Create(ZatoCommand):
         scheduler_api_client_for_server_username = get_scheduler_api_client_for_server_username(args)
         scheduler_api_client_for_server_password = get_scheduler_api_client_for_server_password(args, cm)
 
-        out.api_username = scheduler_api_client_for_server_username
-        out.api_password = scheduler_api_client_for_server_password
+        out.api_client.from_server_to_scheduler.username = scheduler_api_client_for_server_username
+        out.api_client.from_server_to_scheduler.password = scheduler_api_client_for_server_password
 
         # This can be overridden through environment variables
         env_keys = ['Zato_Server_To_Scheduler_Use_TLS', 'ZATO_SERVER_SCHEDULER_USE_TLS']
@@ -790,9 +802,10 @@ class Create(ZatoCommand):
                 use_tls = as_bool(value)
                 break
         else:
-            use_tls = True
+            if use_tls is NotGiven:
+                use_tls = True
 
-        out.use_tls = use_tls
+        out.use_tls = use_tls # type: ignore
 
         # .. finally, return the response to our caller.
         return out
@@ -937,8 +950,8 @@ class Create(ZatoCommand):
                     scheduler_host=scheduler_config.host,
                     scheduler_port=scheduler_config.port,
                     scheduler_use_tls=scheduler_config.use_tls,
-                    scheduler_api_client_for_server_username=scheduler_config.api_username,
-                    scheduler_api_client_for_server_password=scheduler_config.api_password,
+                    scheduler_api_client_for_server_username=scheduler_config.api_client.from_server_to_scheduler.username,
+                    scheduler_api_client_for_server_password=scheduler_config.api_client.from_server_to_scheduler.password,
                 )
 
             # .. and special-case this one as it contains the {} characters
