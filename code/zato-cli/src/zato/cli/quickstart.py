@@ -139,11 +139,11 @@ $ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py {check_tcp_ports_suffix}
 # .. load-balancer ..
 {start_lb}
 
-# .. servers ..
-{start_servers}
-
 # .. scheduler ..
 {start_scheduler}
+
+# .. servers ..
+{start_servers}
 """
 
 # ################################################################################################################################
