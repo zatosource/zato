@@ -161,7 +161,7 @@ class BrokerClient:
             except Exception as e:
 
                 # .. log what happened ..
-                logger.warn('Scheduler invocation error -> %s', e)
+                logger.warn('Scheduler invocation error -> %s (%s)', e, self.scheduler_address)
 
             # .. keep retrying or return the response ..
             finally:
