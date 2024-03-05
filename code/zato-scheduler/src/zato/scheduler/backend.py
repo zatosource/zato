@@ -569,7 +569,7 @@ class Scheduler:
 
         # .. otherwise, we are initializing jobs via API calls to a remote server.
         else:
-            self._init_jobs_by_api()
+            spawn_greenlet(self._init_jobs_by_api)
 
 # ################################################################################################################################
 

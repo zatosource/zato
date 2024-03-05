@@ -357,7 +357,7 @@ class Create(ZatoCommand):
 
         # .. otherwise, we look up the server connection details in ODB.
         else:
-            server_prefer_odb_config = True
+            server_prefer_odb_config = False # Set it to True for pre-3.2 backward compatibility
 
         config:'strdict' = {
             'scheduler_api_client_for_server_auth_required': server_config.is_auth_from_server_required,
