@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,6 +18,7 @@ from zato.server.base.worker.common import WorkerImpl
 
 if 0:
     from bunch import Bunch
+    from zato.common.typing_ import strdict
     from zato.server.base.worker import WorkerStore
     from zato.server.connection.connector import ConnectorStore
 
@@ -42,6 +43,18 @@ class WebSocket(WorkerImpl):
         with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=lock_timeout):
             func = getattr(self.web_socket_api, action)
             func(name, msg, self.on_message_invoke_service, self.request_dispatcher.url_data.authenticate_web_socket)
+
+# ################################################################################################################################
+
+    def get_web_socket_channel_id_by_name(
+        self: 'WorkerStore', # type: ignore
+        channel_name: 'str'
+    ) -> 'int':
+
+        item:'strdict' = self.worker_config.channel_web_socket.get(channel_name)
+        item_config = item['config']
+        channel_id:'int' = item_config['id']
+        return channel_id
 
 # ################################################################################################################################
 
