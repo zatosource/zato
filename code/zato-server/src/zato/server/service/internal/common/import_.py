@@ -258,7 +258,7 @@ class ImportObjects(Service):
                 topic_id = existing.get_topic_id_by_name(topic_name)
 
                 # .. build basic information about the subscription ..
-                new_item = {
+                new_item:'strdict' = {
                     'topic_id': topic_id,
                     'endpoint_id': endpoint_id,
                     'delivery_method': item['delivery_method'],
