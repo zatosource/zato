@@ -130,6 +130,10 @@ class UpdateEnmasse(Service):
         # .. extract the path to the enmasse file ..
         enmasse_file_path = raw_request['full_path']
 
+        # .. ignore files with environment variables ..
+        if enmasse_file_path.endswith('env.ini'):
+            return
+
         # .. and execute it now.
         _ = self.commands.run_enmasse_async(enmasse_file_path)
 
