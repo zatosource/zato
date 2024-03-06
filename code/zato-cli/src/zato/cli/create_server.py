@@ -784,7 +784,7 @@ class Create(ZatoCommand):
                 break
         else:
             if use_tls is NotGiven:
-                use_tls = True
+                use_tls = False
 
         out.scheduler_use_tls = use_tls # type: ignore
 
