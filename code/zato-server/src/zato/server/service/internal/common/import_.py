@@ -450,8 +450,6 @@ class ImportObjects(Service):
         # Go through each item that we potentially need to create and see if there is a match
         for new_item in incoming:
 
-            self.logger.info('Processing new item: %r', new_item)
-
             # Turn WSX channel names into their IDs
             if ws_channel_name := new_item.get('ws_channel_name'):
                 ws_channel_id:'int' = self.server.worker_store.get_web_socket_channel_id_by_name(ws_channel_name)
