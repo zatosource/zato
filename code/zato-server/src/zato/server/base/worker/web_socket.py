@@ -18,7 +18,7 @@ from zato.server.base.worker.common import WorkerImpl
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import strdict
+    from zato.common.typing_ import any_, strdict
     from zato.server.base.worker import WorkerStore
     from zato.server.connection.connector import ConnectorStore
 
@@ -41,6 +41,22 @@ class WebSocket(WorkerImpl):
         start  # type: bool
     ) -> 'None':
         with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=lock_timeout):
+
+            # Get the name to delete, which may be actually an old name in case it is a rename ..
+            config_name:'str' = msg.get('name', '') or msg.get('old_name', '')
+
+            # .. delete the previous configuration, if any ..
+            _:'any_' = self.worker_config.channel_web_socket.pop(config_name, None)
+
+            # .. create the new one ..
+            config = {
+                'config': msg
+            }
+
+            # .. and assign it for later use ..
+            self.worker_config.channel_web_socket[config_name] = config
+
+            # .. now, proceed to the the low-level connector functionality.
             func = getattr(self.web_socket_api, action)
             func(name, msg, self.on_message_invoke_service, self.request_dispatcher.url_data.authenticate_web_socket)
 
