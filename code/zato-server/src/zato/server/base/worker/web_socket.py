@@ -67,7 +67,7 @@ class WebSocket(WorkerImpl):
         channel_name: 'str'
     ) -> 'int':
 
-        wait_for_dict_key(self.worker_config.channel_web_socket, channel_name, timeout=5) # type: ignore
+        wait_for_dict_key(self.worker_config.channel_web_socket, channel_name, timeout=10) # type: ignore
         item:'strdict' = self.worker_config.channel_web_socket.get(channel_name)
         item_config = item['config']
         channel_id:'int' = item_config['id']
