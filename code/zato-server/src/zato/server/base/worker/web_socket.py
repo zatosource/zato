@@ -51,12 +51,9 @@ class WebSocket(WorkerImpl):
         channel_name: 'str'
     ) -> 'int':
 
-        if item := self.worker_config.channel_web_socket.get(channel_name): # type: ignore
-            item_config = item['config'] # type: ignore
-            channel_id:'int' = item_config['id']
-        else:
-            # If we were not able to find it above, it means that it must be the first one created by enmasse
-            channel_id = 1
+        item:'strdict' = self.worker_config.channel_web_socket.get(channel_name)
+        item_config = item['config']
+        channel_id:'int' = item_config['id']
         return channel_id
 
 # ################################################################################################################################
