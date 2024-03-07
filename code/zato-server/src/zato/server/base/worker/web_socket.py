@@ -51,6 +51,9 @@ class WebSocket(WorkerImpl):
         channel_name: 'str'
     ) -> 'int':
 
+        self.logger.info('Channel name: %r', channel_name)
+        self.logger.info('Current WSX: %r', self.worker_config.channel_web_socket)
+
         item:'strdict' = self.worker_config.channel_web_socket.get(channel_name)
         item_config = item['config']
         channel_id:'int' = item_config['id']
