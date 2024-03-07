@@ -83,7 +83,7 @@ class EndpointAPI:
 # ################################################################################################################################
 
     def get_id_by_ws_channel_id(self, ws_channel_id:'int') -> 'intnone':
-        wait_for_dict_key(self.ws_channel_id_to_endpoint_id, ws_channel_id, timeout=10)
+        wait_for_dict_key(self.ws_channel_id_to_endpoint_id, ws_channel_id, timeout=3)
         endpoint_id = self.ws_channel_id_to_endpoint_id.get(ws_channel_id)
         return endpoint_id
 
