@@ -365,11 +365,6 @@ class WebSocketsPubSubGateway(Service):
 
         service = self.request.input.service
         request = self.request.input.request
-
-        self.logger.info('WSX Pub/sub gateway service %r', service)
-        self.logger.info('WSX Pub/sub gateway request %r', request)
-        self.logger.info('WSX Pub/sub gateway wsgi_environ %r', self.wsgi_environ)
-
         self.response.payload = self.invoke(service, request, wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################
