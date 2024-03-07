@@ -74,7 +74,7 @@ class WebSocket(WorkerImpl):
         self.logger.info('Channel name: %r', channel_name)
         self.logger.info('Current WSX 01: %r', self.worker_config.channel_web_socket)
 
-        wait_for_dict_key(self.worker_config.channel_web_socket, channel_name) # type: ignore
+        wait_for_dict_key(self.worker_config.channel_web_socket, channel_name, timeout=5) # type: ignore
 
         self.logger.info('Current WSX 02: %r', self.worker_config.channel_web_socket)
 
