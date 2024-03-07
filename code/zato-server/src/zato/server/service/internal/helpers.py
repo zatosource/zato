@@ -365,7 +365,6 @@ class WebSocketsPubSubGateway(Service):
 
         service = self.request.input.service
         request = self.request.input.request
-
         self.response.payload = self.invoke(service, request, wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################
