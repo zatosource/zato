@@ -795,7 +795,7 @@ def populate_services_from_apispec(client, logger): # type: ignore
 # The common prefix for a set of services is tested against the first element in this list using startswith().
 # If it matches, that prefix is replaced by the second element. The prefixes must match exactly if the first element
 # does not end in a period.
-SHORTNAME_BY_PREFIX = [
+SHORTNAME_BY_PREFIX:'anylist' = [
     ('zato.pubsub.', 'pubsub'),
     ('zato.definition.', 'def'),
     ('zato.email.', 'email'),
@@ -1295,6 +1295,8 @@ class DependencyScanner:
     def scan_item(self, item_type:'str', item:'Bunch', results:'Results') -> 'None':
         """ Scan the data of a single item for required dependencies, recording any that are missing in self.missing.
         """
+
+        missing_item:'any_'
 
         #
         # Preprocess item type
@@ -3034,7 +3036,7 @@ class InputParser:
 class Enmasse(ManageCommand):
     """ Manages server objects en masse.
     """
-    opts = [
+    opts:'dictlist' = [
         {'name':'--server-url', 'help':'URL of the server that enmasse should talk to, provided in host[:port] format. Defaults to server.conf\'s \'gunicorn_bind\''},  # noqa: E501
         {'name':'--export-local', 'help':'Export local file definitions into one file (can be used with --export)', 'action':'store_true'},
         {'name':'--export', 'help':'Export server objects to a file (can be used with --export-local)', 'action':'store_true'},
@@ -3059,7 +3061,7 @@ class Enmasse(ManageCommand):
         {'name':'--cols-width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH), 'action':'store_true'},
     ]
 
-    CODEC_BY_EXTENSION = {
+    CODEC_BY_EXTENSION:'strdict' = {
         'json': JsonCodec,
         'yaml': YamlCodec,
         'yml': YamlCodec,
