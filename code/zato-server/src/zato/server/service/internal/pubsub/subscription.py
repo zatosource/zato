@@ -788,7 +788,7 @@ class CreateWSXSubscription(AdminService):
 
         endpoint_id = self.pubsub.get_endpoint_id_by_ws_channel_id(ws_channel_id)
         if not endpoint_id:
-            self.logger.warning('There is no pub/sub endpoint for WSX channel ID `%s`', ws_channel_id)
+            self.logger.info('There is no pub/sub endpoint for WSX channel ID `%s`', ws_channel_id)
             environ['web_socket'].disconnect_client()
             raise Forbidden(self.cid)
 
