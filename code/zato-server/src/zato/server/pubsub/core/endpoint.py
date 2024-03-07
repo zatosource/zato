@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.api import PUBSUB
 from zato.common.typing_ import cast_
+from zato.common.util.api import wait_for_dict_key
 from zato.server.pubsub.model import Endpoint
 
 # ################################################################################################################################
@@ -82,6 +83,7 @@ class EndpointAPI:
 # ################################################################################################################################
 
     def get_id_by_ws_channel_id(self, ws_channel_id:'int') -> 'intnone':
+        wait_for_dict_key(self.ws_channel_id_to_endpoint_id, ws_channel_id, timeout=10)
         endpoint_id = self.ws_channel_id_to_endpoint_id.get(ws_channel_id)
         return endpoint_id
 
