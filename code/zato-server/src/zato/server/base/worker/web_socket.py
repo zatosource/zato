@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from bunch import bunchify
 
 # Zato
-from zato.common.util.api import start_connectors
+from zato.common.util.api import start_connectors, wait_for_dict_key
 from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
@@ -42,6 +42,8 @@ class WebSocket(WorkerImpl):
     ) -> 'None':
         with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=lock_timeout):
 
+            self.logger.info('Current WSX Create-Edit 01: %r -> %r', self.worker_config.channel_web_socket, msg)
+
             # Get the name to delete, which may be actually an old name in case it is a rename ..
             config_name:'str' = msg.get('name', '') or msg.get('old_name', '')
 
@@ -56,6 +58,8 @@ class WebSocket(WorkerImpl):
             # .. and assign it for later use ..
             self.worker_config.channel_web_socket[config_name] = config
 
+            self.logger.info('Current WSX Create-Edit 02: %r -> %r', self.worker_config.channel_web_socket, msg)
+
             # .. now, proceed to the the low-level connector functionality.
             func = getattr(self.web_socket_api, action)
             func(name, msg, self.on_message_invoke_service, self.request_dispatcher.url_data.authenticate_web_socket)
@@ -68,7 +72,11 @@ class WebSocket(WorkerImpl):
     ) -> 'int':
 
         self.logger.info('Channel name: %r', channel_name)
-        self.logger.info('Current WSX: %r', self.worker_config.channel_web_socket)
+        self.logger.info('Current WSX 01: %r', self.worker_config.channel_web_socket)
+
+        wait_for_dict_key(self.worker_config.channel_web_socket, channel_name) # type: ignore
+
+        self.logger.info('Current WSX 02: %r', self.worker_config.channel_web_socket)
 
         item:'strdict' = self.worker_config.channel_web_socket.get(channel_name)
         item_config = item['config']
@@ -90,6 +98,7 @@ class WebSocket(WorkerImpl):
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
+        self.logger.info('Processing CHANNEL_WEB_SOCKET_CREATE %s', msg)
         if self.server.zato_lock_manager.acquire(msg.config_cid, ttl=10, block=False):
             start_connectors(self, 'zato.channel.web-socket.start', msg)
 
@@ -99,6 +108,7 @@ class WebSocket(WorkerImpl):
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
+        self.logger.info('Processing CHANNEL_WEB_SOCKET_CREATE %s', msg)
         msg = bunchify(msg)
         self.web_socket_channel_create_edit(msg.old_name, msg, 'edit', 5, False)
 
