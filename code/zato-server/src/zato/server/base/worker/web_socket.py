@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from bunch import bunchify
 
 # Zato
-from zato.common.util.api import start_connectors
+from zato.common.util.api import start_connectors, wait_for_dict_key
 from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
@@ -50,6 +50,8 @@ class WebSocket(WorkerImpl):
         self: 'WorkerStore', # type: ignore
         channel_name: 'str'
     ) -> 'int':
+
+        wait_for_dict_key(self.worker_config.channel_web_socket, channel_name, timeout=10) # type: ignore
 
         item:'strdict' = self.worker_config.channel_web_socket.get(channel_name)
         item_config = item['config']
