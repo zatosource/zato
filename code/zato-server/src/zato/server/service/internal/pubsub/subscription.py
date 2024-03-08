@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from contextlib import closing
 from logging import getLogger
 
@@ -790,7 +791,10 @@ class CreateWSXSubscription(AdminService):
         if not endpoint_id:
             self.logger.info('There is no pub/sub endpoint for WSX channel ID `%s`', ws_channel_id)
             environ['web_socket'].disconnect_client()
-            raise Forbidden(self.cid)
+            if environ['ws_channel_config'].name in os.environ.get('Zato_WSX_Missing_Endpoints_To_Ignore', ''):
+                return
+            else:
+                raise Forbidden(self.cid)
 
         # Either an exact topic name or a list thereof is needed ..
         if not (topic_name or topic_name_list):
