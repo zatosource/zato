@@ -11,6 +11,7 @@ import logging
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from inspect import isclass
+from json import loads
 from traceback import format_exc
 from typing import Optional as optional
 
@@ -798,15 +799,23 @@ class Service:
                 # Check if there is a JSON Schema validator attached to the service and if so,
                 # validate input before proceeding any further.
                 if service._json_schema_validator and service._json_schema_validator.is_initialized:
-                    validation_result = service._json_schema_validator.validate(cid, raw_request)
+                    data = raw_request.decode('utf8')
+                    data = loads(data)
+                    validation_result = service._json_schema_validator.validate(cid, data)
                     if not validation_result:
                         error = validation_result.get_error()
 
                         error_msg = error.get_error_message()
                         error_msg_details = error.get_error_message(True)
 
-                        raise JSONSchemaValidationException(cid, CHANNEL.SERVICE, service.name,
-                            error.needs_err_details, error_msg, error_msg_details)
+                        raise JSONSchemaValidationException(
+                            cid,
+                            CHANNEL.SERVICE,
+                            service.name,
+                            error.needs_err_details,
+                            error_msg,
+                            error_msg_details
+                        )
 
                 # All hooks are optional so we check if they have not been replaced with None by ServiceStore.
 
