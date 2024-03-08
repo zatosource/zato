@@ -495,7 +495,7 @@ class RequestDispatcher:
                         status_code = _status_bad_request
                         needs_prefix = False if e.needs_err_details else True
                         response = JSONSchemaDictError(
-                            cid, e.needs_err_details, e.error_msg, needs_prefix=needs_prefix).serialize()
+                            cid, e.needs_err_details, e.error_msg, needs_prefix=needs_prefix).serialize(to_string=True)
 
                     # Rate limiting and whitelisting
                     elif isinstance(e, RateLimitingException):
