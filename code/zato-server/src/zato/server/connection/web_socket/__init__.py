@@ -81,8 +81,10 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger('zato_web_socket')
-logger_zato = getLogger('zato')
 logger_has_debug = logger.isEnabledFor(DEBUG)
+
+logger_zato = getLogger('zato')
+logger_zato_has_debug = logger_zato.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
@@ -1176,7 +1178,8 @@ class WebSocket(_WebSocket):
             if not hook:
                 log_msg = 'Ignoring pub/sub response, on_pubsub_response hook not implemented for `%s`, conn:`%s`, msg:`%s`'
                 logger.info(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
-                logger_zato.info(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
+                if logger_zato_has_debug:
+                    logger_zato.debug(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
             else:
                 request = self._get_hook_request()
                 request['msg'] = msg
