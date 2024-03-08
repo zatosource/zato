@@ -791,7 +791,7 @@ class CreateWSXSubscription(AdminService):
         if not endpoint_id:
             self.logger.info('There is no pub/sub endpoint for WSX channel ID `%s`', ws_channel_id)
             environ['web_socket'].disconnect_client()
-            if environ['ws_channel_config'].name in os.environ.get('Zato_WSX_Missing_Endpoints_To_Ignore', ''):
+            if environ['ws_channel_config'].name in (os.environ.get('Zato_WSX_Missing_Endpoints_To_Ignore') or ''):
                 return
             else:
                 raise Forbidden(self.cid)
