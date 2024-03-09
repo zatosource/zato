@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -161,7 +161,7 @@ class BrokerClient:
             except Exception as e:
 
                 # .. log what happened ..
-                logger.warn('Scheduler invocation error -> %s', e)
+                logger.warn('Scheduler invocation error -> %s (%s)', e, self.scheduler_address)
 
             # .. keep retrying or return the response ..
             finally:

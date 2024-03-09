@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -293,17 +293,17 @@ class ColorFormatter(Formatter):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_logging_conf_contents():
+def get_logging_conf_contents() -> 'str':
     # type: (str) -> str
 
     # We import it here to make CLI work faster
-    from zato.common.util.platform_ import is_windows
+    from zato.common.util.platform_ import is_linux
 
-    windows_log_handler_class     = 'logging.handlers.RotatingFileHandler'
-    non_windows_log_handler_class = 'logging.handlers.ConcurrentRotatingFileHandler'
+    linux_log_handler_class     = 'logging.handlers.ConcurrentRotatingFileHandler'
+    non_linux_log_handler_class = 'logging.handlers.RotatingFileHandler'
 
     # Under Windows, we cannot have multiple processes access the same log file
-    log_handler_class = windows_log_handler_class if is_windows else non_windows_log_handler_class
+    log_handler_class = linux_log_handler_class if is_linux else non_linux_log_handler_class
 
     return logging_conf_contents.format(log_handler_class=log_handler_class)
 

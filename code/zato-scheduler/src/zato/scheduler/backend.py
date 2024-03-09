@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -350,6 +350,9 @@ class Scheduler:
         self.job_log = getattr(logger, config.job_log_level)
         self.initial_sleep_time = self.config.main.get('misc', {}).get('initial_sleep_time') or SCHEDULER.InitialSleepTime
 
+        # We set it to True for backward compatibility with pre-3.2
+        self.prefer_odb_config = self.config.raw_config.server.get('server_prefer_odb_config', True)
+
 # ################################################################################################################################
 
     def on_max_repeats_reached(self, job):
@@ -561,12 +564,12 @@ class Scheduler:
         sleep(self.initial_sleep_time)
 
         # If we have ODB configuration, we will be initializing jobs in the ODB ..
-        if self.odb:
+        if self.prefer_odb_config:
             self._init_jobs_by_odb()
 
         # .. otherwise, we are initializing jobs via API calls to a remote server.
         else:
-            self._init_jobs_by_api()
+            spawn_greenlet(self._init_jobs_by_api)
 
 # ################################################################################################################################
 

@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -269,8 +269,8 @@ class Publisher:
 
         ext_pub_time = request.ext_pub_time or None
         if ext_pub_time:
-            ext_pub_time = parse_datetime_as_naive(ext_pub_time)
-            ext_pub_time = datetime_to_ms(ext_pub_time) / 1000.0
+            ext_pub_time = parse_datetime_as_naive(ext_pub_time) # type: ignore
+            ext_pub_time = datetime_to_ms(ext_pub_time) / 1000.0 # type: ignore
 
         pub_correl_id = pub_correl_id if pub_correl_id else None
         in_reply_to = in_reply_to if in_reply_to else None
@@ -307,7 +307,7 @@ class Publisher:
         ps_msg.pub_pattern_matched = pub_pattern_matched
         ps_msg.data = data
         ps_msg.mime_type = mime_type
-        ps_msg.priority = priority
+        ps_msg.priority = priority # type: ignore
         ps_msg.expiration = expiration
         ps_msg.expiration_time = expiration_time
         ps_msg.published_by_id = endpoint_id
@@ -319,8 +319,8 @@ class Publisher:
         ps_msg.group_id = request.group_id or None
         ps_msg.position_in_group = request.position_in_group or PUBSUB.DEFAULT.PositionInGroup
         ps_msg.is_in_sub_queue = bool(subscriptions_by_topic)
-        ps_msg.reply_to_sk = reply_to_sk
-        ps_msg.deliver_to_sk = deliver_to_sk
+        ps_msg.reply_to_sk = reply_to_sk # type: ignore
+        ps_msg.deliver_to_sk = deliver_to_sk # type: ignore
         ps_msg.user_ctx = user_ctx
         ps_msg.zato_ctx = zato_ctx
 
@@ -706,7 +706,7 @@ class Publisher:
             log_msg = 'Message published. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' + \
                   ', GD data:`%s`, non-GD data:`%s`'
 
-            logger_audit.info(log_msg, ctx.cid, ctx.topic.name, self.pubsub.endpoints[ctx.endpoint_id].name,
+            logger_audit.info(log_msg, ctx.cid, ctx.topic.name, self.pubsub.endpoints[ctx.endpoint_id].name, # type: ignore
                 ctx.ext_client_id, ctx.pub_pattern_matched, ctx.current_depth, ctx.gd_msg_list, ctx.non_gd_msg_list)
 
         # If this is the very first time we are running during this invocation, try to deliver non-GD messages

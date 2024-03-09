@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -69,6 +69,7 @@ class AuxServerConfig:
     crypto_manager_class: 'type_[CryptoManager]'
     parent_server_name: 'str'
     parent_server_pid: 'int'
+    raw_config: 'Bunch'
 
     def __init__(self) -> 'None':
         self.main = Bunch()
@@ -165,14 +166,15 @@ class AuxServerConfig:
             secrets_conf = None
 
         # Read configuration in
-        config.main = cast_('Bunch', get_config(
+        raw_config = get_config(
             repo_location,
             conf_file_name,
             crypto_manager=crypto_manager,
             secrets_conf=secrets_conf,
             require_exists=True
-        ))
-
+        )
+        config.raw_config = raw_config
+        config.main = cast_('Bunch', raw_config)
         config.main.crypto.use_tls = as_bool(config.main.crypto.use_tls)
 
         # Make all paths absolute
@@ -390,7 +392,7 @@ class AuxServer:
 
     def _check_credentials(self, credentials:'str') -> 'None':
 
-        result = check_basic_auth(credentials, self.config.username, self.config.password)
+        result = check_basic_auth('', credentials, self.config.username, self.config.password)
         if result is not True:
             logger.info('Credentials error -> %s', result)
             raise Exception('Invalid credentials')

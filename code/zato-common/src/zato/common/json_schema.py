@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -252,7 +252,7 @@ class Validator:
         result.cid = cid
 
         object_type = object_type or self.config.object_type
-        object_name or self.config.object_name
+        object_name = object_name or self.config.object_name
         needs_err_details = needs_err_details or self.config.needs_err_details
 
         try:

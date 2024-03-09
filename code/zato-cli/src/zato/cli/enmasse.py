@@ -3,12 +3,12 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 import os
-from collections import namedtuple, OrderedDict
+from collections import namedtuple
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -17,8 +17,8 @@ from time import sleep
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, LDAP as COMMON_LDAP, \
-    NotGiven, PUBSUB as Common_PubSub, Sec_Def_Type, TLS as COMMON_TLS, Zato_No_Security, Zato_None
+from zato.common.api import All_Sec_Def_Types, Data_Format, GENERIC as COMMON_GENERIC, Groups as Common_Groups, \
+    LDAP as COMMON_LDAP, NotGiven, PUBSUB as Common_PubSub, Sec_Def_Type, TLS as COMMON_TLS, Zato_No_Security, Zato_None
 from zato.common.const import ServiceConst
 from zato.common.typing_ import cast_
 
@@ -45,6 +45,14 @@ zato_enmasse_env2 = 'Zato_Enmasse_Env.'
 zato_enmasse_env_value_prefix = 'Zato_Enmasse_Env_'
 
 DEFAULT_COLS_WIDTH = '15,100'
+
+# ################################################################################################################################
+
+class _NoValue:
+    pass
+
+_no_value1 = _NoValue()
+_no_value2 = _NoValue()
 
 # ################################################################################################################################
 
@@ -139,6 +147,9 @@ class ModuleCtx:
     # Maps enmasse defintions types to their attributes that need to be converted to a list during an export
     Enmasse_Attr_List_As_List = cast_('strlistdict', None)
 
+    # Maps enmasse defintions types to their attributes that will be always skipped during an export
+    Enmasse_Attr_List_Skip_Always = cast_('strlistdict', None)
+
     # Maps enmasse defintions types to their attributes that will be skipped during an export if they are empty
     Enmasse_Attr_List_Skip_If_Empty = cast_('strlistdict', None)
 
@@ -169,7 +180,7 @@ class ModuleCtx:
     # As above, in the reverse direction, but only for specific types
     Enmasse_Item_Type_Name_Map_Reverse_By_Type = cast_('strdict', None)
 
-    # How to sort attributes of a given object
+    # How to sort attributes of a given object during an export
     Enmasse_Attr_List_Sort_Order = cast_('strlistdict', None)
 
     # How many seconds to wait for servers to start up
@@ -193,6 +204,9 @@ ModuleCtx.Enmasse_Type = {
 
     # Security definitions
     'def_sec': ModuleCtx.Include_Type.Security,
+
+    # Security definitions
+    'security_groups': ModuleCtx.Include_Type.Security,
 
     # SQL Connections
     'outconn_sql':ModuleCtx.Include_Type.SQL,
@@ -231,6 +245,7 @@ ModuleCtx.Enmasse_Attr_List_Include = {
         'service',
         'url_path',
         'security_name',
+        'security_groups',
         'is_active',
         'data_format',
         'connection',
@@ -396,10 +411,21 @@ ModuleCtx.Enmasse_Attr_List_As_List = {
 
 # ################################################################################################################################
 
+ModuleCtx.Enmasse_Attr_List_Skip_Always = {
+
+    # Security groups
+    'security_groups':  ['description', 'group_id', 'member_count', 'type'],
+}
+
+# ################################################################################################################################
+
 ModuleCtx.Enmasse_Attr_List_Skip_If_Empty = {
 
     # Security definitions
     'scheduler':  ['weeks', 'days', 'hours', 'minutes', 'seconds', 'cron_definition', 'repeats', 'extra'],
+
+    # REST channels
+    'channel_plain_http': ['data_format'],
 
     # Outgoing WSX connections
     _attr_outconn_wsx:  ['data_format', 'subscription_list'],
@@ -453,6 +479,11 @@ ModuleCtx.Enmasse_Attr_List_Skip_If_Value_Matches = {
 # ################################################################################################################################
 
 ModuleCtx.Enmasse_Attr_List_Skip_If_Other_Value_Matches = {
+
+    # Security definitions
+    'def_sec':  [
+        {'criteria':[{'type':'apikey'}], 'attrs':['username']},
+    ],
 
     # Pub/sub subscriptions
     'pubsub_subscription':  [
@@ -569,6 +600,12 @@ ModuleCtx.Enmasse_Attr_List_Sort_Order = {
         'grant_type',
         'scopes',
         'extra_fields',
+    ],
+
+    # Security groups
+    'security_groups': [
+        'name',
+        'members',
     ],
 
     # Scheduled tasks
@@ -758,7 +795,7 @@ def populate_services_from_apispec(client, logger): # type: ignore
 # The common prefix for a set of services is tested against the first element in this list using startswith().
 # If it matches, that prefix is replaced by the second element. The prefixes must match exactly if the first element
 # does not end in a period.
-SHORTNAME_BY_PREFIX = [
+SHORTNAME_BY_PREFIX:'anylist' = [
     ('zato.pubsub.', 'pubsub'),
     ('zato.definition.', 'def'),
     ('zato.email.', 'email'),
@@ -778,6 +815,10 @@ SHORTNAME_BY_PREFIX = [
 
 def make_service_name(prefix): # type: ignore
 
+    # This can be done quickly
+    if 'groups' in prefix:
+        return 'security_groups'
+
     # stdlib
     import re
 
@@ -790,6 +831,7 @@ def make_service_name(prefix): # type: ignore
             return name
         elif prefix == module_prefix:
             return name_prefix
+
     return escaped
 
 # ################################################################################################################################
@@ -1254,6 +1296,8 @@ class DependencyScanner:
         """ Scan the data of a single item for required dependencies, recording any that are missing in self.missing.
         """
 
+        missing_item:'any_'
+
         #
         # Preprocess item type
         #
@@ -1522,7 +1566,12 @@ class ObjectImporter:
                     if not value:
                         raise Exception('Could not build a value from `{}` in `{}`'.format(orig_value, item_type))
                     else:
-                        value = os.environ.get(value)
+                        value = os.environ.get(value, NotGiven)
+                        if value is NotGiven:
+                            if key.startswith(('is_', 'should_', 'needs_')):
+                                value = None
+                            else:
+                                value = 'Env-Value-Not-Found-' + orig_value
 
                     attrs[key] = value
 
@@ -1544,6 +1593,10 @@ class ObjectImporter:
         # Generic connections cannot import their IDs during edits
         if item_type == 'zato_generic_connection' and is_edit:
             _= attrs_dict.pop('id', None)
+
+        # We handle security groups only
+        elif item_type == 'security_groups':
+            attrs['group_type'] = Common_Groups.Type.API_Clients
 
         # RBAC objects cannot refer to other objects by their IDs
         elif item_type == 'rbac_role_permission':
@@ -1617,7 +1670,7 @@ class ObjectImporter:
                 self._set_generic_connection_secret(attrs_dict['name'], attrs_dict['type_'], attrs_dict['secret'])
 
         # We'll see how expensive this call is. Seems to be but let's see in practice if it's a burden.
-        self.object_mgr.get_objects_by_type(item_type)
+        self.object_mgr.populate_objects_by_type(item_type)
 
 # ################################################################################################################################
 
@@ -1630,11 +1683,8 @@ class ObjectImporter:
 
     def find_already_existing_odb_objects(self):
 
-        # Python 2/3 compatibility
-        from zato.common.ext.future.utils import iteritems
-
         results = Results()
-        for item_type, items in iteritems(self.json): # type: ignore
+        for item_type, items in self.json.items(): # type: ignore
 
             #
             # Preprocess item type
@@ -1653,11 +1703,13 @@ class ObjectImporter:
 
                     existing:'any_' = find_first(self.object_mgr.objects.http_soap,
                         lambda item: connection == item.connection and transport == item.transport and name == item.name) # type: ignore
+
                     if existing is not None:
                         self.add_warning(results, item_type, item, existing)
 
                 else:
                     existing = self.object_mgr.find(item_type, {'name': name})
+
                     if existing is not None:
                         self.add_warning(results, item_type, item, existing)
 
@@ -1750,17 +1802,7 @@ class ObjectImporter:
 
 # ################################################################################################################################
 
-    def import_objects(self, already_existing) -> 'Results': # type: ignore
-
-        # stdlib
-        from collections import OrderedDict
-        from time import sleep
-
-        # Python 2/3 compatibility
-        from zato.common.ext.future.utils import iteritems
-
-        rbac_sleep = getattr(self.args, 'rbac_sleep', 1)
-        rbac_sleep = float(rbac_sleep)
+    def _build_existing_objects_to_edit_during_import(self, already_existing:'any_') -> 'any_':
 
         existing_defs = []
         existing_rbac_role = []
@@ -1768,18 +1810,9 @@ class ObjectImporter:
         existing_rbac_client_role = []
         existing_other = []
 
-        new_defs = []
-        new_rbac_role = []
-        new_rbac_role_permission = []
-        new_rbac_client_role = []
-        new_other = []
-
-        #
-        # Update already existing objects first, definitions before any object that may depend on them ..
-        #
-
         for w in already_existing.warnings: # type: ignore
-            item_type, _ = w.value_raw # type: ignore
+            item_type, value = w.value_raw # type: ignore
+            value = value
 
             if 'def' in item_type:
                 existing = existing_defs
@@ -1793,15 +1826,138 @@ class ObjectImporter:
                 existing = existing_other
             existing.append(w)
 
-        #
-        # .. actually invoke the updates now ..
-        #
         existing_combined:'any_' = existing_defs + existing_rbac_role + existing_rbac_role_permission + \
             existing_rbac_client_role + existing_other
+
+        return existing_combined
+
+# ################################################################################################################################
+
+    def _build_new_objects_to_create_during_import(self, existing_combined:'any_') -> 'any_':
+
+        # stdlib
+        from collections import OrderedDict
+
+        new_defs = []
+        new_rbac_role = []
+        new_rbac_role_permission = []
+        new_rbac_client_role = []
+        new_other = []
+
+        # Use an ordered dict to iterate over the data with dependencies first
+        self_json = deepcopy(self.json)
+        self_json_ordered:'any_' = OrderedDict()
+
+        # All the potential dependencies will be handled in this specific order
+        dep_order = [
+            'def_sec',
+            'basic_auth',
+            'apikey',
+            'ntlm',
+            'oauth',
+            'jwt',
+            'aws',
+            'tls_key_cert',
+            'tls_channel_sec',
+            'security_groups',
+            # 'wss',
+            # 'openstack',
+            # 'xpath_sec',
+            # 'vault_conn_sec',
+            'http_soap',
+            'web_socket',
+            'pubsub_topic',
+            'pubsub_endpoint',
+        ]
+
+        # Do populate the dependencies first ..
+        for dep_name in dep_order:
+            self_json_ordered[dep_name] = self_json.get(dep_name, [])
+
+        # .. now, populate everything that is not a dependency.
+        for key, value in self_json.items(): # type: ignore
+            if key not in dep_order:
+                self_json_ordered[key] = value
+
+        for item_type, items in self_json_ordered.items(): # type: ignore
+
+            #
+            # Preprocess item type
+            #
+            item_type = _replace_item_type(True, item_type)
+
+            if self.may_be_dependency(item_type):
+
+                if item_type == 'rbac_role':
+                    append_to = new_rbac_role
+                elif item_type == 'rbac_role_permission':
+                    append_to = new_rbac_role_permission
+                elif item_type == 'rbac_client_role':
+                    append_to = new_rbac_client_role
+                else:
+                    append_to = new_defs
+            else:
+                append_to = new_other
+
+            append_to.append({item_type: items})
+
+        # This is everything new that we know about ..
+        new_combined:'any_' = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
+
+        # .. now, go through it once more and filter out elements that we know should be actually edited, not created ..
+        to_remove = []
+
+        for new_elem in new_combined:
+            for item_type, value_list in new_elem.items():
+                for value_dict in value_list:
+                    value_dict = value_dict.toDict()
+
+                    for existing_elem in existing_combined:
+                        existing_item_type, existing_item = existing_elem.value_raw
+                        if item_type == existing_item_type:
+                            if value_dict.get('name', _no_value1) == existing_item.get('name', _no_value2):
+                                to_remove.append({
+                                    'item_type': item_type,
+                                    'item': value_dict,
+                                })
+                                break
+
+        for elem in to_remove: # type: ignore
+            item_type = elem['item_type'] # type: ignore
+            item = elem['item'] # type: ignore
+
+            for new_elem in new_combined:
+                for new_item_type, value_list in new_elem.items():
+                    for idx, value_dict in enumerate(value_list):
+                        value_dict = value_dict.toDict()
+
+                        if new_item_type == item_type:
+                            if value_dict['name'] == item['name']:
+                                value_list.pop(idx)
+
+        return new_combined
+
+# ################################################################################################################################
+
+    def import_objects(self, already_existing) -> 'Results': # type: ignore
+
+        # stdlib
+        from time import sleep
+
+        rbac_sleep = getattr(self.args, 'rbac_sleep', 1)
+        rbac_sleep = float(rbac_sleep)
+
+        existing_combined = self._build_existing_objects_to_edit_during_import(already_existing)
+        new_combined = self._build_new_objects_to_create_during_import(existing_combined)
 
         # Extract and load Basic Auth definitions as a whole, before any other updates (edit)
         basic_auth_edit = self._extract_basic_auth(existing_combined, is_edit=True)
         self._import_basic_auth(basic_auth_edit, is_edit=True)
+
+        # Extract and load Basic Auth definitions as a whole, before any other updates (create)
+        basic_auth_create = self._extract_basic_auth(new_combined, is_edit=False)
+        self._import_basic_auth(basic_auth_create, is_edit=False)
+
         self._trigger_sync_server_objects(sync_pubsub=False)
         self.object_mgr.refresh_objects()
 
@@ -1832,67 +1988,6 @@ class ObjectImporter:
         # Create new objects, again, definitions come first ..
         #
 
-        # Use an ordered dict to iterate over the data with dependencies first
-        self_json = deepcopy(self.json)
-        self_json_ordered:'any_' = OrderedDict()
-
-        # All the potential dependencies will be handled in this specific order
-        dep_order = [
-            'def_sec',
-            'basic_auth',
-            'apikey',
-            'ntlm',
-            'oauth',
-            'jwt',
-            'aws',
-            'tls_key_cert',
-            'tls_channel_sec',
-            # 'wss',
-            # 'openstack',
-            # 'xpath_sec',
-            # 'vault_conn_sec',
-            'http_soap',
-            'web_socket',
-            'pubsub_topic',
-            'pubsub_endpoint',
-        ]
-
-        # Do populate the dependencies first ..
-        for dep_name in dep_order:
-            self_json_ordered[dep_name] = self_json.get(dep_name, [])
-
-        # .. now, populate everything that is not a dependency.
-        for key, value in self_json.items(): # type: ignore
-            if key not in dep_order:
-                self_json_ordered[key] = value
-
-        for item_type, items in iteritems(self_json_ordered): # type: ignore
-
-            #
-            # Preprocess item type
-            #
-            item_type = _replace_item_type(True, item_type)
-
-            if self.may_be_dependency(item_type):
-
-                if item_type == 'rbac_role':
-                    append_to = new_rbac_role
-                elif item_type == 'rbac_role_permission':
-                    append_to = new_rbac_role_permission
-                elif item_type == 'rbac_client_role':
-                    append_to = new_rbac_client_role
-                else:
-                    append_to = new_defs
-            else:
-                append_to = new_other
-
-            append_to.append({item_type: items})
-
-        #
-        # .. actually create the objects now.
-        #
-        new_combined:'any_' = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
-
         # A container for pub/sub objects to be handled separately
         pubsub_objects:'strlistdict' = {
             'pubsub_endpoint': [],
@@ -1901,13 +1996,11 @@ class ObjectImporter:
         }
 
         # Extract and load Basic Auth definitions as a whole, before any other updates (create)
-        basic_auth_create = self._extract_basic_auth(new_combined, is_edit=False)
-        self._import_basic_auth(basic_auth_create, is_edit=False)
         self._trigger_sync_server_objects(sync_pubsub=False)
         self.object_mgr.refresh_objects()
 
         for elem in new_combined:
-            for item_type, attr_list in iteritems(elem):
+            for item_type, attr_list in elem.items():
                 for attrs in attr_list:
 
                     if self.should_skip_item(item_type, attrs, False):
@@ -1951,12 +2044,14 @@ class ObjectImporter:
                 item_type, attrs = value_raw
                 if item_type == Sec_Def_Type.BASIC_AUTH:
                     attrs = dict(attrs)
+                    attrs = self._resolve_attrs('basic_auth', attrs)
                     out.append(attrs)
         else:
             for item in data:
                 if basic_auth := item.get(Sec_Def_Type.BASIC_AUTH):
                     for elem in basic_auth:
                         attrs = dict(elem)
+                        attrs = self._resolve_attrs('basic_auth', attrs)
                         out.append(attrs)
 
         return out
@@ -2256,7 +2351,7 @@ class ObjectManager:
 
 # ################################################################################################################################
 
-    def get_objects_by_type(self, item_type:'str') -> 'None':
+    def populate_objects_by_type(self, item_type:'str') -> 'None':
 
         # Ignore artificial objects
         if item_type in {'def_sec'}:
@@ -2282,9 +2377,20 @@ class ObjectManager:
             return
 
         self.logger.debug('Invoking -> getter -> %s for %s (%s)', service_name, service_info.name, item_type)
-        response = self.client.invoke(service_name, {
-            'cluster_id': self.client.cluster_id
-        })
+
+        request = {
+            'cluster_id': self.client.cluster_id,
+        }
+
+        if service_name == 'zato.http-soap.get-list':
+            request['needs_security_group_names'] = True
+
+        elif service_name == 'zato.groups.get-list':
+            request['group_type'] = Common_Groups.Type.API_Clients
+            request['needs_members'] = True
+            request['needs_short_members'] = True
+
+        response = self.client.invoke(service_name, request)
 
         if not response.ok:
             self.logger.warning('Could not fetch objects of type {}: {}'.format(service_info.name, response.details))
@@ -2333,7 +2439,7 @@ class ObjectManager:
                 if not service_info.is_security:
                     continue
 
-            self.get_objects_by_type(service_info.name)
+            self.populate_objects_by_type(service_info.name)
 
         for item_type, items in self.objects.items(): # type: ignore
             for item in items: # type: ignore
@@ -2930,7 +3036,7 @@ class InputParser:
 class Enmasse(ManageCommand):
     """ Manages server objects en masse.
     """
-    opts = [
+    opts:'dictlist' = [
         {'name':'--server-url', 'help':'URL of the server that enmasse should talk to, provided in host[:port] format. Defaults to server.conf\'s \'gunicorn_bind\''},  # noqa: E501
         {'name':'--export-local', 'help':'Export local file definitions into one file (can be used with --export)', 'action':'store_true'},
         {'name':'--export', 'help':'Export server objects to a file (can be used with --export-local)', 'action':'store_true'},
@@ -2955,7 +3061,7 @@ class Enmasse(ManageCommand):
         {'name':'--cols-width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH), 'action':'store_true'},
     ]
 
-    CODEC_BY_EXTENSION = {
+    CODEC_BY_EXTENSION:'strdict' = {
         'json': JsonCodec,
         'yaml': YamlCodec,
         'yml': YamlCodec,
@@ -3281,6 +3387,9 @@ class Enmasse(ManageCommand):
         # .. as above, for attributes that should be skipped if they are empty ..
         attr_list_as_multiline = ModuleCtx.Enmasse_Attr_List_As_Multiline.get(attr_key) or []
 
+        # .. as above, for attributes that should be always skipped ..
+        attr_list_skip_always = ModuleCtx.Enmasse_Attr_List_Skip_Always.get(attr_key) or []
+
         # .. as above, for attributes that should be skipped if they are empty ..
         attr_list_skip_if_empty = ModuleCtx.Enmasse_Attr_List_Skip_If_Empty.get(attr_key) or []
 
@@ -3345,6 +3454,10 @@ class Enmasse(ManageCommand):
                         value = value.splitlines()
                         value = '\n'.join(value)
                         item[attr] = value
+
+        # .. optionally, certain attributes will be always skipped ..
+        for attr in attr_list_skip_always:
+            _ = item.pop(attr, NotGiven)
 
         # .. optionally, skip empty attributes ..
         for attr in attr_list_skip_if_empty:
@@ -3417,6 +3530,9 @@ class Enmasse(ManageCommand):
         attr_key, # type: str
         item,     # type: strdict
     ) -> 'strdict':
+
+        # stdlib
+        from collections import OrderedDict
 
         # Turn the item into an object whose attributes can be sorted ..
         item = OrderedDict(item)
@@ -3577,6 +3693,7 @@ class Enmasse(ManageCommand):
         import os
         import re
         from datetime import datetime
+        from collections import OrderedDict
 
         # Bunch
         from zato.bunch import debunchify
@@ -3696,6 +3813,7 @@ class Enmasse(ManageCommand):
 
         # .. certain keys should be stored in a specific order at the head of the output ..
         key_order = reversed([
+            'security_groups',
             'security',
             'channel_rest',
             'outgoing_rest',

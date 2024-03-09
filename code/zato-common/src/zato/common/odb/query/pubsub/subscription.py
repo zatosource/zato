@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
@@ -132,7 +132,7 @@ def pubsub_subscription_list(
 
 # ################################################################################################################################
 
-def pubsub_sub_key_list(session:'SASession') -> 'Query':
+def pubsub_sub_key_list(session:'SASession') -> 'Query': # type: ignore
     """ Returns a list of sub_keys and IDs in the database.
     """
     return session.query(

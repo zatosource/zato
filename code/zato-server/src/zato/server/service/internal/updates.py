@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from errno import ENETUNREACH
@@ -50,14 +48,7 @@ delta_minor_days = 60
 delta_minor = day * delta_minor_days
 
 # Download and info URLs
-url_latest = 'https://zato.io/docs/admin/guide/install/index.html'
-url_version = 'https://zato.io/docs/{}/admin/guide/install/index.html'
 url_info = 'https://zato.io/support/updates/info-{}.json'
-
-# What to store in logs
-msg = '\n\nCluster `%s` uses Zato `%s` and a new %s release is available' \
-      ' from %s - consider an upgrade to %s.' \
-      ' This message will be repeated in %s days.'
 
 # ################################################################################################################################
 
@@ -71,7 +62,7 @@ class CheckUpdates(Service):
     def handle(self):
 
         # Run in a new greenlet in case we are invoked externally, e.g. over HTTP
-        spawn(self._serve_forerver)
+        _ = spawn(self._serve_forerver)
 
 # ################################################################################################################################
 
@@ -100,16 +91,6 @@ class CheckUpdates(Service):
 
 # ################################################################################################################################
 
-    def _time_elapsed_major(self, _delta_major):
-        return True
-
-# ################################################################################################################################
-
-    def _time_elapsed_minor(self, _delta_minor):
-        return True
-
-# ################################################################################################################################
-
     def _get_current(self, _url_info, self_major, self_version):
         try:
             response = requests_get(_url_info.format(self_major), params={'v':self_version})
@@ -124,70 +105,7 @@ class CheckUpdates(Service):
 
 # ################################################################################################################################
 
-    def _remote_has_new_minor(self, self_major_json, self_minor, remote_data):
-        return remote_data.get('latest_{}'.format(self_major_json)) > self_minor
-
-# ################################################################################################################################
-
-    def _notify(self, self_version, current, type, url, delta):
-        self.logger.warning(msg, self.server.cluster.name, self_version, type, url, current, delta)
-
-# ################################################################################################################################
-
-    def _notify_major_release(self, self_version, current_major):
-        self._notify(self_version, current_major, 'major', url_latest, delta_major_days)
-
-# ################################################################################################################################
-
-    def _notify_minor_release(self, self_version, current_major, current_minor):
-        self._notify(self_version, current_major, 'minor', url_version.format(current_major), delta_minor_days)
-
-# ################################################################################################################################
-
     def _check_notify(self, _url_info, self_major, self_minor, self_version, delta_major=delta_major, delta_minor=delta_minor):
-        """ Checks if users should be notified of new releases and does it if required.
-
-        Scenarios to handle (note that 2. and 4. do not rule out each other):
-
-        * Someone is running Zato from source code in which case we only notify of full releases
-        * Someone's major versions is not newest
-        * Someone's major version is newest but their minor one is not
-        * Someone's major is not newest and there is a newer minor version within their self_major,
-          for instance someone is running 3.0.1 and the newest major version is 3.1.3 but there is also 3.0.5 for them
-        """
-
-        # Consult remote end
-        data = self._get_current(_url_info, self_major, self_version)
-
-        # Apparently we have nothing to work with
-        if not data:
-            return
-
-        # To save on keystrokes
-        config = self.server.fs_server_config.updates
-        self_major_json = self_major.replace('.', '_') # E.g. 3.0 -> 3_0
-
-        # We are running from source code so only notify of latest versions, no matter which
-        if source_prefix in self_minor:
-            if config.notify_if_from_source and self._time_elapsed_major(delta_major):
-                self._notify_major_release(self_version, data.current_major)
-            return
-
-        # We are on the current major but possibly not on minor
-        if self_major == data.current_major:
-            if self_minor < data.current_minor:
-                if config.notify_minor_versions and self._time_elapsed_minor(delta_minor):
-                    self._notify_minor_release(self_version, data.current_major, data.current_minor)
-
-        # We are definitely running on an older version and on top of there may be a new minor version of our major revision
-        # For instance, we are 3.0.1 but there is 4.0.3 and on top of it, there is 3.0.5 within the 3.0.x branch.
-        if self_major < data.current_major:
-
-            if config.notify_major_versions and self._time_elapsed_major(delta_major):
-                self._notify_major_release(self_version, data.current_minor)
-
-            if self._remote_has_new_minor(self_major_json, self_minor, data):
-                if config.notify_minor_versions and self._time_elapsed_minor(delta_minor):
-                    self._notify_minor_release(self_version, data.current_major, data.current_minor)
+        _ = self._get_current(_url_info, self_major, self_version)
 
 # ################################################################################################################################

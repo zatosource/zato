@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -176,10 +176,13 @@ class CryptoManager:
 # ################################################################################################################################
 
     @staticmethod
-    def generate_secret(bits=256):
+    def generate_secret(bits=256, as_str=False) -> 'bytes | str':
         """ Generates a secret string of bits size.
         """
-        return base64.urlsafe_b64encode(os.urandom(int(bits / 8)))
+        value = base64.urlsafe_b64encode(os.urandom(int(bits / 8)))
+        if as_str:
+            value = value.decode('utf8')
+        return value
 
 # ################################################################################################################################
 

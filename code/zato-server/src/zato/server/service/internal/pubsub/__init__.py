@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -344,7 +344,7 @@ class ResumeWSXSubscription(AdminService):
 
         out = dict.fromkeys(sub_key_list, []) # type: stranydict
 
-        for messages in messages_list: # type: dict
+        for messages in messages_list:
             messages = messages['response']
             for sub_key, sub_key_data in messages.items():
                 for msg in sub_key_data:

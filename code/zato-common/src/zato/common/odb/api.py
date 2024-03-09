@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -742,7 +742,7 @@ class ODBManager(SessionWrapper):
                         self._copy_rate_limiting_config(sec_def, result[target].sec_def)
 
                     elif item.sec_type == SEC_DEF_TYPE.APIKEY:
-                        result[target].sec_def.username = 'HTTP_{}'.format(sec_def.username.upper().replace('-', '_'))
+                        result[target].sec_def.header = 'HTTP_{}'.format(sec_def.header.upper().replace('-', '_'))
                         self._copy_rate_limiting_config(sec_def, result[target].sec_def)
 
                     elif item.sec_type == SEC_DEF_TYPE.WSS:

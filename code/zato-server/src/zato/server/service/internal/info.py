@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -44,7 +44,9 @@ class GetInfo(Service):
         api_protocol = get_url_protocol_from_config_item(self.server.fs_server_config.crypto.use_tls)
 
         with closing(self.odb.session()) as session:
-            for item in server_list(session, self.server.cluster_id, None, None, False): # type: ignore
+            _server_list = server_list(session, self.server.cluster_id, None, None, False) # type: ignore
+
+            for item in _server_list:
                 server_info:'any_' = out.setdefault(item.name, {})
                 server_info['cluster_name'] = item.cluster_name
 

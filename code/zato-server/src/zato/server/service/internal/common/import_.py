@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -21,6 +21,7 @@ from zato.common.odb.model import HTTPBasicAuth, PubSubEndpoint, PubSubSubscript
 from zato.common.odb.query.common import get_object_list, get_object_list_by_columns, get_object_list_by_name_list
 from zato.common.pubsub import new_sub_key
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import cast_
 from zato.server.service import Model, Service
 
 # ################################################################################################################################
@@ -257,7 +258,7 @@ class ImportObjects(Service):
                 topic_id = existing.get_topic_id_by_name(topic_name)
 
                 # .. build basic information about the subscription ..
-                new_item = {
+                new_item:'strdict' = {
                     'topic_id': topic_id,
                     'endpoint_id': endpoint_id,
                     'delivery_method': item['delivery_method'],
@@ -327,10 +328,13 @@ class ImportObjects(Service):
 
             # .. if we are here, it means that there was no match, which means that this item truly is new ..
             else:
+
+                # .. passwords are optional on input ..
+                if not 'password' in new_item:
+                    new_item['password'] = self.name + ' ' + cast_('str', CryptoManager.generate_secret(as_str=True))
+
                 new_item['sec_type'] = Sec_Def_Type.BASIC_AUTH
                 new_item['cluster_id'] = self.server.cluster_id
-                new_item['password'] = CryptoManager.generate_secret()
-                _ = new_item.pop('realm', None)
                 out.to_add.append(new_item)
 
         # .. now, we can return the response to our caller.
@@ -349,8 +353,17 @@ class ImportObjects(Service):
 
     def create_basic_auth(self, session:'SASession', values:'dictlist', incoming:'dictlist') -> 'None':
 
+        # We need to create a new list with only these values
+        # that the base table can support.
+        sec_base_values = []
+
+        for item in values:
+            sec_base_item = deepcopy(item)
+            _ = sec_base_item.pop('realm', None)
+            sec_base_values.append(sec_base_item)
+
         # First, insert rows in the base table ..
-        sec_base_insert = insert(SecurityBase).values(values)
+        sec_base_insert = insert(SecurityBase).values(sec_base_values)
         session.execute(sec_base_insert)
         session.commit()
 
@@ -362,10 +375,9 @@ class ImportObjects(Service):
         for item in values:
             for newly_added_item in newly_added:
                 if item['name'] == newly_added_item['name']:
-                    realm = self._get_basic_auth_realm_by_sec_name(incoming, item['name'])
                     to_add_item = {
                         'id': newly_added_item['id'],
-                        'realm': realm,
+                        'realm': item['realm'],
                     }
                     to_add_basic_auth.append(to_add_item)
                     break
@@ -437,6 +449,12 @@ class ImportObjects(Service):
 
         # Go through each item that we potentially need to create and see if there is a match
         for new_item in incoming:
+
+            # Turn WSX channel names into their IDs
+            if ws_channel_name := new_item.get('ws_channel_name'):
+                ws_channel_id:'int' = self.server.worker_store.get_web_socket_channel_id_by_name(ws_channel_name)
+                new_item['ws_channel_id'] = ws_channel_id
+
             for existing_item in existing:
                 if new_item['name'] == existing_item['name']:
                     new_item['id'] = existing_item['id']

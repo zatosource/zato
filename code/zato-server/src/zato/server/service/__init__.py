@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -11,6 +11,7 @@ import logging
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from inspect import isclass
+from json import loads
 from traceback import format_exc
 from typing import Optional as optional
 
@@ -100,9 +101,10 @@ if 0:
         modelnone, strdict, strdictnone, strstrdict, strnone, strlist
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
+    from zato.server.connection.connector import Connector
     from zato.server.connection.ftp import FTPStore
     from zato.server.connection.http_soap.outgoing import RESTWrapper
-    from zato.server.connection.web_socket import WebSocket
+    from zato.server.connection.web_socket import ChannelWebSocket, WebSocket
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
@@ -315,6 +317,14 @@ class _WSXChannelContainer:
         self.server = server
         self._lock = RLock()
         self._channels = {}
+
+    def invoke(self, cid:'str', conn_name:'str', **kwargs) -> 'any_':
+
+        wsx_channel:'Connector' = self.server.worker_store.web_socket_api.connectors[conn_name] # type: ignore
+        wsx_channel:'ChannelWebSocket' = cast_('ChannelWebSocket', wsx_channel) # type: ignore
+
+        response = wsx_channel.invoke_client(cid, **kwargs)
+        return response
 
 # ################################################################################################################################
 
@@ -789,15 +799,23 @@ class Service:
                 # Check if there is a JSON Schema validator attached to the service and if so,
                 # validate input before proceeding any further.
                 if service._json_schema_validator and service._json_schema_validator.is_initialized:
-                    validation_result = service._json_schema_validator.validate(cid, raw_request)
+                    data = raw_request.decode('utf8')
+                    data = loads(data)
+                    validation_result = service._json_schema_validator.validate(cid, data)
                     if not validation_result:
                         error = validation_result.get_error()
 
                         error_msg = error.get_error_message()
                         error_msg_details = error.get_error_message(True)
 
-                        raise JSONSchemaValidationException(cid, CHANNEL.SERVICE, service.name,
-                            error.needs_err_details, error_msg, error_msg_details)
+                        raise JSONSchemaValidationException(
+                            cid,
+                            CHANNEL.SERVICE,
+                            service.name,
+                            error.needs_err_details,
+                            error_msg,
+                            error_msg_details
+                        )
 
                 # All hooks are optional so we check if they have not been replaced with None by ServiceStore.
 
@@ -946,21 +964,6 @@ class Service:
     ) -> 'any_':
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
         """
-        if self.component_enabled_target_matcher:
-
-            orig_impl_name = impl_name
-            impl_name, target = self.extract_target(impl_name)
-
-            # It's possible we are being invoked through self.invoke or self.invoke_by_id
-            target = target or kwargs.get('target', '')
-
-            if not self._worker_store.target_matcher.is_allowed(target):
-                raise ZatoException(self.cid, 'Invocation target `{}` not allowed ({})'.format(target, orig_impl_name))
-
-        if self.component_enabled_invoke_matcher:
-            if not self._worker_store.invoke_matcher.is_allowed(impl_name):
-                raise ZatoException(self.cid, 'Service `{}` (impl_name) cannot be invoked'.format(impl_name))
-
         if self.impl_name == impl_name:
             msg = 'A service cannot invoke itself, name:[{}]'.format(self.name)
             self.logger.error(msg)
@@ -1016,16 +1019,6 @@ class Service:
         # not its name, and we need to extract the name ourselves.
         if isclass(zato_name) and issubclass(zato_name, Service): # type: Service
             zato_name = zato_name.get_name()
-
-        if self.component_enabled_target_matcher:
-            zato_name, target = self.extract_target(zato_name) # type: ignore
-            kwargs['target'] = target
-
-        if self._enforce_service_invokes and self.invokes:
-            if zato_name not in self.invokes:
-                msg = 'Could not invoke `{}` which is not in `{}`'.format(zato_name, self.invokes)
-                self.logger.warning(msg)
-                raise ValueError(msg)
 
         return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[zato_name], *args, **kwargs)
 

@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -110,6 +110,8 @@ class Model(BaseModel):
     after_created = None
 
     def __getitem__(self, name, default=None):
+        if not isinstance(name, str):
+            name = str(name)
         return getattr(self, name, default)
 
     def __contains__(self, name):

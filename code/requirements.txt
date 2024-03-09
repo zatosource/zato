@@ -14,7 +14,7 @@ configparser==3.7.1
 convertdate==2.0.3.1
 coverage==3.7.1
 crontab==0.22.9
-cryptography==41.0.6
+cryptography==42.0.4
 dacite==1.6.0
 dataclasses-jsonschema==2.15.0
 dateparser==0.7.6
@@ -57,7 +57,7 @@ ipaddress==1.0.16
 iso8601==0.1.10
 jsonpatch==1.23
 jsonpointer==2.0
-jsonschema==4.18.0
+jsonschema==4.21.1
 keyring==23.0.0
 kombu==5.0.2
 ldap3==2.8.1
@@ -74,7 +74,7 @@ netifaces==0.11.0
 o365==2.0.26
 odoo-client-lib==1.2.2
 openpyxl==3.0.5
-orjson==3.8.2
+orjson==3.9.15
 oslo.config==9.0.0
 # pandas==1.5.0
 parse-type==0.3.4
@@ -90,14 +90,14 @@ py-cpuinfo==3.3.0
 pyaml==20.4.0
 pyasn1==0.4.8
 pycparser==2.21
-pycryptodome==3.19.0
+pycryptodome==3.19.1
 pyflakes==2.4.0
 pyftpdlib==1.5.7
 pygments==2.15.0
 PyJWT==2.5.0
 pymongo==4.2.0
 PyMySQL==1.0.2
-pyOpenSSL==23.2.0
+pyOpenSSL==24.0.0
 pyotp==2.6.0
 pyparsing==2.4.2
 pyprof2calltree==1.4.5
@@ -162,7 +162,7 @@ memray==1.4.1; sys_platform == 'linux'
 newrelic==8.4.0; sys_platform == 'linux'
 sh==1.14.3; sys_platform == 'linux'
 portalocker==2.6.0
-posix-ipc==1.0.0; sys_platform == 'linux'
+posix-ipc==1.0.0; sys_platform != 'Windows'
 psycopg2-binary==2.9.5; sys_platform == 'linux'
 pysimdjson==5.0.2; sys_platform == 'linux'
 pysolr==3.9.0; sys_platform == 'linux'

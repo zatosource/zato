@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # ################################################################################################################################
@@ -141,7 +141,6 @@ strbooldict   = dict_[str, bool]
 strcalldict   = dict_[str, callable_]
 strdictdict   = dict_[str, anydict]
 strdictlist   = list_[stranydict]
-strlistdict   = dict_[str, anylist]
 strdictnone   = union_[stranydict, None]
 strint        = union_[str_, int]
 strintbool    = union_[str_, int, bool]
