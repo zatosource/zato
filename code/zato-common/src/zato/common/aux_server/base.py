@@ -20,7 +20,7 @@ from bunch import Bunch
 from gevent.pywsgi import WSGIServer
 
 # Zato
-from zato.common.api import IPC as Common_IPC, ZATO_ODB_POOL_NAME
+from zato.common.api import IPC as Common_IPC, Zato_ODB
 from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
@@ -95,10 +95,10 @@ class AuxServerConfig:
             if odb_password and odb_password.startswith('gA'):
                 config.main.odb.password = config.crypto_manager.decrypt(odb_password)
 
-        sql_pool_store[ZATO_ODB_POOL_NAME] = config.main.odb
+        sql_pool_store[Zato_ODB.Pool_Name.Main] = config.main.odb
 
-        odb.pool = sql_pool_store[ZATO_ODB_POOL_NAME].pool
-        odb.init_session(ZATO_ODB_POOL_NAME, config.main.odb, odb.pool, False)
+        odb.pool = sql_pool_store[Zato_ODB.Pool_Name.Main].pool
+        odb.init_session(Zato_ODB.Pool_Name.Main, config.main.odb, odb.pool, False)
         odb.pool.ping(odb.fs_sql_config)
 
         return odb

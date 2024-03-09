@@ -36,7 +36,7 @@ from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
 from zato.common.api import API_Key, DATA_FORMAT, default_internal_modules, EnvFile, EnvVariable,  GENERIC,  HotDeploy, IPC, \
     KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, \
-        ZATO_ODB_POOL_NAME
+        Zato_ODB
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
 from zato.common.bearer_token import BearerTokenManager
@@ -140,6 +140,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
     odb: 'ODBManager'
+    odb_sso: 'ODBManager'
+    odb_pubsub: 'ODBManager'
     kvdb: 'KVDB'
     config: 'ConfigStore'
     crypto_manager: 'ServerCryptoManager'
@@ -174,6 +176,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.use_tls = False
         self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
+        self.odb_sso_data = Bunch()
+        self.odb_pubsub_data = Bunch()
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
         self.user_conf_location_extra:'strset' = set()
@@ -660,7 +664,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             service= 'zato.pickup.update-user-conf'
 
         # .. and store the configuration for later use now.
-        pickup_from = {
+        pickup_from:'strdict' = {
             'pickup_from': path,
             'patterns': patterns_str,
             'parse_on_pickup': False,
@@ -878,12 +882,39 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def set_up_odb(self) -> 'None':
+
+        # ###############
+        # Set up main ODB
+        # ###############
+
         # This is the call that creates an SQLAlchemy connection
         self.config.odb_data['fs_sql_config'] = self.fs_sql_config
-        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
-        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
+        self.sql_pool_store[Zato_ODB.Pool_Name.Main] = self.config.odb_data
+        self.odb.pool = self.sql_pool_store[Zato_ODB.Pool_Name.Main].pool
         self.odb.token = self.config.odb_data.token.decode('utf8')
         self.odb.decrypt_func = self.decrypt
+
+        # ###############
+        # Set up SSO ODB
+        # ###############
+
+        # This is the call that creates an SQLAlchemy connection
+        self.config.odb_sso_data['fs_sql_config'] = self.fs_sql_config
+        self.sql_pool_store[Zato_ODB.Pool_Name.SSO] = self.config.odb_sso_data
+        self.odb_sso.pool = self.sql_pool_store[Zato_ODB.Pool_Name.Main].pool
+        self.odb_sso.token = self.config.odb_pubsub_data.token.decode('utf8')
+        self.odb_sso.decrypt_func = self.decrypt
+
+        # ##################
+        # Set up pub/sub ODB
+        # ##################
+
+        # This is the call that creates an SQLAlchemy connection
+        self.config.odb_pubsub_data['fs_sql_config'] = self.fs_sql_config
+        self.sql_pool_store[Zato_ODB.Pool_Name.PubSub] = self.config.odb_pubsub_data
+        self.odb_pubsub.pool = self.sql_pool_store[Zato_ODB.Pool_Name.Main].pool
+        self.odb_pubsub.token = self.config.odb_pubsub_data.token.decode('utf8')
+        self.odb_pubsub.decrypt_func = self.decrypt
 
 # ################################################################################################################################
 
@@ -1011,8 +1042,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.server_startup_ipc = None
             self.connector_config_ipc = None
 
-        # Store the ODB configuration, create an ODB connection pool and have self.odb use it
-        self.config.odb_data = self.get_config_odb_data(self)
+        # Store the ODB configuration, create an ODB connection pool and have self.odb* connetions use them
+        _config_token = self.fs_server_config.main.token
+        self.config.odb_data = self.get_config_odb_data(self.odb_data, 'is_odb', _config_token)
+        self.config.odb_sso_data = self.get_config_odb_data(self.odb_sso_data, 'is_odb_sso', _config_token)
+        self.config.odb_pubsub_data = self.get_config_odb_data(self.odb_pubsub_data, 'is_odb_pubsub', _config_token)
         self.set_up_odb()
 
         # Now try grabbing the basic server's data from the ODB. No point
@@ -1361,7 +1395,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         we need to get its configuration through IPC and populate our own accordingly.
         """
 
-        ipc_config_name_to_enabled = {
+        ipc_config_name_to_enabled:'strdict' = {
             IBMMQIPC.ipc_config_name: config.has_ibm_mq,
             SFTPIPC.ipc_config_name: config.has_sftp,
             ZatoEventsIPC.ipc_config_name: config.has_stats,
@@ -1423,7 +1457,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             fs_data_path = os.path.abspath(fs_data_path)
             fs_data_path = os.path.normpath(fs_data_path)
 
-        extra_options_kwargs = {
+        extra_options_kwargs:'anydict' = {
             'fs_data_path': fs_data_path,
             'sync_threshold': EventsDefault.sync_threshold,
             'sync_interval': EventsDefault.sync_interval,
@@ -1512,7 +1546,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def _set_ide_password(self, ide_username:'str', ide_password:'str') -> 'None':
         service_name = 'zato.security.basic-auth.change-password'
-        request = {
+        request:'anydict' = {
             'name': ide_username,
             'is_active': True,
             'type_': SEC_DEF_TYPE.BASIC_AUTH,
@@ -1927,7 +1961,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.config.odb_data['fs_sql_config'] = self.fs_sql_config
             self.set_up_odb()
 
-            self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.odb_data, self.odb.pool, False)
+            self.odb.init_session(Zato_ODB.Pool_Name.Main, self.config.odb_data, self.odb.pool, False)
 
             self.odb.server_up_down(self.odb.token, SERVER_UP_STATUS.CLEAN_DOWN)
             self.odb.close()

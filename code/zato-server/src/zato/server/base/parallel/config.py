@@ -589,24 +589,24 @@ class ConfigLoader:
 
 # ################################################################################################################################
 
-    def get_config_odb_data(self, parallel_server:'ParallelServer') -> 'Bunch':
+    def get_config_odb_data(self, odb_config:'Bunch', is_odb_key:'str', config_token:'str') -> 'Bunch':
         """ Returns configuration with regards to ODB data.
         """
         odb_data = Bunch()
-        odb_data.db_name = parallel_server.odb_data['db_name']
-        odb_data.extra = parallel_server.odb_data['extra']
-        odb_data.engine = parallel_server.odb_data['engine']
-        odb_data.token = parallel_server.fs_server_config.main.token
+        odb_data.db_name = odb_config['db_name']
+        odb_data.extra = odb_config['extra']
+        odb_data.engine = odb_config['engine']
+        odb_data.token = config_token # parallel_server.fs_server_config.main.token
 
-        odb_data.is_odb = True
+        odb_data[is_odb_key] = True
 
         if odb_data.engine != 'sqlite':
-            odb_data.password = parallel_server.odb_data['password']
-            odb_data.host = parallel_server.odb_data['host']
-            odb_data.port = parallel_server.odb_data['port']
-            odb_data.engine = parallel_server.odb_data['engine']
-            odb_data.pool_size = parallel_server.odb_data['pool_size']
-            odb_data.username = parallel_server.odb_data['username']
+            odb_data.password = odb_config['password']
+            odb_data.host = odb_config['host']
+            odb_data.port = odb_config['port']
+            odb_data.engine = odb_config['engine']
+            odb_data.pool_size = odb_config['pool_size']
+            odb_data.username = odb_config['username']
 
         # Note that we don't read is_active off of anywhere - ODB always must
         # be active and it's not a regular connection pool anyway.

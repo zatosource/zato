@@ -334,6 +334,8 @@ class ConfigStore:
 
         # ODB
         self.odb_data = Bunch()
+        self.odb_sso_data = Bunch()
+        self.odb_pubsub_data = Bunch()
 
         # SimpleIO
         self.simple_io = None # type: stranydict
@@ -435,6 +437,8 @@ class ConfigStore:
         config_store.url_sec = self.url_sec
         config_store.broker_config = self.broker_config
         config_store.odb_data = deepcopy(self.odb_data)
+        config_store.odb_sso_data = deepcopy(self.odb_sso_data)
+        config_store.odb_pubsub_data = deepcopy(self.odb_pubsub_data)
 
         return config_store
 

@@ -413,9 +413,16 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     # Basic components needed for the server to boot up
     kvdb = KVDB()
+    sql_pool_store = PoolStore()
+
     odb_manager = ODBManager()
     odb_manager.well_known_data = ZATO_CRYPTO_WELL_KNOWN_DATA
-    sql_pool_store = PoolStore()
+
+    odb_sso_manager = ODBManager()
+    odb_sso_manager.well_known_data = ZATO_CRYPTO_WELL_KNOWN_DATA
+
+    odb_pubsub_manager = ODBManager()
+    odb_pubsub_manager.well_known_data = ZATO_CRYPTO_WELL_KNOWN_DATA
 
     # Create it upfront here
     server = ParallelServer()
@@ -428,6 +435,8 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     )
 
     server.odb = odb_manager
+    server.odb_sso = odb_sso_manager
+    server.odb_pubsub = odb_pubsub_manager
     server.service_store = service_store
     server.service_store.server = server
     server.sql_pool_store = sql_pool_store
@@ -443,14 +452,18 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
-    odb_main:'str' = server_config.get('odb_main', '') or server_config['odb']
+    odb_data:'Bunch' = server_config.get('odb_main') or server_config['odb']
+    odb_sso_data:'Bunch' = server_config.get('odb_sso') or odb_data
+    odb_pubsub_data:'Bunch' = server_config.get('odb_pubsub') or odb_data
 
     server.has_fg = options.get('fg') or False
     server.env_file = env_file
     server.env_variables_from_files[:] = initial_env_variables
     server.deploy_auto_from = options.get('deploy_auto_from') or ''
     server.crypto_manager = crypto_manager
-    server.odb_data = odb_main
+    server.odb_data = odb_data
+    server.odb_sso_data = odb_sso_data
+    server.odb_pubsub_data = odb_pubsub_data
     server.host = zato_gunicorn_app.zato_host
     server.port = zato_gunicorn_app.zato_port
     server.use_tls = server_config.crypto.use_tls

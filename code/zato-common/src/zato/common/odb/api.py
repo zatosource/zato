@@ -30,7 +30,7 @@ from bunch import Bunch, bunchify
 
 # Zato
 from zato.common.api import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, MS_SQL, NotGiven, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
-     SERVER_UP_STATUS, UNITTEST, ZATO_NONE, ZATO_ODB_POOL_NAME
+     SERVER_UP_STATUS, UNITTEST, ZATO_NONE, Zato_ODB
 from zato.common.exception import Inactive
 from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import query
@@ -549,7 +549,7 @@ class ODBManager(SessionWrapper):
         to the value pointed to by the server's .cluster attribute.
         """
         if not self.session_initialized:
-            self.init_session(ZATO_ODB_POOL_NAME, odb_config, self.pool, False)
+            self.init_session(Zato_ODB.Pool_Name.Main, odb_config, self.pool, False)
 
         with closing(self.session()) as session:
             try:

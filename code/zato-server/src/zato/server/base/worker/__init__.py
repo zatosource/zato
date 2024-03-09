@@ -38,7 +38,7 @@ from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
      HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, \
-     URL_TYPE, WEB_SOCKET, Wrapper_Name_Prefix_List, ZATO_DEFAULT, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+     URL_TYPE, WEB_SOCKET, Wrapper_Name_Prefix_List, ZATO_DEFAULT, ZATO_NONE, Zato_ODB, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -661,9 +661,10 @@ class WorkerStore(_WorkerStoreBase):
         self.sql_pool_store = PoolStore()
 
         # Connect to ODB
-        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.worker_config.odb_data
+        self.sql_pool_store[Zato_ODB.Pool_Name.Main] = self.worker_config.odb_data
         self.odb = SessionWrapper()
-        self.odb.init_session(ZATO_ODB_POOL_NAME, self.worker_config.odb_data, self.sql_pool_store[ZATO_ODB_POOL_NAME].pool)
+        self.odb.init_session(
+            Zato_ODB.Pool_Name.Main, self.worker_config.odb_data, self.sql_pool_store[Zato_ODB.Pool_Name.Main].pool)
 
         # Any user-defined SQL connections left?
         for pool_name in self.worker_config.out_sql:

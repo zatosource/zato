@@ -16,7 +16,7 @@ from uuid import uuid4
 from zato.common.py23_.past.builtins import unicode
 
 # Zato
-from zato.common.api import ZATO_ODB_POOL_NAME
+from zato.common.api import Zato_ODB
 from zato.common.exception import ZatoException
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import Cluster, SQLConnectionPool
@@ -268,7 +268,7 @@ class AutoPing(AdminService):
     """
     def handle(self):
         try:
-            self.server.sql_pool_store[ZATO_ODB_POOL_NAME].pool.ping(self.server.fs_sql_config)
+            self.server.sql_pool_store[Zato_ODB.Pool_Name.Main].pool.ping(self.server.fs_sql_config)
         except Exception:
             self.logger.warning('Could not ping ODB, e:`%s`', format_exc())
 
