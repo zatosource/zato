@@ -75,9 +75,9 @@ class SQLPublishWithRetryTestCase(CommandLineTestCase):
             self.store = PoolStore()
             self.store[name] = config
 
-            self.odb = SessionWrapper()
-            self.odb.init_session(name, config, self.store[name].pool)
-            self.odb.pool.ping({})
+            self.odb_pubsub = SessionWrapper()
+            self.odb_pubsub.init_session(name, config, self.store[name].pool)
+            _ = self.odb_pubsub.pool.ping({})
 
 # ################################################################################################################################
 

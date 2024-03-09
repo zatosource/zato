@@ -616,6 +616,8 @@ class ServiceStore:
                 class_._worker_store = service_store.server.worker_store
                 class_._enforce_service_invokes = service_store.server.enforce_service_invokes # type: ignore
                 class_.odb = service_store.server.odb
+                class_.odb_sso = service_store.server.odb_sso
+                class_.odb_pubsub = service_store.server.odb_pubsub
                 class_.schedule = SchedulerFacade(service_store.server)
                 class_.kvdb = service_store.server.worker_store.kvdb # type: ignore
                 class_.pubsub = service_store.server.worker_store.pubsub

@@ -34,7 +34,7 @@ class GetHookService(AdminService):
         output_optional = 'id', 'name'
 
     def handle(self) -> 'None':
-        with closing(self.odb.session()) as session:
+        with closing(self.odb_pubsub.session()) as session:
 
             data = pubsub_hook_service(session, self.request.input.cluster_id, self.request.input.endpoint_id,
                 hook_type_model[self.request.input.hook_type])

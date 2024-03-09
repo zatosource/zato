@@ -282,7 +282,7 @@ class ResumeWSXSubscription(AdminService):
                 raise Forbidden(self.cid)
 
         try:
-            with closing(self.odb.session()) as session:
+            with closing(self.odb_pubsub.session()) as session:
 
                 # Everything is performed using that WebSocket's pub/sub lock to ensure that both
                 # in-RAM and SQL (non-GD and GD) messages are made available to the WebSocket as a single unit.

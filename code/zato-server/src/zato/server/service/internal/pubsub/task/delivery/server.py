@@ -156,7 +156,7 @@ class GetList(AdminService):
         # All PIDs of all servers
         server_pids = {}
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb_pubsub.session()) as session:
 
             # Iterate over all servers and their sub_keys as they are known in ODB
             for _ignored_server_id, server_name, sub_key in delivery_server_list(session, self.request.input.cluster_id):

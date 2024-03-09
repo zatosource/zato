@@ -86,7 +86,7 @@ def broker_message_hook(
 ) -> 'None':
 
     if service_type == 'create_edit':
-        with closing(self.odb.session()) as session:
+        with closing(self.odb_pubsub.session()) as session:
             topic = pubsub_topic(session, input['cluster_id'], instance.id)
             input['is_internal'] = topic.is_internal
             input['max_depth_gd'] = topic.max_depth_gd
@@ -127,7 +127,7 @@ def response_hook(self:'Service', input:'anydict', instance:'PubSubTopic', attrs
                 topic_id_list.append(item.id)
 
             # .. query the database to find all the additional data for topics from the list ..
-            with closing(self.odb.session()) as session:
+            with closing(self.odb_pubsub.session()) as session:
                 depth_by_topic = get_gd_depth_topic_list(session, input['cluster_id'], topic_id_list)
                 sub_count_by_topic = get_topic_sub_count_list(session, input['cluster_id'], topic_id_list)
 
@@ -255,7 +255,7 @@ class Get(AdminService):
         topic_id   = self.request.input.id
         topic_name = self.request.input.name
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb_pubsub.session()) as session:
             topic = pubsub_topic(session, cluster_id, topic_id, topic_name) # type: PubSubTopic
             topic['current_depth_gd'] = get_gd_depth_topic(session, cluster_id, topic.id)
 
@@ -301,7 +301,7 @@ class Clear(AdminService):
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
         topic_id = self.request.input.id
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb_pubsub.session()) as session:
 
             self.logger.info('Clearing topic `%s` (id:%s)', self.pubsub.get_topic_by_id(topic_id).name, topic_id)
 
@@ -350,7 +350,7 @@ class GetPublisherList(AdminService):
 
         response = []
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb_pubsub.session()) as session:
 
             # Get last pub time for that specific endpoint to this very topic
             last_data:'anylist' = pubsub_publishers_for_topic(session, cluster_id, self.request.input.topic_id).all()
@@ -396,7 +396,7 @@ class GetGDMessageList(AdminService):
         out = []
 
         # .. collect the data ..
-        with closing(self.odb.session()) as session:
+        with closing(self.odb_pubsub.session()) as session:
             data = self.get_gd_data(session)
 
         # .. use ISO timestamps ..
@@ -480,7 +480,7 @@ class GetInRAMMessageList(AdminService):
         out = []
         topic_sub_keys:'stranydict' = {}
 
-        with closing(self.odb.session()) as session:
+        with closing(self.odb_pubsub.session()) as session:
             for topic_id, sub_key in get_topics_by_sub_keys(session, self.server.cluster_id, self.request.input.sub_key_list):
                 sub_keys:'strlist' = topic_sub_keys.setdefault(topic_id, [])
                 sub_keys.append(sub_key)

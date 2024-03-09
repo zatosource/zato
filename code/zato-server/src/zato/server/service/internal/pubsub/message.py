@@ -73,7 +73,7 @@ class GetFromTopicGD(AdminService):
         input_optional = ('needs_sub_queue_check',)
 
     def handle(self, _not_given:'any_'=object()) -> 'None':
-        with closing(self.odb.session()) as session:
+        with closing(self.odb_pubsub.session()) as session:
             needs_sub_queue_check = self.request.input.get('needs_sub_queue_check', _not_given)
             needs_sub_queue_check = needs_sub_queue_check if needs_sub_queue_check is not _not_given else True
             item = pubsub_message(session, self.request.input.cluster_id, self.request.input.msg_id, needs_sub_queue_check).\
@@ -140,7 +140,7 @@ class Has(AdminService):
         output_required = (Bool('found'),)
 
     def handle(self) -> 'None':
-        with closing(self.odb.session()) as session:
+        with closing(self.odb_pubsub.session()) as session:
             self.response.payload.found = session.query(
                 exists().where(and_(
                     PubSubMessage.pub_msg_id==self.request.input.msg_id,
@@ -157,7 +157,7 @@ class TopicDeleteGD(AdminService):
         input_required = ('cluster_id', AsIs('msg_id'))
 
     def handle(self) -> 'None':
-        with closing(self.odb.session()) as session:
+        with closing(self.odb_pubsub.session()) as session:
             ps_msg = session.query(PubSubMessage).\
                 filter(PubSubMessage.cluster_id==self.request.input.cluster_id).\
                 filter(PubSubMessage.pub_msg_id==self.request.input.msg_id).\
@@ -242,7 +242,7 @@ class QueueDeleteGD(AdminService):
         input_required = ('cluster_id', AsIs('msg_id'), 'sub_key')
 
     def handle(self) -> 'None':
-        with closing(self.odb.session()) as session:
+        with closing(self.odb_pubsub.session()) as session:
             ps_msg = session.query(PubSubEndpointEnqueuedMessage).\
                 filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
                 filter(PubSubEndpointEnqueuedMessage.pub_msg_id==self.request.input.msg_id).\
@@ -311,7 +311,7 @@ class _Update(AdminService):
     def handle(self) -> 'None':
         input = self.request.input
         self.response.payload.msg_id = input.msg_id
-        session = self.odb.session() if self._message_update_has_gd else None
+        session = self.odb_pubsub.session() if self._message_update_has_gd else None
 
         try:
             # Get that from its storage, no matter what it is
@@ -401,7 +401,7 @@ class GetFromQueueGD(AdminService):
             'published_by_name', 'pub_pattern_matched')
 
     def handle(self):
-        with closing(self.odb.session()) as session:
+        with closing(self.odb_pubsub.session()) as session:
             item = pubsub_queue_message(session, self.request.input.cluster_id, self.request.input.msg_id).\
                 first()
             if item:
