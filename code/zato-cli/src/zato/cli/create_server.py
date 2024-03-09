@@ -99,7 +99,7 @@ pub_key_location=zato-server-pub-key.pem
 cert_location=zato-server-cert.pem
 ca_certs_location=zato-server-ca-certs.pem
 
-[odb_main]
+[odb]
 db_name={{odb_db_name}}
 engine={{odb_engine}}
 extra=echo=False
