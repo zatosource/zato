@@ -1527,7 +1527,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             else:
                 session_func = pool.session
         else:
-            session_func = self.odb.session
+            session_func = self.odb_sso.session
 
         return session_func()
 

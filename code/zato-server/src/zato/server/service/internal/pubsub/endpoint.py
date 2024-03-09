@@ -445,7 +445,7 @@ class _GetEndpointQueue(AdminService):
 
             if sk_server.server_name == self.server.name and sk_server.server_pid == self.server.pid:
                 if pubsub_tool := self.pubsub.get_pubsub_tool_by_sub_key(item['sub_key']):
-                    _, current_depth_non_gd = pubsub_tool.get_queue_depth(item['sub_key'])
+                    _, current_depth_non_gd = pubsub_tool.get_queue_depth(item['sub_key']) # type: ignore
             else:
 
                 # An invoker pointing to that server
