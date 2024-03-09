@@ -1537,10 +1537,13 @@ def get_engine_url(args):
 
     names = (
         'engine', 'username', 'password', 'host', 'port', 'name', 'db_name', 'db_type',
-        'sqlite_path', 'sqlite_path'
-        'odb_type', 'odb_user', 'odb_password', 'odb_host', 'odb_port', 'odb_db_name', 'odb_type',
+        'sqlite_path',  'odb_type', 'odb_user', 'odb_password', 'odb_host', 'odb_port', 'odb_db_name',
         'ENGINE', 'NAME', 'HOST', 'USER', 'PASSWORD', 'PORT'
     )
+
+    #print()
+    #print('KKK-01', attrs)
+    #print()
 
     for name in names:
         if has_get:
@@ -1581,6 +1584,12 @@ def get_engine_url(args):
         template = engine_def
 
     out = template.format(**attrs)
+
+    #print()
+    #print('QQQ-01', attrs)
+    #print('QQQ-02', template)
+    #print('QQQ-03', out)
+    #print()
 
     return out
 

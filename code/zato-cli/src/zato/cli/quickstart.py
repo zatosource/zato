@@ -421,6 +421,29 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
+    def _enrich_create_cluster_args(self, create_cluster_args:'Bunch', create_odb_args:'Bunch') -> 'None':
+
+        for elem in sorted(create_cluster_args):
+            if elem.startswith('odb'):
+                del create_cluster_args[elem]
+
+        odb_args = [
+            'odb_type',
+            'odb_host',
+            'odb_port',
+            'odb_user',
+            'odb_db_name',
+            'odb_password',
+            'sqlite_path',
+            'odb_postgresql_schema',
+        ]
+
+        for key in odb_args:
+            value = create_odb_args[key]
+            create_cluster_args[key] = value
+
+# ################################################################################################################################
+
     def allow_empty_secrets(self) -> 'bool':
         return True
 
@@ -519,7 +542,7 @@ class Create(ZatoCommand):
             args.odb_sso_sqlite_path = os.path.join(args_path, 'zato-sso.db')
 
         if args.odb_pubsub_type == 'sqlite':
-            args.odb_pubsub_sqlite_path = os.path.join(args_path, 'zato-pubsub3.db')
+            args.odb_pubsub_sqlite_path = os.path.join(args_path, 'zato-pubsub.db')
 
         next_step = count(1)
         next_port = count(http_plain_server_port)
@@ -627,7 +650,7 @@ class Create(ZatoCommand):
                 #
                 # 2) ODB
                 #
-                if create_odb.Create(create_odb_args).execute(args, False) == self.SYS_ERROR.ODB_EXISTS:
+                if create_odb.Create(create_odb_args).execute(create_odb_args, False) == self.SYS_ERROR.ODB_EXISTS:
                     self.logger.info('[%s/%s] ODB schema already exists (%s)' % (next(next_step), total_steps, odb_type))
                 else:
                     self.logger.info('[%s/%s] ODB schema created (%s)' % (next(next_step), total_steps, odb_type))
@@ -638,13 +661,16 @@ class Create(ZatoCommand):
                 # 3) ODB initial data
                 #
                 create_cluster_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
+
                 create_cluster_args.lb_host = lb_host
                 create_cluster_args.lb_port = lb_port
                 create_cluster_args.lb_agent_port = lb_agent_port
                 create_cluster_args.secret_key = secret_key
+                self._enrich_create_cluster_args(create_cluster_args, create_odb_args)
+
                 create_cluster.Create(create_cluster_args).execute(create_cluster_args, False) # type: ignore
 
-                self.logger.info('[{}/{}] ODB initial data created'.format(next(next_step), total_steps))
+                self.logger.info('[%s/%s] ODB initial data created (%s)' % (next(next_step), total_steps, odb_type))
 
 # ################################################################################################################################
 
@@ -670,6 +696,11 @@ class Create(ZatoCommand):
                 create_server_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
                 create_server_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
                 create_server_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
+
+                print()
+                for key, value in sorted(create_server_args.items()):
+                    print('ZZZ-01', key, value)
+                print()
 
                 if has_tls:
                     create_server_args.cert_path = server_crypto_loc[name].cert_path # type: ignore
