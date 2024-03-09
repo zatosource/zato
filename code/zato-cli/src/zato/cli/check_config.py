@@ -65,7 +65,9 @@ class CheckConfig(ManageCommand):
         # Zato
         from zato.common.odb.ping import get_ping_query
 
-        engine_params = dict((conf['odb']))
+        odb_main = conf.get('odb_main') or conf['odb']
+
+        engine_params = dict(odb_main)
         engine_params['extra'] = {}
         engine_params['pool_size'] = 1
 

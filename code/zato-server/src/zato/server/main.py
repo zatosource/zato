@@ -78,7 +78,7 @@ from zato.sso.util import new_user_id, normalize_sso_config
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, callable_, dictnone, strintnone
+    from zato.common.typing_ import any_, anydict, callable_, dictnone, strintnone
     from zato.server.ext.zunicorn.config import Config as ZunicornConfig
     callable_ = callable_
 
@@ -121,8 +121,8 @@ class ZatoGunicornApplication(Application):
         self.repo_location = repo_location
         self.config_main = config_main
         self.crypto_config = crypto_config
-        self.zato_host = ''
-        self.zato_port = -1
+        self.zato_host:'str' = ''
+        self.zato_port:'int' = -1
         self.zato_config = {}
         super(ZatoGunicornApplication, self).__init__(*args, **kwargs)
 
@@ -158,14 +158,14 @@ class ZatoGunicornApplication(Application):
         self.cfg.set('before_pid_kill', self.zato_wsgi_app.before_pid_kill) # Cleans up before the worker exits
         self.cfg.set('worker_exit', self.zato_wsgi_app.worker_exit) # Cleans up after the worker exits
 
-        for k, v in self.config_main.items():
+        for k, v in self.config_main.items(): # type: ignore
             if k.startswith('gunicorn') and v:
-                k = k.replace('gunicorn_', '')
+                k = k.replace('gunicorn_', '') # type: ignore
                 if k == 'bind':
                     if not ':' in v:
                         raise ValueError('No port found in main.gunicorn_bind')
                     else:
-                        host, port = v.split(':')
+                        host, port = v.split(':') # type: ignore
                         self.zato_host = host
                         self.zato_port = port
                 self.cfg.set(k, v)
@@ -183,11 +183,11 @@ class ZatoGunicornApplication(Application):
 
         # .. what interface to bind to ..
         if bind_host := self.get_config_value('bind_host'): # type: ignore
-            self.zato_host = bind_host
+            self.zato_host = bind_host # type: ignore
 
         # .. what is our main TCP port ..
         if bind_port := self.get_config_value('bind_port'): # type: ignore
-            self.zato_port = bind_port
+            self.zato_port = bind_port # type: ignore
 
         # .. now, set the bind config value once more in self.cfg  ..
         # .. because it could have been overwritten via bind_host or bind_port ..
@@ -325,8 +325,8 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     crypto_manager = ServerCryptoManager(repo_location, secret_key=options['secret_key'], stdin_data=read_stdin_data())
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
-    server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
-    pickup_config = get_config(repo_location, 'pickup.conf')
+    server_config:'any_' = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
+    pickup_config:'any_' = get_config(repo_location, 'pickup.conf')
 
     if server_config.main.get('debugger_enabled'):
         import debugpy
@@ -340,7 +340,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     sio_config = get_sio_server_config(sio_config)
 
     sso_config = get_config(repo_location, 'sso.conf', needs_user_config=False)
-    normalize_sso_config(sso_config)
+    normalize_sso_config(sso_config) # type: ignore
 
     # Now that we have access to server.conf, greenify libraries required to be made greenlet-friendly,
     # assuming that there are any - otherwise do not do anything.
@@ -356,8 +356,8 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     if to_greenify:
         import greenify # type: ignore
         greenify.greenify()
-        for name in to_greenify:
-            result = greenify.patch_lib(name)
+        for name in to_greenify: # type: ignore
+            result = greenify.patch_lib(name) # type: ignore
             if not result:
                 raise ValueError('Library `{}` could not be greenified'.format(name))
             else:
@@ -398,7 +398,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     zunicorn.SERVER_SOFTWARE = server_config.misc.get('http_server_header', 'Zato')
 
     # Store KVDB config in logs, possibly replacing its password if told to
-    kvdb_config = get_kvdb_config_for_log(server_config.kvdb)
+    kvdb_config:'Bunch' = get_kvdb_config_for_log(server_config.kvdb)
     kvdb_logger.info('Main process config `%s`', kvdb_config)
 
     user_locale = server_config.misc.get('locale', None)
@@ -443,12 +443,14 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
+    odb_main:'str' = server_config.get('odb_main', '') or server_config['odb']
+
     server.has_fg = options.get('fg') or False
     server.env_file = env_file
     server.env_variables_from_files[:] = initial_env_variables
     server.deploy_auto_from = options.get('deploy_auto_from') or ''
     server.crypto_manager = crypto_manager
-    server.odb_data = server_config.odb
+    server.odb_data = odb_main
     server.host = zato_gunicorn_app.zato_host
     server.port = zato_gunicorn_app.zato_port
     server.use_tls = server_config.crypto.use_tls
@@ -475,7 +477,8 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.stop_after = stop_after # type: ignore
     server.is_sso_enabled = server.fs_server_config.component_enabled.sso
     if server.is_sso_enabled:
-        server.sso_api = SSOAPI(server, sso_config, cast_('callable_', None), crypto_manager.encrypt, server.decrypt,
+        server.sso_api = SSOAPI(server, sso_config, cast_('callable_', None), # type: ignore
+            crypto_manager.encrypt, server.decrypt,
             crypto_manager.hash_secret, crypto_manager.verify_hash, new_user_id)
 
     if scheduler_api_password := server.fs_server_config.scheduler.get('scheduler_api_password'):
@@ -489,8 +492,8 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     RepoManager(repo_location).ensure_repo_consistency()
 
     # For IPC communication
-    ipc_password = crypto_manager.generate_secret()
-    ipc_password = ipc_password.decode('utf8')
+    ipc_password = crypto_manager.generate_secret() # type: ignore
+    ipc_password = ipc_password.decode('utf8') # type: ignore
 
     # .. this is for our own process ..
     server.set_ipc_password(ipc_password)
@@ -498,7 +501,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     # .. this is for other processes.
     ipc_password_encrypted = crypto_manager.encrypt(ipc_password, needs_str=True)
     _ipc_password_key = IPC.Credentials.Password_Key
-    os.environ[_ipc_password_key] = ipc_password_encrypted
+    os.environ[_ipc_password_key] = ipc_password_encrypted # type: ignore
 
     profiler_enabled = server_config.get('profiler', {}).get('enabled', False)
     sentry_config = server_config.get('sentry') or {}
@@ -596,7 +599,7 @@ if __name__ == '__main__':
         logging.info('Using environment key %s -> %s', env_key_name, env_server_base_dir)
 
         server_base_dir = env_server_base_dir
-        cmd_line_options = {
+        cmd_line_options:'anydict' = {
             'fg': True,
             'sync_internal': True,
             'secret_key': '',
@@ -607,7 +610,7 @@ if __name__ == '__main__':
         }
     else:
         server_base_dir = sys.argv[1]
-        cmd_line_options = sys.argv[2]
+        cmd_line_options = sys.argv[2] # type: ignore
         cmd_line_options = parse_cmd_line_options(cmd_line_options)
 
     if not os.path.isabs(server_base_dir):
