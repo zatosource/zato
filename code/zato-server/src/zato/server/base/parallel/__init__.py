@@ -1532,7 +1532,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def configure_sso(self) -> 'None':
         if self.is_sso_enabled:
-            self.sso_api.post_configure(self._get_sso_session, self.odb.is_sqlite)
+            self.sso_api.post_configure(self._get_sso_session, self.odb_sso.is_sqlite)
 
 # ################################################################################################################################
 

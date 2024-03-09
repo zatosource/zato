@@ -657,14 +657,29 @@ class WorkerStore(_WorkerStoreBase):
     def init_sql(self) -> 'None':
         """ Initializes SQL connections, first to ODB and then any user-defined ones.
         """
+        # Local variables
+        _pool_name = Zato_ODB.Pool_Name
+
         # We need a store first
         self.sql_pool_store = PoolStore()
 
-        # Connect to ODB
-        self.sql_pool_store[Zato_ODB.Pool_Name.Main] = self.worker_config.odb_data
+        # Connect to ODB (main)
+        odb_data = self.worker_config.odb_data
+        self.sql_pool_store[_pool_name.Main] = odb_data
         self.odb = SessionWrapper()
-        self.odb.init_session(
-            Zato_ODB.Pool_Name.Main, self.worker_config.odb_data, self.sql_pool_store[Zato_ODB.Pool_Name.Main].pool)
+        self.odb.init_session(_pool_name.Main, odb_data, self.sql_pool_store[_pool_name.Main].pool)
+
+        # Connect to ODB (SSO)
+        odb_sso_data = self.worker_config.odb_sso_data
+        self.sql_pool_store[_pool_name.SSO] = odb_sso_data
+        self.odb_sso = SessionWrapper()
+        self.odb_sso.init_session(_pool_name.SSO, odb_sso_data, self.sql_pool_store[_pool_name.SSO].pool)
+
+        # Connect to ODB (pub/sub)
+        odb_pubsub_data = self.worker_config.odb_pubsub_data
+        self.sql_pool_store[_pool_name.PubSub] = odb_pubsub_data
+        self.odb_pubsub = SessionWrapper()
+        self.odb_pubsub.init_session(_pool_name.PubSub, odb_pubsub_data, self.sql_pool_store[_pool_name.PubSub].pool)
 
         # Any user-defined SQL connections left?
         for pool_name in self.worker_config.out_sql:
