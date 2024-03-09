@@ -354,7 +354,7 @@ class Create(ZatoCommand):
         out.odb_pubsub_db_name = args.odb_pubsub_db_name
         out.odb_pubsub_password = args.odb_pubsub_password
 
-        out.sqlite_path = getattr(args, 'sqlite_path', None)
+        out.odb_sqlite_path = getattr(args, 'sqlite_path', None)
         out.odb_sso_sqlite_path = getattr(args, 'odb_sso_sqlite_path', None)
         out.odb_pubsub_sqlite_path = getattr(args, 'odb_pubsub_sqlite_path', None)
 
@@ -470,6 +470,13 @@ class Create(ZatoCommand):
         # Make sure we always work with absolute paths
         args_path = os.path.abspath(args.path)
 
+        print()
+        for key, value in sorted(vars(args).items()):
+            print(111, key, value)
+        print()
+
+        zzz
+
         if args.odb_type == 'sqlite':
             args.odb_sqlite_path = os.path.join(args_path, 'zato.db')
 
@@ -477,7 +484,7 @@ class Create(ZatoCommand):
             args.odb_sso_sqlite_path = os.path.join(args_path, 'zato-sso.db')
 
         if args.odb_pubsub_type == 'sqlite':
-            args.odb_pubsub_sqlite_path = os.path.join(args_path, 'zato-pubsub.db')
+            args.odb_pubsub_sqlite_path = os.path.join(args_path, 'zato-pubsub3.db')
 
         next_step = count(1)
         next_port = count(http_plain_server_port)

@@ -54,11 +54,6 @@ class Create(ZatoCommand):
         else:
             has_alembic = True
 
-        print()
-        for key, value in sorted(vars(args).items()):
-            print(111, key, value)
-        print()
-
         engine = self._get_engine(args)
         session = self._get_session(engine)
 
