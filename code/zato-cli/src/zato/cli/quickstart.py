@@ -322,7 +322,14 @@ class Create(ZatoCommand):
     opts += deepcopy(common_scheduler_server_address_opts)
     opts += deepcopy(common_scheduler_server_api_client_opts)
 
-    def _bunch_from_args(self, args:'any_', admin_invoke_password:'str', cluster_name:'str'='') -> 'Bunch':
+    def _bunch_from_args(
+        self,
+        args:'any_',
+        admin_invoke_password:'str',
+        cluster_name:'str'='',
+        *,
+        needs_odb:'bool'=True,
+    ) -> 'Bunch':
 
         # Bunch
         from bunch import Bunch
@@ -332,35 +339,6 @@ class Create(ZatoCommand):
         out.verbose = args.verbose
         out.store_log = args.store_log
         out.store_config = args.store_config
-
-        out.odb_type = args.odb_type
-        out.odb_host = args.odb_host
-        out.odb_port = args.odb_port
-        out.odb_user = args.odb_user
-        out.odb_db_name = args.odb_db_name
-        out.odb_password = args.odb_password
-
-        out.odb_sso_type = args.odb_sso_type
-        out.odb_sso_host = args.odb_sso_host
-        out.odb_sso_port = args.odb_sso_port
-        out.odb_sso_user = args.odb_sso_user
-        out.odb_sso_db_name = args.odb_sso_db_name
-        out.odb_sso_password = args.odb_sso_password
-
-        out.odb_pubsub_type = args.odb_pubsub_type
-        out.odb_pubsub_host = args.odb_pubsub_host
-        out.odb_pubsub_port = args.odb_pubsub_port
-        out.odb_pubsub_user = args.odb_pubsub_user
-        out.odb_pubsub_db_name = args.odb_pubsub_db_name
-        out.odb_pubsub_password = args.odb_pubsub_password
-
-        out.odb_sqlite_path = getattr(args, 'sqlite_path', None)
-        out.odb_sso_sqlite_path = getattr(args, 'odb_sso_sqlite_path', None)
-        out.odb_pubsub_sqlite_path = getattr(args, 'odb_pubsub_sqlite_path', None)
-
-        out.odb_postgresql_schema = getattr(args, 'odb_postgresql_schema', None)
-        out.odb_sso_postgresql_schema = getattr(args, 'odb_sso_postgresql_schema', None)
-        out.odb_pubsub_postgresql_schema = getattr(args, 'odb_pubsub_postgresql_schema', None)
 
         out.kvdb_host = self.get_arg('kvdb_host')
         out.kvdb_port = self.get_arg('kvdb_port')
@@ -375,7 +353,71 @@ class Create(ZatoCommand):
         out.server_password = admin_invoke_password
         out.server_api_client_for_scheduler_password = admin_invoke_password
 
+        if needs_odb:
+
+            out.odb_type = args.odb_type
+            out.odb_host = args.odb_host
+            out.odb_port = args.odb_port
+            out.odb_user = args.odb_user
+            out.odb_db_name = args.odb_db_name
+            out.odb_password = args.odb_password
+            out.odb_sqlite_path = getattr(args, 'odb_sqlite_path', None)
+            out.odb_postgresql_schema = getattr(args, 'odb_postgresql_schema', None)
+
+            out.odb_sso_type = args.odb_sso_type
+            out.odb_sso_host = args.odb_sso_host
+            out.odb_sso_port = args.odb_sso_port
+            out.odb_sso_user = args.odb_sso_user
+            out.odb_sso_db_name = args.odb_sso_db_name
+            out.odb_sso_password = args.odb_sso_password
+            out.odb_sso_sqlite_path = getattr(args, 'odb_sso_sqlite_path', None)
+            out.odb_sso_postgresql_schema = getattr(args, 'odb_sso_postgresql_schema', None)
+
+            out.odb_pubsub_type = args.odb_pubsub_type
+            out.odb_pubsub_host = args.odb_pubsub_host
+            out.odb_pubsub_port = args.odb_pubsub_port
+            out.odb_pubsub_user = args.odb_pubsub_user
+            out.odb_pubsub_db_name = args.odb_pubsub_db_name
+            out.odb_pubsub_password = args.odb_pubsub_password
+            out.odb_pubsub_sqlite_path = getattr(args, 'odb_pubsub_sqlite_path', None)
+            out.odb_pubsub_postgresql_schema = getattr(args, 'odb_pubsub_postgresql_schema', None)
+
         return out
+
+# ################################################################################################################################
+
+    def _get_create_odb_args(self, orig_args:'any_', odb_type_name:'str') -> 'Bunch':
+
+        args = self._bunch_from_args(orig_args, '', needs_odb=False)
+
+        odb_type_param = f'{odb_type_name}_type'
+        odb_host_param = f'{odb_type_name}_host'
+        odb_port_param = f'{odb_type_name}_port'
+        odb_user_param = f'{odb_type_name}_user'
+        odb_db_name_param = f'{odb_type_name}_db_name'
+        odb_password_param = f'{odb_type_name}_password'
+        odb_sqlite_path_param = f'{odb_type_name}_sqlite_path'
+        odb_postgresql_schema_param = f'{odb_type_name}_postgresql_schema'
+
+        odb_type = getattr(orig_args, odb_type_param, None)
+        odb_host = getattr(orig_args, odb_host_param, None)
+        odb_port = getattr(orig_args, odb_port_param, None)
+        odb_user = getattr(orig_args, odb_user_param, None)
+        odb_db_name = getattr(orig_args, odb_db_name_param, None)
+        odb_password = getattr(orig_args, odb_password_param, None)
+        odb_sqlite_path = getattr(orig_args, odb_sqlite_path_param, None)
+        odb_postgresql_schema = getattr(orig_args, odb_postgresql_schema_param, None)
+
+        args['odb_type'] = odb_type
+        args['odb_host'] = odb_host
+        args['odb_port'] = odb_port
+        args['odb_user'] = odb_user
+        args['odb_db_name'] = odb_db_name
+        args['odb_password'] = odb_password
+        args['sqlite_path'] = odb_sqlite_path
+        args['odb_postgresql_schema'] = odb_postgresql_schema
+
+        return args
 
 # ################################################################################################################################
 
@@ -470,13 +512,6 @@ class Create(ZatoCommand):
         # Make sure we always work with absolute paths
         args_path = os.path.abspath(args.path)
 
-        print()
-        for key, value in sorted(vars(args).items()):
-            print(111, key, value)
-        print()
-
-        zzz
-
         if args.odb_type == 'sqlite':
             args.odb_sqlite_path = os.path.join(args_path, 'zato.db')
 
@@ -558,9 +593,10 @@ class Create(ZatoCommand):
 
             for name in server_names: # type: ignore
                 ca_args_server = deepcopy(ca_args)
-                ca_args_server.server_name = server_names[name]
+                ca_args_server.server_name = server_names[name] # type: ignore
                 ca_create_server.Create(ca_args_server).execute(ca_args_server, False)
-                server_crypto_loc[name] = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server_names[name]))
+                server_crypto_loc[name] = CryptoMaterialLocation( # type: ignore
+                    ca_path, '{}-{}'.format(cluster_name, server_names[name])) # type: ignore
 
             lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
             web_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'web-admin')
@@ -570,27 +606,45 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-        #
-        # 2) ODB
-        #
-        if create_odb.Create(args).execute(args, False) == self.SYS_ERROR.ODB_EXISTS:
-            self.logger.info('[{}/{}] ODB schema already exists'.format(next(next_step), total_steps))
-        else:
-            self.logger.info('[{}/{}] ODB schema created'.format(next(next_step), total_steps))
+        # All the possible ODB types that we support ..
+        odb_types = ['odb', 'odb_sso', 'odb_pubsub']
+
+        # .. go through each ..
+        for odb_type in odb_types:
+
+            # .. this will be specific to each type ..
+            odb_type_attr = f'{odb_type}_type'
+
+            # .. try to get its value ..
+            has_odb_type = getattr(args, odb_type_attr, None)
+
+            # .. continue only if we have this ODB type on input ..
+            if has_odb_type:
+
+                # .. build ODB parameters specific for this type ..
+                create_odb_args = self._get_create_odb_args(args, odb_type)
+
+                #
+                # 2) ODB
+                #
+                if create_odb.Create(create_odb_args).execute(args, False) == self.SYS_ERROR.ODB_EXISTS:
+                    self.logger.info('[%s/%s] ODB schema already exists (%s)' % (next(next_step), total_steps, odb_type))
+                else:
+                    self.logger.info('[%s/%s] ODB schema created (%s)' % (next(next_step), total_steps, odb_type))
 
 # ################################################################################################################################
 
-        #
-        # 3) ODB initial data
-        #
-        create_cluster_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
-        create_cluster_args.lb_host = lb_host
-        create_cluster_args.lb_port = lb_port
-        create_cluster_args.lb_agent_port = lb_agent_port
-        create_cluster_args.secret_key = secret_key
-        create_cluster.Create(create_cluster_args).execute(create_cluster_args, False) # type: ignore
+                #
+                # 3) ODB initial data
+                #
+                create_cluster_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
+                create_cluster_args.lb_host = lb_host
+                create_cluster_args.lb_port = lb_port
+                create_cluster_args.lb_agent_port = lb_agent_port
+                create_cluster_args.secret_key = secret_key
+                create_cluster.Create(create_cluster_args).execute(create_cluster_args, False) # type: ignore
 
-        self.logger.info('[{}/{}] ODB initial data created'.format(next(next_step), total_steps))
+                self.logger.info('[{}/{}] ODB initial data created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
@@ -604,11 +658,11 @@ class Create(ZatoCommand):
         if create_components_other_than_scheduler:
 
             for idx, name in enumerate(server_names): # type: ignore
-                server_path = os.path.join(args_path, server_names[name])
+                server_path = os.path.join(args_path, server_names[name]) # type: ignore
                 os.mkdir(server_path)
 
                 create_server_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
-                create_server_args.server_name = server_names[name]
+                create_server_args.server_name = server_names[name] # type: ignore
                 create_server_args.path = server_path
                 create_server_args.jwt_secret = jwt_secret
                 create_server_args.secret_key = secret_key
@@ -711,7 +765,7 @@ class Create(ZatoCommand):
             scheduler_path = os.path.join(args_path, 'scheduler')
             os.mkdir(scheduler_path)
 
-            session = get_session(get_engine(args)) # type: ignore
+            session:'any_' = get_session(get_engine(args)) # type: ignore
 
             with closing(session):
                 cluster_id:'int' = session.query(Cluster.id).\
@@ -765,9 +819,15 @@ class Create(ZatoCommand):
 
         if create_components_other_than_scheduler:
             for name in server_names: # type: ignore
-                check_config.append(check_config_template.format(server_name=server_names[name]))
-                start_servers.append(start_servers_template.format(server_name=server_names[name], step_number=int(name)+4))
-                stop_servers.append(stop_servers_template.format(server_name=server_names[name], step_number=int(name)+1))
+
+                check_config.append(check_config_template.format(
+                    server_name=server_names[name])) # type: ignore
+
+                start_servers.append(start_servers_template.format(
+                    server_name=server_names[name], step_number=int(name)+4)) # type: ignore
+
+                stop_servers.append(stop_servers_template.format(
+                    server_name=server_names[name], step_number=int(name)+1)) # type: ignore
 
         check_config = '\n'.join(check_config)
         start_servers = '\n'.join(start_servers)

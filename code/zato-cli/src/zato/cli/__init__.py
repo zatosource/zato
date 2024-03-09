@@ -72,7 +72,7 @@ common_odb_opts = [
     {'name':'--odb-postgresql-schema', 'help':_opts_odb_schema},
     {'name':'--odb-password', 'help':_opts_odb_password, 'default':''},
 
-    {'name':'--odb-sso-type', 'help':_opts_odb_type + _suffix_sso, 'choices':Supported_DB_Types, 'default':'sqlite'}, # noqa
+    {'name':'--odb-sso-type', 'help':_opts_odb_type + _suffix_sso, 'choices':Supported_DB_Types}, # noqa
     {'name':'--odb-sso-host', 'help':_opts_odb_host + _suffix_sso},
     {'name':'--odb-sso-port', 'help':_opts_odb_port + _suffix_sso},
     {'name':'--odb-sso-user', 'help':_opts_odb_user + _suffix_sso},
@@ -80,7 +80,7 @@ common_odb_opts = [
     {'name':'--odb-sso-postgresql-schema', 'help':_opts_odb_schema + _suffix_sso},
     {'name':'--odb-sso-password', 'help':_opts_odb_password + _suffix_sso, 'default':''},
 
-    {'name':'--odb-pubsub-type', 'help':_opts_odb_type + _suffix_pubsub, 'choices':Supported_DB_Types, 'default':'sqlite'}, # noqa
+    {'name':'--odb-pubsub-type', 'help':_opts_odb_type + _suffix_pubsub, 'choices':Supported_DB_Types}, # noqa
     {'name':'--odb-pubsub-host', 'help':_opts_odb_host + _suffix_pubsub},
     {'name':'--odb-pubsub-port', 'help':_opts_odb_port + _suffix_pubsub},
     {'name':'--odb-pubsub-user', 'help':_opts_odb_user + _suffix_pubsub},

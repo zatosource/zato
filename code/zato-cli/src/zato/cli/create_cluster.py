@@ -58,6 +58,11 @@ class Create(ZatoCommand):
 
     def execute(self, args, show_output=True):
 
+        print()
+        print()
+        print()
+        zzz
+
         # stdlib
         from datetime import datetime
         from traceback import format_exc
