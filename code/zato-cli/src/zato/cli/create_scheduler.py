@@ -315,7 +315,7 @@ class Create(ZatoCommand):
         odb_config:'strdict' = {
             'odb_engine': odb_engine,
             'odb_password': odb_password,
-            'odb_db_name': args.odb_db_name or args.sqlite_path,
+            'odb_db_name': args.odb_db_name or args.odb_sqlite_path,
             'odb_host': args.odb_host or '',
             'odb_port': args.odb_port or '',
             'odb_username': args.odb_user or '',

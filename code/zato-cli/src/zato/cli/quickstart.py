@@ -332,16 +332,38 @@ class Create(ZatoCommand):
         out.verbose = args.verbose
         out.store_log = args.store_log
         out.store_config = args.store_config
+
         out.odb_type = args.odb_type
         out.odb_host = args.odb_host
         out.odb_port = args.odb_port
         out.odb_user = args.odb_user
         out.odb_db_name = args.odb_db_name
+        out.odb_password = args.odb_password
+
+        out.odb_sso_type = args.odb_sso_type
+        out.odb_sso_host = args.odb_sso_host
+        out.odb_sso_port = args.odb_sso_port
+        out.odb_sso_user = args.odb_sso_user
+        out.odb_sso_db_name = args.odb_sso_db_name
+        out.odb_sso_password = args.odb_sso_password
+
+        out.odb_pubsub_type = args.odb_pubsub_type
+        out.odb_pubsub_host = args.odb_pubsub_host
+        out.odb_pubsub_port = args.odb_pubsub_port
+        out.odb_pubsub_user = args.odb_pubsub_user
+        out.odb_pubsub_db_name = args.odb_pubsub_db_name
+        out.odb_pubsub_password = args.odb_pubsub_password
+
+        out.sqlite_path = getattr(args, 'sqlite_path', None)
+        out.odb_sso_sqlite_path = getattr(args, 'odb_sso_sqlite_path', None)
+        out.odb_pubsub_sqlite_path = getattr(args, 'odb_pubsub_sqlite_path', None)
+
+        out.odb_postgresql_schema = getattr(args, 'odb_postgresql_schema', None)
+        out.odb_sso_postgresql_schema = getattr(args, 'odb_sso_postgresql_schema', None)
+        out.odb_pubsub_postgresql_schema = getattr(args, 'odb_pubsub_postgresql_schema', None)
+
         out.kvdb_host = self.get_arg('kvdb_host')
         out.kvdb_port = self.get_arg('kvdb_port')
-        out.sqlite_path = getattr(args, 'sqlite_path', None)
-        out.postgresql_schema = getattr(args, 'postgresql_schema', None)
-        out.odb_password = args.odb_password
         out.kvdb_password = self.get_arg('kvdb_password')
         out.cluster_name = cluster_name
         out.scheduler_name = 'scheduler1'
@@ -449,7 +471,13 @@ class Create(ZatoCommand):
         args_path = os.path.abspath(args.path)
 
         if args.odb_type == 'sqlite':
-            args.sqlite_path = os.path.join(args_path, 'zato.db')
+            args.odb_sqlite_path = os.path.join(args_path, 'zato.db')
+
+        if args.odb_sso_type == 'sqlite':
+            args.odb_sso_sqlite_path = os.path.join(args_path, 'zato-sso.db')
+
+        if args.odb_pubsub_type == 'sqlite':
+            args.odb_pubsub_sqlite_path = os.path.join(args_path, 'zato-pubsub.db')
 
         next_step = count(1)
         next_port = count(http_plain_server_port)

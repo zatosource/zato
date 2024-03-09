@@ -1536,9 +1536,10 @@ def get_engine_url(args):
         is_sqlite = args.get('engine') == 'sqlite' or args.get('db_type') == 'sqlite'
 
     names = (
-        'engine', 'username', 'password', 'host', 'port', 'name', 'db_name', 'db_type', 'sqlite_path', 'odb_type',
-        'odb_user', 'odb_password', 'odb_host', 'odb_port', 'odb_db_name', 'odb_type', 'ENGINE', 'NAME', 'HOST', 'USER',
-        'PASSWORD', 'PORT'
+        'engine', 'username', 'password', 'host', 'port', 'name', 'db_name', 'db_type',
+        'odb_sqlite_path', 'odb_sso_sqlite_path', 'odb_pubsub_sqlite_path',
+        'odb_type', 'odb_user', 'odb_password', 'odb_host', 'odb_port', 'odb_db_name', 'odb_type',
+        'ENGINE', 'NAME', 'HOST', 'USER', 'PASSWORD', 'PORT'
     )
 
     for name in names:
@@ -1546,6 +1547,10 @@ def get_engine_url(args):
             attrs[name] = args.get(name, '')
         else:
             attrs[name] = getattr(args, name, '')
+
+    for name in ['odb_sqlite_path', 'odb_sso_sqlite_path', 'odb_pubsub_sqlite_path']:
+        if value := attrs.pop(name, None):
+            attrs['sqlite_path'] = value
 
     # Re-map Django params into SQLAlchemy params
     if is_django:
@@ -1574,7 +1579,22 @@ def get_engine_url(args):
         if sqlite_path:
             attrs['db_name'] = sqlite_path
 
-    return (engine_def_sqlite if is_sqlite else engine_def).format(**attrs)
+    if is_sqlite:
+        template = engine_def_sqlite
+    else:
+        template = engine_def
+
+    print()
+    # print(111, out)
+    print(222, template)
+    print(333, attrs)
+    print()
+
+    # zzz
+
+    out = template.format(**attrs)
+
+    return out
 
 # ################################################################################################################################
 
