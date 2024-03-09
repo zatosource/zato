@@ -400,6 +400,9 @@ class ZatoCommand:
             host = self.get_arg(host_arg_name, default_host)
             port = self.get_arg(port_arg_name, default_port)
 
+        if use_tls is NotGiven:
+            use_tls = False
+
         return use_tls, host, port
 
 # ################################################################################################################################
