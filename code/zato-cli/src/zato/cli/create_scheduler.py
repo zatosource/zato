@@ -179,7 +179,8 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def _get_cluster_id(self, args:'any_') -> 'any_':
-        engine = self._get_engine(args)
+        odb_args = self._get_odb_args(args, 'odb')
+        engine = self._get_engine(odb_args)
         session = self._get_session(engine) # type: ignore
 
         cluster_id_list = session.query(Cluster.id).all() # type: ignore

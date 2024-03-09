@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -20,7 +20,7 @@ from bunch import Bunch
 from gevent.pywsgi import WSGIServer
 
 # Zato
-from zato.common.api import IPC as Common_IPC, odb_section_to_pool_name, Zato_ODB
+from zato.common.api import IPC as Common_IPC, odb_section_to_pool_name
 from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.api import ODBManager, PoolStore

@@ -1541,10 +1541,6 @@ def get_engine_url(args):
         'ENGINE', 'NAME', 'HOST', 'USER', 'PASSWORD', 'PORT'
     )
 
-    #print()
-    #print('KKK-01', attrs)
-    #print()
-
     for name in names:
         if has_get:
             attrs[name] = args.get(name, '')
@@ -1584,12 +1580,6 @@ def get_engine_url(args):
         template = engine_def
 
     out = template.format(**attrs)
-
-    #print()
-    #print('QQQ-01', attrs)
-    #print('QQQ-02', template)
-    #print('QQQ-03', out)
-    #print()
 
     return out
 

@@ -487,14 +487,27 @@ class Create(ZatoCommand):
         total_non_servers_steps = 5 if is_windows else 7
         total_steps = total_non_servers_steps + servers
 
+        odb_args = self._get_odb_args(args, 'odb')
+
         # Take the scheduler into account
         if no_scheduler:
             total_steps -= 1
+
         elif scheduler_only:
             # 1 for servers
             # 1 for Dashboard
             # 1 for the load-balancer
             total_steps -= 3
+
+        print()
+        for key, value in sorted(vars(args).items()):
+            print('KKK-01', key, value)
+        print()
+
+        # Take SSO and pub/sub ODB into account
+        for name in ['odb_sso_type', 'odb_pubsub_type']:
+            if getattr(args, name, None):
+                total_steps += 2 # One for schema, the other for its contents
 
 # ################################################################################################################################
 
@@ -613,7 +626,6 @@ class Create(ZatoCommand):
                 if idx == 0:
 
                     # .. make it a delivery server for sample pub/sub topics ..
-                    odb_args = self._get_odb_args(args, 'odb')
                     self._set_pubsub_server(odb_args, server_id, cluster_name, '/zato/demo/sample') # type: ignore
 
                     # .. make the scheduler use it.
@@ -695,7 +707,7 @@ class Create(ZatoCommand):
             scheduler_path = os.path.join(args_path, 'scheduler')
             os.mkdir(scheduler_path)
 
-            session:'any_' = get_session(get_engine(args)) # type: ignore
+            session:'any_' = get_session(get_engine(odb_args)) # type: ignore
 
             with closing(session):
                 cluster_id:'int' = session.query(Cluster.id).\
