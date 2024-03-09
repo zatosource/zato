@@ -40,7 +40,7 @@ class CommandStore:
                 if name in opt:
                     arguments[name] = opt[name]
 
-            parser.add_argument(opt['name'], **arguments)
+            _ = parser.add_argument(opt['name'], **arguments)
 
 # ################################################################################################################################
 
@@ -50,9 +50,9 @@ class CommandStore:
         import argparse
 
         base_parser = argparse.ArgumentParser(add_help=False)
-        base_parser.add_argument('--store-log', help='Whether to store an execution log', action='store_true')
-        base_parser.add_argument('--verbose', help='Show verbose output', action='store_true')
-        base_parser.add_argument(
+        _ = base_parser.add_argument('--store-log', help='Whether to store an execution log', action='store_true')
+        _ = base_parser.add_argument('--verbose', help='Show verbose output', action='store_true')
+        _ = base_parser.add_argument(
             '--store-config',
             help='Whether to store config options in a file for a later use', action='store_true')
 
@@ -103,8 +103,7 @@ class CommandStore:
 
         # Zato
         from zato.common.version import get_version
-
-        parser.add_argument('--version', action='version', version=get_version())
+        _ = parser.add_argument('--version', action='version', version=get_version())
 
 # ################################################################################################################################
 
@@ -130,7 +129,6 @@ class CommandStore:
              crypto              as crypto_mod,              \
              delete_odb          as delete_odb_mod,          \
              enmasse             as enmasse_mod,             \
-             FromConfig,                                     \
              hl7_                as hl7_mod,                 \
              ide                 as ide_mod,                 \
              info                as info_mod,                \
@@ -141,7 +139,9 @@ class CommandStore:
              stop                as stop_mod,                \
              wait                as wait_mod,                \
              web_admin_auth      as web_admin_auth_mod,      \
-             wsx                 as wsx_mod # noqa: E272
+             wsx                 as wsx_mod
+
+        from zato.cli import FromConfig # type: ignore
 
         # Zato - Pub/sub
         from zato.cli.pubsub import \
@@ -708,7 +708,7 @@ class CommandStore:
         #
         # start
         #
-        self.add_start_server_parser(parser, base_parser, subs, formatter_class)
+        _ = self.add_start_server_parser(parser, base_parser, subs, formatter_class)
 
         #
         # stop
@@ -774,9 +774,9 @@ def pre_process_quickstart(sys_argv:'strlist', opts_idx:'int') -> 'None':
     # .. remove them from their pre-3.2 non-optional positions,
     # .. note that we need to do it once for each of odb_type, redis_host and redis_port
     # .. using the same index because .pop will modify the list in place ..
-    sys_argv.pop(original_odb_type_idx)
-    sys_argv.pop(original_odb_type_idx)
-    sys_argv.pop(original_odb_type_idx)
+    _ = sys_argv.pop(original_odb_type_idx)
+    _ = sys_argv.pop(original_odb_type_idx)
+    _ = sys_argv.pop(original_odb_type_idx)
 
     # .. now, add the options back as '--' ones.
     sys_argv.append('--odb_type')
@@ -919,7 +919,7 @@ def main() -> 'any_':
         # Zato
         from zato.common.version import get_version
 
-        sys.stdout.write(get_version() + '\n')
+        _ = sys.stdout.write(get_version() + '\n')
         sys.exit(0)
 
     # Now, zato start ...
@@ -967,7 +967,7 @@ def main() -> 'any_':
                 missing_verb = ' is '    if len(missing) == 1 else ' are '
                 missing.sort()
 
-                sys.stdout.write(
+                _ = sys.stdout.write(
                     missing_noun                  + \
                     '`'                           + \
                     ', '.join(missing)            + \
@@ -980,8 +980,7 @@ def main() -> 'any_':
                 sys.exit(1)
 
         # Zato
-        from zato.cli import run_command
-
+        from zato.cli import run_command # type: ignore
         return run_command(args)
 
 # ################################################################################################################################
