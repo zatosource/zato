@@ -29,16 +29,20 @@ class MS_SQL:
 
 ZATO_INFO_FILE = '.zato-info'
 
-SUPPORTED_DB_TYPES = ('mysql', 'postgresql', 'sqlite')
+Supported_DB_Types = ('mysql', 'postgresql', 'sqlite')
 
 # ################################################################################################################################
 
-_opts_odb_type = 'Operational database type, must be one of {}'.format(SUPPORTED_DB_TYPES) # noqa
+_opts_odb_type = 'Operational database type'
 _opts_odb_host = 'Operational database host'
 _opts_odb_port = 'Operational database port'
 _opts_odb_user = 'Operational database user'
-_opts_odb_schema = 'Operational database schema'
+_opts_odb_password = 'Operational database password'
+_opts_odb_schema = 'Operational database schema for PostgreSQL'
 _opts_odb_db_name = 'Operational database name'
+
+_suffix_sso = ' (SSO)'
+_suffix_pubsub = ' (pub/sub)'
 
 # ################################################################################################################################
 
@@ -59,13 +63,31 @@ default_common_name = 'localhost'
 # ################################################################################################################################
 
 common_odb_opts = [
-    {'name':'--odb-type', 'help':_opts_odb_type, 'choices':SUPPORTED_DB_TYPES, 'default':'sqlite'}, # noqa
+
+    {'name':'--odb-type', 'help':_opts_odb_type, 'choices':Supported_DB_Types, 'default':'sqlite'}, # noqa
     {'name':'--odb-host', 'help':_opts_odb_host},
     {'name':'--odb-port', 'help':_opts_odb_port},
     {'name':'--odb-user', 'help':_opts_odb_user},
     {'name':'--odb-db-name', 'help':_opts_odb_db_name},
-    {'name':'--postgresql-schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
-    {'name':'--odb-password', 'help':'ODB database password', 'default':''},
+    {'name':'--odb-postgresql-schema', 'help':_opts_odb_schema},
+    {'name':'--odb-password', 'help':_opts_odb_password, 'default':''},
+
+    {'name':'--odb-sso-type', 'help':_opts_odb_type + _suffix_sso, 'choices':Supported_DB_Types, 'default':'sqlite'}, # noqa
+    {'name':'--odb-sso-host', 'help':_opts_odb_host + _suffix_sso},
+    {'name':'--odb-sso-port', 'help':_opts_odb_port + _suffix_sso},
+    {'name':'--odb-sso-user', 'help':_opts_odb_user + _suffix_sso},
+    {'name':'--odb-sso-db-name', 'help':_opts_odb_db_name + _suffix_sso},
+    {'name':'--odb-sso-postgresql-schema', 'help':_opts_odb_schema + _suffix_sso},
+    {'name':'--odb-sso-password', 'help':_opts_odb_password + _suffix_sso, 'default':''},
+
+    {'name':'--odb-pubsub-type', 'help':_opts_odb_type + _suffix_pubsub, 'choices':Supported_DB_Types, 'default':'sqlite'}, # noqa
+    {'name':'--odb-pubsub-host', 'help':_opts_odb_host + _suffix_pubsub},
+    {'name':'--odb-pubsub-port', 'help':_opts_odb_port + _suffix_pubsub},
+    {'name':'--odb-pubsub-user', 'help':_opts_odb_user + _suffix_pubsub},
+    {'name':'--odb-pubsub-db-name', 'help':_opts_odb_db_name + _suffix_pubsub},
+    {'name':'--odb-pubsub-postgresql-schema', 'help':_opts_odb_schema + _suffix_pubsub},
+    {'name':'--odb-pubsub-password', 'help':_opts_odb_password + _suffix_pubsub, 'default':''},
+
 ]
 
 common_ca_create_opts = [
