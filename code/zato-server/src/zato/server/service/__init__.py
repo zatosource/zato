@@ -399,6 +399,8 @@ class Service:
     definition = Definition()
     im = InstantMessaging()
     odb:'ODBManager'
+    odb_sso:'ODBManager'
+    odb_pubsub:'ODBManager'
     kvdb:'KVDB'
     pubsub:'PubSub'
     static_config:'Bunch'

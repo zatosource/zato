@@ -618,6 +618,9 @@ class ServiceStore:
                 class_.odb = service_store.server.odb
                 class_.odb_sso = service_store.server.odb_sso
                 class_.odb_pubsub = service_store.server.odb_pubsub
+                if 'DeleteEndpointQueue' in str(class_):
+                    qqq = class_.odb_pubsub
+                    qqq
                 class_.schedule = SchedulerFacade(service_store.server)
                 class_.kvdb = service_store.server.worker_store.kvdb # type: ignore
                 class_.pubsub = service_store.server.worker_store.pubsub

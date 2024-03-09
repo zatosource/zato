@@ -654,6 +654,23 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
+    def _init_sql(
+        self,
+        odb_object: 'SessionWrapper | None',
+        odb_data: 'any_',
+        pool_name: 'str',
+    ) -> 'SessionWrapper | None':
+
+        # This is optional and we create one if it is not given on input
+        odb_object = odb_object or SessionWrapper()
+
+        self.sql_pool_store[pool_name] = odb_data
+        odb_object.init_session(pool_name, odb_data, self.sql_pool_store[pool_name].pool)
+
+        return odb_object
+
+# ################################################################################################################################
+
     def init_sql(self) -> 'None':
         """ Initializes SQL connections, first to ODB and then any user-defined ones.
         """
@@ -664,22 +681,13 @@ class WorkerStore(_WorkerStoreBase):
         self.sql_pool_store = PoolStore()
 
         # Connect to ODB (main)
-        odb_data = self.worker_config.odb_data
-        self.sql_pool_store[_pool_name.Main] = odb_data
-        self.odb = SessionWrapper()
-        self.odb.init_session(_pool_name.Main, odb_data, self.sql_pool_store[_pool_name.Main].pool)
+        self.odb = self._init_sql(None, self.worker_config.odb_data, _pool_name.Main)
 
         # Connect to ODB (SSO)
-        odb_sso_data = self.worker_config.odb_sso_data
-        self.sql_pool_store[_pool_name.SSO] = odb_sso_data
-        self.odb_sso = SessionWrapper()
-        self.odb_sso.init_session(_pool_name.SSO, odb_sso_data, self.sql_pool_store[_pool_name.SSO].pool)
+        _ = self._init_sql(self.server.odb_sso, self.worker_config.odb_sso_data, _pool_name.SSO)
 
         # Connect to ODB (pub/sub)
-        odb_pubsub_data = self.worker_config.odb_pubsub_data
-        self.sql_pool_store[_pool_name.PubSub] = odb_pubsub_data
-        self.odb_pubsub = SessionWrapper()
-        self.odb_pubsub.init_session(_pool_name.PubSub, odb_pubsub_data, self.sql_pool_store[_pool_name.PubSub].pool)
+        _ = self._init_sql(self.server.odb_pubsub, self.worker_config.odb_pubsub_data, _pool_name.PubSub)
 
         # Any user-defined SQL connections left?
         for pool_name in self.worker_config.out_sql:

@@ -883,14 +883,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def set_up_odb(self) -> 'None':
 
+        # Local variables
+        _pool_name = Zato_ODB.Pool_Name
+
         # ###############
         # Set up main ODB
         # ###############
 
         # This is the call that creates an SQLAlchemy connection
         self.config.odb_data['fs_sql_config'] = self.fs_sql_config
-        self.sql_pool_store[Zato_ODB.Pool_Name.Main] = self.config.odb_data
-        self.odb.pool = self.sql_pool_store[Zato_ODB.Pool_Name.Main].pool
+        self.sql_pool_store[_pool_name.Main] = self.config.odb_data
+        self.odb.pool = self.sql_pool_store[_pool_name.Main].pool
         self.odb.token = self.config.odb_data.token.decode('utf8')
         self.odb.decrypt_func = self.decrypt
 
@@ -900,8 +903,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # This is the call that creates an SQLAlchemy connection
         self.config.odb_sso_data['fs_sql_config'] = self.fs_sql_config
-        self.sql_pool_store[Zato_ODB.Pool_Name.SSO] = self.config.odb_sso_data
-        self.odb_sso.pool = self.sql_pool_store[Zato_ODB.Pool_Name.Main].pool
+        self.sql_pool_store[_pool_name.SSO] = self.config.odb_sso_data
+        self.odb_sso.pool = self.sql_pool_store[_pool_name.Main].pool
         self.odb_sso.token = self.config.odb_pubsub_data.token.decode('utf8')
         self.odb_sso.decrypt_func = self.decrypt
 
@@ -911,8 +914,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # This is the call that creates an SQLAlchemy connection
         self.config.odb_pubsub_data['fs_sql_config'] = self.fs_sql_config
-        self.sql_pool_store[Zato_ODB.Pool_Name.PubSub] = self.config.odb_pubsub_data
-        self.odb_pubsub.pool = self.sql_pool_store[Zato_ODB.Pool_Name.Main].pool
+        self.sql_pool_store[_pool_name.PubSub] = self.config.odb_pubsub_data
+        self.odb_pubsub.pool = self.sql_pool_store[_pool_name.PubSub].pool
         self.odb_pubsub.token = self.config.odb_pubsub_data.token.decode('utf8')
         self.odb_pubsub.decrypt_func = self.decrypt
 
