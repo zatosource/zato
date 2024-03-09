@@ -1537,7 +1537,7 @@ def get_engine_url(args):
 
     names = (
         'engine', 'username', 'password', 'host', 'port', 'name', 'db_name', 'db_type',
-        'sqlite_path',  'odb_type', 'odb_user', 'odb_password', 'odb_host', 'odb_port', 'odb_db_name',
+        'sqlite_path', 'odb_type', 'odb_user', 'odb_password', 'odb_host', 'odb_port', 'odb_db_name',
         'ENGINE', 'NAME', 'HOST', 'USER', 'PASSWORD', 'PORT'
     )
 

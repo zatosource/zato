@@ -865,7 +865,8 @@ class Create(ZatoCommand):
 
         default_http_port = default_http_port or http_plain_server_port
 
-        engine = self._get_engine(args)
+        odb_args = self._get_odb_args(args, 'odb')
+        engine = self._get_engine(odb_args)
         session = self._get_session(engine) # type: ignore
 
         cluster = session.query(Cluster).filter(Cluster.name == args.cluster_name).first() # type: ignore

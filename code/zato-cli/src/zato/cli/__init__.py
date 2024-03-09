@@ -378,6 +378,105 @@ class ZatoCommand:
 
 # ################################################################################################################################
 
+    def _bunch_from_args(
+        self,
+        args:'any_',
+        admin_invoke_password:'str',
+        cluster_name:'str'='',
+        *,
+        needs_odb:'bool'=True,
+    ) -> 'Bunch':
+
+        # Bunch
+        from bunch import Bunch
+
+        out = Bunch()
+        out.path = args.path
+        out.verbose = args.verbose
+        out.store_log = args.store_log
+        out.store_config = args.store_config
+
+        out.kvdb_host = self.get_arg('kvdb_host')
+        out.kvdb_port = self.get_arg('kvdb_port')
+        out.kvdb_password = self.get_arg('kvdb_password')
+        out.cluster_name = cluster_name
+        out.scheduler_name = 'scheduler1'
+        out.scheduler_address_for_server = getattr(args, 'scheduler_address_for_server', '')
+        out.server_address_for_scheduler = getattr(args, 'server_address_for_scheduler', '')
+
+        out['admin-invoke-password'] = admin_invoke_password
+        out.admin_invoke_password = admin_invoke_password
+        out.server_password = admin_invoke_password
+        out.server_api_client_for_scheduler_password = admin_invoke_password
+
+        if needs_odb:
+
+            out.odb_type = args.odb_type
+            out.odb_host = args.odb_host
+            out.odb_port = args.odb_port
+            out.odb_user = args.odb_user
+            out.odb_db_name = args.odb_db_name
+            out.odb_password = args.odb_password
+            out.odb_sqlite_path = getattr(args, 'odb_sqlite_path', None)
+            out.odb_postgresql_schema = getattr(args, 'odb_postgresql_schema', None)
+
+            out.odb_sso_type = args.odb_sso_type
+            out.odb_sso_host = args.odb_sso_host
+            out.odb_sso_port = args.odb_sso_port
+            out.odb_sso_user = args.odb_sso_user
+            out.odb_sso_db_name = args.odb_sso_db_name
+            out.odb_sso_password = args.odb_sso_password
+            out.odb_sso_sqlite_path = getattr(args, 'odb_sso_sqlite_path', None)
+            out.odb_sso_postgresql_schema = getattr(args, 'odb_sso_postgresql_schema', None)
+
+            out.odb_pubsub_type = args.odb_pubsub_type
+            out.odb_pubsub_host = args.odb_pubsub_host
+            out.odb_pubsub_port = args.odb_pubsub_port
+            out.odb_pubsub_user = args.odb_pubsub_user
+            out.odb_pubsub_db_name = args.odb_pubsub_db_name
+            out.odb_pubsub_password = args.odb_pubsub_password
+            out.odb_pubsub_sqlite_path = getattr(args, 'odb_pubsub_sqlite_path', None)
+            out.odb_pubsub_postgresql_schema = getattr(args, 'odb_pubsub_postgresql_schema', None)
+
+        return out
+
+# ################################################################################################################################
+
+    def _get_odb_args(self, orig_args:'any_', odb_type_name:'str') -> 'Bunch':
+
+        args = self._bunch_from_args(orig_args, '', needs_odb=False)
+
+        odb_type_param = f'{odb_type_name}_type'
+        odb_host_param = f'{odb_type_name}_host'
+        odb_port_param = f'{odb_type_name}_port'
+        odb_user_param = f'{odb_type_name}_user'
+        odb_db_name_param = f'{odb_type_name}_db_name'
+        odb_password_param = f'{odb_type_name}_password'
+        odb_sqlite_path_param = f'{odb_type_name}_sqlite_path'
+        odb_postgresql_schema_param = f'{odb_type_name}_postgresql_schema'
+
+        odb_type = getattr(orig_args, odb_type_param, None)
+        odb_host = getattr(orig_args, odb_host_param, None)
+        odb_port = getattr(orig_args, odb_port_param, None)
+        odb_user = getattr(orig_args, odb_user_param, None)
+        odb_db_name = getattr(orig_args, odb_db_name_param, None)
+        odb_password = getattr(orig_args, odb_password_param, None)
+        odb_sqlite_path = getattr(orig_args, odb_sqlite_path_param, None)
+        odb_postgresql_schema = getattr(orig_args, odb_postgresql_schema_param, None)
+
+        args['odb_type'] = odb_type
+        args['odb_host'] = odb_host
+        args['odb_port'] = odb_port
+        args['odb_user'] = odb_user
+        args['odb_db_name'] = odb_db_name
+        args['odb_password'] = odb_password
+        args['sqlite_path'] = odb_sqlite_path
+        args['odb_postgresql_schema'] = odb_postgresql_schema
+
+        return args
+
+# ################################################################################################################################
+
     def _extract_address_data(
         self,
         args:'any_',

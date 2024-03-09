@@ -322,112 +322,15 @@ class Create(ZatoCommand):
     opts += deepcopy(common_scheduler_server_address_opts)
     opts += deepcopy(common_scheduler_server_api_client_opts)
 
-    def _bunch_from_args(
-        self,
-        args:'any_',
-        admin_invoke_password:'str',
-        cluster_name:'str'='',
-        *,
-        needs_odb:'bool'=True,
-    ) -> 'Bunch':
-
-        # Bunch
-        from bunch import Bunch
-
-        out = Bunch()
-        out.path = args.path
-        out.verbose = args.verbose
-        out.store_log = args.store_log
-        out.store_config = args.store_config
-
-        out.kvdb_host = self.get_arg('kvdb_host')
-        out.kvdb_port = self.get_arg('kvdb_port')
-        out.kvdb_password = self.get_arg('kvdb_password')
-        out.cluster_name = cluster_name
-        out.scheduler_name = 'scheduler1'
-        out.scheduler_address_for_server = getattr(args, 'scheduler_address_for_server', '')
-        out.server_address_for_scheduler = getattr(args, 'server_address_for_scheduler', '')
-
-        out['admin-invoke-password'] = admin_invoke_password
-        out.admin_invoke_password = admin_invoke_password
-        out.server_password = admin_invoke_password
-        out.server_api_client_for_scheduler_password = admin_invoke_password
-
-        if needs_odb:
-
-            out.odb_type = args.odb_type
-            out.odb_host = args.odb_host
-            out.odb_port = args.odb_port
-            out.odb_user = args.odb_user
-            out.odb_db_name = args.odb_db_name
-            out.odb_password = args.odb_password
-            out.odb_sqlite_path = getattr(args, 'odb_sqlite_path', None)
-            out.odb_postgresql_schema = getattr(args, 'odb_postgresql_schema', None)
-
-            out.odb_sso_type = args.odb_sso_type
-            out.odb_sso_host = args.odb_sso_host
-            out.odb_sso_port = args.odb_sso_port
-            out.odb_sso_user = args.odb_sso_user
-            out.odb_sso_db_name = args.odb_sso_db_name
-            out.odb_sso_password = args.odb_sso_password
-            out.odb_sso_sqlite_path = getattr(args, 'odb_sso_sqlite_path', None)
-            out.odb_sso_postgresql_schema = getattr(args, 'odb_sso_postgresql_schema', None)
-
-            out.odb_pubsub_type = args.odb_pubsub_type
-            out.odb_pubsub_host = args.odb_pubsub_host
-            out.odb_pubsub_port = args.odb_pubsub_port
-            out.odb_pubsub_user = args.odb_pubsub_user
-            out.odb_pubsub_db_name = args.odb_pubsub_db_name
-            out.odb_pubsub_password = args.odb_pubsub_password
-            out.odb_pubsub_sqlite_path = getattr(args, 'odb_pubsub_sqlite_path', None)
-            out.odb_pubsub_postgresql_schema = getattr(args, 'odb_pubsub_postgresql_schema', None)
-
-        return out
-
 # ################################################################################################################################
 
-    def _get_create_odb_args(self, orig_args:'any_', odb_type_name:'str') -> 'Bunch':
+    def _enrich_with_odb_args(self, base_args:'Bunch', odb_args:'Bunch') -> 'None':
 
-        args = self._bunch_from_args(orig_args, '', needs_odb=False)
-
-        odb_type_param = f'{odb_type_name}_type'
-        odb_host_param = f'{odb_type_name}_host'
-        odb_port_param = f'{odb_type_name}_port'
-        odb_user_param = f'{odb_type_name}_user'
-        odb_db_name_param = f'{odb_type_name}_db_name'
-        odb_password_param = f'{odb_type_name}_password'
-        odb_sqlite_path_param = f'{odb_type_name}_sqlite_path'
-        odb_postgresql_schema_param = f'{odb_type_name}_postgresql_schema'
-
-        odb_type = getattr(orig_args, odb_type_param, None)
-        odb_host = getattr(orig_args, odb_host_param, None)
-        odb_port = getattr(orig_args, odb_port_param, None)
-        odb_user = getattr(orig_args, odb_user_param, None)
-        odb_db_name = getattr(orig_args, odb_db_name_param, None)
-        odb_password = getattr(orig_args, odb_password_param, None)
-        odb_sqlite_path = getattr(orig_args, odb_sqlite_path_param, None)
-        odb_postgresql_schema = getattr(orig_args, odb_postgresql_schema_param, None)
-
-        args['odb_type'] = odb_type
-        args['odb_host'] = odb_host
-        args['odb_port'] = odb_port
-        args['odb_user'] = odb_user
-        args['odb_db_name'] = odb_db_name
-        args['odb_password'] = odb_password
-        args['sqlite_path'] = odb_sqlite_path
-        args['odb_postgresql_schema'] = odb_postgresql_schema
-
-        return args
-
-# ################################################################################################################################
-
-    def _enrich_create_cluster_args(self, create_cluster_args:'Bunch', create_odb_args:'Bunch') -> 'None':
-
-        for elem in sorted(create_cluster_args):
+        for elem in sorted(base_args):
             if elem.startswith('odb'):
-                del create_cluster_args[elem]
+                del base_args[elem]
 
-        odb_args = [
+        odb_arg_keys = [
             'odb_type',
             'odb_host',
             'odb_port',
@@ -438,9 +341,9 @@ class Create(ZatoCommand):
             'odb_postgresql_schema',
         ]
 
-        for key in odb_args:
-            value = create_odb_args[key]
-            create_cluster_args[key] = value
+        for key in odb_arg_keys:
+            value = odb_args[key]
+            base_args[key] = value
 
 # ################################################################################################################################
 
@@ -645,7 +548,7 @@ class Create(ZatoCommand):
             if has_odb_type:
 
                 # .. build ODB parameters specific for this type ..
-                create_odb_args = self._get_create_odb_args(args, odb_type)
+                create_odb_args = self._get_odb_args(args, odb_type)
 
                 #
                 # 2) ODB
@@ -666,7 +569,7 @@ class Create(ZatoCommand):
                 create_cluster_args.lb_port = lb_port
                 create_cluster_args.lb_agent_port = lb_agent_port
                 create_cluster_args.secret_key = secret_key
-                self._enrich_create_cluster_args(create_cluster_args, create_odb_args)
+                self._enrich_with_odb_args(create_cluster_args, create_odb_args)
 
                 create_cluster.Create(create_cluster_args).execute(create_cluster_args, False) # type: ignore
 
@@ -697,11 +600,6 @@ class Create(ZatoCommand):
                 create_server_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
                 create_server_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
 
-                print()
-                for key, value in sorted(create_server_args.items()):
-                    print('ZZZ-01', key, value)
-                print()
-
                 if has_tls:
                     create_server_args.cert_path = server_crypto_loc[name].cert_path # type: ignore
                     create_server_args.pub_key_path = server_crypto_loc[name].pub_path # type: ignore
@@ -715,7 +613,8 @@ class Create(ZatoCommand):
                 if idx == 0:
 
                     # .. make it a delivery server for sample pub/sub topics ..
-                    self._set_pubsub_server(args, server_id, cluster_name, '/zato/demo/sample') # type: ignore
+                    odb_args = self._get_odb_args(args, 'odb')
+                    self._set_pubsub_server(odb_args, server_id, cluster_name, '/zato/demo/sample') # type: ignore
 
                     # .. make the scheduler use it.
                     first_server_path = server_path
