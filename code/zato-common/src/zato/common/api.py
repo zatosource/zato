@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,7 +23,7 @@ from zato.common.defaults import http_plain_server_port
 
 if 0:
     from zato.common.ext.imbox import Imbox
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strstrdict
 
 # ################################################################################################################################
 
@@ -248,8 +248,14 @@ class ZMQ:
 class Zato_ODB:
     class Pool_Name:
         Main   = 'Zato_ODB_Main'
-        PubSub = 'Zato_ODB_PubSub'
         SSO    = 'Zato_ODB_SSO'
+        PubSub = 'Zato_ODB_PubSub'
+
+odb_section_to_pool_name:'strstrdict' = {
+    'odb': Zato_ODB.Pool_Name.Main,
+    'odb_sso': Zato_ODB.Pool_Name.SSO,
+    'odb_pubsub': Zato_ODB.Pool_Name.PubSub,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -20,7 +20,7 @@ from bunch import Bunch
 from gevent.pywsgi import WSGIServer
 
 # Zato
-from zato.common.api import IPC as Common_IPC, Zato_ODB
+from zato.common.api import IPC as Common_IPC, odb_section_to_pool_name, Zato_ODB
 from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
@@ -57,6 +57,8 @@ class AuxServerConfig:
     """ Encapsulates configuration of various server-related layers.
     """
     odb: 'ODBManager'
+    odb_sso: 'ODBManager'
+    odb_pubsub: 'ODBManager'
     username: 'str' = ''
     password: 'str' = ''
     env_key_username: 'str' = ''
@@ -79,26 +81,29 @@ class AuxServerConfig:
 # ################################################################################################################################
 
     @staticmethod
-    def get_odb(config:'AuxServerConfig') -> 'ODBManager':
+    def get_odb(config:'AuxServerConfig', odb_section:'str') -> 'ODBManager':
 
+        # Local variables
         odb = ODBManager()
         sql_pool_store = PoolStore()
+        pool_name = odb_section_to_pool_name[odb_section]
 
-        if config.main.odb.engine != 'sqlite':
+        if config.main[odb_section].engine != 'sqlite':
 
-            config.main.odb.host = config.main.odb.host
-            config.main.odb.username = config.main.odb.username
-            config.main.odb.pool_size = config.main.odb.pool_size
+            config.main[odb_section].host = config.main[odb_section].host
+            config.main[odb_section].username = config.main[odb_section].username
+            config.main[odb_section].pool_size = config.main[odb_section].pool_size
 
-            odb_password:'str' = config.main.odb.password or ''
+            odb_password:'str' = config.main[odb_section].password or ''
 
             if odb_password and odb_password.startswith('gA'):
-                config.main.odb.password = config.crypto_manager.decrypt(odb_password)
+                config.main[odb_section].password = config.crypto_manager.decrypt(odb_password)
 
-        sql_pool_store[Zato_ODB.Pool_Name.Main] = config.main.odb
+        sql_pool_store[pool_name] = config.main.odb
 
-        odb.pool = sql_pool_store[Zato_ODB.Pool_Name.Main].pool
-        odb.init_session(Zato_ODB.Pool_Name.Main, config.main.odb, odb.pool, False)
+        odb.pool = sql_pool_store[pool_name].pool
+        odb.init_session(pool_name, config.main.odb, odb.pool, False)
+
         odb.pool.ping(odb.fs_sql_config)
 
         return odb
@@ -190,10 +195,13 @@ class AuxServerConfig:
         has_odb = False
 
         if needs_odb:
-            if 'odb' in config.main:
-                config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
-                config.odb = class_.get_odb(config)
-                has_odb = True
+            odb_sections = ['odb', 'odb_sso', 'odb_pubsub']
+            for odb_section in odb_sections:
+                if odb_section in config.main:
+                    config.main[odb_section].fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
+                    odb = class_.get_odb(config, odb_section)
+                    setattr(config, odb_section, odb)
+                    has_odb = True
 
         # We want to have something set, even None, to make sure we do not get AttributeErrors when accessing config.odb
         if not has_odb:

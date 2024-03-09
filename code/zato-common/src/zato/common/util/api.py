@@ -2026,7 +2026,7 @@ def hex_sequence_to_bytes(elems):
 
 # ################################################################################################################################
 
-def tabulate_dictlist(data:'dictlist', skip_keys:'listnone'=None) -> 'str':
+def tabulate_dictlist(data:'dictlist', skip_keys:'str | listnone'=None) -> 'str':
 
     # stdlib
     from copy import deepcopy

@@ -48,7 +48,7 @@ if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, anylist, callable_, dictlist, dtnone, floatnone, stranydict, strlist, \
         strlistdict
-    from zato.scheduler.server import Config
+    from zato.scheduler.server import SchedulerServerConfig
     SASession = SASession
 
 # ################################################################################################################################
@@ -160,7 +160,7 @@ class CleanupPartsEnabled(Model):
 
 class CleanupManager:
     logger:        'Logger'
-    config:        'Config'
+    config:        'SchedulerServerConfig'
     repo_location: 'str'
     broker_client: 'BrokerClient'
     parts_enabled: 'CleanupPartsEnabled'
@@ -183,7 +183,7 @@ class CleanupManager:
         os.chdir(base_dir)
 
         # Build our main configuration object
-        self.config = SchedulerServerConfig.from_repo_location(
+        self.config = SchedulerServerConfig.from_repo_location( # type: ignore
             SchedulerServer.server_type,
             self.repo_location,
             SchedulerServer.conf_file_name,
@@ -252,7 +252,8 @@ class CleanupManager:
             topic_max_last_interaction_time = datetime_to_sec(topic_max_last_interaction_time_dt)
 
         # Always create a new session so as not to block the database
-        with closing(self.config.odb.session()) as session: # type: ignore
+
+        with closing(self.config.odb_pubsub.session()) as session: # type: ignore
             result = get_subscriptions(task_id, session, topic_ctx.id, topic_ctx.name,
                 topic_max_last_interaction_time, topic_max_last_interaction_time_dt, topic_max_last_interaction_time_source)
 
@@ -311,7 +312,7 @@ class CleanupManager:
         groups_ctx = self._build_groups(task_id, 'queue message(s)', msg_list, CleanupConfig.MsgDeleteBatchSize, ctx_id)
 
         # Note that messages for each subscriber are deleted under a new session
-        with closing(self.config.odb.session()) as session: # type: ignore
+        with closing(self.config.odb_pubsub.session()) as session: # type: ignore
 
             # Iterate over groups to delete each of them ..
             for idx, group in enumerate(groups_ctx.items, 1):
@@ -364,7 +365,7 @@ class CleanupManager:
         cluster_id = None
 
         # Always create a new session so as not to block the database
-        with closing(self.config.odb.session()) as session: # type: ignore
+        with closing(self.config.odb_pubsub.session()) as session: # type: ignore
             sk_queue_msg_list = get_sql_msg_ids_by_sub_key(
                 session, cluster_id, sub_key, last_sql_run, pub_time_max, include_unexpired_only=False, needs_result=True)
 
@@ -463,7 +464,7 @@ class CleanupManager:
         topics_found = []
 
         # Always create a new session so as not to block the database
-        with closing(self.config.odb.session()) as session: # type: ignore
+        with closing(self.config.odb_pubsub.session()) as session: # type: ignore
             result = get_topics_basic_data(session)
 
         # Convert SQL results to a dict that we can easily work with
@@ -519,7 +520,7 @@ class CleanupManager:
     def _delete_topic_messages_from_group(self, task_id:'str', groups_ctx:'GroupsCtx', topic_name:'str') -> 'None':
 
         # Always create a new session so as not to block the database
-        with closing(self.config.odb.session()) as session: # type: ignore
+        with closing(self.config.odb_pubsub.session()) as session: # type: ignore
 
             for idx, group in enumerate(groups_ctx.items, 1):
 
@@ -587,7 +588,7 @@ class CleanupManager:
         messages_to_delete = {} # type: strlistdict
 
         # Always create a new session so as not to block the database
-        with closing(self.config.odb.session()) as session: # type: ignore
+        with closing(self.config.odb_pubsub.session()) as session: # type: ignore
 
             for topic_ctx in cleanup_ctx.all_topics:
 
@@ -747,7 +748,7 @@ class CleanupManager:
         # as well as subscribers that have not used the system in the last delta seconds.
         if cleanup_ctx.clean_up_subscriptions:
             self.logger.info('Entering _cleanup_subscriptions')
-            self._cleanup_subscriptions(task_id, cleanup_ctx)
+            _ = self._cleanup_subscriptions(task_id, cleanup_ctx)
 
         # Clean up topics that contain messages without subscribers
         if cleanup_ctx.clean_up_topics_without_subscribers:
