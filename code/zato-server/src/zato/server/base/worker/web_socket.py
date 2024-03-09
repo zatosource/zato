@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from bunch import bunchify
 
 # Zato
-from zato.common.util.api import start_connectors
+from zato.common.util.api import start_connectors, wait_for_dict_key
 from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
@@ -18,6 +18,7 @@ from zato.server.base.worker.common import WorkerImpl
 
 if 0:
     from bunch import Bunch
+    from zato.common.typing_ import any_, strdict
     from zato.server.base.worker import WorkerStore
     from zato.server.connection.connector import ConnectorStore
 
@@ -40,8 +41,37 @@ class WebSocket(WorkerImpl):
         start  # type: bool
     ) -> 'None':
         with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=lock_timeout):
+
+            # Get the name to delete, which may be actually an old name in case it is a rename ..
+            config_name:'str' = msg.get('name', '') or msg.get('old_name', '')
+
+            # .. delete the previous configuration, if any ..
+            _:'any_' = self.worker_config.channel_web_socket.pop(config_name, None)
+
+            # .. create the new one ..
+            config = {
+                'config': msg
+            }
+
+            # .. and assign it for later use ..
+            self.worker_config.channel_web_socket[config_name] = config
+
+            # .. now, proceed to the the low-level connector functionality.
             func = getattr(self.web_socket_api, action)
             func(name, msg, self.on_message_invoke_service, self.request_dispatcher.url_data.authenticate_web_socket)
+
+# ################################################################################################################################
+
+    def get_web_socket_channel_id_by_name(
+        self: 'WorkerStore', # type: ignore
+        channel_name: 'str'
+    ) -> 'int':
+
+        wait_for_dict_key(self.worker_config.channel_web_socket, channel_name, timeout=5) # type: ignore
+        item:'strdict' = self.worker_config.channel_web_socket.get(channel_name)
+        item_config = item['config']
+        channel_id:'int' = item_config['id']
+        return channel_id
 
 # ################################################################################################################################
 

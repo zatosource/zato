@@ -99,6 +99,7 @@ check_config_template = """$ZATO_BIN check-config $BASE_DIR/{server_name}"""
 
 start_servers_template = """
 $ZATO_BIN start $BASE_DIR/{server_name} --verbose
+$ZATO_BIN wait --path $BASE_DIR/{server_name}
 echo [{step_number}/$STEPS] {server_name} started
 """
 
@@ -138,11 +139,11 @@ $ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py {check_tcp_ports_suffix}
 # .. load-balancer ..
 {start_lb}
 
-# .. servers ..
-{start_servers}
-
 # .. scheduler ..
 {start_scheduler}
+
+# .. servers ..
+{start_servers}
 """
 
 # ################################################################################################################################
