@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -20,7 +20,7 @@ from zato.common.api import DATA_FORMAT
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, PubSubTopic, SecurityBase, Service as ServiceModel, \
      WebSocketClient
-from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service, web_socket_client, \
+from zato.common.odb.query import channel_web_socket_list, channel_web_socket, sec_base, service, web_socket_client, \
      web_socket_client_by_pub_id, web_socket_client_list, web_socket_sub_key_data_list
 from zato.common.util.api import is_port_taken
 from zato.common.util.sql import elems_with_opaque
@@ -57,7 +57,7 @@ skip_input_params = ['cluster_id', 'service_id', 'is_out']
 create_edit_input_required_extra = ['service_name']
 create_edit_input_optional_extra = generic_attrs + ['extra_properties']
 input_optional_extra = ['security']
-output_optional_extra = ['sec_type', 'service_name', 'address'] + generic_attrs
+output_optional_extra = ['sec_type', 'service_name', 'address', 'security_name'] + generic_attrs
 create_edit_force_rewrite = {'service_name', 'address'}
 
 # ################################################################################################################################
@@ -126,10 +126,22 @@ def instance_hook(self, input, instance, attrs):
 # ################################################################################################################################
 
 def response_hook(self, input, _ignored_instance, attrs, service_type):
+
     if service_type == 'get_list' and self.name == 'zato.channel.web-socket.get-list':
+
         with closing(self.odb.session()) as session:
             for item in self.response.payload:
-                item.service_name = service(session, self.server.cluster_id, item.service_id).name
+
+                _service = service(session, self.server.cluster_id, item.service_id)
+                item.service_name = _service.name
+
+                if item.security_id:
+                    _security = sec_base(session, self.server.cluster_id, item.security_id, use_one=False)
+
+                    if _security:
+                        item.security_name = _security.name
+                    else:
+                        item.security_name = None
 
 # ################################################################################################################################
 
@@ -235,25 +247,37 @@ class _BaseAPICommand(_BaseCommand):
             'WSX API request: `%s` `%s` `%s` `%s` (%s %s:%s)', self.server_service, self.request.input,
             client.pub_client_id, client.ext_client_id, self.cid, server_name, server_proc_pid)
 
-        server_response = self.server.rpc[server_name].invoke(
-            self.server_service, self.request.input, pid=server_proc_pid, data_format=DATA_FORMAT.JSON)
+        invoker = self.server.rpc.get_invoker_by_server_name(server_name)
+        server_response = invoker.invoke(
+            self.server_service,
+            self.request.input,
+            pid=server_proc_pid,
+            data_format=DATA_FORMAT.JSON
+        )
 
         self.logger.info('WSX API response: `%s` (%s)', server_response, self.cid)
 
         if server_response:
 
-            # It may be a dict on a successful invocation ..
-            if isinstance(server_response, dict):
-                data = server_response
+            # It can be a string object that we will then use as-is ..
+            if isinstance(server_response, str):
+                response_data = server_response
 
-            # .. otherwise, it may be a ServiceInvocationResult object.
+            # .. otherwise ..
             else:
-                data = server_response.data
 
-            # The actual response may be a dict by default (on success),
-            # or a string representation of a traceback object caught
-            # while invoking another PID.
-            response_data = data.get('response_data') or {}
+                # It may be a dict on a successful invocation ..
+                if isinstance(server_response, dict):
+                    data = server_response
+
+                # .. otherwise, it may be a ServiceInvocationResult object.
+                else:
+                    data = server_response.data
+
+                # The actual response may be a dict by default (on success),
+                # or a string representation of a traceback object caught
+                # while invoking another PID.
+                response_data = data.get('response_data') or {}
 
             # No matter what it is, we can return it now.
             self.response.payload.response_data = response_data

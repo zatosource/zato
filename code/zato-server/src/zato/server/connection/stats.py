@@ -3,7 +3,7 @@
 """
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -27,7 +27,7 @@ logger = getLogger(__name__)
 
 event_type_req      = EventInfo.EventType.service_request
 event_type_resp     = EventInfo.EventType.service_response
-object_type_service = EventInfo.ObjectType.service
+object_type_service = EventInfo.CommonObject.service
 
 # ################################################################################################################################
 # ################################################################################################################################

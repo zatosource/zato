@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Monkey-patching modules individually can be about 20% faster,
@@ -51,7 +51,7 @@ Logger._log = logging_Logger_log # type: ignore
 import yaml
 
 # Zato
-from zato.common.api import OS_Env, SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
+from zato.common.api import IPC, OS_Env, SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ipaddress_ import get_preferred_ip
@@ -59,10 +59,11 @@ from zato.common.kvdb.api import KVDB
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
 from zato.common.simpleio_ import get_sio_server_config
-from zato.common.util.api import absjoin, asbool, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
+from zato.common.typing_ import cast_
+from zato.common.util.api import absjoin, asbool, get_config, get_kvdb_config_for_log, is_encrypted, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.env import populate_environment_from_file
-from zato.common.util.platform_ import is_linux, is_windows
+from zato.common.util.platform_ import is_linux, is_mac, is_windows
 from zato.common.util.open_ import open_r
 from zato.server.base.parallel import ParallelServer
 from zato.server.ext import zunicorn
@@ -77,8 +78,28 @@ from zato.sso.util import new_user_id, normalize_sso_config
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, dictnone
+    from zato.common.typing_ import any_, callable_, dictnone, strintnone
     from zato.server.ext.zunicorn.config import Config as ZunicornConfig
+    callable_ = callable_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ModuleCtx:
+
+    num_threads     = 'num_threads'
+    bind_host       = 'bind_host'
+    bind_port       = 'bind_port'
+
+    Env_Num_Threads = 'Zato_Config_Num_Threads'
+    Env_Bind_Host   = 'Zato_Config_Bind_Host'
+    Env_Bind_Port   = 'Zato_Config_Bind_Port'
+
+    Env_Map = {
+        num_threads: Env_Num_Threads,
+        bind_host:   Env_Bind_Host,
+        bind_port:   Env_Bind_Port,
+    }
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,7 +128,31 @@ class ZatoGunicornApplication(Application):
 
 # ################################################################################################################################
 
+    def get_config_value(self, config_key:'str') -> 'strintnone':
+
+        # First, map the config key to its corresponding environment variable
+        env_key = ModuleCtx.Env_Map[config_key]
+
+        # First, check if we have such a value among environment variables ..
+        if value := os.environ.get(env_key):
+
+            # .. if yes, we can return it now ..
+            return value
+
+        # .. we are here if there was no such environment variable ..
+        # .. but maybe there is a config key on its own ..
+        if value := self.config_main.get(config_key): # type: ignore
+
+            # ..if yes, we can return it ..
+            return value # type: ignore
+
+        # .. we are here if we have nothing to return, so let's do it explicitly.
+        return None
+
+# ################################################################################################################################
+
     def init(self, *ignored_args:'any_', **ignored_kwargs:'any_') -> 'None':
+
         self.cfg.set('post_fork', self.zato_wsgi_app.post_fork) # Initializes a worker
         self.cfg.set('on_starting', self.zato_wsgi_app.on_starting) # Generates the deployment key
         self.cfg.set('before_pid_kill', self.zato_wsgi_app.before_pid_kill) # Cleans up before the worker exits
@@ -129,6 +174,25 @@ class ZatoGunicornApplication(Application):
                     v = int(v)
 
                 self.zato_config[k] = v
+
+        # Override pre-3.2 names with non-gunicorn specific ones ..
+
+        # .. number of processes / threads ..
+        if num_threads := self.get_config_value('num_threads'):
+            self.cfg.set('workers', num_threads)
+
+        # .. what interface to bind to ..
+        if bind_host := self.get_config_value('bind_host'): # type: ignore
+            self.zato_host = bind_host
+
+        # .. what is our main TCP port ..
+        if bind_port := self.get_config_value('bind_port'): # type: ignore
+            self.zato_port = bind_port
+
+        # .. now, set the bind config value once more in self.cfg  ..
+        # .. because it could have been overwritten via bind_host or bind_port ..
+        bind = f'{self.zato_host}:{self.zato_port}'
+        self.cfg.set('bind', bind)
 
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_wsgi_app, name, self.zato_config[name])
@@ -161,7 +225,7 @@ def get_bin_dir() -> 'str':
 def get_code_dir(bin_dir:'str') -> 'str':
 
     # Now, built the path up to the code_dir, which is is the directory with our code, not the directory where the server is.
-    if is_linux:
+    if is_linux or is_mac:
         levels = ['..']
     else:
         levels = ['..', '..', '..']
@@ -201,8 +265,11 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     # Store a pidfile before doing anything else
     store_pidfile(base_dir)
 
-    # Now, import environment variables
-    populate_environment_from_file(options.get('env_file') or '')
+    # Now, import environment variables and store the variable for later use
+    if env_file := options.get('env_file', ''):
+        initial_env_variables = populate_environment_from_file(env_file)
+    else:
+        initial_env_variables = []
 
     # For dumping stacktraces
     if is_linux:
@@ -230,7 +297,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     from zato_environment import EnvironmentManager # type: ignore
 
     # .. build the object that we now have access to ..
-    env_manager = EnvironmentManager(env_manager_base_dir, bin_dir) # type: any_
+    env_manager:'any_' = EnvironmentManager(env_manager_base_dir, bin_dir)
 
     # .. and run the initial runtime setup, based on environment variables.
     env_manager.runtime_setup_with_env_variables()
@@ -370,18 +437,21 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     # Assigned here because it is a circular dependency
     odb_manager.parallel_server = server
 
-    stop_after = options.get('stop_after') or os.environ.get('ZATO_STOP_AFTER')
+    stop_after = options.get('stop_after') or os.environ.get('Zato_Stop_After')  or os.environ.get('ZATO_STOP_AFTER')
     if stop_after:
         stop_after = int(stop_after)
 
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
     server.has_fg = options.get('fg') or False
+    server.env_file = env_file
+    server.env_variables_from_files[:] = initial_env_variables
     server.deploy_auto_from = options.get('deploy_auto_from') or ''
     server.crypto_manager = crypto_manager
     server.odb_data = server_config.odb
     server.host = zato_gunicorn_app.zato_host
     server.port = zato_gunicorn_app.zato_port
+    server.use_tls = server_config.crypto.use_tls
     server.repo_location = repo_location
     server.pickup_config = pickup_config
     server.base_dir = base_dir
@@ -405,14 +475,30 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.stop_after = stop_after # type: ignore
     server.is_sso_enabled = server.fs_server_config.component_enabled.sso
     if server.is_sso_enabled:
-        server.sso_api = SSOAPI(server, sso_config, None, crypto_manager.encrypt, server.decrypt,
+        server.sso_api = SSOAPI(server, sso_config, cast_('callable_', None), crypto_manager.encrypt, server.decrypt,
             crypto_manager.hash_secret, crypto_manager.verify_hash, new_user_id)
+
+    if scheduler_api_password := server.fs_server_config.scheduler.get('scheduler_api_password'):
+        if is_encrypted(scheduler_api_password):
+            server.fs_server_config.scheduler.scheduler_api_password = crypto_manager.decrypt(scheduler_api_password)
 
     server.return_tracebacks = asbool(server_config.misc.get('return_tracebacks', True))
     server.default_error_message = server_config.misc.get('default_error_message', 'An error has occurred')
 
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
+
+    # For IPC communication
+    ipc_password = crypto_manager.generate_secret()
+    ipc_password = ipc_password.decode('utf8')
+
+    # .. this is for our own process ..
+    server.set_ipc_password(ipc_password)
+
+    # .. this is for other processes.
+    ipc_password_encrypted = crypto_manager.encrypt(ipc_password, needs_str=True)
+    _ipc_password_key = IPC.Credentials.Password_Key
+    os.environ[_ipc_password_key] = ipc_password_encrypted
 
     profiler_enabled = server_config.get('profiler', {}).get('enabled', False)
     sentry_config = server_config.get('sentry') or {}

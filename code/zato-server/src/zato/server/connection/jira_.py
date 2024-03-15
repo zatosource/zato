@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+"""
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
 # atlassian-python-api
 from atlassian import Jira as AtlassianJiraClient
 
@@ -7,7 +13,7 @@ from atlassian import Jira as AtlassianJiraClient
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, strlist
+    from zato.common.typing_ import any_, stranydict, strlist, strset
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,7 +76,7 @@ class JiraClient(AtlassianJiraClient):
     ) -> 'strlist':
 
         # Get the current values ..
-        value_list = self.issue_field_value(key, field_id)
+        value_list:'strlist | strset' = self.issue_field_value(key, field_id)
 
         # .. make sure it is always a list ..
         value_list = value_list or []
@@ -86,7 +92,7 @@ class JiraClient(AtlassianJiraClient):
         value_list = sorted(value_list)
 
         # .. update the ticket with a new list ..
-        self.update_issue_field(key, {
+        _:'any_' = self.update_issue_field(key, {
             field_id: value_list
         })
 
@@ -117,7 +123,7 @@ class JiraClient(AtlassianJiraClient):
 
             # .. if we are here, it means that we must have append the final item
             # .. in the list above, in which case we can make the transition.
-            self.set_issue_status(key, transition_to)
+            _:'any_' = self.set_issue_status(key, transition_to)
 
 # ################################################################################################################################
 # ################################################################################################################################

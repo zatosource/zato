@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -13,7 +13,6 @@ import socket
 
 # Zato
 from zato.common.util.api import get_current_user
-from zato.common.util.platform_ import is_linux
 
 # ################################################################################################################################
 
@@ -79,10 +78,7 @@ class GitRepoManager(_BaseRepoManager):
 # ################################################################################################################################
 # ################################################################################################################################
 
-if is_linux:
-    RepoManager = GitRepoManager
-else:
-    RepoManager = PassThroughRepoManager
+RepoManager = PassThroughRepoManager
 
 # ################################################################################################################################
 # ################################################################################################################################

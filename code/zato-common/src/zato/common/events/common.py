@@ -3,7 +3,7 @@
 """
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -35,7 +35,7 @@ class EventInfo:
         service_request = 1_000_000
         service_response = 1_000_001
 
-    class ObjectType:
+    class CommonObject:
         service = 2_000_000
 
 # ################################################################################################################################

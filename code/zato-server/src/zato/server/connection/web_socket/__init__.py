@@ -3,7 +3,7 @@
 """
 Copyright (C) Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # ################################################################################################################################
@@ -19,7 +19,7 @@ class _UTF8Validator:
     def reset(*ignored_args:'any_', **ignored_kwargs:'any_') -> 'any_':
         pass
 
-from ws4py import streaming
+from zato.server.ext.ws4py import streaming
 streaming.Utf8Validator = _UTF8Validator
 
 # ################################################################################################################################
@@ -43,10 +43,10 @@ from gevent.lock import RLock
 from gevent.pywsgi import WSGIServer as _Gevent_WSGIServer
 
 # ws4py
-from ws4py.exc import HandshakeError
-from ws4py.websocket import WebSocket as _WebSocket
-from ws4py.server.geventserver import GEventWebSocketPool, WebSocketWSGIHandler
-from ws4py.server.wsgiutils import WebSocketWSGIApplication
+from zato.server.ext.ws4py.exc import HandshakeError
+from zato.server.ext.ws4py.websocket import WebSocket as _WebSocket
+from zato.server.ext.ws4py.server.geventserver import GEventWebSocketPool, WebSocketWSGIHandler
+from zato.server.ext.ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
@@ -81,8 +81,10 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger('zato_web_socket')
-logger_zato = getLogger('zato')
 logger_has_debug = logger.isEnabledFor(DEBUG)
+
+logger_zato = getLogger('zato')
+logger_zato_has_debug = logger_zato.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
@@ -224,6 +226,9 @@ class WebSocket(_WebSocket):
         # Note: configuration object is shared by all WebSockets and any writes will be visible to all of them
         self.config = config
 
+        # This is needed for API completeness with non-Zato WSX clients
+        self.url = self.config.address
+
         # For later reference
         self.initial_http_wsgi_environ = wsgi_environ
 
@@ -256,7 +261,14 @@ class WebSocket(_WebSocket):
         if self.store_ctx:
             self.ctx_handler = ContextHandler(ctx_container_name=self.config.name, is_read_only=False)
 
-        super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
+        super(WebSocket, self).__init__(
+            self.parallel_server,
+            _unusued_sock,
+            _unusued_protocols,
+            _unusued_extensions,
+            wsgi_environ,
+            **kwargs
+        )
 
 # ################################################################################################################################
 
@@ -944,7 +956,7 @@ class WebSocket(_WebSocket):
         """ Registers peer in ODB and sets up background pings to keep its connection alive.
         Called only if authentication succeeded.
         """
-        self.sql_ws_client_id = self.invoke_service('zato.channel.web-socket.client.create', {
+        response = self.invoke_service('zato.channel.web-socket.client.create', {
             'pub_client_id': self.pub_client_id,
             'ext_client_id': self.ext_client_id,
             'ext_client_name': self.ext_client_name,
@@ -957,7 +969,9 @@ class WebSocket(_WebSocket):
             'channel_name': self.config.name,
             'peer_forwarded_for': self.forwarded_for,
             'peer_forwarded_for_fqdn': self.forwarded_for_fqdn,
-        }, needs_response=True).ws_client_id
+        }, needs_response=True)
+
+        self.sql_ws_client_id = response['ws_client_id']
 
         logger.info(
             _assigned_msg, self.sql_ws_client_id, self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name)
@@ -1164,7 +1178,8 @@ class WebSocket(_WebSocket):
             if not hook:
                 log_msg = 'Ignoring pub/sub response, on_pubsub_response hook not implemented for `%s`, conn:`%s`, msg:`%s`'
                 logger.info(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
-                logger_zato.info(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
+                if logger_zato_has_debug:
+                    logger_zato.debug(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
             else:
                 request = self._get_hook_request()
                 request['msg'] = msg
@@ -1506,8 +1521,9 @@ class WebSocket(_WebSocket):
         # Pretend it's an actual response from the client,
         # we cannot use in_reply_to because pong messages are 1:1 copies of ping ones.
         data = self._json_parser.parse(msg.data) # type: any_
-        msg_id = data['meta']['id']
-        self.responses_received[msg_id] = True
+        if data:
+            msg_id = data['meta']['id']
+            self.responses_received[msg_id] = True
 
         # Since we received a pong response, it means that the peer is connected,
         # in which case we update its pub/sub metadata.
@@ -1647,7 +1663,32 @@ class WebSocketContainer(WebSocketWSGIApplication):
 # ################################################################################################################################
 
     def invoke_client(self, cid:'str', pub_client_id:'str', request:'any_', timeout:'int') -> 'any_':
-        return self.clients[pub_client_id].invoke_client(cid, request, timeout)
+
+        #
+        # We need to handle a few cases:
+        #
+        # 1) We have a specific pub_client_id, in which case we invoke that one client and the response is not a list
+        # 2) We have no pub_client_id and we have only one client so we invoke that one client and the response is not a list
+        # 3) We have no pub_client_id and we have multiple clients so we invoke them all and the response is a list
+        #
+
+        #
+        # Case 1)
+        #
+        if pub_client_id:
+            return self.clients[pub_client_id].invoke_client(cid, request, timeout) # type: ignore
+        else:
+            out = {} # type: ignore
+            for pub_client_id, wsx in self.clients.items(): # type: ignore
+                response:'any_' = wsx.invoke_client(cid, request, timeout)
+                out[pub_client_id] = response
+
+            if len(out) > 1:
+                return out # type: ignore
+            else:
+                key = list(out)[0] # type: ignore
+                response = out[key] # type: ignore
+                return response
 
 # ################################################################################################################################
 
@@ -1889,8 +1930,20 @@ class ChannelWebSocket(Connector):
     def get_log_details(self) -> 'str':
         return cast_('str', self.config.address)
 
-    def invoke(self, cid:'str', pub_client_id:'str', request:'any_', timeout:'int'=5) -> 'any_':
-        return self._wsx_server.invoke_client(cid, pub_client_id, request, timeout)
+    def invoke(
+        self,
+        cid:'str',
+        pub_client_id:'str'='',
+        request:'any_'=None,
+        timeout:'int'=5,
+        remove_wrapper:'bool'=True
+    ) -> 'any_':
+        response = self._wsx_server.invoke_client(cid, pub_client_id, request, timeout)
+        if remove_wrapper:
+            if isinstance(response, dict):
+                if 'response' in response:
+                    return response['response'] # type: ignore
+        return response # type: ignore
 
     def invoke_by_attrs(self, cid:'str', attrs:'stranydict', request:'any_', timeout:'int'=5) -> 'any_':
         return self._wsx_server.invoke_client_by_attrs(cid, attrs, request, timeout)

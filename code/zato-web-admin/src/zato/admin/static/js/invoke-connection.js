@@ -4,8 +4,6 @@ $(document).ready(function() {
         $.fn.zato.data_table.set_field_required('#' + name);
     });
 
-    $('#send_message_form').bValidator();
-
     var _callback = function(data, status, xhr){
         var success = status == 'success';
         if(success) {

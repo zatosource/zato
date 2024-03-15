@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -12,6 +12,7 @@ from copy import deepcopy
 # Zato
 from zato.cli import common_odb_opts, is_arg_given, ZatoCommand
 from zato.common.api import SSO
+from zato.common.const import ServiceConst
 
 # ################################################################################################################################
 
@@ -47,9 +48,9 @@ class Create(ZatoCommand):
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to create'})
     opts.append({'name':'--lb-host', 'help':'Load-balancer host', 'default':'127.0.0.1'})
     opts.append({'name':'--lb-port', 'help':'Load-balancer port', 'default':'11223'})
-    opts.append({'name':'--lb-agent_port', 'help':'Load-balancer agent host', 'default':'20151'})
+    opts.append({'name':'--lb-agent_port', 'help':'Load-balancer agent\'s port', 'default':'20151'})
     opts.append({'name':'--secret-key', 'help':'Secret key that servers will use for decryption and decryption'})
-    opts.append({'name':'--admin-invoke-password', 'help':'Password for web-admin to connect to servers with'})
+    opts.append({'name':'--admin-invoke-password', 'help':'Password for config API clients to connect to servers with'})
     opts.append({'name':'--skip-if-exists',
         'help':'Return without raising an error if cluster already exists', 'action':'store_true'})
 
@@ -110,8 +111,8 @@ class Create(ZatoCommand):
             if not admin_invoke_password:
                 admin_invoke_password = self.generate_password()
 
-            admin_invoke_sec = HTTPBasicAuth(None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke',
-                admin_invoke_password, cluster)
+            admin_invoke_sec = HTTPBasicAuth(None, ServiceConst.API_Admin_Invoke_Username, True,
+                ServiceConst.API_Admin_Invoke_Username, 'Zato admin invoke', admin_invoke_password, cluster)
             session.add(admin_invoke_sec)
 
             pubapi_sec = HTTPBasicAuth(None, _pubsub_default.PUBAPI_SECDEF_NAME, True, _pubsub_default.PUBAPI_USERNAME,
@@ -134,7 +135,7 @@ class Create(ZatoCommand):
             self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, ide_pub_rbac_role)
 
             self.add_ping_services(session, cluster)
-            self.add_default_cache(session, cluster)
+            self.add_default_caches(session, cluster)
             self.add_cache_endpoints(session, cluster)
             self.add_crypto_endpoints(session, cluster)
             self.add_pubsub_sec_endpoints(session, cluster)
@@ -328,7 +329,8 @@ class Create(ZatoCommand):
 
         channel = HTTPSOAP(
             None, MISC.DefaultAdminInvokeChannel, True, True, 'channel', 'plain_http',
-            None, '/zato/admin/invoke', None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
+            None, ServiceConst.API_Admin_Invoke_Url_Path, None, '', None,
+            SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
             security=admin_invoke_sec)
         session.add(channel)
 
@@ -409,22 +411,39 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_default_cache(self, session, cluster):
-        """ Adds default cache to cluster.
+    def add_default_caches(self, session, cluster):
+        """ Adds default caches to the cluster.
         """
 
         # Zato
         from zato.common.api import CACHE
         from zato.common.odb.model import CacheBuiltin
 
+        # This is the default cache that is used if a specific one is not selected by users
         item = CacheBuiltin()
         item.cluster = cluster
-        item.name = 'default'
+        item.name = CACHE.Default_Name.Main
         item.is_active = True
         item.is_default = True
         item.max_size = CACHE.DEFAULT.MAX_SIZE
         item.max_item_size = CACHE.DEFAULT.MAX_ITEM_SIZE
         item.extend_expiry_on_get = True
+        item.extend_expiry_on_set = True
+        item.cache_type = CACHE.TYPE.BUILTIN
+        item.sync_method = CACHE.SYNC_METHOD.IN_BACKGROUND.id
+        item.persistent_storage = CACHE.PERSISTENT_STORAGE.SQL.id
+        session.add(item)
+
+        # This is used for Bearer tokens - note that it does not extend the key's expiration on .get.
+        # Otherwise, it is the same as the default one.
+        item = CacheBuiltin()
+        item.cluster = cluster
+        item.name = CACHE.Default_Name.Bearer_Token
+        item.is_active = True
+        item.is_default = True
+        item.max_size = CACHE.DEFAULT.MAX_SIZE
+        item.max_item_size = CACHE.DEFAULT.MAX_ITEM_SIZE
+        item.extend_expiry_on_get = False
         item.extend_expiry_on_set = True
         item.cache_type = CACHE.TYPE.BUILTIN
         item.sync_method = CACHE.SYNC_METHOD.IN_BACKGROUND.id
@@ -613,7 +632,7 @@ class Create(ZatoCommand):
             url_path = service_to_endpoint[name]
 
             http_soap = HTTPSOAP(None, name, True, True, 'channel', 'plain_http', None, url_path, None, '',
-                None, DATA_FORMAT.JSON, security=None, service=service, cluster=cluster)
+                None, DATA_FORMAT.JSON, security=sec, service=service, cluster=cluster)
 
             session.add(http_soap)
 
@@ -657,7 +676,7 @@ class Create(ZatoCommand):
             url_path = service_to_endpoint[name]
 
             http_soap = HTTPSOAP(None, name, True, True, 'channel', 'plain_http', None, url_path, None, '',
-                None, DATA_FORMAT.JSON, security=None, service=service, cluster=cluster)
+                None, DATA_FORMAT.JSON, security=sec, service=service, cluster=cluster)
 
             session.add(http_soap)
 
@@ -672,10 +691,10 @@ class Create(ZatoCommand):
         from zato.common.pubsub import new_sub_key
         from zato.common.util.time_ import utcnow_as_ms
 
-        sec_pubsub_demo = HTTPBasicAuth(
-            None, PUBSUB.DEFAULT.DEMO_SECDEF_NAME, True, PUBSUB.DEFAULT.DEMO_USERNAME,
-            'Zato pub/sub demo', self.generate_password(), cluster)
-        session.add(sec_pubsub_demo)
+        sec_pubsub_default = HTTPBasicAuth(
+            None, PUBSUB.DEFAULT.DEFAULT_SECDEF_NAME, True, PUBSUB.DEFAULT.DEFAULT_USERNAME,
+            'Zato pub/sub default', self.generate_password(), cluster)
+        session.add(sec_pubsub_default)
 
         sec_pubsub_test = HTTPBasicAuth(
             None, PUBSUB.DEFAULT.TEST_SECDEF_NAME, True, PUBSUB.DEFAULT.TEST_USERNAME,
@@ -694,7 +713,7 @@ class Create(ZatoCommand):
         service_topic = Service(None, 'zato.pubsub.pubapi.topic-service', True, impl_name1, True, cluster)
         service_sub   = Service(None, 'zato.pubsub.pubapi.subscribe-service', True, impl_name2, True, cluster)
         service_msg   = Service(None, 'zato.pubsub.pubapi.message-service', True, impl_name3, True, cluster)
-        service_demo  = Service(None, 'zato.pubsub.helpers.json-raw-request-logger', True, impl_demo, True, cluster)
+        service_demo  = Service(None, 'pub.helpers.raw-request-logger', True, impl_demo, True, cluster)
         service_test  = service_demo
 
         # Opaque data that lets clients use topic contain slash characters
@@ -717,7 +736,7 @@ class Create(ZatoCommand):
 
         chan_demo = HTTPSOAP(None, 'pubsub.demo.sample.channel', True, True, CONNECTION.CHANNEL,
             URL_TYPE.PLAIN_HTTP, None, '/zato/pubsub/zato.demo.sample',
-            None, '', None, DATA_FORMAT.JSON, security=sec_pubsub_demo, service=service_demo, opaque=opaque,
+            None, '', None, DATA_FORMAT.JSON, security=sec_pubsub_default, service=service_demo, opaque=opaque,
             cluster=cluster)
 
         chan_test = HTTPSOAP(None, 'pubsub.test.sample.channel', True, True, CONNECTION.CHANNEL,
@@ -727,7 +746,7 @@ class Create(ZatoCommand):
 
         outconn_demo = HTTPSOAP(None, 'pubsub.demo.sample.outconn', True, True, CONNECTION.OUTGOING,
             URL_TYPE.PLAIN_HTTP, 'http://127.0.0.1:17010', '/zato/pubsub/zato.demo.sample',
-            None, '', None, DATA_FORMAT.JSON, security=sec_pubsub_demo, opaque=opaque,
+            None, '', None, DATA_FORMAT.JSON, security=sec_pubsub_default, opaque=opaque,
             cluster=cluster)
 
         outconn_test = HTTPSOAP(None, 'pubsub.test.sample.outconn', True, True, CONNECTION.OUTGOING,
@@ -744,18 +763,27 @@ class Create(ZatoCommand):
         endpoint_default_internal.cluster = cluster
         endpoint_default_internal.endpoint_type = PUBSUB.ENDPOINT_TYPE.INTERNAL.id
 
-        endpoint_demo = PubSubEndpoint()
-        endpoint_demo.name = 'zato.pubsub.demo.endpoint'
-        endpoint_demo.is_internal = True
-        endpoint_demo.role = PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
-        endpoint_demo.topic_patterns = 'pub=/zato/demo/*\nsub=/zato/demo/*'
-        endpoint_demo.security = sec_pubsub_demo
-        endpoint_demo.cluster = cluster
-        endpoint_demo.endpoint_type = PUBSUB.ENDPOINT_TYPE.REST.id
+        endpoint_default_rest = PubSubEndpoint()
+        endpoint_default_rest.name = 'zato.pubsub.default.rest'
+        endpoint_default_rest.is_internal = False
+        endpoint_default_rest.role = PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
+        endpoint_default_rest.topic_patterns = 'pub=/*\nsub=/*'
+        endpoint_default_rest.security = sec_pubsub_default
+        endpoint_default_rest.cluster = cluster
+        endpoint_default_rest.endpoint_type = PUBSUB.ENDPOINT_TYPE.REST.id
+
+        endpoint_default_service = PubSubEndpoint()
+        endpoint_default_service.name = 'zato.pubsub.default.service'
+        endpoint_default_service.is_internal = False
+        endpoint_default_service.role = PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
+        endpoint_default_service.topic_patterns = 'pub=/*\nsub=/*'
+        endpoint_default_service.cluster = cluster
+        endpoint_default_service.endpoint_type = PUBSUB.ENDPOINT_TYPE.SERVICE.id
+        endpoint_default_service.service = service_demo
 
         endpoint_test = PubSubEndpoint()
         endpoint_test.name = 'zato.pubsub.test.endpoint'
-        endpoint_test.is_internal = False
+        endpoint_test.is_internal = True
         endpoint_test.role = PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
         endpoint_test.topic_patterns = 'pub=/zato/test/*\nsub=/zato/test/*'
         endpoint_test.security = sec_pubsub_test
@@ -789,18 +817,30 @@ class Create(ZatoCommand):
         topic_test.has_gd = False
         topic_test.cluster = cluster
 
-        sub_demo = PubSubSubscription()
-        sub_demo.creation_time = utcnow_as_ms()
-        sub_demo.topic = topic_demo
-        sub_demo.endpoint = endpoint_demo
-        sub_demo.sub_key = new_sub_key(endpoint_demo.endpoint_type)
-        sub_demo.has_gd = False
-        sub_demo.sub_pattern_matched = 'sub=/zato/demo/*'
-        sub_demo.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
-        sub_demo.cluster = cluster
-        sub_demo.wrap_one_msg_in_list = False
-        sub_demo.delivery_err_should_block = False
-        sub_demo.out_http_soap = outconn_demo
+        sub_default_rest = PubSubSubscription()
+        sub_default_rest.creation_time = utcnow_as_ms()
+        sub_default_rest.topic = topic_demo
+        sub_default_rest.endpoint = endpoint_default_rest
+        sub_default_rest.sub_key = new_sub_key(endpoint_default_rest.endpoint_type)
+        sub_default_rest.has_gd = False
+        sub_default_rest.sub_pattern_matched = 'sub=/*'
+        sub_default_rest.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
+        sub_default_rest.cluster = cluster
+        sub_default_rest.wrap_one_msg_in_list = False
+        sub_default_rest.delivery_err_should_block = False
+        sub_default_rest.out_http_soap = outconn_demo
+
+        sub_default_service = PubSubSubscription()
+        sub_default_service.creation_time = utcnow_as_ms()
+        sub_default_service.topic = topic_demo
+        sub_default_service.endpoint = endpoint_default_service
+        sub_default_service.sub_key = new_sub_key(endpoint_default_service.endpoint_type)
+        sub_default_service.has_gd = False
+        sub_default_service.sub_pattern_matched = 'sub=/*'
+        sub_default_service.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
+        sub_default_service.cluster = cluster
+        sub_default_service.wrap_one_msg_in_list = False
+        sub_default_service.delivery_err_should_block = False
 
         sub_test = PubSubSubscription()
         sub_test.creation_time = utcnow_as_ms()
@@ -816,10 +856,11 @@ class Create(ZatoCommand):
         sub_test.out_http_soap = outconn_test
 
         session.add(endpoint_default_internal)
-        session.add(endpoint_demo)
+        session.add(endpoint_default_rest)
         session.add(topic_demo)
         session.add(topic_test)
-        session.add(sub_demo)
+        session.add(sub_default_rest)
+        session.add(sub_default_service)
         session.add(sub_test)
 
         session.add(service_topic)

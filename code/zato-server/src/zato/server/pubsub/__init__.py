@@ -3,13 +3,14 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # pylint: disable=unused-import, redefined-builtin, unused-variable
 
 # stdlib
 import logging
+import os
 from contextlib import closing
 from io import StringIO
 from operator import attrgetter
@@ -27,7 +28,7 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.typing_ import cast_, dict_, optional
-from zato.common.util.api import spawn_greenlet, wait_for_dict_key_by_get_func
+from zato.common.util.api import as_bool, spawn_greenlet, wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.core.endpoint import EndpointAPI
 from zato.server.pubsub.core.trigger import NotifyPubSubTasksTrigger
@@ -44,7 +45,7 @@ from zato.server.pubsub.sync import InRAMSync
 
 if 0:
     from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, dictlist, intdict, \
-        intlist, intnone, list_, stranydict, strstrdict, strlist, strlistdict, \
+        intlist, intnone, list_, stranydict, strnone, strstrdict, strlist, strlistdict, \
         strlistempty, strtuple, type_
     from zato.distlock import Lock
     from zato.server.base.parallel import ParallelServer
@@ -204,6 +205,17 @@ class PubSub:
 
 # ################################################################################################################################
 
+    def stop(self) -> 'None':
+        """ Stops all pub/sub tools, which in turn stops all the delivery tasks.
+        """
+        for item in self.pubsub_tools:
+            try:
+                item.stop()
+            except Exception:
+                logger.info('Ignoring exception in PubSub.stop -> %s', format_exc())
+
+# ################################################################################################################################
+
     @property
     def subscriptions_by_sub_key(self) -> 'strsubdict':
         return self._subscriptions_by_sub_key
@@ -253,10 +265,34 @@ class PubSub:
 
 # ################################################################################################################################
 
+    def _wait_for_sub_key(self, sub_key:'str') -> 'None':
+
+        # Log what we are about to do
+        logger.info('Waiting for sub_key -> %s', sub_key)
+
+        # Make sure the key is there.
+        wait_for_dict_key(self.subscriptions_by_sub_key, sub_key, timeout=180)
+
+# ################################################################################################################################
+
     def _get_subscription_by_sub_key(self, sub_key:'str') -> 'Subscription':
         """ Low-level implementation of self.get_subscription_by_sub_key, must be called with self.lock held.
         """
-        return self.subscriptions_by_sub_key[sub_key]
+        # Make sure the key is there ..
+        # self._wait_for_sub_key(sub_key)
+
+        # .. get the subscription ..
+        sub = self.subscriptions_by_sub_key.get(sub_key)
+
+        # .. and return it to the caller if it exists ..
+        if sub:
+            return sub
+
+        # .. otherwise, raise an error ..
+        else:
+            msg = 'No such subscription `{}` among `{}`'.format(sub_key, sorted(self.subscriptions_by_sub_key))
+            logger.info(msg)
+            raise KeyError(msg)
 
 # ################################################################################################################################
 
@@ -462,7 +498,7 @@ class PubSub:
                     sk_list.append(sub.sub_key)
 
             # .. delete all references to the sub_keys found ..
-            for sub_key in sk_list:
+            for sub_key in sk_list: # type: ignore
 
                 # .. first, stop the delivery tasks ..
                 _ = self._delete_subscription_by_sub_key(sub_key, ignore_missing=True)
@@ -473,6 +509,11 @@ class PubSub:
         with self.lock:
             self.endpoint_api.delete(config['id'])
             self.endpoint_api.create(config)
+
+# ################################################################################################################################
+
+    def wait_for_endpoint(self, endpoint_name:'str', timeout:'int'=600) -> 'bool':
+        return wait_for_dict_key_by_get_func(self.endpoint_api.get_by_name, endpoint_name, timeout, interval=0.5)
 
 # ################################################################################################################################
 
@@ -505,7 +546,12 @@ class PubSub:
 
     def get_topic_by_name(self, topic_name:'str') -> 'Topic':
         with self.lock:
-            return self.topic_api.get_topic_by_name(topic_name)
+            return self.get_topic_by_name_no_lock(topic_name)
+
+# ################################################################################################################################
+
+    def get_topic_by_name_no_lock(self, topic_name:'str') -> 'Topic':
+        return self.topic_api.get_topic_by_name(topic_name)
 
 # ################################################################################################################################
 
@@ -518,6 +564,13 @@ class PubSub:
     def get_topic_name_by_sub_key(self, sub_key:'str') -> 'str':
         with self.lock:
             return self._get_subscription_by_sub_key(sub_key).topic_name
+
+# ################################################################################################################################
+
+    def get_target_service_name_by_topic_id(self, topic_id:'int') -> 'strnone':
+        with self.lock:
+            topic = self.topic_api.get_topic_by_id(topic_id)
+            return topic.config.get('target_service_name')
 
 # ################################################################################################################################
 
@@ -607,8 +660,10 @@ class PubSub:
 
     def _delete_subscription_from_subscriptions_by_topic(self, sub:'Subscription') -> 'None':
 
-        # This is a list of all the subscriptions related to a given topic ..
-        sk_list = self.subscriptions_by_topic[sub.topic_name]
+        # This is a list of all the subscriptions related to a given topic,
+        # it may be potentially empty if we are trying to delete subscriptions
+        # for a topic that has just been deleted ..
+        sk_list = self.get_subscriptions_by_topic(sub.topic_name)
 
         # .. try to remove the subscription object from each list ..
         try:
@@ -738,13 +793,13 @@ class PubSub:
 # ################################################################################################################################
 
     def create_topic_for_service(self, service_name:'str', topic_name:'str') -> 'None':
-        self.create_topic(topic_name, is_internal=True)
+        self.create_topic(topic_name, is_internal=True, target_service_name=service_name)
         logger.info('Created topic `%s` for service `%s`', topic_name, service_name)
 
 # ################################################################################################################################
 
     def wait_for_topic(self, topic_name:'str', timeout:'int'=600) -> 'bool':
-        return wait_for_dict_key_by_get_func(self.topic_api.get_topic_by_name, topic_name, timeout, interval=0.5)
+        return wait_for_dict_key_by_get_func(self.topic_api.get_topic_by_name, topic_name, timeout, interval=0.01)
 
 # ################################################################################################################################
 
@@ -870,7 +925,7 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def get_pubsub_tool_by_sub_key(self, sub_key:'str') -> 'PubSubTool':
+    def get_pubsub_tool_by_sub_key(self, sub_key:'str') -> 'PubSubTool | None':
         with self.lock:
             return self._get_pubsub_tool_by_sub_key(sub_key)
 
@@ -905,7 +960,10 @@ class PubSub:
             'channel_name': channel_name,
             'pub_client_id': pub_client_id,
             'endpoint_type': PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
-            'wsx_info': wsx_info
+            'wsx_info': wsx_info,
+            'source': 'pubsub.PubSub',
+            'source_server_name': self.server.name,
+            'source_server_pid': self.server.pid,
         })
 
 # ################################################################################################################################
@@ -973,33 +1031,61 @@ class PubSub:
     def _set_sub_key_server(
         self,
         config, # type: stranydict
+        *,
+        ignore_missing_sub_key, # type: bool
         _endpoint_type=PUBSUB.ENDPOINT_TYPE # type: type_[PUBSUB.ENDPOINT_TYPE]
     ) -> 'None':
         """ Low-level implementation of self.set_sub_key_server - must be called with self.lock held.
         """
-        sub = self._get_subscription_by_sub_key(config['sub_key'])
-        config['endpoint_id'] = sub.endpoint_id
-        config['endpoint_name'] = self.endpoint_api.get_by_id(sub.endpoint_id)
-        self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
-        endpoint_type = config['endpoint_type']
+        try:
+            # Try to see if we have such a subscription ..
+            sub = self._get_subscription_by_sub_key(config['sub_key'])
+        except KeyError:
 
-        config['wsx'] = int(endpoint_type == _endpoint_type.WEB_SOCKETS.id)
-        config['srv'] = int(endpoint_type == _endpoint_type.SERVICE.id)
+            # .. if we do not, it may be because it was already deleted
+            # before we have been invoked and this may be potentially ignored.
 
-        sks_table = self.format_sk_servers()
-        msg = 'Set sk_server{}for sub_key `%(sub_key)s` (wsx/srv:%(wsx)s/%(srv)s) - `%(server_name)s:%(server_pid)s`, ' + \
-            'current sk_servers:\n{}'
-        msg = msg.format(' ' if config['server_pid'] else ' (no PID) ', sks_table)
+            if not ignore_missing_sub_key:
+                raise
 
-        logger.info(msg, config)
-        logger_zato.info(msg, config)
+        else:
+
+            sub_key:'str' = config['sub_key']
+            sk_server = SubKeyServer(config)
+            self.sub_key_servers[sub_key] = sk_server
+
+            config['endpoint_id'] = sub.endpoint_id
+            config['endpoint_name'] = self.endpoint_api.get_by_id(sub.endpoint_id)
+
+            endpoint_type = config['endpoint_type']
+
+            config['wsx'] = int(endpoint_type == _endpoint_type.WEB_SOCKETS.id)
+            config['srv'] = int(endpoint_type == _endpoint_type.SERVICE.id)
+
+            server_pid:'str' = config['server_pid']
+            server_name:'str' = config['server_name']
+            is_wsx:'int' = config['wsx']
+            is_service:'int' = config['srv']
+            pid_info:'str' = ' ' if config['server_pid'] else ' (no PID) '
+
+            # This is basic information that we always log ..
+            msg  = f'Set sk_server{pid_info}for sub_key `{sub_key}` (w/s:{is_wsx}/{is_service}) - {server_name}:{server_pid}'
+            msg += f', len-sks:{len(self.sub_key_servers)}'
+
+            # .. optionally, we log the full connection table too ..
+            if as_bool(os.environ.get(PUBSUB.Env.Log_Table)):
+                sks_table = self.format_sk_servers()
+                msg += f', current sk_servers:\n{sks_table}'
+
+            logger.info(msg)
+            logger_zato.info(msg)
 
 # ################################################################################################################################
 
     def set_sub_key_server(self, config:'anydict') -> 'None':
         with self.lock:
-            self._set_sub_key_server(config)
+            self._set_sub_key_server(config, ignore_missing_sub_key=True)
 
 # ################################################################################################################################
 
@@ -1033,11 +1119,12 @@ class PubSub:
 
             _ = self.sub_key_servers.pop(sub_key, None)
 
-            sks_table = self.format_sk_servers(sub_pattern_matched=sub_pattern_matched)
-            msg_sks = 'Current sk_servers after deletion of `%s`:\n%s'
+            if as_bool(os.environ.get(PUBSUB.Env.Log_Table)):
+                sks_table = self.format_sk_servers(sub_pattern_matched=sub_pattern_matched)
+                msg_sks = 'Current sk_servers after deletion of `%s`:\n%s'
 
-            logger.info(msg_sks, sub_key, sks_table)
-            logger_zato.info(msg_sks, sub_key, sks_table)
+                logger.info(msg_sks, sub_key, sks_table)
+                logger_zato.info(msg_sks, sub_key, sks_table)
 
         else:
             logger.info('Could not find sub_key `%s` while deleting sub_key server, current `%s` `%s`',
@@ -1072,7 +1159,8 @@ class PubSub:
         Returns that PID or None if the information could not be obtained.
         """
         try:
-            response = self.server.rpc[server_name].invoke('zato.pubsub.delivery.get-server-pid-for-sub-key', {
+            invoker = self.server.rpc.get_invoker_by_server_name(server_name)
+            response = invoker.invoke('zato.pubsub.delivery.get-server-pid-for-sub-key', {
                 'sub_key': sub_key,
             }) # type: anydict
         except Exception:
@@ -1119,7 +1207,7 @@ class PubSub:
             config['server_pid'] = self.get_server_pid_for_sub_key(data.server_name, sub_key)
 
             # OK, set up the server with what we found above
-            self._set_sub_key_server(config)
+            self._set_sub_key_server(config, ignore_missing_sub_key=False)
 
 # ################################################################################################################################
 
@@ -1642,13 +1730,14 @@ class PubSub:
 # ################################################################################################################################
 
     def create_topic(self,
-        name,                    # type: str
-        has_gd=False,            # type: bool
-        accept_on_no_sub=True,   # type: bool
-        is_active=True,          # type: bool
-        is_internal=False,       # type: bool
-        is_api_sub_allowed=True, # type: bool
-        hook_service_id=None,    # type: intnone
+        name,                     # type: str
+        has_gd=False,             # type: bool
+        accept_on_no_sub=True,    # type: bool
+        is_active=True,           # type: bool
+        is_internal=False,        # type: bool
+        is_api_sub_allowed=True,  # type: bool
+        hook_service_id=None,     # type: intnone
+        target_service_name=None, # type: strnone
         task_sync_interval=_ps_default.TASK_SYNC_INTERVAL,         # type: int
         task_delivery_interval=_ps_default.TASK_DELIVERY_INTERVAL, # type: int
         depth_check_freq=_ps_default.DEPTH_CHECK_FREQ,             # type: int
@@ -1665,6 +1754,7 @@ class PubSub:
             is_internal = is_internal,
             is_api_sub_allowed = is_api_sub_allowed,
             hook_service_id = hook_service_id,
+            target_service_name = target_service_name,
             task_sync_interval = task_sync_interval,
             task_delivery_interval = task_delivery_interval,
             depth_check_freq = depth_check_freq,

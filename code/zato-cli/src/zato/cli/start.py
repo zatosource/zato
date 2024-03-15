@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -20,7 +20,7 @@ from zato.common.util.file_system import get_tmp_path
 
 if 0:
 
-    from zato.common.typing_ import any_, anydict, callnone, dictnone
+    from zato.common.typing_ import any_, anydict, callnone, dictnone, strdict
 
     # During development, it is convenient to configure it here to catch information that should be logged
     # even prior to setting up main loggers in each of components.
@@ -140,14 +140,26 @@ Examples:
         """ Starts a component in background or foreground, depending on the 'fg' flag.
         """
 
+        # Type hints
+        env_file:'str'
+
         # Zato
         from zato.common.util.proc import start_python_process
 
-        options = {
+        # We need for it to be an absolute path because the component
+        # may want to listen for changes to its contents.
+        if env_file := self.args.env_file: # type: ignore
+            if not os.path.abspath(env_file):
+                env_file = os.path.join(self.original_dir, env_file)
+                env_file = os.path.abspath(env_file)
+            else:
+                env_file = os.path.expanduser(env_file)
+
+        options:'strdict' = {
             'sync_internal': self.args.sync_internal,
             'secret_key': self.args.secret_key or '',
             'stderr_path': self.args.stderr_path,
-            'env_file': self.args.env_file,
+            'env_file': env_file,
             'stop_after': self.args.stop_after,
         }
 
@@ -253,21 +265,21 @@ Examples:
     def _maybe_set_up_deploy(self) -> 'dictnone':
 
         # Local aliases
-        env_from1 = os.environ.get('Zato_Deploy_From')
-        env_from2 = os.environ.get('ZATO_DEPLOY_FROM')
+        env_from1 = os.environ.get('Zato_Deploy_From') or ''
+        env_from2 = os.environ.get('ZATO_DEPLOY_FROM') or ''
 
         # Zato_Deploy_Auto_Path_To_Delete
         # Zato_Deploy_Auto_Enmasse
 
         # First goes the command line, then both of the environment variables
-        deploy = self.args.deploy or env_from1 or env_from2 or ''
+        deploy:'str' = self.args.deploy or env_from1 or env_from2 or ''
 
         # We have a resource to deploy ..
         if deploy:
 
             is_ssh   = deploy.startswith('ssh://')
             is_http  = deploy.startswith('http://')
-            is_https = deploy.startswith('httpss//')
+            is_https = deploy.startswith('https//')
             is_local = not (is_ssh or is_http or is_https)
 
             # .. handle a local path ..

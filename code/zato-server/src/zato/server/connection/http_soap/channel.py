@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -23,18 +23,20 @@ from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, HTTP_SOAP, 
     SSO, TRACE1, URL_PARAMS_PRIORITY, ZATO_NONE
 from zato.common.audit_log import DataReceived, DataSent
 from zato.common.const import ServiceConst
-from zato.common.exception import HTTP_RESPONSES
+from zato.common.exception import HTTP_RESPONSES, ServiceMissingException
 from zato.common.hl7 import HL7Exception
 from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
 from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.typing_ import cast_
+from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
 from zato.common.util.exception import pretty_format_exception
-from zato.common.util.http import get_form_data as util_get_form_data, QueryDict
+from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
 from zato.cy.reqresp.payload import SimpleIOPayload as CySimpleIOPayload
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
+from zato.server.groups.ctx import SecurityGroupsCtx
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -53,8 +55,9 @@ if 0:
 
 # ################################################################################################################################
 
-logger = logging.getLogger(__name__)
-_has_debug = logger.isEnabledFor(logging.DEBUG)
+logger = logging.getLogger('zato_rest')
+_logger_is_enabled_for = logger.isEnabledFor
+_logging_info = logging.INFO
 split_re = regex_compile('........?').findall # type: ignore
 
 # ################################################################################################################################
@@ -220,8 +223,13 @@ class RequestDispatcher:
         cid:'str',
         req_timestamp:'str',
         wsgi_environ:'stranydict',
-        worker_store:'WorkerStore'
+        worker_store:'WorkerStore',
+        user_agent:'str',
+        remote_addr:'str'
     ) -> 'any_':
+
+        # Reusable
+        _has_log_info  = _logger_is_enabled_for(_logging_info)
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -231,7 +239,9 @@ class RequestDispatcher:
         http_accept = http_accept.replace('*', accept_any_internal).replace('/', 'HTTP_SEP')
 
         # Needed in later steps
-        path_info = wsgi_environ['PATH_INFO']
+        path_info        = wsgi_environ['PATH_INFO']
+        wsgi_raw_uri     = wsgi_environ['RAW_URI']
+        wsgi_remote_port = wsgi_environ['REMOTE_PORT']
 
         # Immediately reject the request if it is not a support HTTP method, no matter what channel
         # it would have otherwise matched.
@@ -248,8 +258,11 @@ class RequestDispatcher:
         url_match = cast_('str', url_match)
         channel_item = cast_('anydict', channel_item)
 
-        if _has_debug and channel_item:
-            logger.debug('url_match:`%r`, channel_item:`%r`', url_match, sorted(channel_item.items()))
+        # .. the item itself may be None in case it is a 404 ..
+        if channel_item:
+            channel_name = channel_item['name']
+        else:
+            channel_name = '(None)'
 
         # This is needed in parallel.py's on_wsgi_request
         wsgi_environ['zato.channel_item'] = channel_item
@@ -263,7 +276,15 @@ class RequestDispatcher:
         # Assume that by default we are not authenticated / authorized
         auth_result = None
 
-        # OK, we can possibly handle it
+        # .. before proceeding, log what we have learned so far about the request ..
+        # .. but do not do it for paths that are explicitly configured to be ignored ..
+        if _has_log_info:
+            if not path_info in self.server.rest_log_ignore:
+                msg  = f'REST cha → cid={cid}; {http_method} {wsgi_raw_uri} name={channel_name}; len={len(payload)}; '
+                msg += f'agent={user_agent}; remote-addr={remote_addr}:{wsgi_remote_port}'
+                logger.info(msg)
+
+        # .. we have a match and ee can possibly handle the incoming request ..
         if url_match not in ModuleCtx.No_URL_Match:
 
             try:
@@ -273,6 +294,15 @@ class RequestDispatcher:
                     logger.warning('url_data:`%s` is not active, raising NotFound', url_match)
                     raise NotFound(cid, 'Channel inactive')
 
+                # This the string pointing to the URL path that we matched
+                match_target = channel_item['match_target']
+
+                # This is the channel's security definition, if any
+                sec = self.url_data.url_sec[match_target]
+
+                # This may point to security groups attached to this channel
+                security_groups_ctx = channel_item.get('security_groups_ctx')
+
                 # Assume we have no form (POST) data by default.
                 post_data = {}
 
@@ -281,18 +311,45 @@ class RequestDispatcher:
                     if wsgi_environ.get('CONTENT_TYPE', '').startswith(ModuleCtx.Form_Data_Content_Type):
                         post_data = util_get_form_data(wsgi_environ)
 
-                match_target = channel_item['match_target']
-                sec = self.url_data.url_sec[match_target]
+                        # This is handy if someone invoked URLData's OAuth API manually
+                        wsgi_environ['zato.oauth.post_data'] = post_data
 
+                #
+                # This will check credentials based on a security definition attached to the channel
+                #
                 if sec.sec_def != ZATO_NONE or sec.sec_use_rbac is True:
 
-                    # Will raise an exception on any security violation
+                    # Do check credentials based on a security definition
                     auth_result = self.url_data.check_security(
-                        sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store)
+                        sec,
+                        cid,
+                        channel_item,
+                        path_info,
+                        payload,
+                        wsgi_environ,
+                        post_data,
+                        worker_store,
+                        enforce_auth=True
+                    )
+
+                #
+                # This will check credentials based on security groups potentially assigned to the channel ..
+                #
+                if security_groups_ctx:
+
+                    # .. if we do not have any members, we do not check anything ..
+                    if security_groups_ctx.has_members():
+
+                        # .. this will raise an exception if the validation fails.
+                        self.check_security_via_groups(cid, channel_item['name'], security_groups_ctx, wsgi_environ)
+
+                #
+                # If we are here, it means that credentials are correct or they were not required
+                #
 
                 # Check rate limiting now - this could not have been done earlier because we wanted
                 # for security checks to be made first. Otherwise, someone would be able to invoke
-                # our endpoint without credentials as many times as it is needed to exhaust the rate limit
+                # our endpoint without credentials as many times as it is needed to exhaust the rate limit,
                 # denying in this manner access to genuine users.
                 if channel_item.get('is_rate_limit_active'):
                     self.server.rate_limiting.check_limit(
@@ -333,15 +390,21 @@ class RequestDispatcher:
                             self.server.sso_tool.on_external_auth(
                                 sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid,
                                 wsgi_environ, ext_session_id)
-                        else:
-                            raise Exception('Unexpected sec_type `{}`'.format(sec.sec_def.sec_type))
 
-                # This is handy if someone invoked URLData's OAuth API manually
-                wsgi_environ['zato.oauth.post_data'] = post_data
+                if channel_item['merge_url_params_req']:
+                    channel_params = self.request_handler.create_channel_params(
+                        url_match, # type: ignore
+                        channel_item,
+                        wsgi_environ,
+                        payload,
+                        post_data
+                    )
+                else:
+                    channel_params = {}
 
-                # OK, no security exception at that point means we can finally invoke the service.
+                # This is the call that obtains a response.
                 response = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ,
-                    payload, worker_store, self.simple_io_config, post_data, path_info)
+                    payload, worker_store, self.simple_io_config, post_data, path_info, channel_params)
 
                 wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
                 wsgi_environ['zato.http.response.headers'].update(response.headers)
@@ -351,7 +414,7 @@ class RequestDispatcher:
 
                     s = StringIO()
                     with GzipFile(fileobj=s, mode='w') as f: # type: ignore
-                        f.write(response.payload)
+                        _ = f.write(response.payload)
                     response.payload = s.getvalue()
                     s.close()
 
@@ -364,7 +427,7 @@ class RequestDispatcher:
                     data_event = DataSent()
                     data_event.type_ = ModuleCtx.Channel
                     data_event.object_id = channel_item['id']
-                    data_event.data = response.payload
+                    data_event.data = response.payload # type: ignore
                     data_event.timestamp = _utcnow()
                     data_event.msg_id = 'zrp{}'.format(cid) # This is a response to this CID
                     data_event.in_reply_to = cid
@@ -397,7 +460,8 @@ class RequestDispatcher:
 
                     if isinstance(e, Unauthorized):
                         status = _status_unauthorized
-                        wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
+                        if e.challenge:
+                            wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
 
                     elif isinstance(e, (BadRequest, ModelValidationError)):
                         status = _status_bad_request
@@ -410,7 +474,7 @@ class RequestDispatcher:
                             # Note that SSO channels do not return details
                             url_path = channel_item['url_path'] # type: str
                             needs_msg = e.needs_msg and (not url_path.startswith(SSO.Default.RESTPrefix))
-                            response = e.msg if needs_msg else 'Invalid input'
+                            response = e.msg if needs_msg else 'Bad request'
 
                     elif isinstance(e, NotFound):
                         status = _status_not_found
@@ -431,7 +495,7 @@ class RequestDispatcher:
                         status_code = _status_bad_request
                         needs_prefix = False if e.needs_err_details else True
                         response = JSONSchemaDictError(
-                            cid, e.needs_err_details, e.error_msg, needs_prefix=needs_prefix).serialize()
+                            cid, e.needs_err_details, e.error_msg, needs_prefix=needs_prefix).serialize(to_string=True)
 
                     # Rate limiting and whitelisting
                     elif isinstance(e, RateLimitingException):
@@ -456,14 +520,17 @@ class RequestDispatcher:
                 if channel_item['data_format'] == DATA_FORMAT.JSON:
                     wsgi_environ['zato.http.response.headers']['Content-Type'] = CONTENT_TYPE['JSON']
 
-                _exc = stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
-                    add_summary=True, source_lines=20) if stack_format else _format_exc # type: str
+                # We need a traceback unless we merely report information about a missing service,
+                # which may happen if enmasse runs before such a service has been deployed.
+                needs_traceback = not isinstance(e, ServiceMissingException)
 
-                # TODO: This should be configurable. Some people may want such
-                # things to be on DEBUG whereas for others ERROR will make most sense
-                # in given circumstances.
-                logger.error(
-                    'Caught an exception, cid:`%s`, status_code:`%s`, `%s`', cid, status_code, _exc)
+                if needs_traceback:
+                    _exc_string = stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
+                        add_summary=True, source_lines=20) if stack_format else _format_exc # type: str
+
+                    # Log what happened
+                    logger.info(
+                        'Caught an exception, cid:`%s`, status_code:`%s`, `%s`', cid, status_code, _exc_string)
 
                 try:
                     error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'])
@@ -490,10 +557,66 @@ class RequestDispatcher:
             response = response_404.format(cid)
 
             # .. this goes to logs and it includes the URL sent by the client.
-            logger.error(response_404_log, path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
+            logger.warning(response_404_log, path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
 
             # This is the payload for the caller
             return response
+
+# ################################################################################################################################
+
+    def check_security_via_groups(
+        self,
+        cid:'str',
+        channel_name:'str',
+        security_groups_ctx:'SecurityGroupsCtx',
+        wsgi_environ:'stranydict'
+    ) -> 'None':
+
+        # Local variables
+        sec_def = None
+
+        # Extract Basic Auth information from input ..
+        basic_auth_info = wsgi_environ.get('HTTP_AUTHORIZATION')
+
+        # .. extract API key information too ..
+        apikey_header_value = wsgi_environ.get(self.server.api_key_header_wsgi)
+
+        # .. we cannot have both on input ..
+        if basic_auth_info and apikey_header_value:
+            logger.warn('Received both Basic Auth and API key (groups)')
+            raise BadRequest(cid)
+
+        # Handle Basic Auth via groups ..
+        if basic_auth_info:
+
+            # .. extract credentials ..
+            username, password = extract_basic_auth(cid, basic_auth_info)
+
+            # .. run the validation now ..
+            if security_id := security_groups_ctx.check_security_basic_auth(cid, channel_name, username, password):
+                sec_def = self.url_data.basic_auth_get_by_id(security_id)
+            else:
+                logger.warn('Invalid Basic Auth credentials (groups)')
+                raise Forbidden(cid)
+
+        # Handle API keys via groups ..
+        elif apikey_header_value:
+
+            # .. run the validation now ..
+            if security_id := security_groups_ctx.check_security_apikey(cid, channel_name, apikey_header_value):
+                sec_def = self.url_data.apikey_get_by_id(security_id)
+            else:
+                logger.warn('Invalid API key (groups)')
+                raise Forbidden(cid)
+
+        else:
+            logger.warn('Received neither Basic Auth nor API key (groups)')
+            raise Forbidden(cid)
+
+        # Now we can enrich the WSGI environment with information
+        # that will become self.channel.security for services.
+        if sec_def:
+            enrich_with_sec_data(wsgi_environ, sec_def, sec_def['sec_type'])
 
 # ################################################################################################################################
 
@@ -597,9 +720,6 @@ class RequestHandler:
                 channel_params = {}
             channel_params.update(path_params)
 
-        if _has_debug:
-            logger.debug('channel_params `%s`, path_params `%s`, _qs `%s`', channel_params, path_params, _qs)
-
         wsgi_environ['zato.http.GET'] = _qs
         wsgi_environ['zato.http.POST'] = post
 
@@ -670,7 +790,8 @@ class RequestHandler:
         worker_store:'WorkerStore',
         simple_io_config:'stranydict',
         post_data:'dictnone',
-        path_info:'str'
+        path_info:'str',
+        channel_params:'stranydict',
     ) -> 'any_':
         """ Create a new instance of a service and invoke it.
         """
@@ -679,11 +800,6 @@ class RequestHandler:
             logger.warning('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
             raise NotFound(cid, response_404.format(
                 path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid))
-
-        if channel_item.merge_url_params_req:
-            channel_params = self.create_channel_params(url_match, channel_item, wsgi_environ, raw_request, post_data)
-        else:
-            channel_params = {}
 
         # This is needed for type checking to make sure the name is bound
         cache_key = ''
@@ -715,8 +831,6 @@ class RequestHandler:
             self.set_response_in_cache(channel_item, cache_key, response)
 
         # Having used the cache or not, we can return the response now
-        response
-        response
         return response
 
 # ################################################################################################################################
@@ -744,7 +858,8 @@ class RequestHandler:
         if self._needs_admin_response(service_instance):
             if data_format in {ModuleCtx.SIO_JSON, ModuleCtx.SIO_FORM_DATA}:
                 zato_env = {'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}}
-                if response.payload and (not isinstance(response.payload, str)):
+                is_not_str = not isinstance(response.payload, str)
+                if is_not_str and response.payload:
                     payload = response.payload.getvalue(False)
                     payload.update(zato_env)
                 else:
@@ -760,7 +875,10 @@ class RequestHandler:
                         if isinstance(response.payload, Model):
                             value = response.payload.to_json()
                         else:
-                            value = response.payload.getvalue() # type: ignore
+                            if hasattr(response.payload, 'getvalue'):
+                                value = response.payload.getvalue() # type: ignore
+                            else:
+                                value = dumps(response.payload)
                     else:
                         value = ''
                     response.payload = value

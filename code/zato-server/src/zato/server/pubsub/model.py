@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # pylint: disable=unused-import, redefined-builtin, unused-variable
@@ -173,6 +173,7 @@ class Endpoint(ToDictBase):
         self.role = config['role']
         self.is_active = config['is_active']
         self.is_internal = config['is_internal']
+        self.service_id = config['service_id']
 
         self.topic_patterns = config.get('topic_patterns', '')
 

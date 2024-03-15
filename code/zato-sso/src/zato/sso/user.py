@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -546,7 +546,7 @@ class UserAPI:
         ctx_dict['sign_up_confirm_token'] = confirm_token
 
         for name in self.sso_conf.user_validation.service:
-            validation_response = self.server.invoke(name, ctx_dict, serialize=False).getvalue(serialize=False)
+            validation_response = self.server.invoke(name, ctx_dict, serialize=False)
             if not validation_response['is_valid']:
                 raise ValidationError(validation_response['sub_status'])
 

@@ -1,0 +1,427 @@
+/* Pure CSS Navigation v1.8 by Adam Culpepper | @adamculpepper https://github.com/adamculpepper/pure-css-navigation */
+/* Customizable styles */
+
+.pure-css-nav {
+   background-color:#363636;
+   border-bottom: 3px solid #aaa;
+}
+
+div.nav-container {
+   background-color: #363636;
+   height:2.1rem
+}
+
+nav.menu {
+   background-color:#363636;
+}
+
+nav.menu ul.left {
+   float: left;
+   width: 60%;
+}
+
+nav.menu ul.right {
+   float: right;
+}
+
+li.right {
+   float: right;
+}
+
+nav.menu ul.left,
+nav.menu ul.right {
+   background-color:#363636;
+}
+
+.pure-css-nav > nav ul li a {
+    color:#fff;
+    text-shadow: 1px 1px 0 #000;
+}
+
+ul {
+   align-items: center;
+}
+
+/* Level 1 */
+ .pure-css-nav > nav ul li {
+    background-color:#363636;
+}
+
+.pure-css-nav > nav ul li.first-level {
+   padding-top: 0.58rem;
+   padding-bottom: 0.58rem;
+   padding-right: 0.42rem;
+   padding-left: 0.3rem;
+   text-align: center;
+   align-content: center;
+}
+
+.pure-css-nav > nav ul li.first-level a {
+   font-size: 0.7rem;
+   background-color: transparent;
+}
+
+.pure-css-nav > nav ul li.first-level a:hover {
+   font-size: 0.7rem;
+   background-color: transparent;
+}
+ .pure-css-nav > nav ul li a {
+     font-size:0.7rem;
+}
+/* Level 2 and beyond */
+ .pure-css-nav > nav ul ul {
+    padding-top: 0.16rem;
+}
+ .pure-css-nav > nav ul ul li a {
+    font-size:0.75rem;
+    padding:9px 7px;
+}
+/* Hover colors */
+ .pure-css-nav > nav ul li:hover,
+ .pure-css-nav > nav ul li li:hover > a:first-child:nth-last-child(2),
+ .pure-css-nav > nav > ul > li:hover > a:first-child:nth-last-child(2) {
+    background-color:#494949;
+}
+/* Font icon arrow colors */
+ .pure-css-nav > nav > ul > li > a:first-child:nth-last-child(2):after {
+    color:#fff;
+}
+ .pure-css-nav > nav > ul > li:hover > a:first-child:nth-last-child(2):after {
+    color:rgba(0, 0, 0, 0.60);
+}
+ .pure-css-nav > nav ul li li > a:first-child:nth-last-child(2):after {
+    color:rgba(0, 0, 0, 0.30);
+}
+ .pure-css-nav > nav ul li li:hover > a:first-child:nth-last-child(2):after {
+    color:rgba(0, 0, 0, 0.60);
+}
+/* Mobile Navigation overlay */
+ .pure-css-nav.mobile-nav input:checked + label + nav {
+    background-color:rgba(255, 255, 255, 0.9);
+}
+
+ .pure-css-nav > nav {
+    width:100%;
+}
+ .pure-css-nav > nav ul,
+ .pure-css-nav > nav li {
+    margin:0;
+     padding:0;
+     list-style:none;
+}
+ .pure-css-nav > nav li:hover {
+    cursor:inherit;
+}
+ .pure-css-nav > nav a {
+    text-decoration:none;
+}
+/* Level 1 */
+ .pure-css-nav > nav ul {
+    display:flex;
+     flex-wrap:wrap;
+}
+ .pure-css-nav > nav ul li {
+    overflow:hidden;
+     white-space:nowrap;
+     text-align:left;
+}
+ .pure-css-nav > nav ul li:hover {
+    overflow:visible;
+}
+ .pure-css-nav > nav ul > li {
+    position:relative;
+    filter: drop-shadow(0 0 0.06rem #363636);
+}
+
+.pure-css-nav > nav ul > li.child {
+   width: 7rem;
+}
+ .pure-css-nav > nav ul li a {
+    display:block;
+     height:100%;
+}
+/* Level 2 */
+ .pure-css-nav > nav ul ul {
+    visibility:hidden;
+     opacity:0;
+     position:absolute;
+     z-index:1;
+     display:block;
+}
+ .pure-css-nav > nav ul li:hover > ul {
+    visibility:visible;
+     opacity:1;
+}
+/* Level 3 */
+ .pure-css-nav > nav ul ul ul {
+    top:0;
+     left:100%;
+}
+ .pure-css-nav > nav ul ul ul {
+    margin-top:5px;
+}
+/* ---------- */
+/* Transitions */
+ .pure-css-nav > nav ul,
+ .pure-css-nav > nav ul li,
+ .pure-css-nav > nav ul li a,
+ .pure-css-nav > nav ul li a:first-child:nth-last-child(2):after {
+    transition:all 50ms linear;
+}
+ .pure-css-nav.mobile-nav {
+    transition:all 0.5s linear;
+}
+/* ---------- */
+/* Arrow styles */
+ .pure-css-nav > nav ul li a {
+    display:flex;
+     align-items:center;
+}
+ .pure-css-nav > nav ul li a:first-child:nth-last-child(2):after {
+     display:inline-block;
+     height:5px;
+     margin-left:1px;
+}
+ .pure-css-nav > nav ul ul li a:first-child:nth-last-child(2):before,
+ .pure-css-nav > nav ul ul li a:first-child:nth-last-child(2):after {
+    content:'';
+}
+ .pure-css-nav > nav ul ul li a:first-child:nth-last-child(2):before {
+    order:1;
+    margin-left:1px;
+}
+ .pure-css-nav > nav ul ul li a:first-child:nth-last-child(2):after {
+    order:2;
+    margin-left:1px;
+}
+/* ---------- */
+/* FontAwesome Icon arrow support */
+ .pure-css-nav.nav-font-icons ul li a:first-child:nth-last-child(2):after {
+     content:'\f078';
+    /* arrow: down */
+     font-family:'FontAwesome';
+     opacity:1;
+     width:auto;
+     height:auto;
+     background:none;
+}
+ .pure-css-nav.nav-font-icons ul ul li > a:first-child:nth-last-child(2):after {
+    content:'\f054';
+}
+/* arrow: right */
+/* ---------- */
+/* Justify Navigation (first level equal widths) */
+ .pure-css-nav.nav-justified > nav > ul {
+    width:100%;
+}
+ .pure-css-nav.nav-justified > nav > ul > li {
+    flex:1 1 auto;
+    width: 450px;
+}
+ .pure-css-nav.nav-justified > nav > ul > li > a {
+    justify-content:center;
+}
+/* ---------- */
+/* Vertical Navigation */
+ .pure-css-nav.nav-vertical nav > ul {
+    display:block;
+     width:200px;
+}
+ .pure-css-nav.nav-vertical nav > ul li a:first-child:nth-last-child(2):after {
+    margin-left:auto;
+}
+ .pure-css-nav.nav-vertical nav > ul ul {
+    left:100%;
+     top:0;
+     margin-top:5px;
+}
+ .pure-css-nav.nav-vertical nav > ul > li {
+    margin-bottom:1px;
+}
+/* ---------- */
+/* Mobile Navigation */
+ .pure-css-nav.mobile-nav input {
+    display:none;
+}
+ .pure-css-nav.mobile-nav input + label {
+    margin-bottom:0;
+     z-index:999;
+}
+ .pure-css-nav.mobile-nav input + label + nav > ul > li {
+    margin-right:1px;
+}
+ .pure-css-nav.mobile-nav input:checked + label {
+    position:absolute;
+     top:8px;
+     right:10px;
+}
+ .pure-css-nav.mobile-nav input:checked + label i:before {
+    content:'\f00d';
+}
+/* ---------- */
+/* Responsive Breakpoints - down */
+/* Extra Small (xs) and down */
+ @media (max-width:575px) {
+}
+/* Small (sm) and down */
+ @media (max-width:767px) {
+}
+/* Medium (md) and down */
+ @media (max-width:991px) {
+     .pure-css-nav.mobile-nav > nav {
+        display:none;
+    }
+     .pure-css-nav.mobile-nav input:checked + label + nav {
+        display:block;
+    }
+    /* Mobile Navigation > Animations */
+     .pure-css-nav.mobile-nav input:checked + label + nav {
+        animation:mobile-nav-slide-in 0.5s;
+    }
+     .pure-css-nav.mobile-nav.pure-css-nav-animation-ready input:not(:checked) + label + nav {
+        animation:mobile-nav-slide-out 5s;
+         animation-play-state:paused!important;
+    }
+     .pure-css-nav.mobile-nav input:checked + label i:before {
+        animation:fade-icon-close 0.5s;
+    }
+     @keyframes mobile-nav-slide-in {
+         0% {
+            left:-100%;
+             opacity:0;
+             visibility:visible;
+            /*transition-timing-function: linear;
+            */
+        }
+         100% {
+            left:0;
+             opacity:1;
+        }
+    }
+     @keyframes mobile-nav-slide-out {
+         0% {
+            left:0;
+             opacity:1;
+             visibility:visible;
+        }
+         100% {
+            left:-100%;
+             opacity:0;
+             visibility:hidden;
+        }
+    }
+     @keyframes fade-icon-close {
+         0% {
+            opacity:0;
+        }
+         100% {
+            opacity:1;
+        }
+    }
+    /* Mobile Navigation > Vertical Navigation */
+     .pure-css-nav.mobile-nav input:checked + label + nav > ul {
+        display:block;
+         width:300px;
+         max-width:100%;
+         height:100%;
+    }
+     .pure-css-nav.mobile-nav input:checked + label + nav > ul li a:first-child:nth-last-child(2):after {
+        margin-left:auto;
+    }
+     .pure-css-nav.mobile-nav input:checked + label + nav > ul ul {
+        left:0;
+         top:100%;
+         width:100%;
+    }
+     .pure-css-nav.mobile-nav input:checked + label + nav > ul > li {
+        margin-bottom:1px;
+    }
+     .pure-css-nav.mobile-nav input:checked + label + nav > ul li:hover > ul {
+        position:relative;
+         margin-left:1px;
+         border-left:3px solid #999;
+    }
+     .pure-css-nav.mobile-nav input:checked + label + nav ul ul ul {
+        margin-top:0;
+    }
+     .pure-css-nav.mobile-nav input:checked + label i:before {
+        animation:anim1 2s;
+    }
+     @keyframes anim1 {
+         from {
+            color:red;
+             background:green;
+        }
+    }
+     .pure-css-nav.mobile-nav input + label + nav {
+        background-color:rgba(255, 0, 255, 0.9)!important;
+    }
+    /* temp */
+     .pure-css-nav.mobile-nav input + label + nav {
+         display:block;
+         margin:0 -100%;
+         margin:0 calc(50% - 50vw);
+         position:fixed;
+         top:0;
+         left:0;
+         right:0;
+         bottom:0;
+         z-index:99;
+         width:100%;
+         height:100%;
+    }
+     .pure-css-nav.mobile-nav input:checked + label + nav {
+         top:0;
+         left:0;
+         right:0;
+         bottom:0;
+         z-index:99;
+         width:100%;
+         height:100%;
+    }
+     .pure-css-nav.mobile-nav input:checked + label + nav {
+        visibility:visible;
+         opacity:1;
+    }
+     .pure-css-nav.mobile-nav input:not(:checked) + label + nav {
+        visibility:hidden;
+         opacity:0;
+    }
+    /* .pure-css-nav.mobile-nav *, .pure-css-nav.mobile-nav *:before, .pure-css-nav.mobile-nav *:after {
+        animation-play-state:paused!important;
+    }
+     */
+     .pure-css-nav.mobile-nav:not(:hover) * {
+         -webkit-transition: none !important;
+         -moz-transition: none !important;
+         -ms-transition: none !important;
+         -o-transition: none !important;
+         border:2px solid red;
+    }
+}
+/* Large (lg) and down */
+ @media (max-width:1199px) {
+}
+/* ---------- */
+/* Responsive Breakpoints - up */
+/* Small (sm) and up */
+ @media (min-width:576px) {
+}
+/* Medium (md) and up */
+ @media (min-width:768px) {
+}
+/* Large (lg) and up */
+ @media (min-width:992px) {
+     .pure-css-nav.mobile-nav input:not(:checked),
+     .pure-css-nav.mobile-nav input:not(:checked) + label {
+        display:none;
+    }
+}
+/* Extra Large (xl) and up */
+ @media (min-width:1200px) {
+}
+ .pure-css-nav a:not([href]), .pure-css-nav a[href='']:hover,
+ .pure-css-nav a[href='#']:hover, .pure-css-nav a[href='']:active,
+ .pure-css-nav a[href='#']:active {
+    pointer-events:none;
+}

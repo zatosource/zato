@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -40,10 +40,11 @@ from pathlib import Path
 from pprint import pprint as _pprint, PrettyPrinter
 from string import Template
 from subprocess import Popen, PIPE
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, gettempdir
 from threading import current_thread
 from time import sleep
 from traceback import format_exc
+from uuid import uuid4
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -108,27 +109,29 @@ if PY3:
 
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, HL7, KVDB, MISC, \
-     SCHEDULER, SECRET_SHADOW, SIMPLE_IO, TLS, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
+     SECRET_SHADOW, SIMPLE_IO, TLS, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
-from zato.common.const import SECRETS
+from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
 from zato.common.exception import ZatoException
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
 from zato.common.json_internal import dumps, loads
-from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
+from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, Server
+from zato.common.util.config import enrich_config_from_environment
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
 from zato.common.util.logging_ import ColorFormatter
-from zato.common.util.open_ import open_r
+from zato.common.util.open_ import open_r, open_w
 from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_request
 
 # ################################################################################################################################
 
 if 0:
     from typing import Iterable as iterable
-    from zato.common.typing_ import any_, anydict, callable_, dictlist, listnone, strlistnone
+    from zato.client import ZatoClient
+    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strlist, strlistnone, strnone, strset
     iterable = iterable
 
 # ################################################################################################################################
@@ -176,6 +179,11 @@ wait_until_port_taken = wait_until_port_taken
 
 # ################################################################################################################################
 
+class ModuleCtx:
+    PID_To_Port_Pattern = 'zato-ipc-port-{cluster_name}-{server_name}-{pid}.txt'
+
+# ################################################################################################################################
+
 # We can initialize it once per process here
 _hostname = socket.gethostname()
 _fqdn = socket.getfqdn()
@@ -188,6 +196,21 @@ TLS_KEY_TYPE = {
     crypto.TYPE_DSA: 'DSA',
     crypto.TYPE_RSA: 'RSA'
 }
+
+# ################################################################################################################################
+
+def is_encrypted(data:'str | bytes') -> 'bool':
+
+    # Zato
+    from zato.common.const import SECRETS
+
+    if isinstance(data, bytes):
+        data = data.decode('utf8')
+    elif not isinstance(data, str):
+        data = str(data)
+
+    result = data.startswith(SECRETS.Encrypted_Indicator)
+    return result
 
 # ################################################################################################################################
 
@@ -336,13 +359,20 @@ def tech_account_password(password_clear, salt):
 
 # ################################################################################################################################
 
-def new_cid(bytes:'int'=12, _random:'callable_'=random.getrandbits) -> 'str':
+def new_cid(bytes:'int'=12, needs_padding:'bool'=False, _random:'callable_'=random.getrandbits) -> 'str':
     """ Returns a new 96-bit correlation identifier. It is not safe to use the ID
     for any cryptographical purposes; it is only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     """
-    # Note that we need to convert bytes to bits here.
-    return hex(_random(bytes * 8))[2:]
+    # Note that we need to convert bytes to bits here ..
+    out = hex(_random(bytes * 8))[2:]
+
+    # .. and that we optionally ensure it is always 24 characters on output ..
+    if needs_padding:
+        out = out.ljust(24, 'a')
+
+    # .. return the output to the caller.
+    return out
 
 # ################################################################################################################################
 
@@ -353,33 +383,56 @@ def get_user_config_name(name:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _get_config(conf, bunchified, needs_user_config, repo_location=None):
-    # type: (bool, bool, str) -> Bunch
+def _get_config(
+    *,
+    conf, # type: ConfigObj
+    config_name, # type: str
+    bunchified, # type: bool
+    needs_user_config, # type: bool
+    repo_location=None # type: strnone
+) -> 'Bunch | ConfigObj':
 
-    conf = bunchify(conf) if bunchified else conf
+    conf = bunchify(conf) if bunchified else conf # type: ignore
 
     if needs_user_config:
-        conf.user_config_items = {}
+        conf.user_config_items = {} # type: ignore
 
         user_config = conf.get('user_config')
         if user_config:
-            for name, path in user_config.items():
+            for name, path in user_config.items(): # type: ignore
                 path = absolutize(path, repo_location)
                 if not os.path.exists(path):
                     logger.warning('User config not found `%s`, name:`%s`', path, name)
                 else:
                     user_conf = ConfigObj(path)
                     user_conf = bunchify(user_conf) if bunchified else user_conf
-                    conf.user_config_items[name] = user_conf
+                    conf.user_config_items[name] = user_conf # type: ignore
 
-    return conf
+    # At this point, we have a Bunch instance that contains
+    # the contents of the file. Now, we need to enrich it
+    # with values that may be potentially found in the environment.
+    if isinstance(conf, Bunch):
+        conf = enrich_config_from_environment(config_name, conf) # type: ignore
+
+    return conf # type: ignore
 
 # ################################################################################################################################
 
-def get_config(repo_location, config_name, bunchified=True, needs_user_config=True, crypto_manager=None, secrets_conf=None,
-    raise_on_error=False, log_exception=True, require_exists=True, conf_location=None):
+def get_config(
+    repo_location,   # type: str
+    config_name,     # type: str
+    bunchified=True, # type: bool
+    needs_user_config=True, # type: bool
+    crypto_manager=None,    # type: CryptoManager | None
+    secrets_conf=None,      # type: any_
+    raise_on_error=False,   # type: bool
+    log_exception=True,     # type: bool
+    require_exists=True,    # type: bool
+    conf_location=None      # type: strnone
+) -> 'Bunch | ConfigObj':
     """ Returns the configuration object. Will load additional user-defined config files, if any are available.
     """
+
     # Default output to produce
     result = Bunch()
 
@@ -394,7 +447,13 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
 
         logger.info('Getting configuration from `%s`', conf_location)
         conf = ConfigObj(conf_location, zato_crypto_manager=crypto_manager, zato_secrets_conf=secrets_conf)
-        result = _get_config(conf, bunchified, needs_user_config, repo_location)
+        result = _get_config(
+            conf=conf,
+            config_name=config_name,
+            bunchified=bunchified,
+            needs_user_config=needs_user_config,
+            repo_location=repo_location
+        )
     except Exception:
         if log_exception:
             logger.warning('Error while reading %s from %s; e:`%s`', config_name, repo_location, format_exc())
@@ -422,11 +481,11 @@ def get_config_from_string(data):
     """ A simplified version of get_config which creates a config object from string, skipping any user-defined config files.
     """
     buff = StringIO()
-    buff.write(data)
-    buff.seek(0)
+    _ = buff.write(data)
+    _ = buff.seek(0)
 
     conf = ConfigObj(buff)
-    out = _get_config(conf, True, False)
+    out = _get_config(conf=conf, config_name='', bunchified=True, needs_user_config=False)
 
     buff.close()
     return out
@@ -539,6 +598,8 @@ ZIP_EXTENSIONS = ('.zip', '.whl')
 TAR_EXTENSIONS = ('.tar.gz', '.tgz', '.tar')
 ARCHIVE_EXTENSIONS = (ZIP_EXTENSIONS + BZ2_EXTENSIONS + TAR_EXTENSIONS + XZ_EXTENSIONS)
 
+# ################################################################################################################################
+
 def splitext(path):
     """Like os.path.splitext, but take off .tar too"""
     base, ext = os.path.splitext(path)
@@ -546,6 +607,8 @@ def splitext(path):
         ext = base[-4:] + ext
         base = base[:-4]
     return base, ext
+
+# ################################################################################################################################
 
 def is_archive_file(name):
     """Return True if `name` is a considered as an archive file."""
@@ -564,6 +627,7 @@ def is_python_file(name):
             return True
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class _DummyLink:
     """ A dummy class for staying consistent with pip's API in certain places
@@ -572,6 +636,7 @@ class _DummyLink:
     def __init__(self, url):
         self.url = url
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ModuleInfo:
@@ -612,28 +677,25 @@ def visit_py_source(
     order_patterns=None # type: strlistnone
 ) -> 'any_':
 
-    # Assume we are not given any patterns on input ..
-    order_patterns = order_patterns or [
+    # We enter here if we are not given any patterns on input ..
+    if not order_patterns:
 
-        '  common*.py',
-        '*_common*.py',
+        # .. individual Python files will be deployed in this order ..
+        order_patterns = [
+            'common*',
+            'util*',
+            'model*',
+            '*'
+        ]
 
-        '  model*.py',
-        '*_model*.py',
-
-        '  lib*.py',
-        '*_lib*.py',
-
-        '  util*.py',
-        '*_util*.py',
-
-        '  pri_*.py',
-        '*_pri.py',
-    ]
+        # .. now, append the .py extension to each time so that we can find such files below ..
+        for idx, elem in enumerate(order_patterns):
+            new_item = f'{elem}.py'
+            order_patterns[idx] = new_item
 
     # For storing names of files that we have already deployed,
     # to ensure that there will be no duplicates.
-    already_visited = set()
+    already_visited:'strset' = set()
 
     # .. append the default ones, unless they are already there ..
     for default in ['*.py', '*.pyw']:
@@ -814,94 +876,6 @@ def dotted_getattr(o, path):
 
 # ################################################################################################################################
 
-def wait_for_odb_service(session, cluster_id, service_name):
-    # Assume we do not have it
-    service = None
-
-    while not service:
-
-        # Try to look it up ..
-        service = session.query(Service).\
-            filter(Service.name==service_name).\
-            filter(Cluster.id==cluster_id).\
-            first()
-
-        # .. if not found, sleep for a moment.
-        if not service:
-            sleep(1)
-            logger.info('Waiting for ODB service `%s`', service_name)
-
-    # If we are here, it means that the service was found so we can return it
-    return service
-
-# ################################################################################################################################
-
-def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
-    """ Adds internal jobs to the ODB. Note that it isn't being added
-    directly to the scheduler because we want users to be able to fine-tune the job's
-    settings.
-    """
-    with closing(odb.session()) as session:
-        now = datetime.utcnow()
-        for item in jobs:
-
-            if item['name'].startswith('zato.stats'):
-                continue
-
-            try:
-                extra = item.get('extra', '')
-                if isinstance(extra, basestring):
-                    extra = extra.encode('utf-8')
-                else:
-                    if item.get('is_extra_list'):
-                        extra = '\n'.join(extra)
-                    else:
-                        extra = dumps(extra)
-
-                if extra:
-                    if not isinstance(extra, bytes):
-                        extra = extra.encode('utf8')
-
-                #
-                # This will block as long as this service is not available in the ODB.
-                # It is required to do it because the scheduler may start before servers
-                # in which case services will not be in the ODB yet and we need to wait for them.
-                #
-                service = wait_for_odb_service(session, cluster_id, item['service'])
-
-                cluster = session.query(Cluster).\
-                    filter(Cluster.id==cluster_id).\
-                    one()
-
-                existing_one = session.query(Job).\
-                    filter(Job.name==item['name']).\
-                    filter(Job.cluster_id==cluster_id).\
-                    first()
-
-                if existing_one:
-                    continue
-
-                job = Job(None, item['name'], True, 'interval_based', now, cluster=cluster, service=service, extra=extra)
-
-                kwargs = {}
-                for name in('seconds', 'minutes'):
-                    if name in item:
-                        kwargs[name] = item[name]
-
-                ib_job = IntervalBasedJob(None, job, **kwargs)
-
-                session.add(job)
-                session.add(ib_job)
-                session.commit()
-
-            except Exception:
-                logger.warning(format_exc())
-
-            else:
-                logger.info('Initial job added `%s`', job.name)
-
-# ################################################################################################################################
-
 def hexlify(item, _hexlify=binascii_hexlify):
     """ Returns a nice hex version of a string given on input.
     """
@@ -1038,7 +1012,7 @@ def register_diag_handlers():
 
 # ################################################################################################################################
 
-def parse_simple_type(value, convert_bool=True):
+def parse_simple_type(value:'any_', convert_bool:'bool'=True) -> 'any_':
     if convert_bool:
         try:
             value = is_boolean(value)
@@ -1053,19 +1027,29 @@ def parse_simple_type(value, convert_bool=True):
         pass
 
     # Could be a dict or another simple type then
-    try:
-        value = literal_eval(value)
-    except Exception:
-        pass
+    value = parse_literal_dict(value)
 
     # Either parsed out or as it was received
     return value
 
 # ################################################################################################################################
 
-def parse_extra_into_dict(lines, convert_bool=True):
+def parse_literal_dict(value:'str') -> 'str | anydict':
+    try:
+        value = literal_eval(value)
+    except Exception:
+        pass
+    finally:
+        return value
+
+# ################################################################################################################################
+
+def parse_extra_into_dict(lines:'str | bytes', convert_bool:'bool'=True):
     """ Creates a dictionary out of key=value lines.
     """
+    if isinstance(lines, bytes):
+        lines = lines.decode('utf8')
+
     _extra = {}
 
     if lines:
@@ -1206,6 +1190,8 @@ def store_tls(root_dir, payload, is_key=False):
 
 def replace_private_key(orig_payload):
     if isinstance(orig_payload, basestring):
+        if isinstance(orig_payload, bytes):
+            orig_payload = orig_payload.decode('utf8')
         for item in TLS.BEGIN_END:
             begin = '-----BEGIN {}PRIVATE KEY-----'.format(item)
             if begin in orig_payload:
@@ -1306,34 +1292,6 @@ class StaticConfig(Bunch):
                     self.read_file(full_path, elem.name)
             except Exception as e:
                 logger.warning('Could not read file `%s`, e:`%s`', full_path, e.args)
-
-# ################################################################################################################################
-
-def add_scheduler_jobs(api, odb, cluster_id, spawn=True):
-
-    job_list = odb.get_job_list(cluster_id)
-
-    for(id, name, is_active, job_type, start_date, extra, service_name, _,
-        _, weeks, days, hours, minutes, seconds, repeats, cron_definition) in job_list:
-
-        # Ignore jobs that have been removed
-        if name in SCHEDULER.JobsToIgnore:
-            logger.info('Ignoring job `%s (%s)`', name, 'add_scheduler_jobs')
-            continue
-
-        job_data = Bunch({
-            'id':id, 'name':name, 'is_active':is_active,
-            'job_type':job_type, 'start_date':start_date,
-            'extra':extra, 'service':service_name, 'weeks':weeks,
-            'days':days, 'hours':hours, 'minutes':minutes,
-            'seconds':seconds, 'repeats':repeats,
-            'cron_definition':cron_definition
-        })
-
-        if is_active:
-            api.create_edit('create', job_data, spawn=spawn)
-        else:
-            logger.info('Not adding an inactive job `%s`', job_data)
 
 # ################################################################################################################################
 
@@ -1451,9 +1409,19 @@ def get_odb_session_from_server_dir(server_dir):
 
 # ################################################################################################################################
 
-def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted) -> 'any_':
-    """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
+def get_server_client_auth(
+    config,
+    repo_dir,
+    cm,
+    odb_password_encrypted,
+    *,
+    url_path=None,
+) -> 'any_':
+    """ Returns credentials to authenticate with against Zato's own inocation channels.
     """
+    # This is optional on input
+    url_path = url_path or ServiceConst.API_Admin_Invoke_Url_Path
+
     session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
 
     with closing(session) as session:
@@ -1478,7 +1446,7 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted) -> 'any
 
         channel = session.query(HTTPSOAP).\
             filter(HTTPSOAP.cluster_id == cluster.id).\
-            filter(HTTPSOAP.url_path == '/zato/admin/invoke').\
+            filter(HTTPSOAP.url_path == url_path).\
             filter(HTTPSOAP.connection== 'channel').\
             one()
 
@@ -1488,33 +1456,48 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted) -> 'any
                 first()
 
             if security:
-                password = security.password.replace(SECRETS.PREFIX, '')
-                if password.startswith(SECRETS.EncryptedMarker):
-                    if cm:
-                        password = cm.decrypt(password)
+                if password:= security.password:
+                    password = security.password.replace(SECRETS.PREFIX, '')
+                    if password.startswith(SECRETS.Encrypted_Indicator):
+                        if cm:
+                            password = cm.decrypt(password)
+                else:
+                    password = ''
                 return (security.username, password)
 
 # ################################################################################################################################
 
-def get_client_from_server_conf(server_dir, require_server=True, stdin_data=None):
+def get_client_from_server_conf(
+    server_dir,          # type: str
+    require_server=True, # type: bool
+    stdin_data=None,     # type: strnone
+    *,
+    url_path=None,       # type: strnone
+    initial_wait_time=60 # type: int
+) -> 'ZatoClient':
 
     # Imports go here to avoid circular dependencies
     from zato.client import get_client_from_server_conf as client_get_client_from_server_conf
 
     # Get the client object ..
-    client = client_get_client_from_server_conf(server_dir, get_server_client_auth, get_config, stdin_data=stdin_data)
+    client = client_get_client_from_server_conf(
+        server_dir,
+        get_server_client_auth,
+        get_config,
+        stdin_data=stdin_data,
+        url_path=url_path
+    )
 
     # .. make sure the server is available ..
     if require_server:
-        wait_for_zato_ping(client.address)
+        wait_for_zato_ping(client.address, initial_wait_time)
 
     # .. return the client to our caller now.
     return client
 
 # ################################################################################################################################
 
-def get_repo_dir_from_component_dir(component_dir):
-    # type: (str) -> str
+def get_repo_dir_from_component_dir(component_dir:'str') -> 'str':
     return os.path.join(os.path.abspath(os.path.join(component_dir)), 'config', 'repo')
 
 # ################################################################################################################################
@@ -1715,13 +1698,30 @@ def get_logger_for_class(class_):
 
 # ################################################################################################################################
 
+def get_worker_pids_by_parent(parent_pid:'int') -> 'intlist':
+    """ Returns all children PIDs of the process whose PID is given on input.
+    """
+    # psutil
+    import psutil
+
+    return sorted(elem.pid for elem in psutil.Process(parent_pid).children())
+
+# ################################################################################################################################
+
 def get_worker_pids():
     """ Returns all sibling worker PIDs of the server process we are being invoked on, including our own worker too.
     """
     # psutil
     import psutil
 
-    return sorted(elem.pid for elem in psutil.Process(psutil.Process().ppid()).children())
+    # This is our own process ..
+    current_process = psutil.Process()
+
+    # .. and this is its parent PID ..
+    parent_pid = current_process.ppid()
+
+    # .. now, we can return PIDs of all the workers.
+    return get_worker_pids_by_parent(parent_pid)
 
 # ################################################################################################################################
 
@@ -1762,7 +1762,7 @@ def require_tcp_port(address):
 # ################################################################################################################################
 
 def update_apikey_username_to_channel(config):
-    config.username = 'HTTP_{}'.format(config.get('username', '').upper().replace('-', '_'))
+    config.header = 'HTTP_{}'.format(config.get('header', '').upper().replace('-', '_'))
 
 # ################################################################################################################################
 
@@ -1894,8 +1894,15 @@ def slugify(value, allow_unicode=False):
 
 # ################################################################################################################################
 
-def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, needs_log=True, *args, **kwargs):
-    # type: (object, int, float, *object, **object) -> bool
+def wait_for_predicate(
+    predicate_func, # type: callable_
+    timeout,        # type: int
+    interval,       # type: float
+    log_msg_details=None, # type: strnone
+    needs_log=True,       # type: bool
+    *args,   # type: any_
+    **kwargs # type: any_
+) -> 'bool':
 
     # Try out first, perhaps it already fulfilled
     is_fulfilled = bool(predicate_func(*args, **kwargs))
@@ -1903,24 +1910,51 @@ def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, 
     # Use an explicit loop index for reporting
     loop_idx = 1
 
-    logger.info('Entering wait-for-predicate -> %s -> %s', log_msg_details, is_fulfilled)
+    # After that many seconds, we are going to start logging the fact that we are still waiting.
+    # In this way, we do not need to log information about all the predicates that finish quickly.
+    log_after_seconds = 5
 
+    # Perhaps we can already return and we enter this branch if we cannot ..
     if not is_fulfilled:
+
+        # For later use
         start = datetime.utcnow()
+
+        # The time at which we will start to log details
+        log_after  = start + timedelta(seconds=log_after_seconds)
+
+        # We will wait for the predicate until this time
         wait_until = start + timedelta(seconds=timeout)
 
-        if needs_log and log_msg_details:
-            logger.info('Waiting for %s (#%s)', log_msg_details, loop_idx)
+        # Optionally, we may already have something to log
+        if (datetime.utcnow() > log_after) and needs_log and log_msg_details:
+            logger.info('Waiting for %s (#%s -> %ss)', log_msg_details, loop_idx, interval)
 
+        # Keep looping until the predicate is fulfilled ..
         while not is_fulfilled:
+
+            # .. sleep for a moment ..
             gevent_sleep(interval)
-            if needs_log and log_msg_details:
-                logger.info('Waiting for %s (#%s)', log_msg_details, loop_idx)
-            is_fulfilled = predicate_func(*args, **kwargs)
-            if datetime.utcnow() > wait_until:
+
+            # .. for later use ..
+            now = datetime.utcnow()
+
+            # .. return if we have run out of time ..
+            if now > wait_until:
                 break
+
+            # .. optionally, log the current state ..
+            if (now > log_after) and needs_log and log_msg_details:
+                logger.info('Waiting for %s (#%s -> %ss)', log_msg_details, loop_idx, interval)
+
+            # .. otherwise, check if we have the predicate fulfilled already ..
+            is_fulfilled = predicate_func(*args, **kwargs)
+
+            # .. keep looping ..
             loop_idx += 1
 
+    # .. at this point, the predicate is fulfilled or we have run out of time ..
+    # .. but, in either case, we can return the result to our caller.
     return is_fulfilled
 
 # ################################################################################################################################
@@ -1928,7 +1962,7 @@ def wait_for_predicate(predicate_func, timeout, interval, log_msg_details=None, 
 def wait_for_dict_key_by_get_func(
     get_key_func, # type: callable_
     key,          # type: any_
-    timeout=30,   # type: int
+    timeout=9999,# type: int
     interval=0.01 # type: float
 ) -> 'any_':
 
@@ -1937,7 +1971,8 @@ def wait_for_dict_key_by_get_func(
 
     def _predicate_dict_key(*_ignored_args, **_ignored_kwargs) -> 'any_':
         try:
-            return get_key_func(key)
+            value = get_key_func(key)
+            return value
         except KeyError:
             return False
 
@@ -1948,7 +1983,7 @@ def wait_for_dict_key_by_get_func(
 def wait_for_dict_key(
     _dict,        # type: anydict
     key,          # type: any_
-    timeout=30,   # type: int
+    timeout=9999, # type: int
     interval=0.01 # type: float
 ) -> 'any_':
 
@@ -1956,13 +1991,14 @@ def wait_for_dict_key(
     # using the dict's own .get method.
 
     def _predicate_dict_key(*_ignored_args, **_ignored_kwargs) -> 'any_':
-        return _dict.get(key)
+        value = _dict.get(key)
+        return value
 
-    return wait_for_dict_key_by_get_func(_predicate_dict_key, timeout, interval, log_msg_details=f'dict key -> `{key}`')
+    return wait_for_dict_key_by_get_func(_predicate_dict_key, key, timeout, interval)
 
 # ################################################################################################################################
 
-def wait_for_file(full_path:'str', timeout:'int'=30, interval:'float'=0.01) -> 'any_':
+def wait_for_file(full_path:'str', timeout:'int'=9999, interval:'float'=0.01) -> 'any_':
 
     def _predicate_wait_for_file(*_ignored_args, **_ignored_kwargs) -> 'any_':
 
@@ -2030,5 +2066,88 @@ def needs_suffix(item:'any_') -> 'bool':
     else:
         len_item = len(item)
     return len_item == 0 or len_item > 1
+
+# ################################################################################################################################
+
+def get_new_tmp_full_path(file_name:'str'='', *, prefix:'str'='', suffix:'str'='', random_suffix:'str'='') -> 'str':
+
+    if prefix:
+        prefix = f'{prefix}-'
+
+    if not random_suffix:
+        random_suffix = uuid4().hex
+
+    # This may be provided by users on input
+    file_name = file_name or 'zato-tmp-' + prefix + random_suffix
+
+    if suffix:
+        file_name += f'-{suffix}'
+
+    tmp_dir = gettempdir()
+    full_path = os.path.join(tmp_dir, file_name)
+
+    return full_path
+
+# ################################################################################################################################
+
+def get_ipc_pid_port_path(cluster_name:'str', server_name:'str', pid:'int') -> 'str':
+
+    # This is where the file name itself ..
+    file_name = ModuleCtx.PID_To_Port_Pattern.format(
+        cluster_name=cluster_name,
+        server_name=server_name,
+        pid=pid,
+    )
+
+    # .. make sure the name is safe to use in the file-system ..
+    file_name = fs_safe_name(file_name)
+
+    # .. now, we can obtain a full path to a temporary directory ..
+    full_path = get_new_tmp_full_path(file_name)
+
+    # .. and return the result to our caller.
+    return full_path
+
+# ################################################################################################################################
+
+def save_ipc_pid_port(cluster_name:'str', server_name:'str', pid:'int', port:'int') -> 'None':
+
+    # Make sure we store a string ..
+    port = str(port)
+
+    # .. get a path where we can save it ..
+    path = get_ipc_pid_port_path(cluster_name, server_name, pid)
+
+    # .. and do save it now.
+    with open_w(path) as f:
+        _ = f.write(port)
+        f.flush()
+
+# ################################################################################################################################
+
+def load_ipc_pid_port(cluster_name:'str', server_name:'str', pid:'int') -> 'int':
+
+    # Get a path to load the port from ..
+    path = get_ipc_pid_port_path(cluster_name, server_name, pid)
+
+    # .. wait until the file exists (which may be required when the server starts up) ..
+    wait_for_file(path, interval=2.5)
+
+    # .. load it now ..
+    with open_r(path) as f:
+        data = f.read()
+        data = data.strip()
+        out = int(data)
+
+    return out
+
+# ################################################################################################################################
+
+def make_list_from_string_list(value:'str', separator:'str') -> 'strlist':
+
+    value = value.split(separator) # type: ignore
+    value = [elem.strip() for elem in value if elem] # type: ignore
+
+    return value
 
 # ################################################################################################################################

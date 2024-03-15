@@ -3,7 +3,7 @@
 """
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato - Cython
@@ -15,11 +15,11 @@ from zato.common.py23_.past.builtins import basestring, unicode
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import any_
     from zato.cy.simpleio import BoolConfig as PyBoolConfig
     from zato.cy.simpleio import IntConfig as PyIntConfig
     from zato.cy.simpleio import SecretConfig as PySecretConfig
     from zato.cy.simpleio import SIOServerConfig as PySIOServerConfig
-
     PyBoolConfig = PyBoolConfig
     PyIntConfig  = PyIntConfig
     PySecretConfig = PySecretConfig
@@ -70,7 +70,7 @@ prefix=
 suffix=_count, _id, _size, _size_min, _size_max, _timeout
 
 [secret]
-exact=auth_data, auth_token, password, password1, password2, secret_key, tls_pem_passphrase, token
+exact=auth_data, auth_token, password, password1, password2, secret_key, tls_pem_passphrase, token, api_key, apiKey, xApiKey
 prefix=
 suffix=
 
@@ -220,7 +220,7 @@ def get_sio_server_config(sio_fs_config):
 
 # ################################################################################################################################
 
-def drop_sio_elems(elems, *to_drop):
+def drop_sio_elems(elems:'any_', *to_drop:'any_') -> 'any_':
     out = list(set(elems))
     for out_elem in out:
         out_name = out_elem.name if isinstance(out_elem, Elem) else out_elem

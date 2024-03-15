@@ -15,27 +15,6 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/endpoint.js"></script>
 
-    <script nonce="{{ CSP_NONCE }}" type="text/python" src="/static/brython/zato/common.py"></script>
-
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript">
-    window.zato_dyn_form_default = 'rest';
-    window.zato_dyn_form_elem_name = 'endpoint_type';
-    window.zato_dyn_form_rows = {
-        'amqp': [],
-        'files': [],
-        'ftp': [],
-        'imap': [],
-        'rest': ['security_id'],
-        'sms_twilio': [],
-        'smtp': [],
-        'soap': [],
-        'srv': ['service_id'],
-        'sql': [],
-        'wsx': ['ws_channel_id'],
-    }
-    window.zato_dyn_form_in_use = {{ in_use|safe }}
-    </script>
-
     <script nonce="{{ CSP_NONCE }}" type="text/javascript">
 
     $.fn.zato.data_table.get_columns = function() {
@@ -90,7 +69,7 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Role</a></th>
                         <th style="width:25%"><a href="#">Topics allowed</a></th>
-                        <th style="width:10%"><a href="#">Client</a></th>
+                        <th style="width:25%"><a href="#">Client</a></th>
                         <th>Pub</th>
                         <th>Sub</th>
                         <th style="width:5%">&nbsp;</th>
@@ -113,12 +92,20 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td>{{ item.name }}</td>
-                        <td>{{ item.role }}</td>
-                        <td>{{ item.topic_patterns_html|safe|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{% if item.is_internal %}<span class="form_hint">{{ item.name }}</span>{% else %}{{ item.name }}{% endif %}</td>
+                        <td>{% if item.is_internal %}<span class="form_hint">{{ item.role }}</span>{% else %}{{ item.role }}{% endif %}</td>
+                        <td>
+                            {% if item.is_internal %}
+                                <span class="form_hint">{{ item.topic_patterns_html|safe|default:'---' }}</span>
+                            {% else %}
+                                {{ item.topic_patterns_html|safe|default:'<span class="form_hint">---</span>' }}
+                            {% endif %}
+                        </td>
                         <td>
                             {% if item.client_html %}
-                                {{ item.client_html|safe }}
+                                {% if item.is_internal %}<span class="form_hint">{% endif %}
+                                    {{ item.client_html|safe }}
+                                {% if item.is_internal %}</span>{% endif %}
                             {% else %}
                                 {% if item.is_internal and item.endpoint_type == "srv" %}
                                     Internal
@@ -129,14 +116,14 @@
                         </td>
                         <td>
                             {% if 'pub' in item.role %}
-                                <a href="{% url "pubsub-endpoint-topics" cluster_id item.id item.name|slugify %}?cluster={{ cluster_id }}">Topics</a>
+                                <a href="{% url "pubsub-endpoint-topics" cluster_id item.id item.name|slugify %}?cluster={{ cluster_id }}">{% if item.is_internal %}<span class="form_hint">Topics</span>{% else %}Topics{% endif %}</a>
                             {% else %}
                                 <span class="form_hint">---</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if 'sub' in item.role %}
-                                <a href="{% url "pubsub-endpoint-queues" cluster_id item.id item.name|slugify %}?cluster={{ cluster_id }}">Queues</a>
+                                <a href="{% url "pubsub-endpoint-queues" cluster_id item.id item.name|slugify %}?cluster={{ cluster_id }}">{% if item.is_internal %}<span class="form_hint">Queues</span>{% else %}Queues{% endif %}</a>
                             {% else %}
                                 <span class="form_hint">---</span>
                             {% endif %}
@@ -196,23 +183,24 @@
                             <td>{{ create_form.role }} </td>
                         </tr>
 
-                        {% comment %} --------- REST/SOAP --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_security_id" style="display:none">
+                        {% comment %} --------- REST --------- {% endcomment %}
+                        <tr id="tr_toggle_security_id" class="zato-toggle zato-toggle-rest zato-toggle-visible">
                             <td style="vertical-align:middle">API client credentials</td>
                             <td>{{ create_form.security_id }} </td>
                         </tr>
 
+                        {% comment %} --------- WebSockets --------- {% endcomment %}
+                        <tr id="tr_toggle_ws_channel_id" class="zato-toggle zato-toggle-wsx zato-toggle-hidden">
+                            <td style="vertical-align:middle">WSX channel</td>
+                            <td>{{ create_form.ws_channel_id }} </td>
+                        </tr>
+
                         {% comment %} --------- Service --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_service_id" style="display:none">
+                        <tr id="tr_toggle_service_id" class="zato-toggle zato-toggle-srv zato-toggle-hidden">
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ create_form.service_id }} </td>
                         </tr>
 
-                        {% comment %} --------- WebSockets --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_ws_channel_id" style="display:none">
-                            <td style="vertical-align:middle">WSX channel</td>
-                            <td>{{ create_form.ws_channel_id }} </td>
-                        </tr>
                         <tr>
                             <td style="vertical-align:middle">Topics allowed</td>
                             <td>{{ create_form.topic_patterns }} </td>
@@ -250,23 +238,24 @@
                             <td>{{ edit_form.role }} </td>
                         </tr>
 
-                        {% comment %} --------- REST/SOAP --------- {% endcomment %}
-                        <tr id="edit-dyn_form_row_id_security_id" style="display:none">
+                        {% comment %} --------- REST --------- {% endcomment %}
+                        <tr id="edit-tr_toggle_security_id" class="zato-toggle-edit zato-toggle-rest-edit zato-toggle-visible-edit">
                             <td style="vertical-align:middle">API client credentials</td>
                             <td>{{ edit_form.security_id }} </td>
                         </tr>
 
+                        {% comment %} --------- WebSockets --------- {% endcomment %}
+                        <tr id="edit-tr_toggle_ws_channel_id" class="zato-toggle-edit zato-toggle-wsx-edit zato-toggle-hidden-edit">
+                            <td style="vertical-align:middle">WSX channel</td>
+                            <td>{{ edit_form.ws_channel_id }} </td>
+                        </tr>
+
                         {% comment %} --------- Service --------- {% endcomment %}
-                        <tr id="edit-dyn_form_row_id_service_id" style="display:none">
+                        <tr id="edit-tr_toggle_service_id" class="zato-toggle-edit zato-toggle-srv-edit zato-toggle-hidden-edit">
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.service_id }} </td>
                         </tr>
 
-                        {% comment %} --------- WebSockets --------- {% endcomment %}
-                        <tr id="edit-dyn_form_row_id_ws_channel_id" style="display:none">
-                            <td style="vertical-align:middle">WebSockets channel</td>
-                            <td>{{ edit_form.ws_channel_id }} </td>
-                        </tr>
                         <tr>
                             <td style="vertical-align:middle">Topics allowed</td>
                             <td>{{ edit_form.topic_patterns }} </td>

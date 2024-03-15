@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 from json import dumps, loads
 
 # Zato
+from zato.common.api import NotGiven
 from zato.common.util.open_ import open_r, open_w
 
 # ################################################################################################################################
@@ -79,6 +80,33 @@ common_totp_opts = [
     {'name': 'username', 'help': 'Username to reset the TOTP secret key of'},
     {'name': '--key', 'help': 'Key to use'},
     {'name': '--key-label', 'help': 'Label to apply to the key'},
+]
+
+common_scheduler_server_address_opts = [
+    {'name':'--scheduler-address-for-server', 'help':'Address of the scheduler for servers to invoke'},
+    {'name':'--server-address-for-scheduler', 'help':'Address of the server for a scheduler to invoke'},
+]
+
+common_scheduler_server_api_client_opts = [
+    {
+        'name':'--scheduler-api-client-for-server-username',
+        'help':'Name of the API user that the server connects to the scheduler with'
+    },
+
+    {
+        'name':'--scheduler-api-client-for-server-password',
+        'help':'Password of the API user that the server connects to the scheduler with'
+    },
+
+    {
+        'name':'--server-api-client-for-scheduler-username',
+        'help':'Name of the API user that the scheduler connects to the server with'
+    },
+
+    {
+        'name':'--server-api-client-for-scheduler-password',
+        'help':'Password of the API user that the scheduler connects to the server with'
+    },
 ]
 
 # ################################################################################################################################
@@ -159,6 +187,7 @@ command_imports = (
     ('pubsub_cleanup', 'zato.cli.pubsub.cleanup.Cleanup'),
     ('pubsub_create_endpoint', 'zato.cli.pubsub.endpoint.CreateEndpoint'),
     ('pubsub_create_topic', 'zato.cli.pubsub.topic.CreateTopic'),
+    ('pubsub_create_test_topics', 'zato.cli.pubsub.topic.CreateTestTopics'),
     ('pubsub_delete_endpoint', 'zato.cli.pubsub.endpoint.DeleteEndpoint'),
     ('pubsub_delete_topic', 'zato.cli.pubsub.topic.DeleteTopics'),
     ('pubsub_delete_topics', 'zato.cli.pubsub.topic.DeleteTopics'),
@@ -276,7 +305,7 @@ class ZatoCommand:
         LOAD_BALANCER = _ComponentName('LOAD_BALANCER', 'Load balancer')
         SCHEDULER = _ComponentName('SCHEDULER', 'Scheduler')
         SERVER = _ComponentName('SERVER', 'Server')
-        WEB_ADMIN = _ComponentName('WEB_ADMIN', 'Web admin')
+        WEB_ADMIN = _ComponentName('WEB_ADMIN', 'Dashboard')
 
 # ################################################################################################################################
 
@@ -305,16 +334,76 @@ class ZatoCommand:
 
 # ################################################################################################################################
 
+    def exit(self, exit_code:'int'=0) -> 'None':
+
+        # stdlib
+        import sys
+
+        _ = sys.exit(exit_code)
+
+# ################################################################################################################################
+
     def allow_empty_secrets(self):
         return False
 
 # ################################################################################################################################
 
-    def get_arg(self, name, default=''):
+    def get_arg(self, name, default='') -> 'any_':
         if hasattr(self.args, 'get'):
             return self.args.get(name) or default
         else:
             return getattr(self.args, name, default)
+
+# ################################################################################################################################
+
+    def _extract_address_data(
+        self,
+        args:'any_',
+        main_arg_name:'str',
+        host_arg_name:'str',
+        port_arg_name:'str',
+        default_host:'str',
+        default_port:'int'
+    ) -> 'any_':
+
+        # stdlib
+        from urllib.parse import urlparse
+
+        # Local variables
+        use_tls = NotGiven
+
+        # Try to extract the scheduler's address from a single option
+        if address := getattr(args, main_arg_name, None):
+
+            # Make sure we have a scheme ..
+            if not '://' in address:
+                address = 'https://' + address
+
+            # .. parse out the individual components ..
+            address = urlparse(address)
+
+            # .. now we know if TLS should be used ..
+            use_tls = address.scheme == 'https'
+
+            # .. extract the host and port ..
+            address = address.netloc.split(':')
+            host = address[0]
+
+            if len(address) == 2:
+                port = address[1]
+                port = int(port)
+            else:
+                port = default_port
+
+        else:
+            # Extract the scheduler's address from individual pieces
+            host = self.get_arg(host_arg_name, default_host)
+            port = self.get_arg(port_arg_name, default_port)
+
+        if use_tls is NotGiven:
+            use_tls = False
+
+        return use_tls, host, port
 
 # ################################################################################################################################
 
@@ -935,7 +1024,10 @@ class ManageCommand(ZatoCommand):
         # Zato
         from zato.common.json_internal import load
 
-        self.component_dir = os.path.abspath(args.path)
+        args_path = os.path.expanduser(args.path)
+        args_path = os.path.expandvars(args_path)
+
+        self.component_dir = os.path.abspath(args_path)
         self.config_dir = os.path.join(self.component_dir, 'config')
         listing = set(os.listdir(self.component_dir))
 
@@ -1052,13 +1144,16 @@ class ServerAwareCommand(ZatoCommand):
         request:'anydict',
         hook_func:'callnone'=None,
         needs_stdout:'bool'=True
-    ) -> 'None':
+    ) -> 'any_':
 
         # Invoke the service first ..
         data = self._invoke_service(service, request, hook_func)
 
-        # .. and log its output now.
+        # .. log its output ..
         self._log_response(data, needs_stdout)
+
+        # .. and return the output to our caller.
+        return data
 
 # ################################################################################################################################
 # ################################################################################################################################

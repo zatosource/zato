@@ -1,22 +1,21 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class StartConfig:
-    __slots__ = 'has_ibm_mq', 'has_sftp'
+    __slots__ = 'has_ibm_mq', 'has_sftp', 'has_stats'
 
-    def __init__(self, has_ibm_mq=False, has_sftp=False):
+    def __init__(self, has_ibm_mq=False, has_sftp=False, has_stats=False):
         self.has_ibm_mq = has_ibm_mq
         self.has_sftp   = has_sftp
+        self.has_stats  = has_stats
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,11 +23,12 @@ class StartConfig:
 class CurrentState:
     """ Represents current runtime state of subprocess-based connectors.
     """
-    __slots__ = 'is_ibm_mq_running', 'is_sftp_running'
+    __slots__ = 'is_ibm_mq_running', 'is_sftp_running', 'is_stats_running'
 
     def __init__(self):
         self.is_ibm_mq_running = False
         self.is_sftp_running   = False
+        self.is_stats_running  = False
 
 # ################################################################################################################################
 # ################################################################################################################################

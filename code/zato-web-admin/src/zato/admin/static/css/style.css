@@ -122,7 +122,7 @@ td {
     border-left: 1px solid #fff;
     border-top: 1px solid #CFDEFF;
     padding: .75em 1em;
-    text-shadow: -1px -1px 0 red;
+    text-shadow-QQQ-QQQ: -1px -1px 0 red;
     text-decoration: none;
     display: block;
     position: relative
@@ -134,7 +134,7 @@ span.like-a {
 
 .sf-menu a,
 span.like-a {
-    text-shadow: 1px 1px 0 #000
+    text-shadow-QQQ-QQQ: 1px 1px 0 #000
 }
 
 .sf-menu a,
@@ -162,7 +162,7 @@ span.like-a {
     color: #999;
     font-weight: 600;
     font-family: sans-serif;
-    text-shadow: 2px 2px 0 #333;
+    text-shadow-QQQ: 2px 2px 0 #333;
     vertical-align: middle
 }
 
@@ -323,13 +323,12 @@ span.like-a {
     font-size: 12px;
     background-color: #ccc;
     color: #000;
-    text-shadow: 1px 1px 0 #eee
 }
 
 .form-data td {
     border: none;
     padding: 4px;
-    padding-right: 12px
+    padding-right: 0px
 }
 
 .ui-dialog-titlebar {
@@ -339,12 +338,17 @@ span.like-a {
     border: 1px solid #666;
     border-bottom: none;
     text-align: left;
-    text-shadow: 1px 1px 0 #aaa;
+    text-shadow-QQQ: 1px 1px 0 #aaa;
 }
 
 .form_hint {
     font-size: smaller;
     color: #333
+}
+
+.disabled {
+    font-size:0.78rem;
+    color: #888;
 }
 
 .attention {
@@ -356,7 +360,7 @@ div.bd {
 }
 
 div.ui-dialog {
-    width: 33em !important
+    width: 38em !important
 }
 
 p.big-notice {
@@ -378,7 +382,7 @@ p.big-notice {
     border-bottom: none;
     text-align: left;
     color: #eee;
-    text-shadow: 1px 1px 0 #000
+    text-shadow-QQQ: 1px 1px 0 #000
 }
 
 .ui-icon-closethick {
@@ -391,6 +395,10 @@ p.big-notice {
 
 .ui-icon-closethick {
     display: none
+}
+
+select {
+    -webkit-appearance: listbox !important;
 }
 
 .ui-widget {
@@ -430,12 +438,12 @@ div.prompt form {
     padding-top: 4px
 }
 
-a {
+a:not(.menu-link) {
     color: #000;
     font-family: arial, helvetica, clean, sans-serif;
     text-decoration: underline;
     padding: 3px;
-    padding-left: 0px
+    QQQ-padding-left: 0px
 }
 
 a:hover {
@@ -446,7 +454,7 @@ a:hover {
 
 a.top {
     color: #fff;
-    text-shadow: none
+    text-shadow-QQQ: none
 }
 
 a.top:hover {
@@ -478,6 +486,178 @@ a.hint {
 #markup {
     width: 94%;
     text-align: center
+}
+
+#markup.columns {
+    display: flex;
+    width: 100%;
+}
+
+body {
+    counter-reset: left-column-counter;
+    counter-reset: right-column-counter;
+}
+
+.left-column {
+    background-color: #fff;
+    flex-grow: 1;
+    max-width: 50%;
+    max-height: 88vh;
+    overflow: scroll;
+}
+
+.right-column {
+    background-color: #fff;
+    flex-grow: 1;
+    max-width: 50%;
+    max-height: 88vh;
+    overflow: scroll;
+}
+
+.column-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    align-content:stretch;
+}
+
+.column-header {
+    text-align: left;
+    padding-left: 0.7rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    background-color: #eee;
+}
+
+.column-header.left {
+    padding-left: 0.3rem;
+    border-right: 1px solid #bbb
+}
+
+.column-body.left {
+    border-right: 1px solid #bbb
+}
+
+.listing {
+    min-height: 80vh;
+}
+
+#listing-left-empty,
+#listing-right-empty
+{
+    margin-top: 1rem;
+    font-size: 0.91rem !important;
+}
+
+.handle {
+    cursor: move;
+}
+
+.list-group-item {
+    border-bottom: 1px solid #ccc;
+    border-right: 1px solid #ccc;
+    background-color: #f6f6f6;
+    margin: 0.3rem;
+    padding-top: 0.05rem;
+    padding-bottom: 0.05rem;
+    padding-left: 0.4rem;
+    text-align: left;
+    font-size: 0.76rem !important;
+    font-family: monospace;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.05s ease;
+}
+
+.list-group-item .sec-type {
+    text-transform: uppercase;
+    font-size: 0.56rem;
+    letter-spacing: 0.05rem;
+    background-color: #ddd;
+    padding: 0.3rem;
+    margin-left: 0.4rem;
+    margin-right: 0.1rem;
+    min-width: 5rem;
+    text-align: center;
+}
+
+.list-group-item a {
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+    padding-top: 0.18rem;
+    padding-bottom: 0.2rem;
+    display: inline-block;
+}
+
+.list-group-item .handle {
+    flex: 1;
+}
+
+.list-group-item .handle:after {
+    content: '\2807';
+    font-size: 1.2rem;
+    float: right;
+    color: #666;
+}
+
+.list-group-item.left {
+    counter-increment: left-column-counter;
+}
+
+.list-group-item.right {
+    counter-increment: right-column-counter;
+}
+
+.list-group-item.left::before {
+    content: counter(left-column-counter) ". ";
+}
+
+.list-group-item.right::before {
+    content: counter(right-column-counter) ". ";
+}
+
+.list-group-item:hover {
+    background-color: #f1f178;
+}
+
+.list-group-item.selected {
+    background-color: #e3e3e3;
+    border-bottom: 1px solid #999;
+    border-right: 1px solid #999;
+    transition: background-color 0.3s ease;
+}
+
+.list-group-item.selected a {
+    background-color: #ff9;
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+    padding-top: 0.18rem;
+    padding-bottom: 0.2rem;
+}
+
+.list-group-item.selected .sec-type {
+    background-color: #c9c9c9;
+}
+
+.list-group-item.left.selected::before,
+.list-group-item.right.selected::before
+{
+    font-weight: 600;
+}
+
+.list-group-item.left.selected::before {
+    content: counter(left-column-counter) ". ";
+}
+
+.list-group-item.right.selected::before {
+    content: counter(right-column-counter) ". ";
+}
+
+#column-header-right-menu {
+    float: right;
+    font-size: 0.78rem;
+    padding-top: 0.1rem;
+    padding-right: 0.5rem;
 }
 
 th.ignore,
@@ -527,6 +707,60 @@ div.page_prompt a.current {
 }
 
 #data-table * tr.odd:hover,
-#data-table * tr.even:hover {
+#data-table * tr.even:hover,
+table.multi-select-table tr:hover
+{
     background-color: #ff8;
+}
+
+.ui-icon {
+    display: none !important;
+}
+
+.chosen-container {
+    min-width:100%;
+}
+
+input[data-zato-validator-required="required"]::placeholder {
+    opacity: 0.64;
+    color: #000;
+  }
+
+.zato-validator-attention {
+    border: 2px dotted red !important;
+    background-color: #fffcc8 !important;
+}
+
+.zato-toggle-hidden,
+.zato-toggle-hidden-edit {
+    display: none;
+}
+
+.zato-toggle-visible,
+.zato-toggle-visible-edit
+ {
+    visibility: visible;
+}
+
+.zato-blinking {
+    animation: blink 0.5s linear 1;
+}
+
+@keyframes blink {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+.options-expanded {
+    background-color:#e3e3e0;
+}
+.options-expanded td.to-ignore {
+    background-color: #ccc;
 }

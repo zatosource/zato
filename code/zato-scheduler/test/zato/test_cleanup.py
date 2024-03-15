@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
-"""
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # This needs to be done as soon as possible
 from gevent.monkey import patch_all
-patch_all()
+_ = patch_all()
 
 # stdlib
 import os
@@ -60,8 +61,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         self.api_impl = PubSubAPIRestImpl(self, self.rest_client)
 
         # .. clean up any left over topics as well ..
-        cli_params = ['pubsub', 'delete-topics', '--pattern', test_topic_prefix]
-        _ = self.run_zato_cli_json_command(cli_params)
+        self.delete_pubsub_topics_by_pattern(test_topic_prefix)
 
         # A path to the scheduler that the tests will use
         self.scheduler_path = os.environ['ZATO_SCHEDULER_BASE_DIR']
@@ -96,7 +96,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         messages_published = []
 
         # Before subscribing, make sure we are not currently subscribed
-        self._unsubscribe(topic_name)
+        _ = self._unsubscribe(topic_name)
 
         # Subscribe to the topic
         response_initial = self.rest_client.post(PubSubConfig.PathSubscribe + topic_name)
@@ -104,7 +104,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
         # Wait a moment to make sure the subscription data is created
         sleep(2)
 
-        sub_key = response_initial['sub_key']
+        sub_key:'str' = response_initial['sub_key']
         sub_key
 
         data = 'abc'
@@ -513,7 +513,7 @@ class PubSubCleanupTestCase(CommandLineTestCase, BasePubSubRestTestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    _ = main()
 
 # ################################################################################################################################
 # ################################################################################################################################

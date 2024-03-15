@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -22,13 +22,11 @@ from crontab import CronTab
 # gevent
 from gevent import sleep
 
-# Python 2/3 compatibility
-from zato.common.py23_.past.builtins import basestring
-
 # Zato
-from zato.common.api import SCHEDULER, ZATO_NONE
+from zato.common.api import MISC, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 from zato.common.util.api import new_cid, spawn_greenlet
+from zato.common.util.config import parse_url_address
 from zato.scheduler.backend import Interval, Job, Scheduler as _Scheduler
 
 # ################################################################################################################################
@@ -36,6 +34,7 @@ from zato.scheduler.backend import Interval, Job, Scheduler as _Scheduler
 
 if 0:
     from zato.broker.client import BrokerClient
+    from zato.common.typing_ import strdict, strdictnone
     from zato.scheduler.server import Config
 
 # ################################################################################################################################
@@ -48,7 +47,7 @@ _has_debug = logger.isEnabledFor(logging.DEBUG)
 # ################################################################################################################################
 
 def _start_date(job_data):
-    if isinstance(job_data.start_date, basestring):
+    if isinstance(job_data.start_date, str):
         # Remove timezone information as we assume that all times are in UTC
         start_date = job_data.start_date.split('+')
         start_date = start_date[0]
@@ -66,7 +65,7 @@ class SchedulerAPI:
         self.config = config
         self.broker_client = None # type: BrokerClient
         self.config.on_job_executed_cb = self.on_job_executed
-        self.sched = _Scheduler(self.config, self)
+        self.scheduler = _Scheduler(self.config, self)
 
         if run:
             self.serve_forever()
@@ -76,15 +75,54 @@ class SchedulerAPI:
     def serve_forever(self):
         try:
             try:
-                spawn_greenlet(self.sched.run)
+                spawn_greenlet(self.scheduler.run)
             except Exception:
                 logger.warning(format_exc())
 
-            while not self.sched.ready:
+            while not self.scheduler.ready:
                 sleep(0.1)
 
         except Exception:
             logger.warning(format_exc())
+
+# ################################################################################################################################
+
+    def invoke_service(self, name:'str', request:'strdictnone'=None) -> 'strdict':
+
+        # Make sure we have a request to send
+        request = request or {}
+
+        # Assume there is no response until we have one
+        response = None
+
+        # Enrich the business data ..
+        request['cluster_id'] = MISC.Default_Cluster_ID
+
+        # .. keep looping until we have a response ..
+        while not response:
+
+            try:
+                # .. log what we are about to do ..
+                logger.info(f'Invoking service `{name}` with `{request}`')
+
+                # .. invoke the server ..
+                response = self.broker_client.zato_client.invoke(name, request, timeout=0.5)
+
+            except Exception as e:
+
+                logger.info(f'Service invocation error -> `{name}` -> {e}')
+
+            finally:
+
+                # .. if there is still none, wait a bit longer ..
+                logger.info(f'Waiting for response from service `{name}`')
+
+                # .. do wait now ..
+                sleep(1)
+
+        # .. if we are here, we have a response to return.
+        logger.info(f'Returning response from service {name}')
+        return response.data
 
 # ################################################################################################################################
 
@@ -161,7 +199,7 @@ class SchedulerAPI:
         job = Job(id, name, job_type, interval, start_time, cb_kwargs=cb_kwargs, max_repeats=max_repeats,
             is_active=is_active, cron_definition=cron_definition, service=service, extra=extra, old_name=old_name)
 
-        func = self.sched.create if is_create else self.sched.edit
+        func = self.scheduler.create if is_create else self.scheduler.edit
         func(job, **kwargs)
 
 # ################################################################################################################################
@@ -190,12 +228,20 @@ class SchedulerAPI:
         """ Re-/schedules the execution of an interval-based job.
         """
         start_date = _start_date(job_data)
+
         weeks = job_data.weeks if job_data.get('weeks') else 0
         days = job_data.days if job_data.get('days') else 0
         hours = job_data.hours if job_data.get('hours') else 0
         minutes = job_data.minutes if job_data.get('minutes') else 0
         seconds = job_data.seconds if job_data.get('seconds') else 0
         max_repeats = job_data.repeats if job_data.get('repeats') else None
+
+        weeks = int(weeks)
+        days = int(days)
+        hours = int(hours)
+        minutes = int(minutes)
+        seconds = int(seconds)
+        max_repeats = int(max_repeats) if max_repeats is not None else max_repeats
 
         self.create_edit_job(job_data.id, job_data.name, job_data.get('old_name'), start_date, SCHEDULER.JOB_TYPE.INTERVAL_BASED,
             job_data.service, is_create, max_repeats, days+weeks*7, hours, minutes, seconds, job_data.extra,
@@ -243,17 +289,17 @@ class SchedulerAPI:
 
         logger.info('Deleting job %s (old_name:%s)', name, old_name)
 
-        self.sched.unschedule_by_name(name, **kwargs)
+        self.scheduler.unschedule_by_name(name, **kwargs)
 
 # ################################################################################################################################
 
     def execute(self, job_data):
-        self.sched.execute(job_data.name)
+        self.scheduler.execute(job_data.name)
 
 # ################################################################################################################################
 
     def stop(self):
-        self.sched.stop()
+        self.scheduler.stop()
 
 # ################################################################################################################################
 
@@ -281,6 +327,13 @@ class SchedulerAPI:
 
     def on_broker_msg_SCHEDULER_EXECUTE(self, msg, *ignored_args):
         self.execute(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SCHEDULER_SET_SERVER_ADDRESS(self, msg, *ignored_args):
+        url = parse_url_address(msg.address, SCHEDULER.Default_Server_Port)
+        self.broker_client.set_zato_client_address(url)
+        logger.info('Set server address to -> %s', url)
 
 # ################################################################################################################################
 # ################################################################################################################################

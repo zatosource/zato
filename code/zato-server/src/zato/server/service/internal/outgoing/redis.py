@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 import os
 
 # Zato
-from zato.common.util import get_config
+from zato.common.util.config import get_config_object, update_config_file
 from zato.server.service import AsIs, Bool, Int, SIOElem
 from zato.server.service.internal import AdminService, ChangePasswordBase
 
@@ -20,7 +20,7 @@ from zato.server.service.internal import AdminService, ChangePasswordBase
 if 0:
     from bunch import Bunch
     from zato.common.ext.configobj_ import ConfigObj
-
+    from zato.common.typing_ import any_, anylist, strdict
     Bunch = Bunch
     ConfigObj = ConfigObj
 
@@ -33,14 +33,7 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_config_object(repo_location, conf_file):
-    # type: (str) -> dict
-    return get_config(repo_location, conf_file, bunchified=False)
-
-# ################################################################################################################################
-
-def set_kvdb_config(server_config, input_data, redis_sentinels):
-    # type: (dict, Bunch, str) -> None
+def set_kvdb_config(server_config:'strdict', input_data:'Bunch', redis_sentinels:'str') -> 'None':
 
     server_config['kvdb']['host'] = input_data.host or ''
     server_config['kvdb']['port'] = int(input_data.port) if input_data.port else ''
@@ -48,15 +41,6 @@ def set_kvdb_config(server_config, input_data, redis_sentinels):
     server_config['kvdb']['use_redis_sentinels'] = input_data.use_redis_sentinels
     server_config['kvdb']['redis_sentinels'] = redis_sentinels
     server_config['kvdb']['redis_sentinels_master'] = input_data.redis_sentinels_master or ''
-
-# ################################################################################################################################
-
-def update_config_file(config, repo_location, conf_file):
-    # type: (ConfigObj, str, str) -> None
-
-    conf_path = os.path.join(repo_location, conf_file)
-    with open(conf_path, 'wb') as f:
-        config.write(f)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,7 +56,7 @@ class GetList(AdminService):
 
 # ################################################################################################################################
 
-    def get_data(self):
+    def get_data(self) -> 'anylist':
 
         # Response to produce
         out = []
@@ -90,13 +74,13 @@ class GetList(AdminService):
         for elem in self.SimpleIO.output_optional:
 
             # Extract the embedded name or use it as is
-            name = elem.name if isinstance(elem, SIOElem) else elem
+            name = elem.name if isinstance(elem, SIOElem) else elem # type: ignore
 
             # These will not exist in server.conf
             if name in ('id', 'is_active', 'name'):
                 continue
 
-            value = config[name]
+            value = config[name] # type: ignore
 
             if name == 'redis_sentinels':
                 value = '\n'.join(value)
@@ -111,8 +95,7 @@ class GetList(AdminService):
 
 # ################################################################################################################################
 
-    def handle(self):
-
+    def handle(self) -> 'None':
         self.response.payload[:] = self.get_data()
 
 # ################################################################################################################################
@@ -126,13 +109,13 @@ class Edit(AdminService):
         output_required = 'id', 'name'
         response_elem = None
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         # Local alias
         input = self.request.input
 
         # If provided, turn sentinels configuration into a format expected by the underlying KVDB object
-        redis_sentinels = input.redis_sentinels or '' # type: str
+        redis_sentinels:'any_' = input.redis_sentinels or ''
         if redis_sentinels:
 
             redis_sentinels = redis_sentinels.splitlines()
@@ -144,7 +127,7 @@ class Edit(AdminService):
 
         server_conf_path = os.path.join(self.server.repo_location, 'server.conf')
         with open(server_conf_path, 'wb') as f:
-            config.write(f)
+            _ = config.write(f) # type: ignore
 
         # .. assign new in-RAM server-wide configuration ..
         set_kvdb_config(self.server.fs_server_config, input, redis_sentinels)
@@ -176,22 +159,19 @@ class ChangePassword(ChangePasswordBase):
         password = (input.password1 or '').encode('utf8')
 
         # Now, encrypt the input password
-        password = self.crypto.encrypt(password)
-
-        # Decode it back for later use
-        password = password.decode('utf8')
+        password = self.crypto.encrypt(password, needs_str=True)
 
         # Find our secrets config
         config = get_config_object(self.server.repo_location, 'secrets.conf')
 
         # Set the new secret
-        config['zato']['server_conf.kvdb.password'] = password
+        config['zato']['server_conf.kvdb.password'] = password # type: ignore
 
         # Update the on-disk configuration
-        update_config_file(config, self.server.repo_location, 'secrets.conf')
+        update_config_file(config, self.server.repo_location, 'secrets.conf') # type: ignore
 
         # Change in-RAM password
-        self.server.kvdb.set_password(password)
+        self.server.kvdb.set_password(password) # type: ignore
 
         self.response.payload.id = self.request.input.id
 

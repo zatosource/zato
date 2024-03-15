@@ -17,15 +17,30 @@ $.fn.zato.data_table.PubSubSubscription = new Class({
 
 });
 
-// /////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var elems_required = [
+    'active_status',
+    'sub_key',
+    'server_id',
+    'active_status',
+    'delivery_method',
+    'delivery_batch_size',
+    'delivery_max_retry',
+    'wait_sock_err',
+    'wait_non_sock_err',
+];
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = false;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubSubscription;
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.endpoint_queue.data_table.new_row;
+    $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.subscription.before_submit_hook;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['active_status', 'sub_key']);
+    $.fn.zato.data_table.setup_forms(elems_required);
 })
 
 $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, include_tr) {
@@ -36,7 +51,7 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     }
 
     var topic_link = String.format(
-        '<a href="/zato/pubsub/topic/?cluster={0}&highlight={1}">{2}</a>', data.cluster_id, data.id, data.topic_name);
+        '<a href="/zato/pubsub/topic/?cluster={0}&query={1}">{1}</a>', data.cluster_id, data.topic_name);
 
     var total_link = $.fn.zato.pubsub.endpoint_queue.get_current_depth_link(data, data.cluster_id);
 
@@ -125,6 +140,8 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     row += String.format("<td class='ignore'>{0}</td>", data.out_soap_http_soap_id);
     row += String.format("<td class='ignore'>{0}</td>", data.delivery_err_should_block);
     row += String.format("<td class='ignore'>{0}</td>", data.is_staging_enabled);
+    row += String.format("<td class='ignore'>{0}</td>", data.current_depth_gd);
+    row += String.format("<td class='ignore'>{0}</td>", data.current_depth_non_gd);
 
     if(include_tr) {
         row += '</tr>';
@@ -133,15 +150,21 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     return row;
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.pubsub.endpoint_queue.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update subscription', id);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.endpoint_queue.get_depth_link = function(has_gd, id, name_slug, cluster_id, depth) {
     return String.format(
         '<a href="/zato/pubsub/endpoint/queue/browser/gd/{0}/queue/{1}/{2}?cluster={3}">{4}</a>',
             has_gd, id, name_slug, cluster_id, depth || 0);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.endpoint_queue.get_current_depth_link = function(data, cluster_id) {
     var current_depth_gd = $.fn.zato.pubsub.endpoint_queue.get_depth_link('true', data.id, data.name_slug, cluster_id,
@@ -152,6 +175,8 @@ $.fn.zato.pubsub.endpoint_queue.get_current_depth_link = function(data, cluster_
 
     return current_depth = current_depth_gd + ' / ' + data.current_depth_non_gd;
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.endpoint_queue.clear = function(id, cluster_id, topic_name) {
 
@@ -182,6 +207,8 @@ $.fn.zato.pubsub.endpoint_queue.clear = function(id, cluster_id, topic_name) {
     jConfirm(q, 'Please confirm', jq_callback);
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.pubsub.endpoint_queue.delete_ = function(id) {
     var instance = $.fn.zato.data_table.data[id];
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
@@ -190,6 +217,8 @@ $.fn.zato.pubsub.endpoint_queue.delete_ = function(id) {
         true, false,
         '/zato/pubsub/endpoint/queue/delete/{0}/' + instance.sub_key + '/');
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.endpoint_queue.toggle_sub_key = function(id) {
     var hidden = 'Show';
@@ -203,3 +232,5 @@ $.fn.zato.pubsub.endpoint_queue.toggle_sub_key = function(id) {
         elem.html(hidden);
     }
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

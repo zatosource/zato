@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -14,6 +12,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.broker_message import CHANNEL
+from zato.common.exception import ServiceMissingException
 from zato.common.odb.model import ChannelAMQP, Cluster, ConnDefAMQP, Service
 from zato.common.odb.query import channel_amqp_list
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -80,7 +79,7 @@ class Create(AdminService):
 
             if not service:
                 msg = 'Service `{}` does not exist in this cluster'.format(input.service)
-                raise Exception(msg)
+                raise ServiceMissingException(self.cid, msg)
 
             try:
                 item = ChannelAMQP()

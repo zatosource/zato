@@ -15,7 +15,7 @@ allow_multiline_dictionary_keys=False
 allow_multiline_lambdas=False
 
 # Allow splitting before a default / named assignment in an argument list.
-allow_split_before_default_or_named_assigns=True
+allow_split_before_default_or_named_assigns=False
 
 # Allow splits before the dictionary value.
 allow_split_before_dict_value=True
@@ -61,7 +61,7 @@ blank_line_before_module_docstring=False
 #                      # <------ this blank line
 #     def method():
 #       ...
-blank_line_before_nested_class_or_def=False
+blank_line_before_nested_class_or_def=True
 
 # Do not split consecutive brackets. Only relevant when
 # dedent_closing_brackets is set. For example:
@@ -93,7 +93,7 @@ column_limit=130
 # - VALIGN-RIGHT: Vertically align continuation lines to multiple of
 #   INDENT_WIDTH columns. Slightly right (one tab or a few spaces) if
 #   cannot vertically align continuation lines with indent characters.
-continuation_align_style=FIXED
+continuation_align_style=SPACE
 
 # Indent width used for line continuations.
 continuation_indent_width=4
@@ -118,7 +118,7 @@ dedent_closing_brackets=True
 
 # Disable the heuristic which places each list element on a separate line
 # if the list is comma-terminated.
-disable_ending_comma_heuristic=True
+disable_ending_comma_heuristic=False
 
 # Place each dictionary entry onto its own line.
 each_dict_entry_on_separate_line=True

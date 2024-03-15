@@ -3,12 +3,13 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 import logging
 import os
+from copy import deepcopy
 from datetime import datetime, timedelta
 from logging import DEBUG, INFO, WARN
 from pathlib import Path
@@ -33,13 +34,16 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import DATA_FORMAT, default_internal_modules, HotDeploy, KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, \
-    SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
+from zato.common.api import API_Key, DATA_FORMAT, default_internal_modules, EnvFile, EnvVariable,  GENERIC,  HotDeploy, IPC, \
+    KVDB as CommonKVDB, RATE_LIMIT, SERVER_STARTUP, SEC_DEF_TYPE, SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, \
+        ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
+from zato.common.bearer_token import BearerTokenManager
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.const import SECRETS
 from zato.common.events.common import Default as EventsDefault
+from zato.common.facade import SecurityFacade
 from zato.common.ipc.api import IPCAPI
 from zato.common.json_internal import dumps, loads
 from zato.common.kv_data import KVDataAPI
@@ -52,21 +56,17 @@ from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, get_config_from_file, get_kvdb_config_for_log, get_user_config_name, \
-    fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
-    register_diag_handlers
+    fs_safe_name, hot_deploy, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid, \
+    register_diag_handlers, save_ipc_pid_port, spawn_greenlet, StaticConfig
+from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
+from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
 from zato.common.util.tcp import wait_until_port_taken
 from zato.distlock import LockManager
-from zato.server.base.worker import WorkerStore
-from zato.server.config import ConfigStore
-from zato.server.connection.stats import ServiceStatsClient
-from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
-from zato.server.connection.server.rpc.config import ODBConfigSource
-from zato.server.connection.kvdb.api import KVDB as ZatoKVDB
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.subprocess_.api import CurrentState as SubprocessCurrentState, \
@@ -75,6 +75,15 @@ from zato.server.base.parallel.subprocess_.ftp import FTPIPC
 from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
 from zato.server.base.parallel.subprocess_.zato_events import ZatoEventsIPC
 from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
+from zato.server.base.worker import WorkerStore
+from zato.server.config import ConfigStore
+from zato.server.connection.kvdb.api import KVDB as ZatoKVDB
+from zato.server.connection.pool_wrapper import ConnectionPoolWrapper
+from zato.server.connection.stats import ServiceStatsClient
+from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
+from zato.server.connection.server.rpc.config import ODBConfigSource
+from zato.server.groups.base import GroupsManager
+from zato.server.groups.ctx import SecurityGroupsCtxBuilder
 from zato.server.sso import SSOTool
 
 # ################################################################################################################################
@@ -82,25 +91,28 @@ from zato.server.sso import SSOTool
 
 if 0:
 
-    # Zato
+    from bunch import Bunch as bunch_
     from zato.common.crypto.api import ServerCryptoManager
+    from zato.common.ipc.client import IPCResponse
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
-    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, strbytes, strlist, strnone
-    from zato.server.commands import CommandResult
+    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, dictlist, intset, listorstr, strdict, strbytes, \
+        strlist, strorlistnone, strnone, strorlist, strset
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.ext.zunicorn.arbiter import Arbiter
     from zato.server.ext.zunicorn.workers.ggevent import GeventWorker
     from zato.server.service.store import ServiceStore
     from zato.simpleio import SIOServerConfig
+    from zato.server.generic.api.outconn.wsx.common import WSXCtx
     from zato.server.startup_callable import StartupCallableTool
     from zato.sso.api import SSOAPI
 
+    bunch_ = bunch_
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
-    SIOServerConfig = SIOServerConfig
+    SIOServerConfig = SIOServerConfig # type: ignore
     SSOAPI = SSOAPI # type: ignore
     StartupCallableTool = StartupCallableTool
     SubprocessIPC = SubprocessIPC
@@ -115,6 +127,11 @@ kvdb_logger = logging.getLogger('zato_kvdb')
 # ################################################################################################################################
 
 megabyte = 10 ** 6
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_ipc_timeout = IPC.Default.Timeout
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -141,19 +158,25 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     zato_lock_manager: 'LockManager'
     startup_callable_tool: 'StartupCallableTool'
     oauth_store: 'OAuthStore'
+    bearer_token_manager: 'BearerTokenManager'
+    security_facade: 'SecurityFacade'
 
     stop_after: 'intnone'
     deploy_auto_from: 'str' = ''
+
+    groups_manager: 'GroupsManager'
+    security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
 
     def __init__(self) -> 'None':
         self.logger = logger
         self.host = ''
         self.port = -1
+        self.use_tls = False
         self.is_starting_first = '<not-set>'
         self.odb_data = Bunch()
         self.repo_location = ''
-        self.user_conf_location = []
-        self.user_conf_location_extra = set()
+        self.user_conf_location:'strlist' = []
+        self.user_conf_location_extra:'strset' = set()
         self.soap11_content_type = ''
         self.soap12_content_type = ''
         self.plain_xml_content_type = ''
@@ -198,15 +221,18 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.crypto_use_tls = False
         self.pid = -1
         self.sync_internal = False
-        self.ipc_api = IPCAPI()
+        self.ipc_api = IPCAPI(self)
         self.fifo_response_buffer_size = -1
         self.is_first_worker = False
+        self.process_idx = -1
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
         self.connector_config_ipc = ConnectorConfigIPC()
         self.is_sso_enabled = False
         self.audit_pii = audit_pii
         self.has_fg = False
+        self.env_file = ''
+        self.env_variables_from_files:'strlist' = []
         self.default_internal_pubsub_endpoint_id = 0
         self.jwt_secret = b''
         self._hash_secret_method = ''
@@ -224,6 +250,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
         self.enforce_service_invokes = False
         self.json_parser = BasicParser()
+        self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
+        self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
 
         # A server-wide publication counter, indicating which one the current publication is,
         # increased after each successful publication.
@@ -280,12 +308,22 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.needs_access_log = self.access_logger.isEnabledFor(INFO)
         self.needs_all_access_log = True
         self.access_log_ignore = set()
+        self.rest_log_ignore   = set()
         self.has_pubsub_audit_log = logging.getLogger('zato_pubsub_audit').isEnabledFor(DEBUG)
         self.is_enabled_for_warn = logging.getLogger('zato').isEnabledFor(WARN)
         self.is_admin_enabled_for_info = logging.getLogger('zato_admin').isEnabledFor(INFO)
 
+        # A wrapper for outgoing WSX connections
+        self.wsx_connection_pool_wrapper = ConnectionPoolWrapper(self, GENERIC.CONNECTION.TYPE.OUTCONN_WSX)
+
         # The main config store
         self.config = ConfigStore()
+
+# ################################################################################################################################
+
+    def set_ipc_password(self, password:'str') -> 'None':
+        password = self.decrypt(password)
+        self.ipc_api.password = password
 
 # ################################################################################################################################
 
@@ -319,7 +357,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 logger.info('Found extra services to deploy: %s', ', '.join(sorted(item.name for item in missing)))
 
                 # (file_name, source_path) -> a list of services it contains
-                modules = {}
+                modules:'strdict' = {}
 
                 # Coalesce all service modules - it is possible that each one has multiple services
                 # so we do want to deploy the same module over for each service found.
@@ -346,7 +384,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
                 # Create a deployment package in ODB out of which all the services will be picked up ..
                 for file_name, values in modules.items():
-                    msg = Bunch()
+                    msg:'bunch_' = Bunch()
                     msg.action = HOT_DEPLOY.CREATE_SERVICE.value
                     msg.msg_type = MESSAGE_TYPE.TO_PARALLEL_ALL
                     msg.package_id = hot_deploy(self, file_name, values['tmp_full_path'], notify=False)
@@ -394,15 +432,21 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             logger.info('Deploying user-defined services (%s)', self.name)
 
-            user_defined_deployed = self.service_store.import_services_from_anywhere(
+            user_defined_deployed:'anylist' = self.service_store.import_services_from_anywhere(
                 self.service_modules + self.service_sources, self.base_dir).to_process
 
             locally_deployed.extend(user_defined_deployed)
             len_user_defined_deployed = len(user_defined_deployed)
 
-            suffix = ' ' if len_user_defined_deployed == 1 else 's '
+            suffix = '' if len_user_defined_deployed == 1 else 's'
 
+            # This will be always logged ..
             logger.info('Deployed %d user-defined service%s (%s)', len_user_defined_deployed, suffix, self.name)
+
+            # .. whereas details are optional.
+            if asbool(os.environ.get('Zato_Log_User_Services_Deployed', False)):
+                for item in sorted(elem.name for elem in user_defined_deployed):
+                    logger.info('Deployed user service: %s', item)
 
             return set(locally_deployed)
 
@@ -461,11 +505,22 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def add_pickup_conf_from_env(self) -> 'None':
 
-        # Look up Python hot-deployment directories ..
-        path = os.environ.get('ZATO_HOT_DEPLOY_DIR', '')
+        # These exact names may exist in the environment ..
+        name_list = ['Zato_Project_Root', 'Zato_Hot_Deploy_Dir', 'ZATO_HOT_DEPLOY_DIR']
 
-        # .. and make it possible to deploy from them.
-        self._add_pickup_conf_from_local_path(path)
+        # .. same for these prefixes ..
+        prefix_list = ['Zato_Project_Root_', 'Zato_Hot_Deploy_Dir_']
+
+        # .. go through the specific names and add any matching ..
+        for name in name_list:
+            if path := os.environ.get(name, ''):
+                self.add_pickup_conf_from_local_path(path, name)
+
+        # .. go through the list of prefixes and add any matching too.
+        for prefix in prefix_list:
+            for name, path in os.environ.items():
+                if name.startswith(prefix):
+                    self.add_pickup_conf_from_local_path(path, name)
 
 # ################################################################################################################################
 
@@ -475,92 +530,145 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         path = os.path.join(self.deploy_auto_from, 'code')
 
         # .. and make it possible to deploy from them.
-        self._add_pickup_conf_from_local_path(path)
+        self.add_pickup_conf_from_local_path(path, 'AutoDeploy')
 
 # ################################################################################################################################
 
-    def _add_pickup_conf_from_local_path(self, items:'str') -> 'None':
+    def add_pickup_conf_from_local_path(self, paths:'str', source:'str', path_patterns:'strorlistnone'=None) -> 'None':
 
-        # Bunch
+        # Bunchz
         from bunch import bunchify
 
+        # Local variables
+        path_patterns = path_patterns or HotDeploy.Default_Patterns
+        path_patterns = path_patterns if isinstance(path_patterns, list) else [path_patterns] # type: ignore
+
         # We have hot-deployment configuration to process ..
-        if items:
+        if paths:
+
+            # .. log what we are about to do ..
+            msg = f'Processing hot-deployment configuration paths `{paths!r}` (source -> {source})'
+            logger.info(msg)
 
             # .. support multiple entries ..
-            items = items.split(':') # type: ignore
-            items = [elem.strip() for elem in items] # type: ignore
+            paths = make_list_from_string_list(paths, ':') # type: ignore
 
             # .. add  the actual configuration ..
-            for name in items:
+            for path in paths:
+
+                # .. make sure the path is actually given on input, e.g. it is not None or '' ..
+                if not path:
+                    msg = f'Ignoring empty hot-deployment configuration path `{path}` (source -> {source})'
+                    logger.info(msg)
+                    continue
 
                 # .. log what we are about to do ..
-                logger.info('Adding hot-deployment configuration from `%s` (env. variable found -> ZATO_HOT_DEPLOY_DIR)', name)
+                msg = f'Adding hot-deployment configuration from `{path}` (source -> {source})'
+                logger.info(msg)
 
                 # .. stay on the safe side because, here, we do not know where it will be used ..
-                _fs_safe_name = fs_safe_name(name)
+                _fs_safe_name = fs_safe_name(path)
 
                 # .. use this prefix to indicate that it is a directory to hot-deploy from ..
                 key_name = '{}.{}'.format(HotDeploy.UserPrefix, _fs_safe_name)
 
-                # .. and store the configuration for later use now.
+                # .. store the configuration for later use now ..
                 pickup_from = {
-                    'pickup_from': name
+                    'pickup_from': path
                 }
                 self.pickup_config[key_name] = bunchify(pickup_from)
+
+                # .. go through all the path patterns that point to user configuration (including enmasse) ..
+                for path_pattern in path_patterns:
+
+                    # .. get a list of matching paths ..
+                    user_conf_paths = Path(path).rglob(path_pattern)
+                    user_conf_paths = list(user_conf_paths)
+
+                    # .. go through all the paths that matched ..
+                    for user_conf_path in user_conf_paths:
+
+                        # .. and add each of them to hot-deployment.
+                        self._add_user_conf_from_path(str(user_conf_path), source)
 
 # ################################################################################################################################
 
     def add_user_conf_from_env(self) -> 'None':
 
+        # Local variables
+        env_keys = ['Zato_User_Conf_Dir', 'ZATO_USER_CONF_DIR']
+
+        # Look up user-defined configuration directories ..
+        paths = os.environ.get('ZATO_USER_CONF_DIR', '')
+
+        # .. try the other name too ..
+        if not paths:
+            paths = os.environ.get('Zato_User_Conf_Dir', '')
+
+        # Go through all the possible environment keys ..
+        for key in env_keys:
+
+            # .. if we have user-config details to process ..
+            if paths := os.environ.get(key, ''):
+
+                # .. support multiple entries ..
+                paths = paths.split(':')
+                paths = [elem.strip() for elem in paths]
+
+                # .. and the actual configuration.
+                for path in paths:
+                    source = f'env. variable found -> {key}'
+                    self._add_user_conf_from_path(path, source)
+
+# ################################################################################################################################
+
+    def _add_user_conf_from_path(self, path:'str', source:'str') -> 'None':
+
         # Bunch
         from bunch import bunchify
 
-        # Look up user-defined configuration directories
-        items = os.environ.get('ZATO_USER_CONF_DIR', '')
-
-        # Ignore files other than that
-        suffixes = ['ini', 'conf']
+        # Ignore files other than the below ones
+        suffixes = ['ini', 'conf', 'yaml', 'yml']
         patterns = ['*.' + elem for elem in suffixes]
         patterns_str = ', '.join(patterns)
 
-        # We have user-config details to process ..
-        if items:
+        # Log what we are about to do ..
+        msg = f'Adding user-config from `{path}` ({source})'
+        logger.info(msg)
 
-            # .. support multiple entries ..
-            items = items.split(':')
-            items = [elem.strip() for elem in items]
+        # .. look up files inside the directory and add the path to each
+        # .. to a list of what should be loaded on startup ..
+        if os.path.exists(path) and os.path.isdir(path):
+            file_item_list = os.listdir(path)
+            for file_item in file_item_list:
+                for suffix in suffixes:
+                    if file_item.endswith(suffix):
+                        self.user_conf_location_extra.add(path)
 
-            # .. add  the actual configuration ..
-            for name in items:
+        # .. stay on the safe side because, here, we do not know where it will be used ..
+        _fs_safe_name = fs_safe_name(path)
 
-                # .. log what we are about to do ..
-                logger.info('Adding user-config from `%s` (env. variable found -> ZATO_USER_CONF_DIR)', name)
+        # .. use this prefix to indicate that it is a directory to deploy user configuration from  ..
+        key_name = '{}.{}'.format(HotDeploy.UserConfPrefix, _fs_safe_name)
 
-                # .. look up files inside the directory and add the path to each
-                # .. to a list of what should be loaded on startup ..
-                if os.path.exists(name) and os.path.isdir(name):
-                    file_item_list = os.listdir(name)
-                    for file_item in file_item_list:
-                        for suffix in suffixes:
-                            if file_item.endswith(suffix):
-                                self.user_conf_location_extra.add(name)
+        # .. use a specific service if it is an enmasse file ..
+        if 'enmasse' in path:
+            service = 'zato.pickup.update-enmasse'
 
-                # .. stay on the safe side because, here, we do not know where it will be used ..
-                _fs_safe_name = fs_safe_name(name)
+        # .. or default to the one for user config if it is not ..
+        else:
+            service= 'zato.pickup.update-user-conf'
 
-                # .. use this prefix to indicate that it is a directory to deploy user configuration from  ..
-                key_name = '{}.{}'.format(HotDeploy.UserConfPrefix, _fs_safe_name)
+        # .. and store the configuration for later use now.
+        pickup_from = {
+            'pickup_from': path,
+            'patterns': patterns_str,
+            'parse_on_pickup': False,
+            'delete_after_pickup': False,
+            'services': service,
+        }
 
-                # .. and store the configuration for later use now.
-                pickup_from = {
-                    'pickup_from': name,
-                    'patterns': patterns_str,
-                    'parse_on_pickup': False,
-                    'delete_after_pickup': False,
-                    'services': 'zato.pickup.update-user-conf',
-                }
-                self.pickup_config[key_name] = bunchify(pickup_from)
+        self.pickup_config[key_name] = bunchify(pickup_from)
 
 # ################################################################################################################################
 
@@ -571,6 +679,43 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # User configuration
         self.add_user_conf_from_env()
+
+# ################################################################################################################################
+
+    def add_pickup_conf_for_env_file(self) -> 'None':
+
+        # If we have a file with environment variables, we want to listed to the changes to its contents ..
+        if self.env_file:
+
+            # .. but we need to have an absolute path ..
+            if not os.path.isabs(self.env_file):
+                logger.info(f'Env. file is not an absolute path, hot-deployment will not be enabled -> `{self.env_file}')
+                return
+
+            else:
+                # .. extract the directory the file is in ..
+                parent_dir = os.path.dirname(self.env_file)
+                parent_dir = Path(parent_dir)
+                parent_dir_name = parent_dir.name
+
+                # .. and extract its own parent as well because this is needed in the call below ..
+                grand_parent_dir = os.path.dirname(parent_dir)
+
+                # .. and add it to hot-deployment.
+                self.add_pickup_conf_from_local_path(grand_parent_dir, 'EnvFile', parent_dir_name)
+
+# ################################################################################################################################
+
+    def update_environment_variables_from_file(self, file_path:'str') -> 'None':
+
+        # Prepare information about the variables that are to be deleted ..
+        to_delete = deepcopy(self.env_variables_from_files)
+
+        # .. load new variables, deleting the old ones along the way ..
+        new_variables = populate_environment_from_file(file_path, to_delete=to_delete, use_print=False)
+
+        # .. and populate the list for later use.
+        self.env_variables_from_files = new_variables
 
 # ################################################################################################################################
 
@@ -594,7 +739,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def _after_init_common(self, server:'ParallelServer') -> 'anyset':
         """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
         """
-        def _normalise_service_source_path(name:'str') -> 'str':
+        def _normalize_service_source_path(name:'str') -> 'str':
             if not os.path.isabs(name):
                 name = os.path.normpath(os.path.join(self.base_dir, name))
             return name
@@ -609,7 +754,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.static_config.read_directory(os.path.join(self.static_dir, 'sso', 'email'))
 
         # Key-value DB
-        kvdb_config = get_kvdb_config_for_log(self.fs_server_config.kvdb)
+        kvdb_config:'bunch_' = get_kvdb_config_for_log(self.fs_server_config.kvdb)
         kvdb_logger.info('Worker config `%s`', kvdb_config)
 
         self.kvdb.config = self.fs_server_config.kvdb
@@ -626,7 +771,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.fs_server_config.misc.sftp_genkey_command = 'dropbearkey'
 
         # New in 3.2, may be missing in the config file
-        allow_internal = self.fs_server_config.misc.get('service_invoker_allow_internal', [])
+        allow_internal:'listorstr' = self.fs_server_config.misc.get('service_invoker_allow_internal', [])
         allow_internal = allow_internal if isinstance(allow_internal, list) else [allow_internal]
         self.fs_server_config.misc.service_invoker_allow_internal = allow_internal
 
@@ -634,7 +779,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         for name in open(os.path.join(self.repo_location, self.fs_server_config.main.service_sources)):
             name = name.strip()
             if name and not name.startswith('#'):
-                name = _normalise_service_source_path(name)
+                name = _normalize_service_source_path(name)
                 self.service_sources.append(name)
 
         # Look up pickup configuration among environment variables
@@ -645,17 +790,27 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if self.deploy_auto_from:
             self.add_pickup_conf_from_auto_deploy()
 
+        # If we have a file with environment variables on input,
+        # pick up changes to this file too.
+        if self.env_file:
+            self.add_pickup_conf_for_env_file()
+
         # Append additional services that can be invoked through WebSocket gateways.
         self.add_wsx_gateway_service_allowed()
 
-        # Service sources from user-defined hot-deployment configuration
-        for key, value in self.pickup_config.items():
-            if key.startswith(HotDeploy.UserPrefix):
-                pickup_from = value.get('pickup_from')
-                if pickup_from:
-                    logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix)', pickup_from)
-                    pickup_from = _normalise_service_source_path(pickup_from)
-                    self.service_sources.append(pickup_from)
+        # Service sources from user-defined hot-deployment configuration ..
+        for pickup_from in extract_pickup_from_items(self.base_dir, self.pickup_config, HotDeploy.Source_Directory):
+
+            # .. log what we are about to do ..
+            if isinstance(pickup_from, list):
+                for project in pickup_from:
+                    for item in project.pickup_from_path:
+                        logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix->Project)', item)
+            else:
+                logger.info('Adding hot-deployment directory `%s` (HotDeploy.UserPrefix->Path)', pickup_from)
+
+            # .. and do append it for later use ..
+            self.service_sources.append(pickup_from)
 
         # Read all the user config files that are already available on startup
         self.read_user_config()
@@ -671,11 +826,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def _read_user_config_from_directory(self, dir_name:'str') -> 'None':
 
-        # We assume that it will be always one of these file name suffixes
+        # We assume that it will be always one of these file name suffixes,
+        # note that we are not reading enmasse (.yaml and .yml) files here,
+        # even though directories with enmasse files may be among what we have in self.user_conf_location_extra.
         suffixes_supported = ('.ini', '.conf')
 
         # User-config from ./config/repo/user-config
         for file_name in os.listdir(dir_name):
+
+            # Reject files that actually contain environment variables
+            if file_name == EnvFile.Default:
+                continue
 
             # Reject files with suffixes that we do not recognize
             if not file_name.lower().endswith(suffixes_supported):
@@ -686,7 +847,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             conf = get_config_from_file(user_conf_full_path, file_name)
 
             # Not used at all in this type of configuration
-            _ = conf.pop('user_config_items', None)
+            _:'any_' = conf.pop('user_config_items', None)
 
             self.user_config[user_config_name] = conf
 
@@ -695,6 +856,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def read_user_config(self):
+
+        # Type hints
+        dir_name:'str'
 
         # Reads config files from the default directory
         for dir_name in self.user_conf_location:
@@ -708,7 +872,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def set_up_user_config_location(self) -> 'strlist':
 
-        user_conf_location = self.pickup_config.get('user_conf', {}).get('pickup_from', '')
+        user_conf_location:'str' = self.pickup_config.get('user_conf', {}).get('pickup_from', '')
         return path_string_list_to_list(self.base_dir, user_conf_location)
 
 # ################################################################################################################################
@@ -742,13 +906,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _on_enmasse_completed(self, result:'CommandResult') -> 'None':
-
-        self.logger.info('Enmasse stdout -> `%s`', result.stdout.strip())
-        self.logger.info('Enmasse stderr -> `%s`', result.stderr.strip())
-
-# ################################################################################################################################
-
     def handle_enmasse_auto_from(self) -> 'None':
 
         # Zato
@@ -767,8 +924,28 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # .. find all the enmasse files in this directory ..
         for file_path in sorted(path.iterdir()):
 
-            command = f'enmasse --import --replace-odb-objects --input {file_path} {self.base_dir} --verbose'
-            _ = commands.run_zato_cli_async(command, callback=self._on_enmasse_completed)
+            # .. and run enmasse with each of them.
+            _ = commands.run_enmasse_async(file_path)
+
+# ################################################################################################################################
+
+    def log_environment_details(self):
+
+        # First, we need to have the correct variable set ..
+        if log_details := os.environ.get(EnvVariable.Log_Env_Details) or True:
+
+            # .. now, make sure it is set to True ..
+            if asbool(log_details):
+
+                # .. now, we need to have the correct file available ..
+                path = ['~', 'env', 'details', 'all-zato-env-details.json']
+                path = os.path.join(*path)
+                path = os.path.expanduser(path)
+
+                if os.path.exists(path):
+                    with open(path) as f:
+                        data = f.read()
+                    self.logger.info(f'Environment details:\n{data}')
 
 # ################################################################################################################################
 
@@ -782,7 +959,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.pid = os.getpid()
 
         # This also cannot be done in __init__ which doesn't have this variable yet
-        self.is_first_worker = int(os.environ['ZATO_SERVER_WORKER_IDX']) == 0
+        self.process_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
+        self.is_first_worker = self.process_idx == 0
 
         # Used later on
         use_tls = asbool(self.fs_server_config.crypto.use_tls)
@@ -818,7 +996,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.set_up_zato_kvdb()
 
         # Find out if we are on a platform that can handle our posix_ipc
-        _skip_platform = self.fs_server_config.misc.get('posix_ipc_skip_platform')
+        _skip_platform:'listorstr' = self.fs_server_config.misc.get('posix_ipc_skip_platform')
         _skip_platform = _skip_platform if isinstance(_skip_platform, list) else [_skip_platform]
         _skip_platform = [elem for elem in _skip_platform if elem]
         self.fs_server_config.misc.posix_ipc_skip_platform = _skip_platform
@@ -839,16 +1017,16 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Now try grabbing the basic server's data from the ODB. No point
         # in doing anything else if we can't get past this point.
-        server = self.odb.fetch_server(self.config.odb_data)
+        server:'any_' = self.odb.fetch_server(self.config.odb_data)
 
         if not server:
             raise Exception('Server does not exist in the ODB')
 
         # Set up the server-wide default lock manager
-        odb_data = self.config.odb_data
+        odb_data:'bunch_' = self.config.odb_data
 
         if is_posix:
-            backend_type = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
+            backend_type:'str' = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
         else:
             backend_type = 'zato-pass-through'
 
@@ -884,7 +1062,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Configure which HTTP methods can be invoked via REST or SOAP channels
         methods_allowed = self.fs_server_config.http.methods_allowed
-        methods_allowed = methods_allowed if isinstance(methods_allowed, list) else [methods_allowed]
+        methods_allowed:'strorlist' = methods_allowed if isinstance(methods_allowed, list) else [methods_allowed]
         self.http_methods_allowed.extend(methods_allowed)
 
         # As above, as a regular expression to be used in pattern matching
@@ -935,12 +1113,19 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Rate limiting for SSO
         self.set_up_sso_rate_limiting()
 
+        # API keys configuration
+        self.set_up_api_key_config()
+
         # Some parts of the worker store's configuration are required during the deployment of services
         # which is why we are doing it here, before worker_store.init() is called.
         self.worker_store.early_init()
 
         # Deploys services
         locally_deployed = self._after_init_common(server) # type: ignore
+
+        # Build objects responsible for groups
+        self.groups_manager = GroupsManager(self)
+        self.security_groups_ctx_builder = SecurityGroupsCtxBuilder(self)
 
         # Initializes worker store, including connectors
         self.worker_store.init()
@@ -949,11 +1134,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Configure remaining parts of SSO
         self.configure_sso()
 
+        # Security facade wrapper
+        self.security_facade = SecurityFacade(self)
+
         # Configure the store to obtain OAuth tokens through
         self.set_up_oauth_store()
 
+        # Bearer tokens (OAuth)
+        self.bearer_token_manager = BearerTokenManager(self)
+
         # Cannot be done in __init__ because self.sso_config is not available there yet
-        salt_size = self.sso_config.hash_secret.salt_size
+        salt_size:'int' = self.sso_config.hash_secret.salt_size
         self.crypto_manager.add_hash_scheme('zato.default', self.sso_config.hash_secret.rounds, salt_size)
 
         # Support pre-3.x hot-deployment directories
@@ -987,12 +1178,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # These flags are needed if we are the first worker or not
         has_ibm_mq = bool(self.worker_store.worker_config.definition_wmq.keys()) \
             and self.fs_server_config.component_enabled.ibm_mq
-
         has_sftp = bool(self.worker_store.worker_config.out_sftp.keys())
+        has_stats = self.fs_server_config.component_enabled.stats
 
         subprocess_start_config = SubprocessStartConfig()
+
         subprocess_start_config.has_ibm_mq = has_ibm_mq
-        subprocess_start_config.has_sftp = has_sftp
+        subprocess_start_config.has_sftp   = has_sftp
+        subprocess_start_config.has_stats  = has_stats
 
         # Directories for SSH keys used by SFTP channels
         self.sftp_channel_dir = os.path.join(self.repo_location, 'sftp', 'channel')
@@ -1037,17 +1230,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if self.has_posix_ipc:
                 self._populate_connector_config(subprocess_start_config)
 
-        # IPC
-        self.ipc_api.name = self.ipc_api.get_endpoint_name(self.cluster_name, self.name, self.pid)
-        self.ipc_api.pid = self.pid
-        self.ipc_api.on_message_callback = self.worker_store.on_ipc_message
-
         # Stops the environment after N seconds
         if self.stop_after:
             _ = spawn_greenlet(self._stop_after_timeout)
 
+        # Per-process IPC tasks
+        self.init_ipc()
+
         if is_posix:
-            _ = spawn_greenlet(self.ipc_api.run)
             connector_config_ipc = cast_('ConnectorConfigIPC', self.connector_config_ipc)
 
             if self.component_enabled['stats']:
@@ -1068,7 +1258,48 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if self.deploy_auto_from:
                 self.handle_enmasse_auto_from()
 
+        # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
+        self.log_environment_details()
+
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def set_scheduler_address(self, scheduler_address:'str') -> 'None':
+        self.broker_client.set_scheduler_address(scheduler_address)
+
+# ################################################################################################################################
+
+    def init_ipc(self):
+
+        # Name of the environment key that points to our password ..
+        _ipc_password_key = IPC.Credentials.Password_Key
+
+        # .. which we can extract ..
+        ipc_password = os.environ[_ipc_password_key]
+
+        # .. and decrypt it ..
+        ipc_password = self.decrypt(ipc_password)
+
+        # .. this is the same for all processes ..
+        bind_host = self.fs_server_config.main.get('ipc_host') or '0.0.0.0'
+
+        # .. this is set to a different value for each process ..
+        bind_port = (self.fs_server_config.main.get('ipc_port_start') or IPC.Default.TCP_Port_Start) + self.process_idx
+
+        # .. now, the IPC server can be started ..
+        _:'any_' = spawn_greenlet(self.ipc_api.start_server,
+            self.pid,
+            self.base_dir,
+            bind_host=bind_host,
+            bind_port=bind_port,
+            username=IPC.Credentials.Username,
+            password=ipc_password,
+            callback_func=self.on_ipc_invoke_callback,
+        )
+
+        # .. we can now store the information about what IPC port to use with this PID.
+        save_ipc_pid_port(self.cluster_name, self.name, self.pid, bind_port)
 
 # ################################################################################################################################
 
@@ -1088,7 +1319,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         logger.info(f'Stopping Zato after {self.stop_after}s')
 
         # All the pids that we will stop
-        to_stop = set()
+        to_stop:'intset' = set()
 
         # Details of each process
         details = {}
@@ -1133,7 +1364,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         ipc_config_name_to_enabled = {
             IBMMQIPC.ipc_config_name: config.has_ibm_mq,
             SFTPIPC.ipc_config_name: config.has_sftp,
-            ZatoEventsIPC.ipc_config_name: True,
+            ZatoEventsIPC.ipc_config_name: config.has_stats,
         }
 
         for ipc_config_name, is_enabled in ipc_config_name_to_enabled.items():
@@ -1176,7 +1407,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.subproc_current_state.is_sftp_running = True
 
         # Prepare Zato events configuration
-        events_config = self.fs_server_config.get('events') or {} # type: dict
+        events_config = self.fs_server_config.get('events') or {}
 
         # This is optional in server.conf ..
         fs_data_path = events_config.get('fs_data_path') or ''
@@ -1214,6 +1445,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def set_up_api_key_config(self):
+
+        # Prefer the value from environment variables ..
+        if not (api_key_header := os.environ.get(API_Key.Env_Key)):
+
+            # .. otherwise, use the default one .
+            api_key_header = API_Key.Default_Header
+
+        # .. now, we can set it for later use.
+        self.api_key_header = api_key_header
+        self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
+
+# ################################################################################################################################
+
     def _create_sso_user_rate_limiting(
         self,
         user_id:'str',
@@ -1234,10 +1479,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def _get_sso_session(self) -> 'any_':
         """ Returns a session function suitable for SSO operations.
         """
-        pool_name = self.sso_config.sql.name
+        pool_name:'str' = self.sso_config.sql.name
         if pool_name:
             try:
-                pool = self.worker_store.sql_pool_store.get(pool_name)
+                pool:'any_' = self.worker_store.sql_pool_store.get(pool_name)
             except KeyError:
                 pool = None
             if not pool:
@@ -1323,51 +1568,68 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def get_from_cache(self, cache_type:'str', cache_name:'str', key:'str') -> 'any_':
         """ Returns a value from input cache by key, or None if there is no such key.
         """
-        return self.worker_store.cache_api.get_cache(cache_type, cache_name).get(key)
+        cache = self.worker_store.cache_api.get_cache(cache_type, cache_name)
+        return cache.get(key) # type: ignore
 
 # ################################################################################################################################
 
     def set_in_cache(self, cache_type:'str', cache_name:'str', key:'str', value:'any_') -> 'any_':
         """ Sets a value in cache for input parameters.
         """
-        return self.worker_store.cache_api.get_cache(cache_type, cache_name).set(key, value)
+        cache = self.worker_store.cache_api.get_cache(cache_type, cache_name)
+        return cache.set(key, value) # type: ignore
 
 # ################################################################################################################################
 
-    def invoke_all_pids(self, service:'str', request:'any_', timeout:'int'=5, *args:'any_', **kwargs:'any_') -> 'anydict':
+    def _remove_response_root_elem(self, data:'strdict') -> 'strdict':
+        keys = list(data.keys())
+        if len(keys) == 1:
+            root = keys[0]
+            if root.startswith('zato_') or root == 'response':
+                data = data[root]
+
+        return data
+
+# ################################################################################################################################
+
+    def _remove_response_elem(self, data:'strdict | anylist') -> 'strdict | anylist':
+
+        if isinstance(data, dict):
+            data = self._remove_response_root_elem(data)
+        else:
+            for idx, item in enumerate(data):
+                item = self._remove_response_root_elem(item)
+                data[idx] = item
+
+        return data
+
+# ################################################################################################################################
+
+    def invoke_all_pids(self, service:'str', request:'any_', timeout:'int'=5, *args:'any_', **kwargs:'any_') -> 'dictlist':
         """ Invokes a given service in each of processes current server has.
         """
-        # PID -> response from that process
-        out = {}
 
-        # Per-PID response
-        response:'anydict'
+        # A list of dict responses, one for each PID
+        out:'dictlist' = []
 
         try:
             # Get all current PIDs
-            data = self.invoke('zato.info.get-worker-pids', serialize=False).getvalue(False)
-            pids = data['response']['pids']
+            all_pids_response = self.invoke('zato.info.get-worker-pids', serialize=False)
+            pids = all_pids_response['pids']
 
-            # Underlying IPC needs strings on input instead of None
-            request = request or ''
+            # Use current PID if none were received (this is required on Mac)
+            pids = pids or [self.pid]
 
+            # Invoke each of them
             for pid in pids:
-                response = {
-                    'is_ok': False,
-                    'pid_data': None,
-                    'error_info': None
-                }
+                pid_response = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
+                if pid_response.data is not None:
 
-                try:
-                    is_ok, pid_data = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
-                    response['is_ok'] = is_ok
-                    response['pid_data' if is_ok else 'error_info'] = pid_data
+                    # If this is an internal service, we want to remove its root-level response element.
+                    if service.startswith('zato'):
+                        pid_response.data = self._remove_response_elem(pid_response.data)
+                    out.append(cast_('anydict', pid_response.data))
 
-                except Exception:
-                    e = format_exc()
-                    response['error_info'] = e
-                finally:
-                    out[pid] = response
         except Exception:
             logger.warning('PID invocation error `%s`', format_exc())
         finally:
@@ -1375,11 +1637,18 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def invoke_by_pid(self, service:'str', request:'any_', target_pid:'int', *args:'any_', **kwargs:'any_') -> 'any_':
+    def invoke_by_pid(
+        self,
+        service,    # type: str
+        request,    # type: any_
+        target_pid, # type: int
+        timeout=_ipc_timeout, # type: int
+        **kwargs    # type:any_
+    ) -> 'IPCResponse':
         """ Invokes a service in a worker process by the latter's PID.
         """
-        return self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid,
-            self.fifo_response_buffer_size, *args, **kwargs)
+        response = self.ipc_api.invoke_by_pid(self.use_tls, service, request, self.cluster_name, self.name, target_pid, timeout)
+        return response
 
 # ################################################################################################################################
 
@@ -1392,14 +1661,33 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             # This cannot be used by self.invoke_by_pid
             data_format = kwargs.pop('data_format', None)
 
-            _, data = self.invoke_by_pid(service, request, target_pid, *args, **kwargs)
+            data = self.invoke_by_pid(service, request, target_pid, *args, **kwargs)
             return dumps(data) if data_format == DATA_FORMAT.JSON else data
         else:
-            return self.worker_store.invoke(
+            response = self.worker_store.invoke(
                 service, request,
                 data_format=kwargs.pop('data_format', DATA_FORMAT.DICT),
                 serialize=kwargs.pop('serialize', True),
                 *args, **kwargs)
+            return response
+
+# ################################################################################################################################
+
+    def invoke_wsx_adapter(self, service_name:'str', ctx:'WSXCtx') -> 'None':
+        ctx.invoke_service(self, service_name)
+
+# ################################################################################################################################
+
+    def on_ipc_invoke_callback(self, msg:'bunch_') -> 'anydict':
+
+        service:'str' = msg['service']
+        data:'any_'   = msg['data']
+
+        response:'any_' = self.invoke(service, data)
+        if isinstance(response, dict):
+            if 'response' in response:
+                response:'any_' = response['response']
+        return response # type: ignore
 
 # ################################################################################################################################
 
@@ -1416,7 +1704,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def publish_pickup(self, topic_name:'str', request:'any_', *args:'any_', **kwargs:'any_') -> 'None':
-        """ Publishes a pickedup file to a named topic.
+        """ Publishes a previously picked up file to a named topic.
         """
         _ = self.invoke('zato.pubsub.publish.publish', {
             'topic_name': topic_name,
@@ -1444,7 +1732,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         topic = self.worker_store.pubsub.topics[subscription.config['topic_id']] # type: ignore
 
         if topic.before_delivery_hook_service_invoker:
-            response = topic.before_delivery_hook_service_invoker(topic, msg)
+            response:'any_' = topic.before_delivery_hook_service_invoker(topic, msg)
             if response['skip_msg']:
                 raise SkipDelivery(msg.pub_msg_id)
 
@@ -1452,13 +1740,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def encrypt(self, data:'any_', prefix:'str'=SECRETS.PREFIX) -> 'strnone':
+    def encrypt(self, data:'any_', prefix:'str'=SECRETS.PREFIX, *, needs_str:'bool'=True) -> 'strnone':
         """ Returns data encrypted using server's CryptoManager.
         """
         if data:
             data = data.encode('utf8') if isinstance(data, str) else data
-            encrypted = self.crypto_manager.encrypt(data)
-            encrypted = encrypted.decode('utf8')
+            encrypted = self.crypto_manager.encrypt(data, needs_str=needs_str)
             return '{}{}'.format(prefix, encrypted)
 
 # ################################################################################################################################
@@ -1473,7 +1760,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def decrypt(self, data:'strbytes', _prefix:'str'=SECRETS.PREFIX, _marker:'str'=SECRETS.EncryptedMarker) -> 'str':
+    def decrypt(self, data:'strbytes', _prefix:'str'=SECRETS.PREFIX, _marker:'str'=SECRETS.Encrypted_Indicator) -> 'str':
         """ Returns data decrypted using server's CryptoManager.
         """
 
@@ -1605,7 +1892,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def worker_exit(arbiter:'Arbiter', worker:'GeventWorker') -> 'None':
 
         # Invoke cleanup procedures
-        app = worker.app.zato_wsgi_app # type: ParallelServer
+        app:'ParallelServer' = worker.app.zato_wsgi_app
         app.cleanup_on_stop()
 
 # ################################################################################################################################
@@ -1665,9 +1952,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 self.server_startup_ipc.close()
                 self.connector_config_ipc.close()
 
-            # Close ZeroMQ-based IPC
-            self.ipc_api.close()
-
             # WSX connections for this server cleanup
             self.cleanup_wsx(True)
 
@@ -1697,11 +1981,22 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         return self.worker_store.basic_auth_get_by_id(*args, **kwargs)
 
     def api_worker_store_reconnect_generic(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self.worker_store.reconnect_generic(*args, **kwargs)
+        return self.worker_store.reconnect_generic(*args, **kwargs) # type: ignore
 
     def is_active_outconn_wsx(self, conn_id:'str') -> 'bool':
-        is_active = self.worker_store.is_active_generic_conn(conn_id)
+        is_active:'bool' = self.worker_store.is_active_generic_conn(conn_id)
         return is_active
+
+    def is_service_wsx_adapter(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self.service_store.is_service_wsx_adapter(*args, **kwargs)
+
+    def on_wsx_outconn_stopped_running(self, conn_id:'str') -> 'None':
+        """ This does not do anything by default but tests can overwrite it with custom functionality.
+        """
+
+    def on_wsx_outconn_connected(self, conn_id:'str') -> 'None':
+        """ This does not do anything by default but tests can overwrite it with custom functionality.
+        """
 
 # ################################################################################################################################
 # ################################################################################################################################

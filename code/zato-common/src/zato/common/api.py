@@ -1,19 +1,23 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 from collections import OrderedDict
+from dataclasses import dataclass
 from io import StringIO
 from numbers import Number
 from sys import maxsize
 
 # Bunch
 from bunch import Bunch
+
+# Zato
+from zato.common.defaults import http_plain_server_port
 
 # ################################################################################################################################
 
@@ -40,6 +44,7 @@ megabyte = 10 ** 6
 zato_no_op_marker = 'zato_no_op_marker'
 
 SECRET_SHADOW = '******'
+Secret_Shadow = SECRET_SHADOW
 
 # TRACE1 logging level, even more details than DEBUG
 TRACE1 = 6
@@ -58,7 +63,7 @@ ZATO_NOT_GIVEN = b'ZATO_NOT_GIVEN'
 ZatoNotGiven = b'ZatoNotGiven'
 
 # Separates command line arguments in shell commands.
-CLI_ARG_SEP = 'ZATO_ZATO_ZATO'
+CLI_ARG_SEP = 'Zato_Zato_Zato'
 
 # Also used in a couple of places.
 ZATO_OK = 'ZATO_OK'
@@ -68,6 +73,7 @@ ZATO_NONE = 'ZATO_NONE'
 ZATO_DEFAULT = 'ZATO_DEFAULT'
 ZATO_SEC_USE_RBAC = 'ZATO_SEC_USE_RBAC'
 Zato_None = ZATO_NONE
+Zato_No_Security = 'zato-no-security'
 
 DELEGATED_TO_RBAC = 'Delegated to RBAC'
 
@@ -101,7 +107,8 @@ generic_attrs = (
     'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
     'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding',
     'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq',
-    'max_wait_time', 'oauth_def'
+    'max_wait_time', 'oauth_def', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout',
+    'security_group_count', 'security_group_member_count',
 )
 
 # ################################################################################################################################
@@ -128,6 +135,36 @@ engine_display_name = {
     'postgresql+pg8000': 'PostgreSQL',
     'sqlite': 'SQLite',
 }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class EnvVariable:
+    Key_Prefix = 'Zato_Config'
+    Key_Missing_Suffix = '_Missing'
+    Log_Env_Details = 'Zato_Log_Env_Details'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class EnvFile:
+    Default = 'env.ini'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class EnvConfigCtx:
+    component:'str'
+    file_name:'str'
+    missing_suffix:'str' = EnvVariable.Key_Missing_Suffix
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class API_Key:
+    Env_Key = 'Zato_API_Key_Name'
+    Default_Header = 'X-API-Key'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -227,7 +264,7 @@ class SEARCH:
 
     class SOLR:
         class DEFAULTS:
-            ADDRESS = 'http://127.0.0.1:8983/solr'
+            ADDRESS = 'https://127.0.0.1:8983/solr'
             PING_PATH = '/solr/admin/ping'
             TIMEOUT = '10'
             POOL_SIZE = '5'
@@ -252,6 +289,8 @@ class SEC_DEF_TYPE:
     VAULT = 'vault_conn_sec'
     WSS = 'wss'
 
+Sec_Def_Type = SEC_DEF_TYPE
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -261,12 +300,14 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.BASIC_AUTH: 'Basic Auth',
     SEC_DEF_TYPE.JWT: 'JWT',
     SEC_DEF_TYPE.NTLM: 'NTLM',
-    SEC_DEF_TYPE.OAUTH: 'OAuth',
+    SEC_DEF_TYPE.OAUTH: 'Bearer token',
     SEC_DEF_TYPE.TLS_CHANNEL_SEC: 'TLS channel',
     SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
     SEC_DEF_TYPE.VAULT: 'Vault',
     SEC_DEF_TYPE.WSS: 'WS-Security',
 }
+
+All_Sec_Def_Types = sorted(SEC_DEF_TYPE_NAME)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -318,7 +359,7 @@ class NameId:
 # ################################################################################################################################
 
 class NotGiven:
-    pass # A marker for lazily-initialized attributes
+    pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -355,6 +396,8 @@ class DATA_FORMAT(Attrs):
         # they may at most only used so that services can invoke each other directly
         return iter((self.JSON, self.CSV, self.POST, self.HL7))
 
+Data_Format = DATA_FORMAT
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -381,6 +424,10 @@ class SERVER_UP_STATUS(Attrs):
 
 class CACHE:
 
+    class Default_Name:
+        Main = 'default'
+        Bearer_Token = 'zato.bearer.token'
+
     API_USERNAME = 'pub.zato.cache'
 
     class TYPE:
@@ -388,7 +435,7 @@ class CACHE:
         MEMCACHED = 'memcached'
 
     class BUILTIN_KV_DATA_TYPE:
-        STR = NameId('String/unicode', 'str')
+        STR = NameId('String', 'str')
         INT = NameId('Integer', 'int')
 
         def __iter__(self):
@@ -517,10 +564,80 @@ class KVDB(Attrs):
 class SCHEDULER:
 
     InitialSleepTime = 0.1
-    DefaultHost = '127.0.0.1'
-    DefaultPort = 31530
     EmbeddedIndicator      = 'zato_embedded'
     EmbeddedIndicatorBytes = EmbeddedIndicator.encode('utf8')
+
+    # This is what a server will invoke
+    DefaultHost = '127.0.0.1'
+    DefaultPort = 31530
+
+    # This is what a scheduler will invoke
+    Default_Server_Host = '127.0.0.1'
+    Default_Server_Port = http_plain_server_port
+
+    # This is what a scheduler will bind to
+    DefaultBindHost = '0.0.0.0'
+    DefaultBindPort = DefaultPort
+
+    # This is the username of an API client that servers
+    # will use when they invoke their scheduler.
+    Default_API_Client_For_Server_Auth_Required = True
+    Default_API_Client_For_Server_Username = 'server_api_client1'
+
+    TLS_Enabled = False
+    TLS_Verify = True
+    TLS_Client_Certs = 'optional'
+
+    TLS_Private_Key_Location  = 'zato-scheduler-priv-key.pem'
+    TLS_Public_Key_Location   = 'zato-scheduler-pub-key.pem'
+    TLS_Cert_Location         = 'zato-scheduler-cert.pem'
+    TLS_CA_Certs_Key_Location = 'zato-scheduler-ca-certs.pem'
+
+    TLS_Version_Default_Linux   = 'TLSv1_3'
+    TLS_Version_Default_Windows = 'TLSv1_2'
+
+    TLS_Ciphers_13 = 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256'
+    TLS_Ciphers_12 = 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:' + \
+                     'ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:'  + \
+                     'DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305'
+
+    class Status:
+        Active = 'Active'
+        Paused = 'Paused'
+
+    class Env:
+
+        # Basic information about where the scheduler can be found
+        Host = 'Zato_Scheduler_Host'
+        Port = 'Zato_Scheduler_Port'
+
+        # Whether the scheduler is active or paused
+        Status = 'Zato_Scheduler_Status'
+
+        Bind_Host = 'Zato_Scheduler_scheduler_conf_bind_host'
+        Bind_Port = 'Zato_Scheduler_Bind_Port'
+        Use_TLS = 'Zato_Scheduler_Use_TLS'
+        TLS_Verify = 'Zato_Scheduler_TLS_Verify'
+        TLS_Client_Certs = 'Zato_Scheduler_TLS_Client_Certs'
+
+        TLS_Private_Key_Location  = 'Zato_Scheduler_TLS_Private_Key_Location'
+        TLS_Public_Key_Location   = 'Zato_Scheduler_TLS_Public_Key_Location'
+        TLS_Cert_Location         = 'Zato_Scheduler_TLS_Cert_Location'
+        TLS_CA_Certs_Key_Location = 'Zato_Scheduler_TLS_CA_Certs_Key_Location'
+
+        TLS_Version = 'Zato_Scheduler_TLS_Version'
+        TLS_Ciphers = 'Zato_Scheduler_TLS_Ciphers'
+        Path_Action_Prefix = 'Zato_Scheduler_Path_Action_'
+
+        # These are used by servers to invoke the scheduler
+        Server_Username = 'Zato_Scheduler_API_Client_For_Server_Username'
+        Server_Password = 'Zato_Scheduler_API_Client_For_Server_Password'
+        Server_Auth_Required = 'Zato_Scheduler_API_Client_For_Server_Auth_Required'
+
+    class ConfigCommand:
+        Pause = 'pause'
+        Resume = 'resume'
+        SetServer = 'set_server'
 
     # These jobs were removed in 3.2 and should be ignored
     JobsToIgnore = {'zato.wsx.cleanup.pub-sub', 'zato.wsx.cleanup'}
@@ -626,6 +743,7 @@ class MISC:
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
     DefaultAdminInvokeChannel = 'admin.invoke.json'
+    Default_Cluster_ID = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -788,16 +906,20 @@ class PUBSUB:
         WAIT_TIME_NON_SOCKET_ERROR = 3
         ON_NO_SUBS_PUB = 'accept'
         SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
-        UnsubOnWSXClose = True
-        PositionInGroup = 1
+
         Dashboard_Message_Body = 'This is a sample message'
+        Delivery_Err_Should_Block = True
+        Has_GD = False
+        PositionInGroup = 1
+        UnsubOnWSXClose = True
+        Wrap_One_Msg_In_List = True
 
         LimitMessageExpiry  = 86_400 # In seconds = 1 day # 0.1
         LimitTopicRetention = 86_400 # In seconds = 1 day # 0.1
         LimitSubInactivity  = 86_400 # In seconds = 1 day # 0.1
 
-        DEMO_USERNAME    = 'zato.pubsub.demo'
-        DEMO_SECDEF_NAME = 'zato.pubsub.demo.secdef'
+        DEFAULT_USERNAME    = 'zato.pubsub'
+        DEFAULT_SECDEF_NAME = 'pub.zato.pubsub.default'
 
         TEST_USERNAME    = 'zato.pubsub.test'
         TEST_SECDEF_NAME = 'zato.pubsub.test.secdef'
@@ -807,12 +929,12 @@ class PUBSUB:
 
         INTERNAL_USERNAME      = 'zato.pubsub.internal'
         INTERNAL_SECDEF_NAME   = 'zato.pubsub.internal.secdef'
-        INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
+        INTERNAL_ENDPOINT_NAME = 'zato.pubsub.internal.default'
 
         Topic_Patterns_All = 'pub=/*\nsub=/*'
 
     class SERVICE_SUBSCRIBER:
-        NAME = 'zato.pubsub.service.endpoint'
+        NAME = 'zato.pubsub.service.subscriber'
         TOPICS_ALLOWED = 'sub=/zato/s/to/*'
 
     class TOPIC_PATTERN:
@@ -921,6 +1043,9 @@ class PUBSUB:
 
     class MIMEType:
         Zato = 'application/vnd.zato.ps.msg'
+
+    class Env:
+        Log_Table = 'Zato_Pub_Sub_Log_Table'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1070,6 +1195,20 @@ class RATE_LIMIT:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class CommonObject:
+
+    Prefix_Invalid = 'prefix-invalid'
+
+    Invalid = 'invalid-invalid'
+    PubSub_Endpoint = 'pubsub-endpoint'
+    PubSub_Publish = 'pubsub-publish'
+    PubSub_Subscription = 'pubsub-subscription'
+    PubSub_Topic = 'pubsub-topic'
+    Security_Basic_Auth = 'security-basic-auth'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ODOO:
 
     class CLIENT_TYPE:
@@ -1114,7 +1253,7 @@ class STOMP:
 CONTENT_TYPE = Bunch(
     JSON = 'application/json',
     PLAIN_XML = 'application/xml',
-    SOAP11 = 'text/xml',
+    SOAP11 = 'text/xml; charset=UTF-8',
     SOAP12 = 'application/soap+xml; charset=utf-8',
 ) # type: Bunch
 
@@ -1125,6 +1264,16 @@ class ContentType:
 # ################################################################################################################################
 
 class IPC:
+
+    Status_OK = 'ok'
+
+    class Default:
+        Timeout = 90
+        TCP_Port_Start = 17050
+
+    class Credentials:
+        Username = 'zato.server.ipc'
+        Password_Key = 'Zato_Server_IPC_Password'
 
     class ACTION:
         INVOKE_SERVICE = 'invoke-service'
@@ -1155,7 +1304,10 @@ class WEB_SOCKET:
         FQDN_UNKNOWN = '(Unknown)'
         INTERACT_UPDATE_INTERVAL = 60 # 60 minutes = 1 hour
         PINGS_MISSED_THRESHOLD = 2
-        PING_INTERVAL = 30
+        PINGS_MISSED_THRESHOLD_OUTGOING = 1
+        PING_INTERVAL = 45
+        Socket_Read_Timeout  = 60
+        Socket_Write_Timeout = 60
 
     class PATTERN:
         BY_EXT_ID = 'zato.by-ext-id.{}'
@@ -1243,6 +1395,7 @@ class GENERIC:
     ATTR_NAME = 'opaque1'
     DeleteReason = 'DeleteGenericConnection'
     DeleteReasonBytes = DeleteReason.encode('utf8')
+    InitialReason = 'ReasonInitial'
 
     class ConnName:
         OutconnWSX = 'outgoing WebSocket'
@@ -1265,6 +1418,20 @@ class GENERIC:
             OUTCONN_MONGODB = 'outconn-mongodb'
             OUTCONN_SFTP = 'outconn-sftp'
             OUTCONN_WSX = 'outconn-wsx'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Groups:
+    class Type:
+        Group_Parent    = 'zato-group'
+        Group_Member    = 'zato-group-member'
+        API_Clients     = 'zato-api-creds'
+        Organizations   = 'zato-org'
+
+    class Membership_Action:
+        Add    = 'add'
+        Remove = 'remove'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1554,10 +1721,11 @@ class Microsoft365:
 class OAuth:
 
     class Default:
-        Auth_Server_URL = 'https://example.com/oauth2/default/v1/token'
-        Scopes = [
-            'zato.access',
-        ]
+        Auth_Server_URL = 'https://example.com/oauth2/token'
+        Scopes = [] # There are no default scopes
+        Client_ID_Field = 'client_id'
+        Client_Secret_Field = 'client_secret'
+        Grant_Type = 'client_credentials'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1652,6 +1820,11 @@ class SIMPLE_IO:
     HTTP_SOAP_FORMAT[HL7.Const.Version.v2.id] = HL7.Const.Version.v2.name
     HTTP_SOAP_FORMAT[DATA_FORMAT.FORM_DATA] = 'Form data'
 
+    Bearer_Token_Format = [
+        NameId('JSON', DATA_FORMAT.JSON),
+        NameId('Form data', DATA_FORMAT.FORM_DATA)
+    ]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1663,6 +1836,13 @@ class UNITTEST:
 class HotDeploy:
     UserPrefix = 'hot-deploy.user'
     UserConfPrefix = 'user_conf'
+    Source_Directory = 'src'
+    User_Conf_Directory = 'user-conf'
+    Enmasse_File_Pattern = 'enmasse'
+    Default_Patterns = [User_Conf_Directory, Enmasse_File_Pattern]
+
+    class Env:
+        Pickup_Patterns = 'Zato_Hot_Deploy_Pickup_Patterns'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1930,6 +2110,41 @@ WebSphereMQCallData = IBMMQCallData
 # ################################################################################################################################
 # ################################################################################################################################
 
+class Name_Prefix:
+    Keysight_Hawkeye = 'KeysightHawkeye.'
+    Keysight_Vision  = 'KeysightVision.'
+
+Wrapper_Name_Prefix_List = {
+    Name_Prefix.Keysight_Hawkeye,
+    Name_Prefix.Keysight_Vision,
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Wrapper_Type:
+    Keysight_Hawkeye = 'KeysightHawkeye'
+    Keysight_Vision  = 'KeysightVision'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HAProxy:
+    Default_Memory_Limit = '1024' # In megabytes = 1 GB
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class URLInfo:
+    address: 'str'
+    host: 'str'
+    port: 'int'
+    use_tls: 'bool'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 default_internal_modules = {
     'zato.server.service.internal': True,
     'zato.server.service.internal.apispec': True,
@@ -1948,6 +2163,11 @@ default_internal_modules = {
     'zato.server.service.internal.channel.web_socket.subscription': True,
     'zato.server.service.internal.channel.zmq': True,
     'zato.server.service.internal.cloud.aws.s3': True,
+    'zato.server.service.internal.common': True,
+    'zato.server.service.internal.common.create': True,
+    'zato.server.service.internal.common.delete': True,
+    'zato.server.service.internal.common.import_': True,
+    'zato.server.service.internal.common.sync': True,
     'zato.server.service.internal.connector.amqp_': True,
     'zato.server.service.internal.crypto': True,
     'zato.server.service.internal.definition.amqp_': True,
@@ -1956,6 +2176,8 @@ default_internal_modules = {
     'zato.server.service.internal.email.imap': True,
     'zato.server.service.internal.email.smtp': True,
     'zato.server.service.internal.generic.connection': True,
+    'zato.server.service.internal.generic.rest_wrapper': True,
+    'zato.server.service.internal.groups': True,
     'zato.server.service.internal.helpers': True,
     'zato.server.service.internal.hot_deploy': True,
     'zato.server.service.internal.ide_deploy': True,

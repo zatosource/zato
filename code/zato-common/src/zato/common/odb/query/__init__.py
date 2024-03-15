@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -82,16 +82,30 @@ class _SearchWrapper:
             q = q.filter(where)
         else:
 
-            # If there are multiple filters, they are by default OR-joined
-            # to ease in look ups over more than one column.
-            filter_op = and_ if config.get('filter_op') == 'and' else or_
             filters = []
 
-            for filter_by in config.get('filter_by', []):
-                for criterion in config.get('query', []):
-                    filters.append(filter_by.contains(criterion))
+            if query := config.get('query', []):
+                query = query if isinstance(query, (list, tuple)) else [query]
 
-            q = q.filter(filter_op(*filters))
+            if filter_by := config.get('filter_by', []):
+                filter_by = filter_by if isinstance(filter_by, (list, tuple)) else [filter_by]
+                len_filter_by = len(filter_by)
+                for column in filter_by:
+                    for criterion in query:
+                        expression = column.contains(criterion)
+                        if criterion.startswith('-'):
+                            expression = not_(expression)
+                        and_filter = and_(*[expression]) # type: ignore
+                        filters.append(and_filter)
+
+                # We need to use "or" if we filter by more then one column
+                # to let the filters match all of them independently.
+                if len_filter_by > 1:
+                    combine_criteria_using = or_
+                else:
+                    combine_criteria_using = and_
+
+                q = q.filter(combine_criteria_using(*filters))
 
         # Total number of results
         total_q = q.statement.with_only_columns([func.count()]).order_by(None)
@@ -233,10 +247,16 @@ def _sec_base(session, cluster_id):
         filter(SecurityBase.cluster_id==Cluster.id).\
         filter(Cluster.id==cluster_id)
 
-def sec_base(session, cluster_id, sec_base_id):
-    return _sec_base(session, cluster_id).\
-        filter(SecurityBase.id==sec_base_id).\
-        one()
+def sec_base(session, cluster_id, sec_base_id, use_one=True):
+    q = _sec_base(session, cluster_id).\
+        filter(SecurityBase.id==sec_base_id)
+
+    if use_one:
+        result = q.one()
+    else:
+        result = q.first()
+
+    return result
 
 @query_wrapper
 def apikey_security_list(session, cluster_id, needs_columns=False):
@@ -354,7 +374,7 @@ def ntlm_list(session, cluster_id, needs_columns=False):
 def oauth_list(session, cluster_id, needs_columns=False):
     """ All the OAuth definitions.
     """
-    return session.query(
+    out = session.query(
         OAuth.id,
         OAuth.name,
         OAuth.is_active,
@@ -366,10 +386,12 @@ def oauth_list(session, cluster_id, needs_columns=False):
         OAuth.sec_type,
         OAuth.opaque1,
         ).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==OAuth.cluster_id).\
-        filter(SecurityBase.id==OAuth.id).\
-        order_by(SecurityBase.name)
+    filter(Cluster.id==cluster_id).\
+    filter(Cluster.id==OAuth.cluster_id).\
+    filter(SecurityBase.id==OAuth.id).\
+    order_by(SecurityBase.name)
+
+    return out
 
 @query_wrapper
 def tls_ca_cert_list(session, cluster_id, needs_columns=False):
@@ -975,7 +997,7 @@ def _pubsub_endpoint(session, cluster_id):
         outerjoin(Service, Service.id==PubSubEndpoint.service_id).\
         outerjoin(ChannelWebSocket, ChannelWebSocket.id==PubSubEndpoint.ws_channel_id).\
         filter(PubSubEndpoint.cluster_id==cluster_id).\
-        order_by(PubSubEndpoint.id)
+        order_by(PubSubEndpoint.name)
 
 def pubsub_endpoint(session, cluster_id, id):
     """ An individual pub/sub endpoint.
@@ -1017,7 +1039,7 @@ def _pubsub_topic(session, cluster_id):
         order_by(PubSubTopic.name)
 
 @bunch_maker
-def pubsub_topic(session, cluster_id, topic_id=None, topic_name=None):
+def pubsub_topic(session, cluster_id, topic_id=None, topic_name=None) -> 'PubSubTopic':
     """ A pub/sub topic.
     """
     q = _pubsub_topic(session, cluster_id)

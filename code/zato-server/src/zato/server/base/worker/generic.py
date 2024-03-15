@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Bunch
@@ -14,6 +14,8 @@ from zato.common.api import GENERIC as COMMON_GENERIC, LDAP, ZATO_NONE
 from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.const import SECRETS
 from zato.common.util.api import as_bool, parse_simple_type
+from zato.common.util.config import replace_query_string_items_in_dict
+from zato.distlock import PassThrough as PassThroughLock
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.generic.connection import GenericConnection
 
@@ -29,8 +31,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
-_secret_prefixes = (SECRETS.EncryptedMarker, SECRETS.PREFIX)
+_type_outconn_wsx = COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX
+_type_channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
+_secret_prefixes = (SECRETS.Encrypted_Indicator, SECRETS.PREFIX)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -109,10 +112,10 @@ class Generic(WorkerImpl):
 
             # .. and delete the connection from the configuration object.
             conn_name = conn_dict['name']
-            del conn_value[conn_name]
+            _ = conn_value.pop(conn_name, None)
 
         # Run a special path for file transfer channels
-        if msg['type_'] == _channel_file_transfer:
+        if msg['type_'] == _type_channel_file_transfer:
             self._delete_file_transfer_channel(msg)
 
 # ################################################################################################################################
@@ -165,14 +168,18 @@ class Generic(WorkerImpl):
                     value = self.server.decrypt(value)
                     item_dict[key] = value
 
+        # Mask out all the relevant attributes
+        replace_query_string_items_in_dict(self.server, item_dict)
+
         config_attr[msg_name] = item_dict
-        config_attr[msg_name].conn = wrapper(item_dict, self.server)
+        conn_wrapper = wrapper(item_dict, self.server)
+        config_attr[msg_name].conn = conn_wrapper
         config_attr[msg_name].conn.build_wrapper()
 
         if not is_starting:
 
             # Run a special path for file transfer channels
-            if msg['type_'] == _channel_file_transfer:
+            if msg['type_'] == _type_channel_file_transfer:
                 self._create_file_transfer_channel(msg)
 
 # ################################################################################################################################
@@ -180,7 +187,7 @@ class Generic(WorkerImpl):
     def _edit_generic_connection(self, msg:'stranydict', skip:'any_'=None, secret:'strnone'=None) -> 'None':
 
         # Special-case file transfer channels
-        if msg['type_'] == _channel_file_transfer:
+        if msg['type_'] == _type_channel_file_transfer:
             self._edit_file_transfer_channel(msg)
             return
 
@@ -249,7 +256,7 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_GENERIC_CONNECTION_CREATE(
+    def _on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(
         self,
         msg:'stranydict',
         *args: 'any_',
@@ -260,8 +267,51 @@ class Generic(WorkerImpl):
         if func:
             func(msg)
 
-    on_broker_msg_GENERIC_CONNECTION_EDIT            = on_broker_msg_GENERIC_CONNECTION_CREATE
-    on_broker_msg_GENERIC_CONNECTION_DELETE          = on_broker_msg_GENERIC_CONNECTION_CREATE
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_CREATE(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def _get_edit_generic_lock(self, is_outconn_wsx:'bool', msg:'stranydict') -> 'callable_':
+
+        # Outgoing WSX connections that connect to Zato use a specific lock type ..
+        if is_outconn_wsx:
+            lock = self.server.wsx_connection_pool_wrapper.get_update_lock(is_zato=msg['is_zato'])
+            return lock
+
+        # .. if we are here, we use a pass-through lock.
+        return PassThroughLock
+
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_EDIT(
+        self,
+        msg:'stranydict',
+        *args: 'any_',
+        **kwargs: 'any_'
+    ) -> 'None':
+
+        # Local variables
+        _is_outconn_wsx = msg['type_'] == _type_outconn_wsx
+
+        # Find out what kind of a lock to use ..
+        _lock = self._get_edit_generic_lock(_is_outconn_wsx, msg)
+
+        # .. do use it ..
+        with _lock(msg['id']):
+
+            # .. and update the connection now.
+            return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(msg, *args, **kwargs)
+
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_DELETE(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(*args, **kwargs)
+
+# ################################################################################################################################
+
     on_broker_msg_GENERIC_CONNECTION_CHANGE_PASSWORD = _change_password_generic_connection
 
 # ################################################################################################################################

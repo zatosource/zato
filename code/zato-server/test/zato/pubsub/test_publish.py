@@ -3,7 +3,7 @@
 """
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -79,8 +79,8 @@ class PubSubTestCase(RESTClientTestCase):
         self.rest_client.api_invoke('helpers.pubsub.source', request)
 
         # Sleep for a moment until the files appear in the file system
-        wait_for_file(file_name_pub_sub)
-        wait_for_file(file_name_hook)
+        wait_for_file(file_name_pub_sub, max_wait=99)
+        wait_for_file(file_name_hook, max_wait=99)
 
         # Attempt to read the files now ..
         with open_r(file_name_pub_sub) as f:

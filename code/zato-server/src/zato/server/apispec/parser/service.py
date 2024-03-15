@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.common.marshal_.api import extract_model_class, is_list
 from zato.common.marshal_.api import Model
 from zato.common.marshal_.simpleio import DataClassSimpleIO
+from zato.common.typing_ import any_, cast_
 from zato.server.apispec.model import APISpecInfo, Config, FieldInfo, SimpleIO
 from zato.server.apispec.parser.docstring import DocstringParser
 
@@ -18,14 +20,14 @@ from zato.simpleio import SIO_TYPE_MAP
 # ################################################################################################################################
 # ################################################################################################################################
 
-_SIO_TYPE_MAP = SIO_TYPE_MAP()
+_SIO_TYPE_MAP = SIO_TYPE_MAP() # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from dataclasses import Field
-    from zato.common.typing_ import any_, anydict, anylist, optional, strorlist, type_
+    from zato.common.typing_ import anydict, anylist, optional, strorlist, type_
     from zato.server.service import Service
 
     Field   = Field
@@ -39,16 +41,29 @@ def build_field_list(model:'Model | str', api_spec_info:'any_') -> 'anylist':
     # Response to produce
     out = [] # type: anylist
 
-    # All the fields of this dataclass
-    if isinstance(model, str):
+    # Local variables
+    is_any  = model is any_
+    is_int  = model is int
+    is_str  = model is str
+    is_bool = model is bool
+
+    # This is not a true model that we can process ..
+    should_ignore = is_int or is_str or is_any or is_bool
+
+    # .. in which case we can return immediately ..
+    if should_ignore:
         return out
 
-    python_field_list = model.zato_get_fields()
+    # .. handle list models as well ..
+    if is_list(model, True): # type: ignore
+        model = extract_model_class(model) # type: ignore
+
+    python_field_list = cast_('any_', model).zato_get_fields()
 
     for _, field in sorted(python_field_list.items()):
 
         # Parameter details object
-        info = FieldInfo.from_python_field(model, field, api_spec_info)
+        info = FieldInfo.from_python_field(model, field, api_spec_info) # type: ignore
         out.append(info)
 
     return out
@@ -120,7 +135,7 @@ class ServiceInfo:
             # This can be reused across all the output data formats
             sio_desc = self.docstring.get_sio_desc(sio)
 
-            for api_spec_info in _SIO_TYPE_MAP:
+            for api_spec_info in _SIO_TYPE_MAP: # type: ignore
 
                 # A structure that contains an API specification for each major output format, e.g. Zato or OpenAPI
                 spec_info = APISpecInfo()

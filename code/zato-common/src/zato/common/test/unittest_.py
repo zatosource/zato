@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -26,8 +26,8 @@ if 0:
 
 _default = PUBSUB.DEFAULT
 
-sec_name = _default.DEMO_SECDEF_NAME
-username = _default.DEMO_USERNAME
+sec_name = _default.DEFAULT_SECDEF_NAME
+username = _default.DEFAULT_USERNAME
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,7 +59,7 @@ class PubSubAPIRestImpl:
 
     def _subscribe(self, topic_name:'str', needs_unsubscribe:'bool'=False) -> 'str':
         if needs_unsubscribe:
-            self._unsubscribe(topic_name)
+            _ = self._unsubscribe(topic_name)
         response = self.rest_client.post(PubSubConfig.PathSubscribe + topic_name)
         sleep(6)
         return response['sub_key']
@@ -91,7 +91,7 @@ class BasePubSubRestTestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def setUp(self) -> None:
+    def setUp(self) -> 'None':
         super().setUp()
         if self.should_init_rest_client:
             self.rest_client.init(username=username, sec_name=sec_name)

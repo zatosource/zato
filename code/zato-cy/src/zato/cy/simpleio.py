@@ -5,7 +5,7 @@
 """
 Copyright (C) Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -1528,6 +1528,10 @@ class CySimpleIO:
         response_elem = getattr(self.user_declaration, 'response_elem', InternalNotGiven)
 
         if response_elem is InternalNotGiven:
+            if getattr(class_, '_zato_needs_response_wrapper', None) is False:
+                response_elem = None
+
+        if response_elem is InternalNotGiven:
             response_elem = getattr(self.server_config, 'response_elem', InternalNotGiven)
 
         if (not response_elem) or (response_elem is InternalNotGiven):
@@ -1566,7 +1570,7 @@ class CySimpleIO:
 # ################################################################################################################################
 
     @cy.returns(Elem)
-    def _convert_to_elem_instance(self, elem_name, is_required:cy.bint) -> Elem:
+    def convert_to_elem_instance(self, elem_name, is_required:cy.bint) -> Elem:
 
         # The element we return, at this point we do not know what its exact subtype will be
         _elem:Elem
@@ -1713,7 +1717,7 @@ class CySimpleIO:
                 if isinstance(initial_elem, Elem):
                     elem = initial_elem
                 else:
-                    elem = self._convert_to_elem_instance(initial_elem, is_required)
+                    elem = self.convert_to_elem_instance(initial_elem, is_required)
 
                 # By default all Elem instances are required so we need
                 # to potentially overwrite it with the actual is_required value.
@@ -2122,7 +2126,6 @@ class CySimpleIO:
         out:object = out_elems if is_list else out_elems[0]
 
         # Wrap the response in a top-level element if needed
-
         if data_format in (DATA_FORMAT_JSON, DATA_FORMAT_DICT):
             if self.definition._has_response_elem:
                 out = {

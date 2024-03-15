@@ -4,7 +4,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
@@ -515,6 +515,15 @@ class CommandStore:
         self.add_opts(pubsub_create_topic, pubsub_topic_mod.CreateTopic.opts)
 
         #
+        # pubsub create-topics
+        #
+
+        pubsub_create_test_topics = pubsub_subs.add_parser('create-test-topics',
+            description=pubsub_topic_mod.CreateTestTopics.__doc__, parents=[base_parser])
+        pubsub_create_test_topics.set_defaults(command='pubsub_create_test_topics')
+        self.add_opts(pubsub_create_test_topics, pubsub_topic_mod.CreateTestTopics.opts)
+
+        #
         # pubsub delete-endpoint
         #
 
@@ -955,7 +964,7 @@ def main() -> 'any_':
 
             if missing:
                 missing_noun = 'Option ' if len(missing) == 1 else 'Options '
-                missing_verb = ' is ' if len(missing) == 1 else ' are '
+                missing_verb = ' is '    if len(missing) == 1 else ' are '
                 missing.sort()
 
                 sys.stdout.write(

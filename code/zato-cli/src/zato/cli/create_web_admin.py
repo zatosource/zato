@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from copy import deepcopy
 
 # Zato
 from zato.cli import common_odb_opts, ZatoCommand
+from zato.common.const import ServiceConst
 from zato.common.util.open_ import open_r, open_w
 
 config_template = """{{
@@ -35,6 +34,7 @@ config_template = """{{
   "DATABASE_PASSWORD": "{DATABASE_PASSWORD}",
   "DATABASE_HOST": "{DATABASE_HOST}",
   "DATABASE_PORT": "{DATABASE_PORT}",
+  "DATABASE_OPTIONS": {{"timeout": 30}},
 
   "TIME_ZONE": "America/New_York",
   "LANGUAGE_CODE": "en-us",
@@ -166,7 +166,7 @@ class Create(ZatoCommand):
             'DATABASE_PORT': args.odb_port or '',
             'SITE_ID': django_site_id,
             'SECRET_KEY': cm.encrypt(django_secret_key),
-            'ADMIN_INVOKE_NAME':'admin.invoke',
+            'ADMIN_INVOKE_NAME':ServiceConst.API_Admin_Invoke_Username,
             'ADMIN_INVOKE_PASSWORD':cm.encrypt(admin_invoke_password),
         }
         import platform
@@ -198,8 +198,9 @@ class Create(ZatoCommand):
         django.setup()
         self.reset_logger(args, True)
 
-        # # Can't import these without DJANGO_SETTINGS_MODULE being set
+        # Can't import these without DJANGO_SETTINGS_MODULE being set
         from django.contrib.auth.models import User
+        from django.core.management.base import CommandError
         from django.db import connection
         from django.db.utils import IntegrityError
 
@@ -215,7 +216,7 @@ class Create(ZatoCommand):
             user.set_password(admin_password)
             user.save()
 
-        except IntegrityError:
+        except (CommandError, IntegrityError):
             # This will happen if user 'admin' already exists, e.g. if this is not the first cluster in this database
             admin_created = False
             connection._rollback()

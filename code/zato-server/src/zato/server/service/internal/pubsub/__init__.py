@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -60,18 +60,18 @@ _wsx_expected_endpoint_type=PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
 # ################################################################################################################################
 
 class CommonSubData:
-    common = ('is_internal', 'topic_name', 'active_status', 'endpoint_type', 'endpoint_id', 'endpoint_name', 'delivery_method',
-        'delivery_data_format', 'delivery_batch_size', Bool('wrap_one_msg_in_list'), 'delivery_max_retry',
-        Bool('delivery_err_should_block'), 'wait_sock_err', 'wait_non_sock_err', 'server_id', 'out_http_method',
-        'out_http_method', DateTime('creation_time'), DateTime('last_interaction_time'), 'last_interaction_type',
-        'last_interaction_details', Int('total_depth'), Int('current_depth_gd'),
+    common = ('subscription_id', 'is_internal', 'topic_name', 'active_status', 'endpoint_type', 'endpoint_id',
+        'endpoint_name', 'delivery_method', 'delivery_data_format', 'delivery_batch_size', Bool('wrap_one_msg_in_list'),
+        'delivery_max_retry', Bool('delivery_err_should_block'), 'wait_sock_err', 'wait_non_sock_err', 'server_id',
+        'server_name', 'out_http_method', 'out_http_method', DateTime('creation_time'), DateTime('last_interaction_time'),
+        'last_interaction_type', 'last_interaction_details', Int('total_depth'), Int('current_depth_gd'),
         Int('current_depth_non_gd'), 'sub_key', 'has_gd', 'is_staging_enabled', 'sub_id', 'name', AsIs('ws_ext_client_id'),
-        AsIs('ext_client_id'), 'topic_id') # type: anytuple
+        AsIs('ext_client_id'), 'topic_id', 'should_ignore_if_sub_exists', 'should_delete_all') # type: anytuple
     amqp = ('out_amqp_id', 'amqp_exchange', 'amqp_routing_key')
     files = ('files_directory_list',)
     ftp = ('ftp_directory_list',)
     pubapi = ('security_id',)
-    rest = ('out_rest_http_soap_id', 'rest_delivery_endpoint')
+    rest = ('out_http_soap_id', 'out_rest_http_soap_id', 'rest_connection', 'rest_delivery_endpoint')
     service = ('service_id',)
     sms_twilio = ('sms_twilio_from', 'sms_twilio_to_list')
     smtp = (Bool('smtp_is_html'), 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body') # type: anytuple
@@ -215,7 +215,8 @@ class AfterPublish(AdminService):
             }
 
             try:
-                self.server.rpc[server_name].invoke(service_name, full_request, pid=server_pid)
+                invoker = self.server.rpc.get_invoker_by_server_name(server_name)
+                invoker.invoke(service_name, full_request, pid=server_pid)
             except Exception:
 
                 for logger in (self.logger, logger_pubsub):
@@ -343,7 +344,7 @@ class ResumeWSXSubscription(AdminService):
 
         out = dict.fromkeys(sub_key_list, []) # type: stranydict
 
-        for messages in messages_list: # type: dict
+        for messages in messages_list:
             messages = messages['response']
             for sub_key, sub_key_data in messages.items():
                 for msg in sub_key_data:

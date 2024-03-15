@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -42,7 +42,7 @@ from zato.server.file_transfer.snapshot import FTPSnapshotMaker, LocalSnapshotMa
 if 0:
     from bunch import Bunch
     from requests import Response
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist, list_
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from zato.server.file_transfer.event import FileTransferEvent
@@ -99,7 +99,7 @@ class FileTransferAPI:
         self.keep_running = True
 
         # A list of all observer objects
-        self.observer_list = []
+        self.observer_list:'list_[BaseObserver]' = []
 
         # A mapping of channel_id to an observer object associated with the channel.
         # Note that only non-inotify observers are added here.
@@ -132,6 +132,11 @@ class FileTransferAPI:
 
         # Maps channel name to a list of globre patterns for the channel's directories
         self.pattern_matcher_dict = {}
+
+# ################################################################################################################################
+
+    def add_pickup_dir(self, path:'str', source:'str') -> 'None':
+        self.server.add_pickup_conf_from_local_path(path, source)
 
 # ################################################################################################################################
 
@@ -467,7 +472,7 @@ class FileTransferAPI:
 
                         # .. and notify each one.
                         for observer in observer_list: # type: LocalObserver
-                            observer.event_handler.on_created(PathCreatedEvent(src_path), observer)
+                            observer.event_handler.on_created(PathCreatedEvent(src_path, is_dir=False), observer)
 
                     except Exception:
                         logger.warning('Exception in inotify handler `%s`', format_exc())

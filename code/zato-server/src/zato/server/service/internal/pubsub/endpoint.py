@@ -3,11 +3,13 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 from contextlib import closing
+from copy import deepcopy
+from json import loads
 
 # SQLAlchemy
 from sqlalchemy import delete
@@ -43,11 +45,14 @@ if 0:
     from bunch import Bunch
     from sqlalchemy import Column
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import anylist, stranydict
+    from zato.common.typing_ import any_, anylist, intnone, strdict
+    from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvocationResult
     from zato.server.pubsub.model import subnone
     from zato.server.service import Service
     Bunch   = Bunch
     Column = Column
+    PerPIDResponse = PerPIDResponse
+    ServerInvocationResult = ServerInvocationResult
     Service = Service
     subnone = subnone
 
@@ -62,6 +67,7 @@ broker_message = PUBSUB
 broker_message_prefix = 'ENDPOINT_'
 list_func = pubsub_endpoint_list
 skip_input_params = ['sub_key', 'is_sub_allowed']
+input_optional_extra = ['service_name']
 output_optional_extra = ['service_name', 'ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key', 'endpoint_type_name']
 delete_require_instance = False
 
@@ -76,7 +82,7 @@ for name in msg_pub_attrs:
         continue
     elif name.endswith('_id'):
         msg_pub_attrs_sio.append(AsIs(name))
-    elif name in ('position_in_group', 'priority', 'size', 'delivery_count'):
+    elif name in ('position_in_group', 'priority', 'size', 'delivery_count', 'expiration'):
         msg_pub_attrs_sio.append(Int(name))
     elif name.startswith(('has_', 'is_')):
         msg_pub_attrs_sio.append(Bool(name))
@@ -108,14 +114,64 @@ class _GetEndpointQueueMessagesSIO(GetListAdminSIO):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def instance_hook(self:'Service', input:'stranydict', instance:'PubSubEndpoint', attrs:'stranydict') -> 'None':
+def _get_security_id_from_input(self:'Service', input:'strdict') -> 'intnone':
+
+    if input.get('security_name') == 'zato-no-security':
+        return
+
+    # If we have a security name on input, we need to turn it into its ID ..
+    if security_name := input.get('security_name'):
+        security_name = security_name.strip()
+        security = self.server.worker_store.basic_auth_get(security_name)
+        security = security['config']
+        security_id:'int' = security['id']
+
+    # .. otherwise, we use a service ID as it is.
+    else:
+        security_id = self.request.input.get('security_id')
+
+    return security_id
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_service_id_from_input(self:'Service', input:'strdict') -> 'intnone':
+
+    # If we have a service name on input, we need to turn it into its ID ..
+    if service_name := input.get('service_name'):
+        try:
+            service_name = service_name.strip()
+            service_id = self.server.service_store.get_service_id_by_name(service_name)
+        except KeyError:
+            return
+
+    # .. otherwise, we use a service ID as it is.
+    else:
+        service_id = self.request.input.get('service_id')
+
+    return service_id
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def instance_hook(self:'Service', input:'strdict', instance:'PubSubEndpoint', attrs:'strdict') -> 'None':
 
     if attrs['is_delete']:
         return
 
+    # These can be given as ID or name and we need to extract the correct values here
+    service_id = _get_service_id_from_input(self, input)
+    security_id = _get_security_id_from_input(self, input)
+
+    instance.service_id = service_id
+    instance.security_id = security_id
+
     # Don't use empty string with integer attributes, set them to None (NULL) instead
-    if cast_('str', instance.service_id) == '':
+    if cast_('str', service_id) == '':
         instance.service_id = None
+
+    if cast_('str', security_id) == '':
+        instance.security_id = None
 
     # SQLite will not accept empty strings, must be None
     instance.last_seen = instance.last_seen or None
@@ -125,11 +181,55 @@ def instance_hook(self:'Service', input:'stranydict', instance:'PubSubEndpoint',
 
 # ################################################################################################################################
 
+def response_hook(
+    self:'Service',
+    input:'any_',
+    instance:'any_',
+    attrs:'any_',
+    service_type:'str',
+) -> 'None':
+
+    if service_type == 'create_edit':
+        _ = self.pubsub.wait_for_endpoint(input['name'])
+
+    elif service_type == 'get_list':
+
+        # We are going to check topics for each of these endpoint IDs ..
+        endpoint_id_list = []
+
+        # .. go through every endpoint found ..
+        for item in self.response.payload:
+
+            # .. append its ID for later use ..
+            endpoint_id_list.append(item.id)
+
+        # .. we have all the IDs now and we can check their topics ..
+        topic_service = 'zato.pubsub.subscription.get-list'
+        topic_response = self.invoke(topic_service, endpoint_id_list=endpoint_id_list)
+
+        # .. top-level response that we are returning ..
+        response = self.response.payload.getvalue()
+        response = loads(response)
+        response = response['zato_pubsub_endpoint_get_list_response']
+
+        # .. first, add the required key to all the endpoints ..
+        for item in response:
+            item['topic_list'] = []
+
+        # .. now, go through the items once more and populate topics for each endpoint ..
+        for item in response:
+            for topic_dict in topic_response:
+                if item['id'] == topic_dict['endpoint_id']:
+                    topic_name = topic_dict['topic_name']
+                    item['topic_list'].append(topic_name)
+
+# ################################################################################################################################
+
 def broker_message_hook(
     self:'Service',
-    input:'stranydict',
+    input:'strdict',
     instance:'PubSubEndpoint',
-    attrs:'stranydict',
+    attrs:'strdict',
     service_type:'str'
 ) -> 'None':
     if service_type == 'create_edit':
@@ -151,15 +251,24 @@ class Create(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('name', 'role', 'is_active', 'is_internal', 'endpoint_type')
-        input_optional = ('cluster_id', 'topic_patterns', 'security_id', 'service_id', 'ws_channel_id')
+        input_optional = ('cluster_id', 'topic_patterns', 'security_id', 'security_name', 'service_id', 'service_name', \
+            'ws_channel_id')
         output_required = (AsIs('id'), 'name')
         request_elem = 'zato_pubsub_endpoint_create_request'
         response_elem = 'zato_pubsub_endpoint_create_response'
         default_value = None
 
     def handle(self):
+
         input = self.request.input
         cluster_id = input.get('cluster_id') or self.server.cluster_id
+        security_id = _get_security_id_from_input(self, self.request.input)
+        service_id = _get_service_id_from_input(self, self.request.input)
+
+        # If we had a name of a service on input but there is no ID for it, it means that that the name was invalid.
+        if service_name := input.get('service_name'):
+            if not service_id:
+                raise BadRequest(self.cid, f'No such service -> {service_name}')
 
         # Services have a fixed role and patterns ..
         if input.endpoint_type == COMMON_PUBSUB.ENDPOINT_TYPE.SERVICE.id:
@@ -181,8 +290,34 @@ class Create(AdminService):
                 filter(PubSubEndpoint.name==input.name).\
                 first()
 
+            # Names must be unique
             if existing_one:
                 raise Conflict(self.cid, 'Endpoint `{}` already exists'.format(input.name))
+
+            # Services cannot be assigned to more than one endpoint
+            if service_id:
+                try:
+                    endpoint_id = self.pubsub.get_endpoint_id_by_service_id(service_id)
+                except KeyError:
+                    pass
+                else:
+                    endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
+                    service_name = self.server.service_store.get_service_name_by_id(service_id)
+                    msg = f'Service {service_name} is already assigned to endpoint {endpoint.name}'
+                    raise Conflict(self.cid, msg)
+
+            # Security definitions cannot be assigned to more than one endpoint
+            if security_id:
+                try:
+                    endpoint_id = self.pubsub.get_endpoint_id_by_sec_id(security_id)
+                except KeyError:
+                    pass
+                else:
+                    endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
+                    security = self.server.worker_store.basic_auth_get_by_id(security_id)
+                    security_name:'str' = security['name']
+                    msg = f'Security definition {security_name} is already assigned to endpoint {endpoint.name}'
+                    raise Conflict(self.cid, msg)
 
             endpoint = PubSubEndpoint()
             endpoint.cluster_id = cluster_id # type: ignore
@@ -192,8 +327,8 @@ class Create(AdminService):
             endpoint.endpoint_type = input.endpoint_type
             endpoint.role = input.role
             endpoint.topic_patterns = input.topic_patterns
-            endpoint.security_id = input.get('security_id')
-            endpoint.service_id = input.get('service_id')
+            endpoint.security_id = security_id
+            endpoint.service_id = service_id
             endpoint.ws_channel_id = input.get('ws_channel_id')
 
             session.add(endpoint)
@@ -205,6 +340,8 @@ class Create(AdminService):
 
             self.response.payload.id = endpoint.id
             self.response.payload.name = self.request.input.name
+
+        _ = self.pubsub.wait_for_endpoint(input.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -231,11 +368,26 @@ class Get(AdminService):
         output_required = ('id', 'name', 'is_active', 'is_internal', 'role', 'endpoint_type')
         output_optional = ('tags', 'topic_patterns', 'pub_tag_patterns', 'message_tag_patterns',
             'security_id', 'ws_channel_id', 'sec_type', 'sec_name', 'ws_channel_name', 'sub_key',
-            'service_id', 'service_name')
+            'service_id', 'service_name', AsIs('topic_list'))
 
     def handle(self):
+
+        # Local variables
+        cluster_id = self.request.input.cluster_id
+        endpoint_id = self.request.input.id
+
+        # Connect to the database ..
         with closing(self.odb.session()) as session:
+
+            # .. get basic information about this endpoint ..
             self.response.payload = pubsub_endpoint(session, self.request.input.cluster_id, self.request.input.id)
+
+            # .. get a list of topics this endpoint is subscribed to ..
+            request = {'cluster_id':cluster_id, 'endpoint_id':endpoint_id, 'sql_session':session}
+
+            topic_service = 'zato.pubsub.subscription.get-list'
+            topic_list = self.invoke(topic_service, request)
+            self.response.payload.topic_list = topic_list
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -262,19 +414,20 @@ class GetEndpointQueueNonGDDepth(AdminService):
     """ Returns current depth of non-GD messages for input sub_key which must have a delivery task on current server.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('sub_key',)
-        output_optional = (Int('current_depth_non_gd'),)
+        input_required = 'sub_key'
+        output_optional = Int('current_depth_non_gd')
 
     def handle(self):
-        pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        _, non_gd_depth = pubsub_tool.get_queue_depth(self.request.input.sub_key)
-        self.response.payload.current_depth_non_gd = non_gd_depth
+        if pubsub_tool := self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key):
+            _, non_gd_depth = pubsub_tool.get_queue_depth(self.request.input.sub_key)
+            self.response.payload.current_depth_non_gd = non_gd_depth
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class _GetEndpointQueue(AdminService):
-    def _add_queue_depths(self, session:'SASession', item:'stranydict') -> 'None':
+
+    def _add_queue_depths(self, session:'SASession', item:'strdict') -> 'None':
 
         cluster_id = self.request.input.cluster_id
         sub_key = item['sub_key']
@@ -291,20 +444,53 @@ class _GetEndpointQueue(AdminService):
         if sk_server:
 
             if sk_server.server_name == self.server.name and sk_server.server_pid == self.server.pid:
-                pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(item['sub_key'])
-                _, current_depth_non_gd = pubsub_tool.get_queue_depth(item['sub_key'])
+                if pubsub_tool := self.pubsub.get_pubsub_tool_by_sub_key(item['sub_key']):
+                    _, current_depth_non_gd = pubsub_tool.get_queue_depth(item['sub_key'])
             else:
-                response = self.server.rpc[sk_server.server_name].invoke(GetEndpointQueueNonGDDepth.get_name(), {
+
+                # An invoker pointing to that server
+                invoker   = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+
+                # The service we are invoking
+                service_name = GetEndpointQueueNonGDDepth.get_name()
+
+                # Inquire the server about our sub_key
+                request = {
                     'sub_key': item['sub_key'],
-                }, pid=sk_server.server_pid)
-                inner_response = response['response']
-                current_depth_non_gd = inner_response['current_depth_non_gd'] if inner_response else 0
+                }
+
+                # Keyword arguments point to a specific PID in that server
+                kwargs = {
+                    'pid': sk_server.server_pid
+                }
+
+                # Do invoke the server now
+                response = invoker.invoke(service_name, request, **kwargs)
+
+                self.logger.info('*' * 50)
+                self.logger.warn('Invoker  -> %s', invoker)
+                self.logger.warn('RESPONSE -> %s', response)
+                self.logger.info('*' * 50)
+
+                """
+                '''
+
+                pid_data = response['response']
+
+                if pid_data:
+                    pid_data = cast_('anydict', pid_data)
+                    current_depth_non_gd = pid_data['current_depth_non_gd']
+                else:
+                    current_depth_non_gd = 0
 
         # No delivery server = there cannot be any non-GD messages waiting for that subscriber
         else:
             current_depth_non_gd = 0
+            '''
+            """
 
-        item['current_depth_non_gd'] = current_depth_non_gd
+        # item['current_depth_non_gd'] = current_depth_non_gd
+        item['current_depth_non_gd'] = 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -426,10 +612,12 @@ class UpdateEndpointQueue(AdminService):
 
             for key, value in sorted(self.request.input.items()):
                 if key not in _sub_skip_update:
+                    if isinstance(value, bytes):
+                        value = value.decode('utf8')
                     if value is not None:
                         setattr(item, key, value)
 
-            # This one we set manually based on logic at the top of the method
+            # This one we set manually based on the logic at the top of the method
             item.out_http_soap_id = out_http_soap_id
 
             session.add(item)
@@ -439,12 +627,20 @@ class UpdateEndpointQueue(AdminService):
             self.response.payload.name = item.topic.name
 
             # Notify all processes, including our own, that this subscription's parameters have changed
-            updated_params_msg = item.asdict()
+            updated_params_msg:'strdict' = item.asdict()
+
+            # Remove bytes objects from what we are about to publish - they had to be used
+            # in SQL messages but not here.
+            for key, value in deepcopy(updated_params_msg).items():
+                if isinstance(value, bytes):
+                    updated_params_msg[key] = value.decode('utf8')
+
             updated_params_msg['action'] = PUBSUB.SUBSCRIPTION_EDIT.value
             self.broker_client.publish(updated_params_msg)
 
             # We change the delivery server in background - note how we send name, not ID, on input.
-            # This is because our invocation target will want to use self.server.rpc[server_name].invoke(...)
+            # This is because our invocation target will want to use
+            # self.server.rpc.get_invoker_by_server_name(server_name).invoke(...)
             if should_update_delivery_server:
                 if old_delivery_server_id != new_delivery_server_id:
                     self.broker_client.publish({
@@ -534,7 +730,7 @@ class DeleteEndpointQueue(AdminService):
             self.logger.info('Deleting subscriptions `%s`', topic_sub_keys)
 
             # .. delete all subscriptions from the sub_key list ..
-            session.execute(
+            _:'any_' = session.execute(
                 delete(SubTable).\
                 where(
                     SubTable.c.sub_key.in_(sub_key_list),
@@ -606,14 +802,15 @@ class GetServerEndpointQueueMessagesNonGD(AdminService):
     SimpleIO = _GetEndpointQueueMessagesSIO # type: ignore
 
     def handle(self) -> 'None':
-        ps_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        messages = ps_tool.get_messages(self.request.input.sub_key, False)
 
         data_prefix_len = self.pubsub.data_prefix_len
         data_prefix_short_len = self.pubsub.data_prefix_short_len
 
-        self.response.payload[:] = [
-            make_short_msg_copy_from_msg(elem, data_prefix_len, data_prefix_short_len) for elem in messages]
+        if ps_tool := self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key):
+            messages = ps_tool.get_messages(self.request.input.sub_key, False)
+
+            self.response.payload[:] = [
+                make_short_msg_copy_from_msg(elem, data_prefix_len, data_prefix_short_len) for elem in messages]
 
         for elem in self.response.payload:
             elem['recv_time'] = datetime_from_ms(elem['recv_time'] * 1000.0)
@@ -639,7 +836,8 @@ class GetEndpointQueueMessagesNonGD(NonGDSearchService, _GetMessagesBase):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
 
         if sk_server:
-            response = self.server.rpc[sk_server.server_name].invoke(GetServerEndpointQueueMessagesNonGD.get_name(), {
+            invoker = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+            response = invoker.invoke(GetServerEndpointQueueMessagesNonGD.get_name(), {
                 'cluster_id': self.request.input.cluster_id,
                 'sub_key': sub.sub_key,
             }, pid=sk_server.server_pid)
@@ -657,8 +855,9 @@ class _GetEndpointSummaryBase(AdminService):
         input_required = ('cluster_id',)
         input_optional = ('topic_id',)
         output_required = ('id', 'endpoint_name', 'endpoint_type', 'subscription_count', 'is_active', 'is_internal')
-        output_optional = ('security_id', 'sec_type', 'sec_name', 'ws_channel_id', 'ws_channel_name',
-            'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role', 'endpoint_type_name')
+        output_optional = ['security_id', 'sec_type', 'sec_name', 'ws_channel_id', 'ws_channel_name',
+            'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role', 'endpoint_type_name'] + \
+                drop_sio_elems(common_sub_data, 'endpoint_name', 'endpoint_type', 'is_internal')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -778,8 +977,8 @@ class GetServerDeliveryMessages(AdminService):
         output_optional = List('msg_list')
 
     def handle(self) -> 'None':
-        ps_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        self.response.payload.msg_list = ps_tool.pull_messages(self.request.input.sub_key)
+        if ps_tool := self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key):
+            self.response.payload.msg_list = ps_tool.pull_messages(self.request.input.sub_key)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -806,19 +1005,27 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
 
         if sk_server:
-            response = self.server.rpc[sk_server.server_name].invoke(GetServerDeliveryMessages.get_name(), {
+            invoker = self.server.rpc.get_invoker_by_server_name(sk_server.server_name)
+            response = invoker.invoke(GetServerDeliveryMessages.get_name(), {
                 'sub_key': sub.sub_key,
             }, pid=sk_server.server_pid)
 
             if response:
 
+                # It may be a dict on a successful invocation ..
+                if isinstance(response, dict):
+                    data = response         # type: ignore
+                    data = data['response'] # type: ignore
+
+                # .. otherwise, it may be an IPCResponse object.
+                else:
+                    data = response.data # type: ignore
+
                 # Extract the actual list of messages ..
-                response = response.data
-                response = response[sk_server.server_pid]
-                response = response.pid_data
-                response = response['msg_list']
-                response = reversed(response)
-                response = list(response)
+                data = cast_('strdict', data)
+                msg_list = data['msg_list']
+                msg_list = reversed(msg_list)
+                msg_list = list(msg_list)
 
                 # .. at this point the topic may have been already deleted ..
                 try:
@@ -830,16 +1037,16 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
 
                 # .. make sure that all of the sub_keys actually still exist ..
                 with closing(self.odb.session()) as session:
-                    response = ensure_subs_exist(
+                    msg_list = ensure_subs_exist(
                         session,
                         topic_name,
-                        response,
-                        response,
+                        msg_list,
+                        msg_list,
                         'returning to endpoint',
                         '<no-ctx-string>'
                     )
 
-                self.response.payload[:] = response
+                self.response.payload[:] = msg_list
         else:
             self.logger.info('Could not find delivery server for sub_key:`%s`', sub.sub_key)
 

@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from datetime import datetime
 from ftplib import FTP_PORT
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_false, ForeignKey, Index, Integer, LargeBinary, \
-     Numeric, Sequence, SmallInteger, String, Text, true as sa_true, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_false, ForeignKey, Index, Integer, \
+    LargeBinary, Numeric, Sequence, SmallInteger, String, Text, true as sa_true, UniqueConstraint
 from sqlalchemy.orm import backref, relationship
 
 # Zato
@@ -27,10 +28,8 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from datetime import datetime
     from zato.common.typing_ import boolnone, floatnone, intnone, strnone
     boolnone = boolnone
-    datetime = datetime
     floatnone = floatnone
     intnone = intnone
     strnone = strnone
@@ -419,7 +418,7 @@ class AWSSecurity(SecurityBase):
 # ################################################################################################################################
 
 class OpenStackSecurity(SecurityBase):
-    """ Stores OpenStack credentials (no longer used, to be removed).
+    """ Stores OpenStack credentials.
     """
     __tablename__ = 'sec_openstack'
     __mapper_args__ = {'polymorphic_identity': 'openstack'}
@@ -453,6 +452,7 @@ class APIKeySecurity(SecurityBase):
         self.username = username
         self.password = password
         self.cluster = cluster
+        self.header = None # Not used by the DB
 
     def to_json(self):
         return to_json(self)
@@ -658,6 +658,11 @@ class HTTPSOAP(Base):
         self.rate_limit_type = None
         self.rate_limit_def = None
         self.rate_limit_check_parent_def = None
+        self.is_wrapper = None
+        self.wrapper_type = None
+        self.password = None
+        self.security_groups_count = None
+        self.security_groups_member_count = None
 
 # ################################################################################################################################
 
@@ -2197,6 +2202,7 @@ class PubSubEndpoint(Base):
 
     # Endpoint is a service
     service_id = cast_('intnone', Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True))
+    service = relationship('Service', backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
     # Identifies the endpoint through its security definition, e.g. a username/password combination.
     security_id = cast_('intnone', Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True))
@@ -2538,6 +2544,7 @@ class PubSubSubscription(Base):
     total_depth = None # Not used by DB
     current_depth_gd = None # Not used by DB
     current_depth_non_gd = None # Not used by DB
+    sub_count = None # Not used by DB
 
 # ################################################################################################################################
 
@@ -2703,8 +2710,8 @@ class GenericObject(Base):
     category_id = Column(Text(191), nullable=True)
     subcategory_id = Column(Text(191), nullable=True)
 
-    creation_time = Column(DateTime, nullable=False)
-    last_modified = Column(DateTime, nullable=False)
+    creation_time = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_modified = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     category_name = Column(Text(191), nullable=True)
     subcategory_name = Column(Text(191), nullable=True)
