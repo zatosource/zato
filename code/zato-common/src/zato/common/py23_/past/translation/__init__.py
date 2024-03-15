@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # ################################################################################################################################
@@ -353,9 +353,9 @@ class Py2Fixer(object):
             #     # if so.
             #     convert = False
             # in theory, other paths could be configured to be excluded here too
-            elif any([fullname.startswith(path) for path in self.exclude_paths]):
+            elif any(fullname.startswith(path) for path in self.exclude_paths):
                 convert = False
-            elif any([fullname.startswith(path) for path in self.include_paths]):
+            elif any(fullname.startswith(path) for path in self.include_paths):
                 convert = True
             else:
                 convert = False

@@ -3,7 +3,7 @@
 """
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
@@ -357,8 +357,10 @@ class CheckConfig(ManageCommand):
         secrets_conf_path = ConfigObj(join(repo_dir, 'secrets.conf'), use_zato=False)
         server_conf = ConfigObj(server_conf_path, zato_secrets_conf=secrets_conf_path, zato_crypto_manager=cm, use_zato=True)
 
-        fs_sql_config = self.get_sql_ini('sql.conf')
-        self.check_sql_odb_server_scheduler(cm, server_conf, fs_sql_config)
-        self.ensure_no_pidfile('scheduler')
+        # ODB is optional for schedulers
+        if 'odb' in server_conf:
+            fs_sql_config = self.get_sql_ini('sql.conf')
+            self.check_sql_odb_server_scheduler(cm, server_conf, fs_sql_config)
+            self.ensure_no_pidfile('scheduler')
 
 # ################################################################################################################################

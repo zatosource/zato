@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -12,19 +12,20 @@ from logging import getLogger
 
 # Zato
 from zato.common.ext.dataclasses import dataclass
-from zato.common.odb.model import SecurityBase as SecurityBaseModel
 from zato.common.odb.query import server_by_name, server_list
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from typing import Callable
     from zato.common.odb.api import SessionWrapper
-    from zato.common.odb.model import Server as ServerModel
+    from zato.common.odb.model import SecurityBase as SecurityBaseModel, Server as ServerModel
+    from zato.common.typing_ import callable_, intnone, list_, strnone
     from zato.server.base.parallel import ParallelServer
 
     ParallelServer = ParallelServer
+    SecurityBaseModel = SecurityBaseModel
     SessionWrapper = SessionWrapper
 
 # ################################################################################################################################
@@ -43,20 +44,24 @@ class CredentialsConfig:
 # ################################################################################################################################
 
 @dataclass(init=False)
-class RemoteServerInvocationCtx:
-    cluster_name: str = None
-    server_name:  str = None
-    address:  str = None
-    port: int = None
-    crypto_use_tls: bool
-    username: str = None
-    password: str = None
-    needs_ping: bool = True
+class RPCServerInvocationCtx:
+
+    cluster_name: 'strnone' = None
+    server_name:  'strnone' = None
+
+    address: 'strnone' = None
+    port:    'intnone' = None
+
+    username: 'strnone' = None
+    password: 'strnone' = None
+
+    needs_ping:     'bool' = True
+    crypto_use_tls: 'bool' = False
 
 @dataclass(init=False)
 class InvocationCredentials:
-    username: str = None
-    password: str = None
+    username: 'strnone' = None
+    password: 'strnone' = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,22 +69,18 @@ class InvocationCredentials:
 class ConfigSource:
     """ A base class for returning server configuration.
     """
-    def __init__(self, cluster_name, server_name, decrypt_func):
-        # type: (str, str, Callable) -> None
+    def __init__(self, cluster_name:'str', server_name:'str', decrypt_func:'callable_') -> 'None':
         self.current_cluster_name = cluster_name
         self.current_server_name = server_name
         self.decrypt_func = decrypt_func
 
-    def get_server_ctx(self, parallel_server, cluster_name, server_name):
-        # type: (ParallelServer, str, str) -> RemoteServerInvocationCtx
+    def get_server_ctx(self, parallel_server, cluster_name:'str', server_name:'str') -> 'RPCServerInvocationCtx':
         raise NotImplementedError('Should be overridden by subclasses')
 
-    def get_server_ctx_list(self, cluster_name):
-        # type: (str) -> list[RemoteServerInvocationCtx]
+    def get_server_ctx_list(self, cluster_name:'str') -> 'list_[RPCServerInvocationCtx]':
         raise NotImplementedError('Should be overridden by subclasses')
 
-    def get_invocation_credentials(self, cluster_name):
-        # type: (str) -> InvocationCredentials
+    def get_invocation_credentials(self, cluster_name:'str') -> 'InvocationCredentials':
         raise NotImplementedError('Should be overridden by subclasses')
 
 # ################################################################################################################################
@@ -88,15 +89,15 @@ class ConfigSource:
 class ODBConfigSource(ConfigSource):
     """ Returns server configuration based on information in the cluster's ODB.
     """
-    def __init__(self, odb, cluster_name, server_name, decrypt_func):
-        # type: (SessionWrapper, str, str, Callable) -> None
+    def __init__(self, odb:'SessionWrapper', cluster_name:'str', server_name:'str', decrypt_func:'callable_') -> 'None':
         super().__init__(cluster_name, server_name, decrypt_func)
         self.odb = odb
 
 # ################################################################################################################################
 
-    def get_invocation_credentials(self, session, cluster_name):
-        for sec_item in self.odb.get_basic_auth_list(None, cluster_name): # type: SecurityBaseModel
+    def get_invocation_credentials(self, _unused_session, cluster_name:'str'):
+        for sec_item in self.odb.get_basic_auth_list(None, cluster_name):
+            sec_item = cast_('SecurityBaseModel', sec_item)
             if sec_item.name == CredentialsConfig.sec_def_name:
                 out = InvocationCredentials()
                 out.username = sec_item.username
@@ -108,10 +109,9 @@ class ODBConfigSource(ConfigSource):
 
 # ################################################################################################################################
 
-    def build_server_ctx(self, server_model, credentials):
-        # type: (ServerModel, InvocationCredentials) -> RemoteServerInvocationCtx
+    def build_server_ctx(self, server_model:'ServerModel', credentials:'InvocationCredentials') -> 'RPCServerInvocationCtx':
 
-        out = RemoteServerInvocationCtx()
+        out = RPCServerInvocationCtx()
         out.cluster_name = server_model.cluster_name
         out.server_name = server_model.name
         out.address = server_model.preferred_address
@@ -125,11 +125,14 @@ class ODBConfigSource(ConfigSource):
 
 # ################################################################################################################################
 
-    def get_server_ctx(self, _ignored_parallel_server, cluster_name, server_name):
+    def get_server_ctx(
+        self,
+        _ignored_parallel_server, # type: ParallelServer
+        cluster_name, # type: str
+        server_name   # type: str
+    ) -> 'RPCServerInvocationCtx':
         """ Returns a specific server defined in ODB.
         """
-        # type: (ParallelServer, str, str) -> RemoteServerInvocationCtx
-
         with closing(self.odb.session()) as session:
             result = server_by_name(session, None, cluster_name, server_name)
 
@@ -147,14 +150,15 @@ class ODBConfigSource(ConfigSource):
 
         else:
             server_model = result[0] # type: ServerModel
-            credentials = self.get_invocation_credentials(session, cluster_name) # type: SecurityBaseModel
+
+            credentials = self.get_invocation_credentials(session, cluster_name)
+            credentials = cast_('SecurityBaseModel', credentials)
 
             return self.build_server_ctx(server_model, credentials)
 
 # ################################################################################################################################
 
-    def get_server_ctx_list(self, cluster_name):
-        # type: (str) -> list[RemoteServerInvocationCtx]
+    def get_server_ctx_list(self, cluster_name:'str') -> 'list_[RPCServerInvocationCtx]':
 
         # Response to return
         out = []

@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -165,15 +165,16 @@ class GetList(AdminService):
                 pids = server_pids.setdefault(server_name, set()) # type: anyset
 
                 # Add a PID found for that server
-                sk_server = self.pubsub.get_sub_key_server(sub_key)
-                pids.add(sk_server.server_pid)
+                if sk_server := self.pubsub.get_sub_key_server(sub_key):
+                    pids.add(sk_server.server_pid)
 
         # We can now iterate over the PIDs found and append an output row for each one.
         for server_name, pids in server_pids.items():
 
             for pid in pids:
 
-                pid_response = bunchify(self.server.rpc[server_name].invoke(GetDetails.get_name(), pid=pid))
+                invoker = self.server.rpc.get_invoker_by_server_name(server_name)
+                pid_response = bunchify(invoker.invoke(GetDetails.get_name(), pid=pid))
 
                 # A summary of each PID's current pub/sub activities
                 pid_data = bunchify({

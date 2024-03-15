@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -17,7 +17,7 @@ from traceback import format_exc
 from bunch import Bunch
 
 # Zato
-from zato.common.api import FILE_TRANSFER
+from zato.common.api import EnvFile, FILE_TRANSFER
 from zato.common.broker_message import ValueConstant, HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.typing_ import cast_, dataclass, from_dict, optional
 from zato.common.util.api import get_config, get_user_config_name
@@ -119,6 +119,27 @@ class UpdateUserConf(_Updater):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class UpdateEnmasse(Service):
+    """ Runs an enmasse file if its contents is changed.
+    """
+    def handle(self) -> 'None':
+
+        # Add type hints ..
+        raw_request = cast_('stranydict', self.request.raw_request)
+
+        # .. extract the path to the enmasse file ..
+        enmasse_file_path = raw_request['full_path']
+
+        # .. ignore files with environment variables ..
+        if enmasse_file_path.endswith('env.ini'):
+            return
+
+        # .. and execute it now.
+        _ = self.commands.run_enmasse_async(enmasse_file_path)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _OnUpdate(Service):
     """ Updates user configuration in memory and file system.
     """
@@ -184,7 +205,7 @@ class _OnUpdate(Service):
         #
         # This is why we first (1) add the file name to a skiplist of ignored files,
         # so that our own local notifier does not want to hot-deploy it,
-        # then (2) we save the file, and then (3) we remove the name from the ignore ones.
+        # then (2) we save the file, and then (3) we remove the name from the ignored ones.
         #
 
         try:
@@ -198,22 +219,26 @@ class _OnUpdate(Service):
             # Step (2) - Save the file
             #
             with self.lock('{}-{}-{}'.format(self.name, self.server.name, ctx.full_path)): # type: ignore
+
                 with open(ctx.full_path, 'wb') as f:
-                    f.write(ctx.data.encode('utf8'))
+                    _ = f.write(ctx.data.encode('utf8'))
+
+                # Reusable
+                update_type = self.get_update_type(ctx.full_path)
 
                 try:
                     # The file is saved so we can update our in-RAM mirror of it ..
-                    self.logger.info('Syncing in-RAM contents of `%s` (%s)', ctx.full_path, self.update_type)
+                    self.logger.info('Syncing in-RAM contents of `%s` (%s)', ctx.full_path, update_type)
 
                     # The file is saved on disk so we can call our handler function to post-process it.
                     self.sync_pickup_file_in_ram(ctx)
 
                 except Exception:
                     self.logger.warning('Could not sync in-RAM contents of `%s`, e:`%s` (%s)',
-                        ctx.full_path, format_exc(), self.update_type)
+                        ctx.full_path, format_exc(), update_type)
                 else:
                     self.logger.info('Successfully finished syncing in-RAM contents of `%s` (%s)',
-                        ctx.full_path, self.update_type)
+                        ctx.full_path, update_type)
 
         except Exception:
             self.logger.warning('Could not update file `%s`, e:`%s`', ctx.full_path, format_exc())
@@ -235,6 +260,18 @@ class _OnUpdate(Service):
 
 # ################################################################################################################################
 
+    def _get_update_type(self, file_path:'str') -> 'str':
+        return ''
+
+# ################################################################################################################################
+
+    def get_update_type(self, file_path:'str') -> 'str':
+
+        update_type = self._get_update_type(file_path) or self.update_type
+        return update_type
+
+# ################################################################################################################################
+
     def sync_pickup_file_in_ram(self, *args:'any_', **kwargs:'any_') -> 'None':
         raise NotImplementedError('Should be implemented by subclasses')
 
@@ -246,16 +283,36 @@ class OnUpdateUserConf(_OnUpdate):
     """
     update_type = 'user config file'
 
+    def _is_env_file(self, file_path:'str') -> 'bool':
+        return EnvFile.Default in file_path
+
+# ################################################################################################################################
+
     def sync_pickup_file_in_ram(self, ctx:'UpdateCtx') -> 'None':
 
-        conf_key = ctx.file_name
-        conf_base_dir = os.path.dirname(ctx.full_path)
-        conf = get_config(conf_base_dir, conf_key, raise_on_error=True, log_exception=False)
+        # We enter here if this is a file with environment variables ..
+        if self._is_env_file(ctx.full_path):
+            self.server.update_environment_variables_from_file(ctx.full_path)
 
-        user_config_name = get_user_config_name(conf_key)
-        entry = self.server.user_config.setdefault(user_config_name, Bunch())
-        entry.clear()
-        entry.update(conf)
+        # .. otherwise, this is a file with user configuration.
+        else:
+            conf_key = ctx.file_name
+            conf_base_dir = os.path.dirname(ctx.full_path)
+            conf = get_config(conf_base_dir, conf_key, raise_on_error=True, log_exception=False)
+
+            user_config_name = get_user_config_name(conf_key)
+            entry:'Bunch' = self.server.user_config.setdefault(user_config_name, Bunch())
+            entry.clear()
+            entry.update(conf)
+
+# ################################################################################################################################
+
+    def _get_update_type(self, file_path:'str') -> 'str':
+
+        if self._is_env_file(file_path):
+            return EnvFile.Default
+        else:
+            return self.update_type
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -266,7 +323,7 @@ class OnUpdateStatic(_OnUpdate):
     update_type = 'static file'
 
     def sync_pickup_file_in_ram(self, ctx:'UpdateCtx') -> 'None':
-        self.server.static_config.read_file(ctx.full_path, ctx.file_name)
+        _:'any_' = self.server.static_config.read_file(ctx.full_path, ctx.file_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

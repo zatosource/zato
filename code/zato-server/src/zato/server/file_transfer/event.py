@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 import os
+from datetime import datetime
 from io import StringIO
 from logging import getLogger
 from traceback import format_exc
+
+# Watchdog
+from watchdog.events import DirCreatedEvent
 
 # Zato
 from zato.common.util.api import hot_deploy, spawn_greenlet
@@ -44,6 +48,12 @@ singleton = object()
 class FileTransferEvent:
     """ Encapsulates information about a file picked up from file system.
     """
+    # When this event tooks place
+    timestamp: datetime
+
+    # True if it was a creation event, False if it was a modification event
+    is_create: bool
+
     # This is the directory where the file is located
     base_dir = 'not-set'      # type: str
 
@@ -79,16 +89,22 @@ class FileTransferEventHandler:
         # Some parsers will require for input data to be a StringIO objects instead of plain str.
         self.config.parser_needs_string_io = self._check_if_parser_needs_string_io(self.config)
 
+# ################################################################################################################################
+
     def _check_if_parser_needs_string_io(self, config:'Bunch'):
         return config.should_parse_on_pickup and \
                config.parse_with and \
                config.parse_with == 'py:csv.reader'
 
-    def on_created(
+# ################################################################################################################################
+
+    def _on_path_event_observed(
         self,
-        transfer_event,     # type: PathCreatedEvent
-        observer,           # type: BaseObserver
-        snapshot_maker=None # type: BaseRemoteSnapshotMaker | None
+        transfer_event,      # type: PathCreatedEvent
+        observer,            # type: BaseObserver
+        snapshot_maker=None, # type: BaseRemoteSnapshotMaker | None
+        *,
+        is_create # type: bool
     ) -> 'None':
 
         try:
@@ -127,6 +143,8 @@ class FileTransferEventHandler:
                 return
 
             event = FileTransferEvent()
+            event.timestamp = datetime.utcnow()
+            event.is_create = is_create
             event.full_path = transfer_event.src_path
             event.file_name = file_name
             event.base_dir = os.path.dirname(event.full_path)
@@ -134,8 +152,13 @@ class FileTransferEventHandler:
             event.channel_name = self.channel_name
 
             if self.config.is_hot_deploy:
-                spawn_greenlet(hot_deploy, self.manager.server, event.file_name, event.full_path,
-                    self.config.should_delete_after_pickup, should_deploy_in_place=self.config.should_deploy_in_place)
+                if transfer_event.is_directory:
+                    if isinstance(transfer_event, DirCreatedEvent):
+                        logger.info('About to add a new hot-deployment directory -> %s', event.full_path)
+                        self.manager.add_pickup_dir(event.full_path, f'File transfer -> {self.channel_name}')
+                else:
+                    _ = spawn_greenlet(hot_deploy, self.manager.server, event.file_name, event.full_path,
+                        self.config.should_delete_after_pickup, should_deploy_in_place=self.config.should_deploy_in_place)
                 return
 
             if self.config.should_read_on_pickup:
@@ -173,7 +196,39 @@ class FileTransferEventHandler:
             logger.warning('Exception in pickup event handler `%s` (%s) `%s`',
                 self.config.name, transfer_event.src_path, format_exc())
 
-    on_modified = on_created
+# ################################################################################################################################
+
+    def on_created(
+        self,
+        transfer_event,     # type: PathCreatedEvent
+        observer,           # type: BaseObserver
+        snapshot_maker=None # type: BaseRemoteSnapshotMaker | None
+    ) -> 'None':
+
+        # Call the parent function indicating that it was a creation
+        self._on_path_event_observed(
+            transfer_event,
+            observer,
+            snapshot_maker,
+            is_create=True
+        )
+
+# ################################################################################################################################
+
+    def on_modified(
+        self,
+        transfer_event,     # type: PathCreatedEvent
+        observer,           # type: BaseObserver
+        snapshot_maker=None # type: BaseRemoteSnapshotMaker | None
+    ) -> 'None':
+
+        # Call the parent function indicating that it was a modification
+        self._on_path_event_observed(
+            transfer_event,
+            observer,
+            snapshot_maker,
+            is_create=False
+        )
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
@@ -15,11 +16,10 @@ from traceback import format_exc
 from gevent import sleep
 
 # Watchdog
-from watchdog.events import FileCreatedEvent, FileModifiedEvent
+from watchdog.events import DirCreatedEvent, DirModifiedEvent, FileCreatedEvent, FileModifiedEvent
 
 # Zato
 from zato.common.api import FILE_TRANSFER
-from zato.common.typing_ import cast_
 from zato.common.util.api import spawn_greenlet
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.server.file_transfer.snapshot import default_interval, DirSnapshotDiff
@@ -28,7 +28,7 @@ from zato.server.file_transfer.snapshot import default_interval, DirSnapshotDiff
 
 if 0:
     from bunch import Bunch
-    from zato.common.typing_ import any_, anylist, anytuple
+    from zato.common.typing_ import any_, anylist, anytuple, callable_
     from zato.server.file_transfer.api import FileTransferAPI
     from zato.server.file_transfer.snapshot import BaseRemoteSnapshotMaker
 
@@ -45,13 +45,19 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class PathCreatedEvent:
-    def __init__(self, src_path:'str') -> 'None':
+    def __init__(self, src_path:'str', is_dir:'bool') -> 'None':
         self.src_path = src_path
+        self.is_dir = is_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class BaseObserver:
+
+    # Type hints
+    _observe_func: 'callable_'
+    event_handler: 'any_'
+
     observer_type_impl = '<observer-type-impl-not-set>'
     observer_type_name = '<observer-type-name-not-set>'
     observer_type_name_title = observer_type_name.upper()
@@ -67,7 +73,6 @@ class BaseObserver:
         self.name = channel_config.name
         self.is_active = channel_config.is_active
         self.sleep_time = default_interval
-        self.event_handler = None
         self.path_list = ['<initial-observer>']
         self.is_recursive = False
         self.keep_running = True
@@ -96,17 +101,16 @@ class BaseObserver:
 
 # ################################################################################################################################
 
-    def _start(self, observer_start_args):
+    def _start(self, observer_start_args:'any_') -> 'None':
 
         for path in self.path_list:
-            path = cast_('str', path)
 
             # Start only for paths that are valid - all invalid ones
             # are handled by a background path inspector.
             if self.is_path_valid(path):
                 logger.info('Starting %s file observer `%s` for `%s` (%s)',
                     self.observer_type_name, path, self.name, self.observer_type_impl)
-                spawn_greenlet(self._observe_func, path, observer_start_args)
+                _ = spawn_greenlet(self._observe_func, path, observer_start_args)
             else:
                 logger.info('Skipping invalid path `%s` for `%s` (%s)', path, self.name, self.observer_type_impl)
 
@@ -119,14 +123,14 @@ class BaseObserver:
 
 # ################################################################################################################################
 
-    def path_exists(self, path:'str', snapshot_maker:'BaseRemoteSnapshotMaker') -> 'bool':
+    def path_exists(self, path:'str', snapshot_maker:'BaseRemoteSnapshotMaker | None'=None) -> 'bool':
         """ Returns True if path exists, False otherwise.
         """
         raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
 
-    def path_is_directory(self, path:'str', snapshot_maker:'BaseRemoteSnapshotMaker') -> 'bool':
+    def path_is_directory(self, path:'str', snapshot_maker:'BaseRemoteSnapshotMaker | None'=None) -> 'bool':
         """ Returns True if path is a directory, False otherwise.
         """
         raise NotImplementedError('Must be implemented by subclasses')
@@ -246,13 +250,13 @@ class BaseObserver:
         """
         try:
 
+            # How many times to run the loop - either given on input or, essentially, infinitely.
+            current_iter = 0
+
             # Local aliases to avoid namespace lookups in self
             timeout = self.sleep_time
             handler_func = self.event_handler.on_created
             is_recursive = self.is_recursive
-
-            # How many times to run the loop - either given on input or, essentially, infinitely.
-            current_iter = 0
 
             # Take an initial snapshot
             snapshot = snapshot_maker.get_snapshot(path, is_recursive, True, True)
@@ -268,13 +272,35 @@ class BaseObserver:
                     new_snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, False)
 
                     # .. difference between the old and new will return, in particular, new or modified files ..
-                    diff = DirSnapshotDiff(snapshot, new_snapshot)
+                    diff = DirSnapshotDiff(snapshot, new_snapshot) # type: ignore
 
                     for path_created in diff.files_created:
-                        handler_func(FileCreatedEvent(path_created), self, snapshot_maker)
+
+                        # .. ignore Python's own directorries ..
+                        if '__pycache__' in path_created:
+                            continue
+
+                        if os.path.isdir(path_created):
+                            class_ = DirCreatedEvent
+                        else:
+                            class_ = FileCreatedEvent
+
+                        event = class_(path_created)
+                        handler_func(event, self, snapshot_maker)
 
                     for path_modified in diff.files_modified:
-                        handler_func(FileModifiedEvent(path_modified), self, snapshot_maker)
+
+                        # .. ignore Python's own directorries ..
+                        if '__pycache__' in path_modified:
+                            continue
+
+                        if os.path.isdir(path_modified):
+                            class_ = DirModifiedEvent
+                        else:
+                            class_ = FileModifiedEvent
+
+                        event = class_(path_modified)
+                        handler_func(event, self, snapshot_maker)
 
                     # .. a new snapshot which will be treated as the old one in the next iteration
                     snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, True)
@@ -312,7 +338,7 @@ class BaseObserver:
 
         if log_stop_event:
             logger.warning('Stopped %s file transfer observer `%s` for `%s` (snapshot:%s/%s)',
-                self.observer_type_name, self.name, path, current_iter, max_iters)
+                self.observer_type_name, self.name, path, current_iter, max_iters) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -330,7 +356,7 @@ class BackgroundPathInspector:
 
     def start(self):
         if self.observer.is_active:
-            spawn_greenlet(self.observer.wait_for_path, self.path, self.observer_start_args)
+            _ = spawn_greenlet(self.observer.wait_for_path, self.path, self.observer_start_args)
 
 # ################################################################################################################################
 # ################################################################################################################################

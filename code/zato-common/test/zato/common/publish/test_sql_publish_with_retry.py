@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -308,7 +308,7 @@ if __name__ == '__main__':
     log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
     logging.basicConfig(level=log_level, format=log_format)
 
-    main()
+    _ = main()
 
 # ################################################################################################################################
 # ################################################################################################################################

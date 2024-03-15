@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -34,7 +34,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes'
+        output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
+            'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format'
         output_repeated = True
 
     def handle(self):
@@ -51,11 +52,12 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'username', 'auth_server_url', 'scopes'
+        input_required = 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
+            'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format'
         output_required = 'id', 'name'
 
     def success_message(self, item):
-        return 'OAuth client credentials security definition `{}` {} successfully'.format(item.name, self.verb)
+        return 'Bearer token definition `{}` {} successfully'.format(item.name, self.verb)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,7 +79,7 @@ class Edit(_CreateEdit):
 
 class Delete(_Delete):
     url_name = 'security-oauth-outconn-client-credentials-delete'
-    error_message = 'Could not delete the OAuth definition'
+    error_message = 'Bearer token definition could not be deleted'
     service_name = 'zato.security.oauth.delete'
 
 # ################################################################################################################################

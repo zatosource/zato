@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # pylint: disable=attribute-defined-outside-init
@@ -51,7 +51,7 @@ slugify = slugify
 
 if 0:
     from zato.client import ServiceInvokeResponse
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
 
@@ -164,7 +164,7 @@ def method_allowed(*methods_allowed):
             req = args[1] if len(args) > 1 else args[0]
             if req.method not in methods_allowed:
                 msg = 'Method `{}` is not allowed here `{}`, methods allowed:`{}`'.format(
-                    req.method, view.func_name, methods_allowed)
+                    req.method, view, methods_allowed)
                 logger.error(msg)
                 raise Exception(msg)
             return view(*args, **kwargs)
@@ -243,6 +243,23 @@ def get_security_id_from_select(params, prefix, field_name='security'):
         _, security_id = security.split('/')
 
     return security_id
+
+# ################################################################################################################################
+
+def get_security_groups_from_checkbox_list(params, prefix, field_name_prefix='http_soap_security_group_checkbox_'):
+
+    # Our response to produce
+    groups = []
+
+    # Local variables
+    full_prefix = prefix + field_name_prefix
+
+    for item in params:
+        if item.startswith(full_prefix):
+            item = item.replace(full_prefix, '')
+            groups.append(item)
+
+    return groups
 
 # ################################################################################################################################
 
@@ -380,6 +397,7 @@ class Index(BaseView):
     """
     url_name = 'url_name-must-be-defined-in-a-subclass'
     template = 'template-must-be-defined-in-a-subclass-or-get-template-name'
+    wrapper_type = None
 
     output_class = None
     clear_self_items = True
@@ -445,9 +463,16 @@ class Index(BaseView):
             else:
                 logger.info('Not updating request with self.input')
 
+            # Auto-populate the field if it exists
+            if self.wrapper_type:
+                request['wrapper_type'] = self.wrapper_type
+
             logger.info('Invoking `%s` with `%s`', service_name, request)
 
             return func(service_name, request)
+
+    def should_include(self, item) -> 'bool':
+        return True
 
     def _handle_single_item_list(self, container, item_list):
         """ Creates a new instance of the model class for each of the element received
@@ -486,7 +511,7 @@ class Index(BaseView):
         """
         names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
 
-        for msg_item in item_list:
+        for msg_item in (item_list or []):
 
             item = self.output_class()
             for name in sorted(names):
@@ -495,6 +520,9 @@ class Index(BaseView):
                     value = getattr(value, 'text', '') or value
                 if value or value == 0:
                     setattr(item, name, value)
+
+            if not self.should_include(item):
+                continue
 
             item = self.on_before_append_item(item)
 
@@ -649,13 +677,13 @@ class CreateEdit(BaseView):
             logger.info('Request self.req.POST %s', self.req.POST)
 
             logger.info('Sending `%s` to `%s`', self.input_dict, self.service_name)
-
             response = self.req.zato.client.invoke(self.service_name, self.input_dict)
 
             if response.ok:
+                logger.info('Received `%s` from `%s`', response.data, self.service_name)
                 return_data = {
                     'message': self.success_message(response.data)
-                    }
+                }
 
                 return_data.update(initial_return_data)
 
@@ -799,11 +827,26 @@ def id_only_service(req, service, id, error_template='{}', initial=None):
 
 # ################################################################################################################################
 
-def ping_connection(req, service, connection_id, connection_type='{}'):
-    ret = id_only_service(req, service, connection_id, 'Could not ping {}, e:`{{}}`'.format(connection_type))
-    if isinstance(ret, HttpResponseServerError):
-        return ret
-    return HttpResponse(ret.data.info)
+def ping_connection(req, service, connection_id, connection_type='{}', ping_path=None) -> 'any_':
+    error_template = 'Could not ping {}, e:`{{}}`'.format(connection_type)
+    if ping_path:
+        initial = {'ping_path': ping_path}
+    else:
+        initial = None
+    response = id_only_service(req, service, connection_id, error_template, initial)
+    if isinstance(response, HttpResponseServerError):
+        return response
+    else:
+
+        if 'info' in response.data:
+            is_success = response.data.is_success
+            response_class = HttpResponse if is_success else HttpResponseServerError
+            info = response.data.info
+        else:
+            response_class = HttpResponse
+            info = 'Ping OK'
+
+        return response_class(info)
 
 # ################################################################################################################################
 
@@ -908,4 +951,49 @@ def invoke_action_handler(req, service_name:'str', send_attrs:'any_'=None, extra
         logger.error(msg)
         return HttpResponseServerError(msg)
 
+# ################################################################################################################################
+
+def get_security_name_link(req, sec_type, sec_name, *, needs_type=True):
+
+    sec_type_name = SEC_DEF_TYPE_NAME[sec_type]
+    sec_type_as_link = sec_type.replace('_', '-')
+    security_href = f'/zato/security/{sec_type_as_link}/?cluster={req.zato.cluster_id}&amp;query={sec_name}'
+    security_link = f'<a href="{security_href}">{sec_name}</a>'
+    if needs_type:
+        sec_name = f'{sec_type_name}<br/>{security_link}'
+    else:
+        sec_name = security_link
+    return sec_name
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_group_list(req:'any_', group_type:'str', *, http_soap_channel_id:'str'='') -> 'anylist':
+
+    # Get a list of all the groups that exist
+    response = req.zato.client.invoke('zato.groups.get-list', {
+        'group_type': group_type,
+    })
+
+    # .. extract the business data ..
+    groups = response.data or []
+
+    # .. if we have a channel ID on input, we need to indicate which groups are assigned to it ..
+    if http_soap_channel_id:
+        http_soap_channel = req.zato.client.invoke('zato.http-soap.get', {
+            'id': http_soap_channel_id,
+        })
+        http_soap_channel = http_soap_channel.data
+        http_soap_channel_security_groups = http_soap_channel.get('security_groups') or []
+
+        for item in groups:
+            if item.id in http_soap_channel_security_groups:
+                item.is_assigned = True
+            else:
+                item.is_assigned = False
+
+    # .. and return it to our caller.
+    return groups
+
+# ################################################################################################################################
 # ################################################################################################################################

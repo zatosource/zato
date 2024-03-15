@@ -11,7 +11,7 @@ echo "*** Zato Ubuntu/Debian installation using $PY_BINARY ***"
 
 # Always run an update so there are no surprises later on when it actually
 # comes to fetching the packages from repositories.
-# sudo apt-get update
+sudo apt-get update
 
 if ! [ -x "$(command -v lsb_release)" ]; then
   sudo apt-get install -y lsb-release
@@ -23,7 +23,7 @@ fi
 
 sudo apt-get install -y \
     build-essential curl git haproxy libbz2-dev libev-dev libev4 libevent-dev \
-    libffi-dev libkeyutils-dev libldap2-dev libmemcached-dev libpq-dev \
+    libffi-dev libkeyutils-dev libldap2-dev libpq-dev \
     libsasl2-dev libssl-dev libxml2-dev libxslt1-dev libyaml-dev openssl \
     swig uuid-dev uuid-runtime wget zlib1g-dev lsb-release ${PYTHON_DEPENDENCIES}
 
@@ -45,6 +45,6 @@ echo Activating virtualenv in $CURDIR
 source $CURDIR/bin/activate
 
 echo Setting up environment in $CURDIR
-$CURDIR/bin/python $CURDIR/util/zato_environment.py install
+PIP_DISABLE_PIP_VERSION_CHECK=1 $CURDIR/bin/python $CURDIR/util/zato_environment.py install
 
 echo ⭐ Successfully installed `zato --version`

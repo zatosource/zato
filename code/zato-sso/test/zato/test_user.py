@@ -3,7 +3,7 @@
 """
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -262,7 +262,7 @@ class UserLoginInvalidUsernameTestCase(BaseTest):
         }, expect_ok=False)
 
         self.assertEqual(response.result, 'Error')
-        self.assertEqual(response.details, 'Invalid input')
+        self.assertEqual(response.details, 'Bad request')
         self.assertIn('cid', response)
         self.assertNotIn('ust', response)
 
@@ -317,7 +317,7 @@ class UserLoginInvalidPasswordTestCase(BaseTest):
         }, expect_ok=False)
 
         self.assertEqual(response.result, 'Error')
-        self.assertEqual(response.details, 'Invalid input')
+        self.assertEqual(response.details, 'Bad request')
         self.assertIn('cid', response)
         self.assertNotIn('ust', response)
 
@@ -801,6 +801,6 @@ class UserChangePasswordTestCase(BaseTest):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    _ = main()
 
 # ################################################################################################################################

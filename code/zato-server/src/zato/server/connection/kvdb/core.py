@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -263,7 +263,7 @@ class BaseRepo(InRAMStore):
 
 # ################################################################################################################################
 
-    def get_many(self, *args:'any_', **kwargs:'any_'):
+    def get_many(self, *args:'any_', **kwargs:'any_') -> 'anylist':
         with self.update_lock:
             return self._get_many(*args, **kwargs)
 

@@ -3,7 +3,7 @@
 """
 Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -458,14 +458,17 @@ class SessionAPI:
         """ Returns an integer indicating for how many minutes to extend a user session.
         """
         # This will be used if, for any reason, we cannot invoke the hook service
-        out = cast_('int', self.sso_conf.session.expiry)
+        default_expiry = cast_('int', self.sso_conf.session.expiry)
+
+        # This is what we are returning unless a hook says otherwise
+        out = default_expiry
 
         # Try to see if there is an expiry hook service defined ..
         expiry_hook = self.sso_conf.session.get('expiry_hook')
 
         # .. if not, we can return the default expiry immediately ..
         if not expiry_hook:
-            return out
+            return default_expiry
 
         # .. otherwise, try to invoke the hook service ..
         try:
@@ -473,10 +476,9 @@ class SessionAPI:
             request = ExpiryHookInput()
             request.username = username
             request.current_app = current_app
+            request.default_expiry = default_expiry
 
             out = self.server.invoke(expiry_hook, request=request.to_dict(), serialize=False)
-            out = out.getvalue()
-            out = out['response']
             out = out['expiry']
             out = int(out)
 

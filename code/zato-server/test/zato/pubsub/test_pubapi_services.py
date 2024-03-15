@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -24,13 +24,13 @@ class WSXServicesInvokerTest(CommandLineServiceTestCase):
         service_name = 'helpers.pubsub.pubapi-invoker'
 
         # Run the test now
-        self.run_zato_service_test(service_name)
+        _ = self.run_zato_service_test(service_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    _ = main()
 
 # ################################################################################################################################
 # ################################################################################################################################

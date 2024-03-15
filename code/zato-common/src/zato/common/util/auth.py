@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from logging import getLogger
@@ -18,6 +16,8 @@ from six import PY2
 
 # Zato
 from zato.common.api import AUTH_RESULT
+from zato.common.crypto.api import is_string_equal
+from zato.server.connection.http_soap import Forbidden
 
 logger = getLogger('zato')
 
@@ -110,12 +110,12 @@ class SecurityException(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-AUTH_WSSE_NO_DATA = '0003.0001'
-AUTH_WSSE_VALIDATION_ERROR = '0003.0002'
+Auth_WSSE_No_Data = '0003.0001'
+Auth_WSSE_Validation_Error = '0003.0002'
 
-AUTH_BASIC_NO_AUTH = '0004.0001'
-AUTH_BASIC_INVALID_PREFIX = '0004.0002'
-AUTH_BASIC_USERNAME_OR_PASSWORD_MISMATCH = '0004.0003'
+Auth_Basic_No_Auth = 'No_Auth_Provided'
+Auth_Basic_Invalid_Prefix = 'Invalid_Auth_Prefix'
+Auth_Basic_Username_Or_Password_Mismatch = 'Invalid_Username_Or_Password'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -124,13 +124,13 @@ def on_wsse_pwd(wsse, url_config, data, needs_auth_info=True):
     """ Visit _RequestApp._on_wsse_pwd method's docstring.
     """
     if not data:
-        return AuthResult(False, AUTH_WSSE_NO_DATA)
+        return AuthResult(False, Auth_WSSE_No_Data)
 
     request = etree.fromstring(data)
     try:
         ok, wsse_username = wsse.validate(request, url_config)
     except SecurityException as e:
-        return AuthResult(False, AUTH_WSSE_VALIDATION_ERROR, e.description)
+        return AuthResult(False, Auth_WSSE_Validation_Error, e.description)
     else:
         auth_result = AuthResult(True, '0')
         if needs_auth_info:
@@ -141,15 +141,22 @@ def on_wsse_pwd(wsse, url_config, data, needs_auth_info=True):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _on_basic_auth(auth, expected_username, expected_password):
-    """ A low-level call for checking the HTTP Basic Auth credentials.
-    """
+def extract_basic_auth(cid:'str', auth:'str', *, raise_on_error:'bool'=False) -> 'str':
+
     if not auth:
-        return AUTH_BASIC_NO_AUTH
+        if raise_on_error:
+            logger.warn(f'Basic Auth -> {Auth_Basic_No_Auth} -> {cid}')
+            raise Forbidden(cid)
+        else:
+            return None, Auth_Basic_No_Auth
 
     prefix = 'Basic '
     if not auth.startswith(prefix):
-        return AUTH_BASIC_INVALID_PREFIX
+        if raise_on_error:
+            logger.warn(f'Basic Auth -> {Auth_Basic_Invalid_Prefix} -> {cid}')
+            raise Forbidden(cid)
+        else:
+            return None, Auth_Basic_Invalid_Prefix
 
     _, auth = auth.split(prefix)
     auth = auth.strip()
@@ -157,21 +164,35 @@ def _on_basic_auth(auth, expected_username, expected_password):
     auth = auth if isinstance(auth, unicode) else auth.decode('utf8')
     username, password = auth.split(':', 1)
 
-    if username == expected_username and password == expected_password:
+    return username, password
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def check_basic_auth(cid, auth, expected_username, expected_password):
+    """ A low-level call for checking HTTP Basic Auth credentials.
+    """
+    result = extract_basic_auth(cid, auth, raise_on_error=False)
+
+    if result[0]:
+        username, password = result
+    else:
+        return result[1]
+
+    if is_string_equal(username, expected_username) and is_string_equal(password, expected_password):
         return True
     else:
-        return AUTH_BASIC_USERNAME_OR_PASSWORD_MISMATCH
-    # return True
+        return Auth_Basic_Username_Or_Password_Mismatch
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def on_basic_auth(env, url_config, needs_auth_info=True):
-    """ Visit _RequestApp._on_basic_auth method's docstring.
+def on_basic_auth(cid, env, url_config, needs_auth_info=True):
+    """ Visit _RequestApp.check_basic_auth method's docstring.
     """
     username = url_config['basic-auth-username']
-    result = _on_basic_auth(env.get('HTTP_AUTHORIZATION', ''), username, url_config['basic-auth-password'])
-    is_success = result is True # Yes, need to check for True
+    result = check_basic_auth(cid, env.get('HTTP_AUTHORIZATION', ''), username, url_config['basic-auth-password'])
+    is_success = result is True # Note that we need to compare with True
 
     auth_result = AuthResult(is_success)
 
@@ -182,6 +203,17 @@ def on_basic_auth(env, url_config, needs_auth_info=True):
         auth_result.code = result
 
     return auth_result
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def enrich_with_sec_data(data_dict, sec_def, sec_def_type):
+    data_dict['zato.sec_def'] = {}
+    data_dict['zato.sec_def']['id'] = sec_def['id']
+    data_dict['zato.sec_def']['name'] = sec_def['name']
+    data_dict['zato.sec_def']['username'] = sec_def.get('username')
+    data_dict['zato.sec_def']['impl'] = sec_def
+    data_dict['zato.sec_def']['type'] = sec_def_type
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 from datetime import datetime
 from logging import getLogger
 from tempfile import NamedTemporaryFile
+from time import sleep
 from random import choice, randint
 from unittest import TestCase
 from uuid import uuid4
@@ -163,7 +164,7 @@ def rand_string(count=1, prefix='') -> 'any_':
 # ################################################################################################################################
 
 def rand_unicode():
-    return 'abc-123-ϠϡϢ'
+    return 'abc-123-ϠϡϢ-ΩΩΩ-ÞÞÞ'
 
 # ################################################################################################################################
 
@@ -256,6 +257,9 @@ class TestParallelServer:
 
     def decrypt(self, data:'str') -> 'str':
         return data
+
+    def invoke_all_pids(*args, **kwargs):
+        return []
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -408,6 +412,16 @@ class TestServer:
     def invoke(self, service:'any_', request:'any_') -> 'None':
         self.ctx['service'] = service
         self.ctx['request'] = request
+
+# ################################################################################################################################
+
+    def on_wsx_outconn_stopped_running(self, conn_id:'str') -> 'None':
+        pass
+
+# ################################################################################################################################
+
+    def on_wsx_outconn_connected(self, conn_id:'str') -> 'None':
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -732,6 +746,8 @@ class BaseZatoTestCase(TestCase):
         # These parameters for the Command to invoke will always exist ..
         cli_params = ['pubsub', 'create-topic', '--name', topic_name]
 
+        self.logger.info(f'Creating topic {topic_name} ({self.__class__.__name__})')
+
         # .. whereas these ones are optional ..
         if limit_retention:
             cli_params.append('--limit-retention')
@@ -794,6 +810,9 @@ class BaseZatoTestCase(TestCase):
         # .. invoke the service and obtain its response ..
         out = invoker.invoke_cli(cli_params, command_name) # type: str
 
+        # .. let the changes propagate across servers ..
+        sleep(1)
+
         # .. and let the parent class handle the result
         return self._handle_cli_out(out, assert_ok, load_json)
 
@@ -801,6 +820,12 @@ class BaseZatoTestCase(TestCase):
 
     def run_zato_cli_json_command(self, *args, **kwargs) -> 'any_':
         return self.run_zato_cli_command(*args, **kwargs, load_json=True)
+
+# ################################################################################################################################
+
+    def delete_pubsub_topics_by_pattern(self, pattern:'str') -> 'any_':
+        cli_params = ['pubsub', 'delete-topics', '--pattern', pattern]
+        return self.run_zato_cli_json_command(cli_params)
 
 # ################################################################################################################################
 # ################################################################################################################################

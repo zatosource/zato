@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -13,6 +13,7 @@ from operator import itemgetter
 from zato.common.api import PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.query import pubsub_endpoint_queue_list_by_sub_keys
+from zato.common.pubsub import MSG_PREFIX as PUBSUB_MSG_PREFIX
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -224,5 +225,10 @@ def get_expiration(
 
     # We can return the final value now
     return expiration
+
+# ################################################################################################################################
+
+def is_service_subscription(config:'any_') -> 'bool':
+    return config.sub_key.startswith(PUBSUB_MSG_PREFIX.SERVICE_SK)
 
 # ################################################################################################################################

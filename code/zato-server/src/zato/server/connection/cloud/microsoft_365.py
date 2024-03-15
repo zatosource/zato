@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -55,9 +55,15 @@ class Microsoft365Client:
         credentials = (client_id, secret_value)
 
         account = Account(credentials, auth_flow_type='credentials', tenant_id=tenant_id)
-        account.authenticate(scopes=scopes)
+        _ = account.authenticate(scopes=scopes)
 
         return account
+
+# ################################################################################################################################
+
+    def api(self) -> 'Office365Account':
+        out = self.impl_from_config(self.config)
+        return out
 
 # ################################################################################################################################
 

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from dataclasses import asdict, _FIELDS, MISSING, _PARAMS # type: ignore
+from dataclasses import asdict, _FIELDS, make_dataclass, MISSING, _PARAMS # type: ignore
 from http.client import BAD_REQUEST
 from inspect import isclass
 from typing import Any
@@ -22,22 +22,30 @@ except ImportError:
 # BSON (MongoDB)
 from bson import ObjectId
 
+# dateutil
+from dateutil.parser import parse as dt_parse
+
 # orjson
 from orjson import dumps
+
+# SQLAlchemy
+from sqlalchemy.sql.schema import Table
 
 # typing-utils
 from typing_utils import issubtype
 
 # Zato
 from zato.common.api import ZatoNotGiven
-from zato.common.typing_ import cast_, extract_from_union, is_union
+from zato.common.marshal_.model import BaseModel
+from zato.common.typing_ import cast_, date_, datetime_, datetimez, extract_from_union, isotimestamp, is_union, type_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from dataclasses import Field
-    from zato.common.typing_ import any_, anydict, boolnone, dictnone, intnone, optional
+    from zato.common.typing_ import any_, anydict, anylist, boolnone, dictnone, intnone, optional, tuplist
+    from zato.server.base.parallel import ParallelServer
     from zato.server.service import Service
 
     Field = Field
@@ -51,14 +59,21 @@ _None_Type = type(None)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def is_list(field_type, is_class):
-    # type: (Field, bool) -> bool
+def is_list(field_type:'Field', is_class:'bool') -> 'bool':
 
     # Using str is the only reliable method
     if 'typing.Union' in str(field_type):
         type_to_check = field_type.__args__[0] # type: ignore
     else:
         type_to_check = field_type
+
+    # This will exist if input is, for instance abc = type_[Service]
+    # Again, this is the only reliable way to check it.
+    is_type = 'typing.Type' in str(type_to_check)
+
+    # If it is a type object, we know it cannot be a list so we can return here.
+    if is_type:
+        return False
 
     is_list_base_class_instance = isinstance(type_to_check, _ListBaseClass)
     is_list_sub_type = issubtype(type_to_check, list) # type: ignore
@@ -90,12 +105,17 @@ def extract_model_class(field_type:'Field') -> 'Model | None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Model:
+class Model(BaseModel):
     __name__: 'str'
     after_created = None
 
     def __getitem__(self, name, default=None):
+        if not isinstance(name, str):
+            name = str(name)
         return getattr(self, name, default)
+
+    def __contains__(self, name):
+        return hasattr(self, name)
 
     @classmethod
     def zato_get_fields(class_:'any_') -> 'anydict':
@@ -106,6 +126,8 @@ class Model:
     def _zato_from_dict(class_, data, extra=None):
         api = MarshalAPI()
         return api.from_dict(cast_('Service', None), data, class_, extra=extra)
+
+    from_dict = _zato_from_dict
 
     def to_dict(self):
         return asdict(self)
@@ -129,6 +151,56 @@ class Model:
         data = self.to_dict()
         out = self.__class__._zato_from_dict(None, data)
         return out
+
+    @staticmethod
+    def build_model_from_flat_input(
+        server,            # type: ParallelServer
+        sio_server_config, # type: ignore
+        _CySimpleIO,       # type: ignore
+        name,  # type: str
+        input, # type: str | tuplist
+    ) -> 'type_[BaseModel]':
+
+        # Local imports
+        from zato.simpleio import is_sio_bool, is_sio_int
+
+        # Local aliases
+        model_fields = []
+
+        # Make sure this is a list-like container ..
+        if isinstance(input, str):
+            input = [input]
+
+        # .. build an actual SIO handler ..
+        _cy_simple_io = _CySimpleIO(server, sio_server_config, input) # type: ignore
+
+        # .. now, go through everything we have on input ..
+        for item in input:
+
+            # .. find out if this is a required element or not ..
+            is_optional = item.startswith('-')
+            is_required = not is_optional
+
+            # .. turn each element input into a Cython-based one ..
+            sio_elem = _cy_simple_io.convert_to_elem_instance(item, is_required) # type: ignore
+
+            # .. check if it is not a string ..
+            is_int:'bool'  = is_sio_int(sio_elem)
+            is_bool:'bool' = is_sio_bool(sio_elem)
+
+            # .. turn the type into a model-compatible name ..
+            if is_int:
+                _model_type = int
+            elif is_bool:
+                _model_type = bool
+            else:
+                _model_type = str
+
+            # .. append a model-compatible definition of this field for later use ..
+            model_fields.append((sio_elem.name, _model_type))
+
+        model = make_dataclass(name, model_fields, bases=(Model,))
+        return model # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -281,6 +353,50 @@ class FieldCtx:
             elif isinstance(self.dict_ctx.current_dict, Model): # type: ignore
                 value = getattr(self.dict_ctx.current_dict, self.name, ZatoNotGiven)
 
+        # We do not handle SQLAlchemy Table objects
+        is_table = isinstance(value, Table)
+
+        # If this field has a value, we can try to parse it into a specific type ..
+        if (not is_table) and value and (value != ZatoNotGiven):
+
+            try:
+                # .. as an integer ..
+                if self.field_type is int:
+                    if not isinstance(value, int):
+                        value = int(value)
+
+                if self.field_type is date_:
+                    if not isinstance(value, date_):
+                        value = dt_parse(value).date() # type: ignore
+
+                # .. as a datetime object ..
+                elif self.field_type in (datetime_, datetimez):
+                    if not isinstance(value, (date_, datetime_, datetimez)):
+                        _is_datetimez = self.field_type is datetimez
+                        value = dt_parse(value) # type: ignore
+                        if _is_datetimez:
+                            value = datetimez(
+                                year=value.year,
+                                month=value.month,
+                                day=value.day,
+                                hour=value.hour,
+                                minute=value.minute,
+                                second=value.second,
+                                microsecond=value.microsecond,
+                                tzinfo=value.tzinfo,
+                                fold=value.fold,
+                            )
+
+                # .. as a datetime object formatted as string ..
+                elif self.field_type is isotimestamp:
+                    if isinstance(value, str):
+                        value = dt_parse(value) # type: ignore
+                        value = value.isoformat()
+
+            except Exception as e:
+                msg = f'Value `{repr(value)}` of field {self.name} could not be parsed -> {e} -> {self.dict_ctx.current_dict}'
+                raise Exception(msg)
+
         # At this point, we know there will be something to assign although it still may be ZatoNotGiven.
         self.value = value
 
@@ -341,15 +457,13 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def _self_require_dict(self, field_ctx):
-        # type: (FieldCtx) -> None
-        if not isinstance(field_ctx.value, dict):
+    def _self_require_dict_or_model(self, field_ctx:'FieldCtx') -> 'None':
+        if not isinstance(field_ctx.value, (dict, BaseModel)):
             raise self.get_validation_error(field_ctx)
 
 # ################################################################################################################################
 
-    def _visit_list(self, field_ctx):
-        # type: (FieldCtx) -> list
+    def _visit_list(self, field_ctx:'FieldCtx') -> 'anylist':
 
         # Local aliases
         service     = field_ctx.dict_ctx.service
@@ -371,12 +485,11 @@ class MarshalAPI:
             out.append(instance)
 
         # .. finally, return the response.
-        return out
+        return out # type: ignore
 
 # ################################################################################################################################
 
-    def from_field_ctx(self, field_ctx):
-        # type: (FieldCtx) -> any_
+    def from_field_ctx(self, field_ctx:'FieldCtx') -> 'any_':
         return self.from_dict(field_ctx.dict_ctx.service, field_ctx.value, field_ctx.field.type,
             extra=None, list_idx=field_ctx.dict_ctx.list_idx, parent=field_ctx)
 
@@ -391,7 +504,7 @@ class MarshalAPI:
     def from_dict(
         self,
         service:      'Service',
-        current_dict: 'dict',
+        current_dict: 'anydict | BaseModel',
         DataClass:    'any_',
         extra:        'dictnone' = None,
         list_idx:     'intnone'  = None,
@@ -432,7 +545,7 @@ class MarshalAPI:
             if field_ctx.is_model:
 
                 # .. first, we need a dict as value as it is the only container that we can extract model fields from ..
-                self._self_require_dict(field_ctx)
+                self._self_require_dict_or_model(field_ctx)
 
                 # .. if we are here, it means that we can check the dict and extract its fields,
                 # but note that we do not pass extra data on to nested models

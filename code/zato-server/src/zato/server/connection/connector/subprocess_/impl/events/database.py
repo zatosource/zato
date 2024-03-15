@@ -3,7 +3,7 @@
 """
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -211,10 +211,10 @@ class EventsDatabase(InRAMStore):
 
         # Each aggregated result will have these columns
         self.agg_by = {
-            'item_max':  pd.NamedAgg(column='total_time_ms', aggfunc=np.max),
-            'item_min':  pd.NamedAgg(column='total_time_ms', aggfunc=np.min),
-            'item_mean': pd.NamedAgg(column='total_time_ms', aggfunc=np.mean),
-            'item_total_time':  pd.NamedAgg(column='total_time_ms', aggfunc=np.sum),
+            'item_max':  pd.NamedAgg(column='total_time_ms', aggfunc='max'),
+            'item_min':  pd.NamedAgg(column='total_time_ms', aggfunc='min'),
+            'item_mean': pd.NamedAgg(column='total_time_ms', aggfunc='mean'),
+            'item_total_time':  pd.NamedAgg(column='total_time_ms', aggfunc='sum'),
             'item_total_usage':  pd.NamedAgg(column='total_time_ms', aggfunc=np.count_nonzero),
         }
 

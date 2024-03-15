@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -14,21 +14,34 @@ from traceback import format_exc
 from paste.util.converters import asbool
 
 # Zato
-from zato.common.api import CONNECTION, DATA_FORMAT, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
-     ZATO_DEFAULT, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+     Groups, HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
+     ZATO_DEFAULT, ZATO_NONE, ZatoNotGiven, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
-from zato.common.exception import ZatoException
+from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.json_internal import dumps
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
 from zato.common.rate_limiting import DefinitionParser
+from zato.common.util.api import as_bool
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
 from zato.server.connection.http_soap import BadRequest
 from zato.server.service import AsIs, Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anylist, strdict, strintdict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_GetList_Optional = ('include_wrapper', 'cluster_id', 'connection', 'transport', 'data_format', 'needs_security_group_names')
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _HTTPSOAPService:
@@ -61,7 +74,7 @@ class _HTTPSOAPService:
 
                 if transport == URL_TYPE.PLAIN_HTTP and \
                    sec_def.sec_type not in (SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT,
-                        SEC_DEF_TYPE.APIKEY, SEC_DEF_TYPE.OAUTH):
+                        SEC_DEF_TYPE.APIKEY, SEC_DEF_TYPE.OAUTH, SEC_DEF_TYPE.NTLM):
                     raise Exception('Unsupported sec_type `{}`'.format(sec_def.sec_type))
 
             info['security_id'] = security_id
@@ -86,7 +99,9 @@ class _BaseGet(AdminService):
                 'hl7_version', 'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', \
                 'data_encoding', 'is_audit_log_sent_active', 'is_audit_log_received_active', \
                 Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
-                Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received')
+                Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
+                'username', 'is_wrapper', 'wrapper_type', AsIs('security_groups'), 'security_group_count', \
+                'security_group_member_count', 'needs_security_group_names'
 
 # ################################################################################################################################
 
@@ -107,19 +122,38 @@ class _BaseGet(AdminService):
 
 # ################################################################################################################################
 
+    def _get_security_groups_info(self, item:'any_', security_groups_member_count:'strintdict') -> 'strdict':
+
+        # Our response to produce
+        out:'strdict' = {
+            'group_count': 0,
+            'member_count': 0,
+        }
+
+        if security_groups := item.get('security_groups'):
+            for group_id in security_groups:
+                member_count = security_groups_member_count.get(group_id) or 0
+                out['member_count'] += member_count
+                out['group_count'] += 1
+
+        # .. now, return the response to our caller.
+        return out
+
+# ################################################################################################################################
+
 class Get(_BaseGet):
     """ Returns information about an individual HTTP/SOAP object by its ID.
     """
     class SimpleIO(_BaseGet.SimpleIO):
         request_elem = 'zato_http_soap_get_request'
         response_elem = 'zato_http_soap_get_response'
-        input_required = 'cluster_id',
-        input_optional = 'id', 'name'
+        input_optional = 'cluster_id', 'id', 'name'
 
     def handle(self):
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
         with closing(self.odb.session()) as session:
             self.request.input.require_any('id', 'name')
-            item = http_soap(session, self.request.input.cluster_id, self.request.input.id, self.request.input.name)
+            item = http_soap(session, cluster_id, self.request.input.id, self.request.input.name)
             out = get_dict_with_opaque(item)
             out['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(out)
             self.response.payload = out
@@ -134,25 +168,71 @@ class GetList(_BaseGet):
     class SimpleIO(GetListAdminSIO, _BaseGet.SimpleIO):
         request_elem = 'zato_http_soap_get_list_request'
         response_elem = 'zato_http_soap_get_list_response'
-        input_required = 'cluster_id'
-        input_optional = GetListAdminSIO.input_optional + ('connection', 'transport', 'data_format')
+        input_optional = GetListAdminSIO.input_optional + _GetList_Optional
         output_optional = _BaseGet.SimpleIO.output_optional + ('connection', 'transport')
         output_repeated = True
 
     def get_data(self, session):
-        result = self._search(http_soap_list, session, self.request.input.cluster_id,
+
+        # Local aliases
+        out:'anylist' = []
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
+        needs_security_group_names = self.request.input.get('needs_security_group_names') or False
+        include_wrapper = self.request.input.get('include_wrapper') or False
+        should_ignore_wrapper = not include_wrapper
+
+        # Get information about security groups which may be used later on
+        security_groups_member_count = self.invoke('zato.groups.get-member-count', group_type=Groups.Type.API_Clients)
+
+        if needs_security_group_names:
+            all_security_groups = self.invoke('zato.groups.get-list', group_type=Groups.Type.API_Clients)
+            all_security_groups
+        else:
+            all_security_groups = []
+
+        # Obtain the basic result ..
+        result = self._search(http_soap_list, session, cluster_id,
             self.request.input.connection, self.request.input.transport,
             asbool(self.server.fs_server_config.misc.return_internal_objects),
             self.request.input.get('data_format'),
             False,
             )
 
-        data = elems_with_opaque(result)
+        # .. extract all the opaque elements ..
+        data:'anylist' = elems_with_opaque(result)
 
+        # .. go through everything we have so far ..
         for item in data:
+
+            # .. build a dictionary of information about groups ..
+            security_groups_for_item_info = self._get_security_groups_info(item, security_groups_member_count)
+
+            item['security_group_count'] = security_groups_for_item_info['group_count']
+            item['security_group_member_count'] = security_groups_for_item_info['member_count']
+
+            # .. optionally, we may need to turn security group IDs into their names ..
+            if needs_security_group_names:
+                if security_groups_for_item := item.get('security_groups'):
+                    new_security_groups = []
+                    for item_group_id in security_groups_for_item:
+                        for group in all_security_groups:
+                            if item_group_id == group['id']:
+                                new_security_groups.append(group['name'])
+                                break
+                    item['security_groups'] = sorted(new_security_groups)
+
+            # .. this needs to be extracted ..
             item['sec_tls_ca_cert_id'] = self._get_sec_tls_ca_cert_id_from_item(item)
 
-        return data
+            # .. ignore wrapper elements if told do ..
+            if should_ignore_wrapper and item.get('is_wrapper'):
+                continue
+
+            # .. if we are here, it means that this element is to be returned ..
+            out.append(item)
+
+        # .. now, return the result to our caller.
+        return out
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -163,6 +243,7 @@ class GetList(_BaseGet):
 # ################################################################################################################################
 
 class _CreateEdit(AdminService, _HTTPSOAPService):
+
     def add_tls_ca_cert(self, input, sec_tls_ca_cert_id):
         with closing(self.odb.session()) as session:
             input.sec_tls_ca_cert_name = session.query(TLSCACert.name).\
@@ -209,7 +290,19 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 
     def _set_sec_tls_ca_cert_id(self, item, input):
 
+        # This can be used by enmasse to simplify its configuration ..
+        tls_verify = input.pop('tls_verify', ZatoNotGiven)
+
+        # .. this can be used by both enmasse and any other client.
         sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
+
+        # If we have a simplified value on input, it will take priority ..
+        if tls_verify is not ZatoNotGiven:
+            tls_verify = as_bool(tls_verify)
+            if tls_verify:
+                sec_tls_ca_cert_id = ZATO_DEFAULT
+            else:
+                sec_tls_ca_cert_id = ZATO_NONE
 
         if sec_tls_ca_cert_id:
 
@@ -232,6 +325,63 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
             input['sec_tls_ca_cert_verify_strategy'] = True # By default, verify using the built-in bundle
 
 # ################################################################################################################################
+
+    def _preprocess_security_groups(self, input):
+
+        # This will contain only IDs
+        new_input_security_groups = []
+
+        # Security groups are optional
+        if input_security_groups := input.get('security_groups'):
+
+            # Get information about security groups which is need to turn group names into group IDs
+            existing_security_groups = self.invoke('zato.groups.get-list', group_type=Groups.Type.API_Clients)
+
+            for input_group in input_security_groups:
+                group_id = None
+                try:
+                    input_group = int(input_group)
+                except ValueError:
+                    for existing_group in existing_security_groups:
+                        if input_group == existing_group['name']:
+                            group_id = existing_group['id']
+                            break
+                    else:
+                        raise Exception(f'Could not find ID for group `{input_group}`')
+                else:
+                    group_id = input_group
+                finally:
+                    if group_id:
+                        new_input_security_groups.append(group_id)
+
+        # Return what we have to our caller
+        return new_input_security_groups
+
+# ################################################################################################################################
+
+    def _get_service_from_input(self, session, input):
+
+        service = session.query(Service).\
+            filter(Cluster.id==input.cluster_id).\
+            filter(Service.cluster_id==Cluster.id)
+
+        if input.service:
+            service = service.filter(Service.name==input.service)
+        elif input.service_id:
+            service = service.filter(Service.id==input.service_id)
+        else:
+            raise Exception('Either service or service_id is required on input')
+
+        service = service.first()
+
+        if not service:
+            msg = 'Service `{}` does not exist in this cluster'.format(input.service)
+            self.logger.info(msg)
+            raise ServiceMissingException(msg)
+        else:
+            return service
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -241,7 +391,7 @@ class Create(_CreateEdit):
         request_elem = 'zato_http_soap_create_request'
         response_elem = 'zato_http_soap_create_response'
         input_required = 'name', 'url_path', 'connection'
-        input_optional = 'service', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
+        input_optional = 'service', 'service_id', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
             'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
@@ -251,11 +401,15 @@ class Create(_CreateEdit):
             'is_audit_log_sent_active', 'is_audit_log_received_active', \
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
-            'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify'
+            'is_active', 'transport', 'is_internal', 'cluster_id', 'tls_verify', \
+            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
         output_required = 'id', 'name'
         output_optional = 'url_path'
 
     def handle(self):
+
+        # For later use
+        skip_opaque = []
 
         # If we have a rate limiting definition, let's check it upfront
         DefinitionParser.check_definition_from_input(self.request.input)
@@ -265,17 +419,40 @@ class Create(_CreateEdit):
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
         input.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+        input.security_groups = self._preprocess_security_groups(input)
 
         input.is_active   = input.get('is_active',   True)
         input.is_internal = input.get('is_internal', False)
 
         input.transport   = input.get('transport')   or URL_TYPE.PLAIN_HTTP
         input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id
-        input.data_format = input.get('data_format') or DATA_FORMAT.JSON
+        input.data_format = input.get('data_format') or ''
 
         # For HL7
         input.data_encoding = input.get('data_encoding') or 'utf-8'
         input.hl7_version = input.get('hl7_version') or HL7.Const.Version.v2.id
+
+        # Remove extra whitespace
+        input_name = input.name
+        input_host = input.host
+        input_url_path = input.url_path
+        input_ping_method = input.get('ping_method')
+        input_content_type = input.get('content_type')
+
+        if input_name:
+            input.name = input_name.strip()
+
+        if input_host:
+            input.host = input_host.strip()
+
+        if input_url_path:
+            input.url_path = input_url_path.strip()
+
+        if input_ping_method:
+            input.ping_method = input_ping_method.strip() or DEFAULT_HTTP_PING_METHOD
+
+        if input_content_type:
+            input.content_type = input_content_type.strip()
 
         if input.content_encoding and input.content_encoding != 'gzip':
             raise Exception('Content encoding must be empty or equal to `gzip`')
@@ -291,16 +468,10 @@ class Create(_CreateEdit):
             if existing_one:
                 raise Exception('An object of that name `{}` already exists in this cluster'.format(input.name))
 
-            # Is the service's name correct?
-            service = session.query(Service).\
-                filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id).\
-                filter(Service.name==input.service).first()
-
-            if input.connection == CONNECTION.CHANNEL and not service:
-                msg = 'Service `{}` does not exist in this cluster'.format(input.service)
-                self.logger.error(msg)
-                raise Exception(msg)
+            if input.connection == CONNECTION.CHANNEL:
+                service = self._get_service_from_input(session, input)
+            else:
+                service = None
 
             # Will raise exception if the security type doesn't match connection
             # type and transport
@@ -323,11 +494,11 @@ class Create(_CreateEdit):
                 item.host = input.host
                 item.url_path = input.url_path
                 item.method = input.method
-                item.soap_action = input.soap_action
+                item.soap_action = input.soap_action.strip()
                 item.soap_version = input.soap_version or None
                 item.data_format = input.data_format
                 item.service = service
-                item.ping_method = input.get('ping_method') or DEFAULT_HTTP_PING_METHOD
+                item.ping_method = input.ping_method
                 item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
                 item.merge_url_params_req = input.get('merge_url_params_req') or True
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
@@ -335,11 +506,23 @@ class Create(_CreateEdit):
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.timeout
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
-                item.content_type = input.get('content_type')
+                item.content_type = input.content_type
                 item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
+                item.is_wrapper = bool(input.is_wrapper)
+                item.wrapper_type = input.wrapper_type
+
+                if input.username:
+                    item.username = input.username
+                else:
+                    skip_opaque.append('username')
+
+                if input.password:
+                    item.password = input.password
+                else:
+                    skip_opaque.append('password')
 
                 # Configure CA certs
                 self._set_sec_tls_ca_cert_id(item, input)
@@ -347,10 +530,10 @@ class Create(_CreateEdit):
                 if input.security_id:
                     item.security = get_security_by_id(session, input.security_id)
                 else:
-                    input.security_id = None # To ensure that SQLite doesn't reject ''
+                    input.security_id = None # To ensure that SQLite does not reject ''
 
                 # Opaque attributes
-                set_instance_opaque_attrs(item, input)
+                set_instance_opaque_attrs(item, input, skip=skip_opaque)
 
                 session.add(item)
                 session.commit()
@@ -399,9 +582,9 @@ class Edit(_CreateEdit):
         request_elem = 'zato_http_soap_edit_request'
         response_elem = 'zato_http_soap_edit_response'
         input_required = 'id', 'name', 'url_path', 'connection'
-        input_optional = 'service', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
-            'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
-            'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), 'content_type', \
+        input_optional = 'service', 'service_id', AsIs('security_id'), 'method', 'soap_action', 'soap_version', \
+            'data_format', 'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', \
+            'params_pri', 'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
@@ -409,29 +592,57 @@ class Edit(_CreateEdit):
             'is_audit_log_sent_active', 'is_audit_log_received_active', \
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received'), \
-            'cluster_id', 'is_active', 'transport', 'tls_verify'
+            'cluster_id', 'is_active', 'transport', 'tls_verify', \
+            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups')
         output_optional = 'id', 'name'
 
     def handle(self):
+
+        # For later use
+        skip_opaque = []
 
         # If we have a rate limiting definition, let's check it upfront
         DefinitionParser.check_definition_from_input(self.request.input)
 
         input = self.request.input
         input.sec_use_rbac = input.get('sec_use_rbac') or (input.security_id == ZATO_SEC_USE_RBAC)
-        input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
-        input.soap_action = input.soap_action if input.soap_action else ''
+        input.security_id  = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
+        input.soap_action  = input.soap_action if input.soap_action else ''
+        input.timeout      = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+        input.security_groups = self._preprocess_security_groups(input)
 
         input.is_active   = input.get('is_active',   True)
         input.is_internal = input.get('is_internal', False)
 
         input.transport   = input.get('transport')   or URL_TYPE.PLAIN_HTTP
         input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id
-        input.data_format = input.get('data_format') or DATA_FORMAT.JSON
+        input.data_format = input.get('data_format') or ''
 
         # For HL7
         input.data_encoding = input.get('data_encoding') or 'utf-8'
         input.hl7_version = input.get('hl7_version') or HL7.Const.Version.v2.id
+
+        # Remove extra whitespace
+        input_name = input.name
+        input_host = input.host
+        input_url_path = input.url_path
+        input_ping_method = input.get('ping_method')
+        input_content_type = input.get('content_type')
+
+        if input_name:
+            input.name = input_name.strip()
+
+        if input_host:
+            input.host = input_host.strip()
+
+        if input_url_path:
+            input.url_path = input_url_path.strip()
+
+        if input_ping_method:
+            input.ping_method = input_ping_method.strip() or DEFAULT_HTTP_PING_METHOD
+
+        if input_content_type:
+            input.content_type = input_content_type.strip()
 
         if input.content_encoding and input.content_encoding != 'gzip':
             raise Exception('Content encoding must be empty or equal to `gzip`')
@@ -457,16 +668,10 @@ class Edit(_CreateEdit):
                 msg = 'A {} of that name:`{}` already exists in this cluster; path: `{}` (id:{})'
                 raise Exception(msg.format(object_type, input.name, existing_one.url_path, existing_one.id))
 
-            # Is the service's name correct?
-            service = session.query(Service).\
-                filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id).\
-                filter(Service.name==input.service).first()
-
-            if input.connection == CONNECTION.CHANNEL and not service:
-                msg = 'Service `{}` does not exist in this cluster'.format(input.service)
-                self.logger.error(msg)
-                raise Exception(msg)
+            if input.connection == CONNECTION.CHANNEL:
+                service = self._get_service_from_input(session, input)
+            else:
+                service = None
 
             # Will raise exception if the security type doesn't match connection
             # type and transport
@@ -499,25 +704,37 @@ class Edit(_CreateEdit):
                 item.soap_version = input.soap_version or None
                 item.data_format = input.data_format
                 item.service = service
-                item.ping_method = input.get('ping_method') or DEFAULT_HTTP_PING_METHOD
+                item.ping_method = input.ping_method
                 item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
                 item.merge_url_params_req = input.get('merge_url_params_req') or False
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
-                item.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+                item.timeout = input.get('timeout')
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
-                item.content_type = input.get('content_type')
+                item.content_type = input.content_type
                 item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
+                item.is_wrapper = bool(input.is_wrapper)
+                item.wrapper_type = input.wrapper_type
+
+                if input.username:
+                    item.username = input.username
+                else:
+                    skip_opaque.append('username')
+
+                if input.password:
+                    item.password = input.password
+                else:
+                    skip_opaque.append('password')
 
                 # Configure CA certs
                 self._set_sec_tls_ca_cert_id(item, input)
 
                 # Opaque attributes
-                set_instance_opaque_attrs(item, input)
+                set_instance_opaque_attrs(item, input, skip=skip_opaque)
 
                 session.add(item)
                 session.commit()
@@ -659,6 +876,7 @@ class Ping(AdminService):
         request_elem = 'zato_http_soap_ping_request'
         response_elem = 'zato_http_soap_ping_response'
         input_required = 'id'
+        input_optional = 'ping_path'
         output_required = 'id', 'is_success'
         output_optional = 'info'
 
@@ -669,11 +887,9 @@ class Ping(AdminService):
             self.response.payload.id = self.request.input.id
 
             try:
-                result = config_dict.get(item.name).ping(self.cid)
+                result = config_dict.get(item.name).ping(self.cid, ping_path=self.request.input.ping_path)
                 is_success = True
             except Exception as e:
-                from traceback import format_exc
-                self.logger.warn('QQQ-1 -> %s', format_exc())
                 result = e.args[0]
                 is_success = False
             finally:

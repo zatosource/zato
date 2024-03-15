@@ -3,12 +3,12 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # This needs to run as soon as possible
 from gevent.monkey import patch_all
-patch_all()
+_ = patch_all()
 
 # stdlib
 from unittest import main
@@ -17,7 +17,7 @@ from uuid import uuid4
 # Zato
 from zato.common.test.wsx_ import WSXChannelManager, WSXOutconnBaseCase
 from zato.common.util.api import fs_safe_now
-from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
+from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,7 +97,7 @@ class WSXOutconnConnectTestCase(WSXOutconnBaseCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    main()
+    _ = main()
 
 # ################################################################################################################################
 # ################################################################################################################################

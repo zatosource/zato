@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -29,22 +29,30 @@ if 0:
 
 class PubAPITestCase(BasePubSubRestTestCase):
 
+# ################################################################################################################################
+
+    def tearDown(self) -> 'None':
+        super().tearDown()
+        _ = self.delete_pubsub_topics_by_pattern(TestConfig.pubsub_topic_name_unique_auto_create)
+
+# ################################################################################################################################
+
     def test_self_subscribe(self):
 
         # In this test, we check subscriptions to shared topics
         topic_name = TestConfig.pubsub_topic_shared
 
         # Before subscribing, make sure we are not currently subscribed
-        self._unsubscribe(topic_name)
+        _ = self._unsubscribe(topic_name)
 
         # Subscribe to the topic
         response_initial = self.rest_client.post(PubSubConfig.PathSubscribe + topic_name)
 
         # Wait a moment to make sure the subscription data is created
-        sleep(0.2)
+        sleep(4)
 
-        sub_key = response_initial['sub_key']
-        queue_depth = response_initial['queue_depth']
+        sub_key = cast_('str', response_initial['sub_key'])
+        queue_depth = cast_('int', response_initial['queue_depth'])
 
         #
         # Validate sub_key
@@ -97,15 +105,19 @@ class PubAPITestCase(BasePubSubRestTestCase):
 
     def test_full_path_subscribe_after_publication(self):
 
-        prefix = '/zato/demo/unique.'
+        prefix = TestConfig.pubsub_topic_name_unique_auto_create
         topic_name = prefix + datetime.utcnow().isoformat()
 
         # Command to invoke ..
         cli_params = ['pubsub', 'create-topic', '--name', topic_name]
 
+        self.logger.info(f'Creating topic {topic_name} ({self.__class__.__name__})')
+
         # .. get its response as a dict ..
         out = self.run_zato_cli_json_command(cli_params) # type: anydict
         topic_name = out['name']
+
+        sleep(4)
 
         tester = FullPathTester(self, False, topic_name) # type: ignore
         tester.run()
@@ -118,7 +130,7 @@ class PubAPITestCase(BasePubSubRestTestCase):
         topic_name = TestConfig.pubsub_topic_shared
 
         # Make sure we are not subscribed
-        self._unsubscribe(topic_name)
+        _ = self._unsubscribe(topic_name)
 
         # Try to receive messages without a subscription
         response = cast_('anydict', self._receive(topic_name, False, False))
@@ -135,7 +147,7 @@ class PubAPITestCase(BasePubSubRestTestCase):
         topic_name = TestConfig.pubsub_topic_shared
 
         # Make sure we are subscribed
-        self._subscribe(topic_name, needs_unsubscribe=True)
+        _ = self._subscribe(topic_name, needs_unsubscribe=True)
 
         data1 = '111'
         data2 = '222'
@@ -174,7 +186,7 @@ class PubAPITestCase(BasePubSubRestTestCase):
 
 if __name__ == '__main__':
     from unittest import main
-    main()
+    _ = main()
 
 # ################################################################################################################################
 # ################################################################################################################################

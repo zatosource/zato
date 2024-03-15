@@ -94,11 +94,6 @@ $(document).ready(function() {
 
     var command_form = $('#command-form');
 
-    $("#id_command").attr('data-bvalidator', 'required');
-    $("#id_command").attr('data-bvalidator-msg', 'This is a required field');
-
-    command_form.bValidator();
-
     var _callback = function(data, status, xhr){
         var success = status == 'success';
         $("#id_result").text('');

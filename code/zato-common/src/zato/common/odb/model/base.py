@@ -3,7 +3,7 @@
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -19,8 +19,15 @@ from sqlalchemy.ext.declarative import declarative_base
 from zato.common.json_internal import json_dumps, json_loads
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-Base = declarative_base()
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+Base:'any_' = declarative_base()
 make_class_dictable(Base)
 
 # ################################################################################################################################

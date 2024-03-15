@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -19,7 +19,7 @@ from zato.server.connection.queue import Wrapper
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict
+    from zato.common.typing_ import any_
     from O365 import Account as Office365Account
     Office365Account = Office365Account
 
@@ -34,7 +34,7 @@ logger = getLogger(__name__)
 class CloudMicrosoft365Wrapper(Wrapper):
     """ Wraps a queue of connections to Microsoft 365.
     """
-    def __init__(self, config:'stranydict', server) -> 'None':
+    def __init__(self, config:'any_', server:'any_') -> 'None':
         config['auth_url'] = config['address']
         super(CloudMicrosoft365Wrapper, self).__init__(config, 'Microsoft 365', server)
 
@@ -44,7 +44,7 @@ class CloudMicrosoft365Wrapper(Wrapper):
 
         try:
             conn = Microsoft365Client(self.config)
-            self.client.put_client(conn)
+            _ = self.client.put_client(conn)
         except Exception:
             logger.warning('Caught an exception while adding a Microsoft 365 client (%s); e:`%s`',
                 self.config['name'], format_exc())

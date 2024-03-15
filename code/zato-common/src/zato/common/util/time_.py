@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -19,6 +19,12 @@ from tzlocal import get_localzone
 
 # Python 2/3 compatibility
 from zato.common.py23_.past.builtins import unicode
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,7 +103,7 @@ class TimeUtil:
 
 # ################################################################################################################################
 
-    def now(self, format=ModuleCtx.Date_Time_Format, tz=local_tz_zone, needs_format=True, delta=None):
+    def now(self, format=ModuleCtx.Date_Time_Format, tz=local_tz_zone, needs_format=True, delta=None) -> 'str | datetime':
         """ Returns now in a specified timezone.
         """
         now = arrow.now(tz=tz)
@@ -149,10 +155,17 @@ class TimeUtil:
 
 # ################################################################################################################################
 
-    def utcnow(self, format=ModuleCtx.Date_Time_Format, needs_format=True):
+    def utcnow(self, format=ModuleCtx.Date_Time_Format, needs_format=True) -> 'any_':
         """ Returns now in UTC formatted as given in 'format'.
         """
         return self.now(format, 'UTC', needs_format)
+
+# ################################################################################################################################
+
+    def utcnow_as_float(self, format=ModuleCtx.Date_Time_Format, needs_format=True) -> 'any_':
+        """ Returns now in UTC as a float number.
+        """
+        return self.utcnow(needs_format=False).float_timestamp
 
 # ################################################################################################################################
 

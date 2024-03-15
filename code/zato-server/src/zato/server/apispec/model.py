@@ -3,7 +3,7 @@
 """
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -13,7 +13,7 @@ from logging import getLogger
 from operator import attrgetter
 
 # Bunch
-from bunch import Bunch
+from bunch import Bunch # type: ignore[reportUnknownVariableType]
 
 # SimpleParsing
 from simple_parsing.docstring import get_attribute_docstring
@@ -77,7 +77,7 @@ class FieldInfo:
     @staticmethod
     def get_field_type_info(field:'Field') -> 'FieldTypeInfo':
 
-        field_type = field.type
+        field_type:'any_' = field.type
 
         if is_union(field_type):
             result = extract_from_union(field_type)
@@ -96,7 +96,10 @@ class FieldInfo:
 # ################################################################################################################################
 
     @staticmethod
-    def from_python_field(model:'Model', field:'Field', api_spec_info:'Bunch') -> 'FieldInfo':
+    def from_python_field(model:'Model', field:'Field', api_spec_info:'any_') -> 'FieldInfo':
+
+        # Type hints
+        type_info:'any_'
 
         if not field.type:
             raise ValueError('Value missing -> field.type ({})'.format(field))

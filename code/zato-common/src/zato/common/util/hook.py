@@ -3,7 +3,7 @@
 """
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
@@ -29,9 +29,11 @@ class HookTool:
         impl_name = self.server.service_store.name_to_impl_name[service_name]
         service_class = self.server.service_store.service_data(impl_name)['service_class']
         func_name = self.hook_type_to_method[hook_type]
-        func = getattr(service_class, func_name)
 
-        return is_func_overridden(func)
+        if func := getattr(service_class, func_name, None):
+            return is_func_overridden(func)
+        else:
+            return False
 
 # ################################################################################################################################
 
@@ -47,8 +49,13 @@ class HookTool:
             """
             ctx = self.hook_ctx_class(hook_type, *args, **kwargs)
             response = self.invoke_func(service_name, {'ctx':ctx}, serialize=False)
-            response = response.getvalue(serialize=False)
-            response = response['response']
+
+            if not isinstance(response, dict):
+                response = response.getvalue(serialize=False)
+
+            if 'response' in response:
+                response = response['response']
+
             return response
 
         return _invoke_hook_service

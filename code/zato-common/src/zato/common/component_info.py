@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import os
@@ -17,7 +15,7 @@ from operator import attrgetter
 from time import time
 
 # psutil
-from psutil import Process
+from psutil import NoSuchProcess, Process
 
 # PyYAML
 import yaml
@@ -33,6 +31,15 @@ from zato.common.api import INFO_FORMAT, MISC, ZATO_INFO_FILE
 from zato.common.json_internal import dumps as json_dumps, loads as json_loads
 from zato.common.util.api import current_host
 from zato.common.util.open_ import open_r
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 def format_connections(conns, format):
     """ Formats a list of connections according to the output format.
@@ -70,10 +77,19 @@ def get_worker_pids(component_path):
     """ Returns PIDs of all workers of a given server, which must be already started.
     """
     master_proc_pid = int(open_r(os.path.join(component_path, MISC.PIDFILE)).read())
-    return sorted(elem.pid for elem in Process(master_proc_pid).children())
+    try:
+        out = sorted(elem.pid for elem in Process(master_proc_pid).children())
+    except NoSuchProcess:
+        out = []
+    finally:
+        return out
 
-def get_info(component_path, format, _now=datetime.utcnow):
-    component_details = open_r(os.path.join(component_path, ZATO_INFO_FILE)).read()
+def get_info(component_path, format, _now=datetime.utcnow) -> 'stranydict':
+
+    master_proc_pid_file = None
+
+    component_details_file = open_r(os.path.join(component_path, ZATO_INFO_FILE))
+    component_details = component_details_file.read()
 
     out = {
         'component_details': component_details,
@@ -94,10 +110,14 @@ def get_info(component_path, format, _now=datetime.utcnow):
 
     master_proc_pid = None
     try:
-        master_proc_pid = int(open_r(os.path.join(component_path, MISC.PIDFILE)).read())
+        master_proc_pid_file = open_r(os.path.join(component_path, MISC.PIDFILE))
+        master_proc_pid = int(master_proc_pid_file.read())
     except(IOError, ValueError):
-        # Ok, no such file or it's empty
+        # Ok, no such file or it is empty
         pass
+    finally:
+        if master_proc_pid_file:
+            master_proc_pid_file.close()
 
     if master_proc_pid:
         out['component_running'] = True
@@ -132,6 +152,9 @@ def get_info(component_path, format, _now=datetime.utcnow):
             out['worker_{}_create_time'.format(pid)] = datetime.fromtimestamp(worker_create_time).isoformat()
             out['worker_{}_create_time_utc'.format(pid)] = worker_create_time_utc.isoformat()
             out['worker_{}_connections'.format(pid)] = format_connections(worker.connections(), format)
+
+    # Final cleanup
+    component_details_file.close()
 
     return out
 

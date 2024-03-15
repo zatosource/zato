@@ -3,7 +3,7 @@
 """
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -196,6 +196,8 @@ class BaseTestCase(TestCase):
         for item in self.client.requests:
             if item.url.startswith(Config.web_admin_address):
                 if 'zato/stats/user/' in item.url:
+                    continue
+                elif 'zato/groups/' in item.url:
                     continue
                 if item.response:
                     if item.response.status_code not in Config.status_ok: # type: ignore

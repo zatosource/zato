@@ -3,7 +3,7 @@
 """
 Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -123,7 +123,7 @@ class GDMessage(Message):
             _zato_mime_type=_zato_mime_type # type: str
         ) -> 'None':
 
-        logger.info('Building task message (gd) from `%s`', msg)
+        # logger.info('Building task message (gd) from `%s`', msg)
 
         super(GDMessage, self).__init__()
         self.endp_msg_queue_id = msg['endp_msg_queue_id']
@@ -169,7 +169,7 @@ class GDMessage(Message):
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
 
-        logger.info('Built task message (gd) from `%s`', self.pub_msg_id)
+        # logger.info('Built task message (gd) from `%s`', self.pub_msg_id)
 
 # ################################################################################################################################
 
@@ -187,7 +187,7 @@ class NonGDMessage(Message):
             _def_mime_type=PUBSUB.DEFAULT.MIME_TYPE # type: str
         ) -> 'None':
 
-        logger.info('Building task message (ngd) from `%s`', msg)
+        # logger.info('Building task message (ngd) from `%s`', msg)
 
         super(NonGDMessage, self).__init__()
         self.sub_key = sub_key
@@ -225,7 +225,7 @@ class NonGDMessage(Message):
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
 
-        logger.info('Built task message (ngd) `%s`', self.to_dict(add_id_attrs=True))
+        # logger.info('Built task message (ngd) `%s`', self.to_dict(add_id_attrs=True))
 
 # ################################################################################################################################
 # ################################################################################################################################

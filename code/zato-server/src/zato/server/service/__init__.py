@@ -1,35 +1,29 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from inspect import isclass
+from json import loads
 from traceback import format_exc
 from typing import Optional as optional
 
-# Arrow
-from arrow import Arrow
-
 # Bunch
 from bunch import bunchify
-
-# datetutil
-from dateutil.parser import parse as dt_parse
-from dateutil.tz.tz import tzutc
 
 # lxml
 from lxml.etree import _Element as EtreeElement
 from lxml.objectify import ObjectifiedElement
 
 # gevent
-from gevent import Timeout, spawn
+from gevent import Timeout, sleep as _gevent_sleep, spawn as _gevent_spawn
 from gevent.lock import RLock
 
 # Python 2/3 compatibility
@@ -37,17 +31,20 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, SCHEDULER, \
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, NotGiven, PARAMS_PRIORITY, PUBSUB, \
      WEB_SOCKET, zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.exception import Inactive, Reportable, ZatoException
+from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.typing_ import cast_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
+from zato.common.util.python_ import get_module_name_by_path
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
+from zato.server.connection.facade import KeysightContainer, RESTFacade, SchedulerFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.connection.sms import SMSAPI
@@ -94,19 +91,20 @@ UUID = UUID # type: ignore
 
 if 0:
     from logging import Logger
-    from typing import Callable
     from zato.broker.client import BrokerClient
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.json_schema import Validator as JSONSchemaValidator
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
-    from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, dictnone, intnone, \
-        stranydict, strnone, strlist
+    from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, callnone, dictnone, intnone, \
+        modelnone, strdict, strdictnone, strstrdict, strnone, strlist
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
+    from zato.server.connection.connector import Connector
     from zato.server.connection.ftp import FTPStore
-    from zato.server.connection.web_socket import WebSocket
+    from zato.server.connection.http_soap.outgoing import RESTWrapper
+    from zato.server.connection.web_socket import ChannelWebSocket, WebSocket
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
@@ -117,12 +115,12 @@ if 0:
 
     AuditPII = AuditPII
     BrokerClient = BrokerClient
-    Callable = Callable
+    callable_ = callable_
     CassandraAPI = CassandraAPI
     CassandraQueryAPI = CassandraQueryAPI
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
-    CySimpleIO = CySimpleIO
+    CySimpleIO = CySimpleIO # type: ignore
     FTPStore = FTPStore
     JSONSchemaValidator = JSONSchemaValidator
     KVDBAPI = KVDBAPI # type: ignore
@@ -170,7 +168,6 @@ _wsgi_channels = {CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
 # ################################################################################################################################
 
 _response_raw_types=(bytes, str, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
-_utz_utc = timezone.utc
 _utcnow = datetime.utcnow
 
 # ################################################################################################################################
@@ -274,7 +271,7 @@ class ChannelSecurityInfo:
 
 # ################################################################################################################################
 
-    def to_dict(self, needs_impl:'bool'=False) -> 'stranydict':
+    def to_dict(self, needs_impl:'bool'=False) -> 'strdict':
         out = {
             'id': self.id,
             'name': self.name,
@@ -320,6 +317,14 @@ class _WSXChannelContainer:
         self.server = server
         self._lock = RLock()
         self._channels = {}
+
+    def invoke(self, cid:'str', conn_name:'str', **kwargs) -> 'any_':
+
+        wsx_channel:'Connector' = self.server.worker_store.web_socket_api.connectors[conn_name] # type: ignore
+        wsx_channel:'ChannelWebSocket' = cast_('ChannelWebSocket', wsx_channel) # type: ignore
+
+        response = wsx_channel.invoke_client(cid, **kwargs)
+        return response
 
 # ################################################################################################################################
 
@@ -373,93 +378,15 @@ class PatternsFacade:
         self.fanout = FanOut(invoking_service, cache, lock)
         self.parallel = ParallelExec(invoking_service, cache, lock)
 
-################################################################################################################################
-
-class SchedulerFacade:
-    """ The API through which jobs can be scheduled.
-    """
-    def __init__(self, server:'ParallelServer') -> 'None':
-        self.server = server
-
-    def onetime(
-        self,
-        invoking_service, # type: Service
-        target_service,   # type: any_
-        name='',          # type: str
-        *,
-        prefix='',        # type: str
-        start_date='',    # type: any_
-        after_seconds=0,  # type: int
-        after_minutes=0,  # type: int
-        data=''           # type: any_
-        ) -> 'int':
-        """ Schedules a service to run at a specific date and time or aftern N minutes or seconds.
-        """
-
-        # This is reusable
-        now = self.server.time_util.utcnow(needs_format=False)
-
-        # We are given a start date on input ..
-        if start_date:
-            if not isinstance(start_date, datetime):
-
-                # This gives us a datetime object but we need to ensure
-                # that it is in UTC because this what the scheduler expects.
-                start_date = dt_parse(start_date)
-
-                if not isinstance(start_date.tzinfo, tzutc):
-                    _as_arrow = Arrow.fromdatetime(start_date)
-                    start_date = _as_arrow.to(_utz_utc)
-
-        # .. or we need to compute one ourselves.
-        else:
-            start_date = now + timedelta(seconds=after_seconds, minutes=after_minutes)
-
-        # This is the service that is scheduling a job ..
-        invoking_name = invoking_service.get_name()
-
-        # .. and this is the service that is being scheduled.
-        target_name   = target_service if isinstance(target_service, str) else target_service.get_name()
-
-        # Construct a name for the job
-        name = name or '{}{} -> {} {} {}'.format(
-            '{} '.format(prefix) if prefix else '',
-            invoking_name,
-            target_name,
-            now.isoformat(),
-            invoking_service.cid,
-        )
-
-        # This is what the service being invoked will receive on input
-        if data:
-            data = dumps({
-                SCHEDULER.EmbeddedIndicator: True,
-                'data': data
-            })
-
-        # Now, we are ready to create a new job ..
-        response = self.server.invoke(
-            'zato.scheduler.job.create', {
-                'cluster_id': self.server.cluster_id,
-                'name': name,
-                'is_active': True,
-                'job_type': SCHEDULER.JOB_TYPE.ONE_TIME,
-                'service': target_name,
-                'start_date': start_date,
-                'extra': data
-            }
-        )
-
-        # .. and return its ID to the caller.
-        return response['id'] # type: ignore
-
 # ################################################################################################################################
 
 class Service:
     """ A base class for all services deployed on Zato servers, no matter the transport and protocol, be it REST, IBM MQ
     or any other, regardless whether they arere built-in or user-defined ones.
     """
-    schedule: SchedulerFacade
+    rest: 'RESTFacade'
+    schedule: 'SchedulerFacade'
+    security: 'SecurityFacade'
 
     call_hooks:'bool' = True
     _filter_by = None
@@ -514,6 +441,9 @@ class Service:
 
     # Audit log
     audit_pii:'AuditPII'
+
+    # Vendors - Keysight
+    keysight: 'KeysightContainer'
 
     # By default, services do not use JSON Schema
     schema = '' # type: str
@@ -572,9 +502,15 @@ class Service:
         self.environ = Bunch()
         self.request = Request(self) # type: Request
         self.response = Response(self.logger) # type: ignore
-        self.user_config = Bunch()
         self.has_validate_input = False
         self.has_validate_output = False
+
+        # This is where user configuration is kept
+        self.config = Bunch()
+
+        # This is kept for backward compatibility with code that uses self.user_config in services.
+        # Only self.config should be used in new services.
+        self.user_config = Bunch()
 
         self.usage = 0 # How many times the service has been invoked
         self.slow_threshold = maxint # After how many ms to consider the response came too late
@@ -599,6 +535,9 @@ class Service:
             self.kvdb
         ) # type: Outgoing
 
+        # REST facade for outgoing connections
+        self.rest = RESTFacade()
+
         if self.component_enabled_hl7:
             hl7_api = HL7API(self._worker_store.outconn_hl7_fhir, self._worker_store.outconn_hl7_mllp)
             self.out.hl7 = hl7_api
@@ -619,7 +558,8 @@ class Service:
         if not hasattr(class_, '__service_name'):
             name = getattr(class_, 'name', None)
             if not name:
-                name = service_name_from_impl(class_.get_impl_name())
+                impl_name = class_.get_impl_name()
+                name = service_name_from_impl(impl_name)
                 name = class_.convert_impl_name(name)
 
             class_.__service_name = name # type: str
@@ -631,14 +571,14 @@ class Service:
     @classmethod
     def get_impl_name(class_:'type[Service]') -> 'str':
         if not hasattr(class_, '__service_impl_name'):
-            class_.__service_impl_name = '{}.{}'.format(class_.__module__, class_.__name__)
+            class_.__service_impl_name = '{}.{}'.format(class_.__service_module_name, class_.__name__)
         return class_.__service_impl_name
 
 # ################################################################################################################################
 
     @staticmethod
     def convert_impl_name(name:'str') -> 'str':
-        # TODO: Move the replace functionality over to uncamelify, possibly modifying its regexp
+
         split = uncamelify(name).split('.')
 
         path, class_name = split[:-1], split[-1]
@@ -648,6 +588,18 @@ class Service:
         class_name = class_name.replace('.-', '.').replace('_-', '_')
 
         return '{}.{}'.format('.'.join(path), class_name)
+
+# ################################################################################################################################
+
+    @classmethod
+    def zato_set_module_name(class_:'type[Service]', path:'str') -> 'str':
+        if not hasattr(class_, '__service_module_name'):
+            if 'zato' in path and 'internal' in path:
+                mod_name = class_.__module__
+            else:
+                mod_name = get_module_name_by_path(path)
+            class_.__service_module_name = mod_name
+        return class_.__service_module_name
 
 # ################################################################################################################################
 
@@ -696,6 +648,13 @@ class Service:
 
         # Cache is always enabled
         self.cache = self._worker_store.cache_api
+
+        # REST facade
+        self.rest.init(self.cid, self._out_plain_http)
+
+        # Vendors - Keysight
+        self.keysight = KeysightContainer()
+        self.keysight.init(self.cid, self._out_plain_http)
 
 # ################################################################################################################################
 
@@ -774,7 +733,7 @@ class Service:
 # ################################################################################################################################
 
     def update_handle(self,
-        set_response_func, # type: Callable
+        set_response_func, # type: callable_
         service,       # type: Service
         raw_request,   # type: any_
         channel,       # type: str
@@ -840,15 +799,23 @@ class Service:
                 # Check if there is a JSON Schema validator attached to the service and if so,
                 # validate input before proceeding any further.
                 if service._json_schema_validator and service._json_schema_validator.is_initialized:
-                    validation_result = service._json_schema_validator.validate(cid, raw_request)
+                    data = raw_request.decode('utf8')
+                    data = loads(data)
+                    validation_result = service._json_schema_validator.validate(cid, data)
                     if not validation_result:
                         error = validation_result.get_error()
 
                         error_msg = error.get_error_message()
                         error_msg_details = error.get_error_message(True)
 
-                        raise JSONSchemaValidationException(cid, CHANNEL.SERVICE, service.name,
-                            error.needs_err_details, error_msg, error_msg_details)
+                        raise JSONSchemaValidationException(
+                            cid,
+                            CHANNEL.SERVICE,
+                            service.name,
+                            error.needs_err_details,
+                            error_msg,
+                            error_msg_details
+                        )
 
                 # All hooks are optional so we check if they have not been replaced with None by ServiceStore.
 
@@ -985,7 +952,7 @@ class Service:
     def invoke_by_impl_name(
         self,
         impl_name,  # type: str
-        payload='', # type: str | dict
+        payload='', # type: str | anydict
         channel=CHANNEL.INVOKE,       # type: str
         data_format=DATA_FORMAT.DICT, # type: str
         transport='',       # type: str
@@ -997,21 +964,6 @@ class Service:
     ) -> 'any_':
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
         """
-        if self.component_enabled_target_matcher:
-
-            orig_impl_name = impl_name
-            impl_name, target = self.extract_target(impl_name)
-
-            # It's possible we are being invoked through self.invoke or self.invoke_by_id
-            target = target or kwargs.get('target', '')
-
-            if not self._worker_store.target_matcher.is_allowed(target):
-                raise ZatoException(self.cid, 'Invocation target `{}` not allowed ({})'.format(target, orig_impl_name))
-
-        if self.component_enabled_invoke_matcher:
-            if not self._worker_store.invoke_matcher.is_allowed(impl_name):
-                raise ZatoException(self.cid, 'Service `{}` (impl_name) cannot be invoked'.format(impl_name))
-
         if self.impl_name == impl_name:
             msg = 'A service cannot invoke itself, name:[{}]'.format(self.name)
             self.logger.error(msg)
@@ -1047,7 +999,7 @@ class Service:
         if timeout:
             g = None
             try:
-                g = spawn(self.update_handle, *invoke_args, **kwargs)
+                g = _gevent_spawn(self.update_handle, *invoke_args, **kwargs)
                 return g.get(block=True, timeout=timeout)
             except Timeout:
                 if g:
@@ -1067,16 +1019,6 @@ class Service:
         # not its name, and we need to extract the name ourselves.
         if isclass(zato_name) and issubclass(zato_name, Service): # type: Service
             zato_name = zato_name.get_name()
-
-        if self.component_enabled_target_matcher:
-            zato_name, target = self.extract_target(zato_name) # type: ignore
-            kwargs['target'] = target
-
-        if self._enforce_service_invokes and self.invokes:
-            if zato_name not in self.invokes:
-                msg = 'Could not invoke `{}` which is not in `{}`'.format(zato_name, self.invokes)
-                self.logger.warning(msg)
-                raise ValueError(msg)
 
         return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[zato_name], *args, **kwargs)
 
@@ -1104,8 +1046,8 @@ class Service:
         to_json_string=False, # type: bool
         cid='',        # type: str
         callback=None, # type: str | Service | None
-        zato_ctx=None, # type: stranydict | None
-        environ=None   # type: stranydict | None
+        zato_ctx=None, # type: strdict | None
+        environ=None   # type: strdict | None
     ) -> 'str':
         """ Invokes a service asynchronously by its name.
         """
@@ -1224,13 +1166,20 @@ class Service:
 
 # ################################################################################################################################
 
+    def sleep(self, timeout:'int'=1) -> 'None':
+        _gevent_sleep(timeout)
+
+# ################################################################################################################################
+
     def accept(self, _zato_no_op_marker:'any_'=zato_no_op_marker) -> 'bool':
         return True
 
 # ################################################################################################################################
 
-    def spawn(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return spawn(*args, **kwargs)
+    def run_in_thread(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return _gevent_spawn(*args, **kwargs)
+
+    spawn = run_in_thread
 
 # ################################################################################################################################
 
@@ -1313,7 +1262,7 @@ class Service:
 
 # ################################################################################################################################
 
-    def _log_input_output(self, user_msg:'str', level:'int', suppress_keys:'strlist', is_response:'bool') -> 'stranydict':
+    def _log_input_output(self, user_msg:'str', level:'int', suppress_keys:'strlist', is_response:'bool') -> 'strdict':
 
         suppress_keys = suppress_keys or []
         suppressed_msg = '(suppressed)'
@@ -1344,10 +1293,10 @@ class Service:
 
         return msg
 
-    def log_input(self, user_msg:'str'='', level:'int'=logging.INFO, suppress_keys:'any_'=None) -> 'stranydict':
+    def log_input(self, user_msg:'str'='', level:'int'=logging.INFO, suppress_keys:'any_'=None) -> 'strdict':
         return self._log_input_output(user_msg, level, suppress_keys, False)
 
-    def log_output(self, user_msg:'str'='', level:'int'=logging.INFO, suppress_keys:'any_'=('wsgi_environ',)) -> 'stranydict':
+    def log_output(self, user_msg:'str'='', level:'int'=logging.INFO, suppress_keys:'any_'=('wsgi_environ',)) -> 'strdict':
         return self._log_input_output(user_msg, level, suppress_keys, True)
 
 # ################################################################################################################################
@@ -1395,9 +1344,11 @@ class Service:
         service.wsgi_environ = wsgi_environ or {}
         service.job_type = job_type
         service.translate = server.kvdb.translate # type: ignore
+        service.config = server.user_config
         service.user_config = server.user_config
         service.static_config = server.static_config
         service.time = server.time_util
+        service.security = SecurityFacade(service.server)
 
         if channel_params:
             service.request.channel_params.update(channel_params)
@@ -1407,7 +1358,7 @@ class Service:
         service.environ = environ or {}
 
         channel_item = wsgi_environ.get('zato.channel_item') or {}
-        channel_item = cast_('stranydict', channel_item)
+        channel_item = cast_('strdict', channel_item)
         sec_def_info = wsgi_environ.get('zato.sec_def', {})
 
         if channel_type == _AMQP:
@@ -1459,7 +1410,7 @@ class Service:
 class _Hook(Service):
     """ Base class for all hook services.
     """
-    _hook_func_name: 'stranydict'
+    _hook_func_name: 'strdict'
 
     class SimpleIO:
         input_required = (Opaque('ctx'),)
@@ -1504,6 +1455,7 @@ PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_SUBSCRIBED] = 'on_subscribed'
 PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED] = 'on_unsubscribed'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class WSXHook(_Hook):
     """ Subclasses of this class may act as WebSockets hooks.
@@ -1533,4 +1485,186 @@ WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED] = 'on_disconnected
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_PUBSUB_RESPONSE] = 'on_pubsub_response'
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_VAULT_MOUNT_POINT_NEEDED] = 'on_vault_mount_point_needed'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WSXAdapter(Service):
+    """ Subclasses of this class can be used in events related to outgoing WebSocket connections.
+    """
+    on_connected:'callable_'
+    on_message_received:'callable_'
+    on_closed:'callable_'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RESTAdapter(Service):
+
+    # These may be overridden by individual subclasses
+    model            = None
+    conn_name        = ''
+    auth_scopes      = ''
+    sec_def_name     = None
+    log_response     = False
+    map_response     = None
+    get_conn_name    = None
+    get_auth         = None
+    get_auth_scopes  = None
+    get_path_params  = None
+    get_method       = None
+    get_request      = None
+    get_headers      = None
+    get_query_string = None
+    get_auth_bearer  = None
+    get_sec_def_name = None
+
+    has_query_string_id   = False
+    query_string_id_param = None
+
+    has_json_id   = False
+    json_id_param = None
+
+    # Default to GET calls
+    method = 'GET'
+
+# ################################################################################################################################
+
+    def rest_call(
+        self,
+        conn_name,     # type: str
+        *,
+        data='',       # type: str
+        model=None,    # type: modelnone
+        callback=None, # type: callnone
+        params=None,   # type: strdictnone
+        headers=None,  # type: strdictnone
+        method='',     # type: str
+        sec_def_name=None, # type: any_
+        auth_scopes=None,  # type: any_
+        log_response=True, # type: bool
+    ):
+
+        # Get the actual REST connection ..
+        conn:'RESTWrapper' = self.out.rest[conn_name].conn
+
+        # .. invoke the system and map its response back through the callback callable ..
+        out:'any_' = conn.rest_call(
+            cid=self.cid,
+            data=data,
+            model=model, # type: ignore
+            callback=callback,
+            params=params,
+            headers=headers,
+            method=method,
+            sec_def_name=sec_def_name,
+            auth_scopes=auth_scopes,
+            log_response=log_response,
+        )
+
+        # .. and return the result to our caller.
+        return out
+
+# ################################################################################################################################
+
+    def handle(self):
+
+        # Local aliases
+        params:'strdict' = {}
+        request:'any_' = ''
+        headers:'strstrdict' = {}
+
+        # The outgoing connection to use may be static or dynamically generated
+        if self.get_conn_name:
+            conn_name = self.get_conn_name
+        else:
+            conn_name = self.conn_name
+
+        # The request to use may be dynamically generated
+        if self.get_request:
+            request = self.get_request() # type: ignore
+
+        #
+        # Build our query parameters, which can be partly implicit if this is an ID-only service
+        # or explicitly if we have a method to do so.
+        #
+        if self.has_query_string_id:
+
+            if self.query_string_id_param:
+                query_string_id_param = self.query_string_id_param
+            else:
+                query_string_id_param = 'id'
+
+            params[query_string_id_param] = self.request.input[query_string_id_param]
+
+        # Update the query string with information obtained earlier
+        if self.get_query_string:
+            _params:'strdict' = self.get_query_string(params)
+            params.update(_params)
+
+        # Obtain any possible path parameters
+        if self.get_path_params:
+            _params:'strdict' = self.get_path_params(params)
+            params.update(_params)
+
+        # The REST method may be dynamically generated
+        if self.get_method:
+            method:'str' = self.get_method()
+        else:
+            method = self.method
+
+        # Uppercase the method per what HTTP expects
+        method = method.upper()
+
+        # Authentication bearer token may be dynamically generated
+        if self.get_auth_bearer:
+            token:'str' = self.get_auth_bearer()
+            headers['Authorization'] = f'Bearer {token}'
+
+        # Security definition can be dynamically generated ..
+        if self.get_sec_def_name:
+            sec_def_name = self.get_sec_def_name()
+
+        # .. it may also have been given explicitly ..
+        elif self.sec_def_name:
+            sec_def_name = self.sec_def_name
+
+        # .. otherwise, we will indicate explicitly that it was not given on input in any way.
+        else:
+            sec_def_name = NotGiven
+
+        # Auth scopes can be dynamically generated ..
+        if self.get_auth_scopes:
+            auth_scopes = self.get_auth_scopes()
+
+        # .. it may also have been given explicitly ..
+        elif self.auth_scopes:
+            auth_scopes = self.auth_scopes
+
+        # .. otherwise, we will indicate explicitly that they were not given on input in any way.
+        else:
+            auth_scopes = ''
+
+        # Headers may be dynamically generated
+        if self.get_headers:
+            _headers:'strstrdict' = self.get_headers()
+            headers.update(_headers)
+
+        # Obtain the result ..
+        out = self.rest_call(
+            conn_name,
+            data=request,
+            model=self.model,
+            callback=self.map_response,
+            params=params,
+            headers=headers,
+            method=method,
+            sec_def_name=sec_def_name,
+            auth_scopes=auth_scopes,
+            log_response=self.log_response,
+        )
+
+        # .. and return it to our caller.
+        self.response.payload = out
+
+# ################################################################################################################################
 # ################################################################################################################################

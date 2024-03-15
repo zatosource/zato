@@ -3,7 +3,7 @@
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -215,7 +215,7 @@ if __name__ == '__main__':
 
     config = Bunch()
     config.name = name
-    config.url = 'http://localhost:49517'
+    config.url = 'https://localhost:49517'
     config.token = client_token
     config.service_name = 'my.service'
     config.tls_verify = True
