@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from base64 import b64decode, b64encode
 from contextlib import closing
 from enum import Enum
@@ -667,21 +668,31 @@ class UploadPackage(AdminService):
 
     def handle(self):
 
+        # Local variables
         prefix='zato-hd-'
         suffix=self.request.input.payload_name
         body = uuid4().hex
-        file_name_full = get_tmp_path(prefix, suffix, body)
+
+        if service_deploy_location := os.environ.get('Zato_Service_Deploy_Location'):
+            file_name_full = os.path.join(service_deploy_location, suffix)
+            needs_default_hot_deploy = False
+        else:
+            prefix='zato-hd-'
+            suffix=self.request.input.payload_name
+            body = uuid4().hex
+            file_name_full = get_tmp_path(prefix, suffix, body)
+            needs_default_hot_deploy = True
 
         with open(file_name_full, 'wb') as tf:
             input_payload = b64decode(self.request.input.payload)
             _ = tf.write(input_payload)
             tf.flush()
 
+        if needs_default_hot_deploy:
             package_id = hot_deploy(self.server, self.request.input.payload_name, tf.name, False)
-
-        self.response.payload = {
-            'package_id': package_id
-        }
+            self.response.payload = {
+                'package_id': package_id
+            }
 
 # ################################################################################################################################
 # ################################################################################################################################
